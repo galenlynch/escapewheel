@@ -108,7 +108,7 @@ import = "nwb_lake_writer.scripts.cli:register"
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. `05` is the import pipeline. |
-| `revisions/` | R1–R23, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `revisions/` | R1–R24, all accepted. Where they disagree with the frozen docs, the revision binds. |
 | `registry/` | `logical_schemas.json` (29 tables) — what a written table must look like. |
 | `inventory/` | `05` Stage 1 inventories of the real datasets this will import. |
 | `nwb-lake-reader/` | The read path. |
