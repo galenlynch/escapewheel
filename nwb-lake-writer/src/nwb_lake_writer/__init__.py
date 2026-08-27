@@ -1,4 +1,4 @@
-"""Tools to write NWB lakes"""
+"""Tools to write NWB lakes."""
 
 from importlib.metadata import PackageNotFoundError, version
 

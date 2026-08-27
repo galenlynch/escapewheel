@@ -21,6 +21,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
+        # Floor and ceiling. They coincide when a project targets its own
+        # minimum, and a matrix must not then run the same version twice.
         python-version: ["3.10", "3.13"]
 
     if: >
