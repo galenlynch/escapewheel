@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Proposed |
-| **Amends** | `02_core_logical_schemas.md`, R3 §3.3 |
+| **Amends** | `02_core_logical_schemas.md`, `06_analysis_layer.md`, R2 §12, R3 §3.3 |
 | **Depends on** | R3 §3.3 (`array_dimensions`), R3 §6.1 (`array_channels`), R13 (clock anchors) |
 | **Profile** | `nwb-lake-portable-v0.1` |
 
@@ -156,14 +156,63 @@ It survives R3 §3.0's duplication test on the same grounds as `core.units.n_spi
 deriving the rate otherwise requires joining through `core.clocks`, so the scalar buys
 join-free filtering, and a rule keeps it honest.
 
-## 5. Resource references are checked by the shim
+## 5. Analysis arrays are described by analysis tables
+
+An analysis array registered in `core.array_assets`, with axis rows in
+`core.array_dimensions` pointing at an analysis coordinate table, would make a core table
+reference a resource the analysis layer owns. `00` says analysis resources may be deleted and
+recomputed; a core table pointing at one would dangle. R17 §2 forbids core referencing an
+extension for the same reason.
+
+`06` anticipated this, saying array metadata belongs in "`core.array_assets` or an
+`analysis.array_assets` extension table." This revision defines the latter.
+
+Two tables mirror their core counterparts exactly, column for column:
+
+| Table | Mirrors |
+|---|---|
+| `analysis.array_assets` | `core.array_assets` |
+| `analysis.array_dimensions` | `core.array_dimensions` |
+
+R2 §12 excluded analysis schemas from the registry because "their shapes depend on
+materialization parameters." These do not: they describe arrays rather than results, and
+their columns are fixed. The exclusion stands for the tables it was written about —
+`analysis.spikes_by_trial`, `analysis.binned_spikes` and the rest, whose columns follow from
+a materialization's parameters.
+
+### 5.1 References point inward
+
+A layer MAY reference a layer beneath it and MUST NOT reference one above.
+
+```text
+extension  ->  analysis  ->  core        permitted
+core       ->  analysis                  forbidden
+core       ->  extension                 forbidden (R17 §2)
+```
+
+So `core.array_dimensions.coordinate_resource` MUST name a `core` resource;
+`analysis.array_dimensions.coordinate_resource` MAY name a `core` or `analysis` one. Core
+stays interpretable when analysis resources are deleted, which is what makes them disposable.
+
+### 5.2 Where a materialization's coordinate tables are declared
+
+A labelled axis (§2.4) points at a table, and that table needs a schema or the pointer cannot
+be validated. `analysis.binned_spikes_units` is exactly the parameter-dependent shape R2 §12
+keeps out of the core registry.
+
+Such a table is declared in a registry of its own, in R2's format, by whatever produces it —
+which is R17's mechanism, applied to a materialization rather than an institutional
+extension. A validator holding that registry checks the coordinate table like any other; one
+without it reports the pointer as unresolved and continues.
+
+## 6. Resource references are checked by the shim
 
 `coordinate_resource` names a resource, and no table of resources exists to join against, so
 it cannot be an SQL foreign key. A validator resolves it against the manifest, alongside
 verifying that `coordinate_array_asset_id` resolves to a one-dimensional array of the right
 length — both storage-layer facts, which R12 §4 places outside SQL.
 
-## 6. What is deferred
+## 7. What is deferred
 
 **The `trial` and `unit` coordinate tables themselves.** §2.4 defines how an axis points at
 one; what those tables contain for `analysis.binned_spikes` waits for a materialisation that
@@ -175,7 +224,8 @@ latitude field over a curvilinear grid. Reaching an electrode's CCF position fro
 axis is a join through `core.array_channels` and `core.electrode_coordinates` (R19 §3), which
 is more normalized and needs no new mechanism.
 
-## 7. Table count
+## 8. Table count
 
-Unchanged at R19 §5's 26. This revision adds columns to `core.array_dimensions` and defines
-no new table.
+28 tables, from R19 §5's 26: `analysis.array_assets` and `analysis.array_dimensions` (§5).
+The coordinate columns themselves add no table, only fields on `core.array_dimensions` and
+its analysis mirror.
