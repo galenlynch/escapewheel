@@ -165,6 +165,7 @@
           "enum": [
             "core",
             "analysis",
+            "extension",
             "docs"
           ]
         },
@@ -258,6 +259,10 @@
             "type": "string"
           },
           "uniqueItems": true
+        },
+        "extension_id": {
+          "description": "Which extension owns this resource; required when layer is extension (R17 \u00a74).",
+          "type": "string"
         }
       },
       "allOf": [
@@ -314,6 +319,23 @@
           "then": {
             "required": [
               "codecs"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "layer": {
+                "const": "extension"
+              }
+            },
+            "required": [
+              "layer"
+            ]
+          },
+          "then": {
+            "required": [
+              "extension_id"
             ]
           }
         }
