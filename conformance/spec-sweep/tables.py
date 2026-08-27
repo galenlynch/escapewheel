@@ -28,6 +28,7 @@ STEPS = [
     ("R19 §3  + core.electrode_coordinates",   set(), {"core.electrode_coordinates"}),
     ("R20 §5  + analysis.array_assets",        set(), {"analysis.array_assets"}),
     ("R20 §5  + analysis.array_dimensions",    set(), {"analysis.array_dimensions"}),
+    ("R23 §2  + core.event_streams",           set(), {"core.event_streams"}),
 ]
 
 if not PARSED.exists():
