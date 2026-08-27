@@ -25,9 +25,9 @@ When behaviour here seems arbitrary, the reason is there.
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. `05` is the import and validation pipeline. |
-| `revisions/` | R1–R20, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (28 tables), its meta-schema, and the manifest JSON Schema. |
-| `fixtures/` | The conformance corpus — 13 packets with expected findings as data. |
+| `revisions/` | R1–R23, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `registry/` | `logical_schemas.json` (29 tables), its meta-schema, and the manifest JSON Schema. |
+| `fixtures/` | The conformance corpus — 15 packets with expected findings as data. |
 | `nwb-lake-reader/` | The read path. This package's only runtime dependency of substance. |
 
 `src/nwb_lake_validator/schemas/registry.schema.json` is a **vendored copy** from
@@ -85,7 +85,7 @@ conftest is a near-copy of the reader's — deliberate duplication, so both suit
 standalone. `tests/test_cli.py` goes through `nwb_lake_reader.scripts.cli.main`, so a pass
 proves the entry-point wiring rather than just the handler.
 
-For an end-to-end check, `../fixtures/corpus.py` runs 13 packets whose expected findings are
+For an end-to-end check, `../fixtures/corpus.py` runs 15 packets whose expected findings are
 recorded as data. Run it after changing the registry, the generator, or any rule.
 
 ```bash
