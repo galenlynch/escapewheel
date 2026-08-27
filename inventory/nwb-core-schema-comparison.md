@@ -96,7 +96,27 @@ keeping only `description` and `serial_number` undeprecated. `core.devices` carr
 
 Worth watching what replaces them before following.
 
-## 5. Outcome
+## 5. Two things checked and found not to warrant changes
+
+**Phy export.** The pipeline also writes phy format — one TSV per property, keyed by
+`cluster_id`. Structurally that is a column store and maps onto tables without difficulty.
+Its contribution is evidential rather than structural: it carries a fourth quality label,
+`cluster_group`, in phy's canonical curation slot, so one sorting appears in three
+serializations with four label sources under three spellings. That strengthens R16 rather
+than changing it.
+
+**Drift correction.** `preprocessed/motion/` carries a displacement field of shape
+`(2065 time bins, 10 depth bins)`, so probe position relative to the brain is time-varying in
+principle. Measured, it is 19–31 µm peak-to-peak over 69 minutes — smaller than Neuropixels'
+20 µm contact pitch and far smaller than CCF region boundaries. Static electrode coordinates
+(R19 §3) are therefore adequate, and the motion field is a derived preprocessing artifact
+belonging to an extension (R17).
+
+Worth noting in passing: the motion estimate's temporal bins run from 14 425 742 s to
+14 429 870 s. Those are neither session-relative nor Unix epoch, which is one more instance
+of time origins in this data not being self-evident.
+
+## 6. Outcome
 
 | Finding | Disposition |
 |---|---|
