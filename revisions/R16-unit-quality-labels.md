@@ -24,7 +24,11 @@ decoder_label    mua 291   noise 149   sua 146      + decoder_probability
 default_qc       True 338  False 248
 ```
 
-They disagree for 111 of 586 units on one probe. That is not a defect in the data: they are
+They disagree for 111 of 586 units on one probe. A fourth appears in the same pipeline's phy
+export — `cluster_group`, phy's canonical curation slot, where manual judgement lands —
+carrying `good`/`mua`/`noise`. So one sorting is serialized three ways (SpikeInterface
+properties, NWB dynamic columns, phy TSVs) with four label sources under three spellings of
+the same three categories. That is not a defect in the data: they are
 different judgements by different methods, and a consumer may reasonably prefer any of them.
 The available sources also differ between sessions from the same pipeline — one carries
 `KSLabel`, another `bombcell_label`.
@@ -65,7 +69,9 @@ tools, only the spelling varies, and `sua` avoids colliding with
 `sua`/`mua`/`noise`.
 
 `source` is an open vocabulary on R8 §4's terms. Closing it would require knowing every
-curation tool a lab may run, which this specification does not.
+curation tool a lab may run, which this specification does not. `kilosort`, `decoder`,
+`bombcell`, and `phy` are the values observed so far; `phy` denotes `cluster_group`, which is
+where manual curation is recorded.
 
 A boolean assessment such as `default_qc` is not a label and does not belong here. It is a
 policy applied to labels and metrics, which is `06`'s `analysis.good_units` territory. NWB
