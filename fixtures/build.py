@@ -100,15 +100,25 @@ def content() -> dict[str, list[dict]]:
             {"session_id": "s001", "trial_id": "trial_0001", "tag": "hit"},
             {"session_id": "s001", "trial_id": "trial_0002", "tag": "miss"},
             {"session_id": "s001", "trial_id": "trial_0002", "tag": "review"}],
+        # Three streams: one hardware-detected, one with a processing run behind it, and
+        # one emitting two event types -- which is why R23 4.1 keeps event_type on the row.
+        "core.event_streams": [
+            {"event_stream_id": "stim", "session_id": "s001", "name": "stimulus_trigger",
+             "clock_id": "behavior_s001", "device_id": None, "processing_run_id": None},
+            {"event_stream_id": "reward", "session_id": "s001", "name": "reward_valve",
+             "clock_id": "behavior_s001", "device_id": "imec0", "processing_run_id": None},
+            {"event_stream_id": "lick", "session_id": "s001", "name": "lick_sensor",
+             "clock_id": "behavior_s001", "device_id": "imec0",
+             "processing_run_id": "run_import_001"}],
         "core.events": [
-            {"session_id": "s001", "event_id": "ev_0001", "event_type": "stimulus_onset",
-             "t_tick": 1200, "clock_id": "behavior_s001"},
-            {"session_id": "s001", "event_id": "ev_0002", "event_type": "reward",
-             "t_tick": 4200, "clock_id": "behavior_s001"},
-            {"session_id": "s001", "event_id": "ev_0003", "event_type": "stimulus_onset",
-             "t_tick": 6200, "clock_id": "behavior_s001"},
-            {"session_id": "s001", "event_id": "ev_0004", "event_type": "lick",
-             "t_tick": 6900, "clock_id": "behavior_s001"}],
+            {"session_id": "s001", "event_id": "ev_0001", "stream_id": "stim",
+             "event_type": "stimulus_onset", "t_tick": 1200, "clock_id": "behavior_s001"},
+            {"session_id": "s001", "event_id": "ev_0002", "stream_id": "reward",
+             "event_type": "reward", "t_tick": 4200, "clock_id": "behavior_s001"},
+            {"session_id": "s001", "event_id": "ev_0003", "stream_id": "stim",
+             "event_type": "stimulus_offset", "t_tick": 6200, "clock_id": "behavior_s001"},
+            {"session_id": "s001", "event_id": "ev_0004", "stream_id": "lick",
+             "event_type": "lick", "t_tick": 6900, "clock_id": "behavior_s001"}],
         "core.sorting_runs": [
             {"sorting_run_id": "sort_ks4_001", "session_id": "s001", "probe_id": "probe0",
              "sorter_name": "kilosort4", "sorter_version": "4.0.16",
@@ -137,12 +147,13 @@ def content() -> dict[str, list[dict]]:
         "core.unit_quality_labels": [
             {"session_id": "s001", "unit_id": u, "sorting_run_id": "sort_ks4_001",
              "curation_id": "curation_001", "source": src, "label": lab,
-             "confidence": conf}
-            for u, src, lab, conf in (
-                ("unit_001", "decoder", "sua", 0.94),
-                ("unit_001", "kilosort", "sua", None),
-                ("unit_002", "decoder", "mua", 0.71),
-                ("unit_002", "kilosort", "sua", None))],
+             "normalized_label": norm, "confidence": conf}
+            for u, src, lab, norm, conf in (
+                ("unit_001", "decoder", "sua", "sua", 0.94),
+                ("unit_001", "bombcell", "good", "sua", None),
+                ("unit_002", "decoder", "mua", "mua", 0.71),
+                # non_soma has no honest projection, so it is null rather than forced (R22 3).
+                ("unit_002", "bombcell", "non_soma", None, None))],
         "core.unit_observation_intervals": [
             {"session_id": "s001", "unit_id": u, "sorting_run_id": "sort_ks4_001",
              "curation_id": "curation_001", "interval_index": i,
@@ -234,7 +245,9 @@ def variants():
     def null_required(c):
         c["core.events"][2]["event_type"] = None
     def bad_vocabulary(c):
-        c["core.units"][0]["quality_label"] = "good"        # the Phy label, unmapped
+        # bombcell's raw label belongs in `label`; the designated column holds the
+        # projection, which stays closed to sua/mua/noise (R22 5).
+        c["core.units"][0]["quality_label"] = "good"
     def bad_interval(c):
         c["core.trials"][1]["stop_tick"] = 5999             # before its start_tick
     def stale_summary(c):
@@ -246,6 +259,16 @@ def variants():
     def unsorted_spikes(c):
         s = c["core.spike_events"]
         s[3], s[4] = s[4], s[3]
+    def inconsistent_projection(c):
+        # bombcell's `good` already projects to `sua` for unit_001; projecting the same
+        # (source, label) pair to `mua` here is not a projection at all (R22 4).
+        c["core.unit_quality_labels"].append(
+            {"session_id": "s001", "unit_id": "unit_003", "sorting_run_id": "sort_ks4_001",
+             "curation_id": "curation_001", "source": "bombcell", "label": "good",
+             "normalized_label": "mua", "confidence": None})
+    def stream_clock_mismatch(c):
+        # An event on a clock its own stream does not declare (R23 4.2).
+        c["core.events"][0]["clock_id"] = "imec_ap_s001"
     def orphan_manifest_session(c):
         c["core.sessions"][0]["session_id"] = "s999"        # manifest still says s001
     return {"dup_pk": dup_pk, "orphan_fk": orphan_fk, "null_required": null_required,
@@ -253,6 +276,8 @@ def variants():
             "stale_summary": stale_summary,
             "missing_amplitude_unit": missing_amplitude_unit,
             "half_transform": half_transform, "unsorted_spikes": unsorted_spikes,
+            "inconsistent_projection": inconsistent_projection,
+            "stream_clock_mismatch": stream_clock_mismatch,
             "orphan_manifest_session": orphan_manifest_session}
 
 

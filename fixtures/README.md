@@ -23,7 +23,7 @@ uv run --with '../nwb-lake-validator' --with duckdb nwb-lake validate packets/va
 
 ## The valid packet
 
-17 of the registry's 22 tables, 71 rows. One session, one subject, two clocks with a
+20 of the registry's 29 tables, 71 rows. One session, one subject, two clocks with a
 declared transform between them, one probe with four electrodes, two trials, four events,
 one sorting run, one curation version, two units and their spikes, and provenance.
 
@@ -38,6 +38,8 @@ not carry every table; `validate.py` checks what the manifest declares.
 | `orphan_fk` | trial names an absent clock | `core.trials.clock_id_resolves` |
 | `null_required` | null in a required column | `core.events.event_type.not_null` |
 | `bad_vocabulary` | `quality_label` is `good` | `core.units.quality_label.in_vocabulary` |
+| `inconsistent_projection` | one `(source, label)` pair projects two ways | `core.unit_quality_labels.projection_is_consistent` |
+| `stream_clock_mismatch` | an event's clock disagrees with its stream's | `core.events.clock_matches_stream` |
 | `bad_interval` | `stop_tick` before `start_tick` | `core.trials.interval_valid` |
 | `stale_summary` | `n_spikes` disagrees with the spikes | `core.units.spike_summary_consistent` |
 | `missing_amplitude_unit` | amplitudes with no declared unit | `core.sorting_runs.amplitude_unit_declared` |

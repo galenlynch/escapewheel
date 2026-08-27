@@ -27,6 +27,8 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "missing_amplitude_unit": ("error", "core.sorting_runs.amplitude_unit_declared"),
     "half_transform": ("error", "core.clocks.transform_pair_complete"),
     "unsorted_spikes": ("warning", "core.spike_events.physical_order"),
+    "inconsistent_projection": ("error", "core.unit_quality_labels.projection_is_consistent"),
+    "stream_clock_mismatch": ("error", "core.events.clock_matches_stream"),
     "orphan_manifest_session": ("error", "core.sessions.manifest_sessions_match"),
     "bad_type": ("error", "schema.column_type"),
     "missing_column": ("error", "schema.column_absent"),
