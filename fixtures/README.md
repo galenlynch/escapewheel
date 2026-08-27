@@ -7,18 +7,18 @@ the same evidence rather than against a prose description of what should happen.
 
 ```bash
 uv run --with pyarrow python build.py                            # writes packets/
-uv run --no-cache --with ../nwb-lake-reader --with duckdb python corpus.py  # run them all
+uv run --no-cache --with ../nwb-lake-validator --with duckdb python corpus.py  # run them all
 ```
 
 `--no-cache` matters: uv caches the built wheel of the sibling package, and without it a
 run can silently test a stale copy of the validator rather than the working tree.
 
-The validator under test is `nwb_lake_reader.validation`. Nothing is reimplemented here —
+The validator under test is `nwb_lake_validator`. Nothing is reimplemented here —
 a second copy of the checks would be exactly the drift this corpus exists to detect. To
 validate one packet directly:
 
 ```bash
-uv run --with '../nwb-lake-reader' --with duckdb nwb-lake validate packets/valid
+uv run --with '../nwb-lake-validator' --with duckdb nwb-lake validate packets/valid
 ```
 
 ## The valid packet
@@ -55,7 +55,7 @@ packet in the wrong order is conforming, only slower (R10 §2).
 
 ## Validation layers
 
-Four, in `09` §10's order — see `nwb_lake_reader.validation`:
+Four, in `09` §10's order — see `nwb_lake_validator`:
 
 1. **Manifest shape** against `manifest.schema.json`, when the packet is opened.
 2. **The embedded registry** against the meta-schema, and its version against the manifest's.
