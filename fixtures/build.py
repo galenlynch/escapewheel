@@ -1,0 +1,270 @@
+"""Build the Phase 0 fixture packets.
+
+A conforming single-session packet per R1 §6, plus variants each violating exactly one
+rule. Table schemas are taken from the registry rather than restated, so a fixture cannot
+drift from the specification it is meant to exercise.
+"""
+import json
+import shutil
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+HERE = Path(__file__).resolve().parent
+REGISTRY = json.loads((HERE.parent / "registry" / "logical_schemas.json").read_text())
+
+ARROW = {"string": pa.string(), "int32": pa.int32(), "int64": pa.int64(),
+         "float32": pa.float32(), "float64": pa.float64(), "bool": pa.bool_(),
+         "date": pa.date32(), "timestamp": pa.timestamp("us", tz="UTC"),
+         "json_string": pa.string()}
+
+START = datetime(2026, 8, 20, 14, 0, 0, tzinfo=timezone.utc)
+AP_HZ, BEH_HZ = 30_000, 1_000
+
+
+def table(resource: str, rows: list[dict]) -> pa.Table:
+    """Build an Arrow table for `resource` with exactly the registry's schema.
+
+    Columns absent from `rows` are emitted as nulls unless the registry marks them
+    optional, in which case they are omitted entirely — exercising all three presence
+    states (R2 §5).
+    """
+    spec = REGISTRY["tables"][resource]
+    arrays, fields = [], []
+    for c in spec["columns"]:
+        present = any(c["name"] in r for r in rows)
+        if c["presence"] == "optional" and not present:
+            continue
+        typ = ARROW[c["type"]]
+        arrays.append(pa.array([r.get(c["name"]) for r in rows], type=typ))
+        fields.append(pa.field(c["name"], typ))
+    return pa.table(arrays, schema=pa.schema(fields))
+
+
+def spikes(unit, run, cur, clock, ticks):
+    return [{"session_id": "s001", "unit_id": unit, "sorting_run_id": run,
+             "curation_id": cur, "t_tick": int(t), "clock_id": clock,
+             "amplitude": float(-80 - (i % 7) * 3)} for i, t in enumerate(ticks)]
+
+
+def content() -> dict[str, list[dict]]:
+    u1 = list(range(30_000, 300_000, 9_000))     # unit_001, ~3.3 Hz on the AP clock
+    u2 = list(range(45_000, 300_000, 21_000))    # unit_002, sparser
+    return {
+        "core.sessions": [{"session_id": "s001", "subject_id": "m001",
+                           "session_start_time": START,
+                           "session_description": "Two-trial synthetic fixture session.",
+                           "institution": "Example Institute", "task_name": "two_choice"}],
+        "core.subjects": [{"subject_id": "m001", "species": "Mus musculus", "sex": "M",
+                           "date_of_birth": (START - timedelta(days=120)).date(),
+                           "genotype": "wt", "strain": "C57BL/6J"}],
+        "core.session_experimenters": [
+            {"session_id": "s001", "experimenter": "A. Researcher"},
+            {"session_id": "s001", "experimenter": "B. Technician"}],
+        "core.devices": [{"device_id": "imec0", "session_id": "s001",
+                          "name": "Neuropixels headstage", "manufacturer": "imec",
+                          "model": "Neuropixels 1.0"}],
+        "core.probes": [{"probe_id": "probe0", "session_id": "s001", "device_id": "imec0",
+                         "name": "probe0", "probe_type": "Neuropixels 1.0",
+                         "manufacturer": "imec", "target_region": "VISp"}],
+        "core.electrodes": [
+            {"electrode_id": f"elec_{i:03d}", "session_id": "s001", "probe_id": "probe0",
+             "local_electrode_label": str(i), "local_channel_label": f"AP{i}",
+             "x_um": 0.0 + (i % 2) * 16.0, "y_um": 20.0 * (i // 2), "z_um": 0.0,
+             "coordinate_frame": "probe_tip", "brain_region": "VISp"} for i in range(4)],
+        "core.clocks": [
+            {"clock_id": "imec_ap_s001", "session_id": "s001",
+             "name": "Neuropixels AP sample clock", "tick_rate_hz": float(AP_HZ),
+             "origin": "sample 0 at acquisition start", "tick_zero_utc": START},
+            {"clock_id": "behavior_s001", "session_id": "s001",
+             "name": "behavior acquisition clock", "tick_rate_hz": float(BEH_HZ),
+             "origin": "tick 0 at behavior start", "parent_clock_id": "imec_ap_s001",
+             "transform_slope": float(AP_HZ / BEH_HZ), "transform_offset": 0.0,
+             "tick_zero_utc": START}],
+        "core.trials": [
+            {"session_id": "s001", "trial_id": "trial_0001", "start_tick": 1000,
+             "stop_tick": 5000, "clock_id": "behavior_s001", "condition_id": "A_high",
+             "stimulus_id": "grating_45", "choice": "left", "rewarded": True},
+            {"session_id": "s001", "trial_id": "trial_0002", "start_tick": 6000,
+             "stop_tick": 10000, "clock_id": "behavior_s001", "condition_id": "A_high",
+             "stimulus_id": "grating_45", "choice": "right", "rewarded": False}],
+        "core.trial_tags": [
+            {"session_id": "s001", "trial_id": "trial_0001", "tag": "hit"},
+            {"session_id": "s001", "trial_id": "trial_0002", "tag": "miss"},
+            {"session_id": "s001", "trial_id": "trial_0002", "tag": "review"}],
+        "core.events": [
+            {"session_id": "s001", "event_id": "ev_0001", "event_type": "stimulus_onset",
+             "t_tick": 1200, "clock_id": "behavior_s001"},
+            {"session_id": "s001", "event_id": "ev_0002", "event_type": "reward",
+             "t_tick": 4200, "clock_id": "behavior_s001"},
+            {"session_id": "s001", "event_id": "ev_0003", "event_type": "stimulus_onset",
+             "t_tick": 6200, "clock_id": "behavior_s001"},
+            {"session_id": "s001", "event_id": "ev_0004", "event_type": "lick",
+             "t_tick": 6900, "clock_id": "behavior_s001"}],
+        "core.sorting_runs": [
+            {"sorting_run_id": "sort_ks4_001", "session_id": "s001", "probe_id": "probe0",
+             "sorter_name": "kilosort4", "sorter_version": "4.0.16",
+             "amplitude_unit": "uV", "started_at": START + timedelta(hours=2),
+             "ended_at": START + timedelta(hours=3)}],
+        "core.curation_versions": [
+            {"curation_id": "curation_001", "sorting_run_id": "sort_ks4_001",
+             "session_id": "s001", "curator": "A. Researcher", "curation_tool": "phy",
+             "curation_tool_version": "2.0.0",
+             "created_at": START + timedelta(hours=4)}],
+        "core.units": [
+            {"session_id": "s001", "unit_id": "unit_001", "probe_id": "probe0",
+             "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
+             "local_unit_label": "17", "quality_label": "sua",
+             "default_electrode_id": "elec_001",
+             "firing_rate_hz": len(u1) / (300_000 / AP_HZ),
+             "n_spikes": len(u1), "first_spike_tick": u1[0], "last_spike_tick": u1[-1]},
+            {"session_id": "s001", "unit_id": "unit_002", "probe_id": "probe0",
+             "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
+             "local_unit_label": "42", "quality_label": "mua",
+             "default_electrode_id": "elec_003",
+             "firing_rate_hz": len(u2) / (300_000 / AP_HZ),
+             "n_spikes": len(u2), "first_spike_tick": u2[0], "last_spike_tick": u2[-1]}],
+        "core.spike_events":
+            spikes("unit_001", "sort_ks4_001", "curation_001", "imec_ap_s001", u1) +
+            spikes("unit_002", "sort_ks4_001", "curation_001", "imec_ap_s001", u2),
+        "core.source_files": [
+            {"source_file_id": "src_0001", "uri": "raw/s001_imec0_ap.bin",
+             "format": "spikeglx_bin", "size_bytes": 1234567890,
+             "modified_at": START + timedelta(hours=1)}],
+        "core.processing_runs": [
+            {"processing_run_id": "run_import_001", "session_id": "s001",
+             "activity_type": "import", "software_name": "nwb_lake",
+             "software_version": "0.1.0", "status": "succeeded",
+             "started_at": START + timedelta(hours=5),
+             "ended_at": START + timedelta(hours=5, minutes=10)}],
+        "core.processing_run_inputs": [
+            {"processing_run_id": "run_import_001", "source_file_id": "src_0001"}],
+    }
+
+
+def sql_name(resource): return resource.replace(".", "_")
+
+
+def sort_rows(resource: str, rows: list[dict]) -> list[dict]:
+    """Apply the registry's declared physical ordering (R10 §2), as a writer should."""
+    keys = REGISTRY["tables"][resource].get("sort")
+    if not keys:
+        return rows
+    return sorted(rows, key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in keys))
+
+
+def write_packet(out: Path, tables: dict[str, list[dict]], *, raw: dict = None,
+                 unsorted: frozenset = frozenset()):
+    """Write a packet in 03's portable layout. `raw` supplies pre-built Arrow tables for
+    variants that must violate the registry's own schema; `unsorted` names resources
+    written in insertion order, for variants that must violate R10 §2."""
+    if out.exists():
+        shutil.rmtree(out)
+    (out / "tables" / "core").mkdir(parents=True)
+    (out / "schemas").mkdir()
+
+    resources = []
+    for resource, rows in tables.items():
+        ordered = rows if resource in unsorted else sort_rows(resource, rows)
+        t = (raw or {}).get(resource) or table(resource, ordered)
+        rel = f"tables/core/{resource.split('.')[1]}.parquet"
+        pq.write_table(t, out / rel, compression="zstd")
+        resources.append({
+            "resource_id": resource, "layer": "core", "kind": "table",
+            "schema_id": f"{resource}.v0.1", "physical_profile": "parquet",
+            "uri": rel, "canonical": True, "validation_state": "not_run"})
+
+    (out / "schemas" / "logical_schemas.json").write_text(
+        json.dumps(REGISTRY, indent=2) + "\n")
+    (out / "schemas" / "semantic_version.txt").write_text(
+        REGISTRY["semantic_standard_version"] + "\n")
+
+    sessions = sorted({r["session_id"] for r in tables["core.sessions"]})
+    (out / "nwb.packet.json").write_text(json.dumps({
+        "packet_id": out.name,
+        "packet_version": "0.1.0",
+        "profile_id": "nwb-lake-portable-v0.1",
+        "semantic_standard_version": REGISTRY["semantic_standard_version"],
+        "logical_standard_version": REGISTRY["logical_standard_version"],
+        "registry_version": REGISTRY["registry_version"],
+        "created_at": "2026-08-26T00:00:00Z",
+        "dataset_id": "nwb_lake_phase0",
+        "description": "Phase 0 synthetic fixture, single session (R1 §6).",
+        "sessions": sessions,
+        "required_codecs": [],
+        "resources": resources,
+        "validation": {"status": "not_run", "validated_at": "2026-08-26T00:00:00Z",
+                       "validator_name": "nwb_lake_validate", "validator_version": "0.1.0"},
+        "provenance": {"import_processing_run_id": "run_import_001"},
+    }, indent=2) + "\n")
+
+
+# Each variant violates exactly one rule, so the corpus demonstrates that each check fires.
+def variants():
+    def dup_pk(c):
+        c["core.trials"].append(dict(c["core.trials"][0]))
+    def orphan_fk(c):
+        c["core.trials"][1]["clock_id"] = "no_such_clock"
+    def null_required(c):
+        c["core.events"][2]["event_type"] = None
+    def bad_vocabulary(c):
+        c["core.units"][0]["quality_label"] = "good"        # the Phy label, unmapped
+    def bad_interval(c):
+        c["core.trials"][1]["stop_tick"] = 5999             # before its start_tick
+    def stale_summary(c):
+        c["core.units"][0]["n_spikes"] += 5
+    def missing_amplitude_unit(c):
+        c["core.sorting_runs"][0]["amplitude_unit"] = None
+    def half_transform(c):
+        c["core.clocks"][1]["transform_offset"] = None
+    def unsorted_spikes(c):
+        s = c["core.spike_events"]
+        s[3], s[4] = s[4], s[3]
+    def orphan_manifest_session(c):
+        c["core.sessions"][0]["session_id"] = "s999"        # manifest still says s001
+    return {"dup_pk": dup_pk, "orphan_fk": orphan_fk, "null_required": null_required,
+            "bad_vocabulary": bad_vocabulary, "bad_interval": bad_interval,
+            "stale_summary": stale_summary,
+            "missing_amplitude_unit": missing_amplitude_unit,
+            "half_transform": half_transform, "unsorted_spikes": unsorted_spikes,
+            "orphan_manifest_session": orphan_manifest_session}
+
+
+def main():
+    root = HERE / "packets"
+    write_packet(root / "valid", content())
+    print(f"valid                     {sum(len(v) for v in content().values()):>5d} rows")
+
+    for name, mutate in variants().items():
+        c = content()
+        mutate(c)
+        if name == "unsorted_spikes":               # must defeat the writer's sort
+            write_packet(root / name, c, unsorted=frozenset({"core.spike_events"}))
+        elif name == "orphan_manifest_session":     # manifest must keep the original id
+            write_packet(root / name, c)
+            m = json.loads((root / name / "nwb.packet.json").read_text())
+            m["sessions"] = ["s001"]
+            (root / name / "nwb.packet.json").write_text(json.dumps(m, indent=2) + "\n")
+        else:
+            write_packet(root / name, c)
+        print(f"{name:26s}written")
+
+    # Two variants must break the physical schema, not the data.
+    c = content()
+    t = table("core.trials", c["core.trials"])
+    wrong = t.set_column(t.schema.get_field_index("start_tick"), "start_tick",
+                         t.column("start_tick").cast(pa.int32()))
+    write_packet(root / "bad_type", c, raw={"core.trials": wrong})
+    print(f"{'bad_type':26s}written")
+
+    c = content()
+    t = table("core.trials", c["core.trials"])
+    write_packet(root / "missing_column", c,
+                 raw={"core.trials": t.drop_columns(["condition_id"])})
+    print(f"{'missing_column':26s}written")
+
+
+if __name__ == "__main__":
+    main()
