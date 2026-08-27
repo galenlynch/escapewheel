@@ -1021,6 +1021,70 @@
       ],
       "rules": []
     },
+    "core.event_stream_observation_intervals": {
+      "columns": [
+        {
+          "name": "event_stream_id",
+          "type": "string",
+          "presence": "required",
+          "description": "The stream being observed."
+        },
+        {
+          "name": "interval_index",
+          "type": "int64",
+          "presence": "required",
+          "description": "0-based position in this stream's interval sequence."
+        },
+        {
+          "name": "start_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "First observed tick, on the stream's clock."
+        },
+        {
+          "name": "stop_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "Last observed tick, on the stream's clock."
+        }
+      ],
+      "primary_key": [
+        "event_stream_id",
+        "interval_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "event_stream_id"
+          ],
+          "resource": "core.event_streams",
+          "resource_columns": [
+            "event_stream_id"
+          ]
+        }
+      ],
+      "sort": null,
+      "rules": [
+        {
+          "id": "core.event_stream_observation_intervals.interval_valid",
+          "level": "error",
+          "message": "stop_tick precedes start_tick",
+          "sql": "SELECT event_stream_id, interval_index, start_tick, stop_tick FROM core_event_stream_observation_intervals WHERE stop_tick < start_tick"
+        },
+        {
+          "id": "core.event_stream_observation_intervals.index_contiguous",
+          "level": "error",
+          "message": "interval_index is not contiguous from 0",
+          "sql": "SELECT event_stream_id, COUNT(*) AS n FROM core_event_stream_observation_intervals GROUP BY event_stream_id HAVING MAX(interval_index) <> COUNT(*) - 1 OR MIN(interval_index) <> 0"
+        },
+        {
+          "id": "core.event_stream_observation_intervals.non_overlapping",
+          "level": "error",
+          "message": "observation windows overlap, which would double-count observed time",
+          "sql": "SELECT event_stream_id, interval_index, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY event_stream_id ORDER BY interval_index) AS prev_stop FROM core_event_stream_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
+        }
+      ]
+    },
     "core.event_streams": {
       "columns": [
         {
@@ -1108,7 +1172,15 @@
         }
       ],
       "sort": null,
-      "rules": []
+      "rules": [
+        {
+          "id": "core.event_streams.observation_declared",
+          "level": "info",
+          "advisory": true,
+          "message": "streams carry no observation intervals, so no rate over them has a denominator",
+          "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s LEFT JOIN core_event_stream_observation_intervals o ON s.event_stream_id = o.event_stream_id WHERE o.event_stream_id IS NULL"
+        }
+      ]
     },
     "core.events": {
       "columns": [
@@ -1615,6 +1687,12 @@
           "description": "Session start time if known; if unknown use explicit null only in non-strict test packets."
         },
         {
+          "name": "session_end_time",
+          "type": "timestamp",
+          "presence": "nullable",
+          "description": "When the session ended, UTC. Metadata, not derived from the tables (R25 5)."
+        },
+        {
           "name": "session_description",
           "type": "string",
           "presence": "nullable",
@@ -1668,6 +1746,12 @@
           "level": "error",
           "message": "the manifest sessions list disagrees with core.sessions",
           "sql": "SELECT session_id FROM core_sessions WHERE session_id NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_id FROM core_sessions)"
+        },
+        {
+          "id": "core.sessions.session_interval_valid",
+          "level": "error",
+          "message": "session_end_time precedes session_start_time",
+          "sql": "SELECT session_id, session_start_time, session_end_time FROM core_sessions WHERE session_end_time < session_start_time"
         }
       ]
     },
@@ -2486,6 +2570,13 @@
           "level": "error",
           "message": "quality_label and quality_label_source must be present together",
           "sql": "SELECT session_id, unit_id FROM core_units WHERE (quality_label IS NULL) <> (quality_label_source IS NULL)"
+        },
+        {
+          "id": "core.units.observation_declared",
+          "level": "info",
+          "advisory": true,
+          "message": "units carry no observation intervals, so no rate over them has a denominator",
+          "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id FROM core_units u LEFT JOIN core_unit_observation_intervals o ON u.session_id = o.session_id AND u.unit_id = o.unit_id AND u.sorting_run_id = o.sorting_run_id AND u.curation_id = o.curation_id WHERE o.unit_id IS NULL"
         }
       ]
     }

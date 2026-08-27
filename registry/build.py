@@ -388,6 +388,25 @@ def build() -> dict:
         {"columns": ["stream_id"], "resource": "core.event_streams",
          "resource_columns": ["event_stream_id"]})
 
+    # ---- R25 §2 : streams drop out too; absence of an event is ambiguous without this -------
+    tables["core.event_stream_observation_intervals"] = {
+        "columns": [col("event_stream_id", "string", "required", "The stream being observed."),
+                    col("interval_index", "int64", "required",
+                        "0-based position in this stream's interval sequence."),
+                    col("start_tick", "int64", "required",
+                        "First observed tick, on the stream's clock."),
+                    col("stop_tick", "int64", "required",
+                        "Last observed tick, on the stream's clock.")],
+        "primary_key": ["event_stream_id", "interval_index"],
+        # No clock_id: core.event_streams declares one, and an interval is meaningless without
+        # joining to its stream anyway, so repeating it buys nothing (R25 2.1).
+        "references": [{"columns": ["event_stream_id"], "resource": "core.event_streams",
+                        "resource_columns": ["event_stream_id"]}],
+        "sort": None, "rules": []}
+    add_col("core.sessions", col("session_end_time", "timestamp", "nullable",
+            "When the session ended, UTC. Metadata, not derived from the tables (R25 5)."),
+            after="session_start_time")
+
     # ---- R13 §3 : anchor-point clock alignment ------------------------------------------------
     tables["core.clock_anchors"] = {
         "columns": [col("clock_id", "string", "required", "The clock being aligned."),

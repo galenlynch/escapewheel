@@ -91,6 +91,12 @@
         "level": "error",
         "message": "the manifest sessions list disagrees with core.sessions",
         "sql": "SELECT session_id FROM core_sessions WHERE session_id NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_id FROM core_sessions)"
+      },
+      {
+        "id": "core.sessions.session_interval_valid",
+        "level": "error",
+        "message": "session_end_time precedes session_start_time",
+        "sql": "SELECT session_id, session_start_time, session_end_time FROM core_sessions WHERE session_end_time < session_start_time"
       }
     ],
     "core.sorting_runs": [
@@ -134,6 +140,13 @@
         "level": "error",
         "message": "quality_label and quality_label_source must be present together",
         "sql": "SELECT session_id, unit_id FROM core_units WHERE (quality_label IS NULL) <> (quality_label_source IS NULL)"
+      },
+      {
+        "id": "core.units.observation_declared",
+        "level": "info",
+        "advisory": true,
+        "message": "units carry no observation intervals, so no rate over them has a denominator",
+        "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id FROM core_units u LEFT JOIN core_unit_observation_intervals o ON u.session_id = o.session_id AND u.unit_id = o.unit_id AND u.sorting_run_id = o.sorting_run_id AND u.curation_id = o.curation_id WHERE o.unit_id IS NULL"
       }
     ],
     "core.clock_anchors": [
@@ -208,6 +221,28 @@
         "level": "error",
         "message": "an event's clock_id disagrees with its stream's",
         "sql": "SELECT e.session_id, e.event_id, e.clock_id, s.clock_id AS stream_clock_id FROM core_events e JOIN core_event_streams s ON e.stream_id = s.event_stream_id WHERE e.clock_id <> s.clock_id"
+      }
+    ],
+    "core.event_stream_observation_intervals": [
+      {
+        "use": "interval",
+        "start": "start_tick",
+        "stop": "stop_tick",
+        "partition_of": [
+          "event_stream_id"
+        ],
+        "index": "interval_index",
+        "overlap_op": "<=",
+        "overlap_message": "observation windows overlap, which would double-count observed time"
+      }
+    ],
+    "core.event_streams": [
+      {
+        "id": "core.event_streams.observation_declared",
+        "level": "info",
+        "advisory": true,
+        "message": "streams carry no observation intervals, so no rate over them has a denominator",
+        "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s LEFT JOIN core_event_stream_observation_intervals o ON s.event_stream_id = o.event_stream_id WHERE o.event_stream_id IS NULL"
       }
     ]
   }

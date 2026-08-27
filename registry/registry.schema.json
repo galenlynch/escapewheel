@@ -244,8 +244,37 @@
           "description": "Returns offending rows; empty is a pass (R2 \u00a77.3).",
           "type": "string",
           "minLength": 1
+        },
+        "advisory": {
+          "description": "Off by default; runs only when the caller asks (R26 \u00a73). Never `error`, so enabling advisories cannot change whether a packet passed.",
+          "type": "boolean",
+          "default": false
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "advisory": {
+                "const": true
+              }
+            },
+            "required": [
+              "advisory"
+            ]
+          },
+          "then": {
+            "properties": {
+              "level": {
+                "enum": [
+                  "warning",
+                  "info"
+                ]
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
