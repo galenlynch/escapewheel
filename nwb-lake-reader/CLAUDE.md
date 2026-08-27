@@ -19,9 +19,9 @@ This repository implements a specification maintained in sibling repositories un
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. |
-| `revisions/` | R1–R20, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (28 tables), its meta-schema, and the manifest JSON Schema. |
-| `fixtures/` | Phase 0 packets and the conformance corpus — 13 packets with expected findings as data. |
+| `revisions/` | R1–R23, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `registry/` | `logical_schemas.json` (29 tables), its meta-schema, and the manifest JSON Schema. |
+| `fixtures/` | Phase 0 packets and the conformance corpus — 15 packets with expected findings as data. |
 | `conformance/` | Probes producing the measured evidence the revisions cite. |
 | `nwb-lake-validator/` | Phase 2. Depends on this package; adds `nwb-lake validate`. |
 | `nwb-lake-writer/` | Phase 3. Depends on the validator; adds `nwb-lake import`. |
@@ -103,7 +103,7 @@ These are not local preferences; changing them breaks conformance.
   over it. `scan()` returns a lazy dataset for what constraints cannot express.
 
   This shape was chosen over adding a second, faster name for users to discover. Five of the
-  28 tables grow large — `spike_events`, `events`, `media_frames`, `trials`, `trial_tags` —
+  29 tables grow large — `spike_events`, `events`, `media_frames`, `trials`, `trial_tags` —
   and under R1's multi-session extension every table scales with session count, so a
   read-everything default would be wrong in the general case rather than in a corner.
 - **No registry is bundled.** Reading never needs one; `Packet` exposes the copy a packet
