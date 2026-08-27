@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +16,10 @@ from .resources import TableResource
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
     import pyarrow as pa
+
+#: What a column constraint may be: a scalar for equality, a two-item tuple for a closed
+#: range, or None to leave the column unconstrained.
+Predicate = str | int | float | bool | tuple[Any, Any] | None
 
 REGISTRY_PATH = "schemas/logical_schemas.json"
 
@@ -192,8 +196,53 @@ class Packet:
 
     # -- tabular access ---------------------------------------------------------------
 
-    def table(self, resource_id: str) -> pa.Table:
-        """Read a table resource into memory.
+    def table(
+        self,
+        resource_id: str,
+        *,
+        columns: list[str] | None = None,
+        **where: Predicate,
+    ) -> pa.Table:
+        """Read a table resource into memory, optionally narrowed.
+
+        Constraints are pushed into the Parquet reader rather than applied afterwards, so
+        row groups that cannot match are never decompressed. Selecting one unit from nine
+        million spikes takes 4 ms this way against 25 ms for reading and then filtering.
+
+        Reading goes through PyArrow, not a SQL engine, so a packet stays readable with the
+        ``sql`` extra absent.
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID.
+        columns : list of str, optional
+            Read only these columns. Reading every column is the default.
+        **where : str, int, float, bool, tuple, or None
+            Column constraints. A scalar means equality, a two-item tuple means a closed
+            range, and ``None`` leaves the column unconstrained.
+
+        Returns
+        -------
+        pyarrow.Table
+            Matching rows, in stored order.
+
+        Examples
+        --------
+        >>> packet.table("core.events", event_type="reward")           # doctest: +SKIP
+        >>> packet.table("core.spike_events", t_tick=(30_000, 60_000))  # doctest: +SKIP
+        """
+        if not where and columns is None:
+            return self.table_resource(resource_id).to_arrow()
+        dataset = self.table_resource(resource_id).dataset()
+        return dataset.to_table(columns=columns, filter=self._predicate(where))
+
+    def scan(self, resource_id: str) -> pads.Dataset:
+        """Open a resource lazily, without reading it.
+
+        Use this for what constraints cannot express: streaming a resource too large to
+        materialize, handing a dataset to another library, or composing an expression that
+        :meth:`table` does not cover.
 
         Parameters
         ----------
@@ -202,10 +251,10 @@ class Packet:
 
         Returns
         -------
-        pyarrow.Table
-            The table, read in stored order.
+        pyarrow.dataset.Dataset
+            A lazy dataset over the resource.
         """
-        return self.table_resource(resource_id).to_arrow()
+        return self.table_resource(resource_id).dataset()
 
     def duckdb(self, *, connection: duckdb.DuckDBPyConnection | None = None) -> duckdb.DuckDBPyConnection:
         """Register every table resource as a view and return the connection.
@@ -261,24 +310,26 @@ class Packet:
 
     # -- convenience accessors --------------------------------------------------------
 
-    def _filtered(self, resource_id: str, columns: list[str] | None = None, **equals: str | None) -> pa.Table:
-        """Read a resource, keeping rows whose columns equal the given values.
+    @staticmethod
+    def _predicate(where: Mapping[str, Predicate]) -> pads.Expression | None:
+        """Build a dataset expression from column constraints.
 
-        The predicate is pushed into the Parquet reader rather than applied after loading,
-        so row groups that cannot match are never decompressed. On a nine-million-row spike
-        table selecting one unit, that is the difference between 25 ms and 5 ms.
-
-        Filtering goes through PyArrow rather than a SQL engine so that a packet stays
-        readable with the ``sql`` extra absent.
+        A scalar means equality; a two-item tuple means a closed range; ``None`` means the
+        column is unconstrained. An unknown column raises when the expression is applied,
+        rather than silently matching nothing.
         """
-        predicate = None
-        for column, value in equals.items():
+        expression: pads.Expression | None = None
+        for column, value in where.items():
             if value is None:
                 continue
-            term = pads.field(column) == value
-            predicate = term if predicate is None else predicate & term
-        dataset = self.table_resource(resource_id).dataset()
-        return dataset.to_table(columns=columns, filter=predicate)
+            field = pads.field(column)
+            if isinstance(value, tuple):
+                low, high = value
+                term = (field >= low) & (field <= high)
+            else:
+                term = field == value
+            expression = term if expression is None else expression & term
+        return expression
 
     def trials(self, *, session_id: str | None = None, condition_id: str | None = None) -> pa.Table:
         """Read ``core.trials``, optionally filtered.
@@ -295,7 +346,7 @@ class Packet:
         pyarrow.Table
             Matching trials.
         """
-        return self._filtered("core.trials", session_id=session_id, condition_id=condition_id)
+        return self.table("core.trials", session_id=session_id, condition_id=condition_id)
 
     def units(self, *, session_id: str | None = None, quality_label: str | None = None) -> pa.Table:
         """Read ``core.units``, optionally filtered.
@@ -312,9 +363,15 @@ class Packet:
         pyarrow.Table
             Matching units.
         """
-        return self._filtered("core.units", session_id=session_id, quality_label=quality_label)
+        return self.table("core.units", session_id=session_id, quality_label=quality_label)
 
-    def events(self, *, event_type: str | None = None, session_id: str | None = None) -> pa.Table:
+    def events(
+        self,
+        *,
+        event_type: str | None = None,
+        session_id: str | None = None,
+        t_tick: tuple[int, int] | None = None,
+    ) -> pa.Table:
         """Read ``core.events``, optionally filtered.
 
         Parameters
@@ -324,13 +381,16 @@ class Packet:
             value is not an error, only empty.
         session_id : str, optional
             Keep only this session.
+        t_tick : tuple of int, optional
+            Keep only events within this closed tick range. Ticks are only comparable
+            within one clock, so pair this with a session or an event type that pins one.
 
         Returns
         -------
         pyarrow.Table
             Matching events.
         """
-        return self._filtered("core.events", event_type=event_type, session_id=session_id)
+        return self.table("core.events", event_type=event_type, session_id=session_id, t_tick=t_tick)
 
     def spike_times(
         self,
@@ -339,6 +399,7 @@ class Packet:
         session_id: str | None = None,
         sorting_run_id: str | None = None,
         curation_id: str | None = None,
+        t_tick: tuple[int, int] | None = None,
     ) -> pa.Table:
         """Read one unit's spike times.
 
@@ -355,19 +416,22 @@ class Packet:
             The unit.
         session_id, sorting_run_id, curation_id : str, optional
             Narrow the unit's identifying context.
+        t_tick : tuple of int, optional
+            Keep only spikes within this closed tick range, on the unit's own clock.
 
         Returns
         -------
         pyarrow.Table
             Columns ``t_tick`` and ``clock_id``, in stored order.
         """
-        return self._filtered(
+        return self.table(
             "core.spike_events",
-            ["t_tick", "clock_id"],
+            columns=["t_tick", "clock_id"],
             unit_id=unit_id,
             session_id=session_id,
             sorting_run_id=sorting_run_id,
             curation_id=curation_id,
+            t_tick=t_tick,
         )
 
 

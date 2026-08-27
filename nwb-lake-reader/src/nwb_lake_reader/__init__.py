@@ -18,7 +18,7 @@ from .errors import (
     UnsupportedCodecError,
 )
 from .manifest import Manifest, Resource
-from .packet import BASELINE_CODECS, Packet, open_packet
+from .packet import BASELINE_CODECS, Packet, Predicate, open_packet
 from .resources import TableResource
 
 __version__ = version("nwb-lake-reader")
@@ -29,6 +29,7 @@ __all__ = [
     "ManifestError",
     "Packet",
     "PacketError",
+    "Predicate",
     "Resource",
     "ResourceNotFoundError",
     "ResourceUnreadableError",

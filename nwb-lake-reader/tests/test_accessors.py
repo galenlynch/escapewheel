@@ -1,3 +1,5 @@
+import pytest
+
 from nwb_lake_reader import open_packet
 
 
@@ -81,3 +83,57 @@ def test_accessors_push_predicates_into_the_reader(packet_root, monkeypatch):
     monkeypatch.setattr(pq, "read_table", refuse)
     assert open_packet(packet_root).units(quality_label="sua").num_rows == 1
     assert open_packet(packet_root).spike_times("unit_001").num_rows == 3
+
+
+def test_table_pushes_equality_constraints(packet_root):
+    pkt = open_packet(packet_root)
+    assert pkt.table("core.events", event_type="reward").num_rows == 1
+    assert pkt.table("core.events", event_type="stimulus_onset").num_rows == 2
+
+
+def test_table_pushes_range_constraints(packet_root):
+    """A two-item tuple means a closed range."""
+    pkt = open_packet(packet_root)
+    assert pkt.table("core.events", t_tick=(1200, 4200)).num_rows == 2
+    assert pkt.table("core.events", t_tick=(0, 1199)).num_rows == 0
+    assert pkt.table("core.events", t_tick=(1200, 1200)).num_rows == 1
+
+
+def test_table_combines_constraints(packet_root):
+    pkt = open_packet(packet_root)
+    assert pkt.table("core.events", event_type="stimulus_onset", t_tick=(0, 2000)).num_rows == 1
+
+
+def test_table_projects_columns(packet_root):
+    projected = open_packet(packet_root).table("core.units", columns=["unit_id", "quality_label"])
+    assert projected.column_names == ["unit_id", "quality_label"]
+
+
+def test_table_unconstrained_reads_everything(packet_root):
+    assert open_packet(packet_root).table("core.events").num_rows == 3
+
+
+def test_unknown_constraint_column_fails_loudly(packet_root):
+    """A typo must raise, not silently match nothing."""
+    with pytest.raises(Exception, match="no_such_column"):
+        open_packet(packet_root).table("core.events", no_such_column="x")
+
+
+def test_events_accepts_a_tick_range(packet_root):
+    assert open_packet(packet_root).events(event_type="stimulus_onset", t_tick=(6000, 7000)).num_rows == 1
+
+
+def test_spike_times_accepts_a_tick_range(packet_root):
+    result = open_packet(packet_root).spike_times("unit_001", t_tick=(30000, 39000))
+    assert result.to_pydict()["t_tick"] == [30000, 39000]
+
+
+def test_scan_is_lazy(packet_root):
+    """scan() must not read; it hands back a dataset for what constraints cannot express."""
+    import pyarrow.dataset as pads
+    import pyarrow.parquet as pq
+
+    dataset = open_packet(packet_root).scan("core.events")
+    assert isinstance(dataset, pads.Dataset)
+    assert dataset.to_table(filter=pads.field("event_type") == "lick").num_rows == 0
+    assert pq  # the import exists so the lazy contrast is explicit

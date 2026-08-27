@@ -94,9 +94,16 @@ These are not local preferences; changing them breaks conformance.
   optional is what *enforces* that: as a hard dependency, nothing would stop a read path
   growing to require it and the format's portability claim eroding silently.
 
-- **Accessors push predicates into the reader.** `_filtered` builds a `pyarrow.dataset`
-  expression rather than loading a table and filtering it, so row groups that cannot match
-  are never decompressed — 4.4 ms against 24.8 ms on the same query.
+- **The discoverable call is the efficient one.** `table(resource_id, columns=..., **where)`
+  pushes constraints into the Parquet reader — a scalar means equality, a two-item tuple a
+  closed range — so row groups that cannot match are never decompressed. 4.4 ms against
+  24.8 ms selecting one unit from nine million spikes. The named accessors are typed sugar
+  over it. `scan()` returns a lazy dataset for what constraints cannot express.
+
+  This shape was chosen over adding a second, faster name for users to discover. Five of the
+  22 tables grow large — `spike_events`, `events`, `media_frames`, `trials`, `trial_tags` —
+  and under R1's multi-session extension every table scales with session count, so a
+  read-everything default would be wrong in the general case rather than in a corner.
 - **Validation splits by what a query can see** (R12 §4). SQL covers what the data *says* —
   values, keys, references, vocabularies. The Python layers cover how it is *stored* —
   column presence, Parquet types, physical order. A storage-layer check written as SQL fails
