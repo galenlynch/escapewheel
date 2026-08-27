@@ -15,8 +15,18 @@ classifiers = ["Programming Language :: Python :: 3"]
 readme = "README.md"
 version = "0.1.0"
 
+# The reader is the read path; the `sql` extra brings DuckDB, which the rules need because
+# they are SQL. jsonschema validates the registry a packet embeds against R2's meta-schema.
 dependencies = [
+    "nwb-lake-reader[sql]",
+    "jsonschema>=4.26.0",
+    "pyarrow>=25.0.1",
 ]
+
+[project.entry-points."nwb_lake.commands"]
+# `07` names one CLI. nwb-lake-reader owns the console script and discovers this group, so
+# two packages never compete for the `nwb-lake` name under [project.scripts].
+validate = "nwb_lake_validator.scripts.cli:register"
 
 [project.urls]
 Repository = "https://github.com/AllenNeuralDynamics/nwb-lake-validator/"
@@ -28,7 +38,11 @@ Changelog = "https://github.com/AllenNeuralDynamics/nwb-lake-validator/blob/main
 # my_command = "nwb_lake_validator.scripts.my_command:main"
 
 [dependency-groups]
-types = ["mypy"]
+types = [
+    "mypy",
+    "pyarrow-stubs>=20.0.0.20260819",
+    "types-jsonschema>=4.26.0.20260518",
+]
 dev = [{ include-group = "types" }, "codespell", "pytest", "pytest-cov", "ruff", "interrogate"]
 jupyter = [{ include-group = "dev" }, "ipykernel", "pip"]
 docs = [
@@ -96,3 +110,7 @@ module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
+
+[tool.uv.sources]
+# Sibling repo; nothing is published yet.
+nwb-lake-reader = { path = "../nwb-lake-reader", editable = true }

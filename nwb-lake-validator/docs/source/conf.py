@@ -5,7 +5,7 @@
 
 # -- Path Setup --------------------------------------------------------------
 import sys
-from datetime import date
+from datetime import datetime, timezone
 from os.path import abspath, dirname
 from pathlib import Path
 
@@ -13,11 +13,11 @@ from pathlib import Path
 project_root = abspath(dirname(dirname(dirname(__file__))))
 sys.path.insert(0, str(Path(project_root) / "src"))
 
-from nwb_lake_validator import __version__ as package_version # noqa:E402
+from nwb_lake_validator import __version__ as package_version  # noqa:E402
 
 INSTITUTE_NAME = "Allen Institute for Neural Dynamics"
 
-current_year = date.today().year
+current_year = datetime.now(tz=timezone.utc).year
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -41,7 +41,6 @@ extensions = [
     "myst_parser",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
-    
 ]
 
 templates_path = ["_templates"]
