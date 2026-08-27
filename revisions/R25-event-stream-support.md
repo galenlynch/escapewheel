@@ -83,6 +83,31 @@ the denominator §1 exists to provide. This is stated rather than inherited, per
 Three checks are generated — `interval_valid`, `index_contiguous`, `non_overlapping` — and no
 SQL is written.
 
+### 3.1 Events must fall inside the windows their stream declares
+
+Observation intervals are **supplied, never inferred**. Nothing derives a window from the
+events in it, and nothing may: a window is a claim about when the sensor was recording, which
+the events themselves cannot establish — that is the whole point of §1's ambiguity.
+
+Supplied claims need checking against the data, which is the counterpart R18 §3 wrote for
+spikes and this revision owes for events:
+
+```sql
+-- core.events.within_observation  (warning)
+SELECT e.session_id, e.event_id, e.stream_id, e.t_tick FROM core_events e
+WHERE EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o
+              WHERE o.event_stream_id = e.stream_id)
+  AND NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o
+                  WHERE o.event_stream_id = e.stream_id
+                    AND e.t_tick BETWEEN o.start_tick AND o.stop_tick)
+```
+
+The `EXISTS` guard means a stream declaring no windows is unchecked rather than in violation —
+absence stays legal (§2), and R26's advisory rule is what mentions it.
+
+`warning` rather than `error`, on R18 §3's reasoning: a boundary convention may legitimately
+place an event at an edge, and one stray event does not void a packet.
+
 ## 4. Session extent is not a tick range
 
 An earlier sketch of this revision gave `core.sessions` a `clock_id`, `start_tick` and
