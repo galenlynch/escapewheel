@@ -51,7 +51,9 @@ def spikes(unit, run, cur, clock, ticks):
 
 def content() -> dict[str, list[dict]]:
     u1 = list(range(30_000, 300_000, 9_000))     # unit_001, ~3.3 Hz on the AP clock
-    u2 = list(range(45_000, 300_000, 21_000))    # unit_002, sparser
+    # unit_002 drops out between 120k and 150k, so it has no spikes there: the windows
+    # declared below and these spikes must agree (core.spike_events.within_observation).
+    u2 = [t for t in range(45_000, 300_000, 21_000) if not 120_000 < t < 150_000]
     return {
         "core.sessions": [{"session_id": "s001", "subject_id": "m001",
                            "session_start_time": START,
@@ -272,6 +274,13 @@ def variants():
             {"session_id": "s001", "unit_id": "unit_003", "sorting_run_id": "sort_ks4_001",
              "curation_id": "curation_001", "source": "bombcell", "label": "good",
              "normalized_label": "mua", "confidence": None})
+    def spike_outside_window(c):
+        # a spike in unit_002's declared drop-out, which its windows say was not observed
+        c["core.spike_events"].append(
+            {"session_id": "s001", "unit_id": "unit_002", "sorting_run_id": "sort_ks4_001",
+             "curation_id": "curation_001", "t_tick": 129_000, "clock_id": "imec_ap_s001",
+             "amplitude": -80.0})
+        c["core.units"][1]["n_spikes"] += 1
     def stream_clock_mismatch(c):
         # An event on a clock its own stream does not declare (R23 4.2).
         c["core.events"][0]["clock_id"] = "imec_ap_s001"
@@ -283,6 +292,7 @@ def variants():
             "missing_amplitude_unit": missing_amplitude_unit,
             "half_transform": half_transform, "unsorted_spikes": unsorted_spikes,
             "inconsistent_projection": inconsistent_projection,
+            "spike_outside_window": spike_outside_window,
             "stream_clock_mismatch": stream_clock_mismatch,
             "orphan_manifest_session": orphan_manifest_session}
 
