@@ -224,9 +224,17 @@ class Packet:
         duckdb.DuckDBPyConnection
             The connection, with every readable table resource registered.
         """
-        import duckdb as _duckdb
-
-        con = connection if connection is not None else _duckdb.connect()
+        if connection is not None:
+            con = connection
+        else:
+            try:
+                import duckdb as _duckdb
+            except ImportError as exc:  # pragma: no cover - exercised only without the extra
+                raise ImportError(
+                    "SQL access requires duckdb; install the 'validate' extra. Reading a packet "
+                    "does not require it: use table(), the accessors, or TableResource.dataset()."
+                ) from exc
+            con = _duckdb.connect()
         for resource in self.resources(kind="table") + self.resources(kind="materialized_table"):
             handle = TableResource(resource, self._root)
             try:

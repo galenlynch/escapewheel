@@ -36,18 +36,24 @@ and URI resolution; `TableResource` for reading, lazy `dataset()` access, DuckDB
 registration, and an optional Polars scan; convenience accessors `trials()`, `units()`,
 `events()`, `spike_times()`; and the `nwb-lake ls` and `nwb-lake sql` subcommands.
 
-**Not yet.** Validation (Phase 2) — the rule generator currently lives in
-`../prototype/registry-codegen/` and moves here or into a sibling package. Zarr array access
-(Phase 5). Writing, importing, and analysis materialization are separate concerns and
-probably separate packages; this one stays a reader.
+**Also delivered (Phase 2).** `nwb_lake_reader.validation` — Tier 1 checks generated from
+the registry's structure, Tier 2 rules carried in it, and the schema and ordering layers SQL
+cannot express. `nwb-lake validate` runs them. It lives behind the `validate` extra so that
+DuckDB stays optional.
+
+**Not yet.** Zarr array access (Phase 5). Writing, importing, and analysis materialization
+are separate concerns and probably separate packages; this one stays a reader and a
+validator.
 
 ## Architecture
 
 ```
-Packet         opened packet; resolves resources, exposes accessors, registers DuckDB views
-Manifest       parsed nwb.packet.json, validated against its JSON Schema
-Resource       one manifest entry: id, layer, kind, uri, plus the raw entry
-TableResource  a Resource bound to a root; reads, opens lazily, registers, scans
+Packet                 opened packet; resolves resources, accessors, DuckDB registration
+Manifest               parsed nwb.packet.json, validated against its JSON Schema
+Resource               one manifest entry: id, layer, kind, uri, plus the raw entry
+TableResource          a Resource bound to a root; reads, opens lazily, registers, scans
+validation.generate    registry -> Tier 1 checks, plus its Tier 2 rules
+validation.validate    four layers over a packet, returning a Report
 ```
 
 `Resource` records what the manifest *says*; `TableResource` reads it. `ArrayResource`
@@ -76,9 +82,15 @@ These are not local preferences; changing them breaks conformance.
   from Phase 5.
 - **DuckDB is required for validation and deliberately not for reading.** The ban on nested
   Parquet types (R3 §2.1) is what keeps Parquet2.jl a working native Julia read path —
-  measured, in `conformance/parquet-probe/`. The convenience accessors filter through
-  PyArrow for this reason, and `tests/test_accessors.py` asserts that reading a packet never
-  imports DuckDB. Do not introduce a read path that requires it.
+  measured, in `conformance/parquet-probe/`. So DuckDB is an *optional extra*, the accessors
+  filter through PyArrow, and `tests/test_accessors.py` asserts that reading never imports
+  it. Do not introduce a read path that requires it.
+- **Validation splits by what a query can see** (R12 §4). SQL covers what the data *says* —
+  values, keys, references, vocabularies. The Python layers cover how it is *stored* —
+  column presence, Parquet types, physical order. A storage-layer check written as SQL fails
+  silently rather than loudly, which is how R12 came to exist.
+- **No registry is bundled.** `validate()` uses the packet's embedded copy (R2 §8) or one
+  passed explicitly. Bundling a reference copy would let it go stale against `../registry/`.
 - **Tables are flat primitives.** No `struct`, `map`, or `list` columns exist anywhere in the
   registry. Repeated values are child tables (`core.trial_tags`, `core.array_dimensions`,
   `core.session_experimenters`); JSON strings appear only in optional columns.

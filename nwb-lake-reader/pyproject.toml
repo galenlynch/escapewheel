@@ -16,12 +16,14 @@ readme = "README.md"
 version = "0.1.0"
 
 dependencies = [
-    "duckdb>=1.5.5",
     "jsonschema>=4.26.0",
     "pyarrow>=25.0.1",
 ]
 
 [project.optional-dependencies]
+# Reading a packet never requires a SQL engine; the nested-type ban (R3 2.1) exists to
+# keep a native reader viable in languages without one. Validation does require DuckDB.
+validate = ["duckdb>=1.5.5"]
 polars = ["polars>=1.0"]
 
 [project.urls]

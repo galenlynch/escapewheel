@@ -69,10 +69,14 @@ def test_sql_across_resources(packet_root):
 
 
 def test_embedded_registry_is_exposed(packet_root):
-    assert open_packet(packet_root).registry == {
-        "registry_version": "0.1.0",
-        "logical_standard_version": "nwb-lake-logical-v0.1",
-        "tables": {},
+    registry = open_packet(packet_root).registry
+    assert registry["registry_version"] == "0.1.0"
+    assert set(registry["tables"]) == {
+        "core.sessions",
+        "core.trials",
+        "core.units",
+        "core.events",
+        "core.spike_events",
     }
 
 

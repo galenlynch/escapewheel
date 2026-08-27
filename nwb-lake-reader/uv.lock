@@ -1367,7 +1367,6 @@ name = "nwb-lake-reader"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "duckdb" },
     { name = "jsonschema" },
     { name = "pyarrow" },
 ]
@@ -1375,6 +1374,9 @@ dependencies = [
 [package.optional-dependencies]
 polars = [
     { name = "polars" },
+]
+validate = [
+    { name = "duckdb" },
 ]
 
 [package.dev-dependencies]
@@ -1428,12 +1430,12 @@ types = [
 
 [package.metadata]
 requires-dist = [
-    { name = "duckdb", specifier = ">=1.5.5" },
+    { name = "duckdb", marker = "extra == 'validate'", specifier = ">=1.5.5" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0" },
     { name = "pyarrow", specifier = ">=25.0.1" },
 ]
-provides-extras = ["polars"]
+provides-extras = ["validate", "polars"]
 
 [package.metadata.requires-dev]
 dev = [

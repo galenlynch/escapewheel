@@ -29,6 +29,114 @@ def _resource(resource_id, uri, **extra):
     return entry
 
 
+def _col(name, type_, presence, **extra):
+    return {"name": name, "type": type_, "presence": presence, "description": name, **extra}
+
+
+def _registry():
+    """A registry describing exactly the tables the fixture writes."""
+    return {
+        "registry_version": "0.1.0",
+        "semantic_standard_version": "nwb-lake-semantic-v0.1",
+        "logical_standard_version": "nwb-lake-logical-v0.1",
+        "tables": {
+            "core.sessions": {
+                "columns": [
+                    _col("session_id", "string", "required"),
+                    _col("subject_id", "string", "required"),
+                    _col("session_start_time", "timestamp", "required"),
+                ],
+                "primary_key": ["session_id"],
+                "references": [],
+                "sort": ["session_id"],
+                "rules": [
+                    {
+                        "id": "core.sessions.manifest_sessions_match",
+                        "level": "error",
+                        "message": "the manifest sessions list disagrees with core.sessions",
+                        "sql": (
+                            "SELECT session_id FROM core_sessions WHERE session_id NOT IN "
+                            "(SELECT session_id FROM manifest_sessions)"
+                        ),
+                    }
+                ],
+            },
+            "core.trials": {
+                "columns": [
+                    _col("session_id", "string", "required"),
+                    _col("trial_id", "string", "required"),
+                    _col("start_tick", "int64", "required"),
+                    _col("stop_tick", "int64", "required"),
+                    _col("clock_id", "string", "required"),
+                ],
+                "primary_key": ["session_id", "trial_id"],
+                "references": [
+                    {
+                        "columns": ["session_id"],
+                        "resource": "core.sessions",
+                        "resource_columns": ["session_id"],
+                    }
+                ],
+                "sort": ["session_id", "trial_id"],
+                "rules": [
+                    {
+                        "id": "core.trials.interval_valid",
+                        "level": "error",
+                        "message": "stop_tick precedes start_tick",
+                        "sql": "SELECT session_id, trial_id FROM core_trials WHERE stop_tick < start_tick",
+                    }
+                ],
+            },
+            "core.units": {
+                "columns": [
+                    _col("session_id", "string", "required"),
+                    _col("unit_id", "string", "required"),
+                    _col("sorting_run_id", "string", "required"),
+                    _col("curation_id", "string", "required"),
+                    _col("quality_label", "string", "nullable", enum=["sua", "mua", "noise"]),
+                ],
+                "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                "references": [],
+                "sort": ["session_id", "unit_id"],
+                "rules": [],
+            },
+            "core.events": {
+                "columns": [
+                    _col("session_id", "string", "required"),
+                    _col("event_id", "string", "required"),
+                    _col("event_type", "string", "required", vocabulary="open"),
+                    _col("t_tick", "int64", "required"),
+                    _col("clock_id", "string", "required"),
+                ],
+                "primary_key": ["session_id", "event_id"],
+                "references": [],
+                "sort": ["session_id", "event_id"],
+                "rules": [],
+            },
+            "core.spike_events": {
+                "columns": [
+                    _col("session_id", "string", "required"),
+                    _col("unit_id", "string", "required"),
+                    _col("sorting_run_id", "string", "required"),
+                    _col("curation_id", "string", "required"),
+                    _col("t_tick", "int64", "required"),
+                    _col("clock_id", "string", "required"),
+                ],
+                "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick"],
+                "references": [
+                    {
+                        "columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                        "resource": "core.units",
+                        "resource_columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                    }
+                ],
+                "sort": ["session_id", "unit_id", "t_tick"],
+                "rules": [],
+            },
+        },
+    }
+
+
 @pytest.fixture
 def packet_root(tmp_path):
     """A minimal two-table packet: one session, two trials referencing it."""
@@ -88,9 +196,7 @@ def packet_root(tmp_path):
     ]
 
     (root / "schemas").mkdir()
-    (root / "schemas" / "logical_schemas.json").write_text(
-        json.dumps({"registry_version": "0.1.0", "logical_standard_version": "nwb-lake-logical-v0.1", "tables": {}})
-    )
+    (root / "schemas" / "logical_schemas.json").write_text(json.dumps(_registry(), indent=2))
 
     (root / "nwb.packet.json").write_text(
         json.dumps(

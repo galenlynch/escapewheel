@@ -8,6 +8,7 @@ later phases and to their own packages, which extend this command rather than re
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -45,6 +46,31 @@ def _sql(args: argparse.Namespace) -> int:
     return 0
 
 
+def _validate(args: argparse.Namespace) -> int:
+    """Validate a packet against the registry it embeds."""
+    try:
+        from ..validation import validate
+    except ImportError:
+        print(
+            "error: validation requires the 'validate' extra (pip install nwb-lake-reader[validate])", file=sys.stderr
+        )
+        return 2
+
+    packet = open_packet(args.packet)
+    report = validate(packet)
+    for finding in report.findings:
+        print(f"  {finding.level:8s} {finding.check}: {finding.message}")
+        for row in finding.rows:
+            print(f"           {tuple(row)}")
+    status = "passed" if report.passed else "failed"
+    print(f"\n{packet.manifest.packet_id}: {status} — {report.errors} error(s), {report.warnings} warning(s)")
+
+    if args.report is not None:
+        args.report.write_text(json.dumps(report.to_dict(packet.manifest.packet_id), indent=2) + "\n")
+        print(f"report written to {args.report}")
+    return 0 if report.passed else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser.
 
@@ -64,6 +90,11 @@ def build_parser() -> argparse.ArgumentParser:
     sql.add_argument("packet", type=Path, help="packet root directory")
     sql.add_argument("query", help="SQL, referring to resources by their flattened names")
     sql.set_defaults(func=_sql)
+
+    validate_cmd = subcommands.add_parser("validate", help="validate a packet against its registry")
+    validate_cmd.add_argument("packet", type=Path, help="packet root directory")
+    validate_cmd.add_argument("--report", type=Path, default=None, help="write a JSON report here")
+    validate_cmd.set_defaults(func=_validate)
 
     return parser
 
