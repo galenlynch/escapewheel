@@ -22,6 +22,7 @@ STEPS = [
     ("R9 §2   − core.provenance_activities",   {"core.provenance_activities"}, set()),
     ("R9 §2   − core.provenance_edges",        {"core.provenance_edges"}, set()),
     ("R9 §3   + core.processing_run_inputs",   set(), {"core.processing_run_inputs"}),
+    ("R13 §3  + core.clock_anchors",           set(), {"core.clock_anchors"}),
 ]
 
 if not PARSED.exists():
