@@ -25,7 +25,7 @@ When behaviour here seems arbitrary, the reason is there.
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. `05` is the import and validation pipeline. |
-| `revisions/` | R1–R23, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `revisions/` | R1–R24, all accepted. Where they disagree with the frozen docs, the revision binds. |
 | `registry/` | `logical_schemas.json` (29 tables), its meta-schema, and the manifest JSON Schema. |
 | `fixtures/` | The conformance corpus — 15 packets with expected findings as data. |
 | `nwb-lake-reader/` | The read path. This package's only runtime dependency of substance. |
