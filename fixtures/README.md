@@ -6,9 +6,16 @@ corpus: expected findings recorded as data, so any implementation can be checked
 the same evidence rather than against a prose description of what should happen.
 
 ```bash
-uv run --with pyarrow python build.py                                  # writes packets/
-uv run --with duckdb --with jsonschema --with pyarrow python corpus.py # run them all
-uv run --with duckdb --with jsonschema --with pyarrow python validate.py packets/valid
+uv run --with pyarrow python build.py                            # writes packets/
+uv run --with ../nwb-lake-reader --with duckdb python corpus.py  # run them all
+```
+
+The validator under test is `nwb_lake_reader.validation`. Nothing is reimplemented here —
+a second copy of the checks would be exactly the drift this corpus exists to detect. To
+validate one packet directly:
+
+```bash
+uv run --with '../nwb-lake-reader' --with duckdb nwb-lake validate packets/valid
 ```
 
 ## The valid packet
@@ -45,16 +52,13 @@ packet in the wrong order is conforming, only slower (R10 §2).
 
 ## Validation layers
 
-`validate.py` runs four, in `09` §10's order:
+Four, in `09` §10's order — see `nwb_lake_reader.validation`:
 
-1. **Manifest shape** against `manifest.schema.json`.
+1. **Manifest shape** against `manifest.schema.json`, when the packet is opened.
 2. **The embedded registry** against the meta-schema, and its version against the manifest's.
 3. **Physical schema** per resource — column presence and Parquet type.
-4. **Rules** — Tier 1 generated from structure, Tier 2 carried inline, executed by DuckDB.
+4. **Rules** — Tier 1 generated from structure, Tier 2 carried in the registry.
 
 Physical sort order is checked between 3 and 4, by reading each file in written order.
-**It is not a SQL rule and cannot be**: a query has no access to physical row order. This
-was found here, and corrects R2 §7.1 and R5 §7 — see R12.
-
-The generator is imported from `prototype/registry-codegen/`; it moves into the reference
-package at Phase 1.
+**It is not a SQL rule and cannot be**: a query has no access to physical row order. That
+was found here, building this fixture, and corrects R2 §7.1 and R5 §7 — see R12.
