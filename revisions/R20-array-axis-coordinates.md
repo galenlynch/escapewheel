@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-08-27 |
 | **Amends** | `02_core_logical_schemas.md`, `06_analysis_layer.md`, R2 §12, R3 §3.3 |
 | **Depends on** | R3 §3.3 (`array_dimensions`), R3 §6.1 (`array_channels`), R13 (clock anchors) |
 | **Profile** | `nwb-lake-portable-v0.1` |

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-08-27 |
 | **Amends** | `02_core_logical_schemas.md`, `06_analysis_layer.md` |
 | **Depends on** | R3 §3.0 (multiplicity rule), R5 (flat spikes) |
 | **Profile** | `nwb-lake-portable-v0.1` |

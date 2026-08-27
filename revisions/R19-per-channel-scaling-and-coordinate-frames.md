@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-08-27 |
 | **Amends** | `02_core_logical_schemas.md` |
 | **Depends on** | R3 §3.0 (duplication test, multiplicity rule), R3 §6.1 (`array_channels` axis) |
 | **Profile** | `nwb-lake-portable-v0.1` |

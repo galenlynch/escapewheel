@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-08-27 |
 | **Amends** | `09_metadata_minimalism_and_extensions.md`, R2 |
 | **Depends on** | R2 (registry format) |
 | **Profile** | `nwb-lake-portable-v0.1` |
