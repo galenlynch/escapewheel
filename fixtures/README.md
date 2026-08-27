@@ -7,8 +7,11 @@ the same evidence rather than against a prose description of what should happen.
 
 ```bash
 uv run --with pyarrow python build.py                            # writes packets/
-uv run --with ../nwb-lake-reader --with duckdb python corpus.py  # run them all
+uv run --no-cache --with ../nwb-lake-reader --with duckdb python corpus.py  # run them all
 ```
+
+`--no-cache` matters: uv caches the built wheel of the sibling package, and without it a
+run can silently test a stale copy of the validator rather than the working tree.
 
 The validator under test is `nwb_lake_reader.validation`. Nothing is reimplemented here —
 a second copy of the checks would be exactly the drift this corpus exists to detect. To
