@@ -113,6 +113,12 @@
         "level": "warning",
         "message": "negative ticks on a clock with no absolute reference",
         "sql": "SELECT s.session_id, s.clock_id, MIN(s.t_tick) AS min_tick FROM core_spike_events s JOIN core_clocks c USING (clock_id) WHERE s.t_tick < 0 AND c.tick_zero_utc IS NULL GROUP BY s.session_id, s.clock_id"
+      },
+      {
+        "id": "core.spike_events.within_observation",
+        "level": "warning",
+        "message": "spikes fall outside every declared observation window for their unit",
+        "sql": "SELECT s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, s.t_tick FROM core_spike_events s WHERE EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id) AND NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id AND s.t_tick BETWEEN o.start_tick AND o.stop_tick)"
       }
     ],
     "core.trials": [
@@ -221,6 +227,12 @@
         "level": "error",
         "message": "an event's clock_id disagrees with its stream's",
         "sql": "SELECT e.session_id, e.event_id, e.clock_id, s.clock_id AS stream_clock_id FROM core_events e JOIN core_event_streams s ON e.stream_id = s.event_stream_id WHERE e.clock_id <> s.clock_id"
+      },
+      {
+        "id": "core.events.within_observation",
+        "level": "warning",
+        "message": "events fall outside every declared observation window for their stream",
+        "sql": "SELECT e.session_id, e.event_id, e.stream_id, e.t_tick FROM core_events e WHERE EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id) AND NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id AND e.t_tick BETWEEN o.start_tick AND o.stop_tick)"
       }
     ],
     "core.event_stream_observation_intervals": [
