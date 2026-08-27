@@ -2208,7 +2208,7 @@
           "id": "core.unit_observation_intervals.interval_valid",
           "level": "error",
           "message": "stop_tick precedes start_tick",
-          "sql": "SELECT session_id, unit_id, interval_index, start_tick, stop_tick FROM core_unit_observation_intervals WHERE stop_tick < start_tick"
+          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, interval_index, start_tick, stop_tick FROM core_unit_observation_intervals WHERE stop_tick < start_tick"
         },
         {
           "id": "core.unit_observation_intervals.index_contiguous",
@@ -2220,7 +2220,7 @@
           "id": "core.unit_observation_intervals.non_overlapping",
           "level": "error",
           "message": "observation windows overlap, which would double-count observed time",
-          "sql": "SELECT clock_id, session_id, unit_id, interval_index FROM ( SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, unit_id, sorting_run_id, curation_id ORDER BY interval_index) AS prev_stop FROM core_unit_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
+          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, interval_index, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, unit_id, sorting_run_id, curation_id ORDER BY interval_index) AS prev_stop FROM core_unit_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
         }
       ]
     },

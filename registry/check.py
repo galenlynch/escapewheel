@@ -68,12 +68,27 @@ check("withdrawn tables absent",
 # structure it annotates. build.py rejects unknown tables; these catch the rest.
 RULES = json.loads((HERE / "rules.json").read_text())["rules"]
 check("every rules.json table exists in the registry", sorted(set(RULES) - set(T)))
+
+# Template invocations carry no id until build.py expands them (R24 §3). Expand through the
+# same function rather than a second copy, so this cannot drift from what the build does.
+sys.path.insert(0, str(HERE))
+from build import expand  # noqa: E402
+
+authored_rules = []
+for resource, rs in RULES.items():
+    for r in rs:
+        if template := r.get("use"):
+            authored_rules += expand(template, resource, r, T[resource]["primary_key"])
+        else:
+            authored_rules.append(r)
+
 merged = {r["id"] for t_ in T.values() for r in t_["rules"]}
-authored = {r["id"] for rs in RULES.values() for r in rs}
+authored = {r["id"] for r in authored_rules}
 check("every authored rule reached the registry", sorted(authored - merged))
 check("the registry carries no rule rules.json does not author", sorted(merged - authored))
-ids = [r["id"] for rs in RULES.values() for r in rs]
+ids = [r["id"] for r in authored_rules]
 check("rule ids are unique", sorted({i for i in ids if ids.count(i) > 1}))
+
 
 # R2 §9: the registry validates against its published meta-schema.
 try:

@@ -111,10 +111,9 @@
     ],
     "core.trials": [
       {
-        "id": "core.trials.interval_valid",
-        "level": "error",
-        "message": "stop_tick precedes start_tick",
-        "sql": "SELECT session_id, trial_id, start_tick, stop_tick FROM core_trials WHERE stop_tick < start_tick"
+        "use": "interval",
+        "start": "start_tick",
+        "stop": "stop_tick"
       }
     ],
     "core.units": [
@@ -159,22 +158,18 @@
     ],
     "core.unit_observation_intervals": [
       {
-        "id": "core.unit_observation_intervals.interval_valid",
-        "level": "error",
-        "message": "stop_tick precedes start_tick",
-        "sql": "SELECT session_id, unit_id, interval_index, start_tick, stop_tick FROM core_unit_observation_intervals WHERE stop_tick < start_tick"
-      },
-      {
-        "id": "core.unit_observation_intervals.index_contiguous",
-        "level": "error",
-        "message": "interval_index is not contiguous from 0",
-        "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n FROM core_unit_observation_intervals GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(interval_index) <> COUNT(*) - 1 OR MIN(interval_index) <> 0"
-      },
-      {
-        "id": "core.unit_observation_intervals.non_overlapping",
-        "level": "error",
-        "message": "observation windows overlap, which would double-count observed time",
-        "sql": "SELECT clock_id, session_id, unit_id, interval_index FROM ( SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, unit_id, sorting_run_id, curation_id ORDER BY interval_index) AS prev_stop FROM core_unit_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
+        "use": "interval",
+        "start": "start_tick",
+        "stop": "stop_tick",
+        "partition_of": [
+          "session_id",
+          "unit_id",
+          "sorting_run_id",
+          "curation_id"
+        ],
+        "index": "interval_index",
+        "overlap_op": "<=",
+        "overlap_message": "observation windows overlap, which would double-count observed time"
       }
     ],
     "core.array_assets": [

@@ -48,6 +48,56 @@ def col(name, typ, pres, desc):
     return {"name": name, "type": typ, "presence": pres, "description": desc}
 
 
+def expand(template: str, resource: str, call: dict, key: list[str]) -> list[dict[str, str]]:
+    """Expand a rules.json template invocation into concrete Tier 2 rules (R24 §3).
+
+    Templates stay a build-time device: the registry a packet embeds carries plain SQL, so no
+    validator has to learn a new vocabulary to run them.
+
+    Parameters
+    ----------
+    template : str
+        Template name; only ``interval`` exists.
+    resource : str
+        The table being expanded for.
+    call : dict
+        The invocation, carrying the template's parameters.
+    key : list of str
+        The table's primary key, used to identify offending rows.
+
+    Returns
+    -------
+    list of dict
+        Rules in the same shape a hand-authored one has.
+    """
+    if template != "interval":
+        raise SystemExit(f"{resource}: unknown rule template {template!r}")
+
+    name = resource.replace(".", "_")
+    start, stop = call["start"], call["stop"]
+    report = ", ".join(key)
+    rules = [{"id": f"{resource}.interval_valid", "level": "error",
+              "message": f"{stop} precedes {start}",
+              "sql": f"SELECT {report}, {start}, {stop} FROM {name} WHERE {stop} < {start}"}]
+
+    subject = call.get("partition_of")
+    if subject is None:
+        return rules
+
+    index, op = call["index"], call["overlap_op"]
+    by = ", ".join(subject)
+    rules.append({"id": f"{resource}.index_contiguous", "level": "error",
+                  "message": f"{index} is not contiguous from 0",
+                  "sql": (f"SELECT {by}, COUNT(*) AS n FROM {name} GROUP BY {by} "
+                          f"HAVING MAX({index}) <> COUNT(*) - 1 OR MIN({index}) <> 0")})
+    rules.append({"id": f"{resource}.non_overlapping", "level": "error",
+                  "message": call["overlap_message"],
+                  "sql": (f"SELECT {report}, {start}, {stop} FROM (SELECT *, LAG({stop}) OVER "
+                          f"(PARTITION BY {by} ORDER BY {index}) AS prev_stop FROM {name}) "
+                          f"WHERE prev_stop IS NOT NULL AND {start} {op} prev_stop")})
+    return rules
+
+
 def build() -> dict:
     src = parse()
     tables = {}
@@ -352,12 +402,19 @@ def build() -> dict:
         "sort": None, "rules": []}
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
-    hand_written: dict[str, list[dict[str, str]]] = json.loads(RULES.read_text())["rules"]
+    authored = json.loads(RULES.read_text())
+    hand_written: dict[str, list[dict]] = authored["rules"]
     unknown = sorted(set(hand_written) - set(tables))
     if unknown:
         raise SystemExit(f"rules.json names tables the registry does not define: {', '.join(unknown)}")
     for resource, table_rules in hand_written.items():
-        T(resource)["rules"] = table_rules
+        expanded: list[dict[str, str]] = []
+        for rule in table_rules:
+            if template := rule.get("use"):
+                expanded.extend(expand(template, resource, rule, T(resource)["primary_key"]))
+            else:
+                expanded.append(rule)
+        T(resource)["rules"] = expanded
 
     # ---- R20 §5 : analysis arrays are described by analysis tables -------------------------------
     import copy
