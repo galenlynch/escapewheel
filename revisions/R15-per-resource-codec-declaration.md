@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-08-26 |
 | **Amends** | R3 §7.2, `04_packet_catalog_manifest.md` |
 | **Depends on** | R14 (external resources) |
 | **Profile** | `nwb-lake-portable-v0.1` |
@@ -67,7 +67,30 @@ WHERE codec NOT IN (SELECT codec FROM manifest_resource_codecs)
 A reader SHOULD report which resources it cannot open rather than only that it cannot open
 everything.
 
-## 4. What does not change
+## 4. What a validator checks, and when
+
+R14 §2.3.2 keeps structural validation off the network. Applied to codecs, that gives three
+levels, and only the third needs reaching anything.
+
+| Level | Check | Runs |
+|---|---|---|
+| Manifest-internal | every `dense_array_asset` declares `codecs`; `required_codecs` equals their union | always; no I/O beyond the manifest |
+| Packet-owned arrays | declared `codecs` match the array's actual Zarr metadata | always; the packet owns the bytes and must be able to read them |
+| External resources | the URI resolves; `sha256` and `size_bytes` hold; declared `codecs` match the actual metadata | **only in the requested external mode** (R14 §2.3.2) |
+
+So §3's union rule is structural: both sides are manifest fields, and it holds offline.
+
+**A codec declared for an external resource is a claim, not a verified fact.** A packet may
+declare `codecs: ["zstd"]` for an array that is actually WavPack, and structural validation
+cannot detect it — the same standing as `sha256` and `verified_at` under R14 §2.3.1, which
+record what was true when someone looked rather than what is true now.
+
+This is a deliberate limit, not an oversight. The alternative is to make a packet's validity
+depend on network reachability and credentials, which are properties of the reader's
+situation rather than of the packet. A validator SHOULD report unverified external claims as
+`info` in its default mode, so that what was not checked is visible rather than silent.
+
+## 5. What does not change
 
 The baseline stays `none`, `gzip`, `zstd` (R3 §7.2). Writers SHOULD still use it for arrays
 they own; a packet whose owned arrays are baseline stays fully readable regardless of what
@@ -76,7 +99,7 @@ it references.
 R14 §2.2's open declaration stands — any codec may be used provided it is declared. This
 revision changes only where the declaration lives and how coarsely a reader may act on it.
 
-## 5. Consequence
+## 6. Consequence
 
 `04`'s resource entry gains `codecs`, required for `dense_array_asset`. The manifest JSON
 Schema gains it with that conditional.
@@ -84,3 +107,7 @@ Schema gains it with that conditional.
 `Packet.check_codecs()` in the reference reader is packet-level and implements exactly the
 behaviour §2 forbids. It becomes a per-resource check, with a packet-level convenience that
 reports which resources are unopenable rather than raising on the first missing codec.
+
+The validator gains the level split in §4: its default mode gains the manifest-internal
+rules and the packet-owned array check, and its external mode — which does not exist yet —
+covers the third row.
