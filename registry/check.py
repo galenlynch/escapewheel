@@ -1,5 +1,6 @@
 """Check the built registry against the invariants R2-R9 establish."""
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -24,7 +25,9 @@ def check(label, bad, fmt=str):
 
 ledger = subprocess.run([sys.executable, str(HERE.parent / "conformance/spec-sweep/tables.py")],
                         capture_output=True, text=True).stdout
-expected = {l.strip() for l in ledger.splitlines() if l.strip().startswith("core.")}
+# Namespaces beyond core exist from R20 §5; match any <namespace>.<table> line.
+expected = {l.strip() for l in ledger.splitlines()
+            if re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", l.strip())}
 check("table set matches R9 §2 ledger", expected ^ set(T))
 check("every table declares a primary key", [n for n, t in T.items() if t["primary_key"] is None])
 check("every column type is in R2 §4's vocabulary",

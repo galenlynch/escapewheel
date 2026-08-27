@@ -17,7 +17,7 @@
     ]
   },
   "tables": {
-    "core.array_assets": {
+    "analysis.array_assets": {
       "columns": [
         {
           "name": "array_asset_id",
@@ -109,6 +109,216 @@
       ],
       "rules": []
     },
+    "analysis.array_dimensions": {
+      "columns": [
+        {
+          "name": "array_asset_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Array asset ID."
+        },
+        {
+          "name": "axis_index",
+          "type": "int64",
+          "presence": "required",
+          "description": "0-based axis position in stored order (R3 \u00a75)."
+        },
+        {
+          "name": "dimension_name",
+          "type": "string",
+          "presence": "required",
+          "description": "Axis name."
+        },
+        {
+          "name": "coordinate_position_column",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Which column of that resource holds the 0-based position."
+        },
+        {
+          "name": "coordinate_resource",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Resource whose rows are this axis's positions (labelled axis)."
+        },
+        {
+          "name": "coordinate_array_asset_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "A 1-D array holding one value per position (irregular axis)."
+        },
+        {
+          "name": "coordinate_unit",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Unit of the numeric coordinate values."
+        },
+        {
+          "name": "step_value",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Increment per position."
+        },
+        {
+          "name": "origin_value",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Value at position 0 (regular numeric axis)."
+        },
+        {
+          "name": "step_ticks",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Ticks advanced per position."
+        },
+        {
+          "name": "origin_tick",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Tick at position 0."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Clock the ticks are counted on (regular tick axis)."
+        }
+      ],
+      "primary_key": [
+        "array_asset_id",
+        "axis_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "array_asset_id"
+          ],
+          "resource": "analysis.array_assets",
+          "resource_columns": [
+            "array_asset_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
+      "sort": [
+        "array_asset_id",
+        "axis_index"
+      ],
+      "rules": []
+    },
+    "core.array_assets": {
+      "columns": [
+        {
+          "name": "array_asset_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable array asset ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "semantic_type",
+          "type": "string",
+          "presence": "required",
+          "description": "Semantic type, e.g. ElectricalSeries.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "presence": "required",
+          "description": "Human-readable name."
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "presence": "required",
+          "description": "`raw`, `ap`, `lfp`, `waveform`, etc.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "uri",
+          "type": "string",
+          "presence": "required",
+          "description": "URI/path to array store."
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "presence": "required",
+          "description": "`zarr_v3` for portable profile."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Clock for time axis."
+        },
+        {
+          "name": "sample_rate_hz",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Sample rate if regularly sampled."
+        },
+        {
+          "name": "unit",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Physical unit."
+        },
+        {
+          "name": "conversion",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Multiply stored values by this before offset."
+        },
+        {
+          "name": "offset",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Add after conversion."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "array_asset_id"
+      ],
+      "references": [],
+      "sort": [
+        "array_asset_id"
+      ],
+      "rules": [
+        {
+          "id": "core.array_assets.one_scaling_level",
+          "level": "error",
+          "message": "scaling is declared both on the array and per channel",
+          "sql": "SELECT a.array_asset_id FROM core_array_assets a WHERE a.conversion IS NOT NULL AND EXISTS (SELECT 1 FROM core_array_channels c WHERE c.array_asset_id = a.array_asset_id AND c.conversion IS NOT NULL)"
+        },
+        {
+          "id": "core.array_assets.sample_rate_matches_axis",
+          "level": "error",
+          "message": "sample_rate_hz disagrees with the time axis step",
+          "sql": "SELECT a.array_asset_id, a.sample_rate_hz FROM core_array_assets a JOIN core_array_dimensions d USING (array_asset_id) JOIN core_clocks c ON c.clock_id = d.clock_id WHERE a.sample_rate_hz IS NOT NULL AND d.step_ticks IS NOT NULL AND c.tick_rate_hz IS NOT NULL AND abs(a.sample_rate_hz - c.tick_rate_hz / d.step_ticks) > 1e-6"
+        }
+      ]
+    },
     "core.array_channels": {
       "columns": [
         {
@@ -142,6 +352,30 @@
           "description": "Human-readable channel label."
         },
         {
+          "name": "inter_sample_shift",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Acquisition time offset within one sample period, in sample periods."
+        },
+        {
+          "name": "unit",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Physical unit of the converted value."
+        },
+        {
+          "name": "offset",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Add after conversion."
+        },
+        {
+          "name": "conversion",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Multiply stored values by this before offset."
+        },
+        {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
@@ -169,7 +403,14 @@
         "array_asset_id",
         "channel_index"
       ],
-      "rules": []
+      "rules": [
+        {
+          "id": "core.array_channels.scaling_pair_complete",
+          "level": "error",
+          "message": "a conversion without a unit yields a number in no known quantity",
+          "sql": "SELECT array_asset_id, channel_index FROM core_array_channels WHERE conversion IS NOT NULL AND unit IS NULL"
+        }
+      ]
     },
     "core.array_dimensions": {
       "columns": [
@@ -190,6 +431,60 @@
           "type": "string",
           "presence": "required",
           "description": "Axis name."
+        },
+        {
+          "name": "coordinate_position_column",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Which column of that resource holds the 0-based position."
+        },
+        {
+          "name": "coordinate_resource",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Resource whose rows are this axis's positions (labelled axis)."
+        },
+        {
+          "name": "coordinate_array_asset_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "A 1-D array holding one value per position (irregular axis)."
+        },
+        {
+          "name": "coordinate_unit",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Unit of the numeric coordinate values."
+        },
+        {
+          "name": "step_value",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Increment per position."
+        },
+        {
+          "name": "origin_value",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Value at position 0 (regular numeric axis)."
+        },
+        {
+          "name": "step_ticks",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Ticks advanced per position."
+        },
+        {
+          "name": "origin_tick",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Tick at position 0."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Clock the ticks are counted on (regular tick axis)."
         }
       ],
       "primary_key": [
@@ -205,6 +500,15 @@
           "resource_columns": [
             "array_asset_id"
           ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
         }
       ],
       "sort": [
@@ -217,6 +521,36 @@
           "level": "error",
           "message": "axis_index is not contiguous from 0",
           "sql": "SELECT array_asset_id, COUNT(*) AS n_axes, MAX(axis_index) AS max_axis FROM core_array_dimensions GROUP BY array_asset_id HAVING MAX(axis_index) <> COUNT(*) - 1 OR MIN(axis_index) <> 0"
+        },
+        {
+          "id": "core.array_dimensions.one_coordinate_form",
+          "level": "error",
+          "message": "an axis declares more than one coordinate form",
+          "sql": "SELECT array_asset_id, axis_index FROM core_array_dimensions WHERE (CASE WHEN origin_tick IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN origin_value IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN coordinate_array_asset_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN coordinate_resource IS NOT NULL THEN 1 ELSE 0 END) > 1"
+        },
+        {
+          "id": "core.array_dimensions.tick_axis_complete",
+          "level": "error",
+          "message": "a regular tick axis needs clock_id, origin_tick and step_ticks",
+          "sql": "SELECT array_asset_id, axis_index FROM core_array_dimensions WHERE origin_tick IS NOT NULL AND (step_ticks IS NULL OR clock_id IS NULL)"
+        },
+        {
+          "id": "core.array_dimensions.numeric_axis_complete",
+          "level": "error",
+          "message": "a regular numeric axis needs origin_value, step_value and coordinate_unit",
+          "sql": "SELECT array_asset_id, axis_index FROM core_array_dimensions WHERE origin_value IS NOT NULL AND (step_value IS NULL OR coordinate_unit IS NULL)"
+        },
+        {
+          "id": "core.array_dimensions.labelled_axis_complete",
+          "level": "error",
+          "message": "coordinate_resource and coordinate_position_column must be present together",
+          "sql": "SELECT array_asset_id, axis_index FROM core_array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
+        },
+        {
+          "id": "core.array_dimensions.coordinate_resource_is_core",
+          "level": "error",
+          "message": "a core axis points outward at a non-core resource (R20 \u00a75.1)",
+          "sql": "SELECT array_asset_id, axis_index, coordinate_resource FROM core_array_dimensions WHERE coordinate_resource IS NOT NULL AND coordinate_resource NOT LIKE 'core.%'"
         }
       ]
     },
@@ -556,6 +890,58 @@
       ],
       "rules": []
     },
+    "core.electrode_coordinates": {
+      "columns": [
+        {
+          "name": "electrode_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Electrode ID."
+        },
+        {
+          "name": "coordinate_frame",
+          "type": "string",
+          "presence": "required",
+          "description": "The frame these coordinates are in.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "x_um",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "X in micrometres, in that frame."
+        },
+        {
+          "name": "y_um",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Y in micrometres."
+        },
+        {
+          "name": "z_um",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Z in micrometres."
+        }
+      ],
+      "primary_key": [
+        "electrode_id",
+        "coordinate_frame"
+      ],
+      "references": [
+        {
+          "columns": [
+            "electrode_id"
+          ],
+          "resource": "core.electrodes",
+          "resource_columns": [
+            "electrode_id"
+          ]
+        }
+      ],
+      "sort": null,
+      "rules": []
+    },
     "core.electrodes": {
       "columns": [
         {
@@ -587,30 +973,6 @@
           "type": "string",
           "presence": "nullable",
           "description": "Opaque source label; undefined base, not an offset."
-        },
-        {
-          "name": "x_um",
-          "type": "float64",
-          "presence": "nullable",
-          "description": "X coordinate in micrometers."
-        },
-        {
-          "name": "y_um",
-          "type": "float64",
-          "presence": "nullable",
-          "description": "Y coordinate in micrometers."
-        },
-        {
-          "name": "z_um",
-          "type": "float64",
-          "presence": "nullable",
-          "description": "Z coordinate in micrometers."
-        },
-        {
-          "name": "coordinate_frame",
-          "type": "string",
-          "presence": "nullable",
-          "description": "Coordinate frame ID/name."
         },
         {
           "name": "brain_region",
@@ -1645,6 +2007,190 @@
         }
       ]
     },
+    "core.unit_observation_intervals": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "unit_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Unit ID."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Sorting run ID."
+        },
+        {
+          "name": "curation_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Curation ID."
+        },
+        {
+          "name": "interval_index",
+          "type": "int64",
+          "presence": "required",
+          "description": "0-based position in this unit's interval sequence."
+        },
+        {
+          "name": "start_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "First tick, inclusive."
+        },
+        {
+          "name": "stop_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "Last tick, inclusive."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Clock for the interval bounds."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id",
+        "interval_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ],
+          "resource": "core.units",
+          "resource_columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
+      "sort": null,
+      "rules": [
+        {
+          "id": "core.unit_observation_intervals.interval_valid",
+          "level": "error",
+          "message": "stop_tick precedes start_tick",
+          "sql": "SELECT session_id, unit_id, interval_index, start_tick, stop_tick FROM core_unit_observation_intervals WHERE stop_tick < start_tick"
+        },
+        {
+          "id": "core.unit_observation_intervals.index_contiguous",
+          "level": "error",
+          "message": "interval_index is not contiguous from 0",
+          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n FROM core_unit_observation_intervals GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(interval_index) <> COUNT(*) - 1 OR MIN(interval_index) <> 0"
+        },
+        {
+          "id": "core.unit_observation_intervals.non_overlapping",
+          "level": "error",
+          "message": "observation windows overlap, which would double-count observed time",
+          "sql": "SELECT clock_id, session_id, unit_id, interval_index FROM ( SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, unit_id, sorting_run_id, curation_id ORDER BY interval_index) AS prev_stop FROM core_unit_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
+        }
+      ]
+    },
+    "core.unit_quality_labels": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "unit_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Unit ID."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Sorting run ID."
+        },
+        {
+          "name": "curation_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Curation ID."
+        },
+        {
+          "name": "source",
+          "type": "string",
+          "presence": "required",
+          "description": "What produced the label, e.g. kilosort, decoder, bombcell.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "presence": "required",
+          "description": "Quality label.",
+          "enum": [
+            "sua",
+            "mua",
+            "noise"
+          ]
+        },
+        {
+          "name": "confidence",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "The source's confidence, where it reports one."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id",
+        "source"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ],
+          "resource": "core.units",
+          "resource_columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ]
+        }
+      ],
+      "sort": null,
+      "rules": []
+    },
     "core.units": {
       "columns": [
         {
@@ -1693,6 +2239,13 @@
             "mua",
             "noise"
           ]
+        },
+        {
+          "name": "quality_label_source",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Which core.unit_quality_labels source the designated label came from.",
+          "vocabulary": "open"
         },
         {
           "name": "default_electrode_id",
@@ -1796,6 +2349,18 @@
           "level": "error",
           "message": "n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events",
           "sql": "SELECT u.session_id, u.unit_id FROM core_units u LEFT JOIN ( SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM core_spike_events GROUP BY session_id, unit_id, sorting_run_id, curation_id ) s USING (session_id, unit_id, sorting_run_id, curation_id) WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM s.n) OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo) OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)"
+        },
+        {
+          "id": "core.units.designated_label_is_recorded",
+          "level": "error",
+          "message": "the designated quality label is not among the recorded ones",
+          "sql": "SELECT u.session_id, u.unit_id, u.quality_label, u.quality_label_source FROM core_units u LEFT JOIN core_unit_quality_labels q ON u.session_id = q.session_id AND u.unit_id = q.unit_id AND u.sorting_run_id = q.sorting_run_id AND u.curation_id = q.curation_id AND u.quality_label = q.label AND u.quality_label_source = q.source WHERE u.quality_label IS NOT NULL AND q.source IS NULL"
+        },
+        {
+          "id": "core.units.designated_label_pair_complete",
+          "level": "error",
+          "message": "quality_label and quality_label_source must be present together",
+          "sql": "SELECT session_id, unit_id FROM core_units WHERE (quality_label IS NULL) <> (quality_label_source IS NULL)"
         }
       ]
     }

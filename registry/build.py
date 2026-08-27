@@ -214,6 +214,93 @@ def build() -> dict:
     for n, t in tables.items():
         t["sort"] = OVERRIDE.get(n) or t["primary_key"]                   # R10 §2, §6
 
+    # ---- R18 §2 : units drift in and out of a recording -----------------------------------------
+    tables["core.unit_observation_intervals"] = {
+        "columns": [col("session_id", "string", "required", "Session ID."),
+                    col("unit_id", "string", "required", "Unit ID."),
+                    col("sorting_run_id", "string", "required", "Sorting run ID."),
+                    col("curation_id", "string", "required", "Curation ID."),
+                    col("interval_index", "int64", "required",
+                        "0-based position in this unit's interval sequence."),
+                    col("start_tick", "int64", "required", "First tick, inclusive."),
+                    col("stop_tick", "int64", "required", "Last tick, inclusive."),
+                    col("clock_id", "string", "required", "Clock for the interval bounds.")],
+        "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id",
+                        "interval_index"],
+        "references": [{"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                        "resource": "core.units",
+                        "resource_columns": ["session_id", "unit_id", "sorting_run_id",
+                                             "curation_id"]},
+                       {"columns": ["clock_id"], "resource": "core.clocks",
+                        "resource_columns": ["clock_id"]}],
+        "sort": None, "rules": []}
+
+    # ---- R19 §2 : scaling and sample timing are per channel --------------------------------------
+    for name, typ, desc in [
+            ("conversion", "float64", "Multiply stored values by this before offset."),
+            ("offset", "float64", "Add after conversion."),
+            ("unit", "string", "Physical unit of the converted value."),
+            ("inter_sample_shift", "float64",
+             "Acquisition time offset within one sample period, in sample periods.")]:
+        add_col("core.array_channels", col(name, typ, "nullable", desc), after="channel_label")
+
+    # ---- R19 §3 : an electrode sits in more than one coordinate frame ----------------------------
+    for c in ("x_um", "y_um", "z_um", "coordinate_frame"):
+        drop_col("core.electrodes", c)
+    tables["core.electrode_coordinates"] = {
+        "columns": [col("electrode_id", "string", "required", "Electrode ID."),
+                    dict(col("coordinate_frame", "string", "required",
+                             "The frame these coordinates are in."), vocabulary="open"),
+                    col("x_um", "float64", "nullable", "X in micrometres, in that frame."),
+                    col("y_um", "float64", "nullable", "Y in micrometres."),
+                    col("z_um", "float64", "nullable", "Z in micrometres.")],
+        "primary_key": ["electrode_id", "coordinate_frame"],
+        "references": [{"columns": ["electrode_id"], "resource": "core.electrodes",
+                        "resource_columns": ["electrode_id"]}],
+        "sort": None, "rules": []}
+
+    # ---- R20 §2 : four coordinate forms per axis -------------------------------------------------
+    for name, typ, desc in [
+            ("clock_id", "string", "Clock the ticks are counted on (regular tick axis)."),
+            ("origin_tick", "int64", "Tick at position 0."),
+            ("step_ticks", "int64", "Ticks advanced per position."),
+            ("origin_value", "float64", "Value at position 0 (regular numeric axis)."),
+            ("step_value", "float64", "Increment per position."),
+            ("coordinate_unit", "string", "Unit of the numeric coordinate values."),
+            ("coordinate_array_asset_id", "string",
+             "A 1-D array holding one value per position (irregular axis)."),
+            ("coordinate_resource", "string",
+             "Resource whose rows are this axis's positions (labelled axis)."),
+            ("coordinate_position_column", "string",
+             "Which column of that resource holds the 0-based position.")]:
+        add_col("core.array_dimensions", col(name, typ, "nullable", desc),
+                after="dimension_name")
+    T("core.array_dimensions")["references"].append(
+        {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]})
+
+    # ---- R16 §2-3 : unit quality is many labels, attributed ------------------------------------
+    tables["core.unit_quality_labels"] = {
+        "columns": [col("session_id", "string", "required", "Session ID."),
+                    col("unit_id", "string", "required", "Unit ID."),
+                    col("sorting_run_id", "string", "required", "Sorting run ID."),
+                    col("curation_id", "string", "required", "Curation ID."),
+                    dict(col("source", "string", "required",
+                             "What produced the label, e.g. kilosort, decoder, bombcell."),
+                         vocabulary="open"),
+                    dict(col("label", "string", "required", "Quality label."),
+                         enum=["sua", "mua", "noise"]),
+                    col("confidence", "float64", "nullable",
+                        "The source's confidence, where it reports one.")],
+        "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "source"],
+        "references": [{"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                        "resource": "core.units",
+                        "resource_columns": ["session_id", "unit_id", "sorting_run_id",
+                                             "curation_id"]}],
+        "sort": None, "rules": []}
+    add_col("core.units", dict(col("quality_label_source", "string", "nullable",
+            "Which core.unit_quality_labels source the designated label came from."),
+            vocabulary="open"), after="quality_label")
+
     # ---- R13 §3 : anchor-point clock alignment ------------------------------------------------
     tables["core.clock_anchors"] = {
         "columns": [col("clock_id", "string", "required", "The clock being aligned."),
@@ -234,6 +321,17 @@ def build() -> dict:
         raise SystemExit(f"rules.json names tables the registry does not define: {', '.join(unknown)}")
     for resource, table_rules in hand_written.items():
         T(resource)["rules"] = table_rules
+
+    # ---- R20 §5 : analysis arrays are described by analysis tables -------------------------------
+    import copy
+    for core_name in ("core.array_assets", "core.array_dimensions"):
+        mirror = copy.deepcopy(T(core_name))
+        mirror["references"] = [
+            dict(r, resource=r["resource"].replace("core.array_", "analysis.array_"))
+            if r["resource"].startswith("core.array_") else r
+            for r in mirror["references"]]
+        mirror["rules"] = []
+        tables[core_name.replace("core.", "analysis.")] = mirror
 
     # ---- R7 : every table declares a key ---------------------------------------------------
     for n, k in [("core.media_assets", ["media_asset_id"]),
