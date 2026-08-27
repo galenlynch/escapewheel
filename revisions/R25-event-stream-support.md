@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-08-27 |
+| **Status** | **Accepted** 2026-08-27 |
 | **Amends** | `02_core_logical_schemas.md` (`core.sessions`) |
 | **Depends on** | R23 (event streams), R24 (rule templates), R13 (anchor alignment), R18 (observation intervals) |
 | **Profile** | `nwb-lake-portable-v0.1` |
