@@ -1,0 +1,46 @@
+{
+  "registry_version": "0.1.0",
+  "tables": {
+    "core.sessions": {
+      "columns": [
+        {"name": "session_id",         "type": "string",    "presence": "required"},
+        {"name": "subject_id",         "type": "string",    "presence": "required"},
+        {"name": "session_start_time", "type": "timestamp", "presence": "nullable"}
+      ],
+      "primary_key": ["session_id"],
+      "references": []
+    },
+    "core.clocks": {
+      "columns": [
+        {"name": "clock_id",     "type": "string",  "presence": "required"},
+        {"name": "session_id",   "type": "string",  "presence": "required"},
+        {"name": "tick_rate_hz", "type": "float64", "presence": "nullable"},
+        {"name": "origin",       "type": "string",  "presence": "required"}
+      ],
+      "primary_key": ["clock_id"],
+      "references": [
+        {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
+      ]
+    },
+    "core.trials": {
+      "columns": [
+        {"name": "session_id",   "type": "string", "presence": "required"},
+        {"name": "trial_id",     "type": "string", "presence": "required"},
+        {"name": "start_tick",   "type": "int64",  "presence": "required"},
+        {"name": "stop_tick",    "type": "int64",  "presence": "required"},
+        {"name": "clock_id",     "type": "string", "presence": "required"},
+        {"name": "probe_id",     "type": "string", "presence": "nullable"}
+      ],
+      "primary_key": ["session_id", "trial_id"],
+      "references": [
+        {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+        {"columns": ["clock_id"],   "resource": "core.clocks",   "resource_columns": ["clock_id"]}
+      ],
+      "rules": [
+        {"id": "core.trials.interval_valid", "level": "error",
+         "message": "stop_tick precedes start_tick",
+         "sql": "SELECT session_id, trial_id, start_tick, stop_tick FROM core_trials WHERE stop_tick < start_tick"}
+      ]
+    }
+  }
+}
