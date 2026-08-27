@@ -23,6 +23,11 @@ STEPS = [
     ("R9 §2   − core.provenance_edges",        {"core.provenance_edges"}, set()),
     ("R9 §3   + core.processing_run_inputs",   set(), {"core.processing_run_inputs"}),
     ("R13 §3  + core.clock_anchors",           set(), {"core.clock_anchors"}),
+    ("R16 §2  + core.unit_quality_labels",     set(), {"core.unit_quality_labels"}),
+    ("R18 §2  + core.unit_observation_intervals", set(), {"core.unit_observation_intervals"}),
+    ("R19 §3  + core.electrode_coordinates",   set(), {"core.electrode_coordinates"}),
+    ("R20 §5  + analysis.array_assets",        set(), {"analysis.array_assets"}),
+    ("R20 §5  + analysis.array_dimensions",    set(), {"analysis.array_dimensions"}),
 ]
 
 if not PARSED.exists():
