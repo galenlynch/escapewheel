@@ -231,8 +231,9 @@ class Packet:
                 import duckdb as _duckdb
             except ImportError as exc:  # pragma: no cover - exercised only without the extra
                 raise ImportError(
-                    "SQL access requires duckdb; install the 'validate' extra. Reading a packet "
-                    "does not require it: use table(), the accessors, or TableResource.dataset()."
+                    "SQL access requires duckdb; install the 'sql' extra. It is optional because a "
+                    "complete read path exists without it: table(), the accessors, and "
+                    "TableResource.dataset() all go through PyArrow."
                 ) from exc
             con = _duckdb.connect()
         for resource in self.resources(kind="table") + self.resources(kind="materialized_table"):

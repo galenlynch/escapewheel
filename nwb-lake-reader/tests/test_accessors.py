@@ -12,7 +12,12 @@ def test_trials_filtered_by_session(packet_root):
 
 
 def test_accessors_use_no_sql_engine(packet_root, monkeypatch):
-    """Reading must not require DuckDB; only validation may."""
+    """A complete read path must exist without a SQL engine.
+
+    table(), the accessors, and TableResource all go through PyArrow. Packet.duckdb() is a
+    read path too and does need DuckDB; the point is that it is not the only one, so a
+    minimal reader stays possible in a language without an embedded SQL engine (R3 2.1).
+    """
     import builtins
 
     real_import = builtins.__import__

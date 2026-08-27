@@ -38,8 +38,8 @@ registration, and an optional Polars scan; convenience accessors `trials()`, `un
 
 **Also delivered (Phase 2).** `nwb_lake_reader.validation` — Tier 1 checks generated from
 the registry's structure, Tier 2 rules carried in it, and the schema and ordering layers SQL
-cannot express. `nwb-lake validate` runs them. It lives behind the `validate` extra so that
-DuckDB stays optional.
+cannot express. `nwb-lake validate` runs them. Rules are SQL, so this needs the `validate` extra,
+which pulls in `sql`.
 
 **Not yet.** Zarr array access (Phase 5). Writing, importing, and analysis materialization
 are separate concerns and probably separate packages; this one stays a reader and a
@@ -80,11 +80,14 @@ These are not local preferences; changing them breaks conformance.
 - **`required_codecs` must be checked before opening any array** (R3 §7.2), failing with the
   codec named rather than attempting the read. `Packet.check_codecs()` does this; it matters
   from Phase 5.
-- **DuckDB is required for validation and deliberately not for reading.** The ban on nested
-  Parquet types (R3 §2.1) is what keeps Parquet2.jl a working native Julia read path —
-  measured, in `conformance/parquet-probe/`. So DuckDB is an *optional extra*, the accessors
-  filter through PyArrow, and `tests/test_accessors.py` asserts that reading never imports
-  it. Do not introduce a read path that requires it.
+- **A complete read path exists without a SQL engine.** `table()`, the accessors, and
+  `TableResource` go through PyArrow; `Packet.duckdb()` and `Packet.sql()` are read paths
+  too, and they do need DuckDB. The point is that they are not the *only* ones, so a minimal
+  reader stays possible in a language lacking an embedded SQL engine — which is what the ban
+  on nested Parquet types (R3 §2.1) exists to preserve, measured in
+  `conformance/parquet-probe/`. DuckDB is therefore the `sql` extra, and
+  `tests/test_accessors.py` asserts the PyArrow path never imports it. Do not make the
+  PyArrow path depend on DuckDB.
 - **Validation splits by what a query can see** (R12 §4). SQL covers what the data *says* —
   values, keys, references, vocabularies. The Python layers cover how it is *stored* —
   column presence, Parquet types, physical order. A storage-layer check written as SQL fails
@@ -122,6 +125,7 @@ For an end-to-end check against a real packet, `../fixtures/packets/valid` is a
 
 ```bash
 uv sync                                   # install
+uv sync --extra validate                  # install with DuckDB, for validation and SQL
 ./scripts/run_linters_and_checks.sh -c    # format, lint, mypy, interrogate, codespell, pytest
 uv run pytest                             # tests
 uv run pytest -k "test_name"              # one test

@@ -21,9 +21,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Reading a packet never requires a SQL engine; the nested-type ban (R3 2.1) exists to
-# keep a native reader viable in languages without one. Validation does require DuckDB.
-validate = ["duckdb>=1.5.5"]
+# A SQL engine is optional because a complete read path exists without one: the nested-type
+# ban (R3 2.1) exists to keep a native reader viable in languages that lack DuckDB. Rules are
+# SQL, so validation requires it.
+sql = ["duckdb>=1.5.5"]
+validate = ["nwb-lake-reader[sql]"]
 polars = ["polars>=1.0"]
 
 [project.urls]
