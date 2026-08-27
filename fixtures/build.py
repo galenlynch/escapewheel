@@ -72,8 +72,14 @@ def content() -> dict[str, list[dict]]:
         "core.electrodes": [
             {"electrode_id": f"elec_{i:03d}", "session_id": "s001", "probe_id": "probe0",
              "local_electrode_label": str(i), "local_channel_label": f"AP{i}",
-             "x_um": 0.0 + (i % 2) * 16.0, "y_um": 20.0 * (i // 2), "z_um": 0.0,
-             "coordinate_frame": "probe_tip", "brain_region": "VISp"} for i in range(4)],
+             "brain_region": "VISp"} for i in range(4)],
+        "core.electrode_coordinates": [
+            {"electrode_id": f"elec_{i:03d}", "coordinate_frame": frame,
+             "x_um": x, "y_um": y, "z_um": z}
+            for i in range(4)
+            for frame, x, y, z in (
+                ("probe", 0.0 + (i % 2) * 16.0, 20.0 * (i // 2), None),
+                ("ccf", -1968.4 + i, 8768.5 + i, -5142.2 + i))],
         "core.clocks": [
             {"clock_id": "imec_ap_s001", "session_id": "s001",
              "name": "Neuropixels AP sample clock", "tick_rate_hz": float(AP_HZ),
@@ -117,15 +123,33 @@ def content() -> dict[str, list[dict]]:
             {"session_id": "s001", "unit_id": "unit_001", "probe_id": "probe0",
              "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
              "local_unit_label": "17", "quality_label": "sua",
+             "quality_label_source": "decoder",
              "default_electrode_id": "elec_001",
              "firing_rate_hz": len(u1) / (300_000 / AP_HZ),
              "n_spikes": len(u1), "first_spike_tick": u1[0], "last_spike_tick": u1[-1]},
             {"session_id": "s001", "unit_id": "unit_002", "probe_id": "probe0",
              "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
              "local_unit_label": "42", "quality_label": "mua",
+             "quality_label_source": "decoder",
              "default_electrode_id": "elec_003",
              "firing_rate_hz": len(u2) / (300_000 / AP_HZ),
              "n_spikes": len(u2), "first_spike_tick": u2[0], "last_spike_tick": u2[-1]}],
+        "core.unit_quality_labels": [
+            {"session_id": "s001", "unit_id": u, "sorting_run_id": "sort_ks4_001",
+             "curation_id": "curation_001", "source": src, "label": lab,
+             "confidence": conf}
+            for u, src, lab, conf in (
+                ("unit_001", "decoder", "sua", 0.94),
+                ("unit_001", "kilosort", "sua", None),
+                ("unit_002", "decoder", "mua", 0.71),
+                ("unit_002", "kilosort", "sua", None))],
+        "core.unit_observation_intervals": [
+            {"session_id": "s001", "unit_id": u, "sorting_run_id": "sort_ks4_001",
+             "curation_id": "curation_001", "interval_index": i,
+             "start_tick": lo, "stop_tick": hi, "clock_id": "imec_ap_s001"}
+            for u, windows in (("unit_001", [(0, 300_000)]),
+                               ("unit_002", [(0, 120_000), (150_000, 300_000)]))
+            for i, (lo, hi) in enumerate(windows)],
         "core.spike_events":
             spikes("unit_001", "sort_ks4_001", "curation_001", "imec_ap_s001", u1) +
             spikes("unit_002", "sort_ks4_001", "curation_001", "imec_ap_s001", u2),
