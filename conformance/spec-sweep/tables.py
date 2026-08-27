@@ -29,6 +29,7 @@ STEPS = [
     ("R20 §5  + analysis.array_assets",        set(), {"analysis.array_assets"}),
     ("R20 §5  + analysis.array_dimensions",    set(), {"analysis.array_dimensions"}),
     ("R23 §2  + core.event_streams",           set(), {"core.event_streams"}),
+    ("R25 §2  + core.event_stream_observation_intervals", set(), {"core.event_stream_observation_intervals"}),
 ]
 
 if not PARSED.exists():
