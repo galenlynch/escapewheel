@@ -130,3 +130,46 @@ def test_nullable_foreign_keys_are_guarded(packet_root):
     )
     check = next(c for c in generate(registry) if c.id == "core.trials.probe_id_resolves")
     assert "IS NOT NULL" in check.sql
+
+
+def test_required_codecs_must_equal_the_union(packet_root):
+    path = packet_root / "nwb.packet.json"
+    entry = json.loads(path.read_text())
+    entry["resources"].append(
+        {
+            "resource_id": "array.probe0",
+            "layer": "core",
+            "kind": "dense_array_asset",
+            "uri": "s3://example/p.zarr",
+            "external": True,
+            "codecs": ["wavpack"],
+        }
+    )
+    entry["required_codecs"] = []  # the union says wavpack
+    path.write_text(json.dumps(entry))
+    report = validate(open_packet(packet_root))
+    finding = next(f for f in report.findings if f.check == "manifest.required_codecs_is_the_union")
+    assert "wavpack" in finding.message
+
+
+def test_external_resources_are_reported_as_unverified(packet_root):
+    """A default-mode pass must not imply external claims were checked."""
+    path = packet_root / "nwb.packet.json"
+    entry = json.loads(path.read_text())
+    entry["resources"].append(
+        {
+            "resource_id": "array.probe0",
+            "layer": "core",
+            "kind": "dense_array_asset",
+            "uri": "s3://example/p.zarr",
+            "external": True,
+            "codecs": ["wavpack"],
+        }
+    )
+    entry["required_codecs"] = ["wavpack"]
+    path.write_text(json.dumps(entry))
+    report = validate(open_packet(packet_root))
+    assert report.passed  # unreachable externals do not invalidate
+    info = next(f for f in report.findings if f.check == "external.unverified")
+    assert info.level == "info"
+    assert info.rows == (("array.probe0",),)

@@ -150,6 +150,38 @@ def _check_embedded_registry(packet: Packet, embedded: Mapping[str, Any], report
         )
 
 
+def _check_codec_declarations(packet: Packet, report: Report) -> None:
+    """Layer 1b: manifest-internal codec consistency (R15 §4, level 1).
+
+    Both sides are manifest fields, so this holds offline. Whether a declared codec matches
+    the array's actual metadata is level 2 for packet-owned arrays and level 3 -- the
+    requested external mode -- for the rest.
+    """
+    declared: set[str] = set()
+    for resource in packet.resources():
+        declared |= set(resource.codecs)
+    summary = set(packet.manifest.required_codecs)
+    if declared != summary:
+        detail = []
+        if missing := sorted(declared - summary):
+            detail.append(f"resources use {', '.join(missing)} but required_codecs omits them")
+        if extra := sorted(summary - declared):
+            detail.append(f"required_codecs lists {', '.join(extra)} that no resource uses")
+        report.add("error", "manifest.required_codecs_is_the_union", "; ".join(detail))
+
+    # An external resource's codecs, sha256 and size_bytes are claims this mode does not
+    # verify (R14 §2.3.1, R15 §4). Say so, rather than let "passed" imply otherwise.
+    external = [r.resource_id for r in packet.resources() if r.is_external]
+    if external:
+        report.add(
+            "info",
+            "external.unverified",
+            f"{len(external)} external resource(s) not resolved; their codecs, sha256 and "
+            "size_bytes are unverified claims",
+            [(name,) for name in external],
+        )
+
+
 def _check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> dict[str, Any]:
     """Layer 2: column presence and physical type, which SQL cannot see (R12 §4)."""
     declared = {r.resource_id for r in packet.resources()}
@@ -208,9 +240,17 @@ def _check_ordering(tables: Mapping[str, Any], present: Mapping[str, Any], repor
 
 
 #: Registry column type -> the DuckDB type used for the empty stand-in tables below.
-_DDL = {"string": "VARCHAR", "int32": "INTEGER", "int64": "BIGINT", "float32": "FLOAT",
-        "float64": "DOUBLE", "bool": "BOOLEAN", "date": "DATE",
-        "timestamp": "TIMESTAMPTZ", "json_string": "VARCHAR"}
+_DDL = {
+    "string": "VARCHAR",
+    "int32": "INTEGER",
+    "int64": "BIGINT",
+    "float32": "FLOAT",
+    "float64": "DOUBLE",
+    "bool": "BOOLEAN",
+    "date": "DATE",
+    "timestamp": "TIMESTAMPTZ",
+    "json_string": "VARCHAR",
+}
 
 
 def _run_rules(packet: Packet, registry: Mapping[str, Any], present: Mapping[str, Any], report: Report) -> None:
@@ -276,6 +316,7 @@ def validate(packet: Packet, *, registry: Mapping[str, Any] | None = None) -> Re
 
     if embedded is not None:
         _check_embedded_registry(packet, embedded, report)
+    _check_codec_declarations(packet, report)
     present = _check_schemas(packet, effective["tables"], report)
     _check_ordering(effective["tables"], present, report)
     _run_rules(packet, effective, present, report)

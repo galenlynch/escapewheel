@@ -85,19 +85,47 @@ def test_registry_is_optional(packet_root):
     assert open_packet(packet_root).registry is None
 
 
-def test_codec_check_passes_on_the_baseline(packet_root):
-    open_packet(packet_root).check_codecs()
-
-
-def test_codec_check_names_what_is_missing(packet_root):
+def _with_array(packet_root, codecs):
+    """Add an external array resource declaring `codecs`."""
     import json
 
     path = packet_root / "nwb.packet.json"
     entry = json.loads(path.read_text())
-    entry["required_codecs"] = ["zstd", "sharding_indexed"]
+    entry["resources"].append(
+        {
+            "resource_id": "array.probe0_ap",
+            "layer": "core",
+            "kind": "dense_array_asset",
+            "uri": "s3://example/probe0.zarr",
+            "external": True,
+            "codecs": codecs,
+        }
+    )
+    entry["required_codecs"] = codecs
     path.write_text(json.dumps(entry))
-    with pytest.raises(UnsupportedCodecError, match="sharding_indexed"):
-        open_packet(packet_root).check_codecs()
+    return open_packet(packet_root)
+
+
+def test_codec_check_passes_on_the_baseline(packet_root):
+    _with_array(packet_root, ["zstd"]).check_codecs("array.probe0_ap")
+
+
+def test_codec_check_names_what_is_missing(packet_root):
+    pkt = _with_array(packet_root, ["wavpack"])
+    with pytest.raises(UnsupportedCodecError, match="wavpack"):
+        pkt.check_codecs("array.probe0_ap")
+
+
+def test_a_missing_codec_disqualifies_only_that_resource(packet_root):
+    """R15 §2: a reader must not refuse a packet over a codec it will never need."""
+    pkt = _with_array(packet_root, ["wavpack"])
+    assert pkt.unopenable() == {"array.probe0_ap": ("wavpack",)}
+    assert pkt.table("core.trials").num_rows == 2  # tables stay readable
+    pkt.check_codecs("core.trials")  # and declare no codecs at all
+
+
+def test_unopenable_is_empty_when_everything_reads(packet_root):
+    assert _with_array(packet_root, ["gzip"]).unopenable() == {}
 
 
 def test_sessions_and_repr(packet_root):

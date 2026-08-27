@@ -172,27 +172,52 @@ class Packet:
 
     # -- codec capability -------------------------------------------------------------
 
-    def check_codecs(self, supported: Iterable[str] = BASELINE_CODECS) -> None:
-        """Check that this reader supports every codec the packet requires.
+    def check_codecs(self, resource_id: str, supported: Iterable[str] = BASELINE_CODECS) -> None:
+        """Check that this reader can open one resource, before opening it.
 
-        A reader must make this check before opening any array, and fail naming the codec
-        it lacks rather than attempting the read.
+        Codecs are a property of a resource, not of a packet (R15 §2). A packet may
+        reference an array in a codec this reader lacks while its own arrays are readable,
+        so a missing codec disqualifies that resource and nothing else.
 
         Parameters
         ----------
+        resource_id : str
+            Dotted resource ID.
         supported : iterable of str, optional
             Codecs this reader can decode. Defaults to the portable-profile baseline.
 
         Raises
         ------
         UnsupportedCodecError
-            If the packet requires a codec that is not supported.
+            If the resource uses a codec that is not supported.
         """
-        missing = sorted(set(self._manifest.required_codecs) - set(supported))
+        missing = sorted(set(self.resource(resource_id).codecs) - set(supported))
         if missing:
-            raise UnsupportedCodecError(
-                f"{self._manifest.packet_id} requires codecs this reader does not support: {', '.join(missing)}"
-            )
+            raise UnsupportedCodecError(f"{resource_id} uses codecs this reader does not support: {', '.join(missing)}")
+
+    def unopenable(self, supported: Iterable[str] = BASELINE_CODECS) -> dict[str, tuple[str, ...]]:
+        """Report which resources this reader cannot open, and why.
+
+        The packet-level counterpart to :meth:`check_codecs`. It reports rather than raises,
+        because a codec used by one resource says nothing about the rest.
+
+        Parameters
+        ----------
+        supported : iterable of str, optional
+            Codecs this reader can decode. Defaults to the portable-profile baseline.
+
+        Returns
+        -------
+        dict
+            Resource ID to the codecs it needs that are unsupported. Empty when the whole
+            packet is readable.
+        """
+        available = set(supported)
+        return {
+            r.resource_id: tuple(sorted(set(r.codecs) - available))
+            for r in self._manifest.resources
+            if set(r.codecs) - available
+        }
 
     # -- tabular access ---------------------------------------------------------------
 

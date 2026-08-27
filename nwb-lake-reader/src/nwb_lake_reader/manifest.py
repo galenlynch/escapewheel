@@ -74,6 +74,19 @@ class Resource:
         return str(value) if value is not None else None
 
     @property
+    def codecs(self) -> tuple[str, ...]:
+        """Zarr codecs this resource's array uses, excluding the mandatory ``bytes`` codec.
+
+        Empty for resources that are not arrays.
+        """
+        return tuple(str(c) for c in self.entry.get("codecs", ()))
+
+    @property
+    def is_external(self) -> bool:
+        """Whether the packet references these bytes rather than owning them."""
+        return bool(self.entry.get("external", False))
+
+    @property
     def validation_state(self) -> str | None:
         """The validation state recorded for this resource, if declared."""
         value = self.entry.get("validation_state")
