@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-08-26 |
 | **Amends** | `02_core_logical_schemas.md`, R3 §3.4 |
 | **Depends on** | R3 (typed clock transform), R6 (wall-clock binding) |
 | **Profile** | `nwb-lake-portable-v0.1` |

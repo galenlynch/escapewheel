@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-08-26 |
 | **Amends** | `03_portable_physical_profile.md`, `04_packet_catalog_manifest.md`, `05_validation_and_import.md`, R3 §7.2 |
 | **Depends on** | R3 (codec floor, `required_codecs`) |
 | **Blocks** | Phase 5 |
