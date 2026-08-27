@@ -54,7 +54,7 @@
       "uniqueItems": true
     },
     "required_codecs": {
-      "description": "Every Zarr codec used by any array, excluding the mandatory bytes codec (R3 \u00a77.2). A reader MUST check this before opening an array and fail naming any it does not support.",
+      "description": "The union of every resource's codecs (R15 \u00a73). Answers whether a reader can use the whole packet; it does not gate individual reads.",
       "type": "array",
       "items": {
         "type": "string"
@@ -250,6 +250,14 @@
           "description": "When sha256 or size_bytes last held. Not a promise about now (R14 \u00a72.3.1).",
           "type": "string",
           "format": "date-time"
+        },
+        "codecs": {
+          "description": "Zarr codecs this resource's array uses, excluding the mandatory bytes codec (R15 \u00a72). A reader checks these before opening this resource and must not refuse the packet over a codec used only by resources it does not open.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
         }
       },
       "allOf": [
@@ -289,6 +297,23 @@
             },
             "required": [
               "external"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "dense_array_asset"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "codecs"
             ]
           }
         }
