@@ -11,3 +11,4 @@ These are prose inventories of specific datasets. The machine-readable form is
 | File | Dataset |
 |---|---|
 | [`ecephys_776259_2025-04-09.md`](ecephys_776259_2025-04-09.md) | AIND Neuropixels + behaviour, `aind-open-data` |
+| [`nwb-core-schema-comparison.md`](nwb-core-schema-comparison.md) | Core NWB schema versus the core registry |
