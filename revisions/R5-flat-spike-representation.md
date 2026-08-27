@@ -15,11 +15,11 @@ R3 §2.1 forbids nested Parquet types. `core.unit_spike_chunks.spike_ticks` is a
 `list<int64>` column, so the rule cannot be adopted without replacing it. R3 §4 records the
 decision and defers the schema surgery here.
 
-The decision was measured, not assumed (R3 §7.3, `conformance/parquet-probe/`): with delta
-encoding applied to both forms the size difference is 1%, and the chunked table is slower at
-every access pattern tested — including single-unit retrieval, the pattern it exists to
-serve. Sorted by unit, the flat table is fastest at single-unit and multi-unit retrieval and
-within 7% of a time-sorted layout at range selection.
+R3 §7.3 records the measurements (`conformance/parquet-probe/`): with delta encoding applied
+to both forms the size difference is 1%, and the chunked table is slower at every access
+pattern tested, including single-unit retrieval. Sorted by unit, the flat table is fastest at
+single-unit and multi-unit retrieval and within 7% of a tick-sorted layout at range
+selection.
 
 This revision performs the surgery. It changes no semantic concept: a spike is still one
 timestamp for one unit on one clock.
@@ -82,10 +82,10 @@ The table is removed in its entirety, with its columns `chunk_index`, `t_min_tic
 - chunks for one unit SHOULD be non-overlapping and ordered by chunk_index
 ```
 
-None survives, because none describes anything in a flat table.
+None applies to a flat table.
 
 `02`'s "Spike representation policy" section is struck. With one canonical representation
-there is nothing to declare, no equivalence to validate, and no per-`(session_id,
+there is no declaration to make, no equivalence to validate, and no per-`(session_id,
 sorting_run_id, curation_id)` choice to record.
 
 ## 4. `core.units` — summary columns
@@ -152,9 +152,8 @@ offset, so R3 §6's rule becomes uniform rather than a classification readers mu
 | `07` | Round-trip "spike chunk -> spike event -> chunk equivalence" from the testing strategy; `pkt.materialize("analysis.spike_events")` from the API examples; `spike_chunks` from the minimum API |
 | `08` | The `core.unit_spike_chunks` example rows and manifest entry; the chunk-count SQL example |
 
-`04`'s deletion of `canonical_representations` is the largest simplification: an entire
-manifest mechanism, present solely to reconcile two canonical spike forms, has nothing left
-to reconcile.
+The `canonical_representations` block in `04` exists solely to reconcile two canonical spike
+forms. With one canonical form it has no function and is removed entirely.
 
 ## 7. Validation rules
 

@@ -43,7 +43,7 @@ column names, and MUST NOT be read as defining any.
 
 ## 3. Resolutions
 
-In each case `02` is authoritative and `09` is corrected. `02` is the schema definition;
+`02` is authoritative in each case and `09` is corrected. `02` is the schema definition;
 `09` is a policy document that restates schemas for illustration.
 
 ### 3.1 `core.clocks` — `exact_tick_rate`
@@ -61,8 +61,8 @@ validation rule.
 
 **Resolution:** strike both from `09` §4.3. Synchronization *quality* is quality-control
 metadata, not information required to interpret a tick, so it belongs in `core.clocks.metadata`
-under `09`'s own tier-3 rule. This is deliberately narrower than R3 §3.4, which promoted the
-alignment *transform* to typed columns precisely because interpretation depends on it.
+under `09`'s own tier-3 rule. This is narrower than R3 §3.4, which promotes the alignment
+*transform* to typed columns because interpretation depends on it.
 
 ### 3.3 `core.processing_runs` — `created_at`
 
@@ -78,13 +78,12 @@ processing run has a start and an end; a separate creation time duplicates the s
 
 **Resolution:** strike `age_at_session` from `09` §4.1.
 
-There is a real argument for the field, and it should be recorded rather than lost: `01`
-permits sensitive subject metadata to be redacted, and an age is less identifying than a
-date of birth, so a packet withholding `date_of_birth` currently has no way to express age
-at all. Adding it is nonetheless a new field rather than a reconciliation, and
-`age_at_session` is session-relative while `core.subjects` is not session-scoped — it would
-belong on `core.sessions`, if anywhere. Deferred; raise separately if a real packet needs
-redaction.
+The case for the field is recorded here rather than lost. `01` permits sensitive subject
+metadata to be redacted, and an age is less identifying than a date of birth, so a packet
+withholding `date_of_birth` has no way to express age. Adding it is nonetheless a new field
+rather than a reconciliation, and `age_at_session` is session-relative while `core.subjects`
+is not session-scoped, so it would belong on `core.sessions`. Deferred; raise separately if a
+packet requires redaction.
 
 ### 3.5 `09` inline type annotations
 
@@ -116,7 +115,7 @@ columns, or express this particular case as a named cross-column validation rule
 
 Recorded so that R2 need not re-derive it, and so that a future sweep can detect regression.
 
-Against R3's rules, `02` is otherwise clean:
+Against R3's rules, `02` is otherwise compliant:
 
 - **Nested types.** 31 columns use `list`, `struct`, `map`, or `json_string`. All 31 are
   accounted for in R3 §2.2; none is unlisted.

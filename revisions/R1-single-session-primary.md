@@ -30,9 +30,9 @@ not the primary case.**
 The portable profile is optimized for the single-session packet: one file per table, no
 partitioning, relative URIs, readable without a server.
 
-## 3. Why this costs almost nothing
+## 3. Impact on the schemas
 
-The base schemas already support both, and this decision changes no column and no key.
+The base schemas already support both cases. This decision changes no column and no key.
 
 - `session_id` is a column on every session-scoped core table, present in single-session
   packets exactly as in multi-session ones. Cardinality differs; the schema does not.
@@ -52,7 +52,7 @@ The base schemas already support both, and this decision changes no column and n
 - `core.source_files` and the three provenance tables are packet-scoped, not session-scoped,
   and are unaffected.
 
-The only genuinely absent piece is §4.
+The only absent piece is §4.
 
 ## 4. Manifest session inventory
 
@@ -77,8 +77,8 @@ WHERE unnest NOT IN (SELECT session_id FROM core_sessions)
 ```
 
 For a single-session packet this is one string, and it lets a reader answer "what is in here"
-from a small JSON file. For the multi-session extension it is what makes a catalog of packets
-queryable without opening any table.
+from a small JSON file. For the multi-session extension it permits a catalog of packets to be
+queried without opening any table.
 
 ## 5. Multi-session as an extension
 
@@ -92,8 +92,8 @@ A conforming multi-session packet:
 Cross-session clock alignment is out of scope. Sessions relate to one another through
 `core.sessions.session_start_time`, and through `tick_zero_utc` where R6 is adopted. Clocks
 remain session-scoped, as `01` requires; `parent_clock_id` carries no same-session restriction,
-so a packet that genuinely needs a shared reference clock may point at one, but no validation
-rule requires or checks this.
+so a packet requiring a shared reference clock may point at one, but no validation rule
+requires or checks this.
 
 ## 6. Consequences for the fixture
 
@@ -101,5 +101,5 @@ Phase 0's fixture (`07`) is a single-session packet: one session, one subject, o
 trials, two units, and their spikes as `core.spike_events` (R5). It uses one Parquet file per
 table and exercises no partitioning.
 
-A second, small multi-session fixture SHOULD exist in the conformance corpus to keep the
-extension honest, but it is not required for Phases 0–2.
+A second, small multi-session fixture SHOULD exist in the conformance corpus to exercise the
+extension. It is not required for Phases 0–2.

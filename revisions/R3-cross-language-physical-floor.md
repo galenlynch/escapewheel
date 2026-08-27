@@ -36,7 +36,7 @@ Arrow-compatible names are the vocabulary in which the schema registry states re
 column types; NumPy dtype strings (`<i2`, `|b1`) MUST NOT be used, being Python-specific
 and encoding endianness in-band.
 
-Array data types are deliberately not specified here. A Zarr array declares its own
+Array data types are not specified here. A Zarr array declares its own
 `data_type` and both target languages read it identically (§7.3), so the specification has
 nothing to add: no table restates it (§3.0), and whether a given array is int16 or float32
 is an acquisition choice, not a conformance question.
@@ -61,16 +61,14 @@ Tick columns MUST be **signed** `int64`. Signed, because `05:131` contemplates n
 ticks ("spike ticks are nonnegative or justified by clock origin"), so `uint64` is wrong
 despite its larger positive range. `int64` rather than a narrower width because `int32`
 overflows inside a normal recording — 19.9 h at 30 kHz, 11.9 h at 50 kHz, 36 min at 1 MHz —
-and does so silently, since a wrapped tick is still a valid integer. This is a correctness
-bound, not an optimization: measured, `int64` tick columns are no larger than `int32` and
-in practice smaller, because sorted values leave leading zero bytes that compress away
-(§7.3).
+and does so without error, since a wrapped tick is still a valid integer. Measured, `int64`
+tick columns are no larger than `int32` and are smaller in the case tested, because sorted
+values leave leading zero bytes that compress (§7.3).
 
 Writers SHOULD encode tick columns with `DELTA_BINARY_PACKED`, and SHOULD NOT
-dictionary-encode them. Dictionary encoding is actively harmful on high-cardinality tick
-columns: the writer builds a dictionary nearly as large as the column, abandons it on
-hitting its size threshold, and emits a mix of partial dictionary and plain pages that is
-larger than either alone (§7.3).
+dictionary-encode them. On a high-cardinality tick column the writer builds a dictionary
+nearly as large as the column, abandons it on reaching its size threshold, and emits a mix
+of partial dictionary and plain pages larger than either encoding alone (§7.3).
 
 Wall-clock timestamps MUST be stored as Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and
 `MICROS` precision. The legacy `INT96` representation MUST NOT be used. Dates MUST be
@@ -101,21 +99,17 @@ be used and MUST be supported by readers.
 sessions produces incompatible Parquet schemas that break multi-file dataset reads. Both
 risks are structural, not incidental.
 
-`list` is core Parquet and well supported in Arrow C++, pyarrow, and DuckDB, so it looks
-like the safe nested type. It is not, for this project. Measured (§7.3), **Parquet2.jl —
-Julia's native Parquet reader — cannot read a list column at all**, at any compression,
-while reading primitive columns from the same writer without difficulty. A single list
-column therefore forces every Julia reader through DuckDB.
+`list` is core Parquet and supported in Arrow C++, pyarrow, and DuckDB. It is nonetheless
+excluded. Measured (§7.3), Parquet2.jl — the only working native Julia Parquet reader —
+cannot read a list column at any compression, while reading primitive columns from the same
+writer. One list column therefore routes every Julia reader through DuckDB.
 
-DuckDB is a reasonable dependency and likely the recommended Julia path regardless, but
-requiring it for *any* table read is a real narrowing of "readable without a server", and it
-is not a constraint a reader can discover before failing. Portability alone would justify
-the prohibition.
+DuckDB is a supported Julia path, but requiring it for any table read narrows "readable
+without a server", and a reader cannot determine the constraint before failing.
 
-The structural argument stands alongside it: a uniform "every column is a primitive" rule is
-a materially lower implementation floor than "primitives, plus lists, except not maps or
-structs", and the columns that used lists are better modelled as relations (§3) or as a flat
-table (§4).
+A uniform "every column is a primitive" rule is also a lower implementation floor than
+"primitives, plus lists, except not maps or structs", and the columns that used lists are
+modelled as relations (§3) or as a flat table (§4).
 
 ## 3. Table/array metadata boundary, and normalizations
 
@@ -127,29 +121,26 @@ than case by case.
 **Duplication test — a table MUST NOT restate what the data it describes already declares,
 unless the duplication buys access that is otherwise unavailable.**
 
-Both halves matter. A duplicated value can disagree with its source, so it must earn its
-place; but "derived" alone is not disqualifying. The test is whether reading the source
-directly is already cheap. Where it is, duplication buys nothing and costs a failure mode.
-Where it is not, an explicit, validated denormalization is legitimate — see §4.
+A duplicated value can disagree with its source. The test is whether reading the source
+directly is already cheap. Where it is, the duplication adds a failure mode and no
+capability. Where it is not, a validated denormalization is permitted; see §4.
 
 **Multiplicity rule — a field whose semantic type is "zero or more X" MUST be a child
 table, keyed on the parent's primary key plus the value. Never a list, never a delimited
 string, never JSON.**
 
-Delimited strings admit substring collisions and break on any delimiter that appears in a
-value. JSON forces every client to carry a parser to answer a routine filter. Lists are not
-readable by Julia's only working native Parquet reader (§7.3). A child table has none of
-those problems, costs one small file, and makes the value an equality join — which is what
-the surrounding model is built out of.
+Delimited strings admit substring collisions and break on any delimiter occurring within a
+value. JSON requires every client to carry a parser to evaluate a filter. Lists are not
+readable by Parquet2.jl (§7.3). A child table has none of these properties, costs one
+additional file, and makes the value an equality join.
 
-This rule is why §2.1's prohibition on nested types costs so little: the fields that would
-have used them are relations, and were mismodelled as lists. R2 carries the rule forward for
-fields added later.
+The fields that would otherwise use nested types are relations, so §2.1's prohibition
+removes little. R2 carries this rule forward for fields added later.
 
 `03:180` currently requires that "scientific metadata required for packet validation MUST
 also be represented in tables or the manifest," to prevent metadata being "trapped only
-inside array-store attributes." That reaches too far. Measured against real readers (§7.3),
-the fields divide cleanly:
+inside array-store attributes." This is broader than necessary. Measured against the
+readers in §7.3:
 
 | Field | Declared by Zarr? | Visible to Zarr.jl? | In a table? |
 |---|---|---|---|
@@ -186,12 +177,10 @@ Replaces the `experimenter` list column on `core.sessions`.
 Primary key: `(session_id, experimenter)`.
 References: `session_id` -> `core.sessions.session_id`.
 
-A session genuinely has zero or more experimenters, so §3.0's multiplicity rule applies. A
-free-text string would be lossy — individuals cannot be recovered reliably from
-`"Alice Smith, Bob Jones"`, and any delimiter chosen will eventually occur inside a name.
-
-Modelling it the same way as `core.trial_tags` also means an implementer learns one pattern
-for repeated values rather than two.
+A session has zero or more experimenters, so §3.0's multiplicity rule applies. A free-text
+string is lossy: individuals cannot be recovered reliably from `"Alice Smith, Bob Jones"`,
+and any delimiter chosen may occur within a name. Using the same shape as `core.trial_tags`
+gives one pattern for repeated values rather than two.
 
 ### 3.2 New table: `core.trial_tags`
 
@@ -226,14 +215,14 @@ Validation:
 - `axis_index` MUST be contiguous from 0 for each array asset.
 - Row count per asset MUST equal the rank of the stored array.
 
-Axis lengths are deliberately absent, per §3.0 — the array declares them. What the array
-does not declare is what its axes mean: `dimension_names` is optional in Zarr v3, absent by
-default, and not surfaced by Zarr.jl at all (§7.3).
+Axis lengths are absent per §3.0: the array declares them. Axis names it does not —
+`dimension_names` is optional in Zarr v3, absent by default, and not exposed by Zarr.jl
+(§7.3).
 
-Naming axes one row apiece also removes an unvalidated invariant in the base spec, where
+One row per axis also removes an unvalidated invariant in the base specification, where
 `shape[i]` had to correspond to `dimension_names[i]` across two parallel lists with nothing
-enforcing the correspondence. This mirrors `core.array_channels`, which already normalizes
-the channel axis on the same key shape.
+enforcing the correspondence. `core.array_channels` already normalizes the channel axis on
+the same key shape.
 
 ### 3.4 `core.clocks.transform_to_parent`
 
@@ -252,13 +241,13 @@ know a clock's parent before any alignment has been measured, which is the state
 packet imported before synchronization analysis runs.
 
 `transform_slope` is the **measured** ratio, not the nominal one. The nominal ratio is
-already derivable from the two clocks' declared tick rates; recording it again would
-duplicate derivable data, contrary to §3.0. A `transform_slope` that differs from the
-nominal ratio records real relative drift and is the point of the field.
+derivable from the two clocks' declared tick rates, so recording it would duplicate derivable
+data, contrary to §3.0. A `transform_slope` differing from the nominal ratio records relative
+drift.
 
-Clock alignment is analysis-critical, not junk-drawer metadata. Burying it in JSON makes
-the one field that renders multi-clock sessions interpretable the one field a reader cannot
-reach without a parser.
+Clock alignment is required to interpret a multi-clock session. In JSON it would be
+unreachable without a parser, contrary to §2.1's rule that required interpretation not depend
+on one.
 
 **Open:** non-linear alignment (piecewise, anchor-point) needs a child table. This revision
 does not define one; packets requiring it are out of scope for `nwb-lake-portable-v0.1`.
@@ -272,30 +261,27 @@ violation of §2.1. The rule cannot be adopted without replacing it.
 becomes the sole canonical spike representation. `core.unit_spike_chunks` is withdrawn, and
 no chunked form is retained in `core` or `analysis`.
 
-The chunked table's stated justification is compactness (`00:110`). Measured, that is a
-wash: with delta encoding applied to both — for the chunked table via the Parquet child
-path `spike_ticks.list.element` — the flat table is 17.45 MB and the chunked table 17.27 MB
-for the same 9M spikes, a 1% difference (§7.3). Compactness does not decide this.
+The chunked table's stated justification is compactness (`00:110`). Measured with delta
+encoding applied to both forms — for the chunked table via the Parquet child path
+`spike_ticks.list.element` — the flat table is 17.45 MB and the chunked table 17.27 MB for
+the same 9M spikes, a 1% difference (§7.3). Compactness does not distinguish them.
 
-Access does, and not in the chunked table's favour. Across three patterns the chunked
-table is slowest in every one, including single-unit retrieval, which is the pattern it
-exists to serve (§7.3). The effective lever on spike-table performance is **sort order**,
-not table shape: the same flat table sorted by unit versus by time differs 10x on
-single-unit retrieval. **Sorted by unit, the flat table is the all-around winner**:
-fastest at single-unit and multi-unit retrieval, and within 7% of the time-sorted
-layout at range selection, so no second representation is needed for the patterns
-measured. This is the ordering `03:120`
-already recommends — `session_id, sorting_run_id, curation_id, unit_id, t_tick` — so the
-base specification's guidance stands unchanged. A packet later found to need a
-time-optimized access path should materialize a second *flat* table sorted by tick, which
-beats the chunked form on that pattern too.
+Access does. Across the three patterns measured the chunked table is slowest in each,
+including single-unit retrieval (§7.3). Sort order, not table shape, is the effective lever:
+the same flat table sorted by unit rather than by tick differs 10x on single-unit retrieval.
+Sorted by unit the flat table is fastest at single-unit and multi-unit retrieval and within
+7% of the tick-sorted layout at range selection, so no second representation is required for
+the patterns measured. This is the ordering `03:120` already recommends —
+`session_id, sorting_run_id, curation_id, unit_id, t_tick` — so that guidance is unchanged. A
+packet requiring a tick-optimized access path should materialize a second flat table sorted
+by tick, which is also faster than the chunked form on that pattern.
 
-What remains against chunking is therefore structural, and it is decisive: chunk size is a
-free parameter no document specifies, so no two importers produce comparable packets; three
-derived columns can disagree with the data; four validation rules exist solely because of
-chunking; and the entire dual-representation mechanism — the spike policy in `02`,
-`canonical_representations` in `04`, `analysis.spike_events` in `06`, and the round-trip
-equivalence tests in `07` — exists only to reconcile the two forms.
+The remaining costs of chunking are structural: chunk size is a free parameter no document
+specifies, so importers produce non-comparable packets; three derived columns can disagree
+with the data; four validation rules exist only because of chunking; and the
+dual-representation mechanism — the spike policy in `02`, `canonical_representations` in
+`04`, `analysis.spike_events` in `06`, and the round-trip equivalence tests in `07` — exists
+only to reconcile the two forms.
 
 `core.units` SHOULD gain `n_spikes`, `first_spike_tick`, and `last_spike_tick`. These are
 derived from `core.spike_events`, and so must satisfy §3.0's duplication test — which they
@@ -338,10 +324,10 @@ Measured, not assumed (§7.3). An array written from zarr-python 3.3.0 with shap
 `a[2,1]` equals Python `data[0,1]`. Zarr.jl reverses axis order to preserve memory layout
 without copying, which is correct behaviour for a column-major language.
 
-Nothing is wrong at the format level — the stored bytes are unambiguous and both libraries
-are right. The divergence is at the presentation layer, so it is resolved there: each
-client knows its own convention, and a validator compares its own view of the array's rank
-and extents against `core.array_dimensions` accordingly.
+The stored bytes are unambiguous and both libraries are correct; the divergence is at the
+presentation layer and is resolved there. Each client applies its own convention, and a
+validator compares its own view of the array's rank and extents against
+`core.array_dimensions` accordingly.
 
 Zarr.jl 0.10.2 does not expose `dimension_names` at all: its `MetadataV3` type carries
 `zarr_format`, `node_type`, `shape`, `chunks`, `dtype`, `pipeline`, `fill_value`, and
@@ -408,8 +394,8 @@ configuration, not part of the data type. `fill_value` MUST be set explicitly.
 ### 7.2 Codecs
 
 The **baseline** is `none`, `gzip`, and `zstd`. Readers MUST support all three. These are
-universally available across Zarr implementations, and the baseline is deliberately not
-derived from what any particular pair of libraries happens to support.
+universally available across Zarr implementations. The baseline is not derived from what the
+libraries tested in §7.3 happen to support.
 
 Writers SHOULD use only baseline codecs. A packet written to the baseline opens in any
 conforming reader, which is what portability means by default.
@@ -427,10 +413,10 @@ top-level `required_codecs` array. The mandatory `bytes` codec is excluded from 
 Readers MUST check `required_codecs` before opening any array, and MUST fail with a message
 naming the unsupported codec rather than attempting the read.
 
-This is a *declared* capability contract, not a silent fork: a reader learns from the
-manifest, cheaply and up front, whether it can proceed. It is the same mechanism as
-`profile_id`. It is deliberately unlike the withdrawn `02:52` rule, under which a reader
-could only discover a packet's physical encoding by inspecting the data.
+This is a declared capability contract. A reader determines from the manifest, before
+opening any array, whether it can proceed — the same mechanism as `profile_id`. Under the
+withdrawn `02:52` rule a reader could determine a packet's physical encoding only by
+inspecting the data.
 
 This amends `04`'s required top-level manifest fields.
 
@@ -499,12 +485,11 @@ A primitives-only control isolates the nested type from the codec:
 | `list<int64>`, zstd / snappy / uncompressed | **fails, all three** | reads |
 
 Parquet2.jl raises `FieldError: type Nothing has no field meta_data` on every list file and
-none of the primitive files, so the failure is the nested type, not compression. DuckDB.jl
-returns the lists correctly and `UNNEST` works in SQL.
+on none of the primitive files, so the failure is the nested type rather than compression.
+DuckDB.jl returns the lists correctly and `UNNEST` works in SQL.
 
-This is a snapshot of one library version and may be fixed upstream; it is recorded because
-the prohibition in §2.1 rests partly on it. Re-run `conformance/parquet-probe/lists.jl`
-before relaxing that rule.
+These are single library versions and may change upstream. §2.1 rests partly on this result;
+re-run `conformance/parquet-probe/lists.jl` before relaxing that rule.
 
 ### Zarr, array compression
 
@@ -520,10 +505,9 @@ sparse spike waveforms:
 | **blosc-zstd-byteshuffle** | **15.55 MB** | **1.48x** |
 | blosc-zstd-bitshuffle | 23.02 MB | 1.00x |
 
-Byte-shuffle is worth roughly 11% over plain zstd on arrays; bitshuffle is worthless on
-this data and SHOULD NOT be used. Extracellular recordings compress poorly in general
-because they are predominantly noise — do not expect better than about 1.5x from any
-portable codec.
+Byte-shuffle gives roughly 11% over plain zstd on arrays; bitshuffle gives nothing on this
+data and SHOULD NOT be used. Extracellular recordings are predominantly noise and compress
+poorly; approximately 1.5x is the expected ceiling for any portable codec.
 
 ## 8. Rejected alternatives
 
@@ -531,7 +515,7 @@ portable codec.
 every packet opens in every conforming reader, but bases the standard on n=2 — what the two
 libraries tested here happen to support. A third implementation would then have to
 implement shard-index parsing and link c-blosc merely to conform. §7.2's declaration
-mechanism achieves clean failure without raising the floor.
+mechanism produces a defined failure without raising the floor.
 
 **Retaining an advisory `core.array_assets.dtype`.** Rejected under §3.0. A value that can
 disagree with the data it describes buys nothing that opening the array does not.

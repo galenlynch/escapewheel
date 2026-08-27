@@ -95,10 +95,10 @@ rule. A session with several clocks has one `session_start_time` and potentially
 
 ## 5. Scope
 
-This is deliberately minimal. It does not add drift models, leap-second handling, or
-alignment quality metadata; R4 §3.2 keeps synchronization quality in `core.clocks.metadata`,
-and R3 §3.4 covers clock-to-clock alignment through `transform_slope` and `transform_offset`.
-`tick_zero_utc` answers one question — what wall-clock instant was tick 0 — and nothing more.
+This revision adds no drift model, leap-second handling, or alignment quality metadata. R4
+§3.2 keeps synchronization quality in `core.clocks.metadata`, and R3 §3.4 covers
+clock-to-clock alignment through `transform_slope` and `transform_offset`. `tick_zero_utc`
+records the wall-clock instant of tick 0 and nothing further.
 
-Under R1, single-session packets rarely need it. It matters for relating sessions to each
-other, and for aligning packet data against external streams recorded on wall-clock time.
+Under R1 a single-session packet rarely requires it. It applies to relating sessions to one
+another and to aligning packet data against external streams recorded on wall-clock time.
