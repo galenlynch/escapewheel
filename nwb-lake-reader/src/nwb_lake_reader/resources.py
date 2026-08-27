@@ -8,14 +8,14 @@ Phase 5 and should mirror this shape.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pyarrow.dataset as pads
 import pyarrow.parquet as pq
 
-from ._sql import sql_name
 from .errors import ResourceUnreadableError
 from .manifest import Resource
+from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
@@ -158,5 +158,5 @@ class TableResource:
         except ImportError as exc:  # pragma: no cover - exercised only without the extra
             raise ImportError("scan_polars requires polars; install the 'polars' extra") from exc
         target = f"{self.path}/**/*.parquet" if self._resource.is_partitioned else str(self.path)
-        frame: Any = _pl.scan_parquet(target)
+        frame: pl.LazyFrame = _pl.scan_parquet(target)
         return frame

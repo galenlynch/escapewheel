@@ -1,4 +1,8 @@
-"""Helpers for mapping packet identifiers onto SQL identifiers."""
+"""Helpers for mapping packet identifiers onto SQL identifiers.
+
+Public because the validator emits SQL against the names this package registers, and the
+two must agree exactly. One implementation, so they cannot drift apart.
+"""
 
 from __future__ import annotations
 

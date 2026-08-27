@@ -1378,9 +1378,6 @@ polars = [
 sql = [
     { name = "duckdb" },
 ]
-validate = [
-    { name = "duckdb" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -1435,11 +1432,10 @@ types = [
 requires-dist = [
     { name = "duckdb", marker = "extra == 'sql'", specifier = ">=1.5.5" },
     { name = "jsonschema", specifier = ">=4.26.0" },
-    { name = "nwb-lake-reader", extras = ["sql"], marker = "extra == 'validate'" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0" },
     { name = "pyarrow", specifier = ">=25.0.1" },
 ]
-provides-extras = ["sql", "validate", "polars"]
+provides-extras = ["sql", "polars"]
 
 [package.metadata.requires-dev]
 dev = [

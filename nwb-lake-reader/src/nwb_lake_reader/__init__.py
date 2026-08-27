@@ -20,6 +20,7 @@ from .errors import (
 from .manifest import Manifest, Resource
 from .packet import BASELINE_CODECS, Packet, Predicate, open_packet
 from .resources import TableResource
+from .sql import quote, sql_name
 
 __version__ = version("nwb-lake-reader")
 
@@ -37,4 +38,6 @@ __all__ = [
     "UnsupportedCodecError",
     "__version__",
     "open_packet",
+    "quote",
+    "sql_name",
 ]

@@ -1,20 +1,30 @@
 """Command-line access to a packet.
 
 ``07`` names the CLI ``nwb-lake`` with subcommands spanning several phases. This package
-provides the reader's share of them; importing, validating, and materializing belong to
-later phases and to their own packages, which extend this command rather than replacing it.
+provides the reader's share -- ``ls`` and ``sql`` -- and discovers the rest through the
+``nwb_lake.commands`` entry-point group, so validating and importing arrive with their own
+packages rather than being vendored here.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from importlib.metadata import entry_points
 from pathlib import Path
 
 from ..errors import PacketError
 from ..packet import open_packet
+
+#: Entry-point group later packages register their subcommands under.
+COMMAND_GROUP = "nwb_lake.commands"
+
+#: Subcommands provided by packages that may not be installed, so an absent one can say so.
+EXTENSIONS = {
+    "validate": "nwb-lake-validator",
+    "import": "nwb-lake-writer",
+}
 
 
 def _ls(args: argparse.Namespace) -> int:
@@ -46,31 +56,6 @@ def _sql(args: argparse.Namespace) -> int:
     return 0
 
 
-def _validate(args: argparse.Namespace) -> int:
-    """Validate a packet against the registry it embeds."""
-    try:
-        from ..validation import validate
-    except ImportError:
-        print(
-            "error: validation requires the 'validate' extra (pip install nwb-lake-reader[validate])", file=sys.stderr
-        )
-        return 2
-
-    packet = open_packet(args.packet)
-    report = validate(packet)
-    for finding in report.findings:
-        print(f"  {finding.level:8s} {finding.check}: {finding.message}")
-        for row in finding.rows:
-            print(f"           {tuple(row)}")
-    status = "passed" if report.passed else "failed"
-    print(f"\n{packet.manifest.packet_id}: {status} — {report.errors} error(s), {report.warnings} warning(s)")
-
-    if args.report is not None:
-        args.report.write_text(json.dumps(report.to_dict(packet.manifest.packet_id), indent=2) + "\n")
-        print(f"report written to {args.report}")
-    return 0 if report.passed else 1
-
-
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser.
 
@@ -91,12 +76,61 @@ def build_parser() -> argparse.ArgumentParser:
     sql.add_argument("query", help="SQL, referring to resources by their flattened names")
     sql.set_defaults(func=_sql)
 
-    validate_cmd = subcommands.add_parser("validate", help="validate a packet against its registry")
-    validate_cmd.add_argument("packet", type=Path, help="packet root directory")
-    validate_cmd.add_argument("--report", type=Path, default=None, help="write a JSON report here")
-    validate_cmd.set_defaults(func=_validate)
-
+    _extend(subcommands)
     return parser
+
+
+def _extend(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Let installed packages contribute their own subcommands.
+
+    ``07`` names a single CLI, ``nwb-lake``. Two distributions cannot both claim it under
+    ``[project.scripts]`` -- the last one installed wins silently, and the other's
+    subcommands vanish -- so later packages register a callable here instead, and this
+    command grows as they are installed.
+
+    Parameters
+    ----------
+    subcommands : argparse._SubParsersAction
+        The subparser action to register against.
+    """
+    provided = set()
+    for entry in entry_points(group=COMMAND_GROUP):
+        entry.load()(subcommands)
+        provided.add(entry.name)
+
+    for name, distribution in EXTENSIONS.items():
+        if name not in provided:
+            absent = subcommands.add_parser(name, help=f"requires {distribution}")
+            # Swallow whatever would have followed, so the message is about the missing
+            # package rather than an argument the real subcommand would have accepted.
+            absent.add_argument("args", nargs=argparse.REMAINDER)
+            absent.set_defaults(func=_absent(name, distribution))
+
+
+def _absent(name: str, distribution: str) -> Callable[[argparse.Namespace], int]:
+    """Build a handler explaining which package provides a subcommand.
+
+    Without this, an uninstalled subcommand fails as an argparse "invalid choice", which
+    says nothing about what to install.
+
+    Parameters
+    ----------
+    name : str
+        Subcommand name.
+    distribution : str
+        Distribution that provides it.
+
+    Returns
+    -------
+    callable
+        Handler printing the hint and returning exit status 2.
+    """
+
+    def run(args: argparse.Namespace) -> int:
+        print(f"error: `nwb-lake {name}` is provided by {distribution} (uv add {distribution})", file=sys.stderr)
+        return 2
+
+    return run
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -19,10 +19,12 @@ This repository implements a specification maintained in sibling repositories un
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. |
-| `revisions/` | R1–R12, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (22 tables), its meta-schema, and the manifest JSON Schema. |
+| `revisions/` | R1–R20, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `registry/` | `logical_schemas.json` (28 tables), its meta-schema, and the manifest JSON Schema. |
 | `fixtures/` | Phase 0 packets and the conformance corpus — 13 packets with expected findings as data. |
 | `conformance/` | Probes producing the measured evidence the revisions cite. |
+| `nwb-lake-validator/` | Phase 2. Depends on this package; adds `nwb-lake validate`. |
+| `nwb-lake-writer/` | Phase 3. Depends on the validator; adds `nwb-lake import`. |
 
 `src/nwb_lake_reader/schemas/manifest.schema.json` is a **vendored copy** from `registry/`.
 Re-copy it when the manifest schema changes there; it is not generated at build time.
@@ -36,14 +38,13 @@ and URI resolution; `TableResource` for reading, lazy `dataset()` access, DuckDB
 registration, and an optional Polars scan; convenience accessors `trials()`, `units()`,
 `events()`, `spike_times()`; and the `nwb-lake ls` and `nwb-lake sql` subcommands.
 
-**Also delivered (Phase 2).** `nwb_lake_reader.validation` — Tier 1 checks generated from
-the registry's structure, Tier 2 rules carried in it, and the schema and ordering layers SQL
-cannot express. `nwb-lake validate` runs them. Rules are SQL, so this needs the `validate` extra,
-which pulls in `sql`.
+**Elsewhere.** Validation is `nwb-lake-validator`, a separate package that depends on this
+one. It was split out because its correctness is pinned to a *registry* version while this
+package's API is not — every new table or rule would otherwise force a reader release for
+code that had not changed.
 
 **Not yet.** Zarr array access (Phase 5). Writing, importing, and analysis materialization
-are separate concerns and probably separate packages; this one stays a reader and a
-validator.
+belong to `nwb-lake-writer` and its successors; this one stays a reader.
 
 ## Architecture
 
@@ -52,8 +53,8 @@ Packet                 opened packet; resolves resources, accessors, DuckDB regi
 Manifest               parsed nwb.packet.json, validated against its JSON Schema
 Resource               one manifest entry: id, layer, kind, uri, plus the raw entry
 TableResource          a Resource bound to a root; reads, opens lazily, registers, scans
-validation.generate    registry -> Tier 1 checks, plus its Tier 2 rules
-validation.validate    four layers over a packet, returning a Report
+sql                    resource ID -> SQL identifier; public because the validator emits SQL
+                       against the names this package registers, and the two must agree
 ```
 
 `Resource` records what the manifest *says*; `TableResource` reads it. `ArrayResource`
@@ -71,9 +72,10 @@ These are not local preferences; changing them breaks conformance.
   partitions a table or relocates a file stays readable. `Packet.path()` is the only place
   that touches the filesystem layout.
 - **Resource IDs are dotted; SQL identifiers are not.** `core.trials` registers as
-  `core_trials` (`_sql.sql_name`). Column identifiers in emitted SQL are quoted
+  `core_trials` (`sql.sql_name`). Column identifiers in emitted SQL are quoted
   unconditionally — `core.array_assets.offset` is a DuckDB reserved word, and every engine
-  reserves a different set.
+  reserves a different set. `sql` is public rather than private precisely because
+  `nwb-lake-validator` must produce the same names; one implementation, so they cannot drift.
 - **The packet's embedded registry is preferred over any bundled copy** (R2 §8). A packet
   written against registry 0.1.0 stays readable when the reference registry moves on.
   Reading does not require the registry at all; validation does.
@@ -101,15 +103,12 @@ These are not local preferences; changing them breaks conformance.
   over it. `scan()` returns a lazy dataset for what constraints cannot express.
 
   This shape was chosen over adding a second, faster name for users to discover. Five of the
-  22 tables grow large — `spike_events`, `events`, `media_frames`, `trials`, `trial_tags` —
+  28 tables grow large — `spike_events`, `events`, `media_frames`, `trials`, `trial_tags` —
   and under R1's multi-session extension every table scales with session count, so a
   read-everything default would be wrong in the general case rather than in a corner.
-- **Validation splits by what a query can see** (R12 §4). SQL covers what the data *says* —
-  values, keys, references, vocabularies. The Python layers cover how it is *stored* —
-  column presence, Parquet types, physical order. A storage-layer check written as SQL fails
-  silently rather than loudly, which is how R12 came to exist.
-- **No registry is bundled.** `validate()` uses the packet's embedded copy (R2 §8) or one
-  passed explicitly. Bundling a reference copy would let it go stale against `../registry/`.
+- **No registry is bundled.** Reading never needs one; `Packet` exposes the copy a packet
+  embeds (R2 §8) and `nwb-lake-validator` validates against that. Bundling a reference copy
+  here would let it go stale against `../registry/`.
 - **Tables are flat primitives.** No `struct`, `map`, or `list` columns exist anywhere in the
   registry. Repeated values are child tables (`core.trial_tags`, `core.array_dimensions`,
   `core.session_experimenters`); JSON strings appear only in optional columns.
@@ -125,8 +124,12 @@ These are not local preferences; changing them breaks conformance.
 withdrew that table, so `spike_times()` filters the flat `core.spike_events` instead, and
 returns `clock_id` alongside `t_tick` — a tick has no meaning without its clock.
 
-`07` names the CLI `nwb-lake`, which this package claims. Later packages add subcommands by
-depending on this one rather than registering a competing entry point.
+`07` names the CLI `nwb-lake`, which this package claims under `[project.scripts]`. Later
+packages **cannot** also claim it — two distributions declaring the same console script is a
+conflict, and the last one installed wins silently. So they register a callable under the
+`nwb_lake.commands` entry-point group instead, and `cli._extend` loads them at parse time.
+`cli.EXTENSIONS` names the subcommands that live elsewhere, so an uninstalled one reports
+which package provides it rather than failing as an argparse "invalid choice".
 
 ## Testing
 
@@ -141,7 +144,7 @@ For an end-to-end check against a real packet, `../fixtures/packets/valid` is a
 
 ```bash
 uv sync                                   # install
-uv sync --extra validate                  # install with DuckDB, for validation and SQL
+uv sync --extra sql                       # install with DuckDB, for Packet.duckdb()
 ./scripts/run_linters_and_checks.sh -c    # format, lint, mypy, interrogate, codespell, pytest
 uv run pytest                             # tests
 uv run pytest -k "test_name"              # one test

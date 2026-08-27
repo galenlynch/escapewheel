@@ -22,10 +22,9 @@ dependencies = [
 
 [project.optional-dependencies]
 # A SQL engine is optional because a complete read path exists without one: the nested-type
-# ban (R3 2.1) exists to keep a native reader viable in languages that lack DuckDB. Rules are
-# SQL, so validation requires it.
+# ban (R3 2.1) exists to keep a native reader viable in languages that lack DuckDB. Validation
+# is SQL and lives in nwb-lake-validator, which depends on this extra.
 sql = ["duckdb>=1.5.5"]
-validate = ["nwb-lake-reader[sql]"]
 polars = ["polars>=1.0"]
 
 [project.urls]
