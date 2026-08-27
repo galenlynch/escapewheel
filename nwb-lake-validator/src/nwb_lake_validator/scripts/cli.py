@@ -19,7 +19,7 @@ from ..validator import validate
 def _validate(args: argparse.Namespace) -> int:
     """Validate a packet against the registry it embeds."""
     packet = open_packet(args.packet)
-    report = validate(packet)
+    report = validate(packet, advisory=args.advisory)
     for finding in report.findings:
         print(f"  {finding.level:8s} {finding.check}: {finding.message}")
         for row in finding.rows:
@@ -44,4 +44,9 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     parser = subcommands.add_parser("validate", help="validate a packet against its registry")
     parser.add_argument("packet", type=Path, help="packet root directory")
     parser.add_argument("--report", type=Path, default=None, help="write a JSON report here")
+    parser.add_argument(
+        "--advisory",
+        action="store_true",
+        help="also run advisory rules; they are never errors, so the verdict cannot change",
+    )
     parser.set_defaults(func=_validate)

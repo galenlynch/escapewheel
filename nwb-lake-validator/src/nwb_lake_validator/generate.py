@@ -38,13 +38,16 @@ class Check:
     sql: str
 
 
-def generate(registry: Mapping[str, Any], *, only: set[str] | None = None) -> list[Check]:
+def generate(registry: Mapping[str, Any], *, only: set[str] | None = None, advisory: bool = False) -> list[Check]:
     """Build every check a registry implies.
 
     Parameters
     ----------
     registry : Mapping
         A parsed registry document.
+    advisory : bool, default False
+        Include rules marked ``advisory`` (R26 §3). They never carry ``error``, so
+        enabling them cannot change whether a packet passed.
     only : set of str, optional
         Restrict to these resources. Checks referring to a resource outside the set are
         still generated if their own table is inside it; a packet need not carry every
@@ -118,6 +121,8 @@ def generate(registry: Mapping[str, Any], *, only: set[str] | None = None) -> li
             )
 
         for rule in table.get("rules", []):
+            if rule.get("advisory") and not advisory:
+                continue
             checks.append(Check(rule["id"], rule["level"], rule["message"], rule["sql"]))
 
     return checks

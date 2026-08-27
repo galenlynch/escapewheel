@@ -173,3 +173,46 @@ def test_external_resources_are_reported_as_unverified(packet_root):
     info = next(f for f in report.findings if f.check == "external.unverified")
     assert info.level == "info"
     assert info.rows == (("array.probe0",),)
+
+
+def test_advisory_rules_are_off_by_default(packet_root):
+    """An advisory rule does not run unless asked (R26 §3)."""
+    registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    registry["tables"]["core.trials"]["rules"].append(
+        {
+            "id": "core.trials.advice",
+            "level": "info",
+            "advisory": True,
+            "message": "advice",
+            "sql": "SELECT session_id, trial_id FROM core_trials",
+        }
+    )
+    quiet = validate(open_packet(packet_root), registry=registry)
+    assert not any(f.check == "core.trials.advice" for f in quiet.findings)
+
+    loud = validate(open_packet(packet_root), registry=registry, advisory=True)
+    assert any(f.check == "core.trials.advice" for f in loud.findings)
+
+
+def test_advisory_cannot_change_the_verdict(packet_root):
+    """`passed` is invariant under the flag, because advisory rules are never errors."""
+    registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    registry["tables"]["core.trials"]["rules"].append(
+        {
+            "id": "core.trials.advice",
+            "level": "info",
+            "advisory": True,
+            "message": "advice",
+            "sql": "SELECT session_id, trial_id FROM core_trials",
+        }
+    )
+    quiet = validate(open_packet(packet_root), registry=registry)
+    loud = validate(open_packet(packet_root), registry=registry, advisory=True)
+    assert quiet.passed is loud.passed is True
+    assert loud.errors == quiet.errors == 0
+
+
+def test_report_records_whether_advisories_ran(packet_root):
+    """An empty advisory result is ambiguous unless the report says (R26 §5)."""
+    assert validate(open_packet(packet_root)).to_dict("p")["advisory"] is False
+    assert validate(open_packet(packet_root), advisory=True).to_dict("p")["advisory"] is True

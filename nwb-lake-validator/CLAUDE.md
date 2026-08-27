@@ -25,8 +25,8 @@ When behaviour here seems arbitrary, the reason is there.
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. `05` is the import and validation pipeline. |
-| `revisions/` | R1–R24, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (29 tables), its meta-schema, and the manifest JSON Schema. |
+| `revisions/` | R1–R26, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `registry/` | `logical_schemas.json` (30 tables), its meta-schema, and the manifest JSON Schema. |
 | `fixtures/` | The conformance corpus — 15 packets with expected findings as data. |
 | `nwb-lake-reader/` | The read path. This package's only runtime dependency of substance. |
 
@@ -40,6 +40,10 @@ When behaviour here seems arbitrary, the reason is there.
 **Delivered.** Tier 1 checks generated from each table's structure, Tier 2 rules read from
 the registry the packet embeds, the schema and physical-ordering layers SQL cannot express,
 and the `nwb-lake validate` subcommand with an optional JSON report.
+
+**Also delivered.** Advisory rules (R26) — `validate(packet, advisory=True)` and
+`nwb-lake validate --advisory`. They are never `error`, so enabling them cannot change whether
+a packet passed, and the report records whether they ran.
 
 **Not yet.** The external mode (R15 §4, level 3): nothing resolves an external URI or checks
 its `sha256`, `size_bytes`, or actual codecs. Needed for Phase 5.

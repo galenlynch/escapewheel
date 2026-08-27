@@ -61,9 +61,19 @@ class Finding:
 
 @dataclass
 class Report:
-    """The outcome of validating a packet."""
+    """The outcome of validating a packet.
+
+    Attributes
+    ----------
+    findings : list of Finding
+        Every finding, in the order the layers ran.
+    advisory : bool
+        Whether advisory rules were run (R26 §5). Recorded because an empty advisory
+        result is otherwise ambiguous between "none fired" and "not asked for".
+    """
 
     findings: list[Finding] = field(default_factory=list)
+    advisory: bool = False
 
     @property
     def errors(self) -> int:
@@ -77,7 +87,11 @@ class Report:
 
     @property
     def passed(self) -> bool:
-        """Whether the packet is valid. Warnings do not make a packet invalid."""
+        """Whether the packet is valid. Warnings do not make a packet invalid.
+
+        Advisory rules cannot be ``error`` (R26 §3), so this is invariant under the
+        ``advisory`` flag: asking for more to read never changes the verdict.
+        """
         return self.errors == 0
 
     def add(self, level: str, check: str, message: str, rows: Sequence[Sequence[Any]] = ()) -> None:
@@ -114,7 +128,9 @@ class Report:
         return {
             "packet_id": packet_id,
             "status": "passed" if self.passed else "failed",
-            "validator": {"name": "nwb_lake_reader", "version": _version()},
+            # An empty advisory list is ambiguous between "none fired" and "not run" (R26 §5).
+            "advisory": self.advisory,
+            "validator": {"name": "nwb_lake_validator", "version": _version()},
             "summary": {"errors": self.errors, "warnings": self.warnings},
             "findings": [
                 {"level": f.level, "check": f.check, "message": f.message, "rows": [list(r) for r in f.rows]}
@@ -251,7 +267,9 @@ _DDL = {
 }
 
 
-def _run_rules(packet: Packet, registry: Mapping[str, Any], present: Mapping[str, Any], report: Report) -> None:
+def _run_rules(
+    packet: Packet, registry: Mapping[str, Any], present: Mapping[str, Any], report: Report, advisory: bool
+) -> None:
     """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
     connection = packet.duckdb()
 
@@ -270,7 +288,7 @@ def _run_rules(packet: Packet, registry: Mapping[str, Any], present: Mapping[str
     for session in packet.manifest.sessions:
         connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
 
-    for check in generate(registry, only=set(present)):
+    for check in generate(registry, only=set(present), advisory=advisory):
         try:
             rows = connection.sql(check.sql).fetchall()
         except Exception as exc:  # noqa: BLE001 - an engine error is a finding, not a crash
@@ -280,7 +298,7 @@ def _run_rules(packet: Packet, registry: Mapping[str, Any], present: Mapping[str
             report.add(check.level, check.id, check.message, rows)
 
 
-def validate(packet: Packet, *, registry: Mapping[str, Any] | None = None) -> Report:
+def validate(packet: Packet, *, registry: Mapping[str, Any] | None = None, advisory: bool = False) -> Report:
     """Validate a packet.
 
     The registry is taken from the packet unless one is supplied. Nothing is bundled: a
@@ -304,7 +322,7 @@ def validate(packet: Packet, *, registry: Mapping[str, Any] | None = None) -> Re
     PacketError
         If no registry is available.
     """
-    report = Report()
+    report = Report(advisory=advisory)
     embedded = packet.registry
     effective = registry if registry is not None else embedded
     if effective is None:
@@ -317,7 +335,7 @@ def validate(packet: Packet, *, registry: Mapping[str, Any] | None = None) -> Re
     _check_codec_declarations(packet, report)
     present = _check_schemas(packet, effective["tables"], report)
     _check_ordering(effective["tables"], present, report)
-    _run_rules(packet, effective, present, report)
+    _run_rules(packet, effective, present, report, advisory)
     return report
 
 
