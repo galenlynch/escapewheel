@@ -214,6 +214,19 @@ def build() -> dict:
     for n, t in tables.items():
         t["sort"] = OVERRIDE.get(n) or t["primary_key"]                   # R10 §2, §6
 
+    # ---- R13 §3 : anchor-point clock alignment ------------------------------------------------
+    tables["core.clock_anchors"] = {
+        "columns": [col("clock_id", "string", "required", "The clock being aligned."),
+                    col("anchor_index", "int64", "required",
+                        "0-based position in this clock's anchor sequence."),
+                    col("t_tick", "int64", "required", "Tick on clock_id."),
+                    col("parent_tick", "int64", "required",
+                        "The corresponding tick on parent_clock_id.")],
+        "primary_key": ["clock_id", "anchor_index"],
+        "references": [{"columns": ["clock_id"], "resource": "core.clocks",
+                        "resource_columns": ["clock_id"]}],
+        "sort": None, "rules": []}
+
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     hand_written: dict[str, list[dict[str, str]]] = json.loads(RULES.read_text())["rules"]
     unknown = sorted(set(hand_written) - set(tables))

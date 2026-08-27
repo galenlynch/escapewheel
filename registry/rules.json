@@ -39,6 +39,12 @@
         "level": "warning",
         "message": "tick_zero_utc is more than a day from session_start_time",
         "sql": "SELECT c.clock_id, c.tick_zero_utc, s.session_start_time FROM core_clocks c JOIN core_sessions s USING (session_id) WHERE c.tick_zero_utc IS NOT NULL AND s.session_start_time IS NOT NULL AND (c.tick_zero_utc < s.session_start_time - INTERVAL 1 DAY OR c.tick_zero_utc > s.session_start_time + INTERVAL 1 DAY)"
+      },
+      {
+        "id": "core.clocks.one_alignment_model",
+        "level": "error",
+        "message": "a clock declares both a linear transform and anchor points",
+        "sql": "SELECT c.clock_id FROM core_clocks c WHERE c.transform_slope IS NOT NULL AND EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.clock_id = c.clock_id)"
       }
     ],
     "core.processing_runs": [
@@ -87,6 +93,26 @@
         "level": "error",
         "message": "n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events",
         "sql": "SELECT u.session_id, u.unit_id FROM core_units u LEFT JOIN ( SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM core_spike_events GROUP BY session_id, unit_id, sorting_run_id, curation_id ) s USING (session_id, unit_id, sorting_run_id, curation_id) WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM s.n) OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo) OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)"
+      }
+    ],
+    "core.clock_anchors": [
+      {
+        "id": "core.clock_anchors.requires_parent",
+        "level": "error",
+        "message": "anchors are declared for a clock with no parent",
+        "sql": "SELECT DISTINCT a.clock_id FROM core_clock_anchors a JOIN core_clocks c USING (clock_id) WHERE c.parent_clock_id IS NULL"
+      },
+      {
+        "id": "core.clock_anchors.anchor_index_contiguous",
+        "level": "error",
+        "message": "anchor_index is not contiguous from 0",
+        "sql": "SELECT clock_id, COUNT(*) AS n, MAX(anchor_index) AS hi FROM core_clock_anchors GROUP BY clock_id HAVING MAX(anchor_index) <> COUNT(*) - 1 OR MIN(anchor_index) <> 0"
+      },
+      {
+        "id": "core.clock_anchors.monotonic",
+        "level": "error",
+        "message": "anchor sequences do not increase together, so interpolation is undefined",
+        "sql": "SELECT clock_id, anchor_index FROM ( SELECT *, LAG(t_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS prev_t, LAG(parent_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS prev_p FROM core_clock_anchors) WHERE prev_t IS NOT NULL AND (t_tick <= prev_t OR parent_tick <= prev_p)"
       }
     ]
   }

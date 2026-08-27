@@ -2,105 +2,297 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nwb-lake.org/schemas/manifest/0.1.0",
   "title": "NWB-Lake packet manifest",
-  "description": "Shape of nwb.packet.json, per R2 §10. Covers 04's fields plus sessions (R1 §4) and required_codecs (R3 §7.2), less canonical_representations (R5 §6), with R9 §4's provenance renames.",
+  "description": "Shape of nwb.packet.json, per R2 \u00a710. Covers 04's fields plus sessions (R1 \u00a74) and required_codecs (R3 \u00a77.2), less canonical_representations (R5 \u00a76), with R9 \u00a74's provenance renames.",
   "type": "object",
-  "required": ["packet_id", "packet_version", "profile_id", "semantic_standard_version",
-               "logical_standard_version", "registry_version", "created_at", "sessions",
-               "required_codecs", "resources", "validation"],
+  "required": [
+    "packet_id",
+    "packet_version",
+    "profile_id",
+    "semantic_standard_version",
+    "logical_standard_version",
+    "registry_version",
+    "created_at",
+    "sessions",
+    "required_codecs",
+    "resources",
+    "validation"
+  ],
   "properties": {
-    "packet_id": {"type": "string", "minLength": 1},
-    "packet_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
-    "profile_id": {"const": "nwb-lake-portable-v0.1"},
-    "semantic_standard_version": {"type": "string"},
-    "logical_standard_version": {"type": "string"},
-    "registry_version": {
-      "description": "The registry this packet was written against (R2 §8).",
-      "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    "packet_id": {
+      "type": "string",
+      "minLength": 1
     },
-    "created_at": {"type": "string", "format": "date-time"},
-
+    "packet_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "profile_id": {
+      "const": "nwb-lake-portable-v0.1"
+    },
+    "semantic_standard_version": {
+      "type": "string"
+    },
+    "logical_standard_version": {
+      "type": "string"
+    },
+    "registry_version": {
+      "description": "The registry this packet was written against (R2 \u00a78).",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "sessions": {
-      "description": "Every session in the packet (R1 §4). One entry in the primary single-session case.",
-      "type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true
+      "description": "Every session in the packet (R1 \u00a74). One entry in the primary single-session case.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
     },
     "required_codecs": {
-      "description": "Every Zarr codec used by any array, excluding the mandatory bytes codec (R3 §7.2). A reader MUST check this before opening an array and fail naming any it does not support.",
-      "type": "array", "items": {"type": "string"}, "uniqueItems": true
+      "description": "Every Zarr codec used by any array, excluding the mandatory bytes codec (R3 \u00a77.2). A reader MUST check this before opening an array and fail naming any it does not support.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
     },
-
-    "dataset_id": {"type": "string"},
-    "release_id": {"type": "string"},
-    "description": {"type": "string"},
-    "creators": {"type": "array", "items": {"type": "string"}},
-    "license": {"type": "string"},
-    "keywords": {"type": "array", "items": {"type": "string"}},
-    "source_summary": {"type": "object"},
-
-    "resources": {"type": "array", "items": {"$ref": "#/$defs/resource"}},
-
+    "dataset_id": {
+      "type": "string"
+    },
+    "release_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "creators": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "license": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_summary": {
+      "type": "object"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    },
     "validation": {
       "type": "object",
-      "required": ["status", "validated_at", "validator_name", "validator_version"],
+      "required": [
+        "status",
+        "validated_at",
+        "validator_name",
+        "validator_version"
+      ],
       "properties": {
-        "status": {"enum": ["passed", "failed", "not_run"]},
-        "validated_at": {"type": "string", "format": "date-time"},
-        "validator_name": {"type": "string"},
-        "validator_version": {"type": "string"},
-        "report_uri": {"type": "string"}
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "not_run"
+          ]
+        },
+        "validated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "validator_name": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        },
+        "report_uri": {
+          "type": "string"
+        }
       }
     },
-
     "provenance": {
-      "description": "Optional; provenance is SHOULD, not MUST (R9 §5).",
+      "description": "Optional; provenance is SHOULD, not MUST (R9 \u00a75).",
       "type": "object",
       "properties": {
-        "source_files_resource": {"type": "string"},
-        "processing_runs_resource": {"type": "string"},
-        "processing_run_inputs_resource": {"type": "string"},
-        "import_processing_run_id": {"type": "string"}
+        "source_files_resource": {
+          "type": "string"
+        },
+        "processing_runs_resource": {
+          "type": "string"
+        },
+        "processing_run_inputs_resource": {
+          "type": "string"
+        },
+        "import_processing_run_id": {
+          "type": "string"
+        }
       }
     },
-
     "extensions": {
-      "description": "Namespaced extension metadata (09 §6). A core validator verifies declared files exist and MUST NOT require their schemas.",
+      "description": "Namespaced extension metadata (09 \u00a76). A core validator verifies declared files exist and MUST NOT require their schemas.",
       "type": "object"
     }
   },
-
   "$defs": {
     "resource": {
       "type": "object",
-      "required": ["resource_id", "layer", "kind", "uri"],
+      "required": [
+        "resource_id",
+        "layer",
+        "kind",
+        "uri"
+      ],
       "properties": {
-        "resource_id": {"type": "string"},
-        "layer": {"enum": ["core", "analysis", "docs"]},
-        "kind": {"enum": ["table", "materialized_table", "dense_array_asset",
-                          "media_asset", "document_asset", "view"]},
-        "semantic_type": {"type": "string"},
-        "schema_id": {"type": "string"},
-        "physical_profile": {"enum": ["parquet", "parquet_dataset", "zarr_v3",
-                                      "markdown", "json", "text", "pdf", "mp4"]},
-        "uri": {"type": "string", "minLength": 1},
-        "partitioning": {
-          "description": "Present when physical_profile is parquet_dataset (R1 §5).",
-          "type": "array", "items": {"type": "string"}
-        },
-        "canonical": {"type": "boolean"},
-        "validation_state": {"enum": ["passed", "failed", "not_run"]},
-        "derived_from": {"type": "array", "items": {"type": "string"}},
-        "processing_run_id": {
-          "description": "The run that produced this resource (R9 §4, replacing 04's activity_id).",
+        "resource_id": {
           "type": "string"
         },
-        "catalog_table_ref": {"type": "string"},
-        "array_asset_id": {"type": "string"},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        "layer": {
+          "enum": [
+            "core",
+            "analysis",
+            "docs"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "table",
+            "materialized_table",
+            "dense_array_asset",
+            "media_asset",
+            "document_asset",
+            "view"
+          ]
+        },
+        "semantic_type": {
+          "type": "string"
+        },
+        "schema_id": {
+          "type": "string"
+        },
+        "physical_profile": {
+          "enum": [
+            "parquet",
+            "parquet_dataset",
+            "zarr_v3",
+            "markdown",
+            "json",
+            "text",
+            "pdf",
+            "mp4"
+          ]
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "partitioning": {
+          "description": "Present when physical_profile is parquet_dataset (R1 \u00a75).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "canonical": {
+          "type": "boolean"
+        },
+        "validation_state": {
+          "enum": [
+            "passed",
+            "failed",
+            "not_run"
+          ]
+        },
+        "derived_from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "processing_run_id": {
+          "description": "The run that produced this resource (R9 \u00a74, replacing 04's activity_id).",
+          "type": "string"
+        },
+        "catalog_table_ref": {
+          "type": "string"
+        },
+        "array_asset_id": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "external": {
+          "description": "True when the packet does not own these bytes (R14 \u00a72.3). Required wherever uri is absolute. Immutability and checksums cover packet-owned bytes only.",
+          "type": "boolean"
+        },
+        "size_bytes": {
+          "description": "As verified at validation time (R14 \u00a72.3).",
+          "type": "integer",
+          "minimum": 0
+        },
+        "verified_at": {
+          "description": "When sha256 or size_bytes last held. Not a promise about now (R14 \u00a72.3.1).",
+          "type": "string",
+          "format": "date-time"
+        }
       },
-      "allOf": [{
-        "if": {"properties": {"physical_profile": {"const": "parquet_dataset"}},
-               "required": ["physical_profile"]},
-        "then": {"required": ["partitioning"]}
-      }]
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "physical_profile": {
+                "const": "parquet_dataset"
+              }
+            },
+            "required": [
+              "physical_profile"
+            ]
+          },
+          "then": {
+            "required": [
+              "partitioning"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "uri": {
+                "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*://"
+              }
+            },
+            "required": [
+              "uri"
+            ]
+          },
+          "then": {
+            "properties": {
+              "external": {
+                "const": true
+              }
+            },
+            "required": [
+              "external"
+            ]
+          }
+        }
+      ]
     }
   }
 }
