@@ -1,16 +1,26 @@
-"""Derive the schema registry from 02 plus the accepted revisions R1-R9.
+"""Build the schema registry from the specification, the revisions, and the rule set.
 
-Every transformation is labelled with the revision that mandates it, so the output is
-auditable against the specification rather than hand-asserted. Run once to produce
-logical_schemas.json; thereafter the registry is maintained directly and this script is
-the record of how it was derived.
+Two sources, kept apart because they are maintained differently.
+
+**Structure** — columns, keys, references, ordering — is *derived*. ``parse02.py`` reads 02's
+markdown tables and the transformations below apply R3-R11, each labelled with the revision
+that mandates it, so a column's type or presence traces to the decision that set it. Changing
+structure means changing a revision and re-running this script.
+
+**Tier 2 rules** are *hand-authored*, in ``rules.json``, because nothing derives a check that
+the structure cannot imply.
+
+Merging them here keeps ``logical_schemas.json`` wholly generated, so it can be rebuilt
+without losing hand-written work. Do not edit it directly.
 """
 import json
 from pathlib import Path
 
 from parse02 import parse
 
-OUT = Path(__file__).resolve().parent / "logical_schemas.json"
+HERE = Path(__file__).resolve().parent
+OUT = HERE / "logical_schemas.json"
+RULES = HERE / "rules.json"
 
 # 02's type spellings -> R2 §4 vocabulary. Nested spellings are removed by R3, not mapped.
 TYPES = {
@@ -204,83 +214,13 @@ def build() -> dict:
     for n, t in tables.items():
         t["sort"] = OVERRIDE.get(n) or t["primary_key"]                   # R10 §2, §6
 
-    # ---- Tier 2 rules, inline (R2 §7.2) -------------------------------------------------------
-    def rule(table, rid, level, message, sql):
-        T(table)["rules"].append({"id": f"{table}.{rid}", "level": level,
-                                  "message": message, "sql": " ".join(sql.split())})
-
-    rule("core.trials", "interval_valid", "error",
-         "stop_tick precedes start_tick",                                      # 02
-         "SELECT session_id, trial_id, start_tick, stop_tick FROM core_trials"
-         " WHERE stop_tick < start_tick")
-
-    rule("core.clocks", "tick_rate_declared", "error",
-         "neither tick_rate_hz nor an exact rational rate is present",         # R4 §4
-         "SELECT clock_id FROM core_clocks WHERE tick_rate_hz IS NULL"
-         " AND (tick_rate_num IS NULL OR tick_rate_den IS NULL)")
-    rule("core.clocks", "tick_rate_positive", "error",
-         "tick rate is not positive",                                          # 02
-         "SELECT clock_id, tick_rate_hz, tick_rate_num, tick_rate_den FROM core_clocks"
-         " WHERE tick_rate_hz <= 0 OR tick_rate_num <= 0 OR tick_rate_den <= 0")
-    rule("core.clocks", "transform_pair_complete", "error",
-         "transform_slope and transform_offset must be present together",      # R3 §3.4
-         "SELECT clock_id FROM core_clocks"
-         " WHERE (transform_slope IS NULL) <> (transform_offset IS NULL)")
-    rule("core.clocks", "transform_requires_parent", "error",
-         "a clock transform is declared without a parent clock",               # R3 §3.4
-         "SELECT clock_id FROM core_clocks"
-         " WHERE parent_clock_id IS NULL AND transform_slope IS NOT NULL")
-    rule("core.clocks", "tick_zero_plausible", "warning",
-         "tick_zero_utc is more than a day from session_start_time",           # R6 §3
-         "SELECT c.clock_id, c.tick_zero_utc, s.session_start_time"
-         " FROM core_clocks c JOIN core_sessions s USING (session_id)"
-         " WHERE c.tick_zero_utc IS NOT NULL AND s.session_start_time IS NOT NULL"
-         " AND (c.tick_zero_utc < s.session_start_time - INTERVAL 1 DAY"
-         "   OR c.tick_zero_utc > s.session_start_time + INTERVAL 1 DAY)")
-
-    rule("core.units", "spike_summary_consistent", "error",
-         "n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events",
-         # R5 §4
-         """SELECT u.session_id, u.unit_id FROM core_units u LEFT JOIN (
-              SELECT session_id, unit_id, sorting_run_id, curation_id,
-                     COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi
-              FROM core_spike_events
-              GROUP BY session_id, unit_id, sorting_run_id, curation_id
-            ) s USING (session_id, unit_id, sorting_run_id, curation_id)
-            WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM s.n)
-               OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo)
-               OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)""")
-
-    rule("core.spike_events", "ticks_within_clock_span", "warning",
-         "negative ticks on a clock with no absolute reference",               # R6 §3
-         "SELECT s.session_id, s.clock_id, MIN(s.t_tick) AS min_tick"
-         " FROM core_spike_events s JOIN core_clocks c USING (clock_id)"
-         " WHERE s.t_tick < 0 AND c.tick_zero_utc IS NULL"
-         " GROUP BY s.session_id, s.clock_id")
-
-    rule("core.sorting_runs", "amplitude_unit_declared", "error",
-         "spikes carry amplitudes but the sorting run declares no amplitude_unit",  # R11 §2
-         "SELECT DISTINCT s.sorting_run_id FROM core_spike_events s"
-         " JOIN core_sorting_runs r USING (sorting_run_id)"
-         " WHERE s.amplitude IS NOT NULL AND r.amplitude_unit IS NULL")
-
-    rule("core.processing_runs", "no_failed_runs", "error",
-         "a failed run is recorded in a committed packet",                     # R8 §3
-         "SELECT processing_run_id, activity_type FROM core_processing_runs"
-         " WHERE status = 'failed'")
-
-    rule("core.array_dimensions", "axis_index_contiguous", "error",
-         "axis_index is not contiguous from 0",                                # R3 §3.3
-         "SELECT array_asset_id, COUNT(*) AS n_axes, MAX(axis_index) AS max_axis"
-         " FROM core_array_dimensions GROUP BY array_asset_id"
-         " HAVING MAX(axis_index) <> COUNT(*) - 1 OR MIN(axis_index) <> 0")
-
-    rule("core.sessions", "manifest_sessions_match", "error",
-         "the manifest sessions list disagrees with core.sessions",            # R1 §4
-         "SELECT session_id FROM core_sessions"
-         " WHERE session_id NOT IN (SELECT session_id FROM manifest_sessions)"
-         " UNION ALL SELECT session_id FROM manifest_sessions"
-         " WHERE session_id NOT IN (SELECT session_id FROM core_sessions)")
+    # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
+    hand_written: dict[str, list[dict[str, str]]] = json.loads(RULES.read_text())["rules"]
+    unknown = sorted(set(hand_written) - set(tables))
+    if unknown:
+        raise SystemExit(f"rules.json names tables the registry does not define: {', '.join(unknown)}")
+    for resource, table_rules in hand_written.items():
+        T(resource)["rules"] = table_rules
 
     # ---- R7 : every table declares a key ---------------------------------------------------
     for n, k in [("core.media_assets", ["media_asset_id"]),
@@ -301,4 +241,5 @@ if __name__ == "__main__":
     reg = build()
     OUT.write_text(json.dumps(reg, indent=2) + "\n")
     print(f"wrote {OUT.name}: {len(reg['tables'])} tables, "
-          f"{sum(len(t['columns']) for t in reg['tables'].values())} columns")
+          f"{sum(len(t['columns']) for t in reg['tables'].values())} columns, "
+          f"{sum(len(t['rules']) for t in reg['tables'].values())} rules merged from {RULES.name}")

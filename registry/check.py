@@ -61,6 +61,17 @@ check("withdrawn tables absent",
       [n for n in ("core.unit_spike_chunks", "core.provenance_entities",
                    "core.provenance_activities", "core.provenance_edges") if n in T])
 
+# rules.json is hand-authored and merged at build time, so it can drift from the
+# structure it annotates. build.py rejects unknown tables; these catch the rest.
+RULES = json.loads((HERE / "rules.json").read_text())["rules"]
+check("every rules.json table exists in the registry", sorted(set(RULES) - set(T)))
+merged = {r["id"] for t_ in T.values() for r in t_["rules"]}
+authored = {r["id"] for rs in RULES.values() for r in rs}
+check("every authored rule reached the registry", sorted(authored - merged))
+check("the registry carries no rule rules.json does not author", sorted(merged - authored))
+ids = [r["id"] for rs in RULES.values() for r in rs]
+check("rule ids are unique", sorted({i for i in ids if ids.count(i) > 1}))
+
 # R2 §9: the registry validates against its published meta-schema.
 try:
     import jsonschema

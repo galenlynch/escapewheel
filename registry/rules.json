@@ -1,0 +1,93 @@
+{
+  "_comment": "Tier 2 validation rules (R2 7.2): checks the registry's structure cannot imply. Hand-authored. build.py merges these into logical_schemas.json, which is generated and must not be edited directly. Each rule's query returns offending rows; an empty result is a pass (R2 7.3).",
+  "rules": {
+    "core.array_dimensions": [
+      {
+        "id": "core.array_dimensions.axis_index_contiguous",
+        "level": "error",
+        "message": "axis_index is not contiguous from 0",
+        "sql": "SELECT array_asset_id, COUNT(*) AS n_axes, MAX(axis_index) AS max_axis FROM core_array_dimensions GROUP BY array_asset_id HAVING MAX(axis_index) <> COUNT(*) - 1 OR MIN(axis_index) <> 0"
+      }
+    ],
+    "core.clocks": [
+      {
+        "id": "core.clocks.tick_rate_declared",
+        "level": "error",
+        "message": "neither tick_rate_hz nor an exact rational rate is present",
+        "sql": "SELECT clock_id FROM core_clocks WHERE tick_rate_hz IS NULL AND (tick_rate_num IS NULL OR tick_rate_den IS NULL)"
+      },
+      {
+        "id": "core.clocks.tick_rate_positive",
+        "level": "error",
+        "message": "tick rate is not positive",
+        "sql": "SELECT clock_id, tick_rate_hz, tick_rate_num, tick_rate_den FROM core_clocks WHERE tick_rate_hz <= 0 OR tick_rate_num <= 0 OR tick_rate_den <= 0"
+      },
+      {
+        "id": "core.clocks.transform_pair_complete",
+        "level": "error",
+        "message": "transform_slope and transform_offset must be present together",
+        "sql": "SELECT clock_id FROM core_clocks WHERE (transform_slope IS NULL) <> (transform_offset IS NULL)"
+      },
+      {
+        "id": "core.clocks.transform_requires_parent",
+        "level": "error",
+        "message": "a clock transform is declared without a parent clock",
+        "sql": "SELECT clock_id FROM core_clocks WHERE parent_clock_id IS NULL AND transform_slope IS NOT NULL"
+      },
+      {
+        "id": "core.clocks.tick_zero_plausible",
+        "level": "warning",
+        "message": "tick_zero_utc is more than a day from session_start_time",
+        "sql": "SELECT c.clock_id, c.tick_zero_utc, s.session_start_time FROM core_clocks c JOIN core_sessions s USING (session_id) WHERE c.tick_zero_utc IS NOT NULL AND s.session_start_time IS NOT NULL AND (c.tick_zero_utc < s.session_start_time - INTERVAL 1 DAY OR c.tick_zero_utc > s.session_start_time + INTERVAL 1 DAY)"
+      }
+    ],
+    "core.processing_runs": [
+      {
+        "id": "core.processing_runs.no_failed_runs",
+        "level": "error",
+        "message": "a failed run is recorded in a committed packet",
+        "sql": "SELECT processing_run_id, activity_type FROM core_processing_runs WHERE status = 'failed'"
+      }
+    ],
+    "core.sessions": [
+      {
+        "id": "core.sessions.manifest_sessions_match",
+        "level": "error",
+        "message": "the manifest sessions list disagrees with core.sessions",
+        "sql": "SELECT session_id FROM core_sessions WHERE session_id NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_id FROM core_sessions)"
+      }
+    ],
+    "core.sorting_runs": [
+      {
+        "id": "core.sorting_runs.amplitude_unit_declared",
+        "level": "error",
+        "message": "spikes carry amplitudes but the sorting run declares no amplitude_unit",
+        "sql": "SELECT DISTINCT s.sorting_run_id FROM core_spike_events s JOIN core_sorting_runs r USING (sorting_run_id) WHERE s.amplitude IS NOT NULL AND r.amplitude_unit IS NULL"
+      }
+    ],
+    "core.spike_events": [
+      {
+        "id": "core.spike_events.ticks_within_clock_span",
+        "level": "warning",
+        "message": "negative ticks on a clock with no absolute reference",
+        "sql": "SELECT s.session_id, s.clock_id, MIN(s.t_tick) AS min_tick FROM core_spike_events s JOIN core_clocks c USING (clock_id) WHERE s.t_tick < 0 AND c.tick_zero_utc IS NULL GROUP BY s.session_id, s.clock_id"
+      }
+    ],
+    "core.trials": [
+      {
+        "id": "core.trials.interval_valid",
+        "level": "error",
+        "message": "stop_tick precedes start_tick",
+        "sql": "SELECT session_id, trial_id, start_tick, stop_tick FROM core_trials WHERE stop_tick < start_tick"
+      }
+    ],
+    "core.units": [
+      {
+        "id": "core.units.spike_summary_consistent",
+        "level": "error",
+        "message": "n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events",
+        "sql": "SELECT u.session_id, u.unit_id FROM core_units u LEFT JOIN ( SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM core_spike_events GROUP BY session_id, unit_id, sorting_run_id, curation_id ) s USING (session_id, unit_id, sorting_run_id, curation_id) WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM s.n) OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo) OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)"
+      }
+    ]
+  }
+}

@@ -16,19 +16,33 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 ## Provenance of this file
 
-It was derived mechanically from the frozen specification plus the accepted revisions,
-rather than transcribed:
+`logical_schemas.json` is **generated. Do not edit it.** It is built from two sources kept
+apart because they are maintained differently:
 
-```bash
-python3 parse02.py    # 02's markdown tables -> structured form
-python3 build.py      # applies R3-R9, writes logical_schemas.json
-python3 check.py      # 13 invariants from R2-R9; exit 1 on any failure
+```
+02_core_logical_schemas.md ──parse02.py──┐
+revisions R3-R11 ──────────(build.py)────┼──> logical_schemas.json
+rules.json (hand-authored) ──────────────┘
 ```
 
-`build.py` labels every transformation with the revision that mandates it, so a column's
-type or presence can be traced to the decision that set it. It is the audit trail for the
-initial derivation. **From here the registry is maintained directly** — a future revision
-edits `logical_schemas.json` and `build.py` records only how the file first came to be.
+**Structure** — columns, keys, references, ordering — is derived. `build.py` labels every
+transformation with the revision that mandates it, so a column's type or presence traces to
+the decision that set it. Changing structure means changing a revision and rebuilding.
+
+**Tier 2 rules** are hand-authored in `rules.json`, because nothing derives a check the
+structure cannot imply. Keeping them out of the generated file means the registry can be
+rebuilt without losing hand-written work, and a diff shows at a glance whether a change was
+to a schema or to a rule.
+
+```bash
+python3 build.py      # merges both sources, writes logical_schemas.json
+python3 check.py      # 20 invariants; exit 1 on any failure
+```
+
+`build.py` rejects a `rules.json` entry naming a table the registry does not define;
+`check.py` verifies the merge round-trips and that every rule executes as SQL against
+tables built from the registry, which is what catches a rule referencing a column that a
+revision has since removed.
 
 ## What `check.py` verifies
 
