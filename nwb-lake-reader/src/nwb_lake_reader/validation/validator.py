@@ -207,9 +207,27 @@ def _check_ordering(tables: Mapping[str, Any], present: Mapping[str, Any], repor
             )
 
 
+#: Registry column type -> the DuckDB type used for the empty stand-in tables below.
+_DDL = {"string": "VARCHAR", "int32": "INTEGER", "int64": "BIGINT", "float32": "FLOAT",
+        "float64": "DOUBLE", "bool": "BOOLEAN", "date": "DATE",
+        "timestamp": "TIMESTAMPTZ", "json_string": "VARCHAR"}
+
+
 def _run_rules(packet: Packet, registry: Mapping[str, Any], present: Mapping[str, Any], report: Report) -> None:
     """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
     connection = packet.duckdb()
+
+    # A Tier 2 rule may reference a table other than the one it is declared on --
+    # core.clocks.one_alignment_model reads core.clock_anchors, for instance. A packet that
+    # does not declare a table genuinely has no rows of it, so an empty stand-in lets such a
+    # rule evaluate rather than fail to run. A table that IS declared but unreadable is a
+    # different case, already reported as resource.missing.
+    for resource_id, spec in registry["tables"].items():
+        if resource_id in present:
+            continue
+        columns = ", ".join(f'"{c["name"]}" {_DDL[c["type"]]}' for c in spec["columns"])
+        connection.sql(f"CREATE OR REPLACE TABLE {sql_name(resource_id)} ({columns})")
+
     connection.sql("CREATE OR REPLACE TABLE manifest_sessions (session_id VARCHAR)")
     for session in packet.manifest.sessions:
         connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
