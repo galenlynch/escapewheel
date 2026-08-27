@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-08-27 |
+| **Status** | **Accepted** 2026-08-27 |
 | **Amends** | R2 §7.2 (how Tier 2 rules are authored), R18 §4 |
 | **Depends on** | R2 (registry format), R18 (unit observation intervals) |
 | **Profile** | `nwb-lake-portable-v0.1` |
