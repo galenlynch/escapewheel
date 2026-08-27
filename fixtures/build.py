@@ -55,6 +55,7 @@ def content() -> dict[str, list[dict]]:
     return {
         "core.sessions": [{"session_id": "s001", "subject_id": "m001",
                            "session_start_time": START,
+                           "session_end_time": START + timedelta(hours=1),
                            "session_description": "Two-trial synthetic fixture session.",
                            "institution": "Example Institute", "task_name": "two_choice"}],
         "core.subjects": [{"subject_id": "m001", "species": "Mus musculus", "sex": "M",
@@ -110,6 +111,11 @@ def content() -> dict[str, list[dict]]:
             {"event_stream_id": "lick", "session_id": "s001", "name": "lick_sensor",
              "clock_id": "behavior_s001", "device_id": "imec0",
              "processing_run_id": "run_import_001"}],
+        "core.event_stream_observation_intervals": [
+            {"event_stream_id": "stim", "interval_index": 0, "start_tick": 0, "stop_tick": 12000},
+            {"event_stream_id": "reward", "interval_index": 0, "start_tick": 0, "stop_tick": 5000},
+            # the sensor dropped out mid-session, which is why one window is not enough
+            {"event_stream_id": "reward", "interval_index": 1, "start_tick": 6000, "stop_tick": 12000}],
         "core.events": [
             {"session_id": "s001", "event_id": "ev_0001", "stream_id": "stim",
              "event_type": "stimulus_onset", "t_tick": 1200, "clock_id": "behavior_s001"},
