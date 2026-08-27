@@ -1021,6 +1021,95 @@
       ],
       "rules": []
     },
+    "core.event_streams": {
+      "columns": [
+        {
+          "name": "event_stream_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "presence": "required",
+          "description": "Human-readable name, e.g. left_lick_sensor."
+        },
+        {
+          "name": "device_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "The device that produced it, where one is identified."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "description": "The clock its events are timed on."
+        },
+        {
+          "name": "processing_run_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 \u00a74: the manifest records outputs per resource and cannot distinguish streams within one table."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Free-form metadata."
+        }
+      ],
+      "primary_key": [
+        "event_stream_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "device_id"
+          ],
+          "resource": "core.devices",
+          "resource_columns": [
+            "device_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        },
+        {
+          "columns": [
+            "processing_run_id"
+          ],
+          "resource": "core.processing_runs",
+          "resource_columns": [
+            "processing_run_id"
+          ]
+        }
+      ],
+      "sort": null,
+      "rules": []
+    },
     "core.events": {
       "columns": [
         {
@@ -1034,6 +1123,12 @@
           "type": "string",
           "presence": "required",
           "description": "Stable event ID."
+        },
+        {
+          "name": "stream_id",
+          "type": "string",
+          "presence": "required",
+          "description": "The stream this event belongs to."
         },
         {
           "name": "event_type",
@@ -1097,6 +1192,15 @@
           "resource_columns": [
             "clock_id"
           ]
+        },
+        {
+          "columns": [
+            "stream_id"
+          ],
+          "resource": "core.event_streams",
+          "resource_columns": [
+            "event_stream_id"
+          ]
         }
       ],
       "sort": [
@@ -1105,7 +1209,14 @@
         "t_tick",
         "event_type"
       ],
-      "rules": []
+      "rules": [
+        {
+          "id": "core.events.clock_matches_stream",
+          "level": "error",
+          "message": "an event's clock_id disagrees with its stream's",
+          "sql": "SELECT e.session_id, e.event_id, e.clock_id, s.clock_id AS stream_clock_id FROM core_events e JOIN core_event_streams s ON e.stream_id = s.event_stream_id WHERE e.clock_id <> s.clock_id"
+        }
+      ]
     },
     "core.media_assets": {
       "columns": [
@@ -2150,7 +2261,14 @@
           "name": "label",
           "type": "string",
           "presence": "required",
-          "description": "Quality label.",
+          "description": "The source's own label, verbatim.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "normalized_label",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Declared projection onto the closed set. Null where the source's label does not project.",
           "enum": [
             "sua",
             "mua",
@@ -2189,7 +2307,14 @@
         }
       ],
       "sort": null,
-      "rules": []
+      "rules": [
+        {
+          "id": "core.unit_quality_labels.projection_is_consistent",
+          "level": "error",
+          "message": "a (source, label) pair projects onto more than one normalized_label",
+          "sql": "SELECT source, label, COUNT(DISTINCT COALESCE(normalized_label, '')) AS distinct_projections FROM core_unit_quality_labels GROUP BY source, label HAVING COUNT(DISTINCT COALESCE(normalized_label, '')) > 1"
+        }
+      ]
     },
     "core.units": {
       "columns": [
@@ -2354,7 +2479,7 @@
           "id": "core.units.designated_label_is_recorded",
           "level": "error",
           "message": "the designated quality label is not among the recorded ones",
-          "sql": "SELECT u.session_id, u.unit_id, u.quality_label, u.quality_label_source FROM core_units u LEFT JOIN core_unit_quality_labels q ON u.session_id = q.session_id AND u.unit_id = q.unit_id AND u.sorting_run_id = q.sorting_run_id AND u.curation_id = q.curation_id AND u.quality_label = q.label AND u.quality_label_source = q.source WHERE u.quality_label IS NOT NULL AND q.source IS NULL"
+          "sql": "SELECT u.session_id, u.unit_id, u.quality_label, u.quality_label_source FROM core_units u LEFT JOIN core_unit_quality_labels q ON u.session_id = q.session_id AND u.unit_id = q.unit_id AND u.sorting_run_id = q.sorting_run_id AND u.curation_id = q.curation_id AND u.quality_label = q.normalized_label AND u.quality_label_source = q.source WHERE u.quality_label IS NOT NULL AND q.source IS NULL"
         },
         {
           "id": "core.units.designated_label_pair_complete",

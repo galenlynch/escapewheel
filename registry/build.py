@@ -287,7 +287,12 @@ def build() -> dict:
                     dict(col("source", "string", "required",
                              "What produced the label, e.g. kilosort, decoder, bombcell."),
                          vocabulary="open"),
-                    dict(col("label", "string", "required", "Quality label."),
+                    dict(col("label", "string", "required",
+                             "The source's own label, verbatim."),
+                         vocabulary="open"),
+                    dict(col("normalized_label", "string", "nullable",
+                             "Declared projection onto the closed set. Null where the "
+                             "source's label does not project."),
                          enum=["sua", "mua", "noise"]),
                     col("confidence", "float64", "nullable",
                         "The source's confidence, where it reports one.")],
@@ -300,6 +305,38 @@ def build() -> dict:
     add_col("core.units", dict(col("quality_label_source", "string", "nullable",
             "Which core.unit_quality_labels source the designated label came from."),
             vocabulary="open"), after="quality_label")
+
+    # ---- R23 §2-3 : events get the context table every other core stream has -----------------
+    tables["core.event_streams"] = {
+        "columns": [col("event_stream_id", "string", "required", "Stable ID."),
+                    col("session_id", "string", "required", "Session ID."),
+                    col("name", "string", "required",
+                        "Human-readable name, e.g. left_lick_sensor."),
+                    col("device_id", "string", "nullable",
+                        "The device that produced it, where one is identified."),
+                    col("clock_id", "string", "required",
+                        "The clock its events are timed on."),
+                    col("processing_run_id", "string", "nullable",
+                        "The run that produced it. Null means it came off the device as "
+                        "recorded. A narrow exception to R9 §4: the manifest records "
+                        "outputs per resource and cannot distinguish streams within one "
+                        "table."),
+                    col("metadata", "json_string", "optional", "Free-form metadata.")],
+        "primary_key": ["event_stream_id"],
+        "references": [{"columns": ["session_id"], "resource": "core.sessions",
+                        "resource_columns": ["session_id"]},
+                       {"columns": ["device_id"], "resource": "core.devices",
+                        "resource_columns": ["device_id"]},
+                       {"columns": ["clock_id"], "resource": "core.clocks",
+                        "resource_columns": ["clock_id"]},
+                       {"columns": ["processing_run_id"], "resource": "core.processing_runs",
+                        "resource_columns": ["processing_run_id"]}],
+        "sort": None, "rules": []}
+    add_col("core.events", col("stream_id", "string", "required",
+                               "The stream this event belongs to."), after="event_id")
+    T("core.events")["references"].append(
+        {"columns": ["stream_id"], "resource": "core.event_streams",
+         "resource_columns": ["event_stream_id"]})
 
     # ---- R13 §3 : anchor-point clock alignment ------------------------------------------------
     tables["core.clock_anchors"] = {
