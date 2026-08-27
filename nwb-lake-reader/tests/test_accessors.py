@@ -64,3 +64,19 @@ def test_spike_times_narrowed_by_sorting_context(packet_root):
     pkt = open_packet(packet_root)
     assert pkt.spike_times("unit_002", sorting_run_id="sort_001").num_rows == 2
     assert pkt.spike_times("unit_002", sorting_run_id="other").num_rows == 0
+
+
+def test_accessors_push_predicates_into_the_reader(packet_root, monkeypatch):
+    """Filters must reach the Parquet reader, not be applied after loading everything."""
+    import pyarrow.dataset as pads
+
+    seen = {}
+    original = pads.Dataset.to_table
+
+    def record(self, **kwargs):
+        seen.update(kwargs)
+        return original(self, **kwargs)
+
+    monkeypatch.setattr(pads.Dataset, "to_table", record)
+    open_packet(packet_root).units(quality_label="sua")
+    assert seen.get("filter") is not None, "the predicate was not pushed down"

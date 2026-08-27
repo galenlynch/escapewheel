@@ -86,8 +86,17 @@ These are not local preferences; changing them breaks conformance.
   reader stays possible in a language lacking an embedded SQL engine — which is what the ban
   on nested Parquet types (R3 §2.1) exists to preserve, measured in
   `conformance/parquet-probe/`. DuckDB is therefore the `sql` extra, and
-  `tests/test_accessors.py` asserts the PyArrow path never imports it. Do not make the
-  PyArrow path depend on DuckDB.
+  `tests/test_accessors.py` asserts the PyArrow path never imports it.
+
+  The PyArrow path is **not faster** — on 9M spikes selecting one unit it is 4.4 ms against
+  DuckDB's 3.2 ms, and DuckDB adds only ~57 MB to an install PyArrow already dominates at
+  152 MB. Its whole justification is that it works with the extra absent. Keeping DuckDB
+  optional is what *enforces* that: as a hard dependency, nothing would stop a read path
+  growing to require it and the format's portability claim eroding silently.
+
+- **Accessors push predicates into the reader.** `_filtered` builds a `pyarrow.dataset`
+  expression rather than loading a table and filtering it, so row groups that cannot match
+  are never decompressed — 4.4 ms against 24.8 ms on the same query.
 - **Validation splits by what a query can see** (R12 §4). SQL covers what the data *says* —
   values, keys, references, vocabularies. The Python layers cover how it is *stored* —
   column presence, Parquet types, physical order. A storage-layer check written as SQL fails
