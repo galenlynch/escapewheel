@@ -1,0 +1,1733 @@
+{
+  "registry_version": "0.1.0",
+  "semantic_standard_version": "nwb-lake-semantic-v0.1",
+  "logical_standard_version": "nwb-lake-logical-v0.1",
+  "derived_from": {
+    "specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
+    "revisions": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5",
+      "R6",
+      "R7",
+      "R8",
+      "R9"
+    ]
+  },
+  "tables": {
+    "core.array_assets": {
+      "columns": [
+        {
+          "name": "array_asset_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable array asset ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "semantic_type",
+          "type": "string",
+          "presence": "required",
+          "description": "Semantic type, e.g. ElectricalSeries.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "presence": "required",
+          "description": "Human-readable name."
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "presence": "required",
+          "description": "`raw`, `ap`, `lfp`, `waveform`, etc.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "uri",
+          "type": "string",
+          "presence": "required",
+          "description": "URI/path to array store."
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "presence": "required",
+          "description": "`zarr_v3` for portable profile."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Clock for time axis."
+        },
+        {
+          "name": "sample_rate_hz",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Sample rate if regularly sampled."
+        },
+        {
+          "name": "unit",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Physical unit."
+        },
+        {
+          "name": "conversion",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Multiply stored values by this before offset."
+        },
+        {
+          "name": "offset",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Add after conversion."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "array_asset_id"
+      ],
+      "references": [],
+      "sort": [
+        "array_asset_id"
+      ],
+      "rules": []
+    },
+    "core.array_channels": {
+      "columns": [
+        {
+          "name": "array_asset_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Array asset ID."
+        },
+        {
+          "name": "axis_index",
+          "type": "int64",
+          "presence": "required",
+          "description": "Axis that channel_index indexes, in stored order."
+        },
+        {
+          "name": "channel_index",
+          "type": "int64",
+          "presence": "required",
+          "description": "Channel dimension index."
+        },
+        {
+          "name": "electrode_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Electrode ID."
+        },
+        {
+          "name": "channel_label",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Human-readable channel label."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "array_asset_id",
+        "channel_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "array_asset_id",
+            "axis_index"
+          ],
+          "resource": "core.array_dimensions",
+          "resource_columns": [
+            "array_asset_id",
+            "axis_index"
+          ]
+        }
+      ],
+      "sort": [
+        "array_asset_id",
+        "channel_index"
+      ],
+      "rules": []
+    },
+    "core.array_dimensions": {
+      "columns": [
+        {
+          "name": "array_asset_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Array asset ID."
+        },
+        {
+          "name": "axis_index",
+          "type": "int64",
+          "presence": "required",
+          "description": "0-based axis position in stored order (R3 \u00a75)."
+        },
+        {
+          "name": "dimension_name",
+          "type": "string",
+          "presence": "required",
+          "description": "Axis name."
+        }
+      ],
+      "primary_key": [
+        "array_asset_id",
+        "axis_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "array_asset_id"
+          ],
+          "resource": "core.array_assets",
+          "resource_columns": [
+            "array_asset_id"
+          ]
+        }
+      ],
+      "sort": [
+        "array_asset_id",
+        "axis_index"
+      ],
+      "rules": [
+        {
+          "id": "core.array_dimensions.axis_index_contiguous",
+          "level": "error",
+          "message": "axis_index is not contiguous from 0",
+          "sql": "SELECT array_asset_id, COUNT(*) AS n_axes, MAX(axis_index) AS max_axis FROM core_array_dimensions GROUP BY array_asset_id HAVING MAX(axis_index) <> COUNT(*) - 1 OR MIN(axis_index) <> 0"
+        }
+      ]
+    },
+    "core.clocks": {
+      "columns": [
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable clock ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "presence": "required",
+          "description": "Human-readable clock name."
+        },
+        {
+          "name": "tick_rate_hz",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Tick rate as float, required unless exact tick rate provided."
+        },
+        {
+          "name": "tick_rate_num",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Exact rational numerator."
+        },
+        {
+          "name": "tick_rate_den",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Exact rational denominator."
+        },
+        {
+          "name": "origin",
+          "type": "string",
+          "presence": "required",
+          "description": "Origin description."
+        },
+        {
+          "name": "tick_zero_utc",
+          "type": "timestamp",
+          "presence": "nullable",
+          "description": "Wall-clock instant of tick 0 on this clock."
+        },
+        {
+          "name": "parent_clock_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Parent/reference clock."
+        },
+        {
+          "name": "transform_slope",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Parent ticks per this clock's tick, as measured."
+        },
+        {
+          "name": "transform_offset",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Parent-clock tick at this clock's tick 0."
+        },
+        {
+          "name": "transform_to_parent",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Clock alignment transform."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "clock_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "parent_clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
+      "sort": [
+        "clock_id"
+      ],
+      "rules": [
+        {
+          "id": "core.clocks.tick_rate_declared",
+          "level": "error",
+          "message": "neither tick_rate_hz nor an exact rational rate is present",
+          "sql": "SELECT clock_id FROM core_clocks WHERE tick_rate_hz IS NULL AND (tick_rate_num IS NULL OR tick_rate_den IS NULL)"
+        },
+        {
+          "id": "core.clocks.tick_rate_positive",
+          "level": "error",
+          "message": "tick rate is not positive",
+          "sql": "SELECT clock_id, tick_rate_hz, tick_rate_num, tick_rate_den FROM core_clocks WHERE tick_rate_hz <= 0 OR tick_rate_num <= 0 OR tick_rate_den <= 0"
+        },
+        {
+          "id": "core.clocks.transform_pair_complete",
+          "level": "error",
+          "message": "transform_slope and transform_offset must be present together",
+          "sql": "SELECT clock_id FROM core_clocks WHERE (transform_slope IS NULL) <> (transform_offset IS NULL)"
+        },
+        {
+          "id": "core.clocks.transform_requires_parent",
+          "level": "error",
+          "message": "a clock transform is declared without a parent clock",
+          "sql": "SELECT clock_id FROM core_clocks WHERE parent_clock_id IS NULL AND transform_slope IS NOT NULL"
+        },
+        {
+          "id": "core.clocks.tick_zero_plausible",
+          "level": "warning",
+          "message": "tick_zero_utc is more than a day from session_start_time",
+          "sql": "SELECT c.clock_id, c.tick_zero_utc, s.session_start_time FROM core_clocks c JOIN core_sessions s USING (session_id) WHERE c.tick_zero_utc IS NOT NULL AND s.session_start_time IS NOT NULL AND (c.tick_zero_utc < s.session_start_time - INTERVAL 1 DAY OR c.tick_zero_utc > s.session_start_time + INTERVAL 1 DAY)"
+        }
+      ]
+    },
+    "core.curation_versions": {
+      "columns": [
+        {
+          "name": "curation_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable curation ID."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Sorting run ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "curator",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Curator."
+        },
+        {
+          "name": "curation_tool",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Tool."
+        },
+        {
+          "name": "curation_tool_version",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Tool version."
+        },
+        {
+          "name": "parent_curation_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Parent curation."
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "presence": "nullable",
+          "description": "Creation time."
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Notes."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "curation_id"
+      ],
+      "references": [],
+      "sort": [
+        "curation_id"
+      ],
+      "rules": []
+    },
+    "core.devices": {
+      "columns": [
+        {
+          "name": "device_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable device ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Session if device record is session-scoped."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "presence": "required",
+          "description": "Human-readable name."
+        },
+        {
+          "name": "manufacturer",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Manufacturer."
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Model."
+        },
+        {
+          "name": "serial_number",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Serial number."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "device_id"
+      ],
+      "references": [],
+      "sort": [
+        "device_id"
+      ],
+      "rules": []
+    },
+    "core.electrodes": {
+      "columns": [
+        {
+          "name": "electrode_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable electrode ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "probe_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Probe ID."
+        },
+        {
+          "name": "local_electrode_label",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Opaque source label; undefined base, not an offset."
+        },
+        {
+          "name": "local_channel_label",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Opaque source label; undefined base, not an offset."
+        },
+        {
+          "name": "x_um",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "X coordinate in micrometers."
+        },
+        {
+          "name": "y_um",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Y coordinate in micrometers."
+        },
+        {
+          "name": "z_um",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Z coordinate in micrometers."
+        },
+        {
+          "name": "coordinate_frame",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Coordinate frame ID/name."
+        },
+        {
+          "name": "brain_region",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Region label."
+        },
+        {
+          "name": "impedance_ohm",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Impedance."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "electrode_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "probe_id"
+          ],
+          "resource": "core.probes",
+          "resource_columns": [
+            "probe_id"
+          ]
+        }
+      ],
+      "sort": [
+        "electrode_id"
+      ],
+      "rules": []
+    },
+    "core.events": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "event_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable event ID."
+        },
+        {
+          "name": "event_type",
+          "type": "string",
+          "presence": "required",
+          "description": "Event type.",
+          "vocabulary": "open",
+          "reserved_values": [
+            "stimulus_onset",
+            "reward",
+            "lick",
+            "threshold_crossing",
+            "ttl_edge",
+            "sync_pulse"
+          ]
+        },
+        {
+          "name": "t_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "Event tick."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Event clock."
+        },
+        {
+          "name": "payload",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Event payload."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "event_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "clock_id",
+        "t_tick",
+        "event_type"
+      ],
+      "rules": []
+    },
+    "core.media_assets": {
+      "columns": [
+        {
+          "name": "media_asset_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable media asset ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "semantic_type",
+          "type": "string",
+          "presence": "required",
+          "description": "e.g. BehaviorVideo.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "presence": "required",
+          "description": "Name."
+        },
+        {
+          "name": "uri",
+          "type": "string",
+          "presence": "required",
+          "description": "Media file URI."
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "presence": "required",
+          "description": "e.g. mp4."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Clock for frame timing."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "media_asset_id"
+      ],
+      "references": [],
+      "sort": null,
+      "rules": []
+    },
+    "core.media_frames": {
+      "columns": [
+        {
+          "name": "media_asset_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Media asset ID."
+        },
+        {
+          "name": "frame_index",
+          "type": "int64",
+          "presence": "required",
+          "description": "Frame index."
+        },
+        {
+          "name": "t_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "Frame time tick."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Clock ID."
+        },
+        {
+          "name": "pts",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Media presentation timestamp if relevant."
+        },
+        {
+          "name": "dropped",
+          "type": "bool",
+          "presence": "nullable",
+          "description": "Dropped-frame flag."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "media_asset_id",
+        "frame_index"
+      ],
+      "references": [],
+      "sort": [
+        "media_asset_id",
+        "frame_index"
+      ],
+      "rules": []
+    },
+    "core.probes": {
+      "columns": [
+        {
+          "name": "probe_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable probe ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "device_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Associated device."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Probe name."
+        },
+        {
+          "name": "probe_type",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Probe type, e.g. Neuropixels 1.0."
+        },
+        {
+          "name": "manufacturer",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Manufacturer."
+        },
+        {
+          "name": "serial_number",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Serial number."
+        },
+        {
+          "name": "insertion_name",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Insertion label."
+        },
+        {
+          "name": "target_region",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Intended target."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "probe_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "device_id"
+          ],
+          "resource": "core.devices",
+          "resource_columns": [
+            "device_id"
+          ]
+        }
+      ],
+      "sort": [
+        "probe_id"
+      ],
+      "rules": []
+    },
+    "core.processing_run_inputs": {
+      "columns": [
+        {
+          "name": "processing_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "The run."
+        },
+        {
+          "name": "source_file_id",
+          "type": "string",
+          "presence": "required",
+          "description": "A source file the run consumed."
+        }
+      ],
+      "primary_key": [
+        "processing_run_id",
+        "source_file_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "processing_run_id"
+          ],
+          "resource": "core.processing_runs",
+          "resource_columns": [
+            "processing_run_id"
+          ]
+        },
+        {
+          "columns": [
+            "source_file_id"
+          ],
+          "resource": "core.source_files",
+          "resource_columns": [
+            "source_file_id"
+          ]
+        }
+      ],
+      "sort": [
+        "processing_run_id",
+        "source_file_id"
+      ],
+      "rules": []
+    },
+    "core.processing_runs": {
+      "columns": [
+        {
+          "name": "processing_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable processing run ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Session ID if session-scoped."
+        },
+        {
+          "name": "activity_type",
+          "type": "string",
+          "presence": "required",
+          "description": "import, validation, sorting, curation, materialization, etc.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "software_name",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Software name."
+        },
+        {
+          "name": "software_version",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Software version."
+        },
+        {
+          "name": "code_uri",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Code reference."
+        },
+        {
+          "name": "parameters",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Parameters."
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp",
+          "presence": "nullable",
+          "description": "Start time."
+        },
+        {
+          "name": "ended_at",
+          "type": "timestamp",
+          "presence": "nullable",
+          "description": "End time."
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "presence": "required",
+          "description": "succeeded, failed, partial, etc.",
+          "enum": [
+            "succeeded",
+            "failed",
+            "partial"
+          ]
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "processing_run_id"
+      ],
+      "references": [],
+      "sort": null,
+      "rules": [
+        {
+          "id": "core.processing_runs.no_failed_runs",
+          "level": "error",
+          "message": "a failed run is recorded in a committed packet",
+          "sql": "SELECT processing_run_id, activity_type FROM core_processing_runs WHERE status = 'failed'"
+        }
+      ]
+    },
+    "core.session_experimenters": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "experimenter",
+          "type": "string",
+          "presence": "required",
+          "description": "One experimenter."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "experimenter"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "experimenter"
+      ],
+      "rules": []
+    },
+    "core.sessions": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable session ID."
+        },
+        {
+          "name": "subject_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Subject ID."
+        },
+        {
+          "name": "session_start_time",
+          "type": "timestamp",
+          "presence": "required",
+          "description": "Session start time if known; if unknown use explicit null only in non-strict test packets."
+        },
+        {
+          "name": "session_description",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Human-readable session description."
+        },
+        {
+          "name": "institution",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Institution/lab."
+        },
+        {
+          "name": "task_name",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Task/protocol name."
+        },
+        {
+          "name": "source_session_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Source-system session ID if different."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional session metadata."
+        }
+      ],
+      "primary_key": [
+        "session_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "subject_id"
+          ],
+          "resource": "core.subjects",
+          "resource_columns": [
+            "subject_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id"
+      ],
+      "rules": [
+        {
+          "id": "core.sessions.manifest_sessions_match",
+          "level": "error",
+          "message": "the manifest sessions list disagrees with core.sessions",
+          "sql": "SELECT session_id FROM core_sessions WHERE session_id NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_id FROM core_sessions)"
+        }
+      ]
+    },
+    "core.sorting_runs": {
+      "columns": [
+        {
+          "name": "sorting_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable sorting run ID."
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "probe_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Probe ID."
+        },
+        {
+          "name": "sorter_name",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Sorter name."
+        },
+        {
+          "name": "sorter_version",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Sorter version."
+        },
+        {
+          "name": "amplitude_unit",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Unit of core.spike_events.amplitude for this run, e.g. uV, adc.",
+          "vocabulary": "open"
+        },
+        {
+          "name": "parameters",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Sorter parameters."
+        },
+        {
+          "name": "input_array_asset_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Input array asset."
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp",
+          "presence": "nullable",
+          "description": "Start time."
+        },
+        {
+          "name": "ended_at",
+          "type": "timestamp",
+          "presence": "nullable",
+          "description": "End time."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "sorting_run_id"
+      ],
+      "references": [],
+      "sort": [
+        "sorting_run_id"
+      ],
+      "rules": [
+        {
+          "id": "core.sorting_runs.amplitude_unit_declared",
+          "level": "error",
+          "message": "spikes carry amplitudes but the sorting run declares no amplitude_unit",
+          "sql": "SELECT DISTINCT s.sorting_run_id FROM core_spike_events s JOIN core_sorting_runs r USING (sorting_run_id) WHERE s.amplitude IS NOT NULL AND r.amplitude_unit IS NULL"
+        }
+      ]
+    },
+    "core.source_files": {
+      "columns": [
+        {
+          "name": "source_file_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable source file ID."
+        },
+        {
+          "name": "uri",
+          "type": "string",
+          "presence": "required",
+          "description": "Source URI/path."
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Source format."
+        },
+        {
+          "name": "sha256",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Checksum."
+        },
+        {
+          "name": "size_bytes",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Size."
+        },
+        {
+          "name": "modified_at",
+          "type": "timestamp",
+          "presence": "nullable",
+          "description": "Modification time if known."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "source_file_id"
+      ],
+      "references": [],
+      "sort": null,
+      "rules": []
+    },
+    "core.spike_events": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "unit_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Unit ID."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Sorting run ID."
+        },
+        {
+          "name": "curation_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Curation ID."
+        },
+        {
+          "name": "t_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "Spike tick."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Clock ID."
+        },
+        {
+          "name": "amplitude",
+          "type": "float32",
+          "presence": "nullable",
+          "description": "Spike amplitude if available."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id",
+        "t_tick"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ],
+          "resource": "core.units",
+          "resource_columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "sorting_run_id",
+        "curation_id",
+        "unit_id",
+        "t_tick"
+      ],
+      "rules": [
+        {
+          "id": "core.spike_events.ticks_within_clock_span",
+          "level": "warning",
+          "message": "negative ticks on a clock with no absolute reference",
+          "sql": "SELECT s.session_id, s.clock_id, MIN(s.t_tick) AS min_tick FROM core_spike_events s JOIN core_clocks c USING (clock_id) WHERE s.t_tick < 0 AND c.tick_zero_utc IS NULL GROUP BY s.session_id, s.clock_id"
+        }
+      ]
+    },
+    "core.subjects": {
+      "columns": [
+        {
+          "name": "subject_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable subject ID."
+        },
+        {
+          "name": "species",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Species."
+        },
+        {
+          "name": "strain",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Strain/background."
+        },
+        {
+          "name": "sex",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Sex if recorded."
+        },
+        {
+          "name": "date_of_birth",
+          "type": "date",
+          "presence": "nullable",
+          "description": "Date of birth if known."
+        },
+        {
+          "name": "genotype",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Genotype summary."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional subject metadata."
+        }
+      ],
+      "primary_key": [
+        "subject_id"
+      ],
+      "references": [],
+      "sort": [
+        "subject_id"
+      ],
+      "rules": []
+    },
+    "core.trial_tags": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "trial_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Trial ID."
+        },
+        {
+          "name": "tag",
+          "type": "string",
+          "presence": "required",
+          "description": "Tag value."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "trial_id",
+        "tag"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "trial_id"
+          ],
+          "resource": "core.trials",
+          "resource_columns": [
+            "session_id",
+            "trial_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "trial_id",
+        "tag"
+      ],
+      "rules": []
+    },
+    "core.trials": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "trial_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable trial ID."
+        },
+        {
+          "name": "start_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "Trial start tick."
+        },
+        {
+          "name": "stop_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "Trial stop tick."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Clock for start/stop ticks."
+        },
+        {
+          "name": "condition_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Experimental condition."
+        },
+        {
+          "name": "stimulus_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Stimulus ID."
+        },
+        {
+          "name": "choice",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Choice label."
+        },
+        {
+          "name": "rewarded",
+          "type": "bool",
+          "presence": "nullable",
+          "description": "Reward outcome."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional trial metadata."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "trial_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "trial_id"
+      ],
+      "rules": [
+        {
+          "id": "core.trials.interval_valid",
+          "level": "error",
+          "message": "stop_tick precedes start_tick",
+          "sql": "SELECT session_id, trial_id, start_tick, stop_tick FROM core_trials WHERE stop_tick < start_tick"
+        }
+      ]
+    },
+    "core.units": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "unit_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Stable unit ID."
+        },
+        {
+          "name": "probe_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Probe ID."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Sorting run ID."
+        },
+        {
+          "name": "curation_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Curation ID."
+        },
+        {
+          "name": "local_unit_label",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Opaque source label; undefined base, not an offset."
+        },
+        {
+          "name": "quality_label",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Quality label.",
+          "enum": [
+            "sua",
+            "mua",
+            "noise"
+          ]
+        },
+        {
+          "name": "default_electrode_id",
+          "type": "string",
+          "presence": "nullable",
+          "description": "Default electrode."
+        },
+        {
+          "name": "firing_rate_hz",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Firing rate if known."
+        },
+        {
+          "name": "n_spikes",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Total spikes for this unit in this context."
+        },
+        {
+          "name": "first_spike_tick",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Lowest t_tick for this unit."
+        },
+        {
+          "name": "last_spike_tick",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Highest t_tick for this unit."
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "description": "Additional metadata."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "probe_id"
+          ],
+          "resource": "core.probes",
+          "resource_columns": [
+            "probe_id"
+          ]
+        },
+        {
+          "columns": [
+            "sorting_run_id"
+          ],
+          "resource": "core.sorting_runs",
+          "resource_columns": [
+            "sorting_run_id"
+          ]
+        },
+        {
+          "columns": [
+            "curation_id"
+          ],
+          "resource": "core.curation_versions",
+          "resource_columns": [
+            "curation_id"
+          ]
+        },
+        {
+          "columns": [
+            "default_electrode_id"
+          ],
+          "resource": "core.electrodes",
+          "resource_columns": [
+            "electrode_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id"
+      ],
+      "rules": [
+        {
+          "id": "core.units.spike_summary_consistent",
+          "level": "error",
+          "message": "n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events",
+          "sql": "SELECT u.session_id, u.unit_id FROM core_units u LEFT JOIN ( SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM core_spike_events GROUP BY session_id, unit_id, sorting_run_id, curation_id ) s USING (session_id, unit_id, sorting_run_id, curation_id) WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM s.n) OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo) OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)"
+        }
+      ]
+    }
+  }
+}
