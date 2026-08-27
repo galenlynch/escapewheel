@@ -21,7 +21,7 @@ This repository implements a specification maintained in sibling repositories un
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. |
 | `revisions/` | R1–R26, all accepted. Where they disagree with the frozen docs, the revision binds. |
 | `registry/` | `logical_schemas.json` (30 tables), its meta-schema, and the manifest JSON Schema. |
-| `fixtures/` | Phase 0 packets and the conformance corpus — 15 packets with expected findings as data. |
+| `fixtures/` | Phase 0 packets and the conformance corpus — 16 packets with expected findings as data. |
 | `conformance/` | Probes producing the measured evidence the revisions cite. |
 | `nwb-lake-validator/` | Phase 2. Depends on this package; adds `nwb-lake validate`. |
 | `nwb-lake-writer/` | Phase 3. Depends on the validator; adds `nwb-lake import`. |
