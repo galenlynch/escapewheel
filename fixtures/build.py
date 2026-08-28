@@ -78,6 +78,25 @@ def content() -> dict[str, list[dict]]:
             {"electrode_id": f"elec_{i:03d}", "session_id": "s001", "probe_id": "probe0",
              "local_electrode_label": str(i), "local_channel_label": f"AP{i}",
              "brain_region": "VISp"} for i in range(4)],
+        # R28: a unit sits on several electrodes and somewhere, in more than one frame.
+        # R28: a unit sits on several electrodes and somewhere, in more than one frame.
+        # Each unit's set contains its own default_electrode_id, which R28 2.1 requires.
+        "core.unit_electrodes": [
+            {"session_id": "s001", "unit_id": unit, "sorting_run_id": "sort_ks4_001",
+             "curation_id": "curation_001", "electrode_id": f"elec_{e:03d}",
+             "channel_ordinal": k, "is_primary": f"elec_{e:03d}" == primary,
+             "amplitude": -80.0 + k}
+            for unit, primary, contacts in (
+                ("unit_001", "elec_001", (0, 1, 2)),
+                ("unit_002", "elec_003", (2, 3)))
+            for k, e in enumerate(contacts)],
+        "core.unit_coordinates": [
+            {"session_id": "s001", "unit_id": unit, "sorting_run_id": "sort_ks4_001",
+             "curation_id": "curation_001", "coordinate_frame": frame,
+             "x_um": x, "y_um": y, "z_um": z}
+            for unit, depth in (("unit_001", 22.0), ("unit_002", 58.0))
+            for frame, x, y, z in (("probe", 8.0, depth, None),
+                                   ("ccf", -1960.0, 8770.0 + depth, -5140.0))],
         "core.electrode_coordinates": [
             {"electrode_id": f"elec_{i:03d}", "coordinate_frame": frame,
              "x_um": x, "y_um": y, "z_um": z}
@@ -306,6 +325,17 @@ def variants():
         # session declares a reference (R27 4).
         c["core.clocks"][1]["transform_slope"] = None
         c["core.clocks"][1]["transform_offset"] = None
+    # R28: the unit-to-electrode links must be usable.
+    def two_primaries(c):
+        # Two peak channels is not a peak, and the reader has no rule for choosing.
+        c["core.unit_electrodes"][0]["is_primary"] = True
+        c["core.unit_electrodes"][2]["is_primary"] = True
+    def gapped_ordinal(c):
+        # A dense waveform axis indexed by this addresses a row that is not there (R20 2).
+        c["core.unit_electrodes"][2]["channel_ordinal"] = 7
+    def undetected_default(c):
+        # The designated electrode is not one the unit was detected on.
+        c["core.units"][0]["default_electrode_id"] = "elec_003"
     def wide_anchor_gap(c):
         # 1 kHz anchors with one 20x hole: inside the span, outside the bound (R27 5.3).
         c["core.clocks"][1]["transform_slope"] = None
@@ -325,7 +355,8 @@ def variants():
             "orphan_manifest_session": orphan_manifest_session,
             "no_reference_clock": no_reference_clock, "clock_cycle": clock_cycle,
             "unreachable_clock": unreachable_clock, "unaligned_clock": unaligned_clock,
-            "wide_anchor_gap": wide_anchor_gap}
+            "wide_anchor_gap": wide_anchor_gap, "two_primaries": two_primaries,
+            "gapped_ordinal": gapped_ordinal, "undetected_default": undetected_default}
 
 
 def main():

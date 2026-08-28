@@ -38,6 +38,9 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "unreachable_clock": ("error", "core.sessions.every_clock_reaches_the_reference"),
     "unaligned_clock": ("error", "core.clocks.alignment_declared_for_conversion"),
     "wide_anchor_gap": ("warning", "core.clock_anchors.gap_within_bound"),
+    "two_primaries": ("warning", "core.unit_electrodes.one_primary"),
+    "gapped_ordinal": ("error", "core.unit_electrodes.ordinal_contiguous"),
+    "undetected_default": ("error", "core.units.default_electrode_is_declared"),
 }
 
 
