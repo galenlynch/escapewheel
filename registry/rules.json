@@ -177,6 +177,12 @@
         "advisory": true,
         "message": "units carry no observation intervals, so no rate over them has a denominator",
         "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id FROM core_units u LEFT JOIN core_unit_observation_intervals o ON u.session_id = o.session_id AND u.unit_id = o.unit_id AND u.sorting_run_id = o.sorting_run_id AND u.curation_id = o.curation_id WHERE o.unit_id IS NULL"
+      },
+      {
+        "id": "core.units.default_electrode_is_declared",
+        "level": "error",
+        "message": "the designated electrode is not one the unit was detected on (R28 2.1)",
+        "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id, u.default_electrode_id FROM core_units u WHERE u.default_electrode_id IS NOT NULL AND EXISTS (SELECT 1 FROM core_unit_electrodes e WHERE e.session_id = u.session_id AND e.unit_id = u.unit_id AND e.sorting_run_id = u.sorting_run_id AND e.curation_id = u.curation_id) AND NOT EXISTS (SELECT 1 FROM core_unit_electrodes e WHERE e.session_id = u.session_id AND e.unit_id = u.unit_id AND e.sorting_run_id = u.sorting_run_id AND e.curation_id = u.curation_id AND e.electrode_id = u.default_electrode_id)"
       }
     ],
     "core.clock_anchors": [
@@ -285,6 +291,20 @@
         "advisory": true,
         "message": "streams carry no observation intervals, so no rate over them has a denominator",
         "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s LEFT JOIN core_event_stream_observation_intervals o ON s.event_stream_id = o.event_stream_id WHERE o.event_stream_id IS NULL"
+      }
+    ],
+    "core.unit_electrodes": [
+      {
+        "id": "core.unit_electrodes.one_primary",
+        "level": "warning",
+        "message": "a unit designates more than one peak electrode (R28 2)",
+        "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n FROM core_unit_electrodes WHERE is_primary GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING COUNT(*) > 1"
+      },
+      {
+        "id": "core.unit_electrodes.ordinal_contiguous",
+        "level": "error",
+        "message": "channel_ordinal is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
+        "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MAX(channel_ordinal) AS hi FROM core_unit_electrodes WHERE channel_ordinal IS NOT NULL GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(channel_ordinal) <> COUNT(*) - 1 OR MIN(channel_ordinal) <> 0"
       }
     ]
   }

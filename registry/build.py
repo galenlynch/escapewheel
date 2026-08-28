@@ -430,6 +430,50 @@ def build() -> dict:
                         "resource_columns": ["clock_id"]}],
         "sort": None, "rules": []}
 
+    # ---- R28 §2-4 : a unit sits on many electrodes, and somewhere -----------------------------
+    # `default_electrode_id` is the peak channel and not the set, and nothing said where a unit
+    # is. NWB relates the two through three index spaces in one row; naming the electrode is
+    # the alternative R3 §2.1's physical floor already implies.
+    unit_key = ["session_id", "unit_id", "sorting_run_id", "curation_id"]
+    unit_ref = {"columns": unit_key, "resource": "core.units", "resource_columns": unit_key}
+    tables["core.unit_electrodes"] = {
+        "columns": [col("session_id", "string", "required", "Session ID."),
+                    col("unit_id", "string", "required", "Unit ID."),
+                    col("sorting_run_id", "string", "required", "Sorting run ID."),
+                    col("curation_id", "string", "required", "Curation ID."),
+                    col("electrode_id", "string", "required",
+                        "An electrode this unit was detected on."),
+                    col("channel_ordinal", "int64", "nullable",
+                        "0-based position in the unit's channel list, where a dense array axis "
+                        "is indexed by it (R20 §2). Not an identifier; nothing joins on it."),
+                    col("is_primary", "bool", "nullable",
+                        "Whether this is the unit's peak electrode."),
+                    col("amplitude", "float64", "nullable",
+                        "The unit's amplitude here, in core.sorting_runs.amplitude_unit.")],
+        "primary_key": [*unit_key, "electrode_id"],
+        "references": [unit_ref,
+                       {"columns": ["electrode_id"], "resource": "core.electrodes",
+                        "resource_columns": ["electrode_id"]}],
+        "sort": None, "rules": []}
+    tables["core.unit_coordinates"] = {
+        "columns": [col("session_id", "string", "required", "Session ID."),
+                    col("unit_id", "string", "required", "Unit ID."),
+                    col("sorting_run_id", "string", "required", "Sorting run ID."),
+                    col("curation_id", "string", "required", "Curation ID."),
+                    col("coordinate_frame", "string", "required",
+                        "The frame these coordinates are in. Open, as R19 §3 left it."),
+                    col("x_um", "float64", "nullable", "X in micrometres, in that frame."),
+                    col("y_um", "float64", "nullable", "Y in micrometres."),
+                    col("z_um", "float64", "nullable", "Z in micrometres.")],
+        "primary_key": [*unit_key, "coordinate_frame"],
+        "references": [unit_ref],
+        "sort": None, "rules": []}
+    # The one link between a dense array's channels and the electrodes they came from, which
+    # until now nothing validated.
+    T("core.array_channels")["references"].append(
+        {"columns": ["electrode_id"], "resource": "core.electrodes",
+         "resource_columns": ["electrode_id"]})
+
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     authored = json.loads(RULES.read_text())
     hand_written: dict[str, list[dict]] = authored["rules"]

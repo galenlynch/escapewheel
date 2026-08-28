@@ -397,6 +397,15 @@
             "array_asset_id",
             "axis_index"
           ]
+        },
+        {
+          "columns": [
+            "electrode_id"
+          ],
+          "resource": "core.electrodes",
+          "resource_columns": [
+            "electrode_id"
+          ]
         }
       ],
       "sort": [
@@ -2259,6 +2268,184 @@
         }
       ]
     },
+    "core.unit_coordinates": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "unit_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Unit ID."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Sorting run ID."
+        },
+        {
+          "name": "curation_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Curation ID."
+        },
+        {
+          "name": "coordinate_frame",
+          "type": "string",
+          "presence": "required",
+          "description": "The frame these coordinates are in. Open, as R19 \u00a73 left it."
+        },
+        {
+          "name": "x_um",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "X in micrometres, in that frame."
+        },
+        {
+          "name": "y_um",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Y in micrometres."
+        },
+        {
+          "name": "z_um",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "Z in micrometres."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id",
+        "coordinate_frame"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ],
+          "resource": "core.units",
+          "resource_columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ]
+        }
+      ],
+      "sort": null,
+      "rules": []
+    },
+    "core.unit_electrodes": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID."
+        },
+        {
+          "name": "unit_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Unit ID."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Sorting run ID."
+        },
+        {
+          "name": "curation_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Curation ID."
+        },
+        {
+          "name": "electrode_id",
+          "type": "string",
+          "presence": "required",
+          "description": "An electrode this unit was detected on."
+        },
+        {
+          "name": "channel_ordinal",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "0-based position in the unit's channel list, where a dense array axis is indexed by it (R20 \u00a72). Not an identifier; nothing joins on it."
+        },
+        {
+          "name": "is_primary",
+          "type": "bool",
+          "presence": "nullable",
+          "description": "Whether this is the unit's peak electrode."
+        },
+        {
+          "name": "amplitude",
+          "type": "float64",
+          "presence": "nullable",
+          "description": "The unit's amplitude here, in core.sorting_runs.amplitude_unit."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id",
+        "electrode_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ],
+          "resource": "core.units",
+          "resource_columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ]
+        },
+        {
+          "columns": [
+            "electrode_id"
+          ],
+          "resource": "core.electrodes",
+          "resource_columns": [
+            "electrode_id"
+          ]
+        }
+      ],
+      "sort": null,
+      "rules": [
+        {
+          "id": "core.unit_electrodes.one_primary",
+          "level": "warning",
+          "message": "a unit designates more than one peak electrode (R28 2)",
+          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n FROM core_unit_electrodes WHERE is_primary GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING COUNT(*) > 1"
+        },
+        {
+          "id": "core.unit_electrodes.ordinal_contiguous",
+          "level": "error",
+          "message": "channel_ordinal is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
+          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MAX(channel_ordinal) AS hi FROM core_unit_electrodes WHERE channel_ordinal IS NOT NULL GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(channel_ordinal) <> COUNT(*) - 1 OR MIN(channel_ordinal) <> 0"
+        }
+      ]
+    },
     "core.unit_observation_intervals": {
       "columns": [
         {
@@ -2634,6 +2821,12 @@
           "advisory": true,
           "message": "units carry no observation intervals, so no rate over them has a denominator",
           "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id FROM core_units u LEFT JOIN core_unit_observation_intervals o ON u.session_id = o.session_id AND u.unit_id = o.unit_id AND u.sorting_run_id = o.sorting_run_id AND u.curation_id = o.curation_id WHERE o.unit_id IS NULL"
+        },
+        {
+          "id": "core.units.default_electrode_is_declared",
+          "level": "error",
+          "message": "the designated electrode is not one the unit was detected on (R28 2.1)",
+          "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id, u.default_electrode_id FROM core_units u WHERE u.default_electrode_id IS NOT NULL AND EXISTS (SELECT 1 FROM core_unit_electrodes e WHERE e.session_id = u.session_id AND e.unit_id = u.unit_id AND e.sorting_run_id = u.sorting_run_id AND e.curation_id = u.curation_id) AND NOT EXISTS (SELECT 1 FROM core_unit_electrodes e WHERE e.session_id = u.session_id AND e.unit_id = u.unit_id AND e.sorting_run_id = u.sorting_run_id AND e.curation_id = u.curation_id AND e.electrode_id = u.default_electrode_id)"
         }
       ]
     }
