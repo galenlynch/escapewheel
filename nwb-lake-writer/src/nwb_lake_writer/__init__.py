@@ -9,6 +9,7 @@ This package knows nothing about NWB or any other source. Adapters hand it recor
 
 from importlib.metadata import PackageNotFoundError, version
 
+from .clock import Clock, NonFinite, OffGrid
 from .writer import CommitRefused, PacketWriter
 
 try:
@@ -16,4 +17,4 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0.dev0"
 
-__all__ = ["CommitRefused", "PacketWriter", "__version__"]
+__all__ = ["Clock", "CommitRefused", "NonFinite", "OffGrid", "PacketWriter", "__version__"]

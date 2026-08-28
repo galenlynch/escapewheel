@@ -19,8 +19,14 @@ version = "0.1.0"
 # it the reader -- is a dependency rather than an optional extra.
 dependencies = [
     "nwb-lake-validator",
+    "numpy>=1.26",
     "pyarrow>=25.0.1",
 ]
+
+[project.optional-dependencies]
+# The NWB adapter decodes Zarr v2 chunks directly, so it needs the codecs and nothing else:
+# no zarr, no hdmf-zarr, no pynwb. See sources/zarr_compat.py.
+nwb = ["numcodecs>=0.13"]
 
 [project.entry-points."nwb_lake.commands"]
 # 07 names one CLI. nwb-lake-reader owns the console script and discovers this group.
@@ -40,7 +46,7 @@ types = [
     "mypy",
     "pyarrow-stubs>=20.0.0.20260819",
 ]
-dev = [{ include-group = "types" }, "codespell", "pytest", "pytest-cov", "ruff", "interrogate"]
+dev = [{ include-group = "types" }, "codespell", "numcodecs", "pytest", "pytest-cov", "ruff", "interrogate"]
 jupyter = [{ include-group = "dev" }, "ipykernel", "pip"]
 docs = [
   { include-group = "dev" },
@@ -101,6 +107,11 @@ files = ["src/nwb_lake_writer"]
 strict = true
 show_error_codes = true
 exclude = ["scratch"]
+
+[[tool.mypy.overrides]]
+# numcodecs ships no py.typed marker.
+module = "numcodecs.*"
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"

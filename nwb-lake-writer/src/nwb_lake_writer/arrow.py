@@ -6,6 +6,8 @@ A writer does not invent a schema. Every column's type and presence comes from
 
 from __future__ import annotations
 
+import json
+import math
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime
 from typing import Any
@@ -79,8 +81,43 @@ def _date(value: Any, column: str) -> Any:
     return value
 
 
+def _plain(value: Any) -> Any:
+    """Reduce a value to something :func:`json.dumps` can encode.
+
+    NumPy scalars and arrays become their Python equivalents, and a non-finite float becomes
+    null. JSON has no NaN, and source data is full of it -- 384 of this file's 4608
+    electrodes carry NaN CCF coordinates -- so the choice is between dropping it and emitting
+    a document no conforming JSON parser accepts.
+    """
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, (str, bool, int)) or value is None:
+        return value
+    if isinstance(value, Mapping):
+        return {str(k): _plain(v) for k, v in value.items()}
+    if hasattr(value, "item") and getattr(value, "ndim", None) == 0:  # numpy scalar
+        return _plain(value.item())
+    if hasattr(value, "tolist"):  # numpy array
+        return _plain(value.tolist())
+    if isinstance(value, Sequence):
+        return [_plain(v) for v in value]
+    return value
+
+
+def _json_string(value: Any, column: str) -> Any:
+    """Serialize a mapping or sequence to canonical JSON; pass a string through.
+
+    Adapters build metadata as dictionaries, and JSON encoding is a property of the physical
+    profile rather than of any one source, so it happens here. Keys are sorted so two writers
+    given equal metadata emit equal bytes.
+    """
+    if value is None or isinstance(value, str):
+        return value
+    return json.dumps(_plain(value), sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
 #: Per-type coercion applied before Arrow sees a value. Everything else passes through.
-COERCE = {"timestamp": _timestamp, "date": _date}
+COERCE = {"timestamp": _timestamp, "date": _date, "json_string": _json_string}
 
 #: Registry column type -> the Arrow type a conforming writer emits (R3 §2.1).
 #: Every one is a primitive: no struct, map, or list appears anywhere in the registry.
