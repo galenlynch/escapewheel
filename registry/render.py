@@ -33,13 +33,17 @@ def _code(names: Any) -> str:
 def _table(name: str, spec: dict[str, Any]) -> list[str]:
     """Render one table: its columns, then everything that constrains them."""
     out = [f"### `{name}`", ""]
+    if introduced := spec.get("since"):
+        note = f"*Introduced by {introduced} (R29 §2). A column with no revision came from `02` unamended.*"
+        out += [note, ""]
 
-    out += ["| Column | Type | Presence | Description |", "|---|---|:---:|---|"]
+    out += ["| Column | Type | Presence | Since | Description |", "|---|---|:---:|---|---|"]
     for column in spec["columns"]:
         description = (column.get("description") or "").replace("|", "\\|")
         out.append(
             f"| `{column['name']}` | {column['type']} | "
-            f"{PRESENCE.get(column['presence'], column['presence'])} | {description} |"
+            f"{PRESENCE.get(column['presence'], column['presence'])} | "
+            f"{column.get('since', '')} | {description} |"
         )
     out.append("")
 

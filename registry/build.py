@@ -44,8 +44,18 @@ def presence(required: str, typ: str) -> str:
     return "nullable"                                  # 02: prefer present-nullable
 
 
-def col(name, typ, pres, desc):
-    return {"name": name, "type": typ, "presence": pres, "description": desc}
+#: The revision whose block is executing, stamped onto whatever it creates (R29 §2). A block
+#: sets it once; `col` and `new` read it, so the comment naming the revision and the data
+#: recording it cannot disagree. None while 02 is being carried forward, because a column 02
+#: declares and no revision touched carries no `since` -- absence is the meaningful state.
+SINCE = [None]
+
+
+def col(name, typ, pres, desc, since=None):
+    entry = {"name": name, "type": typ, "presence": pres, "description": desc}
+    if stamp := (since or SINCE[0]):
+        entry["since"] = stamp
+    return entry
 
 
 def expand(template: str, resource: str, call: dict, key: list[str]) -> list[dict[str, str]]:
@@ -128,26 +138,44 @@ def build() -> dict:
         cols.insert(i, c)
     def rename(t, old, new):
         for c in T(t)["columns"]:
-            if c["name"] == old: c["name"] = new
+            if c["name"] == old:
+                c["name"] = new
+                if SINCE[0]: c["since"] = SINCE[0]
+    def amend(t, name, **changes):
+        """Change a column in place, recording the revision that did it (R29 §2).
+
+        In-place amendments are most of what a revision does to a 02 column -- a type, a
+        vocabulary, a description -- and they do not go through `col`, so without this they
+        would carry no provenance at all. R8 §2 making `local_unit_label` a string is the
+        example R29 opens with.
+        """
+        for c in T(t)["columns"]:
+            if c["name"] == name:
+                c.update(changes)
+                if SINCE[0]: c["since"] = SINCE[0]
+                return
+        raise SystemExit(f"{t} has no column {name} to amend")
 
     # ---- R3 §3.0 : tables do not restate what the array declares -----------------------
+    SINCE[0] = "R3 §3.0"
     for c in ("dtype", "shape"):
         drop_col("core.array_assets", c)
 
     # ---- R3 §3.1-3.3 : repeated values become child tables ------------------------------
+    SINCE[0] = "R3 §3.1-3.3"
     tables["core.session_experimenters"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("experimenter", "string", "required", "One experimenter.")],
         "primary_key": ["session_id", "experimenter"],
         "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]}], "sort": None, "rules": []}
+                        "resource_columns": ["session_id"]}], "sort": None, "rules": [], "since": SINCE[0]}
     tables["core.trial_tags"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("trial_id", "string", "required", "Trial ID."),
                     col("tag", "string", "required", "Tag value.")],
         "primary_key": ["session_id", "trial_id", "tag"],
         "references": [{"columns": ["session_id", "trial_id"], "resource": "core.trials",
-                        "resource_columns": ["session_id", "trial_id"]}], "sort": None, "rules": []}
+                        "resource_columns": ["session_id", "trial_id"]}], "sort": None, "rules": [], "since": SINCE[0]}
     tables["core.array_dimensions"] = {
         "columns": [col("array_asset_id", "string", "required", "Array asset ID."),
                     col("axis_index", "int64", "required",
@@ -155,19 +183,22 @@ def build() -> dict:
                     col("dimension_name", "string", "required", "Axis name.")],
         "primary_key": ["array_asset_id", "axis_index"],
         "references": [{"columns": ["array_asset_id"], "resource": "core.array_assets",
-                        "resource_columns": ["array_asset_id"]}], "sort": None, "rules": []}
+                        "resource_columns": ["array_asset_id"]}], "sort": None, "rules": [], "since": SINCE[0]}
 
     # ---- R3 §3.4 : typed clock transform ------------------------------------------------
+    SINCE[0] = "R3 §3.4"
     add_col("core.clocks", col("transform_slope", "float64", "nullable",
             "Parent ticks per this clock's tick, as measured."), after="parent_clock_id")
     add_col("core.clocks", col("transform_offset", "float64", "nullable",
             "Parent-clock tick at this clock's tick 0."), after="transform_slope")
 
     # ---- R6 §2 : wall-clock binding -------------------------------------------------------
+    SINCE[0] = "R6 §2"
     add_col("core.clocks", col("tick_zero_utc", "timestamp", "nullable",
             "Wall-clock instant of tick 0 on this clock."), after="origin")
 
     # ---- R3 §6.1 : bind array_channels to an axis ---------------------------------------
+    SINCE[0] = "R3 §6.1"
     add_col("core.array_channels", col("axis_index", "int64", "required",
             "Axis that channel_index indexes, in stored order."), after="array_asset_id")
     T("core.array_channels")["references"].append(
@@ -175,6 +206,7 @@ def build() -> dict:
          "resource_columns": ["array_asset_id", "axis_index"]})
 
     # ---- R5 : flat spikes ----------------------------------------------------------------
+    SINCE[0] = "R5"
     del tables["core.unit_spike_chunks"]                                        # §3
     drop_col("core.spike_events", "trial_id")                                   # §2.1
     T("core.spike_events")["primary_key"] = [                                   # §2
@@ -199,49 +231,43 @@ def build() -> dict:
         rename(t, old, old.replace("_index", "_label"))
 
     # ---- R8 §2 : source labels are strings ------------------------------------------------
+    SINCE[0] = "R8 §2"
     for t, n in [("core.electrodes", "local_electrode_label"),
                  ("core.electrodes", "local_channel_label"),
                  ("core.units", "local_unit_label")]:
-        for c in T(t)["columns"]:
-            if c["name"] == n:
-                c["type"] = "string"
-                c["description"] = "Opaque source label; undefined base, not an offset."
+        amend(t, n, type="string",
+              description="Opaque source label; undefined base, not an offset.")
 
     # ---- R8 §3-4 : vocabularies -----------------------------------------------------------
-    for c in T("core.processing_runs")["columns"]:
-        if c["name"] == "status":
-            c["enum"] = ["succeeded", "failed", "partial"]
+    SINCE[0] = "R8 §3-4"
+    amend("core.processing_runs", "status", enum=["succeeded", "failed", "partial"])
     for t, n in [("core.array_assets", "kind"), ("core.array_assets", "semantic_type"),
                  ("core.media_assets", "semantic_type"),
                  ("core.processing_runs", "activity_type")]:
-        for c in T(t)["columns"]:
-            if c["name"] == n:
-                c["vocabulary"] = "open"
+        amend(t, n, vocabulary="open")
 
     # ---- R11 §6 : trial_id conflates authored fact with derived join ------------------------
+    SINCE[0] = "R11 §6"
     drop_col("core.events", "trial_id")
     T("core.events")["references"] = [r for r in T("core.events")["references"]
                                       if "trial_id" not in r["columns"]]
 
     # ---- R11 §2 : amplitude units live on the sorting run -----------------------------------
+    SINCE[0] = "R11 §2"
     add_col("core.sorting_runs", col("amplitude_unit", "string", "nullable",
             "Unit of core.spike_events.amplitude for this run, e.g. uV, adc."),
             after="sorter_version")
-    for c in T("core.sorting_runs")["columns"]:
-        if c["name"] == "amplitude_unit":
-            c["vocabulary"] = "open"
+    amend("core.sorting_runs", "amplitude_unit", vocabulary="open")
 
     # ---- R11 §3-4 : declared-open vocabularies ------------------------------------------------
-    for c in T("core.units")["columns"]:
-        if c["name"] == "quality_label":
-            c["enum"] = ["sua", "mua", "noise"]                            # R11 §3
-    for c in T("core.events")["columns"]:
-        if c["name"] == "event_type":
-            c["vocabulary"] = "open"
-            c["reserved_values"] = ["stimulus_onset", "reward", "lick",
-                                    "threshold_crossing", "ttl_edge", "sync_pulse"]
+    SINCE[0] = "R11 §3-4"
+    amend("core.units", "quality_label", enum=["sua", "mua", "noise"])          # R11 §3
+    amend("core.events", "event_type", vocabulary="open",
+          reserved_values=["stimulus_onset", "reward", "lick",
+                           "threshold_crossing", "ttl_edge", "sync_pulse"])
 
     # ---- R9 : provenance simplification ----------------------------------------------------
+    SINCE[0] = "R9"
     for n in ("core.provenance_entities", "core.provenance_activities",
               "core.provenance_edges"):
         del tables[n]
@@ -253,9 +279,10 @@ def build() -> dict:
         "references": [{"columns": ["processing_run_id"], "resource": "core.processing_runs",
                         "resource_columns": ["processing_run_id"]},
                        {"columns": ["source_file_id"], "resource": "core.source_files",
-                        "resource_columns": ["source_file_id"]}], "sort": None, "rules": []}
+                        "resource_columns": ["source_file_id"]}], "sort": None, "rules": [], "since": SINCE[0]}
 
     # ---- R10 : sort by primary key unless overridden -----------------------------------------
+    SINCE[0] = "R10"
     OVERRIDE = {                                                          # R10 §3, from 03
         "core.spike_events": ["session_id", "sorting_run_id", "curation_id",
                               "unit_id", "t_tick"],
@@ -265,6 +292,7 @@ def build() -> dict:
         t["sort"] = OVERRIDE.get(n) or t["primary_key"]                   # R10 §2, §6
 
     # ---- R18 §2 : units drift in and out of a recording -----------------------------------------
+    SINCE[0] = "R18 §2"
     tables["core.unit_observation_intervals"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("unit_id", "string", "required", "Unit ID."),
@@ -283,9 +311,10 @@ def build() -> dict:
                                              "curation_id"]},
                        {"columns": ["clock_id"], "resource": "core.clocks",
                         "resource_columns": ["clock_id"]}],
-        "sort": None, "rules": []}
+        "sort": None, "rules": [], "since": SINCE[0]}
 
     # ---- R19 §2 : scaling and sample timing are per channel --------------------------------------
+    SINCE[0] = "R19 §2"
     for name, typ, desc in [
             ("conversion", "float64", "Multiply stored values by this before offset."),
             ("offset", "float64", "Add after conversion."),
@@ -295,6 +324,7 @@ def build() -> dict:
         add_col("core.array_channels", col(name, typ, "nullable", desc), after="channel_label")
 
     # ---- R19 §3 : an electrode sits in more than one coordinate frame ----------------------------
+    SINCE[0] = "R19 §3"
     for c in ("x_um", "y_um", "z_um", "coordinate_frame"):
         drop_col("core.electrodes", c)
     tables["core.electrode_coordinates"] = {
@@ -307,9 +337,10 @@ def build() -> dict:
         "primary_key": ["electrode_id", "coordinate_frame"],
         "references": [{"columns": ["electrode_id"], "resource": "core.electrodes",
                         "resource_columns": ["electrode_id"]}],
-        "sort": None, "rules": []}
+        "sort": None, "rules": [], "since": SINCE[0]}
 
     # ---- R20 §2 : four coordinate forms per axis -------------------------------------------------
+    SINCE[0] = "R20 §2"
     for name, typ, desc in [
             ("clock_id", "string", "Clock the ticks are counted on (regular tick axis)."),
             ("origin_tick", "int64", "Tick at position 0."),
@@ -329,6 +360,7 @@ def build() -> dict:
         {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]})
 
     # ---- R16 §2-3 : unit quality is many labels, attributed ------------------------------------
+    SINCE[0] = "R16 §2-3"
     tables["core.unit_quality_labels"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("unit_id", "string", "required", "Unit ID."),
@@ -351,12 +383,13 @@ def build() -> dict:
                         "resource": "core.units",
                         "resource_columns": ["session_id", "unit_id", "sorting_run_id",
                                              "curation_id"]}],
-        "sort": None, "rules": []}
+        "sort": None, "rules": [], "since": SINCE[0]}
     add_col("core.units", dict(col("quality_label_source", "string", "nullable",
             "Which core.unit_quality_labels source the designated label came from."),
             vocabulary="open"), after="quality_label")
 
     # ---- R23 §2-3 : events get the context table every other core stream has -----------------
+    SINCE[0] = "R23 §2-3"
     tables["core.event_streams"] = {
         "columns": [col("event_stream_id", "string", "required", "Stable ID."),
                     col("session_id", "string", "required", "Session ID."),
@@ -381,7 +414,7 @@ def build() -> dict:
                         "resource_columns": ["clock_id"]},
                        {"columns": ["processing_run_id"], "resource": "core.processing_runs",
                         "resource_columns": ["processing_run_id"]}],
-        "sort": None, "rules": []}
+        "sort": None, "rules": [], "since": SINCE[0]}
     add_col("core.events", col("stream_id", "string", "required",
                                "The stream this event belongs to."), after="event_id")
     T("core.events")["references"].append(
@@ -389,6 +422,7 @@ def build() -> dict:
          "resource_columns": ["event_stream_id"]})
 
     # ---- R25 §2 : streams drop out too; absence of an event is ambiguous without this -------
+    SINCE[0] = "R25 §2"
     tables["core.event_stream_observation_intervals"] = {
         "columns": [col("event_stream_id", "string", "required", "The stream being observed."),
                     col("interval_index", "int64", "required",
@@ -402,12 +436,13 @@ def build() -> dict:
         # joining to its stream anyway, so repeating it buys nothing (R25 2.1).
         "references": [{"columns": ["event_stream_id"], "resource": "core.event_streams",
                         "resource_columns": ["event_stream_id"]}],
-        "sort": None, "rules": []}
+        "sort": None, "rules": [], "since": SINCE[0]}
     add_col("core.sessions", col("session_end_time", "timestamp", "nullable",
             "When the session ended, UTC. Metadata, not derived from the tables (R25 5)."),
             after="session_start_time")
 
     # ---- R27 §2 : "synchronized" has to name a clock ------------------------------------------
+    SINCE[0] = "R27 §2"
     # A reader's default is to return times on one clock. A session with two unparented clocks
     # has two roots and nothing chooses between them, so the session says which.
     add_col("core.sessions", col("reference_clock_id", "string", "nullable",
@@ -418,6 +453,7 @@ def build() -> dict:
          "resource_columns": ["clock_id"]})
 
     # ---- R13 §3 : anchor-point clock alignment ------------------------------------------------
+    SINCE[0] = "R13 §3"
     tables["core.clock_anchors"] = {
         "columns": [col("clock_id", "string", "required", "The clock being aligned."),
                     col("anchor_index", "int64", "required",
@@ -428,9 +464,10 @@ def build() -> dict:
         "primary_key": ["clock_id", "anchor_index"],
         "references": [{"columns": ["clock_id"], "resource": "core.clocks",
                         "resource_columns": ["clock_id"]}],
-        "sort": None, "rules": []}
+        "sort": None, "rules": [], "since": SINCE[0]}
 
     # ---- R28 §2-4 : a unit sits on many electrodes, and somewhere -----------------------------
+    SINCE[0] = "R28 §2-4"
     # `default_electrode_id` is the peak channel and not the set, and nothing said where a unit
     # is. NWB relates the two through three index spaces in one row; naming the electrode is
     # the alternative R3 §2.1's physical floor already implies.
@@ -454,7 +491,7 @@ def build() -> dict:
         "references": [unit_ref,
                        {"columns": ["electrode_id"], "resource": "core.electrodes",
                         "resource_columns": ["electrode_id"]}],
-        "sort": None, "rules": []}
+        "sort": None, "rules": [], "since": SINCE[0]}
     tables["core.unit_coordinates"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("unit_id", "string", "required", "Unit ID."),
@@ -467,7 +504,7 @@ def build() -> dict:
                     col("z_um", "float64", "nullable", "Z in micrometres.")],
         "primary_key": [*unit_key, "coordinate_frame"],
         "references": [unit_ref],
-        "sort": None, "rules": []}
+        "sort": None, "rules": [], "since": SINCE[0]}
     # The one link between a dense array's channels and the electrodes they came from, which
     # until now nothing validated.
     T("core.array_channels")["references"].append(
@@ -490,6 +527,7 @@ def build() -> dict:
         T(resource)["rules"] = expanded
 
     # ---- R20 §5 : analysis arrays are described by analysis tables -------------------------------
+    SINCE[0] = "R20 §5"
     import copy
     for core_name in ("core.array_assets", "core.array_dimensions"):
         mirror = copy.deepcopy(T(core_name))
@@ -498,9 +536,16 @@ def build() -> dict:
             if r["resource"].startswith("core.array_") else r
             for r in mirror["references"]]
         mirror["rules"] = []
+        # The mirror and its columns exist in this namespace because of R20 §5, whatever put
+        # them in core. Carrying the original's provenance would send a reader to a revision
+        # that says nothing about the analysis layer.
+        mirror["since"] = SINCE[0]
+        for column in mirror["columns"]:
+            column["since"] = SINCE[0]
         tables[core_name.replace("core.", "analysis.")] = mirror
 
     # ---- R7 : every table declares a key ---------------------------------------------------
+    SINCE[0] = "R7"
     for n, k in [("core.media_assets", ["media_asset_id"]),
                  ("core.processing_runs", ["processing_run_id"]),
                  ("core.source_files", ["source_file_id"])]:

@@ -42,81 +42,94 @@
           "name": "array_asset_id",
           "type": "string",
           "presence": "required",
-          "description": "Stable array asset ID."
+          "description": "Stable array asset ID.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "required",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "semantic_type",
           "type": "string",
           "presence": "required",
           "description": "Semantic type, e.g. ElectricalSeries.",
-          "vocabulary": "open"
+          "vocabulary": "open",
+          "since": "R20 \u00a75"
         },
         {
           "name": "name",
           "type": "string",
           "presence": "required",
-          "description": "Human-readable name."
+          "description": "Human-readable name.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "kind",
           "type": "string",
           "presence": "required",
           "description": "`raw`, `ap`, `lfp`, `waveform`, etc.",
-          "vocabulary": "open"
+          "vocabulary": "open",
+          "since": "R20 \u00a75"
         },
         {
           "name": "uri",
           "type": "string",
           "presence": "required",
-          "description": "URI/path to array store."
+          "description": "URI/path to array store.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "format",
           "type": "string",
           "presence": "required",
-          "description": "`zarr_v3` for portable profile."
+          "description": "`zarr_v3` for portable profile.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "nullable",
-          "description": "Clock for time axis."
+          "description": "Clock for time axis.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "sample_rate_hz",
           "type": "float64",
           "presence": "nullable",
-          "description": "Sample rate if regularly sampled."
+          "description": "Sample rate if regularly sampled.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "unit",
           "type": "string",
           "presence": "nullable",
-          "description": "Physical unit."
+          "description": "Physical unit.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "conversion",
           "type": "float64",
           "presence": "nullable",
-          "description": "Multiply stored values by this before offset."
+          "description": "Multiply stored values by this before offset.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "offset",
           "type": "float64",
           "presence": "nullable",
-          "description": "Add after conversion."
+          "description": "Add after conversion.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
-          "description": "Additional metadata."
+          "description": "Additional metadata.",
+          "since": "R20 \u00a75"
         }
       ],
       "primary_key": [
@@ -126,7 +139,8 @@
       "sort": [
         "array_asset_id"
       ],
-      "rules": []
+      "rules": [],
+      "since": "R20 \u00a75"
     },
     "analysis.array_dimensions": {
       "columns": [
@@ -134,73 +148,85 @@
           "name": "array_asset_id",
           "type": "string",
           "presence": "required",
-          "description": "Array asset ID."
+          "description": "Array asset ID.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "axis_index",
           "type": "int64",
           "presence": "required",
-          "description": "0-based axis position in stored order (R3 \u00a75)."
+          "description": "0-based axis position in stored order (R3 \u00a75).",
+          "since": "R20 \u00a75"
         },
         {
           "name": "dimension_name",
           "type": "string",
           "presence": "required",
-          "description": "Axis name."
+          "description": "Axis name.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "coordinate_position_column",
           "type": "string",
           "presence": "nullable",
-          "description": "Which column of that resource holds the 0-based position."
+          "description": "Which column of that resource holds the 0-based position.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "coordinate_resource",
           "type": "string",
           "presence": "nullable",
-          "description": "Resource whose rows are this axis's positions (labelled axis)."
+          "description": "Resource whose rows are this axis's positions (labelled axis).",
+          "since": "R20 \u00a75"
         },
         {
           "name": "coordinate_array_asset_id",
           "type": "string",
           "presence": "nullable",
-          "description": "A 1-D array holding one value per position (irregular axis)."
+          "description": "A 1-D array holding one value per position (irregular axis).",
+          "since": "R20 \u00a75"
         },
         {
           "name": "coordinate_unit",
           "type": "string",
           "presence": "nullable",
-          "description": "Unit of the numeric coordinate values."
+          "description": "Unit of the numeric coordinate values.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "step_value",
           "type": "float64",
           "presence": "nullable",
-          "description": "Increment per position."
+          "description": "Increment per position.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "origin_value",
           "type": "float64",
           "presence": "nullable",
-          "description": "Value at position 0 (regular numeric axis)."
+          "description": "Value at position 0 (regular numeric axis).",
+          "since": "R20 \u00a75"
         },
         {
           "name": "step_ticks",
           "type": "int64",
           "presence": "nullable",
-          "description": "Ticks advanced per position."
+          "description": "Ticks advanced per position.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "origin_tick",
           "type": "int64",
           "presence": "nullable",
-          "description": "Tick at position 0."
+          "description": "Tick at position 0.",
+          "since": "R20 \u00a75"
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "nullable",
-          "description": "Clock the ticks are counted on (regular tick axis)."
+          "description": "Clock the ticks are counted on (regular tick axis).",
+          "since": "R20 \u00a75"
         }
       ],
       "primary_key": [
@@ -231,7 +257,8 @@
         "array_asset_id",
         "axis_index"
       ],
-      "rules": []
+      "rules": [],
+      "since": "R20 \u00a75"
     },
     "core.array_assets": {
       "columns": [
@@ -252,7 +279,8 @@
           "type": "string",
           "presence": "required",
           "description": "Semantic type, e.g. ElectricalSeries.",
-          "vocabulary": "open"
+          "vocabulary": "open",
+          "since": "R8 \u00a73-4"
         },
         {
           "name": "name",
@@ -265,7 +293,8 @@
           "type": "string",
           "presence": "required",
           "description": "`raw`, `ap`, `lfp`, `waveform`, etc.",
-          "vocabulary": "open"
+          "vocabulary": "open",
+          "since": "R8 \u00a73-4"
         },
         {
           "name": "uri",
@@ -350,7 +379,8 @@
           "name": "axis_index",
           "type": "int64",
           "presence": "required",
-          "description": "Axis that channel_index indexes, in stored order."
+          "description": "Axis that channel_index indexes, in stored order.",
+          "since": "R3 \u00a76.1"
         },
         {
           "name": "channel_index",
@@ -374,25 +404,29 @@
           "name": "inter_sample_shift",
           "type": "float64",
           "presence": "nullable",
-          "description": "Acquisition time offset within one sample period, in sample periods."
+          "description": "Acquisition time offset within one sample period, in sample periods.",
+          "since": "R19 \u00a72"
         },
         {
           "name": "unit",
           "type": "string",
           "presence": "nullable",
-          "description": "Physical unit of the converted value."
+          "description": "Physical unit of the converted value.",
+          "since": "R19 \u00a72"
         },
         {
           "name": "offset",
           "type": "float64",
           "presence": "nullable",
-          "description": "Add after conversion."
+          "description": "Add after conversion.",
+          "since": "R19 \u00a72"
         },
         {
           "name": "conversion",
           "type": "float64",
           "presence": "nullable",
-          "description": "Multiply stored values by this before offset."
+          "description": "Multiply stored values by this before offset.",
+          "since": "R19 \u00a72"
         },
         {
           "name": "metadata",
@@ -446,73 +480,85 @@
           "name": "array_asset_id",
           "type": "string",
           "presence": "required",
-          "description": "Array asset ID."
+          "description": "Array asset ID.",
+          "since": "R3 \u00a73.1-3.3"
         },
         {
           "name": "axis_index",
           "type": "int64",
           "presence": "required",
-          "description": "0-based axis position in stored order (R3 \u00a75)."
+          "description": "0-based axis position in stored order (R3 \u00a75).",
+          "since": "R3 \u00a73.1-3.3"
         },
         {
           "name": "dimension_name",
           "type": "string",
           "presence": "required",
-          "description": "Axis name."
+          "description": "Axis name.",
+          "since": "R3 \u00a73.1-3.3"
         },
         {
           "name": "coordinate_position_column",
           "type": "string",
           "presence": "nullable",
-          "description": "Which column of that resource holds the 0-based position."
+          "description": "Which column of that resource holds the 0-based position.",
+          "since": "R20 \u00a72"
         },
         {
           "name": "coordinate_resource",
           "type": "string",
           "presence": "nullable",
-          "description": "Resource whose rows are this axis's positions (labelled axis)."
+          "description": "Resource whose rows are this axis's positions (labelled axis).",
+          "since": "R20 \u00a72"
         },
         {
           "name": "coordinate_array_asset_id",
           "type": "string",
           "presence": "nullable",
-          "description": "A 1-D array holding one value per position (irregular axis)."
+          "description": "A 1-D array holding one value per position (irregular axis).",
+          "since": "R20 \u00a72"
         },
         {
           "name": "coordinate_unit",
           "type": "string",
           "presence": "nullable",
-          "description": "Unit of the numeric coordinate values."
+          "description": "Unit of the numeric coordinate values.",
+          "since": "R20 \u00a72"
         },
         {
           "name": "step_value",
           "type": "float64",
           "presence": "nullable",
-          "description": "Increment per position."
+          "description": "Increment per position.",
+          "since": "R20 \u00a72"
         },
         {
           "name": "origin_value",
           "type": "float64",
           "presence": "nullable",
-          "description": "Value at position 0 (regular numeric axis)."
+          "description": "Value at position 0 (regular numeric axis).",
+          "since": "R20 \u00a72"
         },
         {
           "name": "step_ticks",
           "type": "int64",
           "presence": "nullable",
-          "description": "Ticks advanced per position."
+          "description": "Ticks advanced per position.",
+          "since": "R20 \u00a72"
         },
         {
           "name": "origin_tick",
           "type": "int64",
           "presence": "nullable",
-          "description": "Tick at position 0."
+          "description": "Tick at position 0.",
+          "since": "R20 \u00a72"
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "nullable",
-          "description": "Clock the ticks are counted on (regular tick axis)."
+          "description": "Clock the ticks are counted on (regular tick axis).",
+          "since": "R20 \u00a72"
         }
       ],
       "primary_key": [
@@ -580,7 +626,8 @@
           "message": "a core axis points outward at a non-core resource (R20 \u00a75.1)",
           "sql": "SELECT array_asset_id, axis_index, coordinate_resource FROM core_array_dimensions WHERE coordinate_resource IS NOT NULL AND coordinate_resource NOT LIKE 'core.%'"
         }
-      ]
+      ],
+      "since": "R3 \u00a73.1-3.3"
     },
     "core.clock_anchors": {
       "columns": [
@@ -588,25 +635,29 @@
           "name": "clock_id",
           "type": "string",
           "presence": "required",
-          "description": "The clock being aligned."
+          "description": "The clock being aligned.",
+          "since": "R13 \u00a73"
         },
         {
           "name": "anchor_index",
           "type": "int64",
           "presence": "required",
-          "description": "0-based position in this clock's anchor sequence."
+          "description": "0-based position in this clock's anchor sequence.",
+          "since": "R13 \u00a73"
         },
         {
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
-          "description": "Tick on clock_id."
+          "description": "Tick on clock_id.",
+          "since": "R13 \u00a73"
         },
         {
           "name": "parent_tick",
           "type": "int64",
           "presence": "required",
-          "description": "The corresponding tick on parent_clock_id."
+          "description": "The corresponding tick on parent_clock_id.",
+          "since": "R13 \u00a73"
         }
       ],
       "primary_key": [
@@ -650,7 +701,8 @@
           "message": "an anchor gap exceeds twice the median, leaving ticks the mapping does not define (R27 5.3)",
           "sql": "WITH gaps AS (SELECT clock_id, anchor_index, t_tick - LAG(t_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS gap FROM core_clock_anchors), typical AS (SELECT clock_id, median(gap) AS m FROM gaps WHERE gap IS NOT NULL GROUP BY clock_id) SELECT g.clock_id, g.anchor_index, g.gap, t.m FROM gaps g JOIN typical t USING (clock_id) WHERE g.gap IS NOT NULL AND g.gap > t.m * 2"
         }
-      ]
+      ],
+      "since": "R13 \u00a73"
     },
     "core.clocks": {
       "columns": [
@@ -700,7 +752,8 @@
           "name": "tick_zero_utc",
           "type": "timestamp",
           "presence": "nullable",
-          "description": "Wall-clock instant of tick 0 on this clock."
+          "description": "Wall-clock instant of tick 0 on this clock.",
+          "since": "R6 \u00a72"
         },
         {
           "name": "parent_clock_id",
@@ -712,13 +765,15 @@
           "name": "transform_slope",
           "type": "float64",
           "presence": "nullable",
-          "description": "Parent ticks per this clock's tick, as measured."
+          "description": "Parent ticks per this clock's tick, as measured.",
+          "since": "R3 \u00a73.4"
         },
         {
           "name": "transform_offset",
           "type": "float64",
           "presence": "nullable",
-          "description": "Parent-clock tick at this clock's tick 0."
+          "description": "Parent-clock tick at this clock's tick 0.",
+          "since": "R3 \u00a73.4"
         },
         {
           "name": "transform_to_parent",
@@ -942,32 +997,37 @@
           "name": "electrode_id",
           "type": "string",
           "presence": "required",
-          "description": "Electrode ID."
+          "description": "Electrode ID.",
+          "since": "R19 \u00a73"
         },
         {
           "name": "coordinate_frame",
           "type": "string",
           "presence": "required",
           "description": "The frame these coordinates are in.",
+          "since": "R19 \u00a73",
           "vocabulary": "open"
         },
         {
           "name": "x_um",
           "type": "float64",
           "presence": "nullable",
-          "description": "X in micrometres, in that frame."
+          "description": "X in micrometres, in that frame.",
+          "since": "R19 \u00a73"
         },
         {
           "name": "y_um",
           "type": "float64",
           "presence": "nullable",
-          "description": "Y in micrometres."
+          "description": "Y in micrometres.",
+          "since": "R19 \u00a73"
         },
         {
           "name": "z_um",
           "type": "float64",
           "presence": "nullable",
-          "description": "Z in micrometres."
+          "description": "Z in micrometres.",
+          "since": "R19 \u00a73"
         }
       ],
       "primary_key": [
@@ -986,7 +1046,8 @@
         }
       ],
       "sort": null,
-      "rules": []
+      "rules": [],
+      "since": "R19 \u00a73"
     },
     "core.electrodes": {
       "columns": [
@@ -1012,13 +1073,15 @@
           "name": "local_electrode_label",
           "type": "string",
           "presence": "nullable",
-          "description": "Opaque source label; undefined base, not an offset."
+          "description": "Opaque source label; undefined base, not an offset.",
+          "since": "R8 \u00a72"
         },
         {
           "name": "local_channel_label",
           "type": "string",
           "presence": "nullable",
-          "description": "Opaque source label; undefined base, not an offset."
+          "description": "Opaque source label; undefined base, not an offset.",
+          "since": "R8 \u00a72"
         },
         {
           "name": "brain_region",
@@ -1073,25 +1136,29 @@
           "name": "event_stream_id",
           "type": "string",
           "presence": "required",
-          "description": "The stream being observed."
+          "description": "The stream being observed.",
+          "since": "R25 \u00a72"
         },
         {
           "name": "interval_index",
           "type": "int64",
           "presence": "required",
-          "description": "0-based position in this stream's interval sequence."
+          "description": "0-based position in this stream's interval sequence.",
+          "since": "R25 \u00a72"
         },
         {
           "name": "start_tick",
           "type": "int64",
           "presence": "required",
-          "description": "First observed tick, on the stream's clock."
+          "description": "First observed tick, on the stream's clock.",
+          "since": "R25 \u00a72"
         },
         {
           "name": "stop_tick",
           "type": "int64",
           "presence": "required",
-          "description": "Last observed tick, on the stream's clock."
+          "description": "Last observed tick, on the stream's clock.",
+          "since": "R25 \u00a72"
         }
       ],
       "primary_key": [
@@ -1129,7 +1196,8 @@
           "message": "observation windows overlap, which would double-count observed time",
           "sql": "SELECT event_stream_id, interval_index, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY event_stream_id ORDER BY interval_index) AS prev_stop FROM core_event_stream_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
         }
-      ]
+      ],
+      "since": "R25 \u00a72"
     },
     "core.event_streams": {
       "columns": [
@@ -1137,43 +1205,50 @@
           "name": "event_stream_id",
           "type": "string",
           "presence": "required",
-          "description": "Stable ID."
+          "description": "Stable ID.",
+          "since": "R23 \u00a72-3"
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "required",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "since": "R23 \u00a72-3"
         },
         {
           "name": "name",
           "type": "string",
           "presence": "required",
-          "description": "Human-readable name, e.g. left_lick_sensor."
+          "description": "Human-readable name, e.g. left_lick_sensor.",
+          "since": "R23 \u00a72-3"
         },
         {
           "name": "device_id",
           "type": "string",
           "presence": "nullable",
-          "description": "The device that produced it, where one is identified."
+          "description": "The device that produced it, where one is identified.",
+          "since": "R23 \u00a72-3"
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "required",
-          "description": "The clock its events are timed on."
+          "description": "The clock its events are timed on.",
+          "since": "R23 \u00a72-3"
         },
         {
           "name": "processing_run_id",
           "type": "string",
           "presence": "nullable",
-          "description": "The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 \u00a74: the manifest records outputs per resource and cannot distinguish streams within one table."
+          "description": "The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 \u00a74: the manifest records outputs per resource and cannot distinguish streams within one table.",
+          "since": "R23 \u00a72-3"
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
-          "description": "Free-form metadata."
+          "description": "Free-form metadata.",
+          "since": "R23 \u00a72-3"
         }
       ],
       "primary_key": [
@@ -1226,7 +1301,8 @@
           "message": "streams carry no observation intervals, so no rate over them has a denominator",
           "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s LEFT JOIN core_event_stream_observation_intervals o ON s.event_stream_id = o.event_stream_id WHERE o.event_stream_id IS NULL"
         }
-      ]
+      ],
+      "since": "R23 \u00a72-3"
     },
     "core.events": {
       "columns": [
@@ -1246,7 +1322,8 @@
           "name": "stream_id",
           "type": "string",
           "presence": "required",
-          "description": "The stream this event belongs to."
+          "description": "The stream this event belongs to.",
+          "since": "R23 \u00a72-3"
         },
         {
           "name": "event_type",
@@ -1261,7 +1338,8 @@
             "threshold_crossing",
             "ttl_edge",
             "sync_pulse"
-          ]
+          ],
+          "since": "R11 \u00a73-4"
         },
         {
           "name": "t_tick",
@@ -1361,7 +1439,8 @@
           "type": "string",
           "presence": "required",
           "description": "e.g. BehaviorVideo.",
-          "vocabulary": "open"
+          "vocabulary": "open",
+          "since": "R8 \u00a73-4"
         },
         {
           "name": "name",
@@ -1554,13 +1633,15 @@
           "name": "processing_run_id",
           "type": "string",
           "presence": "required",
-          "description": "The run."
+          "description": "The run.",
+          "since": "R9"
         },
         {
           "name": "source_file_id",
           "type": "string",
           "presence": "required",
-          "description": "A source file the run consumed."
+          "description": "A source file the run consumed.",
+          "since": "R9"
         }
       ],
       "primary_key": [
@@ -1591,7 +1672,8 @@
         "processing_run_id",
         "source_file_id"
       ],
-      "rules": []
+      "rules": [],
+      "since": "R9"
     },
     "core.processing_runs": {
       "columns": [
@@ -1612,7 +1694,8 @@
           "type": "string",
           "presence": "required",
           "description": "import, validation, sorting, curation, materialization, etc.",
-          "vocabulary": "open"
+          "vocabulary": "open",
+          "since": "R8 \u00a73-4"
         },
         {
           "name": "software_name",
@@ -1659,7 +1742,8 @@
             "succeeded",
             "failed",
             "partial"
-          ]
+          ],
+          "since": "R8 \u00a73-4"
         },
         {
           "name": "metadata",
@@ -1688,13 +1772,15 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "since": "R3 \u00a73.1-3.3"
         },
         {
           "name": "experimenter",
           "type": "string",
           "presence": "required",
-          "description": "One experimenter."
+          "description": "One experimenter.",
+          "since": "R3 \u00a73.1-3.3"
         }
       ],
       "primary_key": [
@@ -1716,7 +1802,8 @@
         "session_id",
         "experimenter"
       ],
-      "rules": []
+      "rules": [],
+      "since": "R3 \u00a73.1-3.3"
     },
     "core.sessions": {
       "columns": [
@@ -1742,13 +1829,15 @@
           "name": "session_end_time",
           "type": "timestamp",
           "presence": "nullable",
-          "description": "When the session ended, UTC. Metadata, not derived from the tables (R25 5)."
+          "description": "When the session ended, UTC. Metadata, not derived from the tables (R25 5).",
+          "since": "R25 \u00a72"
         },
         {
           "name": "reference_clock_id",
           "type": "string",
           "presence": "nullable",
-          "description": "The clock this session's times are reported on by default (R27 2)."
+          "description": "The clock this session's times are reported on by default (R27 2).",
+          "since": "R27 \u00a72"
         },
         {
           "name": "session_description",
@@ -1871,6 +1960,7 @@
           "type": "string",
           "presence": "nullable",
           "description": "Unit of core.spike_events.amplitude for this run, e.g. uV, adc.",
+          "since": "R11 \u00a72",
           "vocabulary": "open"
         },
         {
@@ -2147,19 +2237,22 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "since": "R3 \u00a73.1-3.3"
         },
         {
           "name": "trial_id",
           "type": "string",
           "presence": "required",
-          "description": "Trial ID."
+          "description": "Trial ID.",
+          "since": "R3 \u00a73.1-3.3"
         },
         {
           "name": "tag",
           "type": "string",
           "presence": "required",
-          "description": "Tag value."
+          "description": "Tag value.",
+          "since": "R3 \u00a73.1-3.3"
         }
       ],
       "primary_key": [
@@ -2185,7 +2278,8 @@
         "trial_id",
         "tag"
       ],
-      "rules": []
+      "rules": [],
+      "since": "R3 \u00a73.1-3.3"
     },
     "core.trials": {
       "columns": [
@@ -2293,49 +2387,57 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "unit_id",
           "type": "string",
           "presence": "required",
-          "description": "Unit ID."
+          "description": "Unit ID.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
-          "description": "Sorting run ID."
+          "description": "Sorting run ID.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "curation_id",
           "type": "string",
           "presence": "required",
-          "description": "Curation ID."
+          "description": "Curation ID.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "coordinate_frame",
           "type": "string",
           "presence": "required",
-          "description": "The frame these coordinates are in. Open, as R19 \u00a73 left it."
+          "description": "The frame these coordinates are in. Open, as R19 \u00a73 left it.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "x_um",
           "type": "float64",
           "presence": "nullable",
-          "description": "X in micrometres, in that frame."
+          "description": "X in micrometres, in that frame.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "y_um",
           "type": "float64",
           "presence": "nullable",
-          "description": "Y in micrometres."
+          "description": "Y in micrometres.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "z_um",
           "type": "float64",
           "presence": "nullable",
-          "description": "Z in micrometres."
+          "description": "Z in micrometres.",
+          "since": "R28 \u00a72-4"
         }
       ],
       "primary_key": [
@@ -2363,7 +2465,8 @@
         }
       ],
       "sort": null,
-      "rules": []
+      "rules": [],
+      "since": "R28 \u00a72-4"
     },
     "core.unit_electrodes": {
       "columns": [
@@ -2371,49 +2474,57 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "unit_id",
           "type": "string",
           "presence": "required",
-          "description": "Unit ID."
+          "description": "Unit ID.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
-          "description": "Sorting run ID."
+          "description": "Sorting run ID.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "curation_id",
           "type": "string",
           "presence": "required",
-          "description": "Curation ID."
+          "description": "Curation ID.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "electrode_id",
           "type": "string",
           "presence": "required",
-          "description": "An electrode this unit was detected on."
+          "description": "An electrode this unit was detected on.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "channel_ordinal",
           "type": "int64",
           "presence": "nullable",
-          "description": "0-based position in the unit's channel list, where a dense array axis is indexed by it (R20 \u00a72). Not an identifier; nothing joins on it."
+          "description": "0-based position in the unit's channel list, where a dense array axis is indexed by it (R20 \u00a72). Not an identifier; nothing joins on it.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "is_primary",
           "type": "bool",
           "presence": "nullable",
-          "description": "Whether this is the unit's peak electrode."
+          "description": "Whether this is the unit's peak electrode.",
+          "since": "R28 \u00a72-4"
         },
         {
           "name": "amplitude",
           "type": "float64",
           "presence": "nullable",
-          "description": "The unit's amplitude here, in core.sorting_runs.amplitude_unit."
+          "description": "The unit's amplitude here, in core.sorting_runs.amplitude_unit.",
+          "since": "R28 \u00a72-4"
         }
       ],
       "primary_key": [
@@ -2463,7 +2574,8 @@
           "message": "channel_ordinal is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
           "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MAX(channel_ordinal) AS hi FROM core_unit_electrodes WHERE channel_ordinal IS NOT NULL GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(channel_ordinal) <> COUNT(*) - 1 OR MIN(channel_ordinal) <> 0"
         }
-      ]
+      ],
+      "since": "R28 \u00a72-4"
     },
     "core.unit_observation_intervals": {
       "columns": [
@@ -2471,49 +2583,57 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "since": "R18 \u00a72"
         },
         {
           "name": "unit_id",
           "type": "string",
           "presence": "required",
-          "description": "Unit ID."
+          "description": "Unit ID.",
+          "since": "R18 \u00a72"
         },
         {
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
-          "description": "Sorting run ID."
+          "description": "Sorting run ID.",
+          "since": "R18 \u00a72"
         },
         {
           "name": "curation_id",
           "type": "string",
           "presence": "required",
-          "description": "Curation ID."
+          "description": "Curation ID.",
+          "since": "R18 \u00a72"
         },
         {
           "name": "interval_index",
           "type": "int64",
           "presence": "required",
-          "description": "0-based position in this unit's interval sequence."
+          "description": "0-based position in this unit's interval sequence.",
+          "since": "R18 \u00a72"
         },
         {
           "name": "start_tick",
           "type": "int64",
           "presence": "required",
-          "description": "First tick, inclusive."
+          "description": "First tick, inclusive.",
+          "since": "R18 \u00a72"
         },
         {
           "name": "stop_tick",
           "type": "int64",
           "presence": "required",
-          "description": "Last tick, inclusive."
+          "description": "Last tick, inclusive.",
+          "since": "R18 \u00a72"
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "required",
-          "description": "Clock for the interval bounds."
+          "description": "Clock for the interval bounds.",
+          "since": "R18 \u00a72"
         }
       ],
       "primary_key": [
@@ -2569,7 +2689,8 @@
           "message": "observation windows overlap, which would double-count observed time",
           "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, interval_index, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, unit_id, sorting_run_id, curation_id ORDER BY interval_index) AS prev_stop FROM core_unit_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
         }
-      ]
+      ],
+      "since": "R18 \u00a72"
     },
     "core.unit_quality_labels": {
       "columns": [
@@ -2577,31 +2698,36 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "since": "R16 \u00a72-3"
         },
         {
           "name": "unit_id",
           "type": "string",
           "presence": "required",
-          "description": "Unit ID."
+          "description": "Unit ID.",
+          "since": "R16 \u00a72-3"
         },
         {
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
-          "description": "Sorting run ID."
+          "description": "Sorting run ID.",
+          "since": "R16 \u00a72-3"
         },
         {
           "name": "curation_id",
           "type": "string",
           "presence": "required",
-          "description": "Curation ID."
+          "description": "Curation ID.",
+          "since": "R16 \u00a72-3"
         },
         {
           "name": "source",
           "type": "string",
           "presence": "required",
           "description": "What produced the label, e.g. kilosort, decoder, bombcell.",
+          "since": "R16 \u00a72-3",
           "vocabulary": "open"
         },
         {
@@ -2609,6 +2735,7 @@
           "type": "string",
           "presence": "required",
           "description": "The source's own label, verbatim.",
+          "since": "R16 \u00a72-3",
           "vocabulary": "open"
         },
         {
@@ -2616,6 +2743,7 @@
           "type": "string",
           "presence": "nullable",
           "description": "Declared projection onto the closed set. Null where the source's label does not project.",
+          "since": "R16 \u00a72-3",
           "enum": [
             "sua",
             "mua",
@@ -2626,7 +2754,8 @@
           "name": "confidence",
           "type": "float64",
           "presence": "nullable",
-          "description": "The source's confidence, where it reports one."
+          "description": "The source's confidence, where it reports one.",
+          "since": "R16 \u00a72-3"
         }
       ],
       "primary_key": [
@@ -2661,7 +2790,8 @@
           "message": "a (source, label) pair projects onto more than one normalized_label",
           "sql": "SELECT source, label, COUNT(DISTINCT COALESCE(normalized_label, '')) AS distinct_projections FROM core_unit_quality_labels GROUP BY source, label HAVING COUNT(DISTINCT COALESCE(normalized_label, '')) > 1"
         }
-      ]
+      ],
+      "since": "R16 \u00a72-3"
     },
     "core.units": {
       "columns": [
@@ -2699,7 +2829,8 @@
           "name": "local_unit_label",
           "type": "string",
           "presence": "nullable",
-          "description": "Opaque source label; undefined base, not an offset."
+          "description": "Opaque source label; undefined base, not an offset.",
+          "since": "R8 \u00a72"
         },
         {
           "name": "quality_label",
@@ -2710,13 +2841,15 @@
             "sua",
             "mua",
             "noise"
-          ]
+          ],
+          "since": "R11 \u00a73-4"
         },
         {
           "name": "quality_label_source",
           "type": "string",
           "presence": "nullable",
           "description": "Which core.unit_quality_labels source the designated label came from.",
+          "since": "R16 \u00a72-3",
           "vocabulary": "open"
         },
         {
@@ -2735,19 +2868,22 @@
           "name": "n_spikes",
           "type": "int64",
           "presence": "nullable",
-          "description": "Total spikes for this unit in this context."
+          "description": "Total spikes for this unit in this context.",
+          "since": "R5"
         },
         {
           "name": "first_spike_tick",
           "type": "int64",
           "presence": "nullable",
-          "description": "Lowest t_tick for this unit."
+          "description": "Lowest t_tick for this unit.",
+          "since": "R5"
         },
         {
           "name": "last_spike_tick",
           "type": "int64",
           "presence": "nullable",
-          "description": "Highest t_tick for this unit."
+          "description": "Highest t_tick for this unit.",
+          "since": "R5"
         },
         {
           "name": "metadata",

@@ -117,6 +117,11 @@
           "items": {
             "$ref": "#/$defs/rule"
           }
+        },
+        "since": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The revision that introduced or last changed this, e.g. 'R8 \u00a72' (R29 \u00a72). A citation for a reader, not a link a validator resolves; absent means it came from 02 unamended."
         }
       }
     },
@@ -179,6 +184,11 @@
             "type": "string"
           },
           "uniqueItems": true
+        },
+        "since": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The revision that introduced or last changed this, e.g. 'R8 \u00a72' (R29 \u00a72). A citation for a reader, not a link a validator resolves; absent means it came from 02 unamended."
         }
       },
       "not": {

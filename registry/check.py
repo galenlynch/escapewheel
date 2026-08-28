@@ -29,6 +29,17 @@ ledger = subprocess.run([sys.executable, str(HERE.parent / "conformance/spec-swe
 expected = {l.strip() for l in ledger.splitlines()
             if re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", l.strip())}
 check("table set matches R9 §2 ledger", expected ^ set(T))
+# R29 §6. A 02 table whose columns a revision amended carries `since` on those columns and
+# not on itself, which is right -- so the checkable claims are the format and that every
+# revision the build stamps is one the registry says it derived from.
+check("every stamped revision is declared in derived_from",
+      sorted({v.split(" ")[0] for n, t in T.items()
+              for v in [t.get("since"), *(c.get("since") for c in t["columns"])] if v}
+             - set(REG.get("derived_from", {}).get("revisions", []))))
+check("a since names a revision",
+      [(n, v) for n, t in T.items()
+       for v in [t.get("since"), *(c.get("since") for c in t["columns"])]
+       if v is not None and not re.fullmatch(r"R\d+(?: §[\d.\-]+)?", v)])
 check("every table declares a primary key", [n for n, t in T.items() if t["primary_key"] is None])
 check("every column type is in R2 §4's vocabulary",
       [(n, c["name"], c["type"]) for n, t in T.items() for c in t["columns"]
