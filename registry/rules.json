@@ -75,6 +75,18 @@
         "level": "error",
         "message": "a clock declares both a linear transform and anchor points",
         "sql": "SELECT c.clock_id FROM core_clocks c WHERE c.transform_slope IS NOT NULL AND EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.clock_id = c.clock_id)"
+      },
+      {
+        "id": "core.clocks.parent_chain_well_founded",
+        "level": "error",
+        "message": "a clock is its own ancestor, so walking the chain does not terminate (R27 3)",
+        "sql": "WITH RECURSIVE up(clock_id, ancestor, depth) AS (SELECT clock_id, parent_clock_id, 1 FROM core_clocks WHERE parent_clock_id IS NOT NULL UNION ALL SELECT u.clock_id, c.parent_clock_id, u.depth + 1 FROM up u JOIN core_clocks c ON c.clock_id = u.ancestor WHERE c.parent_clock_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT clock_id FROM up WHERE ancestor = clock_id OR depth >= 64"
+      },
+      {
+        "id": "core.clocks.alignment_declared_for_conversion",
+        "level": "error",
+        "message": "a non-reference clock declares no alignment, so it cannot be converted (R27 4)",
+        "sql": "SELECT c.clock_id FROM core_clocks c JOIN core_sessions s USING (session_id) WHERE s.reference_clock_id IS NOT NULL AND c.clock_id <> s.reference_clock_id AND c.transform_slope IS NULL AND NOT EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.clock_id = c.clock_id)"
       }
     ],
     "core.processing_runs": [
@@ -97,6 +109,18 @@
         "level": "error",
         "message": "session_end_time precedes session_start_time",
         "sql": "SELECT session_id, session_start_time, session_end_time FROM core_sessions WHERE session_end_time < session_start_time"
+      },
+      {
+        "id": "core.sessions.reference_clock_declared",
+        "level": "error",
+        "message": "a session declaring more than one clock names no reference clock (R27 2)",
+        "sql": "SELECT s.session_id, COUNT(*) AS n_clocks FROM core_sessions s JOIN core_clocks c USING (session_id) WHERE s.reference_clock_id IS NULL GROUP BY s.session_id HAVING COUNT(*) > 1"
+      },
+      {
+        "id": "core.sessions.every_clock_reaches_the_reference",
+        "level": "error",
+        "message": "a clock does not reach the session's reference clock, so it cannot be converted to it",
+        "sql": "WITH RECURSIVE up(clock_id, ancestor, depth) AS (SELECT clock_id, clock_id, 0 FROM core_clocks UNION ALL SELECT u.clock_id, c.parent_clock_id, u.depth + 1 FROM up u JOIN core_clocks c ON c.clock_id = u.ancestor WHERE c.parent_clock_id IS NOT NULL AND u.depth < 64) SELECT c.session_id, c.clock_id FROM core_clocks c JOIN core_sessions s USING (session_id) WHERE s.reference_clock_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM up u WHERE u.clock_id = c.clock_id AND u.ancestor = s.reference_clock_id)"
       }
     ],
     "core.sorting_runs": [
@@ -173,6 +197,12 @@
         "level": "error",
         "message": "anchor sequences do not increase together, so interpolation is undefined",
         "sql": "SELECT clock_id, anchor_index FROM ( SELECT *, LAG(t_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS prev_t, LAG(parent_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS prev_p FROM core_clock_anchors) WHERE prev_t IS NOT NULL AND (t_tick <= prev_t OR parent_tick <= prev_p)"
+      },
+      {
+        "id": "core.clock_anchors.gap_within_bound",
+        "level": "warning",
+        "message": "an anchor gap exceeds twice the median, leaving ticks the mapping does not define (R27 5.3)",
+        "sql": "WITH gaps AS (SELECT clock_id, anchor_index, t_tick - LAG(t_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS gap FROM core_clock_anchors), typical AS (SELECT clock_id, median(gap) AS m FROM gaps WHERE gap IS NOT NULL GROUP BY clock_id) SELECT g.clock_id, g.anchor_index, g.gap, t.m FROM gaps g JOIN typical t USING (clock_id) WHERE g.gap IS NOT NULL AND g.gap > t.m * 2"
       }
     ],
     "core.unit_observation_intervals": [

@@ -407,6 +407,16 @@ def build() -> dict:
             "When the session ended, UTC. Metadata, not derived from the tables (R25 5)."),
             after="session_start_time")
 
+    # ---- R27 §2 : "synchronized" has to name a clock ------------------------------------------
+    # A reader's default is to return times on one clock. A session with two unparented clocks
+    # has two roots and nothing chooses between them, so the session says which.
+    add_col("core.sessions", col("reference_clock_id", "string", "nullable",
+            "The clock this session's times are reported on by default (R27 2)."),
+            after="session_end_time")
+    T("core.sessions")["references"].append(
+        {"columns": ["reference_clock_id"], "resource": "core.clocks",
+         "resource_columns": ["clock_id"]})
+
     # ---- R13 §3 : anchor-point clock alignment ------------------------------------------------
     tables["core.clock_anchors"] = {
         "columns": [col("clock_id", "string", "required", "The clock being aligned."),
