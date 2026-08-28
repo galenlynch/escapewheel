@@ -84,32 +84,38 @@ call.
 
 ---
 
-## 4. rig-qc aligns `continuous/` but not the probes' `events/*/TTL/`
+## 4. Unaligned stubs are indistinguishable from aligned streams
 
-**Repo:** `aind-ephys-rig-qc`
-**Severity:** medium — the wrong number is plausible, so it is used
+**Repo:** `aind-ephys-rig-qc` / Open Ephys
+**Severity:** medium — the wrong number is plausible, so it gets used
 
-HARP alignment reaches every probe's continuous data and the NI-DAQ's events, but not the
-probes' TTL events. Measured on `ecephys_837772_2026-06-27`:
+**Corrected 2026-08-28.** An earlier draft of this entry claimed rig-qc aligned `continuous/`
+but not the probes' `events/*/TTL/`. That is wrong: rig-qc aligns everything a record node
+owns, events included. What misled it was a stub.
+
+A record node's directory lists every stream it *saw*, not every stream it owns. On this
+session two nodes each owned six streams and carried seven local-only copies of the other's:
 
 ```text
-                                        timestamps.npy            archives present
-NI-DAQ  continuous                   17,702,134 .. 17,707,498      yes
-NI-DAQ  events/…/TTL                 17,702,134 .. 17,707,498      yes
-probe   continuous                   17,702,134 .. 17,707,498      yes
-probe   events/…/TTL                      1,475 ..      6,839      NO
+node 109  50198, 50213, 50720-1..4          HARP-aligned, and exactly the sorter's output
+node 109  46101-1..4, 46810, 50197, 50210   acquisition-local stubs
+node 111  46101-1..4, 46810, 50197          HARP-aligned, and exactly the sorter's output
+node 111  50198, 50213, 50720-1..4, 50210   acquisition-local stubs
 ```
 
-The probe TTL timestamps are still acquisition-local. Nothing marks them as unaligned — there
-is no `original_timestamps.npy` beside them, which is the signal that alignment ran — so code
-reading a probe's sync-pulse times gets local seconds while the same probe's continuous data
-is HARP, and the two silently disagree by 17.7 million seconds.
+Both nodes' NI-DAQ is aligned. `50210` is local in both, being a probe nothing sorted.
 
-**Fix:** apply the same alignment and archive step to every stream's `events/*/TTL`, not just
-the stream the HARP line was decoded on.
+The defect is that a stub carries `timestamps.npy` in acquisition-local seconds with nothing
+declaring it unaligned. The only signal is the *absence* of `original_timestamps.npy` beside
+it, which is an archive rig-qc writes as a side effect rather than a marker it intends. Code
+reading a stub gets seconds that look ordinary and are 17.7 million seconds from where the
+same stream's aligned copy sits.
 
-**Workaround:** the anchor extraction reads probe `sample_numbers.npy` and takes HARP time
-from the NI-DAQ's TTL, never from a probe's `timestamps.npy`.
+**Fix:** mark the alignment state explicitly — a `sync_status` beside the timestamps, or omit
+the stub entirely rather than write an unaligned copy of another node's stream.
+
+**Workaround:** `SyncSource` treats the archive as the ownership signal, skips every stream
+without it, and reports each one.
 
 ---
 
