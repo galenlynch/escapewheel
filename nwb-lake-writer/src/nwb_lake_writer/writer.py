@@ -84,7 +84,7 @@ class PacketWriter:
     --------
     >>> writer = PacketWriter(registry, packet_id="s001")  # doctest: +SKIP
     >>> writer.add("core.sessions", [{"session_id": "s001", ...}])  # doctest: +SKIP
-    >>> report = writer.commit(Path("s001.nwbpkt"))  # doctest: +SKIP
+    >>> report = writer.commit(Path("s001"))  # doctest: +SKIP
     """
 
     def __init__(self, registry: Mapping[str, Any], *, packet_id: str, description: str | None = None) -> None:
