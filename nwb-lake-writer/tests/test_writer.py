@@ -94,3 +94,33 @@ def test_committing_over_a_packet_is_refused(tmp_path, registry, minimal):
     _write(root, registry, minimal)
     with pytest.raises(FileExistsError):
         _write(root, registry, minimal)
+
+
+def test_localize_resolves_dst_per_date():
+    """A rig's zone is an IANA zone; its offset depends on the date (`inventory/` §3.1)."""
+    from zoneinfo import ZoneInfo
+
+    from nwb_lake_writer.arrow import localize
+
+    la = ZoneInfo("America/Los_Angeles")
+    assert localize("2025-04-09T17:25:12", la).utcoffset().total_seconds() == -7 * 3600  # PDT
+    assert localize("2024-11-26T16:51:12", la).utcoffset().total_seconds() == -8 * 3600  # PST
+
+
+def test_localize_refuses_a_fixed_offset():
+    """A fixed offset is wrong for half the year, silently."""
+    from datetime import timedelta, timezone
+
+    from nwb_lake_writer.arrow import localize
+
+    with pytest.raises(TypeError, match="IANA zone"):
+        localize("2025-04-09T17:25:12", timezone(timedelta(hours=-7)))
+
+
+def test_localize_leaves_an_aware_value_alone():
+    from zoneinfo import ZoneInfo
+
+    from nwb_lake_writer.arrow import localize
+
+    aware = localize("2025-04-09T17:25:12+00:00", ZoneInfo("America/Los_Angeles"))
+    assert aware.utcoffset().total_seconds() == 0

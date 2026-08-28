@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pyarrow as pa
 
@@ -23,6 +24,41 @@ class NaiveTimestamp(ValueError):
     seven-hour error. Refusing naive values does not catch a wrong offset, but it does stop a
     writer inventing one.
     """
+
+
+def localize(value: datetime | str, zone: ZoneInfo) -> datetime:
+    """Attach a declared IANA zone to a naive wall-clock value.
+
+    An adapter that knows its source's zone may call this; the writer itself never guesses
+    (see :class:`NaiveTimestamp`). The zone must be an IANA zone, **not** a fixed offset,
+    because a fixed offset is wrong for half the year and the error is silent.
+
+    The dataset in `inventory/nwb-zarr-776259-2025-04-09.md` shows why: its session is PDT
+    (−07:00) and the HARP epoch its ticks count from is PST (−08:00), so a rig constant of
+    −07:00 misplaces anything before the March transition by an hour.
+
+    Parameters
+    ----------
+    value : datetime or str
+        A naive wall-clock value. One that already carries an offset is returned unchanged.
+    zone : zoneinfo.ZoneInfo
+        The zone the value was recorded in, e.g. ``ZoneInfo("America/Los_Angeles")``.
+
+    Returns
+    -------
+    datetime
+        Offset-aware, with the zone's offset for that date.
+
+    Raises
+    ------
+    TypeError
+        If `zone` is a fixed offset rather than an IANA zone.
+    """
+    if not isinstance(zone, ZoneInfo):
+        raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value)
+    return value if value.tzinfo is not None else value.replace(tzinfo=zone)
 
 
 def _timestamp(value: Any, column: str) -> Any:
