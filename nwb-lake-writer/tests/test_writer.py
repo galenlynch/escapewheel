@@ -2,6 +2,8 @@
 
 import json
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 from nwb_lake_reader import open_packet
 from nwb_lake_validator import validate
@@ -168,3 +170,105 @@ def test_a_date_written_as_a_string_becomes_a_date(tmp_path, registry, minimal):
     _write(root, registry, {**minimal, "core.subjects": [subject]})
     written = open_packet(root).table("core.subjects").column("date_of_birth").to_pylist()[0]
     assert (written.year, written.month, written.day) == (2024, 9, 24)
+
+
+# -- the columnar path ---------------------------------------------------------------
+
+
+def _spike_batch(n, unit, first_tick):
+    """One batch of core.spike_events, already in the registry's sort order."""
+    return pa.record_batch(
+        {
+            "session_id": pa.array(["s001"] * n),
+            "unit_id": pa.array([unit] * n),
+            "sorting_run_id": pa.array(["sort_1"] * n),
+            "curation_id": pa.array(["cur_1"] * n),
+            "t_tick": pa.array(range(first_tick, first_tick + n), type=pa.int64()),
+            "clock_id": pa.array(["harp_s001"] * n),
+            "amplitude": pa.array([-50.0] * n, type=pa.float32()),
+        }
+    )
+
+
+def _add_spike_context(writer):
+    """The rows core.spike_events references, so a commit can validate."""
+    writer.add(
+        "core.sorting_runs", [{"sorting_run_id": "sort_1", "session_id": "s001", "amplitude_unit": "uV"}]
+    )  # R11 2: spikes carry amplitudes
+    writer.add("core.curation_versions", [{"curation_id": "cur_1", "sorting_run_id": "sort_1", "session_id": "s001"}])
+    writer.add(
+        "core.units", [{"session_id": "s001", "unit_id": "u1", "sorting_run_id": "sort_1", "curation_id": "cur_1"}]
+    )
+
+
+def test_batches_reach_the_packet(tmp_path, registry, minimal):
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    _add_spike_context(writer)
+    writer.add_batches("core.spike_events", (_spike_batch(500, "u1", t) for t in (0, 500, 1000)))
+    writer.commit(tmp_path / "pkt")
+    table = pq.read_table(tmp_path / "pkt" / "tables" / "core" / "spike_events.parquet")
+    assert table.num_rows == 1500
+    assert table.column("t_tick").to_pylist()[:3] == [0, 1, 2]
+
+
+def test_a_generator_is_consumed_lazily(tmp_path, registry):
+    """Peak memory is one batch, so the source must not be materialized before commit."""
+    seen = []
+
+    def batches():
+        for t in (0, 100):
+            seen.append(t)
+            yield _spike_batch(100, "u1", t)
+
+    writer = PacketWriter(registry, packet_id="s001")
+    writer.add_batches("core.spike_events", batches())
+    assert seen == []  # nothing pulled at add time
+
+
+def test_one_table_takes_one_path(registry):
+    writer = PacketWriter(registry, packet_id="s001")
+    writer.add("core.spike_events", [{"session_id": "s001"}])
+    with pytest.raises(ValueError, match="already has records"):
+        writer.add_batches("core.spike_events", [])
+    writer2 = PacketWriter(registry, packet_id="s001")
+    writer2.add_batches("core.spike_events", [])
+    with pytest.raises(ValueError, match="already has batches"):
+        writer2.add_batches("core.spike_events", [])
+
+
+def test_a_later_batch_may_omit_a_declared_column(tmp_path, registry, minimal):
+    """It is written as nulls, the way a record that lacks the key is."""
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    _add_spike_context(writer)
+    wide = _spike_batch(10, "u1", 0)
+    narrow = _spike_batch(10, "u1", 10).drop_columns(["amplitude"])
+    writer.add_batches("core.spike_events", iter([wide, narrow]))
+    writer.commit(tmp_path / "pkt")
+    table = pq.read_table(tmp_path / "pkt" / "tables" / "core" / "spike_events.parquet")
+    assert table.column("amplitude").to_pylist() == [-50.0] * 10 + [None] * 10
+
+
+def test_a_later_batch_may_not_introduce_a_column(tmp_path, registry, minimal):
+    """It is not in the schema the first batch fixed, so it would vanish silently."""
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    _add_spike_context(writer)
+    plain = _spike_batch(10, "u1", 0)
+    extra = pa.record_batch(
+        [*plain.columns, pa.array(['{"a":1}'] * 10)],
+        names=[*plain.schema.names, "metadata"],
+    )
+    writer.add_batches("core.spike_events", iter([plain, extra]))
+    with pytest.raises(ValueError, match="dropped silently"):
+        writer.commit(tmp_path / "pkt")
+
+
+def test_an_unknown_resource_is_refused_on_the_batch_path_too(registry):
+    writer = PacketWriter(registry, packet_id="s001")
+    with pytest.raises(KeyError, match="no table"):
+        writer.add_batches("core.not_a_table", [])

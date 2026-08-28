@@ -22,16 +22,17 @@ from __future__ import annotations
 import json
 import os
 import shutil
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pyarrow.parquet as pq
 from nwb_lake_reader import open_packet
 from nwb_lake_validator import Report, validate
 
-from .arrow import build
+from .arrow import build, schema
 
 
 def _version() -> str:
@@ -49,6 +50,40 @@ REGISTRY_PATH = "schemas/logical_schemas.json"
 
 #: `03`'s portable profile.
 PROFILE = "nwb-lake-portable-v0.1"
+
+
+def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], path: Path) -> None:
+    """Write batches to Parquet one row group at a time, casting each to the registry schema.
+
+    The first batch fixes the schema, exactly as the first record does on the records path:
+    an optional column is emitted when something carries it. A later batch may omit a
+    declared column -- it is written as nulls, like a record that lacks the key -- but may
+    not introduce one the schema does not have, because that column would be dropped without
+    a word.
+
+    An empty stream writes nothing and leaves no file, matching the records path, where a
+    resource with no rows is simply absent from the packet.
+    """
+    writer: pq.ParquetWriter | None = None
+    out: pa.Schema | None = None
+    try:
+        for batch in batches:
+            if out is None:
+                out = schema(spec, set(batch.schema.names))
+                writer = pq.ParquetWriter(path, out, compression="zstd")
+            if extra := sorted(set(batch.schema.names) - set(out.names)):
+                raise ValueError(
+                    f"batch carries {extra}, which the first batch did not; the column would be dropped silently"
+                )
+            columns = [
+                batch.column(name) if name in batch.schema.names else pa.nulls(batch.num_rows, field.type)
+                for name, field in zip(out.names, out, strict=True)
+            ]
+            assert writer is not None
+            writer.write_batch(pa.record_batch(columns, schema=out))
+    finally:
+        if writer is not None:
+            writer.close()
 
 
 class CommitRefused(Exception):
@@ -92,6 +127,7 @@ class PacketWriter:
         self._packet_id = packet_id
         self._description = description
         self._tables: dict[str, list[Mapping[str, Any]]] = {}
+        self._batches: dict[str, Iterable[pa.RecordBatch]] = {}
 
     def add(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> None:
         """Add records for one table.
@@ -115,21 +151,62 @@ class PacketWriter:
             raise KeyError(f"the registry defines no table {resource_id}")
         self._tables.setdefault(resource_id, []).extend(records)
 
+    def add_batches(self, resource_id: str, batches: Iterable[pa.RecordBatch]) -> None:
+        """Add one table as a stream of Arrow record batches, written without buffering.
+
+        The records path holds every row as a Python mapping until commit, which a spike
+        table cannot survive: one AIND session is order 10^8 spikes, and a dict per row is
+        two orders of magnitude more memory than the Parquet file it becomes. This path
+        writes each batch straight through, so peak memory is one batch rather than one
+        packet.
+
+        The caller MUST yield batches already in the registry's declared sort order, since
+        nothing here reorders them -- that is the point. Disorder is not silently accepted:
+        the validator's physical-order check reads the staged file before the commit
+        completes, which is where R12 §4 puts it.
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID.
+        batches : iterable of pyarrow.RecordBatch
+            Consumed once, at commit. A generator is the expected shape, and keeps the
+            source's rows out of memory until they are written.
+
+        Raises
+        ------
+        KeyError
+            If the registry does not define this resource.
+        ValueError
+            If this resource already has records, or already has batches. One table comes
+            from one path; interleaving them would make the sort order unenforceable.
+        """
+        if resource_id not in self._registry["tables"]:
+            raise KeyError(f"the registry defines no table {resource_id}")
+        if resource_id in self._tables:
+            raise ValueError(f"{resource_id} already has records; use one path per table")
+        if resource_id in self._batches:
+            raise ValueError(f"{resource_id} already has batches; concatenate before adding")
+        self._batches[resource_id] = batches
+
     @property
     def resources(self) -> list[str]:
         """Resource IDs with at least one record, in insertion order."""
-        return list(self._tables)
+        return [*self._tables, *self._batches]
 
     def _stage(self, staging: Path) -> list[dict[str, Any]]:
         """Write every table under `staging` and return its manifest entries."""
         entries = []
-        for resource_id, records in self._tables.items():
+        for resource_id in self.resources:
             spec = self._registry["tables"][resource_id]
             namespace, name = resource_id.split(".", 1)
             relative = f"tables/{namespace}/{name}.parquet"
             path = staging / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            pq.write_table(build(spec, records), path, compression="zstd")
+            if resource_id in self._batches:
+                _write_stream(spec, self._batches[resource_id], path)
+            else:
+                pq.write_table(build(spec, self._tables[resource_id]), path, compression="zstd")
             entries.append(
                 {
                     "resource_id": resource_id,
