@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-08-28 |
+| **Status** | **Accepted** 2026-08-28 |
 | **Amends** | `02_core_logical_schemas.md` (`core.sessions`), R13 §3, R6 §2 (derived `tick_zero_utc`) |
 | **Depends on** | R3 (typed clock transform), R6 (wall-clock binding), R13 (anchor-point alignment) |
 | **Profile** | `nwb-lake-portable-v0.1` |
