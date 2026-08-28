@@ -80,6 +80,10 @@ LABEL_SOURCES = {
     "unitrefine_label": "unitrefine",
 }
 
+#: `curation.json`'s label category that fills the same role the automated sources do. Any
+#: other category becomes `manual:<category>`, since one source may emit one label per unit.
+MANUAL_CATEGORY = "quality"
+
 #: Sources that also report a probability, which becomes `confidence`.
 CONFIDENCE = {"decoder": "decoder_probability", "unitrefine": "unitrefine_probability"}
 
@@ -510,6 +514,60 @@ class SorterSource:
                             "confidence": float(confidence[offset]) if confidence is not None else None,
                         }
                     )
+            rows += self.manual_labels(stream)
+        return rows
+
+    def manual_labels(self, stream: SortedStream) -> list[dict[str, Any]]:
+        """`core.unit_quality_labels` rows from a curation's own manual labels.
+
+        The four automated sources live in `properties/`; these live in `curation.json` and
+        are the only record of what a person decided. Leaving them out is what made a
+        packet's 249 removed units indistinguishable from its kept ones.
+
+        Removal is checked here rather than emitted. `curation.json` lists `removed` units
+        separately, and on every stream measured that list is exactly the manually labelled
+        set -- so the label makes removal queryable. That coincidence is a property of this
+        pipeline and not a rule, so a stream where it breaks is reported: the packet would
+        then be hiding a removal no label records, and `02` has no column to put one in.
+        """
+        curation = self._json(stream, "curation.json")
+        ids = self._unit_ids(stream)
+        width = self._width(stream)
+        known = set(ids.tolist())
+        removed = set(curation.get("removed") or [])
+        labelled = {entry["unit_id"] for entry in curation.get("manual_labels") or []}
+        if removed != labelled:
+            self.notes.append(
+                f"{stream.key}: {len(removed - labelled)} units are removed by the curation and carry "
+                f"no manual label, so the packet cannot say they were removed; 02 has no column for it"
+            )
+        if stray := labelled - known:
+            self.notes.append(f"{stream.key}: {len(stray)} manual labels name units the sorting does not have")
+
+        rows = []
+        for entry in curation.get("manual_labels") or []:
+            label = entry["unit_id"]
+            if label not in known:
+                continue
+            for category, values in (entry.get("labels") or {}).items():
+                chosen = list(values) if isinstance(values, list) else [values]
+                if len(chosen) != 1:
+                    self.notes.append(
+                        f"{stream.key}/unit {label}: {len(chosen)} labels in category {category!r}; "
+                        "kept verbatim and left unprojected, since the closed set holds one value"
+                    )
+                raw = "|".join(str(v) for v in chosen)
+                rows.append(
+                    {
+                        "session_id": self.session_id,
+                        "unit_id": self._unit_id(stream, int(label), width),
+                        "sorting_run_id": self._sorting_run_id(stream),
+                        "curation_id": self._curation_id(stream),
+                        "source": "manual" if category == MANUAL_CATEGORY else f"manual:{category}",
+                        "label": raw,
+                        "normalized_label": PROJECTION.get(raw) if len(chosen) == 1 else None,
+                    }
+                )
         return rows
 
     # -- spikes, which do not fit in memory as records ----------------------------------

@@ -252,3 +252,71 @@ def test_amplitudes_that_do_not_align_are_a_defect(tmp_path):
     source = SorterSource(tmp_path, session_id=SESSION)
     with pytest.raises(SourceDefect, match="index-aligned or nothing"):
         list(source.spike_batches())
+
+
+# -- what a person decided --------------------------------------------------------------
+
+
+def test_manual_labels_become_a_fifth_source(source):
+    """They live in curation.json, not properties/, and are the only record of a decision."""
+    labels = rows_of(source, "core.unit_quality_labels")
+    assert {q["source"] for q in labels} == {"kilosort", "bombcell", "decoder", "unitrefine", "manual"}
+
+
+def test_a_manual_label_is_projected_like_any_other(source):
+    """The fixture labels unit 1 `noise`, which is already in the closed set."""
+    row = next(
+        q
+        for q in rows_of(source, "core.unit_quality_labels")
+        if q["source"] == "manual" and q["unit_id"] == f"{SHANK1}.u01"
+    )
+    assert (row["label"], row["normalized_label"]) == ("noise", "noise")
+
+
+def test_only_labelled_units_get_a_manual_row(source):
+    manual = [q for q in rows_of(source, "core.unit_quality_labels") if q["source"] == "manual"]
+    assert {q["unit_id"] for q in manual} == {f"{SHANK1}.u01", "experiment1.Neuropix-PXI-100.50720-2.u01"}
+
+
+def test_a_removal_with_no_label_is_reported(tmp_path):
+    """Then the packet cannot say the unit was removed, and 02 has no column for it."""
+    import json
+
+    sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=sorterfixture.SPIKES)
+    path = tmp_path / "curated" / sorterfixture.NAMES[0] / "curation.json"
+    doc = json.loads(path.read_text())
+    doc["removed"] = [*doc["removed"], sorterfixture.UNIT_IDS[2]]  # removed, never labelled
+    path.write_text(json.dumps(doc))
+    source = SorterSource(tmp_path, session_id=SESSION)
+    source.unit_quality_labels()
+    assert any("carry no manual label" in note for note in source.notes)
+
+
+def test_a_non_quality_category_gets_its_own_source(tmp_path):
+    import json
+
+    sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=sorterfixture.SPIKES)
+    path = tmp_path / "curated" / sorterfixture.NAMES[0] / "curation.json"
+    doc = json.loads(path.read_text())
+    doc["manual_labels"] = [{"unit_id": sorterfixture.UNIT_IDS[0], "labels": {"artefact": ["ringing"]}}]
+    doc["removed"] = []
+    path.write_text(json.dumps(doc))
+    rows = SorterSource(tmp_path, session_id=SESSION).unit_quality_labels()
+    row = next(q for q in rows if q["source"].startswith("manual"))
+    assert (row["source"], row["label"], row["normalized_label"]) == ("manual:artefact", "ringing", None)
+
+
+def test_two_labels_in_one_category_are_kept_unprojected(tmp_path):
+    """A closed vocabulary holds one value, so a pair is verbatim and normalizes to nothing."""
+    import json
+
+    sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=sorterfixture.SPIKES)
+    path = tmp_path / "curated" / sorterfixture.NAMES[0] / "curation.json"
+    doc = json.loads(path.read_text())
+    doc["manual_labels"] = [{"unit_id": sorterfixture.UNIT_IDS[0], "labels": {"quality": ["noise", "MUA"]}}]
+    doc["removed"] = []
+    path.write_text(json.dumps(doc))
+    source = SorterSource(tmp_path, session_id=SESSION)
+    row = next(q for q in source.unit_quality_labels() if q["source"] == "manual")
+    assert (row["label"], row["normalized_label"]) == ("noise|MUA", None)
+    assert any("2 labels in category" in note for note in source.notes)
