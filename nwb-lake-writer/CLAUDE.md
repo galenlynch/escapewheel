@@ -7,9 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The reference **writer** for NWB-Lake packets: the thing that turns normalized records into a
 validated packet on disk, and the source adapters that produce those records.
 
-**Nothing is implemented yet.** This repository is a template plus this file. What follows is
-the design it is being built to, settled in conversation and grounded in `05` and
-`inventory/`.
+**Delivered.** `PacketWriter` — records in, validated packet out. It stages under
+`staging/`, validates there, moves resources into place, and renames the manifest **last**
+(`05` Stage 5), so a reader never finds a partial import claiming to be valid. Schema, column
+order and physical sort all come from the registry, which is embedded in the packet (R2 §8).
+Wall-clock values without a UTC offset are refused rather than assumed (`arrow.NaiveTimestamp`).
+
+**Not yet.** Source adapters, the session recipe, the `nwb-lake import` subcommand, array
+assets. What follows is the design they are being built to, settled in conversation and
+grounded in `05` and `inventory/`.
 
 ## Scope
 
@@ -63,10 +69,15 @@ nwb-lake import session.toml --out packet   # 05 Stages 2-6
 ## Architecture, when it exists
 
 ```
-PacketWriter    normalized Arrow tables + array assets -> a staged, validated, committed packet
-adapters/       one module per source; returns records, touches no filesystem
-recipe          the parsed session spec; also the provenance record
+arrow           registry column types -> Arrow schema; records -> a sorted table
+PacketWriter    records in, staged/validated/committed packet out
+adapters/       one module per source; returns records, touches no filesystem   (not yet)
+recipe          the parsed session spec; also the provenance record             (not yet)
 ```
+
+`PacketWriter.add(resource_id, records)` accumulates; `commit(root)` does the rest and
+returns the validator's `Report`. A commit that finds errors raises `CommitRefused` and leaves
+`staging/` in place for inspection, with no manifest at the root at all.
 
 `PacketWriter` is the product; the adapters are thin. It owns sort order (R10), the physical
 floor (R3 — primitive columns only), staging layout, and `05` Stage 5's atomic commit:

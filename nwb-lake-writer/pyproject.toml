@@ -15,8 +15,16 @@ classifiers = ["Programming Language :: Python :: 3"]
 readme = "README.md"
 version = "0.1.0"
 
+# The committer validates before it renames (05 Stage 5), so the validator -- and through
+# it the reader -- is a dependency rather than an optional extra.
 dependencies = [
+    "nwb-lake-validator",
+    "pyarrow>=25.0.1",
 ]
+
+[project.entry-points."nwb_lake.commands"]
+# 07 names one CLI. nwb-lake-reader owns the console script and discovers this group.
+import = "nwb_lake_writer.scripts.cli:register"
 
 [project.urls]
 Repository = "https://github.com/AllenNeuralDynamics/nwb-lake-writer/"
@@ -28,7 +36,10 @@ Changelog = "https://github.com/AllenNeuralDynamics/nwb-lake-writer/blob/main/CH
 # my_command = "nwb_lake_writer.scripts.my_command:main"
 
 [dependency-groups]
-types = ["mypy"]
+types = [
+    "mypy",
+    "pyarrow-stubs>=20.0.0.20260819",
+]
 dev = [{ include-group = "types" }, "codespell", "pytest", "pytest-cov", "ruff", "interrogate"]
 jupyter = [{ include-group = "dev" }, "ipykernel", "pip"]
 docs = [
@@ -96,3 +107,8 @@ module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
+
+[tool.uv.sources]
+# Sibling repos; nothing is published yet.
+nwb-lake-validator = { path = "../nwb-lake-validator", editable = true }
+nwb-lake-reader = { path = "../nwb-lake-reader", editable = true }
