@@ -8,14 +8,14 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-32 tables, 268 columns, 44 references, 47 Tier 2 rules
+33 tables, 274 columns, 46 references, 47 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30
 ```
 
 ## Contents
 
-**analysis** (2) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions)
+**analysis** (3) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.spike_events`](#analysisspike_events)
 
 **core** (30) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.trial_tags`](#coretrial_tags) · [`core.trials`](#coretrials) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
 
@@ -69,6 +69,27 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **References**
 
 - `array_asset_id` → `analysis.array_assets` (`array_asset_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
+### `analysis.spike_events`
+
+*Introduced by R30 §2 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | string | **required** | R30 §2 | Session ID. |
+| `unit_id` | string | **required** | R30 §2 | Unit ID. |
+| `sorting_run_id` | string | **required** | R30 §2 | Sorting run ID. |
+| `curation_id` | string | **required** | R30 §2 | Curation ID. |
+| `t_tick` | int64 | **required** | R30 §2 | Spike tick on clock_id, mapped through core.clock_anchors. |
+| `clock_id` | string | **required** | R30 §2 | The clock these ticks are on, normally the session's reference. |
+
+**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `t_tick`  
+**Sort** — `session_id`, `sorting_run_id`, `curation_id`, `unit_id`, `t_tick`
+
+**References**
+
+- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
 ## `core`

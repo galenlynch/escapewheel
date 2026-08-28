@@ -544,6 +544,32 @@ def build() -> dict:
             column["since"] = SINCE[0]
         tables[core_name.replace("core.", "analysis.")] = mirror
 
+    # ---- R30 §2 : spikes on the reference clock ---------------------------------------------
+    SINCE[0] = "R30 §2"
+    # 06 already gives this table a schema. Its stated derivation -- flattening
+    # core.unit_spike_chunks -- was vacated by R5, which made core.spike_events the canonical
+    # flat table, so the columns survived and the reason for them did not. What a packet needs
+    # instead is the same spikes on the session's reference clock, so a query spanning probes
+    # does no conversion. Same columns, same ordering, different clock_id.
+    tables["analysis.spike_events"] = {
+        "columns": [col("session_id", "string", "required", "Session ID."),
+                    col("unit_id", "string", "required", "Unit ID."),
+                    col("sorting_run_id", "string", "required", "Sorting run ID."),
+                    col("curation_id", "string", "required", "Curation ID."),
+                    col("t_tick", "int64", "required",
+                        "Spike tick on clock_id, mapped through core.clock_anchors."),
+                    col("clock_id", "string", "required",
+                        "The clock these ticks are on, normally the session's reference.")],
+        "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick"],
+        "references": [{"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                        "resource": "core.units",
+                        "resource_columns": ["session_id", "unit_id", "sorting_run_id",
+                                             "curation_id"]},
+                       {"columns": ["clock_id"], "resource": "core.clocks",
+                        "resource_columns": ["clock_id"]}],
+        "sort": ["session_id", "sorting_run_id", "curation_id", "unit_id", "t_tick"],
+        "rules": [], "since": SINCE[0]}
+
     # ---- R7 : every table declares a key ---------------------------------------------------
     SINCE[0] = "R7"
     for n, k in [("core.media_assets", ["media_asset_id"]),
@@ -557,7 +583,7 @@ def build() -> dict:
             # Every revision whose decisions are applied above, so the registry says what it
             # was derived from rather than leaving it to the block comments.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             "revisions": [f"R{n}" for n in range(1, 29)]},
+                             "revisions": [f"R{n}" for n in range(1, 31)]},
             "tables": dict(sorted(tables.items()))}
 
 
