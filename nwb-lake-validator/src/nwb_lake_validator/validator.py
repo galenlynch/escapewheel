@@ -290,12 +290,26 @@ def _run_rules(
 
     for check in generate(registry, only=set(present), advisory=advisory):
         try:
-            rows = connection.sql(check.sql).fetchall()
+            rows = _offending(connection, check.sql)
         except Exception as exc:  # noqa: BLE001 - an engine error is a finding, not a crash
             report.add("error", check.id, f"check could not run: {str(exc).splitlines()[0][:90]}")
             continue
         if rows:
             report.add(check.level, check.id, check.message, rows)
+
+
+def _offending(connection: Any, sql: str) -> list[tuple[Any, ...]]:
+    """Run a rule and return its offending rows.
+
+    Results come back through Arrow rather than DuckDB's own Python conversion, which needs
+    `pytz` to render a ``TIMESTAMP WITH TIME ZONE`` and raises if it is absent. That failure
+    is worse than it sounds: an empty result converts nothing, so a rule projecting a
+    wall-clock column runs fine until it actually has a finding to report, and then errors
+    instead of reporting it -- with pass or fail decided by whether some unrelated package
+    pulled in `pytz`. Arrow is already a dependency of the read path and uses `zoneinfo`.
+    """
+    table = connection.sql(sql).arrow().read_all()
+    return list(zip(*[column.to_pylist() for column in table.columns], strict=True))
 
 
 def validate(packet: Packet, *, registry: Mapping[str, Any] | None = None, advisory: bool = False) -> Report:
