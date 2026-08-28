@@ -11,6 +11,7 @@ that, and a storage-layer check written as SQL fails silently rather than loudly
 
 from __future__ import annotations
 
+import contextlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -18,6 +19,8 @@ from importlib import resources as importlib_resources
 from typing import Any
 
 import jsonschema
+import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from nwb_lake_reader import Packet, PacketError, sql_name
 
@@ -234,16 +237,78 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
         )
 
 
+#: Rows per batch when checking physical order, and how many breaks are worth reporting.
+#: Read whole, a real session's spike table is a quarter of a billion rows across five sort
+#: columns -- four of them strings -- which as Python objects is around a billion of them and
+#: will take a workstation down. Batched, peak memory is this many rows however large the
+#: table, and a reader only needs to see that the order broke and where it first did.
+ORDER_BATCH = 1 << 20
+ORDER_REPORT = 20
+
+
+def _row_at(batch: Any, keys: Sequence[str], offset: int) -> tuple[Any, ...]:
+    """Pull one row of the sort key out of a batch, as Python values."""
+    return tuple(batch.column(key)[offset].as_py() for key in keys)
+
+
+def _sortable(row: Sequence[Any]) -> tuple[tuple[bool, Any], ...]:
+    """Render a row as its sort key, with null ordering first and consistently."""
+    return tuple((v is None, v) for v in row)
+
+
+def _descents(batch: Any, keys: Sequence[str]) -> list[int]:
+    """Offsets where a batch decreases lexicographically over `keys`.
+
+    Vectorized per column rather than per row: a quarter of a billion Python tuple
+    comparisons is minutes of wall clock, and the same comparison in Arrow is seconds. A
+    descent at row i means some key decreases there while every earlier key is equal, so the
+    equal-so-far mask carries forward across columns. Null sorts first, matching the writer.
+    """
+    n = batch.num_rows - 1
+    if n < 1:
+        return []
+    descending: Any = pa.array([False] * n)
+    equal_so_far: Any = pa.array([True] * n)
+    for key in keys:
+        column: Any = batch.column(key)
+        prior, current = column.slice(0, n), column.slice(1, n)
+        prior_null, current_null = pc.is_null(prior), pc.is_null(current)
+        # null < value, value !< null, null == null
+        less = pc.or_(
+            pc.and_(current_null, pc.invert(prior_null)),
+            pc.and_(pc.invert(pc.or_(prior_null, current_null)), pc.less(current, prior)),
+        )
+        same = pc.or_(
+            pc.and_(prior_null, current_null),
+            pc.and_(pc.invert(pc.or_(prior_null, current_null)), pc.equal(current, prior)),
+        )
+        descending = pc.or_(descending, pc.and_(equal_so_far, pc.fill_null(less, False)))
+        equal_so_far = pc.and_(equal_so_far, pc.fill_null(same, False))
+    return [i + 1 for i in pc.indices_nonzero(descending).to_pylist()]
+
+
 def _check_ordering(tables: Mapping[str, Any], present: Mapping[str, Any], report: Report) -> None:
     """Layer 3: declared sort order, read in written order (R10 §2, R12 §2)."""
     for resource_id, handle in present.items():
         keys = tables[resource_id].get("sort")
         if not keys:
             continue
-        columns = pq.read_table(handle.path, columns=keys).to_pydict()
-        rows = list(zip(*(columns[k] for k in keys)))
-        ordered = [tuple((v is None, v) for v in row) for row in rows]
-        offending = [(i, rows[i - 1], rows[i]) for i in range(1, len(ordered)) if ordered[i] < ordered[i - 1]]
+        offending: list[tuple[int, Any, Any]] = []
+        tail: tuple[Any, ...] | None = None
+        start = 0
+        for batch in pq.ParquetFile(handle.path).iter_batches(batch_size=ORDER_BATCH, columns=keys):
+            first = _row_at(batch, keys, 0)
+            if tail is not None and _sortable(first) < _sortable(tail):
+                offending.append((start, tail, first))
+            offending.extend(
+                (start + offset, _row_at(batch, keys, offset - 1), _row_at(batch, keys, offset))
+                for offset in _descents(batch, keys)
+            )
+            tail = _row_at(batch, keys, batch.num_rows - 1)
+            start += batch.num_rows
+            if len(offending) >= ORDER_REPORT:
+                del offending[ORDER_REPORT:]
+                break
         if offending:
             report.add(
                 "warning",
@@ -267,11 +332,33 @@ _DDL = {
 }
 
 
+#: What a validating DuckDB connection is allowed to take. Left to itself it claims 80% of
+#: system memory and every core, which on a real session's spike table means a quarter of a
+#: billion rows through window functions and anti-joins with a hundred-gigabyte budget --
+#: enough to take a workstation down. Bounded, DuckDB spills to disk and finishes slower
+#: instead of failing, so this costs time and never correctness.
+LIMITS = {"memory_limit": "4GB", "threads": 4}
+
+
+def _bounded(connection: Any, limits: Mapping[str, Any]) -> Any:
+    """Apply resource limits to a connection, ignoring settings this DuckDB lacks."""
+    for name, value in limits.items():
+        rendered = f"'{value}'" if isinstance(value, str) else value
+        with contextlib.suppress(Exception):  # an unknown setting must not fail a validation
+            connection.execute(f"SET {name} = {rendered}")
+    return connection
+
+
 def _run_rules(
-    packet: Packet, registry: Mapping[str, Any], present: Mapping[str, Any], report: Report, advisory: bool
+    packet: Packet,
+    registry: Mapping[str, Any],
+    present: Mapping[str, Any],
+    report: Report,
+    advisory: bool,
+    limits: Mapping[str, Any] | None = None,
 ) -> None:
     """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
-    connection = packet.duckdb()
+    connection = _bounded(packet.duckdb(), LIMITS if limits is None else limits)
 
     # A Tier 2 rule may reference a table other than the one it is declared on --
     # core.clocks.one_alignment_model reads core.clock_anchors, for instance. A packet that
@@ -312,7 +399,13 @@ def _offending(connection: Any, sql: str) -> list[tuple[Any, ...]]:
     return list(zip(*[column.to_pylist() for column in table.columns], strict=True))
 
 
-def validate(packet: Packet, *, registry: Mapping[str, Any] | None = None, advisory: bool = False) -> Report:
+def validate(
+    packet: Packet,
+    *,
+    registry: Mapping[str, Any] | None = None,
+    advisory: bool = False,
+    limits: Mapping[str, Any] | None = None,
+) -> Report:
     """Validate a packet.
 
     The registry is taken from the packet unless one is supplied. Nothing is bundled: a
@@ -325,6 +418,11 @@ def validate(packet: Packet, *, registry: Mapping[str, Any] | None = None, advis
         The packet to validate.
     registry : Mapping, optional
         Registry to validate against. Defaults to the packet's embedded copy.
+    limits : Mapping, optional
+        DuckDB settings bounding what validation may consume, defaulting to
+        :data:`LIMITS`. Pass ``{}`` to leave DuckDB at its own defaults, which are 80% of
+        system memory and every core -- reasonable for an interactive query and not for
+        unattended validation of a table with 10^8 rows.
 
     Returns
     -------
@@ -349,7 +447,7 @@ def validate(packet: Packet, *, registry: Mapping[str, Any] | None = None, advis
     _check_codec_declarations(packet, report)
     present = _check_schemas(packet, effective["tables"], report)
     _check_ordering(effective["tables"], present, report)
-    _run_rules(packet, effective, present, report, advisory)
+    _run_rules(packet, effective, present, report, advisory, limits)
     return report
 
 
