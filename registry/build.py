@@ -509,9 +509,10 @@ def build() -> dict:
     return {"registry_version": "0.1.0",
             "semantic_standard_version": "nwb-lake-semantic-v0.1",
             "logical_standard_version": "nwb-lake-logical-v0.1",
+            # Every revision whose decisions are applied above, so the registry says what it
+            # was derived from rather than leaving it to the block comments.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             "revisions": ["R1", "R2", "R3", "R4", "R5",
-                                           "R6", "R7", "R8", "R9"]},
+                             "revisions": [f"R{n}" for n in range(1, 29)]},
             "tables": dict(sorted(tables.items()))}
 
 
@@ -521,3 +522,8 @@ if __name__ == "__main__":
     print(f"wrote {OUT.name}: {len(reg['tables'])} tables, "
           f"{sum(len(t['columns']) for t in reg['tables'].values())} columns, "
           f"{sum(len(t['rules']) for t in reg['tables'].values())} rules merged from {RULES.name}")
+
+    # Rendered here rather than by hand, so the readable form cannot drift from the content.
+    import render
+
+    print(f"wrote {render.main().name}")

@@ -1,0 +1,756 @@
+# Logical schemas, as the registry stands
+
+**Generated** by `render.py` from `logical_schemas.json`. Do not edit; run
+`python registry/build.py` to regenerate.
+
+This is not a specification. `nwb_lake_poc_docs/` is frozen and the revisions bind
+where they disagree with it — this states what the two together produced, which is
+otherwise answerable only by reading a frozen document and then every amendment to it.
+
+```text
+32 tables, 268 columns, 44 references, 47 Tier 2 rules
+registry 0.1.0   logical standard nwb-lake-logical-v0.1
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28
+```
+
+## Contents
+
+**analysis** (2) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions)
+
+**core** (30) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.trial_tags`](#coretrial_tags) · [`core.trials`](#coretrials) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
+
+## `analysis`
+
+### `analysis.array_assets`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `array_asset_id` | string | **required** | Stable array asset ID. |
+| `session_id` | string | **required** | Session ID. |
+| `semantic_type` | string | **required** | Semantic type, e.g. ElectricalSeries. |
+| `name` | string | **required** | Human-readable name. |
+| `kind` | string | **required** | `raw`, `ap`, `lfp`, `waveform`, etc. |
+| `uri` | string | **required** | URI/path to array store. |
+| `format` | string | **required** | `zarr_v3` for portable profile. |
+| `clock_id` | string | nullable | Clock for time axis. |
+| `sample_rate_hz` | float64 | nullable | Sample rate if regularly sampled. |
+| `unit` | string | nullable | Physical unit. |
+| `conversion` | float64 | nullable | Multiply stored values by this before offset. |
+| `offset` | float64 | nullable | Add after conversion. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `array_asset_id`  
+**Sort** — `array_asset_id`
+
+### `analysis.array_dimensions`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `array_asset_id` | string | **required** | Array asset ID. |
+| `axis_index` | int64 | **required** | 0-based axis position in stored order (R3 §5). |
+| `dimension_name` | string | **required** | Axis name. |
+| `coordinate_position_column` | string | nullable | Which column of that resource holds the 0-based position. |
+| `coordinate_resource` | string | nullable | Resource whose rows are this axis's positions (labelled axis). |
+| `coordinate_array_asset_id` | string | nullable | A 1-D array holding one value per position (irregular axis). |
+| `coordinate_unit` | string | nullable | Unit of the numeric coordinate values. |
+| `step_value` | float64 | nullable | Increment per position. |
+| `origin_value` | float64 | nullable | Value at position 0 (regular numeric axis). |
+| `step_ticks` | int64 | nullable | Ticks advanced per position. |
+| `origin_tick` | int64 | nullable | Tick at position 0. |
+| `clock_id` | string | nullable | Clock the ticks are counted on (regular tick axis). |
+
+**Primary key** — `array_asset_id`, `axis_index`  
+**Sort** — `array_asset_id`, `axis_index`
+
+**References**
+
+- `array_asset_id` → `analysis.array_assets` (`array_asset_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
+## `core`
+
+### `core.array_assets`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `array_asset_id` | string | **required** | Stable array asset ID. |
+| `session_id` | string | **required** | Session ID. |
+| `semantic_type` | string | **required** | Semantic type, e.g. ElectricalSeries. |
+| `name` | string | **required** | Human-readable name. |
+| `kind` | string | **required** | `raw`, `ap`, `lfp`, `waveform`, etc. |
+| `uri` | string | **required** | URI/path to array store. |
+| `format` | string | **required** | `zarr_v3` for portable profile. |
+| `clock_id` | string | nullable | Clock for time axis. |
+| `sample_rate_hz` | float64 | nullable | Sample rate if regularly sampled. |
+| `unit` | string | nullable | Physical unit. |
+| `conversion` | float64 | nullable | Multiply stored values by this before offset. |
+| `offset` | float64 | nullable | Add after conversion. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `array_asset_id`  
+**Sort** — `array_asset_id`
+
+**Tier 2 rules** — 2
+
+- `core.array_assets.one_scaling_level` — error: scaling is declared both on the array and per channel
+- `core.array_assets.sample_rate_matches_axis` — error: sample_rate_hz disagrees with the time axis step
+
+### `core.array_channels`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `array_asset_id` | string | **required** | Array asset ID. |
+| `axis_index` | int64 | **required** | Axis that channel_index indexes, in stored order. |
+| `channel_index` | int64 | **required** | Channel dimension index. |
+| `electrode_id` | string | nullable | Electrode ID. |
+| `channel_label` | string | nullable | Human-readable channel label. |
+| `inter_sample_shift` | float64 | nullable | Acquisition time offset within one sample period, in sample periods. |
+| `unit` | string | nullable | Physical unit of the converted value. |
+| `offset` | float64 | nullable | Add after conversion. |
+| `conversion` | float64 | nullable | Multiply stored values by this before offset. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `array_asset_id`, `channel_index`  
+**Sort** — `array_asset_id`, `channel_index`
+
+**References**
+
+- `array_asset_id`, `axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
+- `electrode_id` → `core.electrodes` (`electrode_id`)
+
+**Tier 2 rules** — 1
+
+- `core.array_channels.scaling_pair_complete` — error: a conversion without a unit yields a number in no known quantity
+
+### `core.array_dimensions`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `array_asset_id` | string | **required** | Array asset ID. |
+| `axis_index` | int64 | **required** | 0-based axis position in stored order (R3 §5). |
+| `dimension_name` | string | **required** | Axis name. |
+| `coordinate_position_column` | string | nullable | Which column of that resource holds the 0-based position. |
+| `coordinate_resource` | string | nullable | Resource whose rows are this axis's positions (labelled axis). |
+| `coordinate_array_asset_id` | string | nullable | A 1-D array holding one value per position (irregular axis). |
+| `coordinate_unit` | string | nullable | Unit of the numeric coordinate values. |
+| `step_value` | float64 | nullable | Increment per position. |
+| `origin_value` | float64 | nullable | Value at position 0 (regular numeric axis). |
+| `step_ticks` | int64 | nullable | Ticks advanced per position. |
+| `origin_tick` | int64 | nullable | Tick at position 0. |
+| `clock_id` | string | nullable | Clock the ticks are counted on (regular tick axis). |
+
+**Primary key** — `array_asset_id`, `axis_index`  
+**Sort** — `array_asset_id`, `axis_index`
+
+**References**
+
+- `array_asset_id` → `core.array_assets` (`array_asset_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 6
+
+- `core.array_dimensions.axis_index_contiguous` — error: axis_index is not contiguous from 0
+- `core.array_dimensions.one_coordinate_form` — error: an axis declares more than one coordinate form
+- `core.array_dimensions.tick_axis_complete` — error: a regular tick axis needs clock_id, origin_tick and step_ticks
+- `core.array_dimensions.numeric_axis_complete` — error: a regular numeric axis needs origin_value, step_value and coordinate_unit
+- `core.array_dimensions.labelled_axis_complete` — error: coordinate_resource and coordinate_position_column must be present together
+- `core.array_dimensions.coordinate_resource_is_core` — error: a core axis points outward at a non-core resource (R20 §5.1)
+
+### `core.clock_anchors`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `clock_id` | string | **required** | The clock being aligned. |
+| `anchor_index` | int64 | **required** | 0-based position in this clock's anchor sequence. |
+| `t_tick` | int64 | **required** | Tick on clock_id. |
+| `parent_tick` | int64 | **required** | The corresponding tick on parent_clock_id. |
+
+**Primary key** — `clock_id`, `anchor_index`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 4
+
+- `core.clock_anchors.requires_parent` — error: anchors are declared for a clock with no parent
+- `core.clock_anchors.anchor_index_contiguous` — error: anchor_index is not contiguous from 0
+- `core.clock_anchors.monotonic` — error: anchor sequences do not increase together, so interpolation is undefined
+- `core.clock_anchors.gap_within_bound` — warning: an anchor gap exceeds twice the median, leaving ticks the mapping does not define (R27 5.3)
+
+### `core.clocks`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `clock_id` | string | **required** | Stable clock ID. |
+| `session_id` | string | **required** | Session ID. |
+| `name` | string | **required** | Human-readable clock name. |
+| `tick_rate_hz` | float64 | nullable | Tick rate as float, required unless exact tick rate provided. |
+| `tick_rate_num` | int64 | nullable | Exact rational numerator. |
+| `tick_rate_den` | int64 | nullable | Exact rational denominator. |
+| `origin` | string | **required** | Origin description. |
+| `tick_zero_utc` | timestamp | nullable | Wall-clock instant of tick 0 on this clock. |
+| `parent_clock_id` | string | nullable | Parent/reference clock. |
+| `transform_slope` | float64 | nullable | Parent ticks per this clock's tick, as measured. |
+| `transform_offset` | float64 | nullable | Parent-clock tick at this clock's tick 0. |
+| `transform_to_parent` | json_string | optional | Clock alignment transform. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `clock_id`  
+**Sort** — `clock_id`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `parent_clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 8
+
+- `core.clocks.tick_rate_declared` — error: neither tick_rate_hz nor an exact rational rate is present
+- `core.clocks.tick_rate_positive` — error: tick rate is not positive
+- `core.clocks.transform_pair_complete` — error: transform_slope and transform_offset must be present together
+- `core.clocks.transform_requires_parent` — error: a clock transform is declared without a parent clock
+- `core.clocks.tick_zero_plausible` — warning: tick_zero_utc is more than a day from session_start_time
+- `core.clocks.one_alignment_model` — error: a clock declares both a linear transform and anchor points
+- `core.clocks.parent_chain_well_founded` — error: a clock is its own ancestor, so walking the chain does not terminate (R27 3)
+- `core.clocks.alignment_declared_for_conversion` — error: a non-reference clock declares no alignment, so it cannot be converted (R27 4)
+
+### `core.curation_versions`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `curation_id` | string | **required** | Stable curation ID. |
+| `sorting_run_id` | string | **required** | Sorting run ID. |
+| `session_id` | string | **required** | Session ID. |
+| `curator` | string | nullable | Curator. |
+| `curation_tool` | string | nullable | Tool. |
+| `curation_tool_version` | string | nullable | Tool version. |
+| `parent_curation_id` | string | nullable | Parent curation. |
+| `created_at` | timestamp | nullable | Creation time. |
+| `notes` | string | nullable | Notes. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `curation_id`  
+**Sort** — `curation_id`
+
+### `core.devices`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `device_id` | string | **required** | Stable device ID. |
+| `session_id` | string | nullable | Session if device record is session-scoped. |
+| `name` | string | **required** | Human-readable name. |
+| `manufacturer` | string | nullable | Manufacturer. |
+| `model` | string | nullable | Model. |
+| `serial_number` | string | nullable | Serial number. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `device_id`  
+**Sort** — `device_id`
+
+### `core.electrode_coordinates`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `electrode_id` | string | **required** | Electrode ID. |
+| `coordinate_frame` | string | **required** | The frame these coordinates are in. |
+| `x_um` | float64 | nullable | X in micrometres, in that frame. |
+| `y_um` | float64 | nullable | Y in micrometres. |
+| `z_um` | float64 | nullable | Z in micrometres. |
+
+**Primary key** — `electrode_id`, `coordinate_frame`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `electrode_id` → `core.electrodes` (`electrode_id`)
+
+### `core.electrodes`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `electrode_id` | string | **required** | Stable electrode ID. |
+| `session_id` | string | **required** | Session ID. |
+| `probe_id` | string | nullable | Probe ID. |
+| `local_electrode_label` | string | nullable | Opaque source label; undefined base, not an offset. |
+| `local_channel_label` | string | nullable | Opaque source label; undefined base, not an offset. |
+| `brain_region` | string | nullable | Region label. |
+| `impedance_ohm` | float64 | nullable | Impedance. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `electrode_id`  
+**Sort** — `electrode_id`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `probe_id` → `core.probes` (`probe_id`)
+
+### `core.event_stream_observation_intervals`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `event_stream_id` | string | **required** | The stream being observed. |
+| `interval_index` | int64 | **required** | 0-based position in this stream's interval sequence. |
+| `start_tick` | int64 | **required** | First observed tick, on the stream's clock. |
+| `stop_tick` | int64 | **required** | Last observed tick, on the stream's clock. |
+
+**Primary key** — `event_stream_id`, `interval_index`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `event_stream_id` → `core.event_streams` (`event_stream_id`)
+
+**Tier 2 rules** — 3
+
+- `core.event_stream_observation_intervals.interval_valid` — error: stop_tick precedes start_tick
+- `core.event_stream_observation_intervals.index_contiguous` — error: interval_index is not contiguous from 0
+- `core.event_stream_observation_intervals.non_overlapping` — error: observation windows overlap, which would double-count observed time
+
+### `core.event_streams`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `event_stream_id` | string | **required** | Stable ID. |
+| `session_id` | string | **required** | Session ID. |
+| `name` | string | **required** | Human-readable name, e.g. left_lick_sensor. |
+| `device_id` | string | nullable | The device that produced it, where one is identified. |
+| `clock_id` | string | **required** | The clock its events are timed on. |
+| `processing_run_id` | string | nullable | The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 §4: the manifest records outputs per resource and cannot distinguish streams within one table. |
+| `metadata` | json_string | optional | Free-form metadata. |
+
+**Primary key** — `event_stream_id`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `device_id` → `core.devices` (`device_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
+
+**Tier 2 rules** — 1
+
+- `core.event_streams.observation_declared` — info *(advisory, R26)*: streams carry no observation intervals, so no rate over them has a denominator
+
+### `core.events`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `event_id` | string | **required** | Stable event ID. |
+| `stream_id` | string | **required** | The stream this event belongs to. |
+| `event_type` | string | **required** | Event type. |
+| `t_tick` | int64 | **required** | Event tick. |
+| `clock_id` | string | **required** | Event clock. |
+| `payload` | json_string | optional | Event payload. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `session_id`, `event_id`  
+**Sort** — `session_id`, `clock_id`, `t_tick`, `event_type`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+- `stream_id` → `core.event_streams` (`event_stream_id`)
+
+**Tier 2 rules** — 2
+
+- `core.events.clock_matches_stream` — error: an event's clock_id disagrees with its stream's
+- `core.events.within_observation` — warning: events fall outside every declared observation window for their stream
+
+### `core.media_assets`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `media_asset_id` | string | **required** | Stable media asset ID. |
+| `session_id` | string | **required** | Session ID. |
+| `semantic_type` | string | **required** | e.g. BehaviorVideo. |
+| `name` | string | **required** | Name. |
+| `uri` | string | **required** | Media file URI. |
+| `format` | string | **required** | e.g. mp4. |
+| `clock_id` | string | nullable | Clock for frame timing. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `media_asset_id`  
+**Sort** — the primary key (R10 §2)
+
+### `core.media_frames`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `media_asset_id` | string | **required** | Media asset ID. |
+| `frame_index` | int64 | **required** | Frame index. |
+| `t_tick` | int64 | **required** | Frame time tick. |
+| `clock_id` | string | **required** | Clock ID. |
+| `pts` | float64 | nullable | Media presentation timestamp if relevant. |
+| `dropped` | bool | nullable | Dropped-frame flag. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `media_asset_id`, `frame_index`  
+**Sort** — `media_asset_id`, `frame_index`
+
+### `core.probes`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `probe_id` | string | **required** | Stable probe ID. |
+| `session_id` | string | **required** | Session ID. |
+| `device_id` | string | nullable | Associated device. |
+| `name` | string | nullable | Probe name. |
+| `probe_type` | string | nullable | Probe type, e.g. Neuropixels 1.0. |
+| `manufacturer` | string | nullable | Manufacturer. |
+| `serial_number` | string | nullable | Serial number. |
+| `insertion_name` | string | nullable | Insertion label. |
+| `target_region` | string | nullable | Intended target. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `probe_id`  
+**Sort** — `probe_id`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `device_id` → `core.devices` (`device_id`)
+
+### `core.processing_run_inputs`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `processing_run_id` | string | **required** | The run. |
+| `source_file_id` | string | **required** | A source file the run consumed. |
+
+**Primary key** — `processing_run_id`, `source_file_id`  
+**Sort** — `processing_run_id`, `source_file_id`
+
+**References**
+
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
+- `source_file_id` → `core.source_files` (`source_file_id`)
+
+### `core.processing_runs`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `processing_run_id` | string | **required** | Stable processing run ID. |
+| `session_id` | string | nullable | Session ID if session-scoped. |
+| `activity_type` | string | **required** | import, validation, sorting, curation, materialization, etc. |
+| `software_name` | string | nullable | Software name. |
+| `software_version` | string | nullable | Software version. |
+| `code_uri` | string | nullable | Code reference. |
+| `parameters` | json_string | optional | Parameters. |
+| `started_at` | timestamp | nullable | Start time. |
+| `ended_at` | timestamp | nullable | End time. |
+| `status` | string | **required** | succeeded, failed, partial, etc. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `processing_run_id`  
+**Sort** — the primary key (R10 §2)
+
+**Tier 2 rules** — 1
+
+- `core.processing_runs.no_failed_runs` — error: a failed run is recorded in a committed packet
+
+### `core.session_experimenters`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `experimenter` | string | **required** | One experimenter. |
+
+**Primary key** — `session_id`, `experimenter`  
+**Sort** — `session_id`, `experimenter`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+
+### `core.sessions`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Stable session ID. |
+| `subject_id` | string | **required** | Subject ID. |
+| `session_start_time` | timestamp | **required** | Session start time if known; if unknown use explicit null only in non-strict test packets. |
+| `session_end_time` | timestamp | nullable | When the session ended, UTC. Metadata, not derived from the tables (R25 5). |
+| `reference_clock_id` | string | nullable | The clock this session's times are reported on by default (R27 2). |
+| `session_description` | string | nullable | Human-readable session description. |
+| `institution` | string | nullable | Institution/lab. |
+| `task_name` | string | nullable | Task/protocol name. |
+| `source_session_id` | string | nullable | Source-system session ID if different. |
+| `metadata` | json_string | optional | Additional session metadata. |
+
+**Primary key** — `session_id`  
+**Sort** — `session_id`
+
+**References**
+
+- `subject_id` → `core.subjects` (`subject_id`)
+- `reference_clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 4
+
+- `core.sessions.manifest_sessions_match` — error: the manifest sessions list disagrees with core.sessions
+- `core.sessions.session_interval_valid` — error: session_end_time precedes session_start_time
+- `core.sessions.reference_clock_declared` — error: a session declaring more than one clock names no reference clock (R27 2)
+- `core.sessions.every_clock_reaches_the_reference` — error: a clock does not reach the session's reference clock, so it cannot be converted to it
+
+### `core.sorting_runs`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `sorting_run_id` | string | **required** | Stable sorting run ID. |
+| `session_id` | string | **required** | Session ID. |
+| `probe_id` | string | nullable | Probe ID. |
+| `sorter_name` | string | nullable | Sorter name. |
+| `sorter_version` | string | nullable | Sorter version. |
+| `amplitude_unit` | string | nullable | Unit of core.spike_events.amplitude for this run, e.g. uV, adc. |
+| `parameters` | json_string | optional | Sorter parameters. |
+| `input_array_asset_id` | string | nullable | Input array asset. |
+| `started_at` | timestamp | nullable | Start time. |
+| `ended_at` | timestamp | nullable | End time. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `sorting_run_id`  
+**Sort** — `sorting_run_id`
+
+**Tier 2 rules** — 1
+
+- `core.sorting_runs.amplitude_unit_declared` — error: spikes carry amplitudes but the sorting run declares no amplitude_unit
+
+### `core.source_files`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `source_file_id` | string | **required** | Stable source file ID. |
+| `uri` | string | **required** | Source URI/path. |
+| `format` | string | nullable | Source format. |
+| `sha256` | string | nullable | Checksum. |
+| `size_bytes` | int64 | nullable | Size. |
+| `modified_at` | timestamp | nullable | Modification time if known. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `source_file_id`  
+**Sort** — the primary key (R10 §2)
+
+### `core.spike_events`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `unit_id` | string | **required** | Unit ID. |
+| `sorting_run_id` | string | **required** | Sorting run ID. |
+| `curation_id` | string | **required** | Curation ID. |
+| `t_tick` | int64 | **required** | Spike tick. |
+| `clock_id` | string | **required** | Clock ID. |
+| `amplitude` | float32 | nullable | Spike amplitude if available. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `t_tick`  
+**Sort** — `session_id`, `sorting_run_id`, `curation_id`, `unit_id`, `t_tick`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+
+**Tier 2 rules** — 2
+
+- `core.spike_events.ticks_within_clock_span` — warning: negative ticks on a clock with no absolute reference
+- `core.spike_events.within_observation` — warning: spikes fall outside every declared observation window for their unit
+
+### `core.subjects`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `subject_id` | string | **required** | Stable subject ID. |
+| `species` | string | nullable | Species. |
+| `strain` | string | nullable | Strain/background. |
+| `sex` | string | nullable | Sex if recorded. |
+| `date_of_birth` | date | nullable | Date of birth if known. |
+| `genotype` | string | nullable | Genotype summary. |
+| `metadata` | json_string | optional | Additional subject metadata. |
+
+**Primary key** — `subject_id`  
+**Sort** — `subject_id`
+
+### `core.trial_tags`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `trial_id` | string | **required** | Trial ID. |
+| `tag` | string | **required** | Tag value. |
+
+**Primary key** — `session_id`, `trial_id`, `tag`  
+**Sort** — `session_id`, `trial_id`, `tag`
+
+**References**
+
+- `session_id`, `trial_id` → `core.trials` (`session_id`, `trial_id`)
+
+### `core.trials`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `trial_id` | string | **required** | Stable trial ID. |
+| `start_tick` | int64 | **required** | Trial start tick. |
+| `stop_tick` | int64 | **required** | Trial stop tick. |
+| `clock_id` | string | **required** | Clock for start/stop ticks. |
+| `condition_id` | string | nullable | Experimental condition. |
+| `stimulus_id` | string | nullable | Stimulus ID. |
+| `choice` | string | nullable | Choice label. |
+| `rewarded` | bool | nullable | Reward outcome. |
+| `metadata` | json_string | optional | Additional trial metadata. |
+
+**Primary key** — `session_id`, `trial_id`  
+**Sort** — `session_id`, `trial_id`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 1
+
+- `core.trials.interval_valid` — error: stop_tick precedes start_tick
+
+### `core.unit_coordinates`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `unit_id` | string | **required** | Unit ID. |
+| `sorting_run_id` | string | **required** | Sorting run ID. |
+| `curation_id` | string | **required** | Curation ID. |
+| `coordinate_frame` | string | **required** | The frame these coordinates are in. Open, as R19 §3 left it. |
+| `x_um` | float64 | nullable | X in micrometres, in that frame. |
+| `y_um` | float64 | nullable | Y in micrometres. |
+| `z_um` | float64 | nullable | Z in micrometres. |
+
+**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `coordinate_frame`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+
+### `core.unit_electrodes`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `unit_id` | string | **required** | Unit ID. |
+| `sorting_run_id` | string | **required** | Sorting run ID. |
+| `curation_id` | string | **required** | Curation ID. |
+| `electrode_id` | string | **required** | An electrode this unit was detected on. |
+| `channel_ordinal` | int64 | nullable | 0-based position in the unit's channel list, where a dense array axis is indexed by it (R20 §2). Not an identifier; nothing joins on it. |
+| `is_primary` | bool | nullable | Whether this is the unit's peak electrode. |
+| `amplitude` | float64 | nullable | The unit's amplitude here, in core.sorting_runs.amplitude_unit. |
+
+**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `electrode_id`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+- `electrode_id` → `core.electrodes` (`electrode_id`)
+
+**Tier 2 rules** — 2
+
+- `core.unit_electrodes.one_primary` — warning: a unit designates more than one peak electrode (R28 2)
+- `core.unit_electrodes.ordinal_contiguous` — error: channel_ordinal is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there
+
+### `core.unit_observation_intervals`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `unit_id` | string | **required** | Unit ID. |
+| `sorting_run_id` | string | **required** | Sorting run ID. |
+| `curation_id` | string | **required** | Curation ID. |
+| `interval_index` | int64 | **required** | 0-based position in this unit's interval sequence. |
+| `start_tick` | int64 | **required** | First tick, inclusive. |
+| `stop_tick` | int64 | **required** | Last tick, inclusive. |
+| `clock_id` | string | **required** | Clock for the interval bounds. |
+
+**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `interval_index`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 3
+
+- `core.unit_observation_intervals.interval_valid` — error: stop_tick precedes start_tick
+- `core.unit_observation_intervals.index_contiguous` — error: interval_index is not contiguous from 0
+- `core.unit_observation_intervals.non_overlapping` — error: observation windows overlap, which would double-count observed time
+
+### `core.unit_quality_labels`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `unit_id` | string | **required** | Unit ID. |
+| `sorting_run_id` | string | **required** | Sorting run ID. |
+| `curation_id` | string | **required** | Curation ID. |
+| `source` | string | **required** | What produced the label, e.g. kilosort, decoder, bombcell. |
+| `label` | string | **required** | The source's own label, verbatim. |
+| `normalized_label` | string | nullable | Declared projection onto the closed set. Null where the source's label does not project. |
+| `confidence` | float64 | nullable | The source's confidence, where it reports one. |
+
+**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `source`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+
+**Tier 2 rules** — 1
+
+- `core.unit_quality_labels.projection_is_consistent` — error: a (source, label) pair projects onto more than one normalized_label
+
+### `core.units`
+
+| Column | Type | Presence | Description |
+|---|---|:---:|---|
+| `session_id` | string | **required** | Session ID. |
+| `unit_id` | string | **required** | Stable unit ID. |
+| `probe_id` | string | nullable | Probe ID. |
+| `sorting_run_id` | string | **required** | Sorting run ID. |
+| `curation_id` | string | **required** | Curation ID. |
+| `local_unit_label` | string | nullable | Opaque source label; undefined base, not an offset. |
+| `quality_label` | string | nullable | Quality label. |
+| `quality_label_source` | string | nullable | Which core.unit_quality_labels source the designated label came from. |
+| `default_electrode_id` | string | nullable | Default electrode. |
+| `firing_rate_hz` | float64 | nullable | Firing rate if known. |
+| `n_spikes` | int64 | nullable | Total spikes for this unit in this context. |
+| `first_spike_tick` | int64 | nullable | Lowest t_tick for this unit. |
+| `last_spike_tick` | int64 | nullable | Highest t_tick for this unit. |
+| `metadata` | json_string | optional | Additional metadata. |
+
+**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`  
+**Sort** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `probe_id` → `core.probes` (`probe_id`)
+- `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
+- `curation_id` → `core.curation_versions` (`curation_id`)
+- `default_electrode_id` → `core.electrodes` (`electrode_id`)
+
+**Tier 2 rules** — 5
+
+- `core.units.spike_summary_consistent` — error: n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events
+- `core.units.designated_label_is_recorded` — error: the designated quality label is not among the recorded ones
+- `core.units.designated_label_pair_complete` — error: quality_label and quality_label_source must be present together
+- `core.units.observation_declared` — info *(advisory, R26)*: units carry no observation intervals, so no rate over them has a denominator
+- `core.units.default_electrode_is_declared` — error: the designated electrode is not one the unit was detected on (R28 2.1)

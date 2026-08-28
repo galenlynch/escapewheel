@@ -5,8 +5,11 @@ conforming table is, in the format [R2](../revisions/R2-schema-registry-format.m
 It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 ```
-22 tables, 178 columns, 26 references, 12 Tier 2 rules
+32 tables, 268 columns, 44 references, 47 Tier 2 rules
 ```
+
+`tables.md` is the same content as markdown, rendered by `render.py` at build time. Read it
+to see what a table looks like now; read `02` plus the revisions to see why.
 
 | File | Contents |
 |---|---|
