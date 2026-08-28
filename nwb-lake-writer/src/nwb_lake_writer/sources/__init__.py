@@ -8,5 +8,6 @@ exists because no single source carries a whole session -- see
 
 from .aind import AcquisitionStream, SessionSource
 from .nwb import NWBSource, SourceDefect
+from .sorter import SortedStream, SorterSource
 
-__all__ = ["AcquisitionStream", "NWBSource", "SessionSource", "SourceDefect"]
+__all__ = ["AcquisitionStream", "NWBSource", "SessionSource", "SortedStream", "SorterSource", "SourceDefect"]
