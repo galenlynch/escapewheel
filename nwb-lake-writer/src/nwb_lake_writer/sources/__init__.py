@@ -9,5 +9,15 @@ exists because no single source carries a whole session -- see
 from .aind import AcquisitionStream, SessionSource
 from .nwb import NWBSource, SourceDefect
 from .sorter import SortedStream, SorterSource
+from .sync import SyncSource, SyncStream
 
-__all__ = ["AcquisitionStream", "NWBSource", "SessionSource", "SortedStream", "SorterSource", "SourceDefect"]
+__all__ = [
+    "AcquisitionStream",
+    "NWBSource",
+    "SessionSource",
+    "SortedStream",
+    "SorterSource",
+    "SourceDefect",
+    "SyncSource",
+    "SyncStream",
+]

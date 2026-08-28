@@ -1,0 +1,187 @@
+"""The sync adapter turns shared pulses into anchors, and refuses the unaligned stubs."""
+
+from itertools import pairwise
+
+import numpy as np
+import pytest
+
+from nwb_lake_writer.clock import HARP_TICK_RATE_HZ
+from nwb_lake_writer.sources import SourceDefect, SyncSource
+from tests import syncfixture
+from tests.syncfixture import AP_HZ, FIRST_SAMPLE, HARP_START, N_PULSES
+
+SESSION = "ecephys_837772_2026-06-27_14-08-21"
+
+
+@pytest.fixture
+def tree(tmp_path):
+    return syncfixture.build(tmp_path)
+
+
+@pytest.fixture
+def source(tree):
+    return SyncSource(tree, session_id=SESSION, first_samples={f"experiment1.{k}": v for k, v in FIRST_SAMPLE.items()})
+
+
+#: Real usage names a clock only for streams that carry ticks; the NI-DAQ does not.
+def probes_only(stream):
+    return f"{stream.key}.samples" if stream.stream.startswith("probe") else None
+
+
+def anchors_of(source, **kwargs):
+    kwargs.setdefault("clock_id_for", probes_only)
+    rows = source.anchors(**kwargs)
+    by_clock = {}
+    for r in rows:
+        by_clock.setdefault(r["clock_id"], []).append((r["t_tick"], r["parent_tick"]))
+    return by_clock
+
+
+# -- which streams are usable ---------------------------------------------------------
+
+
+def test_a_tree_without_record_nodes_is_a_defect(tmp_path):
+    with pytest.raises(SourceDefect, match="no Record Node"):
+        SyncSource(tmp_path, session_id=SESSION)
+
+
+def test_it_finds_every_stream_both_nodes_saw(source):
+    """Each node lists all four; only its own are aligned."""
+    assert len(source.streams()) == 8
+
+
+def test_only_the_owned_streams_are_aligned(source):
+    """The archive rig-qc leaves is the only signal, so ownership is detected."""
+    aligned = {(s.node, s.stream) for s in source.aligned()}
+    assert aligned == {
+        ("109", "probeA"),
+        ("109", "probeB"),
+        ("109", "NI-DAQmx-107"),
+        ("111", "probeC"),
+        ("111", "NI-DAQmx-107"),
+    }
+
+
+def test_a_stub_is_skipped_and_reported(source):
+    """Its seconds are acquisition-local; taken at face value they are 17.7 Ms out."""
+    source.aligned()
+    assert any("probeC" in n and "acquisition-local" in n for n in source.notes)
+    assert sum("skipped" in n for n in source.notes) == 3
+
+
+def test_a_tree_with_nothing_aligned_is_a_defect(tmp_path):
+    events = tmp_path / "Record Node 109" / "experiment1" / "recording1" / "events"
+    syncfixture.stream(events, "probeA", first_sample=1000, aligned=False)
+    with pytest.raises(SourceDefect, match="no stream .* carries HARP-aligned"):
+        SyncSource(tmp_path, session_id=SESSION).aligned()
+
+
+def test_an_absent_experiment_is_a_defect(tree):
+    with pytest.raises(SourceDefect, match="no TTL events"):
+        SyncSource(tree, session_id=SESSION, experiment="experiment9").streams()
+
+
+# -- the anchors -----------------------------------------------------------------------
+
+
+def test_ticks_are_recording_relative(source):
+    """`spikes.npy` indexes the recording, so a raw counter must lose its acquisition base."""
+    by_clock = anchors_of(source)
+    ticks = [t for t, _ in by_clock["experiment1.probeA.samples"]]
+    assert ticks == [1000 + i * AP_HZ for i in range(N_PULSES)]
+
+
+def test_parent_ticks_are_harp(source):
+    by_clock = anchors_of(source)
+    parents = [p for _, p in by_clock["experiment1.probeB.samples"]]
+    assert parents[0] == round(HARP_START * HARP_TICK_RATE_HZ)
+    assert np.allclose(np.diff(parents), HARP_TICK_RATE_HZ)
+
+
+def test_the_same_pulse_lands_on_the_same_parent_tick(source):
+    """Two streams, one physical pulse: the anchor into HARP must agree."""
+    by_clock = anchors_of(source)
+    a = [p for _, p in by_clock["experiment1.probeA.samples"]]
+    b = [p for _, p in by_clock["experiment1.probeB.samples"]]
+    assert a == b
+
+
+def test_anchor_index_is_contiguous_from_zero(source):
+    rows = source.anchors(clock_id_for=probes_only)
+    for clock in {r["clock_id"] for r in rows}:
+        indices = [r["anchor_index"] for r in rows if r["clock_id"] == clock]
+        assert indices == list(range(len(indices)))
+
+
+def test_both_sequences_increase_together(source):
+    """R13 §3: interpolation is only defined if they do."""
+    for pairs in anchors_of(source).values():
+        ticks, parents = zip(*pairs, strict=True)
+        assert all(b > a for a, b in pairwise(ticks))
+        assert all(b > a for a, b in pairwise(parents))
+
+
+def test_a_stream_may_decline_a_clock(source):
+    """The NI-DAQ records the pulse and carries no ticks, so it anchors to nothing."""
+    rows = source.anchors(clock_id_for=lambda s: None if "NI-DAQ" in s.stream else f"{s.key}.samples")
+    assert not [r for r in rows if "NI-DAQ" in r["clock_id"]]
+    assert any("anchored to nothing" in n for n in source.notes)
+
+
+def test_a_counter_that_goes_backwards_is_refused(tmp_path):
+    """R27 §6: a reset mid-recording is two clocks, and this is not one of them."""
+    events = tmp_path / "Record Node 109" / "experiment1" / "recording1" / "events"
+    ttl = syncfixture.stream(events, "probeA", first_sample=1000, aligned=True)
+    ts = np.load(ttl / "timestamps.npy")
+    ts[6:] -= 500.0  # the counter reset
+    np.save(ttl / "timestamps.npy", ts)
+    source = SyncSource(tmp_path, session_id=SESSION, first_samples={"experiment1.probeA": 1000})
+    with pytest.raises(SourceDefect, match="do not increase on both clocks"):
+        source.anchors(clock_id_for=probes_only)
+
+
+def test_a_line_with_no_edges_is_a_defect(source):
+    with pytest.raises(SourceDefect, match="no rising edge on line 7"):
+        SyncSource(
+            source.root,
+            session_id=SESSION,
+            sync_line=7,
+            first_samples={f"experiment1.{k}": v for k, v in FIRST_SAMPLE.items()},
+        ).anchors(clock_id_for=probes_only)
+
+
+# -- the first sample ------------------------------------------------------------------
+
+
+def test_the_first_sample_is_read_from_disk_when_not_supplied(tmp_path):
+    """Element 0 of a 1.3 GB array, memory-mapped, so the file is never touched."""
+    syncfixture.build(tmp_path, with_continuous=True)
+    source = SyncSource(tmp_path, session_id=SESSION)
+    rows = source.anchors(clock_id_for=lambda s: f"{s.key}.samples" if s.stream.startswith("probe") else None)
+    first = min(r["t_tick"] for r in rows if r["clock_id"] == "experiment1.probeA.samples")
+    assert first == 1000
+
+
+def test_without_it_the_counter_cannot_be_made_relative(tree):
+    with pytest.raises(SourceDefect, match="no first sample supplied"):
+        SyncSource(tree, session_id=SESSION).anchors(clock_id_for=probes_only)
+
+
+# -- the reference clock ----------------------------------------------------------------
+
+
+def test_the_reference_clock_is_harp_and_claims_no_epoch(source):
+    """HARP free-runs from power-on and an events tree does not record when that was."""
+    clock = source.clock()
+    assert (clock.clock_id, clock.tick_rate_num) == ("harp", HARP_TICK_RATE_HZ)
+    assert clock.record().get("tick_zero_utc") is None
+    assert clock.record().get("parent_clock_id") is None
+
+
+def test_a_prefix_reaches_the_clock_and_the_anchors(tree):
+    source = SyncSource(
+        tree, session_id=SESSION, prefix="A_", first_samples={f"experiment1.{k}": v for k, v in FIRST_SAMPLE.items()}
+    )
+    assert source.clock().clock_id == "A_harp"
+    rows = source.anchors(clock_id_for=lambda st: f"A_{st.key}.samples" if st.stream.startswith("probe") else None)
+    assert all(r["clock_id"].startswith("A_") for r in rows)

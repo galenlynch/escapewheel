@@ -143,6 +143,9 @@ class SorterSource:
         right only when the caller means them to share a packet.
     prefix : str, optional
         Prepended to every generated ID.
+    parent_clock_id : str, optional
+        The clock these sample clocks align to, where another source supplies the anchors.
+        Left null a packet with more than one clock cannot satisfy R27 §2.
     emit_probes : bool, default True
         Emit `core.probes` from the stream names, which carry the serial. Set False when
         another adapter owns that table, since two adapters emitting it would collide on the
@@ -162,6 +165,7 @@ class SorterSource:
         experiment: str | None = None,
         prefix: str = "",
         emit_probes: bool = True,
+        parent_clock_id: str | None = None,
     ) -> None:
         path = Path(root)
         self.root = path if path.name == "curated" else path / "curated"
@@ -171,6 +175,7 @@ class SorterSource:
         self.experiment = experiment
         self.prefix = prefix
         self.emit_probes = emit_probes
+        self.parent_clock_id = parent_clock_id
         self.notes: list[str] = []
         self._cache: dict[str, Any] = {}
         self._noted_naive = False
@@ -270,6 +275,7 @@ class SorterSource:
                     name=f"{stream.probe} sample clock ({stream.experiment})",
                     tick_rate_num=int(rate),
                     origin=f"sample 0 of {stream.experiment} on {stream.probe}",
+                    parent_clock_id=self.parent_clock_id,
                 ).record()
             )
         return rows

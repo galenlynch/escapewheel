@@ -88,6 +88,10 @@ class Clock:
         see :meth:`~nwb_lake_writer.sources.aind.SessionSource.epoch`, which records the
         derivation as a note because the packet has nowhere to carry its ±1 s uncertainty.
         Derive it only where an independent check exists; omit it rather than guess.
+    parent_clock_id : str, optional
+        The clock this one aligns to (R13 §4). The alignment itself lives elsewhere -- in
+        `transform_slope`/`transform_offset` or in `core.clock_anchors`, never both -- so a
+        parent alone declares parentage without claiming the relation has been measured.
     metadata : dict, optional
         Free-form, serialized into `core.clocks.metadata`.
 
@@ -105,6 +109,7 @@ class Clock:
     origin: str
     tick_rate_den: int = 1
     tick_zero_utc: datetime | None = None
+    parent_clock_id: str | None = None
     metadata: dict[str, Any] | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
@@ -218,6 +223,8 @@ class Clock:
         }
         if self.tick_zero_utc is not None:
             row["tick_zero_utc"] = self.tick_zero_utc
+        if self.parent_clock_id is not None:
+            row["parent_clock_id"] = self.parent_clock_id
         if self.metadata:
             row["metadata"] = self.metadata
         return row
