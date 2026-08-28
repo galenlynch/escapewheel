@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-08-28 |
+| **Status** | **Accepted** 2026-08-28 |
 | **Amends** | R2 §3 (registry document shape), §4 (column entry) |
 | **Depends on** | R2 (schema registry format) |
 | **Profile** | `nwb-lake-portable-v0.1` |
