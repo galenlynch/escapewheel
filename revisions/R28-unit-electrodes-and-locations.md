@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-08-28 |
+| **Status** | **Accepted** 2026-08-28 |
 | **Amends** | `02_core_logical_schemas.md` (`core.units`, `core.array_channels`), R19 §3 |
 | **Depends on** | R16 (unit quality labels), R19 (per-channel scaling and coordinate frames), R20 (array axis coordinates) |
 | **Profile** | `nwb-lake-portable-v0.1` |
