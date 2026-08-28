@@ -128,6 +128,7 @@ class PacketWriter:
         self._description = description
         self._tables: dict[str, list[Mapping[str, Any]]] = {}
         self._batches: dict[str, Iterable[pa.RecordBatch]] = {}
+        self._derived: dict[str, list[str]] = {}
 
     def add(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> None:
         """Add records for one table.
@@ -189,6 +190,30 @@ class PacketWriter:
             raise ValueError(f"{resource_id} already has batches; concatenate before adding")
         self._batches[resource_id] = batches
 
+    def derives(self, resource_id: str, sources: Sequence[str]) -> None:
+        """Record which resources one was derived from (`06`).
+
+        An analysis resource MUST declare lineage to core, and the manifest's `derived_from`
+        is where it goes -- not a table, because the claim is about a resource and not about
+        any row in it. Recording it here rather than inferring it keeps a derivation the
+        writer cannot see, such as one made in another process, expressible.
+
+        Parameters
+        ----------
+        resource_id : str
+            The derived resource.
+        sources : sequence of str
+            The resource IDs it came from.
+
+        Raises
+        ------
+        KeyError
+            If the registry does not define this resource.
+        """
+        if resource_id not in self._registry["tables"]:
+            raise KeyError(f"the registry defines no table {resource_id}")
+        self._derived.setdefault(resource_id, []).extend(sources)
+
     @property
     def resources(self) -> list[str]:
         """Resource IDs with at least one record, in insertion order."""
@@ -207,18 +232,19 @@ class PacketWriter:
                 _write_stream(spec, self._batches[resource_id], path)
             else:
                 pq.write_table(build(spec, self._tables[resource_id]), path, compression="zstd")
-            entries.append(
-                {
-                    "resource_id": resource_id,
-                    "layer": namespace,
-                    "kind": "table",
-                    "schema_id": f"{resource_id}.v{self._registry['registry_version'].rsplit('.', 1)[0]}",
-                    "physical_profile": "parquet",
-                    "uri": relative,
-                    "canonical": True,
-                    "validation_state": "not_run",
-                }
-            )
+            entry = {
+                "resource_id": resource_id,
+                "layer": namespace,
+                "kind": "table",
+                "schema_id": f"{resource_id}.v{self._registry['registry_version'].rsplit('.', 1)[0]}",
+                "physical_profile": "parquet",
+                "uri": relative,
+                "canonical": True,
+                "validation_state": "not_run",
+            }
+            if lineage := self._derived.get(resource_id):
+                entry["derived_from"] = lineage
+            entries.append(entry)
         return entries
 
     def _manifest(self, entries: Sequence[Mapping[str, Any]], report: Report | None) -> dict[str, Any]:
