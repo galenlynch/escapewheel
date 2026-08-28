@@ -59,7 +59,9 @@ def content() -> dict[str, list[dict]]:
                            "session_start_time": START,
                            "session_end_time": START + timedelta(hours=1),
                            "session_description": "Two-trial synthetic fixture session.",
-                           "institution": "Example Institute", "task_name": "two_choice"}],
+                           "institution": "Example Institute", "task_name": "two_choice",
+                           # R27 2: the behavior clock hangs off this one, so it is the root.
+                           "reference_clock_id": "imec_ap_s001"}],
         "core.subjects": [{"subject_id": "m001", "species": "Mus musculus", "sex": "M",
                            "date_of_birth": (START - timedelta(days=120)).date(),
                            "genotype": "wt", "strain": "C57BL/6J"}],
@@ -286,6 +288,32 @@ def variants():
         c["core.events"][0]["clock_id"] = "imec_ap_s001"
     def orphan_manifest_session(c):
         c["core.sessions"][0]["session_id"] = "s999"        # manifest still says s001
+
+    # R27: the clock graph has to be usable, not merely present.
+    def no_reference_clock(c):
+        c["core.sessions"][0]["reference_clock_id"] = None
+    def clock_cycle(c):
+        # Each is the other's parent. Every pre-R27 rule passes; a consumer walking it hangs.
+        c["core.clocks"][1]["parent_clock_id"] = "imec_ap_s001"
+        c["core.clocks"][0]["parent_clock_id"] = "behavior_s001"
+    def unreachable_clock(c):
+        # A third clock with no parent, so nothing converts it to the reference.
+        c["core.clocks"].append(
+            {"clock_id": "aux_s001", "session_id": "s001", "name": "unparented aux clock",
+             "tick_rate_hz": 1000.0, "origin": "tick 0 at aux start"})
+    def unaligned_clock(c):
+        # Parentage known, alignment not measured -- legal under R13 4, a defect once the
+        # session declares a reference (R27 4).
+        c["core.clocks"][1]["transform_slope"] = None
+        c["core.clocks"][1]["transform_offset"] = None
+    def wide_anchor_gap(c):
+        # 1 kHz anchors with one 20x hole: inside the span, outside the bound (R27 5.3).
+        c["core.clocks"][1]["transform_slope"] = None
+        c["core.clocks"][1]["transform_offset"] = None
+        c["core.clock_anchors"] = [
+            {"clock_id": "behavior_s001", "anchor_index": i, "t_tick": t,
+             "parent_tick": t * 30}
+            for i, t in enumerate([0, 1000, 2000, 3000, 23_000, 24_000, 25_000])]
     return {"dup_pk": dup_pk, "orphan_fk": orphan_fk, "null_required": null_required,
             "bad_vocabulary": bad_vocabulary, "bad_interval": bad_interval,
             "stale_summary": stale_summary,
@@ -294,7 +322,10 @@ def variants():
             "inconsistent_projection": inconsistent_projection,
             "spike_outside_window": spike_outside_window,
             "stream_clock_mismatch": stream_clock_mismatch,
-            "orphan_manifest_session": orphan_manifest_session}
+            "orphan_manifest_session": orphan_manifest_session,
+            "no_reference_clock": no_reference_clock, "clock_cycle": clock_cycle,
+            "unreachable_clock": unreachable_clock, "unaligned_clock": unaligned_clock,
+            "wide_anchor_gap": wide_anchor_gap}
 
 
 def main():

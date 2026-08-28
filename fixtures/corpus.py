@@ -33,6 +33,11 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "orphan_manifest_session": ("error", "core.sessions.manifest_sessions_match"),
     "bad_type": ("error", "schema.column_type"),
     "missing_column": ("error", "schema.column_absent"),
+    "no_reference_clock": ("error", "core.sessions.reference_clock_declared"),
+    "clock_cycle": ("error", "core.clocks.parent_chain_well_founded"),
+    "unreachable_clock": ("error", "core.sessions.every_clock_reaches_the_reference"),
+    "unaligned_clock": ("error", "core.clocks.alignment_declared_for_conversion"),
+    "wide_anchor_gap": ("warning", "core.clock_anchors.gap_within_bound"),
 }
 
 
