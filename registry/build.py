@@ -544,13 +544,12 @@ def build() -> dict:
             column["since"] = SINCE[0]
         tables[core_name.replace("core.", "analysis.")] = mirror
 
-    # ---- R30 §2 : spikes on the reference clock ---------------------------------------------
-    SINCE[0] = "R30 §2"
-    # 06 already gives this table a schema. Its stated derivation -- flattening
-    # core.unit_spike_chunks -- was vacated by R5, which made core.spike_events the canonical
-    # flat table, so the columns survived and the reason for them did not. What a packet needs
-    # instead is the same spikes on the session's reference clock, so a query spanning probes
-    # does no conversion. Same columns, same ordering, different clock_id.
+    # ---- 06 : spikes on the reference clock -------------------------------------------------
+    # No `since`: this is 06's own table, carried forward unamended, and R29 §2 makes absence
+    # mean exactly that. Its *stated derivation* -- flattening core.unit_spike_chunks -- was
+    # vacated by R5, so the columns survived and the reason for them did not; a revision has
+    # yet to record that the reason is now clock alignment. The schema below is 06's.
+    SINCE[0] = None
     tables["analysis.spike_events"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("unit_id", "string", "required", "Unit ID."),
@@ -568,7 +567,7 @@ def build() -> dict:
                        {"columns": ["clock_id"], "resource": "core.clocks",
                         "resource_columns": ["clock_id"]}],
         "sort": ["session_id", "sorting_run_id", "curation_id", "unit_id", "t_tick"],
-        "rules": [], "since": SINCE[0]}
+        "rules": []}
 
     # ---- R7 : every table declares a key ---------------------------------------------------
     SINCE[0] = "R7"
@@ -583,7 +582,7 @@ def build() -> dict:
             # Every revision whose decisions are applied above, so the registry says what it
             # was derived from rather than leaving it to the block comments.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             "revisions": [f"R{n}" for n in range(1, 31)]},
+                             "revisions": [f"R{n}" for n in range(1, 30)]},
             "tables": dict(sorted(tables.items()))}
 
 

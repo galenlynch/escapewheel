@@ -33,8 +33,7 @@
       "R26",
       "R27",
       "R28",
-      "R29",
-      "R30"
+      "R29"
     ]
   },
   "tables": {
@@ -268,43 +267,37 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
-          "description": "Session ID.",
-          "since": "R30 \u00a72"
+          "description": "Session ID."
         },
         {
           "name": "unit_id",
           "type": "string",
           "presence": "required",
-          "description": "Unit ID.",
-          "since": "R30 \u00a72"
+          "description": "Unit ID."
         },
         {
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
-          "description": "Sorting run ID.",
-          "since": "R30 \u00a72"
+          "description": "Sorting run ID."
         },
         {
           "name": "curation_id",
           "type": "string",
           "presence": "required",
-          "description": "Curation ID.",
-          "since": "R30 \u00a72"
+          "description": "Curation ID."
         },
         {
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
-          "description": "Spike tick on clock_id, mapped through core.clock_anchors.",
-          "since": "R30 \u00a72"
+          "description": "Spike tick on clock_id, mapped through core.clock_anchors."
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "required",
-          "description": "The clock these ticks are on, normally the session's reference.",
-          "since": "R30 \u00a72"
+          "description": "The clock these ticks are on, normally the session's reference."
         }
       ],
       "primary_key": [
@@ -347,8 +340,7 @@
         "unit_id",
         "t_tick"
       ],
-      "rules": [],
-      "since": "R30 \u00a72"
+      "rules": []
     },
     "core.array_assets": {
       "columns": [
