@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Proposed** 2026-08-28 |
-| **Amends** | `02_core_logical_schemas.md` (`core.sessions`), R13 §3 |
+| **Amends** | `02_core_logical_schemas.md` (`core.sessions`), R13 §3, R6 §2 (derived `tick_zero_utc`) |
 | **Depends on** | R3 (typed clock transform), R6 (wall-clock binding), R13 (anchor-point alignment) |
 | **Profile** | `nwb-lake-portable-v0.1` |
 
@@ -12,17 +12,19 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 ## 1. Motivation
 
 R13 gave a clock a parent and a way to align to it. Nothing since has required that the
-resulting graph be usable: a packet may declare a cycle, may declare clocks that reach no
-common reference, and — where the graph is sound — R13 forbids the one operation that real
-recording boundaries need.
+resulting graph be usable. A packet may declare a cycle. It may declare clocks that reach no
+common reference. Where the graph is sound, R13 forbids the one operation that real recording
+boundaries need. And nothing says what to do when a clock's counter resets mid-session, which
+on a free-running device is not an anomaly but a thing that happens.
 
-Each gap is reachable on the data the specification targets. A Neuropixels rig aligns
-`probe → nidaq → harp`: the probes observe a shared sync pulse the NI-DAQ also records,
-while only the NI-DAQ decodes the time-carrying HARP signal. Two levels, twelve leaves, one
-root. A one-level tree hides all three defects; this one does not.
+Every one is reachable on the data the specification targets. A Neuropixels rig aligns
+`probe → nidaq → harp`: the probes observe a shared sync pulse the NI-DAQ also records, while
+only the NI-DAQ decodes the time-carrying HARP signal. Two levels, twelve leaves, one root. A
+one-level tree hides all four defects; this one does not. The HARP clock at the root
+free-runs from device power-on, and sessions exist where it resets as the task begins.
 
-The gaps matter more because a reader's default is to return synchronized data. That makes
-the clock graph load-bearing rather than advisory: a packet whose graph is unusable fails the
+They matter more because a reader's default is to return synchronized data. That makes the
+clock graph load-bearing rather than advisory: a packet whose graph is unusable fails the
 primary read path, not a corner of it.
 
 ### 1.1 What the ignored alignment costs
@@ -206,7 +208,57 @@ FROM gaps g JOIN typical t USING (clock_id)
 WHERE g.gap IS NOT NULL AND g.gap > t.m * 2
 ```
 
-## 6. What this does not do
+## 6. A clock reset is a new clock
+
+A free-running counter can reset mid-session — a device power-cycles, or the task controller
+resets it as it starts. Observed on real sessions of the data this specification targets, at
+task start, which is the worst place for it: everything scientifically interesting is on the
+far side.
+
+The identity of a free-running clock is its epoch. R6 defines `tick_zero_utc` as *the*
+wall-clock instant of tick 0, one value per clock, and a counter with two epochs has no such
+value. So the reset is not a defect in a clock; it is the boundary between two of them.
+
+A counter that resets during a session MUST be represented as two clocks, one per epoch, each
+with its own `clock_id`, `origin` and `tick_zero_utc`. Every tick-bearing row MUST carry the
+`clock_id` of the epoch it was recorded on. The two SHOULD share a parent, which is what makes
+a query spanning the reset expressible: both convert to the reference and are comparable
+there, while the raw ticks are not.
+
+A packet MUST NOT represent a reset as a discontinuity within one clock. There is no way to
+express it and no way to read it: `core.clock_anchors` requires both sequences to increase
+together (R13 §3), and a bare tick would not say which epoch it belongs to — the same integer
+occurs twice in one session with two different meanings.
+
+### 6.1 Detection belongs to the importer
+
+The reset is invisible in a committed packet. A table is sorted by tick on write (R10 §2), so
+the backward step that reveals it is gone before any rule runs. This is R12 §4's division
+exactly — SQL for what the data says, the shim for how it was stored — and a reset is a fact
+about the source's native order.
+
+An importer MUST examine the source in acquisition order and MUST NOT assume monotonicity.
+
+Two existing rules act as backstops where an importer misses it. R13's
+`core.clock_anchors.monotonic` fires if both epochs' anchors are placed on one clock. §2's
+`every_clock_reaches_the_reference` fires if the second epoch gets a clock but no parent. Both
+report a symptom rather than the cause, which is why neither replaces the import-time check.
+
+### 6.2 A derived `tick_zero_utc` MUST be anchored within one epoch
+
+Where `tick_zero_utc` is derived rather than declared, the tick it is anchored on MUST lie in
+the same epoch as the instant it is paired with.
+
+The failure is quiet and total. Deriving an epoch from the earliest tick in a session is
+natural and, on a rig that resets at task start, wrong: the earliest tick is pre-reset, the
+declared instant it is matched against is post-reset, and the derived `tick_zero_utc` is wrong
+for every row after the reset. Nothing in the packet then disagrees with anything else.
+
+The check is the one that validates any derived epoch — a window declared in wall clock,
+placed on the resulting clock, must contain the events observed in that window. An epoch
+derived across a reset fails it by the size of the reset.
+
+## 7. What this does not do
 
 - **No new table.** The ledger stays at 30 (R25 §6); `core.sessions` gains one column.
 - **No interpolation kind.** R13 §5's exclusion of splines and drift models stands. This
@@ -214,15 +266,16 @@ WHERE g.gap IS NOT NULL AND g.gap > t.m * 2
 - **No declared extrapolation limit.** A per-clock column was considered and rejected: the
   median anchor interval already carries the information, and a declared limit could disagree
   with the anchors it governs.
-- **No detection of a clock reset.** A free-running counter that power-cycles mid-session
-  sends time backwards, and no SQL rule can see it: a packet is sorted by tick on write, so
-  the discontinuity is gone before the rules run. Detecting it means checking the source's
-  native order at import, which is the shim's half of R12 §4, not this revision's.
+- **No reset-detection rule.** §6 fixes how a reset is represented, which is a packet-level
+  question. Noticing one is not: it lives in the source's native order, so it is an
+  import-time check (§6.1), and no rule added here looks for it.
+- **No link between the two clocks a reset creates.** Nothing records that `harp_pre` and
+  `harp_post` are the same physical device before and after. See §9.
 - **Nothing about which clock ticks are stored on.** Whether `core.spike_events` carries a
   probe's own sample index or a reference-clock tick is a writer's choice, unchanged here.
   This revision only requires that whatever is stored can be converted.
 
-## 7. Consequences for the registry
+## 8. Consequences for the registry
 
 - `core.sessions` gains `reference_clock_id` (nullable string) and one reference.
 - Five Tier 2 rules are added: `reference_clock_declared`,
@@ -237,8 +290,12 @@ WHERE g.gap IS NOT NULL AND g.gap > t.m * 2
 - All five were executed while drafting, against a clean `probe → nidaq → harp` topology and
   against each defect in turn: every rule returns no rows on the clean case and rows on its
   own. That is the execution contract (R2 §7), not a substitute for the corpus variants.
+- **§6 adds no rule and no column.** A reset is represented with `core.clocks` as it already
+  stands — one row per epoch — so the registry change is nil and the burden falls on the
+  importer. The corpus should still gain a two-epoch packet, because nothing today exercises
+  a session whose rows are split across two clocks with the same parent.
 
-## 8. Open
+## 9. Open
 
 - **Where the measurements live.** §1.1 and §5.2 were measured against a local Open Ephys
   session and are not reproducible from this repository. They belong in
@@ -253,3 +310,12 @@ WHERE g.gap IS NOT NULL AND g.gap > t.m * 2
   multi-clock sessions, since one clock is unambiguous. Requiring it always would make the
   column uniformly present and the reader's default uniform, at the cost of a redundant
   field on the common case.
+- **Whether the two clocks a reset creates should be linked.** §6 makes them independent, and
+  nothing records that they are one physical device before and after. That is enough to read
+  the packet, and not enough to answer "how many clocks did this rig have" or to warn that a
+  session reset twice. `core.clocks.metadata` could carry it without a schema change; a typed
+  column would need one, and neither is worth adding before a query wants it.
+- **Whether a reset should be reported at all.** It is a fact about the recording that
+  survives nowhere in the packet once represented correctly: two clocks with unrelated epochs
+  look the same as two independent devices. A `docs/` note is the current answer, which is to
+  say there is none.
