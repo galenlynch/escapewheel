@@ -16,6 +16,7 @@ import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
+from pathlib import Path
 from typing import Any
 
 import jsonschema
@@ -334,15 +335,30 @@ _DDL = {
 
 #: What a validating DuckDB connection is allowed to take. Left to itself it claims 80% of
 #: system memory and every core, which on a real session's spike table means a quarter of a
-#: billion rows through window functions and anti-joins with a hundred-gigabyte budget --
-#: enough to take a workstation down. Bounded, DuckDB spills to disk and finishes slower
-#: instead of failing, so this costs time and never correctness.
-LIMITS = {"memory_limit": "4GB", "threads": 4}
+#: billion rows grouped on a five-column key with a hundred-gigabyte budget -- enough to take
+#: a workstation down.
+#:
+#: `temp_directory` is not optional here. An in-memory DuckDB has none by default, so a memory
+#: limit has nothing to spill *to* and bounds nothing; the two settings only work as a pair.
+#: The default follows the packet, because a temp directory on tmpfs -- which `/tmp` is on
+#: several distributions -- spills into the memory the limit exists to protect.
+#:
+#: Measured on 247,758,402 spikes: bounded this way, every check passes at 4.0 GB peak, and
+#: the one expensive check, `core.spike_events.primary_key_unique`, takes 78 s. So this costs
+#: time and never correctness.
+LIMITS: dict[str, Any] = {"memory_limit": "4GB", "threads": 4}
 
 
-def _bounded(connection: Any, limits: Mapping[str, Any]) -> Any:
-    """Apply resource limits to a connection, ignoring settings this DuckDB lacks."""
-    for name, value in limits.items():
+def _bounded(connection: Any, limits: Mapping[str, Any], spill: Path | None = None) -> Any:
+    """Apply resource limits to a connection, ignoring settings this DuckDB lacks.
+
+    `spill` supplies `temp_directory` when the caller has not, since a memory limit without
+    one bounds nothing.
+    """
+    settings = dict(limits)
+    if spill is not None and "memory_limit" in settings:
+        settings.setdefault("temp_directory", str(spill))
+    for name, value in settings.items():
         rendered = f"'{value}'" if isinstance(value, str) else value
         with contextlib.suppress(Exception):  # an unknown setting must not fail a validation
             connection.execute(f"SET {name} = {rendered}")
@@ -358,7 +374,8 @@ def _run_rules(
     limits: Mapping[str, Any] | None = None,
 ) -> None:
     """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
-    connection = _bounded(packet.duckdb(), LIMITS if limits is None else limits)
+    spill = Path(packet.root) / ".duckdb-spill" if hasattr(packet, "root") else None
+    connection = _bounded(packet.duckdb(), LIMITS if limits is None else limits, spill)
 
     # A Tier 2 rule may reference a table other than the one it is declared on --
     # core.clocks.one_alignment_model reads core.clock_anchors, for instance. A packet that
@@ -419,10 +436,11 @@ def validate(
     registry : Mapping, optional
         Registry to validate against. Defaults to the packet's embedded copy.
     limits : Mapping, optional
-        DuckDB settings bounding what validation may consume, defaulting to
-        :data:`LIMITS`. Pass ``{}`` to leave DuckDB at its own defaults, which are 80% of
-        system memory and every core -- reasonable for an interactive query and not for
-        unattended validation of a table with 10^8 rows.
+        DuckDB settings bounding what validation may consume, defaulting to :data:`LIMITS`,
+        with `temp_directory` filled in beside the packet so the limit has somewhere to spill.
+        Pass ``{}`` to leave DuckDB at its own defaults, which are 80% of system memory and
+        every core -- reasonable for an interactive query and not for unattended validation of
+        a table with 10^8 rows.
 
     Returns
     -------
