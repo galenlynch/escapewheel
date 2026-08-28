@@ -224,11 +224,22 @@ class NWBSource:
         return value
 
     def _ticks(self, seconds: NDArray[Any], label: str) -> tuple[NDArray[np.int64], NDArray[np.bool_]]:
-        """Quantize seconds to ticks, dropping non-finite values and saying how many."""
+        """Quantize seconds to ticks, dropping non-finite values and saying how many.
+
+        Cached by label, so `notes` is a property of the source rather than of how many times
+        a caller happened to read it. Without this, calling `events()` twice reports every
+        dropped placeholder twice.
+        """
+        key = f"ticks:{label}"
+        if key in self._cache:
+            cached: tuple[NDArray[np.int64], NDArray[np.bool_]] = self._cache[key]
+            return cached
         finite = np.isfinite(seconds)
         if not finite.all():
             self.notes.append(f"{label}: {int((~finite).sum())} of {finite.size} timestamps not finite; dropped")
-        return self.clock.ticks(seconds[finite]), finite
+        converted = (self.clock.ticks(seconds[finite]), finite)
+        self._cache[key] = converted
+        return converted
 
     # -- tables -----------------------------------------------------------------------
 

@@ -238,3 +238,11 @@ def test_the_records_commit_as_a_valid_packet(source, registry, tmp_path):
     # NumPy's integers and booleans are not Python's, and JSON knows only Python's.
     assert carried["laser_on_trial"] == 0
     assert carried["auto_train_engaged"] is False
+
+
+def test_notes_do_not_grow_when_a_builder_is_called_twice(source):
+    """`notes` describes the source, not how many times a caller read it."""
+    source.events()
+    once = list(source.notes)
+    source.events()
+    assert source.notes == once

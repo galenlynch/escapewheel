@@ -83,9 +83,11 @@ class Clock:
     origin : str
         What tick 0 means. Free text; `core.clocks.origin` is required.
     tick_zero_utc : datetime, optional
-        Wall-clock instant of tick 0 (R6). Offset-aware, or omitted. Write it only when the
-        source records it: deriving it from a second-resolution session start gives a value
-        with ±0.5 s of uncertainty and no way to say so.
+        Wall-clock instant of tick 0 (R6). Offset-aware, or omitted. A free-running clock's
+        tick 0 is a power-on instant that no source declares, so this is usually derived --
+        see :meth:`~nwb_lake_writer.sources.aind.SessionSource.epoch`, which records the
+        derivation as a note because the packet has nowhere to carry its ±1 s uncertainty.
+        Derive it only where an independent check exists; omit it rather than guess.
     metadata : dict, optional
         Free-form, serialized into `core.clocks.metadata`.
 
@@ -157,6 +159,44 @@ class Clock:
         if rounded.min() < TICK_MIN or rounded.max() > TICK_MAX:
             raise OverflowError(f"{self.clock_id}: ticks {rounded.min():.0f}..{rounded.max():.0f} exceed int64")
         return rounded.astype(np.int64)
+
+    def tick_at(self, instant: datetime) -> int:
+        """Convert a wall-clock instant to the nearest tick on this clock.
+
+        Distinct from :meth:`ticks`, and deliberately so. `ticks` converts values already on
+        this clock and refuses any that miss the grid, because a source disagreeing with the
+        declared rate is a defect. This converts an instant read off a *different* clock -- a
+        wall clock -- where landing on the grid is coincidence, so it rounds. The residual is
+        under half a tick, 16 µs at 31,250 Hz, which is far below the uncertainty in any
+        `tick_zero_utc` derived rather than declared.
+
+        Parameters
+        ----------
+        instant : datetime
+            An offset-aware wall-clock time.
+
+        Returns
+        -------
+        int
+            The tick on this clock.
+
+        Raises
+        ------
+        ValueError
+            If this clock has no `tick_zero_utc`, or `instant` carries no offset -- in either
+            case nothing locates the instant on this clock.
+        OverflowError
+            If the tick falls outside int64.
+        """
+        if self.tick_zero_utc is None:
+            raise ValueError(f"{self.clock_id}: no tick_zero_utc, so a wall clock locates no tick on it")
+        if instant.tzinfo is None or instant.utcoffset() is None:
+            raise ValueError(f"{instant!r} carries no offset, so it locates no tick")
+        elapsed = (instant.astimezone(timezone.utc) - self.tick_zero_utc).total_seconds()
+        tick = round(elapsed * self.tick_rate_num / self.tick_rate_den)
+        if tick < TICK_MIN or tick > TICK_MAX:
+            raise OverflowError(f"{self.clock_id}: tick {tick} exceeds int64")
+        return tick
 
     def record(self) -> dict[str, Any]:
         """Render this clock as a `core.clocks` row.

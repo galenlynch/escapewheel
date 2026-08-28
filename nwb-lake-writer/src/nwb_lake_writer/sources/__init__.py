@@ -6,6 +6,7 @@ exists because no single source carries a whole session -- see
 `inventory/nwb-zarr-776259-2025-04-09.md` §6.
 """
 
+from .aind import AcquisitionStream, SessionSource
 from .nwb import NWBSource, SourceDefect
 
-__all__ = ["NWBSource", "SourceDefect"]
+__all__ = ["AcquisitionStream", "NWBSource", "SessionSource", "SourceDefect"]
