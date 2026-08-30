@@ -456,3 +456,66 @@ def test_an_external_array_is_left_to_the_external_mode(packet_root):
     """Level 3, not level 2: reaching it is the reader's situation, not the packet's defect."""
     _add_array(packet_root, declared=["blosc"], external=True)
     assert _checks(validate(open_packet(packet_root))) == set()
+
+
+# -- verify_order: the same comparison, made on the way in ---------------------------------
+
+
+def _batch(first_tick, n=5, unit="u1"):
+    return pa.record_batch(
+        {
+            "unit_id": pa.array([unit] * n),
+            "t_tick": pa.array(range(first_tick, first_tick + n), type=pa.int64()),
+        }
+    )
+
+
+KEYS = ["unit_id", "t_tick"]
+
+
+def test_ordered_batches_pass_through_unchanged():
+    from nwb_lake_validator import verify_order
+
+    batches = [_batch(0), _batch(5), _batch(10)]
+    assert [b.num_rows for b in verify_order(iter(batches), KEYS)] == [5, 5, 5]
+
+
+def test_a_descent_inside_a_batch_is_caught():
+    from nwb_lake_validator import OrderViolation, verify_order
+
+    bad = pa.record_batch({"unit_id": pa.array(["u1"] * 3), "t_tick": pa.array([0, 5, 2], type=pa.int64())})
+    with pytest.raises(OrderViolation, match="row 2 sorts before"):
+        list(verify_order(iter([bad]), KEYS))
+
+
+def test_a_descent_on_a_batch_seam_is_caught():
+    """The case a per-batch check misses: each batch is ordered, the pair is not."""
+    from nwb_lake_validator import OrderViolation, verify_order
+
+    with pytest.raises(OrderViolation, match="row 5 sorts before"):
+        list(verify_order(iter([_batch(10), _batch(0)]), KEYS))
+
+
+def test_a_duplicate_on_a_batch_seam_is_caught():
+    from nwb_lake_validator import OrderViolation, verify_order
+
+    tail = pa.record_batch({"unit_id": pa.array(["u1"]), "t_tick": pa.array([4], type=pa.int64())})
+    with pytest.raises(OrderViolation, match="row 5 repeats"):
+        list(verify_order(iter([_batch(0), tail]), KEYS, unique=KEYS))
+
+
+def test_an_empty_batch_does_not_break_the_seam():
+    from nwb_lake_validator import verify_order
+
+    empty = _batch(0, n=0)
+    assert [b.num_rows for b in verify_order(iter([_batch(0), empty, _batch(5)]), KEYS)] == [5, 0, 5]
+
+
+def test_scanning_nothing_leaves_the_ordering_unchecked(packet_root):
+    """What `commit` relies on: a caller that established the order elsewhere skips the read."""
+    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
+    _rewrite(packet_root, "trials", trials.sort_by([("trial_id", "descending")]))
+    assert any(f.check == "core.trials.physical_order" for f in validate(open_packet(packet_root)).findings)
+    assert not any(
+        f.check == "core.trials.physical_order" for f in validate(open_packet(packet_root), scan=set()).findings
+    )

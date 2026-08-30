@@ -15,7 +15,7 @@ import contextlib
 import json
 import shutil
 import tempfile
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
 from pathlib import Path
@@ -488,17 +488,31 @@ def _constant(path: Path, keys: Sequence[str]) -> set[str]:
     return constant
 
 
-def _check_ordering(tables: Mapping[str, Any], present: Mapping[str, Any], report: Report) -> set[str]:
+def _check_ordering(
+    tables: Mapping[str, Any],
+    present: Mapping[str, Any],
+    report: Report,
+    scan: Collection[str] | None = None,
+) -> set[str]:
     """Layer 3: declared sort order, and the uniqueness that order settles (R10 §2, R12 §2).
 
     One pass answers both. A table sorted by its primary key puts duplicates next to each
-    other, so comparing neighbours -- which this scan already does to find descents -- decides
+    other, so comparing neighbours — which this scan already does to find descents — decides
     uniqueness too. `generate` leaves the `GROUP BY` out for those tables: on 287 M spikes it
     spilled 26 GB, because the key is four string columns and an aggregate materialises every
     one of them, while the scan reads them in order and holds one batch.
+
+    Parameters
+    ----------
+    scan : collection of str, optional
+        Resources to establish by reading. `None`, the default, reads every one, which is what
+        a validator handed an unknown packet must do. A caller that has already established a
+        resource's order by other means passes the rest — see `validate`.
     """
     unsound: set[str] = set()
     for resource_id, handle in present.items():
+        if scan is not None and resource_id not in scan:
+            continue
         spec = tables[resource_id]
         keys = spec.get("sort")
         if not keys:
@@ -555,6 +569,68 @@ def _check_ordering(tables: Mapping[str, Any], present: Mapping[str, Any], repor
                 [(f"row {i}", str(row)) for i, row in duplicated[:ORDER_REPORT]],
             )
     return unsound
+
+
+class OrderViolation(Exception):
+    """A stream of batches is not in the order it declares, or repeats a key."""
+
+
+def verify_order(batches: Iterable[Any], keys: Sequence[str], unique: Sequence[str] | None = None) -> Iterator[Any]:
+    """Yield batches, raising if one sorts before its predecessor or repeats the key.
+
+    The same comparison :func:`_check_ordering` makes against a written file, made instead
+    against the batches on their way into one. It is offered because a writer is the one caller
+    that can establish a file's order without reading the file: the rows pass through its hands
+    already, so the check costs the comparison and not the 467 MB re-read that finding the same
+    answer afterwards costs on a quarter of a billion spikes.
+
+    The seam between batches is compared as well as the inside of each, so a descent or a
+    duplicate landing exactly on a boundary is caught rather than falling between two passes.
+
+    Parameters
+    ----------
+    batches : iterable
+        Record batches, in the order they will be written.
+    keys : sequence of str
+        The declared sort columns.
+    unique : sequence of str, optional
+        A key that adjacency settles, checked for repeats at the same time. Pass None where the
+        sort does not begin with the key, since duplicates need not be neighbours there.
+
+    Yields
+    ------
+    pyarrow.RecordBatch
+        Each batch, unchanged.
+
+    Raises
+    ------
+    OrderViolation
+        On the first row that breaks the declared order, naming where it is.
+    """
+    tail: tuple[Any, ...] | None = None
+    start = 0
+    for batch in batches:
+        if batch.num_rows:
+            first = _row_at(batch, keys, 0)
+            if tail is not None and _sortable(first) < _sortable(tail):
+                raise OrderViolation(f"row {start} sorts before the row above it: {tail} then {first}")
+            if descents := _descents(batch, keys):
+                offset = descents[0]
+                raise OrderViolation(
+                    f"row {start + offset} sorts before the row above it: "
+                    f"{_row_at(batch, keys, offset - 1)} then {_row_at(batch, keys, offset)}"
+                )
+            if unique:
+                if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
+                    raise OrderViolation(f"row {start} repeats the key above it: {_row_at(batch, unique, 0)}")
+                if repeats := _repeats(batch, unique):
+                    offset = repeats[0]
+                    raise OrderViolation(
+                        f"row {start + offset} repeats the key above it: {_row_at(batch, unique, offset)}"
+                    )
+            tail = _row_at(batch, keys, batch.num_rows - 1)
+            start += batch.num_rows
+        yield batch
 
 
 def _tail_key(tail: tuple[Any, ...], keys: Sequence[str], unique: Sequence[str]) -> tuple[Any, ...]:
@@ -699,6 +775,7 @@ def validate(
     registry: Mapping[str, Any] | None = None,
     advisory: bool = False,
     limits: Mapping[str, Any] | None = None,
+    scan: Collection[str] | None = None,
 ) -> Report:
     """Validate a packet.
 
@@ -718,6 +795,15 @@ def validate(
         Pass ``{}`` to leave DuckDB at its own defaults, which are 80% of system memory and
         every core -- reasonable for an interactive query and not for unattended validation of
         a table with 10^8 rows.
+    scan : collection of str, optional
+        Resources whose physical order this call should establish by reading. `None`, the
+        default, reads every one — the only safe answer for a packet of unknown provenance.
+
+        A writer that has already compared every row as it wrote them passes the rest, which
+        is not the writer vouching for itself: the same comparison ran, on the same rows, from
+        the same code, one step earlier. What it costs is the distinction between "the batches
+        handed to Parquet were ordered" and "the file is ordered", and that gap is closed by
+        `_write_stream` making each batch exactly one row group.
 
     Returns
     -------
@@ -743,7 +829,7 @@ def validate(
     _check_packet_owned_arrays(packet, report)
     _check_materialization_provenance(packet, report)
     present = _check_schemas(packet, effective["tables"], report)
-    unsound = _check_ordering(effective["tables"], present, report)
+    unsound = _check_ordering(effective["tables"], present, report, scan)
     _run_rules(packet, effective, present, report, advisory, limits, unsound)
     return report
 

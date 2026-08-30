@@ -12,11 +12,20 @@ separate package: `nwb_lake_reader` opens a packet with PyArrow alone.
 from importlib.metadata import PackageNotFoundError, version
 
 from .generate import Check, generate
-from .validator import Finding, Report, validate
+from .validator import Finding, OrderViolation, Report, validate, verify_order
 
 try:
     __version__ = version("nwb-lake-validator")
 except PackageNotFoundError:  # pragma: no cover - only when running from a source tree
     __version__ = "0.0.0.dev0"
 
-__all__ = ["Check", "Finding", "Report", "__version__", "generate", "validate"]
+__all__ = [
+    "Check",
+    "Finding",
+    "OrderViolation",
+    "Report",
+    "__version__",
+    "generate",
+    "validate",
+    "verify_order",
+]
