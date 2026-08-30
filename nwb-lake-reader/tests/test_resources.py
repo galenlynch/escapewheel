@@ -138,3 +138,69 @@ def test_a_pushed_predicate_still_matches(packet_root):
 def handle_strings(table):
     """String-ish column names, whichever encoding they came back in."""
     return [n for n in table.schema.names if str(table.schema.field(n).type).startswith(("string", "dictionary"))]
+
+
+# -- R14 §2.3: external arrays, which in production live on an object store -----------------
+
+
+def _external_entry(uri):
+    from nwb_lake_reader.manifest import Resource
+
+    entry = {
+        "resource_id": "core.probe.lfp",
+        "layer": "core",
+        "kind": "dense_array_asset",
+        "physical_profile": "zarr_v2",
+        "uri": uri,
+        "external": True,
+        "codecs": ["blosc"],
+    }
+    return Resource("core.probe.lfp", "core", "dense_array_asset", uri, entry)
+
+
+def _array_resource(uri, root=None):
+    from pathlib import Path
+
+    from nwb_lake_reader.resources import ArrayResource
+
+    root = root or Path("/nonexistent")
+
+    return ArrayResource(_external_entry(uri), root)
+
+
+def test_a_file_uri_resolves_to_its_path(tmp_path):
+    """A packet built locally writes file://, which is a URI and not a path."""
+    (tmp_path / "a.zarr").mkdir()
+    handle = _array_resource((tmp_path / "a.zarr").resolve().as_uri(), tmp_path)
+
+    assert handle.path == tmp_path / "a.zarr"
+    assert handle.store == str(tmp_path / "a.zarr")
+
+
+def test_a_remote_uri_is_handed_over_verbatim():
+    """Resolving it to a Path first is the thing that would make it unopenable."""
+    uri = "s3://bucket/session.nwb/processing/ecephys/LFP/ElectricalSeries1-LFP/data"
+    assert _array_resource(uri).store == uri
+
+
+def test_a_remote_uri_has_no_local_path():
+    from nwb_lake_reader import ResourceUnreadableError
+
+    with pytest.raises(ResourceUnreadableError, match="s3:, which has no local path"):
+        assert _array_resource("s3://bucket/lfp").path
+
+
+def test_a_remote_array_takes_its_zarr_version_from_the_manifest():
+    """Nothing local exists to read it from, and R14 §2.3.1 already makes it a claim."""
+    assert _array_resource("s3://bucket/lfp").zarr_format == 2
+
+
+def test_a_windows_drive_is_not_a_scheme(tmp_path):
+    """A single letter before a colon is a drive letter, not a URI scheme.
+
+    It is treated as a path, so it fails for not existing rather than for being remote.
+    """
+    from nwb_lake_reader import ResourceUnreadableError
+
+    with pytest.raises(ResourceUnreadableError, match="does not resolve under"):
+        assert _array_resource("C:/data/lfp.zarr").store

@@ -15,6 +15,7 @@ import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
+from urllib.parse import unquote, urlparse
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -36,6 +37,10 @@ _DICTIONARY_TYPES = ("string", "large_string", "binary", "large_binary")
 
 #: Where a Zarr array keeps its metadata. v3 names it `zarr.json`; v2, which R21 §3 permits
 #: an external array to use, names it `.zarray`. Both are JSON.
+#:
+#: `physical_profile` -> Zarr version, for a remote array whose documents cannot be read
+#: without a backend for its scheme (R21 §3.2).
+_ZARR_PROFILES: dict[str, Literal[2, 3]] = {"zarr_v2": 2, "zarr_v3": 3}
 _ZARR_METADATA: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
 
 
@@ -79,13 +84,34 @@ def _resolve(resource: Resource, root: Path) -> Path:
     Raises
     ------
     ResourceUnreadableError
-        If the path does not exist.
+        If the URI names a store this cannot open locally, or the path does not exist.
     """
-    declared = Path(resource.uri)
+    scheme = urlparse(resource.uri).scheme
+    if scheme and scheme != "file" and len(scheme) > 1:
+        # A single-letter scheme is a Windows drive, not a URI. Anything else is a store only
+        # a library with that backend can open, which `store` hands over as the URI itself.
+        raise ResourceUnreadableError(
+            f"{resource.resource_id}: {resource.uri} is {scheme}:, which has no local path; "
+            "open it through a store that speaks that scheme"
+        )
+    declared = Path(unquote(urlparse(resource.uri).path)) if scheme == "file" else Path(resource.uri)
     resolved = declared if declared.is_absolute() else root / declared
     if not resolved.exists():
         raise ResourceUnreadableError(f"{resource.resource_id}: {resource.uri} does not resolve under {root}")
     return resolved
+
+
+def _store(resource: Resource, root: Path) -> str:
+    """Return what to hand a Zarr store: the URI itself when remote, else the resolved path.
+
+    An external array is expected to be the large one (R14 §2.3), and in production that means
+    an object store rather than a filesystem. Zarr opens such a URI directly given a backend
+    for it, so resolving to a `Path` first would be the thing that made it unopenable.
+    """
+    scheme = urlparse(resource.uri).scheme
+    if scheme and scheme != "file" and len(scheme) > 1:
+        return resource.uri
+    return str(_resolve(resource, root))
 
 
 def _codec_names(codecs: Iterable[Mapping[str, Any]]) -> list[str]:
@@ -378,6 +404,21 @@ class ArrayResource:
         return _resolve(self._resource, self._root)
 
     @property
+    def store(self) -> str:
+        """What to hand a Zarr store, which for a remote array is its URI rather than a path.
+
+        `path` is the local answer and raises for a scheme it cannot reach. This is the one to
+        pass on: an external array is expected to be the large one, and in production that is
+        an object store (R14 §2.3).
+
+        Returns
+        -------
+        str
+            A URI for a remote store, or the resolved local path.
+        """
+        return _store(self._resource, self._root)
+
+    @property
     def zarr_format(self) -> Literal[2, 3]:
         """Which Zarr version the store actually uses, 3 or 2.
 
@@ -395,14 +436,36 @@ class ArrayResource:
         ResourceUnreadableError
             If neither metadata document is present.
         """
+        if not self._is_local:
+            # The manifest's word, and only here. Taking it for a packet-owned array would
+            # make R15 §4's level 2 compare a value with itself; for a remote external one
+            # there is nothing local to compare against, and R14 §2.3.1 already frames the
+            # declaration as a claim rather than a verified fact.
+            declared = str(self._resource.entry.get("physical_profile", ""))
+            if declared in _ZARR_PROFILES:
+                return _ZARR_PROFILES[declared]
+            raise ResourceUnreadableError(
+                f"{self.resource_id}: {self._resource.uri} is remote and declares no Zarr version"
+            )
         root = self.path
         for version, name in _ZARR_METADATA.items():
             if (root / name).is_file():
                 return version
         raise ResourceUnreadableError(f"{self.resource_id}: {root} holds no Zarr metadata document")
 
+    @property
+    def _is_local(self) -> bool:
+        """Whether the array's bytes are reachable as a filesystem path."""
+        scheme = urlparse(self._resource.uri).scheme
+        return not scheme or scheme == "file" or len(scheme) == 1
+
     def metadata(self) -> dict[str, Any]:
         """Read and parse the array's own Zarr metadata document.
+
+        A remote array is read through Zarr, which needs the ``arrays`` extra and a backend for
+        the URI's scheme. A local one is the JSON document itself, so shape, dtype, chunking
+        and codecs cost nothing and need no library at all -- which is the property R3 §2.1
+        protects and the reason `arrays` is an extra in the first place.
 
         Returns
         -------
@@ -410,7 +473,10 @@ class ArrayResource:
             The parsed document, read once and kept.
         """
         if self._metadata is None:
-            parsed: dict[str, Any] = json.loads((self.path / _ZARR_METADATA[self.zarr_format]).read_text())
+            if self._is_local:
+                parsed: dict[str, Any] = json.loads((self.path / _ZARR_METADATA[self.zarr_format]).read_text())
+            else:
+                parsed = dict(self.open().metadata.to_dict())
             self._metadata = parsed
         return self._metadata
 
@@ -477,7 +543,9 @@ class ArrayResource:
         one unit of a sharded array costs 0.7 ms to read and 1.4 ms to reopen the store for,
         so a loop over units spends twice as long opening as reading.
 
-        Zarr is an optional dependency; install it with the ``arrays`` extra.
+        Zarr is an optional dependency; install it with the ``arrays`` extra. An array on an
+        object store needs a backend for its scheme as well -- `s3fs` for `s3://` -- which
+        Zarr resolves through fsspec and this package does not depend on either way.
 
         Returns
         -------
@@ -494,7 +562,14 @@ class ArrayResource:
                 import zarr
             except ImportError as exc:  # pragma: no cover - exercised only without the extra
                 raise ImportError("reading array values requires zarr; install the 'arrays' extra") from exc
-            self._array = zarr.open_array(str(self.path), mode="r", zarr_format=self.zarr_format)
+            try:
+                self._array = zarr.open_array(self.store, mode="r", zarr_format=self.zarr_format)
+            except ImportError as exc:  # pragma: no cover - depends on which backends are installed
+                scheme = urlparse(self._resource.uri).scheme or "file"
+                raise ImportError(
+                    f"{self.resource_id}: opening a {scheme}: store needs a backend for that scheme "
+                    f"(s3fs for s3://, gcsfs for gs://); zarr resolves it through fsspec"
+                ) from exc
         return self._array
 
     def read(self, selection: Any = ...) -> Any:

@@ -11,7 +11,21 @@ with no runtime dependency on NWB, HDMF, or PyNWB.
 This package opens a packet and provides tabular access. It does not write packets, import
 source data, or validate packet contents beyond the manifest's own shape.
 
-### Where the specification lives
+#### An external array is addressed by URI, not by path
+
+`ArrayResource.path` is the local answer and refuses a scheme it cannot reach; `store` is what
+to hand a Zarr store, and for a remote array that is the URI itself — resolving it to a `Path`
+first is exactly what would make it unopenable. In production an LFP array is an S3 object, so
+this is the normal case and not the exotic one.
+
+A remote array takes its Zarr version from the manifest's `physical_profile`, which is the only
+statement available. That is not the circularity R15 §4's level 2 avoids: level 2 covers
+packet-owned arrays, where a local document exists to compare against, while R14 §2.3.1 already
+frames an external resource's declaration as a claim. Its `metadata()` is read through Zarr
+rather than from a JSON document, so shape, dtype and codecs need the `arrays` extra *and* a
+backend for the scheme (`s3fs` for `s3://`) — neither of which this package depends on.
+
+## Where the specification lives
 
 This repository implements a specification maintained in sibling repositories under
 `../` — it does not define one. When behaviour here seems arbitrary, the reason is there.
