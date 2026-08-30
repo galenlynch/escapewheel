@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "nwb-lake-writer"
 description = "Tools to write NWB lakes"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
   { name = "Allen Institute for Neural Dynamics" },
   { name = "Galen Lynch", email = "galen@galenlynch.com" },
@@ -27,6 +27,9 @@ dependencies = [
 # The NWB adapter decodes Zarr v2 chunks directly, so it needs the codecs and nothing else:
 # no zarr, no hdmf-zarr, no pynwb. See sources/zarr_compat.py.
 nwb = ["numcodecs>=0.13"]
+# Writing a packet-owned dense array needs a Zarr v3 writer (R21 §3.1); reading a v2 one
+# still does not, which is what `sources/zarr_compat.py` exists for.
+arrays = ["zarr>=3"]
 
 [project.entry-points."nwb_lake.commands"]
 # 07 names one CLI. nwb-lake-reader owns the console script and discovers this group.
@@ -111,6 +114,11 @@ exclude = ["scratch"]
 [[tool.mypy.overrides]]
 # numcodecs ships no py.typed marker.
 module = "numcodecs.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# zarr is the `arrays` extra, absent on a read-only install.
+module = "zarr.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

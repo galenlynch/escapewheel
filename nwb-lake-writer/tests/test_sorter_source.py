@@ -54,9 +54,17 @@ def test_a_shank_keeps_its_stream_and_shares_a_serial(source):
     assert one.serial == two.serial == "Neuropix-PXI-100.50720"
 
 
-def test_quad_base_shanks_collapse_to_one_probe(source):
-    """Four shank streams are one physical device, with a sorting run and a clock each."""
-    assert len(rows_of(source, "core.probes")) == 1
+def test_quad_base_shanks_are_separate_probes(source):
+    """Each shank stream is its own logical probe, and one serial ties them together.
+
+    SpikeInterface sorts each shank separately -- four unit-id spaces that each start at 0 --
+    and an NWB writes one electrode group per shank, so `probe_id` follows the shank. The
+    physical device is recovered from `serial_number` rather than by parsing an identifier.
+    `01` §92 admits both readings: a Probe is an instrument "or logical recording probe".
+    """
+    probes = rows_of(source, "core.probes")
+    assert len(probes) == 2
+    assert len({p["serial_number"] for p in probes}) == 1
     assert len(rows_of(source, "core.clocks")) == 2
     assert len(rows_of(source, "core.sorting_runs")) == 2
 

@@ -272,3 +272,343 @@ def test_an_unknown_resource_is_refused_on_the_batch_path_too(registry):
     writer = PacketWriter(registry, packet_id="s001")
     with pytest.raises(KeyError, match="no table"):
         writer.add_batches("core.not_a_table", [])
+
+
+# -- amending a committed packet (R32) --------------------------------------------------
+
+
+def _amend(root, registry, tables, **kwargs):
+    writer = PacketWriter(registry, packet_id=root.name, **kwargs)
+    for resource_id, records in tables.items():
+        writer.add(resource_id, records)
+    return writer.amend(root)
+
+
+def _runs(**overrides):
+    """A materialization activity (R31 §2), which is what an amendment normally carries."""
+    return [
+        {
+            "processing_run_id": "run1",
+            "activity_type": "materialization",
+            "software_name": "nwb_lake_writer",
+            "software_version": "0.0.0",
+            "status": "succeeded",
+            **overrides,
+        }
+    ]
+
+
+def test_an_amendment_adds_a_resource(tmp_path, registry, minimal):
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    report = _amend(root, registry, {"core.processing_runs": _runs()})
+    assert report.passed
+    packet = open_packet(root)
+    assert "core.processing_runs" in [r.resource_id for r in packet.resources()]
+    assert packet.table("core.processing_runs").num_rows == 1
+
+
+def test_an_amendment_bumps_the_version_and_says_what_it_supersedes(tmp_path, registry, minimal):
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    before = json.loads((root / "nwb.packet.json").read_text())
+    _amend(root, registry, {"core.processing_runs": _runs()})
+    after = json.loads((root / "nwb.packet.json").read_text())
+    assert after["packet_version"] == "0.1.1"
+    assert after["supersedes"] == before["packet_version"]
+
+
+def test_an_amendment_keeps_packet_level_fields(tmp_path, registry, minimal):
+    """R32 §4: derived from the superseded manifest, not rebuilt. A writer handed only the
+    added resource knows nothing about the sessions the packet already declared."""
+    root = tmp_path / "s001"
+    _write(root, registry, minimal, description="a packet")
+    _amend(root, registry, {"core.processing_runs": _runs()})
+    after = json.loads((root / "nwb.packet.json").read_text())
+    assert after["sessions"] == ["s001"]
+    assert after["description"] == "a packet"
+    assert after["created_at"] == json.loads((root / "manifests" / "nwb.packet.0.1.0.json").read_text())["created_at"]
+
+
+def test_every_manifest_is_retained(tmp_path, registry, minimal):
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    _amend(root, registry, {"core.processing_runs": _runs()})
+    kept = sorted(p.name for p in (root / "manifests").iterdir())
+    assert kept == ["nwb.packet.0.1.0.json", "nwb.packet.0.1.1.json"]
+
+
+def test_amending_an_uncommitted_root_is_refused(tmp_path, registry, minimal):
+    from nwb_lake_writer.writer import NotCommitted
+
+    with pytest.raises(NotCommitted, match="no committed"):
+        _amend(tmp_path / "nothing", registry, {"core.processing_runs": _runs()})
+
+
+def test_an_amendment_may_not_replace_a_core_resource(tmp_path, registry, minimal):
+    """R32 §3: a packet whose core data changes is a new packet, not a new version."""
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    with pytest.raises(ValueError, match="new packet"):
+        _amend(root, registry, {"core.sessions": minimal["core.sessions"]})
+
+
+def test_an_amendment_may_extend_a_provenance_table(tmp_path, registry, minimal):
+    """Append-only by nature: a later run does not change what an earlier one did."""
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    assert _amend(root, registry, {"core.processing_runs": _runs()}).passed
+
+
+def test_a_failed_amendment_leaves_the_packet_at_its_old_version(tmp_path, registry, minimal):
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    with pytest.raises(CommitRefused):
+        _amend(root, registry, {"core.processing_runs": _runs(status="bogus")})
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    assert manifest["packet_version"] == "0.1.0"
+    assert "core.processing_runs" not in [r["resource_id"] for r in manifest["resources"]]
+
+
+def test_an_amendment_installs_a_newer_registry_and_retains_the_old(tmp_path, registry, minimal):
+    """R32 §4.1: the embedded copy must describe the added resource, and the superseded one
+    is kept so a packet at the old version stays interpretable."""
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    newer = {**registry, "registry_version": "9.9.9"}
+    writer = PacketWriter(newer, packet_id=root.name)
+    writer.add("core.processing_runs", _runs())
+    assert writer.amend(root).passed
+    installed = json.loads((root / "schemas" / "logical_schemas.json").read_text())
+    assert installed["registry_version"] == "9.9.9"
+    kept = json.loads((root / "schemas" / f"logical_schemas.{registry['registry_version']}.json").read_text())
+    assert kept["registry_version"] == registry["registry_version"]
+    assert json.loads((root / "nwb.packet.json").read_text())["registry_version"] == "9.9.9"
+
+
+def test_a_failed_amendment_restores_the_registry(tmp_path, registry, minimal):
+    """The registry goes in before validation, so a refusal has to put it back."""
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    newer = {**registry, "registry_version": "9.9.9"}
+    writer = PacketWriter(newer, packet_id=root.name)
+    writer.add("core.processing_runs", _runs(status="bogus"))
+    with pytest.raises(CommitRefused):
+        writer.amend(root)
+    installed = json.loads((root / "schemas" / "logical_schemas.json").read_text())
+    assert installed["registry_version"] == registry["registry_version"]
+    assert not (root / "schemas" / f"logical_schemas.{registry['registry_version']}.json").exists()
+
+
+def test_a_registry_that_changed_without_its_version_is_refused(tmp_path, registry, minimal):
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    import copy
+
+    altered = copy.deepcopy(registry)
+    altered["tables"]["core.sessions"]["columns"][0]["description"] = "changed, same version"
+    writer = PacketWriter(altered, packet_id=root.name)
+    writer.add("core.processing_runs", _runs())
+    with pytest.raises(ValueError, match="cannot be told apart"):
+        writer.amend(root)
+
+
+def test_a_registry_colliding_with_a_retained_copy_is_refused(tmp_path, registry, minimal):
+    """R32 §4.1: two different registries at one version inside one packet would make its own
+    retained manifests name something that no longer identifies anything."""
+    import copy
+
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+
+    # Move off 0.1.0, retaining it, then try to come back to 0.1.0 with different content.
+    newer = {**copy.deepcopy(registry), "registry_version": "9.9.9"}
+    writer = PacketWriter(newer, packet_id=root.name)
+    writer.add("core.processing_runs", _runs())
+    assert writer.amend(root).passed
+
+    altered = copy.deepcopy(registry)
+    altered["tables"]["core.sessions"]["columns"][0]["description"] = "changed, same version"
+    back = PacketWriter(altered, packet_id=root.name)
+    back.add("core.source_files", [{"source_file_id": "f1", "uri": "file:///x"}])
+    with pytest.raises(ValueError, match="two different .* in one packet"):
+        back.amend(root)
+
+
+# -- dense arrays (Phase 5) ---------------------------------------------------------------
+
+
+def _waveforms(units=8, channels=4, samples=10):
+    """A small stand-in with the shape a waveform array has: units, channels, samples."""
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    return (rng.normal(0, 100, (units, channels, samples))).astype("int16")
+
+
+def _array_tables(uri: str = "arrays/core/waveform_means.zarr") -> dict[str, list[dict]]:
+    """The rows an array must be accompanied by: R3 §5 requires every axis to be named."""
+    return {
+        "core.array_assets": [
+            {
+                "array_asset_id": "wf",
+                "session_id": "s001",
+                "semantic_type": "waveform_mean",
+                "name": "mean waveform per unit",
+                "kind": "dense_array_asset",
+                "uri": uri,
+                "format": "zarr_v3",
+            }
+        ],
+        "core.array_dimensions": [
+            {"array_asset_id": "wf", "axis_index": i, "dimension_name": n}
+            for i, n in enumerate(("unit", "channel", "sample"))
+        ],
+    }
+
+
+def test_an_array_is_written_as_zarr_v3(tmp_path, registry, minimal):
+    from nwb_lake_writer.writer import StagedArray
+
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id=root.name)
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    for resource_id, records in _array_tables().items():
+        writer.add(resource_id, records)
+    values = _waveforms()
+    writer.add_array(
+        "core.waveform_means",
+        StagedArray(values=values, array_asset_id="wf", chunks=(1, 4, 10), shard=(4, 4, 10)),
+    )
+    report = writer.commit(root)
+    assert report.passed
+    entry = next(
+        r
+        for r in json.loads((root / "nwb.packet.json").read_text())["resources"]
+        if r["resource_id"] == "core.waveform_means"
+    )
+    assert entry["kind"] == "dense_array_asset"
+    assert entry["physical_profile"] == "zarr_v3"  # R21 §3.1: packet-owned must be v3
+    # Sharding is a codec, and the manifest must say so: a reader without sharding support
+    # would otherwise read `["blosc"]` and discover the shard only on opening the array.
+    assert entry["codecs"] == ["sharding_indexed", "blosc"]
+    assert (root / "arrays" / "core" / "waveform_means.zarr").is_dir()
+
+
+def test_the_array_reads_back_identically(tmp_path, registry, minimal):
+    import numpy as np
+    import zarr
+
+    from nwb_lake_writer.writer import StagedArray
+
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id=root.name)
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    for resource_id, records in _array_tables().items():
+        writer.add(resource_id, records)
+    values = _waveforms()
+    writer.add_array(
+        "core.waveform_means", StagedArray(values=values, array_asset_id="wf", chunks=(1, 4, 10), shard=(4, 4, 10))
+    )
+    writer.commit(root)
+    back = zarr.open_array(str(root / "arrays" / "core" / "waveform_means.zarr"), mode="r")
+    assert np.array_equal(np.asarray(back[:]), values)
+
+
+def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal):
+    """A partial shard is not a regular chunk grid, which R3 §7.1 requires."""
+    from nwb_lake_writer.writer import StagedArray
+
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id=root.name)
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    writer.add_array(
+        "core.waveform_means",
+        StagedArray(values=_waveforms(), array_asset_id="wf", chunks=(3, 4, 10), shard=(4, 4, 10)),
+    )
+    with pytest.raises(ValueError, match="whole number of chunks"):
+        writer.commit(root)
+
+
+def test_a_codec_outside_the_floor_is_refused(tmp_path, registry, minimal):
+    from nwb_lake_writer.writer import StagedArray
+
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id=root.name)
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    writer.add_array(
+        "core.waveform_means", StagedArray(values=_waveforms(), array_asset_id="wf", chunks=(1, 4, 10), codecs=("lz4",))
+    )
+    with pytest.raises(ValueError, match="not permitted by R3"):
+        writer.commit(root)
+
+
+def test_shard_size_follows_the_bandwidth_delay_product():
+    """The rule is `S = share/(1-share) * latency * bandwidth`, not a constant.
+
+    A store read from inside the same region has an order less latency and more bandwidth, so
+    the object that spends the same fraction of a fetch on transfer is several times smaller.
+    A number baked in would be wrong exactly where the data lives.
+    """
+    from nwb_lake_writer.arrays import shard_for, target_object_bytes
+
+    off = target_object_bytes()
+    near = target_object_bytes(latency_s=0.005, bandwidth_bps=100e6)
+    assert off > near * 2
+    far = shard_for((6781, 26, 150), (1, 26, 150), 3850)
+    close = shard_for((6781, 26, 150), (1, 26, 150), 3850, target_bytes=near)
+    assert far is not None and close is not None
+    assert far[0] > close[0]
+
+
+def test_a_power_of_two_is_preferred_only_inside_the_band():
+    from nwb_lake_writer.arrays import BAND, shard_for, target_object_bytes
+
+    target = target_object_bytes()
+    chosen = shard_for((6781, 26, 150), (1, 26, 150), 3850)
+    assert chosen is not None
+    per = chosen[0]
+    assert per & (per - 1) == 0, "a power of two was available inside the band"
+    assert target / BAND <= per * 3850 <= target * BAND
+
+
+def test_an_array_that_fits_one_object_is_not_sharded():
+    """A shard would add an index and buy nothing."""
+    from nwb_lake_writer.arrays import shard_for
+
+    assert shard_for((100, 26, 150), (1, 26, 150), 3850) is None
+
+
+def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
+    """The streaming path's boundary guarantee, which R30 §3.2 and S3 sizing both rest on.
+
+    pyarrow's own default is 2**20 rows per row group, so a larger batch is silently cut into
+    several. That would put `analysis.spike_events` row groups across time-bucket boundaries and
+    would quietly cap any row-group size a caller chose for the store the packet will live on.
+    """
+    import pyarrow as pa
+
+    from nwb_lake_writer.writer import _write_stream
+
+    rows = (1 << 20) + 200_000  # deliberately over pyarrow's default cut
+    spec = registry["tables"]["core.spike_events"]
+    batch = pa.record_batch(
+        {
+            "session_id": pa.repeat(pa.scalar("s001", pa.string()), rows),
+            "unit_id": pa.repeat(pa.scalar("unit_0001", pa.string()), rows),
+            "sorting_run_id": pa.repeat(pa.scalar("sort_001", pa.string()), rows),
+            "curation_id": pa.repeat(pa.scalar("cur_001", pa.string()), rows),
+            "clock_id": pa.repeat(pa.scalar("harp_s001", pa.string()), rows),
+            "t_tick": pa.array(range(rows), type=pa.int64()),
+        }
+    )
+    path = tmp_path / "spike_events.parquet"
+    _write_stream(spec, [batch, batch.slice(0, 1000)], path, "core.spike_events")
+
+    metadata = pq.ParquetFile(path).metadata
+    assert metadata.num_row_groups == 2, "a batch was split into several row groups"
+    assert [metadata.row_group(i).num_rows for i in range(2)] == [rows, 1000]

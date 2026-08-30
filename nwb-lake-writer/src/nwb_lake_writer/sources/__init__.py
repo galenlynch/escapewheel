@@ -10,6 +10,7 @@ from .aind import AcquisitionStream, SessionSource
 from .nwb import NWBSource, SourceDefect
 from .sorter import SortedStream, SorterSource
 from .sync import SyncSource, SyncStream
+from .waveforms import WaveformSource
 
 __all__ = [
     "AcquisitionStream",
@@ -20,4 +21,5 @@ __all__ = [
     "SourceDefect",
     "SyncSource",
     "SyncStream",
+    "WaveformSource",
 ]

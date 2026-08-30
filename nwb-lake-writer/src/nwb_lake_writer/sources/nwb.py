@@ -146,6 +146,7 @@ class NWBSource:
         session_id: str | None = None,
         prefix: str = "",
         trial_metadata: bool = True,
+        units: Mapping[tuple[str, str], Mapping[str, str]] | None = None,
     ) -> None:
         if not isinstance(zone, ZoneInfo):
             raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
@@ -154,6 +155,7 @@ class NWBSource:
         self.zone = zone
         self.prefix = prefix
         self.trial_metadata = trial_metadata
+        self.units = dict(units or {})
         self.notes: list[str] = []
         self._cache: dict[str, Any] = {}
         self.session_id = session_id or _one(self._array("general/session_id")) or self.root.stem
@@ -417,6 +419,117 @@ class NWBSource:
                 )
         return rows
 
+    # -- units, which this file describes but does not date -----------------------------
+
+    def _unit_identity(self) -> list[tuple[int, Mapping[str, str]]]:
+        """NWB unit rows paired with the identity a sorter gave them, in row order.
+
+        The NWB is derived from the sorting, so it carries the sorter's own unit id as
+        `ks_unit_id` (identical to `original_cluster_id`, measured) and the probe as
+        `device_name`. Those two are the join back to `core.units`, which is why the caller
+        supplies the mapping rather than this adapter inventing identifiers: unit identity is
+        contextual -- `(session_id, unit_id, sorting_run_id, curation_id)` -- and only the
+        sorter knows the run and curation.
+
+        The key is the file's own `device_name`, unprefixed, because it names a probe as *this
+        source* calls it. A quad-base probe is four device names here (`45883-1` through `-4`)
+        and one `core.probes` row, so `probe_id` cannot serve as the key.
+
+        A row whose pair is not in the mapping is skipped, which is what a unit the packet's
+        sorting does not contain should do.
+        """
+        if not self.units:
+            return []
+        columns = self._table("units")
+        if not columns or "ks_unit_id" not in columns or "device_name" not in columns:
+            self.notes.append("units: no ks_unit_id/device_name, so no unit-electrode link is emitted")
+            return []
+        paired = []
+        missed = 0
+        for index in range(len(columns["ks_unit_id"])):
+            device = str(_clean(columns["device_name"][index]))
+            label = str(int(columns["ks_unit_id"][index]))
+            identity = self.units.get((device, label))
+            if identity is None:
+                missed += 1
+                continue
+            paired.append((index, identity))
+        if missed:
+            self.notes.append(f"units: {missed} NWB row(s) match no unit in the packet's sorting; skipped")
+        return paired
+
+    def unit_electrodes(self) -> list[dict[str, Any]]:
+        """`core.unit_electrodes`, the electrode each unit peaks on (R28).
+
+        **Only the primary electrode.** The file's own `units/electrodes` link is dense -- every
+        unit points at every contact of its probe, measured at 384 per unit without exception --
+        so it says what `core.units.probe_id` already says and would cost 2.6 M rows to repeat.
+        `extremum_channel_index` is the column carrying information, and it is an offset *into
+        the unit's own slice* of `electrodes`, not a global row: resolving it any other way is
+        correct for the first probe and wrong for every other one.
+
+        A packet with template sparsity adds the non-primary rows; nothing here forbids them.
+        """
+        paired = self._unit_identity()
+        if not paired:
+            return []
+        columns = self._table("units")
+        electrodes = self._array("units/electrodes")
+        bounds = self._array("units/electrodes_index")
+        if "extremum_channel_index" not in columns:
+            self.notes.append("units: no extremum_channel_index, so no primary electrode is known")
+            return []
+        contacts = self._table("general/extracellular_ephys/electrodes")
+        ids = self._electrode_ids(contacts) if contacts else []
+        rows = []
+        for index, identity in paired:
+            start = 0 if index == 0 else int(bounds[index - 1])
+            offset = int(columns["extremum_channel_index"][index])
+            row = int(electrodes[start + offset])
+            if not 0 <= row < len(ids):
+                continue
+            rows.append(
+                {
+                    "session_id": self.session_id,
+                    **identity,
+                    "electrode_id": ids[row],
+                    "is_primary": True,
+                    "amplitude": _clean(columns["amplitude"][index]) if "amplitude" in columns else None,
+                }
+            )
+        return rows
+
+    def unit_coordinates(self) -> list[dict[str, Any]]:
+        """`core.unit_coordinates`, a unit's position per populated frame (R28).
+
+        CCF only: the registration is applied downstream of the sorting, so this file is the
+        authority for it, while the probe-frame position belongs to the sorter's analyzer.
+        A unit whose coordinates are all absent contributes no row -- 241 of 6,781 here, the
+        electrode group the session's alignment does not cover.
+        """
+        paired = self._unit_identity()
+        if not paired:
+            return []
+        columns = self._table("units")
+        if not any(axis in columns for axis in CCF_AXES):
+            return []
+        rows = []
+        for index, identity in paired:
+            values = [_clean(columns[axis][index]) if axis in columns else None for axis in CCF_AXES]
+            if all(value is None for value in values):
+                continue
+            rows.append(
+                {
+                    "session_id": self.session_id,
+                    **identity,
+                    "coordinate_frame": "ccf",
+                    "x_um": values[0],
+                    "y_um": values[1],
+                    "z_um": values[2],
+                }
+            )
+        return rows
+
     def _series(self) -> Iterator[tuple[str, NDArray[Any], NDArray[Any]]]:
         """Yield each acquisition TimeSeries as (name, timestamps, data)."""
         acquisition = self.root / "acquisition"
@@ -531,6 +644,8 @@ class NWBSource:
             "core.probes": self.probes(),
             "core.electrodes": self.electrodes(),
             "core.electrode_coordinates": self.electrode_coordinates(),
+            "core.unit_electrodes": self.unit_electrodes(),
+            "core.unit_coordinates": self.unit_coordinates(),
             "core.event_streams": self.event_streams(),
             "core.events": self.events(),
             "core.trials": self.trials(),
@@ -555,6 +670,10 @@ class NWBSource:
             writer.add(resource, rows)
             counted[resource] = len(rows)
         return counted
+
+    def offers(self) -> dict[str, int]:
+        """Which resources this source supplies from its root, and how many rows (`05` §1)."""
+        return {resource: len(rows) for resource, rows in self.records().items()}
 
 
 def _offset(delta: Any) -> str:

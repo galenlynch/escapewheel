@@ -39,6 +39,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -93,6 +94,14 @@ CONFIDENCE = {"decoder": "decoder_probability", "unitrefine": "unitrefine_probab
 DESIGNATED = "decoder"
 
 
+#: Streams read at once when summarising spikes. Bounded, because the win and the cost pull
+#: apart sharply: a spike file is a struct of three int64 fields, so reading one field pages the
+#: whole 24 bytes per spike, and each concurrent stream is another file resident. Measured over
+#: twelve probe streams — 1 worker 20.5 s at 1.5 GiB, 4 workers 7.0 s at 4.7 GiB, 12 workers
+#: 5.3 s at 11.5 GiB. Past four, half a second costs five gigabytes.
+STREAM_WORKERS = 4
+
+
 @dataclass(frozen=True)
 class SortedStream:
     """One curated sorting folder, with its name parsed.
@@ -116,6 +125,20 @@ class SortedStream:
         """The physical probe's serial, with any shank suffix removed."""
         found = SHANK.match(self.probe)
         return found.group("serial") if found else self.probe
+
+    @property
+    def device(self) -> str:
+        """The probe as the surrounding ecosystem names it, shank suffix and all.
+
+        A quad-base probe reaches Open Ephys as four streams (`...45883-1` through `-4`), and
+        everything downstream keeps them apart: SpikeInterface sorts each separately, giving
+        four unit-id spaces that each start at 0, and an NWB writes four electrode groups.
+        `01` §92 admits exactly this -- a Probe is "an electrode-bearing recording instrument
+        **or logical recording probe**" -- so the logical probe is what `probe_id` names and
+        `serial_number` carries the physical one, which is where a grouping belongs rather
+        than inside an identifier that would have to be parsed.
+        """
+        return self.probe.rsplit(".", 1)[-1]
 
     @property
     def key(self) -> str:
@@ -170,6 +193,7 @@ class SorterSource:
         prefix: str = "",
         emit_probes: bool = True,
         parent_clock_id: str | None = None,
+        sample: int | None = None,
     ) -> None:
         path = Path(root)
         self.root = path if path.name == "curated" else path / "curated"
@@ -180,6 +204,7 @@ class SorterSource:
         self.prefix = prefix
         self.emit_probes = emit_probes
         self.parent_clock_id = parent_clock_id
+        self.sample = sample
         self.notes: list[str] = []
         self._cache: dict[str, Any] = {}
         self._noted_naive = False
@@ -242,7 +267,7 @@ class SorterSource:
         return f"{self.prefix}{stream.key}.curated"
 
     def _probe_id(self, stream: SortedStream) -> str:
-        return f"{self.prefix}{stream.serial}"
+        return f"{self.prefix}{stream.device}"
 
     def _unit_id(self, stream: SortedStream, label: int, width: int) -> str:
         """Compose a unit id that is unique across streams and sorts numerically.
@@ -403,6 +428,10 @@ class SorterSource:
             self.notes.append(f"{stream.key}: analyzer carries no spike_amplitudes")
             return None
         values = read_array(path)
+        # A sample truncates the spikes, so it must truncate their amplitudes by the same rule:
+        # these are index-aligned, and the check below is what guarantees it.
+        if self.sample is not None:
+            values = values[: self.sample]
         if values.size != n_spikes:
             raise SourceDefect(
                 f"{stream.key}: {values.size} amplitudes for {n_spikes} spikes; they are index-aligned or nothing"
@@ -415,43 +444,68 @@ class SorterSource:
         """`core.units`, one row per unit per stream.
 
         `n_spikes`, `first_spike_tick` and `last_spike_tick` are the validated denormalization
-        the spec asks for, computed from the spikes rather than copied from anywhere.
+        the spec asks for, computed from the spikes rather than copied from anywhere. That
+        means reading every spike in the session, which is why the result is kept: an importer
+        asks for it twice, once to join units to another source and once to write the table.
+
+        Streams are read in parallel, :data:`STREAM_WORKERS` at a time. The work is numpy over a
+        memory-mapped array and so releases the GIL, but each concurrent stream is another file
+        resident, so the bound is a memory decision rather than a scheduling one.
         """
+        if "units" not in self._cache:
+            streams = self.streams()
+            with ThreadPoolExecutor(max_workers=min(len(streams), STREAM_WORKERS) or 1) as pool:
+                per_stream = list(pool.map(self._unit_rows, streams))
+            self._cache["units"] = [row for rows in per_stream for row in rows]
+        rows: list[dict[str, Any]] = self._cache["units"]
+        return rows
+
+    def _unit_rows(self, stream: SortedStream) -> list[dict[str, Any]]:
+        """`core.units` rows for one stream, with its spike summary computed from the spikes."""
         rows = []
-        for stream in self.streams():
-            ids = self._unit_ids(stream)
-            width = self._width(stream)
-            index, tick = self._spikes(stream)
-            counts = np.bincount(index, minlength=ids.size)
-            first, last = self._extremes(index, tick, counts)
-            labels = {source: self._property(stream, name) for name, source in LABEL_SOURCES.items()}
-            designated = labels.get(DESIGNATED)
-            for offset, label in enumerate(ids):
-                raw = str(designated[offset]) if designated is not None else None
-                rows.append(
-                    {
-                        "session_id": self.session_id,
-                        "unit_id": self._unit_id(stream, int(label), width),
-                        "probe_id": self._probe_id(stream),
-                        "sorting_run_id": self._sorting_run_id(stream),
-                        "curation_id": self._curation_id(stream),
-                        "local_unit_label": str(int(label)),
-                        "quality_label": PROJECTION.get(raw) if raw is not None else None,
-                        "quality_label_source": DESIGNATED if raw is not None else None,
-                        "n_spikes": int(counts[offset]),
-                        "first_spike_tick": int(first[offset]) if counts[offset] else None,
-                        "last_spike_tick": int(last[offset]) if counts[offset] else None,
-                    }
-                )
+        ids = self._unit_ids(stream)
+        width = self._width(stream)
+        index, tick = self._spikes(stream)
+        counts = np.bincount(index, minlength=ids.size)
+        first, last = self._extremes(index, tick, counts)
+        labels = {source: self._property(stream, name) for name, source in LABEL_SOURCES.items()}
+        designated = labels.get(DESIGNATED)
+        for offset, label in enumerate(ids):
+            raw = str(designated[offset]) if designated is not None else None
+            rows.append(
+                {
+                    "session_id": self.session_id,
+                    "unit_id": self._unit_id(stream, int(label), width),
+                    "probe_id": self._probe_id(stream),
+                    "sorting_run_id": self._sorting_run_id(stream),
+                    "curation_id": self._curation_id(stream),
+                    "local_unit_label": str(int(label)),
+                    "quality_label": PROJECTION.get(raw) if raw is not None else None,
+                    "quality_label_source": DESIGNATED if raw is not None else None,
+                    "n_spikes": int(counts[offset]),
+                    "first_spike_tick": int(first[offset]) if counts[offset] else None,
+                    "last_spike_tick": int(last[offset]) if counts[offset] else None,
+                }
+            )
+
         return rows
 
     def _spikes(self, stream: SortedStream) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
         """Read a stream's `(unit_index, sample_index)` from disk.
 
-        `unit_index` is an offset into `unit_ids`, never an identifier -- see the module
+        `unit_index` is an offset into `unit_ids`, never an identifier — see the module
         docstring. It is resolved before anything is written.
+
+        `sample` truncates every stream to its first spikes, and is applied *here* rather than
+        at either caller because both of them read through this one method. A cap applied to
+        the spike stream alone would leave `core.units.n_spikes` counting spikes the packet
+        does not contain, which is precisely what the `stale_summary` rule exists to catch.
+        Truncating in file order takes an opening time window; a unit with nothing in it keeps
+        its row with a null first and last tick.
         """
         spikes = np.load(stream.path / "spikes.npy", mmap_mode="r")
+        if self.sample is not None:
+            spikes = spikes[: self.sample]
         return np.asarray(spikes["unit_index"]), np.asarray(spikes["sample_index"])
 
     @staticmethod
@@ -601,24 +655,28 @@ class SorterSource:
             if tick.size and int(tick.max()) >= 1 << 32:
                 raise SourceDefect(f"{stream.key}: sample index {int(tick.max())} does not fit the packed sort key")
             order = np.argsort((index.astype(np.int64) << 32) | tick, kind="stable")
-            unit_id = np.array([self._unit_id(stream, int(label), width) for label in ids])
+            # An Arrow array taken from, not a numpy array indexed and converted. `.tolist()`
+            # on a million-row slice builds a million Python strings per batch; `take` stays
+            # in C++ and is 18x faster, which over a quarter of a billion spikes is the
+            # difference between 15 seconds and one.
+            unit_values = pa.array([self._unit_id(stream, int(label), width) for label in ids], type=pa.string())
             run, curation = self._sorting_run_id(stream), self._curation_id(stream)
             clock = self._clock_id(stream)
             for start in range(0, order.size, batch_rows):
-                take = order[start : start + batch_rows]
-                rows = take.size
+                selected = order[start : start + batch_rows]
+                rows = selected.size
                 # `pa.repeat` for the four columns that are constant within a stream: a
                 # million-element Python list per column would cost more than the spikes.
                 columns = {
                     "session_id": pa.repeat(pa.scalar(self.session_id, pa.string()), rows),
-                    "unit_id": pa.array(unit_id[index[take]].tolist(), type=pa.string()),
+                    "unit_id": unit_values.take(pa.array(index[selected], type=pa.int32())),
                     "sorting_run_id": pa.repeat(pa.scalar(run, pa.string()), rows),
                     "curation_id": pa.repeat(pa.scalar(curation, pa.string()), rows),
-                    "t_tick": pa.array(tick[take], type=pa.int64()),
+                    "t_tick": pa.array(tick[selected], type=pa.int64()),
                     "clock_id": pa.repeat(pa.scalar(clock, pa.string()), rows),
                 }
                 if amplitude is not None:
-                    columns["amplitude"] = pa.array(amplitude[take], type=pa.float32())
+                    columns["amplitude"] = pa.array(amplitude[selected], type=pa.float32())
                 yield pa.record_batch(columns)
 
     # -- assembly -----------------------------------------------------------------------
@@ -649,10 +707,25 @@ class SorterSource:
             writer.add(resource, rows)
             counted[resource] = len(rows)
         writer.add_batches("core.spike_events", self.spike_batches(batch_rows=batch_rows))
-        counted["core.spike_events"] = sum(
-            int(np.load(s.path / "spikes.npy", mmap_mode="r").shape[0]) for s in self.streams()
-        )
+        counted["core.spike_events"] = self.spike_count
         return counted
 
+    @property
+    def spike_count(self) -> int:
+        """How many spikes this source holds, from the arrays' headers rather than contents.
 
-__all__ = ["DESIGNATED", "LABEL_SOURCES", "PROJECTION", "SortedStream", "SorterSource"]
+        A quarter of a billion spikes counts in milliseconds, so a caller that has streamed
+        them into a writer can still report how many without holding any.
+        """
+        held = (int(np.load(s.path / "spikes.npy", mmap_mode="r").shape[0]) for s in self.streams())
+        return sum(n if self.sample is None else min(n, self.sample) for n in held)
+
+    def offers(self) -> dict[str, int]:
+        """Which resources this source supplies from its root, and how many rows (`05` §1)."""
+        return {
+            **{resource: len(rows) for resource, rows in self.records().items()},
+            "core.spike_events": self.spike_count,
+        }
+
+
+__all__ = ["DESIGNATED", "LABEL_SOURCES", "PROJECTION", "STREAM_WORKERS", "SortedStream", "SorterSource"]

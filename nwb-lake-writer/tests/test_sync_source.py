@@ -56,9 +56,8 @@ def test_only_the_owned_streams_are_aligned(source):
     assert aligned == {
         ("109", "probeA"),
         ("109", "probeB"),
-        ("109", "NI-DAQmx-107"),
+        ("109", "NI-DAQmx-107"),  # 111's is the same device recorded twice; see below
         ("111", "probeC"),
-        ("111", "NI-DAQmx-107"),
     }
 
 
@@ -185,3 +184,28 @@ def test_a_prefix_reaches_the_clock_and_the_anchors(tree):
     assert source.clock().clock_id == "A_harp"
     rows = source.anchors(clock_id_for=lambda st: f"A_{st.key}.samples" if st.stream.startswith("probe") else None)
     assert all(r["clock_id"].startswith("A_") for r in rows)
+
+
+def test_one_device_recorded_by_two_nodes_is_kept_once(source):
+    """Real rigs do this: 776259 has Record Nodes 109 and 111 subscribed to one NI-DAQ, with
+    identical events and HARP seconds that disagree by 70 us. One device is one clock."""
+    daq = [s for s in source.aligned() if s.stream == "NI-DAQmx-107"]
+    assert [s.node for s in daq] == ["109"]
+    assert any("records the same" in note and "disagree by up to" in note for note in source.notes)
+
+
+def test_uid_stays_unique_where_key_does_not(source):
+    """`key` matches what a sorted folder calls the data and omits the node, so it cannot
+    identify a stream on a two-node rig; `uid` can."""
+    every = source.streams()
+    daq = [s for s in every if s.stream == "NI-DAQmx-107"]
+    assert len(daq) == 2
+    assert len({s.key for s in daq}) == 1
+    assert len({s.uid for s in daq}) == 2
+
+
+def test_a_node_qualified_first_sample_wins(source, tmp_path):
+    """A caller that distinguishes the nodes must not have its value ignored."""
+    stream = next(s for s in source.aligned() if s.stream == "NI-DAQmx-107")
+    source.first_samples = {stream.key: 111, stream.uid: 222}
+    assert source._first_sample(stream) == 222

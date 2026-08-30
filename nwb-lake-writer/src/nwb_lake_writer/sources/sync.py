@@ -87,8 +87,27 @@ class SyncStream:
 
     @property
     def key(self) -> str:
-        """The stream key a sorted folder uses for the same data."""
+        """The stream key a sorted folder uses for the same data.
+
+        Deliberately without the record node, because that is what a sorted folder name
+        reduces to. Unambiguous for probes -- their names are unique across nodes -- and
+        ambiguous for the NI-DAQ, of which a two-node rig has one per node. Use `uid` where
+        the value is an identity rather than a correspondence.
+        """
         return f"{self.experiment}.{self.stream}"
+
+    @property
+    def uid(self) -> str:
+        """A stream id that stays unique when two nodes carry the same stream name."""
+        return f"{self.experiment}.{self.node}.{self.stream}"
+
+
+def _by_key(streams: list[SyncStream]) -> dict[str, list[SyncStream]]:
+    """Group streams by the key a sorted folder would use, to spot an ambiguous one."""
+    grouped: dict[str, list[SyncStream]] = {}
+    for stream in streams:
+        grouped.setdefault(stream.key, []).append(stream)
+    return grouped
 
 
 class SyncSource:
@@ -180,12 +199,53 @@ class SyncSource:
             )
         if not keep:
             raise SourceDefect(f"{self.root}: no stream in {self.experiment} carries HARP-aligned timestamps")
-        return keep
+
+        return self._deduplicate(keep)
+
+    def _deduplicate(self, keep: list[SyncStream]) -> list[SyncStream]:
+        """Drop a stream that is another one recorded twice.
+
+        Two record nodes can subscribe to the same physical device. Measured on a real rig:
+        both nodes' NI-DAQ carry the same 126,636 TTL events with identical states and
+        identical sample numbers, differing only in the HARP seconds each node's alignment
+        produced -- at most 70 µs, about two ticks. They are one clock, and emitting both
+        would put two clocks on one device and leave a reader to pick.
+
+        The lowest-numbered node is kept. The disagreement is reported rather than discarded:
+        it measures how well the alignment is determined, which nothing else in the packet
+        says. Two streams sharing a name whose events differ are a different matter and are
+        refused, because then the name really is ambiguous.
+        """
+        out = []
+        for name, group in sorted(_by_key(keep).items()):
+            if len(group) == 1:
+                out.append(group[0])
+                continue
+            ordered = sorted(group, key=lambda st: st.node)
+            first, *rest = ordered
+            base = (np.load(first.path / "states.npy"), np.load(first.path / "sample_numbers.npy"))
+            for other in rest:
+                same = (np.load(other.path / "states.npy"), np.load(other.path / "sample_numbers.npy"))
+                if not all(a.shape == b.shape and np.array_equal(a, b) for a, b in zip(base, same, strict=True)):
+                    raise SourceDefect(
+                        f"{name} names two streams whose events differ -- {first.node}/{first.stream} "
+                        f"and {other.node}/{other.stream}. The key omits the record node, so one "
+                        "would silently take the other's anchors; give them distinct names."
+                    )
+                drift = np.abs(np.load(first.path / "timestamps.npy") - np.load(other.path / "timestamps.npy")).max()
+                self.notes.append(
+                    f"{name}: node {other.node} records the same {base[0].size:,} events as node "
+                    f"{first.node}; kept {first.node}. The two alignments disagree by up to "
+                    f"{drift * 1e6:.1f} us"
+                )
+            out.append(first)
+        return out
 
     def _first_sample(self, stream: SyncStream) -> int:
         """Find the recording's first raw sample, supplied or read from element 0 on disk."""
-        if stream.key in self.first_samples:
-            return self.first_samples[stream.key]
+        for candidate in (stream.uid, stream.key):
+            if candidate in self.first_samples:
+                return self.first_samples[candidate]
         continuous = stream.path.parent.parent.parent / "continuous" / stream.stream / "sample_numbers.npy"
         if not continuous.is_file():
             raise SourceDefect(
@@ -273,12 +333,25 @@ class SyncSource:
         del parent_clock_id  # named for the caller's benefit; the parent lives on core.clocks
         return rows
 
+    def records(self, *, clock_id_for: Any = None) -> dict[str, list[dict[str, Any]]]:
+        """Every table this adapter builds as records, keyed by resource ID."""
+        built = {
+            "core.clocks": [self.clock().record()],
+            "core.clock_anchors": self.anchors(clock_id_for=clock_id_for),
+        }
+        return {resource: rows for resource, rows in built.items() if rows}
+
+    def offers(self) -> dict[str, int]:
+        """Which resources this source supplies from its root, and how many rows (`05` §1)."""
+        return {resource: len(rows) for resource, rows in self.records().items()}
+
     def into(self, writer: Any, *, clock_id_for: Any = None) -> dict[str, int]:
         """Add the reference clock and every anchor to a `PacketWriter`."""
-        rows = self.anchors(clock_id_for=clock_id_for)
-        writer.add("core.clocks", [self.clock().record()])
-        writer.add("core.clock_anchors", rows)
-        return {"core.clocks": 1, "core.clock_anchors": len(rows)}
+        counted = {}
+        for resource, rows in self.records(clock_id_for=clock_id_for).items():
+            writer.add(resource, rows)
+            counted[resource] = len(rows)
+        return counted
 
 
 def _resolve(root: Path) -> Path:

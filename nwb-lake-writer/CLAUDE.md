@@ -13,9 +13,13 @@ validated packet on disk, and the source adapters that produce those records.
 order and physical sort all come from the registry, which is embedded in the packet (R2 §8).
 Wall-clock values without a UTC offset are refused rather than assumed (`arrow.NaiveTimestamp`).
 
-**Not yet.** Source adapters, the session recipe, the `nwb-lake import` subcommand, array
-assets. What follows is the design they are being built to, settled in conversation and
-grounded in `05` and `inventory/`.
+**Also delivered.** Four source adapters, the session recipe, the `nwb-lake` subcommands
+(`inspect`, `init`, `import`), and dense array staging. Two real AIND sessions commit clean
+from a recipe, 248 M and 287 M spikes.
+
+**Not yet.** External resources (R14/R15 level 3): LFP referenced rather than owned, and
+`core.array_channels` with R19 per-channel gain, offset and `inter_sample_shift`. The NWB
+adapter already prints a note it cannot clear until that lands.
 
 ## Scope
 
@@ -50,12 +54,11 @@ Measured in `../inventory/nwb-zarr-776259-2025-04-09.md`:
 
 So there is no `nwb-lake import <file>`. The unit of work is a **session recipe** naming
 several sources, and the recipe doubles as the parameters `05` Stage 3 requires normalization
-to be deterministic in — which is what gets recorded in `core.processing_runs`.
+to be deterministic in — which is what `core.processing_runs.parameters` now carries, so a
+committed packet says what produced it and `code_uri` names the recipe by digest.
 
-```bash
-nwb-lake-import inspect <source>            # 05 Stage 1, per source, one inventory
-nwb-lake import session.toml --out packet   # 05 Stages 2-6
-```
+See **The CLI** below for the commands. A recipe is checked against the registry before any
+source is opened, so the problems that cost a four-minute build are reported in milliseconds.
 
 ### Two things about the sources that will bite
 
@@ -66,13 +69,15 @@ nwb-lake import session.toml --out packet   # 05 Stages 2-6
   `2025-04-09T17:25:12+00:00` for a Pacific wall clock. The NWB gets it right. Identity comes
   from the JSONs, so the importer must not trust that offset.
 
-## Architecture, when it exists
+## Architecture
 
 ```
+sources/        one adapter per source; returns records, touches no filesystem
+recipe          parse and check a session recipe; opens nothing
+session         order the sources, run them, keep what each one owns
 arrow           registry column types -> Arrow schema; records -> a sorted table
+arrays          Zarr v3 layout: chunk for the question, shard for the object
 PacketWriter    records in, staged/validated/committed packet out
-adapters/       one module per source; returns records, touches no filesystem   (not yet)
-recipe          the parsed session spec; also the provenance record             (not yet)
 ```
 
 `PacketWriter.add(resource_id, records)` accumulates; `commit(root)` does the rest and
@@ -84,8 +89,32 @@ floor (R3 — primitive columns only), staging layout, and `05` Stage 5's atomic
 write staged resources, validate them, write a *candidate* manifest, move resources into
 final paths, rename the candidate to `nwb.packet.json` **last**.
 
-Heavy source dependencies (`hdmf-zarr`, `spikeinterface`) go behind extras, the way
+Heavy source dependencies (`hdmf-zarr`, `spikeinterface`, `zarr`) go behind extras, the way
 `nwb-lake-reader` keeps DuckDB behind `sql`.
+
+### Ownership, and why it is declared
+
+A recipe gives each source an `owns` list and an optional `contributes` list. `owns` is
+exclusive; `contributes` is additive, and exists because `core.clocks` genuinely has two
+suppliers — the sorter declares one clock per probe stream, the sync source declares the rig
+clock they are anchored to. Without the distinction the last adapter to run wins silently,
+which is how a `probe_id` collapse once matched 0 of 6,781 units and how two adapters emitting
+`core.unit_electrodes` collided on its primary key.
+
+`Recipe.check(registry)` is what makes the declaration pay. Before a byte is read it refuses a
+resource owned twice, an owned resource the registry does not define, and an owned table whose
+**required** foreign key points at a table nothing supplies — a packet that cannot validate,
+known from two documents with no data in hand. A nullable one is a warning, because
+`generate(only=...)` silently skips a foreign-key check whose target is absent.
+
+### Ordering comes from the adapters, not the registry
+
+A foreign key constrains validity, not write order: Parquet files are independent and nothing
+stops `core.spike_events` being written before `core.units`. What sequences a build is
+data-flow between adapters — `NWBSource` needs the sorter's units before it can attach a unit
+to an electrode — so `session.CONSUMES` states it, and it is short because there is little of
+it. Table-level parallelism would not pay in any case: `core.spike_events` is 99.9% of a
+session's rows.
 
 ### Design decisions carried from the specification
 
@@ -109,18 +138,25 @@ registers under the `nwb_lake.commands` entry-point group, as `nwb-lake-validato
 distributions declaring the same `[project.scripts]` name is a conflict in which the last one
 installed wins silently.
 
-```toml
-[project.entry-points."nwb_lake.commands"]
-import = "nwb_lake_writer.scripts.cli:register"
+```bash
+nwb-lake inspect sorter /data/sorted    # 05 Stage 1: what one source offers
+nwb-lake init --session-id s001 \       # a recipe draft, contested resources flagged
+  --source sorter=/data/sorted --source nwb=/data/session.nwb
+nwb-lake import session.toml --check    # every problem, before any I/O
+nwb-lake import session.toml            # 05 Stages 2-6
 ```
+
+Progress is stamped and flushed. An import is minutes long and its stages cost very
+differently — on a 287 M-spike session, sources then staging then validation — so the log has
+to say where the time went rather than leaving a caller to guess.
 
 ## Where the specification lives
 
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. `05` is the import pipeline. |
-| `revisions/` | R1–R26, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (30 tables) — what a written table must look like. |
+| `revisions/` | R1–R32, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `registry/` | `logical_schemas.json` (33 tables) — what a written table must look like. |
 | `inventory/` | `05` Stage 1 inventories of the real datasets this will import. |
 | `nwb-lake-reader/` | The read path. |
 | `nwb-lake-validator/` | Phase 2. The committer calls this; it is not reimplemented here. |
