@@ -30,6 +30,7 @@ import nwb_lake_writer
 :caption: Contents
 
 api
+performance
 ```
 
 ## Indices and tables

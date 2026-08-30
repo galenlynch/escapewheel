@@ -116,6 +116,21 @@ to an electrode — so `session.CONSUMES` states it, and it is short because the
 it. Table-level parallelism would not pay in any case: `core.spike_events` is 99.9% of a
 session's rows.
 
+### Never leave Arrow inside a per-batch path
+
+Every performance defect found in this package has been the same one: a column turned into
+Python objects inside a loop that runs once per batch. If a line converts a column to a Python
+`list` and its surrounding code runs per batch, it is wrong — `pc.unique`, `pc.equal`,
+`pc.is_in`, `Array.take` and `np.flatnonzero` cover nearly every case and release the GIL.
+
+String identifiers are not the cause and replacing them makes things worse: Parquet
+dictionary-encodes them, so the four-column contextual key is 2.7 MB per million rows against
+195 MB as uncompressed Arrow.
+
+`docs/source/performance.md` carries the measurements, the layout decisions and what they cost
+— read it before changing an encoding, a row-group size or the spill format, each of which has
+already been changed and reverted on evidence.
+
 ### Design decisions carried from the specification
 
 - **Validation is importation** (`05`). Copying bytes is staging. Staged resources MUST NOT
