@@ -5,7 +5,7 @@ Found while writing the Phase 3 adapters against `ecephys_776259_2025-04-09` and
 specification, and each is worked around in `nwb-lake-writer` — the workarounds are noted so
 they can be removed once a fix lands.
 
-Measured 2026-08-28. Nothing here has been filed.
+Measured 2026-08-28 and 2026-08-29. Nothing here has been filed.
 
 ---
 
@@ -142,3 +142,120 @@ ticks count from is PST.
 **Workaround:** `SessionSource` discards stored offsets and re-localizes to a declared IANA
 zone, reporting each disagreement; `NWBSource` keeps the stored value and reports it, because
 a date has nothing to re-localize.
+
+---
+
+## 6. LFP timestamps carry a negated epoch, putting LFP 268 days from the spikes
+
+**Found:** 2026-08-29, `ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31`
+**Repos:** the NWB export
+**Severity:** high — the two are unalignable as stored, and the error is silent
+
+Every `processing/ecephys/LFP/ElectricalSeries*` in this file starts at a large **negative**
+time, while the spikes in the same file start at the same magnitude, positive:
+
+```text
+units/spike_times                 +11575876.219 .. +11582264.099 s
+ElectricalSeries45883-1-LFP       -11575876.314 .. -11569489.315 s
+ElectricalSeries45883-2/3/4-LFP   identical to -1
+```
+
+Both increase, and both span 6,387 s, so the sampling is intact; it is the epoch that is
+signed wrongly. Negating the LFP start gives 11,575,876.314, which agrees with the spike start
+to 0.095 s. Taken at face value the two streams are 23,151,752 s -- 268 days -- apart.
+
+The magnitude is the HARP epoch offset (see §2), so this is the same quantity the spikes use,
+with its sign flipped somewhere in the LFP writer alone.
+
+**Why it is dangerous:** nothing about the value looks wrong in isolation. It is finite,
+monotonic, and correctly spaced; only comparing it against another stream in the same file
+reveals it. An analysis that plots LFP against spike times gets an empty intersection rather
+than an error.
+
+**Workaround:** do not carry the stored timestamps. The sampling is regular to 1.9 ns over
+200,000 samples, so R20 §2's regular form describes the axis exactly -- an origin and a step
+on a declared clock -- and the origin comes from the recording's own start rather than from
+this array. That is the general argument for R20 restated: a derived per-sample time array is
+both 8 M values and an opportunity to be wrong, where three numbers on a clock are neither.
+
+---
+
+## 7. `waveform_mean` declares volts and holds microvolts
+
+**Found:** 2026-08-29, `ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31`
+**Repos:** the NWB export
+**Severity:** medium — a factor of 10^6, silent, and the array carries no conversion to catch it
+
+```text
+units/waveform_mean  .zattrs   unit: "volts"      no conversion attribute
+                      values   -1654.453 .. +1604.289
+core.sorting_runs             amplitude_unit: uV  (from the analyzer's return_in_uV)
+```
+
+Read as declared these are kilovolt-scale waveforms. They are microvolts: the analyzer that
+produced them was set to return microvolts, and ±1.6 mV is an ordinary extracellular spike.
+Unlike an `ElectricalSeries`, which carries a `conversion` alongside `unit` and would make the
+scale recoverable, this `VectorData` has only the label -- so there is nothing in the array to
+reconcile against, and a consumer that trusts the attribute has no way to notice.
+
+**Also:** the same array is `float64` while every value in it round-trips through `float32`
+with **zero** error, and 93.3% of it is exactly zero -- a unit has signal on the contacts it
+sits near and the rest of the 384 are padding. The stored type asserts a precision the source
+never had, since the samples averaged are int16 ADC counts.
+
+**Workaround:** take the unit from `core.sorting_runs.amplitude_unit`, which the analyzer
+actually declares, and record the scale on `core.array_assets.conversion` where a reader can
+find it.
+
+---
+
+## 8. `extremum_channel_index` names a channel the waveform is zero on
+
+**Found:** 2026-08-29, `ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31`
+**Repos:** the sorting pipeline's waveform export
+**Severity:** medium — two fields describing one unit contradict each other, and neither is marked
+
+`units/extremum_channel_index` names a unit's peak contact. `units/waveform_mean` is dense over
+384 channels, padded with zeros outside the contacts the unit was computed on. For 609 of 6,781
+units the declared peak is one of the padded channels:
+
+```text
+units disagreeing                                   609 / 6,781   (9.0%)
+waveform_mean at the declared extremum, agreeing    21.9 uV       (median)
+waveform_mean at the declared extremum, disagreeing 0.0 uV        (609 of 609, exactly)
+```
+
+The file states that a unit's largest waveform is on a channel where it also stores that the
+waveform is identically zero.
+
+**It is a near miss, not a wild index.** The declared extremum sits a median of **one contact**
+from the unit's real support, and within four for 562 of the 609. The sparsity mask and the
+extremum were computed against slightly different neighbourhoods -- a mask recomputed or
+narrowed after the peak was chosen would produce exactly this.
+
+**It is concentrated on one probe.**
+
+| Probe | Disagreeing | Rate |
+|---|---|---|
+| 46116-2 | 219 / 570 | 38.4% |
+| 46116-1 | 114 / 409 | 27.9% |
+| 46116-3 | 166 / 767 | 21.6% |
+| 46116-4 | 44 / 567 | 7.8% |
+| 45883-1 .. 45883-4 | 64 / 2,806 | 0.5-3.8% |
+| 46122 | 2 / 503 | 0.4% |
+| 46110, 46113, 50209 | 0 / 1,159 | 0.0% |
+
+All four shanks of 46116 account for 543 of the 609, and three probes are clean. A systematic
+indexing error would hit every probe alike, so this is a per-probe difference in how the two
+fields were produced.
+
+**Workaround:** none, deliberately. `core.unit_electrodes.is_primary` is left unset for those
+units, so 609 of 6,781 have no primary row and R28 §2.1's *"where is this unit"* cannot be
+answered for them from that table alone. The array's own peak within the support would be a
+plausible substitute -- at a median distance of one contact it is probably even right -- but it
+manufactures a fact the source contradicts itself about and hides the defect behind a
+believable number. The gap is left visible.
+
+**Not currently load-bearing, by luck.** `core.units.default_electrode_id` is null for every
+unit in the packet, so the corpus's `undetected_default` check has nothing to catch. Had the
+adapter filled it from `extremum_channel_index`, all 609 would be validation errors.
