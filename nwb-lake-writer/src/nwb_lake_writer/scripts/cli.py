@@ -158,11 +158,17 @@ def _import(args: argparse.Namespace) -> int:
     def say(line: str) -> None:
         print(f"[{time.perf_counter() - start:6.1f}s] {line}", flush=True)
 
+    # One budget for the build. The CLI wins over the recipe, because the recipe travels with
+    # the data and the machine packaging it does not.
+    budget = args.memory_budget or recipe.memory_budget
     writer = build(recipe, registry, say=say)
-    derive = materializers(recipe)
+    derive = materializers(recipe, memory_budget=budget)
+    limits = {k: v for k, v in recipe.limits.items() if k != "memory_budget"}
+    if budget and "memory_limit" not in limits:
+        limits["memory_limit"] = budget
     out = args.out or recipe.out
     try:
-        report = writer.commit(out, limits=recipe.limits or None, say=say, materialize=derive)
+        report = writer.commit(out, limits=limits or None, say=say, materialize=derive)
     except CommitRefused as exc:
         for finding in exc.report.findings[:20]:
             print(f"  {finding.level:8s} {finding.check}: {finding.message}", file=sys.stderr)
@@ -197,6 +203,13 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     importer.add_argument("--out", type=Path, help="packet root, overriding [packet].out")
     importer.add_argument("--registry", type=Path, help="registry, overriding [packet].registry")
     importer.add_argument("--check", action="store_true", help="check the recipe and stop")
+    importer.add_argument(
+        "--memory-budget",
+        metavar="N",
+        help="what the build may hold before spilling, as bytes or '20GB'; overrides "
+        "[commit].memory_budget, and bounds validation too. Bucketing a spike table is a "
+        "transpose, so its partition either fits in memory or goes to disk",
+    )
     importer.add_argument(
         "--sample",
         type=int,

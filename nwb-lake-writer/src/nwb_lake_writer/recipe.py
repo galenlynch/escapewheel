@@ -306,6 +306,17 @@ class Recipe:
         return replace(self, document=document, sources=sources, digest=hashlib.sha256(canonical).hexdigest())
 
     @property
+    def memory_budget(self) -> int | str:
+        """What `[commit].memory_budget` allows a build to hold before it spills.
+
+        One budget for the whole build rather than one per stage, because the stages that want
+        memory do not overlap: the partition is built, then released, then the rules run. The
+        peak is the larger of the two, not their sum, so each may have all of it.
+        """
+        budget: int | str = self.limits.get("memory_budget", 0)
+        return budget
+
+    @property
     def owners(self) -> dict[str, list[str]]:
         """Resource ID to the source kinds claiming it exclusively."""
         return self._claims("owns")

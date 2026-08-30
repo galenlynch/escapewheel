@@ -200,7 +200,7 @@ def _derive(options: Mapping[str, Any], packet: Any, writer: Any) -> None:
     materialize.into(packet, writer, **options)
 
 
-def materializers(recipe: Recipe) -> list[Callable[[Any, Any], None]]:
+def materializers(recipe: Recipe, memory_budget: int | str = 0) -> list[Callable[[Any, Any], None]]:
     """Turn a recipe's `[[materialize]]` entries into callables `commit` can run.
 
     Each is handed the staged packet and the writer, which is the pair `materialize.into` wants:
@@ -211,6 +211,10 @@ def materializers(recipe: Recipe) -> list[Callable[[Any, Any], None]]:
     ----------
     recipe : Recipe
         The parsed recipe.
+    memory_budget : int or str, optional
+        Passed to any materializer that does not set its own. Bucketing a spike table is a
+        transpose, so the partition either fits in memory or goes to disk, and which of those
+        is sensible belongs to the machine rather than to the data.
 
     Returns
     -------
@@ -227,7 +231,10 @@ def materializers(recipe: Recipe) -> list[Callable[[Any, Any], None]]:
         if spec.resource not in MATERIALIZERS:
             known = ", ".join(sorted(MATERIALIZERS)) or "nothing"
             raise RecipeError(f"no materializer for {spec.resource}; this writer derives {known}")
-        built.append(partial(_derive, dict(spec.options)))
+        options = dict(spec.options)
+        if memory_budget and "memory_budget" not in options:
+            options["memory_budget"] = memory_budget
+        built.append(partial(_derive, options))
     return built
 
 

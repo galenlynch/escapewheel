@@ -43,6 +43,9 @@ from .align import BOUND, align
 #: Rows per batch, and therefore per row group and per unit of writer memory. Measured: 128 K
 #: costs 0.6% in bytes over 1 M once `t_tick` is not dictionary-encoded, and is what makes the
 #: unit filter prune within a bucket (R30 §6).
+#: The resource these buckets become, so the spill can take the encoding its columns want.
+RESOURCE = "analysis.spike_events"
+
 BATCH_ROWS = 1 << 17
 
 #: Bucket width in seconds of the reference clock. The dial trades scattered-unit access
@@ -120,6 +123,38 @@ def _mapped(batch: pa.RecordBatch, reference: str, anchors: Any, bound: float) -
     return parent, keep
 
 
+def _bytes(budget: int | str) -> int:
+    """Parse a byte budget written as a number or as `"10GB"`, `"512MB"`, `"2G"`."""
+    if isinstance(budget, int):
+        return budget
+    text = budget.strip().upper().removesuffix("B")
+    scale = {"K": 1 << 10, "M": 1 << 20, "G": 1 << 30, "T": 1 << 40}
+    if text and text[-1] in scale:
+        return int(float(text[:-1]) * scale[text[-1]])
+    return int(float(text))
+
+
+def _packed(batch: pa.RecordBatch) -> pa.RecordBatch:
+    """Hold a batch with its identifiers as dictionary codes rather than strings.
+
+    36 bytes a row against 195, which is what decides whether a session's partition can be
+    held at all: 10.4 GB against 56 GB over 287 M spikes. The codes are what Parquet would
+    store anyway, so nothing is lost and the decode is deferred to the one place it was always
+    going to happen.
+    """
+    columns = [
+        column.dictionary_encode() if pa.types.is_string(field.type) else column
+        for column, field in zip(batch.columns, batch.schema, strict=True)
+    ]
+    return pa.record_batch(columns, names=batch.schema.names)
+
+
+def _unpacked(batch: pa.RecordBatch, out: pa.Schema) -> pa.RecordBatch:
+    """Return a held batch to the schema the table declares."""
+    columns = [column.cast(field.type) for column, field in zip(batch.columns, out, strict=True)]
+    return pa.record_batch(columns, schema=out)
+
+
 class _Buckets:
     """Per-bucket Parquet spill files, written in the order rows arrive.
 
@@ -138,28 +173,56 @@ class _Buckets:
     concatenate the files in bucket order, which is a second pass and no comparisons.
     """
 
-    def __init__(self, root: Path, out: pa.Schema) -> None:
+    def __init__(self, root: Path, out: pa.Schema, budget: int = 0) -> None:
+        from .writer import _delta_columns
+
         self._root = root
         self._out = out
+        # The spill gets the encoding the finished table gets. Its own bytes have no reader,
+        # but a tick column left to pyarrow's default overflows the dictionary page and falls
+        # back to PLAIN mid-column, paying for both: 1,195 MB and 77.4 s against 500 MB and
+        # 60.9 s, at no cost in memory.
+        delta = _delta_columns(RESOURCE, out)
+        self._options: dict[str, Any] = {"compression": "zstd"}
+        if delta:
+            self._options["use_dictionary"] = [n for n in out.names if n not in delta]
+            self._options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
+        self._budget = budget
+        # Packing is for holding, not for writing. A batch on its way to disk is about to be
+        # dictionary-encoded by Parquet anyway, so encoding it here and decoding it back costs
+        # 82 s over a session and buys nothing.
+        self._pack = budget > 0
+        self._bytes = 0
         self._writers: dict[int, pq.ParquetWriter] = {}
         self._held: dict[int, list[pa.RecordBatch]] = {}
         self._rows: dict[int, int] = {}
 
     def add(self, bucket: int, batch: pa.RecordBatch) -> None:
-        self._held.setdefault(bucket, []).append(batch)
-        self._rows[bucket] = self._rows.get(bucket, 0) + batch.num_rows
-        if self._rows[bucket] >= BATCH_ROWS:
-            self._flush(bucket)
+        packed = _packed(batch) if self._pack else batch
+        self._held.setdefault(bucket, []).append(packed)
+        self._rows[bucket] = self._rows.get(bucket, 0) + packed.num_rows
+        self._bytes += packed.nbytes
+        while self._bytes > self._budget:
+            # Only buckets holding a whole batch are worth writing. The budget is a target
+            # rather than a wall: with nothing full enough to spill, holding a little more
+            # beats a stream of tiny row groups, and the excess is bounded by one batch per
+            # bucket. Biggest first, so one write buys the most room.
+            ready = [b for b in self._held if self._rows[b] >= BATCH_ROWS]
+            if not ready:
+                break
+            self._flush(max(ready, key=lambda b: self._rows[b]))
 
     def _flush(self, bucket: int) -> None:
         held = self._held.pop(bucket, [])
         self._rows[bucket] = 0
+        self._bytes -= sum(b.nbytes for b in held)
         if not held:
             return
         if bucket not in self._writers:
             path = self._root / f"bucket-{bucket:012d}.parquet"
-            self._writers[bucket] = pq.ParquetWriter(path, self._out, compression="zstd")
-        self._writers[bucket].write_table(pa.Table.from_batches(held, schema=self._out))
+            self._writers[bucket] = pq.ParquetWriter(path, self._out, **self._options)
+        rows = [_unpacked(b, self._out) for b in held] if self._pack else held
+        self._writers[bucket].write_table(pa.Table.from_batches(rows, schema=self._out))
 
     def drain(self) -> Iterator[pa.RecordBatch]:
         """Yield every bucket's rows in bucket order, in batches of at most `BATCH_ROWS`.
@@ -168,14 +231,19 @@ class _Buckets:
         (R30 §3.2). Row groups cut at a fixed row count would straddle boundaries and span
         twice the intended time range.
         """
-        # Over the union, not over `_writers`: a bucket holding fewer than one batch has no
-        # writer yet, and iterating the writers alone would drop it without a word.
-        for bucket in sorted(set(self._writers) | set(self._held)):
+        # A bucket that never exceeded the budget has no writer and never reached disk; it is
+        # yielded from memory. One that did keeps its remainder in `_held`, so it is flushed
+        # first and read back whole.
+        for bucket in sorted(self._writers):
             self._flush(bucket)
             self._writers[bucket].close()
-        for bucket in sorted(self._writers):
-            path = self._root / f"bucket-{bucket:012d}.parquet"
-            yield from pq.ParquetFile(path).iter_batches(batch_size=BATCH_ROWS)
+        for bucket in sorted(set(self._writers) | set(self._held)):
+            if bucket in self._writers:
+                path = self._root / f"bucket-{bucket:012d}.parquet"
+                yield from pq.ParquetFile(path).iter_batches(batch_size=BATCH_ROWS)
+            else:
+                for batch in self._held[bucket]:
+                    yield _unpacked(batch, self._out) if self._pack else batch
 
 
 def spike_events(
@@ -185,6 +253,7 @@ def spike_events(
     bound: float = BOUND,
     bucket_seconds: int = BUCKET_SECONDS,
     scratch: Path | None = None,
+    memory_budget: int | str = 0,
 ) -> Iterator[pa.RecordBatch]:
     """`analysis.spike_events` -- core spikes on the reference clock, bucketed by time.
 
@@ -207,6 +276,16 @@ def spike_events(
     scratch : Path, optional
         Where the per-bucket spill files go. Defaults to a temporary directory beside the
         packet, so a large session does not land on a tmpfs `/tmp`.
+    memory_budget : int or str, optional
+        Bytes the partition may occupy before it spills, as a number or a string such as
+        `"10GB"`. Bucketing is a transpose -- every unit spans every bucket, so no streaming
+        pass can emit in order -- and the partition either fits in memory or goes to disk.
+        Held with identifiers as dictionary codes it is 36 bytes a row, so a session of 287 M
+        spikes wants 10.4 GB; the same rows spill to 0.5 GB of Parquet instead. Zero, the
+        default, holds no more than one batch per bucket, because whether ten gigabytes is
+        reasonable or ruinous is a property of the machine packaging the data rather than of
+        the data. It buys about 8% on a session of this size, so spilling is the default for
+        being the cheaper resource, not the faster path.
 
     Yields
     ------
@@ -230,7 +309,7 @@ def spike_events(
     )
 
     root = Path(scratch) if scratch else Path(tempfile.mkdtemp(prefix=".materialize-", dir=packet.root.parent))
-    buckets = _Buckets(root, out)
+    buckets = _Buckets(root, out, _bytes(memory_budget))
     try:
         for batch in pq.ParquetFile(handle.path).iter_batches(batch_size=BATCH_ROWS, columns=columns):
             parent, keep = _mapped(batch, reference, anchors, bound)
@@ -278,6 +357,8 @@ def into(
     bound: float = BOUND,
     bucket_seconds: int = BUCKET_SECONDS,
     run_id: str = RUN_ID,
+    memory_budget: int | str = 0,
+    scratch: Path | None = None,
 ) -> str:
     """Add `analysis.spike_events` to a writer, with the provenance `06` and R31 require.
 
@@ -287,7 +368,9 @@ def into(
 
     `bucket_seconds` goes in `parameters` because it cannot be recovered from the data -- a
     table whose buckets all happen to be non-empty looks the same at 300 s as at 299 s
-    (R31 §3).
+    (R31 §3). `memory_budget` and `scratch` do not: they change how the rows are produced, not
+    which rows they are, and recording them would make two identical packets claim different
+    provenance.
 
     Returns
     -------
@@ -298,7 +381,17 @@ def into(
 
     resource = "analysis.spike_events"
     started = datetime.now(tz=timezone.utc)
-    writer.add_batches(resource, spike_events(packet, reference=reference, bound=bound, bucket_seconds=bucket_seconds))
+    writer.add_batches(
+        resource,
+        spike_events(
+            packet,
+            reference=reference,
+            bound=bound,
+            bucket_seconds=bucket_seconds,
+            memory_budget=memory_budget,
+            scratch=scratch,
+        ),
+    )
     writer.derives(resource, ["core.spike_events", "core.clock_anchors", "core.clocks"])
     writer.add(
         "core.processing_runs",

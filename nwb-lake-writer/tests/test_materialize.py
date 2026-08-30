@@ -220,3 +220,29 @@ def test_the_bucket_width_is_recorded_because_it_cannot_be_recovered(tmp_path):
     writer = Recorder()
     into(Fake(tmp_path, ticks=[1000], clocks=[PROBE]), writer, bucket_seconds=17)
     assert writer.tables["core.processing_runs"][0]["parameters"]["bucket_seconds"] == 17
+
+
+def test_a_budget_keeps_the_partition_in_memory(tmp_path):
+    """Given room the partition never reaches disk, and the rows are the same either way."""
+    scratch = tmp_path / "spill"
+    scratch.mkdir()
+    spilled = rows(Fake(tmp_path, ticks=[1000, 1000 + AP], clocks=[PROBE] * 2), scratch=scratch)
+
+    held_dir = tmp_path / "held"
+    held_dir.mkdir()
+    held = rows(
+        Fake(tmp_path, ticks=[1000, 1000 + AP], clocks=[PROBE] * 2),
+        scratch=held_dir,
+        memory_budget="1GB",
+    )
+    assert not list(held_dir.glob("*.parquet")), "a budget this large spills nothing"
+    assert held == spilled
+
+
+def test_a_byte_budget_reads_the_units_it_is_written_in():
+    from nwb_lake_writer.materialize import _bytes
+
+    assert _bytes("10GB") == 10 * (1 << 30)
+    assert _bytes("512MB") == 512 * (1 << 20)
+    assert _bytes("2G") == 2 * (1 << 30)
+    assert _bytes(0) == 0
