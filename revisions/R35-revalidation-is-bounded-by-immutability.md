@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-08-30 |
+| **Status** | **Accepted** 2026-08-30 |
 | **Amends** | R32 §5 |
 | **Depends on** | R12 (physical order is not a SQL rule), R14 (external resources), R32 (amending a committed packet) |
 | **Profile** | `nwb-lake-portable-v0.1` |
