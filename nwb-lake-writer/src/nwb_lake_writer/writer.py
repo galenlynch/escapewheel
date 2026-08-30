@@ -122,6 +122,13 @@ def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> dict[
     is checked by the validator's physical-order shim (R12 §4) before the commit completes.
     """
     options: dict[str, Any] = {"compression": "zstd"}
+    # A caller may hand over a column as dictionary codes rather than decoding what Parquet is
+    # about to re-encode. Parquet has no dictionary type -- the column is BYTE_ARRAY/String
+    # either way -- so the only thing that would record the choice is the Arrow schema pyarrow
+    # stores as metadata, and storing it would make the file advertise a type the registry does
+    # not declare. Withhold it, and the file reads back as the registry says.
+    if any(pa.types.is_dictionary(field.type) for field in out):
+        options["store_schema"] = False
     if delta := _delta_columns(resource_id, out):
         options["use_dictionary"] = [n for n in out.names if n not in delta]
         options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
@@ -170,6 +177,22 @@ def _prefetch(batches: Iterable[pa.RecordBatch], depth: int = PREFETCH) -> Itera
         worker.join(timeout=0)
 
 
+def _as_held(out: pa.Schema, held: pa.Schema) -> pa.Schema:
+    """Take the registry's schema, but keep a column the caller already holds as codes.
+
+    Decoding a dictionary here would only hand Parquet strings it is about to dictionary-encode
+    again. The value type must still match what the registry declares; only the encoding is the
+    caller's to choose.
+    """
+    fields = []
+    for field in out:
+        carried = held.field(field.name).type if field.name in held.names else None
+        if carried is not None and pa.types.is_dictionary(carried) and carried.value_type == field.type:
+            field = field.with_type(carried)
+        fields.append(field)
+    return pa.schema(fields)
+
+
 def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], path: Path, resource_id: str) -> None:
     """Write batches to Parquet one row group at a time, casting each to the registry schema.
 
@@ -206,7 +229,7 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
         # either side of it lets all three run at once, and the slowest one sets the pace.
         for batch in _prefetch(_prefetch(verify_order(batches, keys, unique)) if keys else batches):
             if out is None:
-                out = schema(spec, set(batch.schema.names))
+                out = _as_held(schema(spec, set(batch.schema.names)), batch.schema)
                 writer = pq.ParquetWriter(path, out, **_options(resource_id, spec, out))
             if extra := sorted(set(batch.schema.names) - set(out.names)):
                 raise ValueError(

@@ -123,13 +123,14 @@ Python objects inside a loop that runs once per batch. If a line converts a colu
 `list` and its surrounding code runs per batch, it is wrong — `pc.unique`, `pc.equal`,
 `pc.is_in`, `Array.take` and `np.flatnonzero` cover nearly every case and release the GIL.
 
-String identifiers are not the cause and replacing them makes things worse: Parquet
-dictionary-encodes them, so the four-column contextual key is 2.7 MB per million rows against
-195 MB as uncompressed Arrow.
+Storing a string identifier is not the cause — Parquet dictionary-encodes them, and all five
+identity columns of `core.spike_events` are 1.4% of the file. **Converting one is.** Carry the
+codes: `read_dictionary=` on the way in, `store_schema=False` so the file still advertises the
+registry's type, and never a `pc.less` on a dictionary, which decodes both sides.
 
-`docs/source/performance.md` carries the measurements, the layout decisions and what they cost
-— read it before changing an encoding, a row-group size or the spill format, each of which has
-already been changed and reverted on evidence.
+`docs/source/performance.md` carries the measurements, the dictionary rules, the layout
+decisions and what they cost — read it before changing an encoding, a row-group size or the
+spill format, each of which has already been changed and reverted on evidence.
 
 ### Design decisions carried from the specification
 

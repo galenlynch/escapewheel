@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -52,6 +52,16 @@ BATCH_ROWS = 1 << 17
 #: against time-window access, through how many row groups fit in one bucket; 300 s was the
 #: best of 10/60/300 on a 5,364 s session with 7,291 units. Not normative (R30 §3.3).
 BUCKET_SECONDS = 300
+
+#: How the identity columns are held. A dictionary is an encoding, not a type -- Parquet writes
+#: BYTE_ARRAY/String either way -- so this changes what the pipeline carries, not what it emits.
+DICT = pa.dictionary(pa.int32(), pa.string())
+
+
+def _constant(value: str, rows: int) -> pa.DictionaryArray[Any, Any]:
+    """Return a column of one repeated string, held as codes into a one-entry dictionary."""
+    codes = pa.array(np.zeros(rows, dtype=np.int32), type=pa.int32())
+    return pa.DictionaryArray.from_arrays(codes, pa.array([value]))
 
 
 class NotAligned(ValueError):
@@ -112,8 +122,10 @@ def _mapped(batch: pa.RecordBatch, reference: str, anchors: Any, bound: float) -
     # stream is one run, so this loop runs once or twice. Its *body* must still stay in Arrow:
     # asking for the column as Python strings to group it costs a string object per spike, and
     # the comparison that follows is over a handful of distinct values either way.
-    for name in [n for n in pc.unique(clocks).to_pylist() if n is not None]:
-        where = np.flatnonzero(pc.equal(clocks, pa.scalar(name, pa.string())).to_numpy(zero_copy_only=False))
+    for name in _values(clocks):
+        where = _where(clocks, name)
+        if not where.size:
+            continue
         if name == reference:
             parent[where], keep[where] = ticks[where], True
             continue
@@ -121,6 +133,29 @@ def _mapped(batch: pa.RecordBatch, reference: str, anchors: Any, bound: float) -
             raise NotAligned(f"{name} carries no anchors, so its ticks reach no reference clock")
         parent[where], keep[where] = align(ticks[where], *anchors[name], bound=bound)
     return parent, keep
+
+
+def _values(column: Any) -> list[str]:
+    """Distinct values of a string column, read from the dictionary where there is one.
+
+    A dictionary already lists them, so this is a read of a handful of entries rather than a
+    scan. It may name a value no row in this batch uses, which is why the caller skips an empty
+    selection rather than trusting the list to be tight.
+    """
+    listed = column.dictionary if pa.types.is_dictionary(column.type) else pc.unique(column)
+    return [v for v in listed.to_pylist() if v is not None]
+
+
+def _where(column: Any, value: str) -> NDArray[np.int64]:
+    """Offsets where a string column equals `value`, comparing codes where it is a dictionary."""
+    if pa.types.is_dictionary(column.type):
+        code = column.dictionary.index(value).as_py()
+        if code is None or code < 0:
+            return np.empty(0, dtype=np.int64)
+        matches = pc.equal(column.indices, pa.scalar(code, column.indices.type))
+    else:
+        matches = pc.equal(column, pa.scalar(value, pa.string()))
+    return np.flatnonzero(pc.fill_null(matches, False).to_numpy(zero_copy_only=False))
 
 
 def _bytes(budget: int | str) -> int:
@@ -134,25 +169,30 @@ def _bytes(budget: int | str) -> int:
     return int(float(text))
 
 
-def _packed(batch: pa.RecordBatch) -> pa.RecordBatch:
-    """Hold a batch with its identifiers as dictionary codes rather than strings.
+def _coalesced(batches: Iterable[pa.RecordBatch], out: pa.Schema) -> Iterator[pa.RecordBatch]:
+    """Merge small batches up to `BATCH_ROWS`, so held rows yield the row groups spilled ones do.
 
-    36 bytes a row against 195, which is what decides whether a session's partition can be
-    held at all: 10.4 GB against 56 GB over 287 M spikes. The codes are what Parquet would
-    store anyway, so nothing is lost and the decode is deferred to the one place it was always
-    going to happen.
+    A core batch spans many buckets, so splitting it leaves each bucket a handful of rows. Held
+    and yielded as they arrive those become row groups of a couple of thousand rows: measured,
+    140,315 groups against 2,197, and a table half again as large for the per-group overhead.
     """
-    columns = [
-        column.dictionary_encode() if pa.types.is_string(field.type) else column
-        for column, field in zip(batch.columns, batch.schema, strict=True)
-    ]
-    return pa.record_batch(columns, names=batch.schema.names)
+    held: list[pa.RecordBatch] = []
+    rows = 0
+    for batch in batches:
+        held.append(batch)
+        rows += batch.num_rows
+        if rows >= BATCH_ROWS:
+            yield _merged(held, out)
+            held, rows = [], 0
+    if held:
+        yield _merged(held, out)
 
 
-def _unpacked(batch: pa.RecordBatch, out: pa.Schema) -> pa.RecordBatch:
-    """Return a held batch to the schema the table declares."""
-    columns = [column.cast(field.type) for column, field in zip(batch.columns, out, strict=True)]
-    return pa.record_batch(columns, schema=out)
+def _merged(held: list[pa.RecordBatch], out: pa.Schema) -> pa.RecordBatch:
+    """Concatenate held batches into one, unifying the dictionaries they were built with."""
+    if len(held) == 1:
+        return held[0]
+    return pa.Table.from_batches(held, schema=out).combine_chunks().to_batches()[0]
 
 
 class _Buckets:
@@ -188,20 +228,18 @@ class _Buckets:
             self._options["use_dictionary"] = [n for n in out.names if n not in delta]
             self._options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
         self._budget = budget
-        # Packing is for holding, not for writing. A batch on its way to disk is about to be
-        # dictionary-encoded by Parquet anyway, so encoding it here and decoding it back costs
-        # 82 s over a session and buys nothing.
-        self._pack = budget > 0
+        # Read back as codes, the way they were written. A spill that decoded on the way out
+        # would hand the table writer strings it is about to dictionary-encode again.
+        self._coded = [f.name for f in out if pa.types.is_dictionary(f.type)]
         self._bytes = 0
         self._writers: dict[int, pq.ParquetWriter] = {}
         self._held: dict[int, list[pa.RecordBatch]] = {}
         self._rows: dict[int, int] = {}
 
     def add(self, bucket: int, batch: pa.RecordBatch) -> None:
-        packed = _packed(batch) if self._pack else batch
-        self._held.setdefault(bucket, []).append(packed)
-        self._rows[bucket] = self._rows.get(bucket, 0) + packed.num_rows
-        self._bytes += packed.nbytes
+        self._held.setdefault(bucket, []).append(batch)
+        self._rows[bucket] = self._rows.get(bucket, 0) + batch.num_rows
+        self._bytes += batch.nbytes
         while self._bytes > self._budget:
             # Only buckets holding a whole batch are worth writing. The budget is a target
             # rather than a wall: with nothing full enough to spill, holding a little more
@@ -221,8 +259,7 @@ class _Buckets:
         if bucket not in self._writers:
             path = self._root / f"bucket-{bucket:012d}.parquet"
             self._writers[bucket] = pq.ParquetWriter(path, self._out, **self._options)
-        rows = [_unpacked(b, self._out) for b in held] if self._pack else held
-        self._writers[bucket].write_table(pa.Table.from_batches(rows, schema=self._out))
+        self._writers[bucket].write_table(pa.Table.from_batches(held, schema=self._out))
 
     def drain(self) -> Iterator[pa.RecordBatch]:
         """Yield every bucket's rows in bucket order, in batches of at most `BATCH_ROWS`.
@@ -240,10 +277,14 @@ class _Buckets:
         for bucket in sorted(set(self._writers) | set(self._held)):
             if bucket in self._writers:
                 path = self._root / f"bucket-{bucket:012d}.parquet"
-                yield from pq.ParquetFile(path).iter_batches(batch_size=BATCH_ROWS)
+                reader = pq.ParquetFile(path, read_dictionary=self._coded or None)
+                # Coalesced on the way out as well as on the way in: reading a column as codes
+                # cuts a batch wherever the dictionary changes, so `batch_size` is a ceiling
+                # and not the size, and each short batch would become its own row group.
+                batches = _coalesced(reader.iter_batches(batch_size=BATCH_ROWS), self._out)
             else:
-                for batch in self._held[bucket]:
-                    yield _unpacked(batch, self._out) if self._pack else batch
+                batches = _coalesced(self._held[bucket], self._out)
+            yield from batches
 
 
 def spike_events(
@@ -303,15 +344,20 @@ def spike_events(
     anchors = _anchors(packet)
     handle = packet.table_resource("core.spike_events")
     columns = ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick", "clock_id"]
+    coded = [n for n in columns if n != "t_tick"]
+    # The identifiers stay as dictionary codes from the core file to the finished table. They
+    # are what Parquet stores at both ends, so decoding them here would only be undone twice:
+    # 1.05 s and 9.13 GB of Arrow per 40 row groups decoded, against 0.15 s and 1.27 GB held.
     out = pa.schema(
-        [pa.field(n, pa.string()) for n in columns[:4]]
-        + [pa.field("t_tick", pa.int64()), pa.field("clock_id", pa.string()), pa.field("time_bucket_tick", pa.int64())]
+        [pa.field(n, DICT) for n in columns[:4]]
+        + [pa.field("t_tick", pa.int64()), pa.field("clock_id", DICT), pa.field("time_bucket_tick", pa.int64())]
     )
 
     root = Path(scratch) if scratch else Path(tempfile.mkdtemp(prefix=".materialize-", dir=packet.root.parent))
     buckets = _Buckets(root, out, _bytes(memory_budget))
     try:
-        for batch in pq.ParquetFile(handle.path).iter_batches(batch_size=BATCH_ROWS, columns=columns):
+        reader = pq.ParquetFile(handle.path, read_dictionary=coded)
+        for batch in reader.iter_batches(batch_size=BATCH_ROWS, columns=columns):
             parent, keep = _mapped(batch, reference, anchors, bound)
             if not keep.any():
                 continue
@@ -327,7 +373,10 @@ def spike_events(
                     "sorting_run_id": batch.column("sorting_run_id").take(taken),
                     "curation_id": batch.column("curation_id").take(taken),
                     "t_tick": pa.array(ticks, type=pa.int64()),
-                    "clock_id": pa.repeat(pa.scalar(reference, pa.string()), taken.size),
+                    # One code repeated, not one string per spike: every row is on the
+                    # reference clock by construction, so the column is 4 bytes a row rather
+                    # than a pointer and a copy of the name.
+                    "clock_id": _constant(reference, taken.size),
                     "time_bucket_tick": pa.array(starts, type=pa.int64()),
                 },
                 schema=out,

@@ -24,14 +24,67 @@ and its comprehension ran 131,072 times.
 Not every `to_pylist()` qualifies. `_tick_rate` calls one on `core.clocks`, thirteen rows, and
 `arrow._plain` normalises single metadata values. The test is whether the call runs per batch.
 
-## String identifiers are not the cause
+## Storing a string identifier is cheap; converting one is not
 
-Parquet dictionary-encodes them. `session_id` is 6 KB across 287 M rows; a million rows of
-R5's four-column contextual unit key are 2.7 MB, against 195 MB as uncompressed Arrow IPC.
-Decoding an identifier into Python costs; storing and comparing one does not.
+Parquet dictionary-encodes them. All five identity columns of `core.spike_events` are 9.45 MB
+of 681 MB — 1.4% — and `unit_id` costs 0.0068 bytes a spike. A surrogate integer would not be
+smaller. This is also why `materialize.py` spills to Parquet despite a spill having no reader
+to benefit: an Arrow IPC spill took 321.8 s against 76.6 s.
 
-This is why `materialize.py` spills to Parquet despite a spill having no reader to benefit from
-the encoding. An Arrow IPC spill took 321.8 s against 76.6 s.
+What costs is converting between representations, and the default path used to do it four
+times: Parquet decode, encode to spill, decode on read-back, encode to the table. Reading 40
+row groups of the five identity columns:
+
+| | time | Arrow held |
+|---|---|---|
+| decoded to strings | 1.05 s | 9.13 GB |
+| held as codes | 0.15 s | 1.27 GB |
+
+**Carry the codes end to end.** `analysis.spike_events` now converts zero times: the identity
+columns leave `core.spike_events` as `dictionary<int32, string>` and reach the finished table
+still as codes.
+
+## Dictionaries in pyarrow
+
+A dictionary is an *encoding*, not a type. Parquet has no dictionary type — the column is
+`BYTE_ARRAY`/`String` either way, and only the Arrow schema pyarrow stores as file metadata
+records the choice. That single fact settles most of the rules below.
+
+**Ask for codes on the way in.** `pq.ParquetFile(path, read_dictionary=[...])`, not
+`read_table` followed by `dictionary_encode`.
+
+**Do not advertise them.** Writing a dictionary column stores an Arrow schema saying so, and
+the file then reads back as a dictionary by default — a type the registry does not declare.
+`store_schema=False` withholds it; every other type survives, timestamps and their zone
+included. `_as_held` and `_options` in `writer.py` are that pair.
+
+**Never compare codes for order.** A dictionary is unordered, so code order is not value order.
+Comparing `.indices` is valid only for equality, and only within one dictionary.
+
+**Do not hand a dictionary to a comparison kernel either.** `pc.less` and `pc.equal` accept one
+and are correct, but they decode both sides on every call. Compare the *rank* of the dictionary
+values instead: rank the dictionary once — a few hundred entries beside a batch of a hundred
+thousand rows — and compare int32. Per column of 131,072 rows:
+
+| | |
+|---|---|
+| plain string | 0.682 ms |
+| dictionary handed to `pc.less`/`pc.equal` | 2.369 ms |
+| rank of the dictionary value, as int32 | 0.147 ms |
+
+`_ranked` in `nwb_lake_validator.validator` is this, and it makes the ordering scan faster on
+coded columns than on decoded ones.
+
+**`batch_size` becomes a ceiling.** `iter_batches(read_dictionary=...)` cuts a batch wherever
+the dictionary changes. Left alone that doubled `analysis.spike_events` to 4,242 row groups;
+where one batch is one row group, coalesce before writing.
+
+**A constant column is a one-entry dictionary.** `pa.repeat(pa.scalar(name), n)` builds n
+strings; codes into a single-entry dictionary are 4 bytes a row.
+
+**`take` gathers codes.** It keeps the dictionary and touches no characters.
+`Table.from_batches` accepts chunks with differing dictionaries; `combine_chunks()` unifies
+them, which costs — so merge once, not per batch.
 
 ## Layout
 
@@ -51,19 +104,32 @@ supported. Measured identically with and without.
 **One batch is exactly one row group.** `ParquetWriter.write_batch` defaults to cutting at 2²⁰
 rows, so R30 §3.2's guarantee must be asked for explicitly.
 
-## Where an import spends 243.9 s
+## Where an import spends 105.1 s
+
+A complete 23-resource packet, `--memory-budget 20GB`, one command:
 
 ```text
 sources                    9.5 s
-stage core                59.9 s   core.spike_events is 99.9% of the rows
-derive and stage analysis 97.8 s   spill write about half, clock arithmetic 7%
-validate                  76.8 s   Tier 1 and Tier 2 over two 287 M-row tables
+stage core                50.5 s   core.spike_events is 99.9% of the rows
+derive and stage analysis 32.7 s
+validate                  12.5 s   Tier 1 and Tier 2 over two 287 M-row tables
 promote                    0.0 s
 ```
 
 Physical order is established while staging, so validation does not re-read 467 MB of sort
 columns. The comparison runs on the batches in its own pipeline stage, and `commit` passes the
 resources it settled to `validate(scan=...)`.
+
+Materializing `analysis.spike_events` alone, and validating a packet of unknown provenance,
+where that shortcut does not apply:
+
+| | spill | held (20 GB) | validate |
+|---|---|---|---|
+| decoded identifiers | 96.1 s | 191.9 s | 66.3 s |
+| codes carried through | 58.5 s | 34.5 s | 37.1 s |
+
+Spilling to tmpfs instead of disk is worth 4.6% (55.8 s against 58.5) and costs 479 MB of RAM
+that a cgroup will not cap. `--scratch` reaches it; nothing special-cases it.
 
 ## Checking a change
 
