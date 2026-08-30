@@ -34,7 +34,8 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 from nwb_lake_reader import Manifest, Packet, open_packet
-from nwb_lake_validator import Report, validate
+from nwb_lake_validator import Report, validate, verify_order
+from nwb_lake_validator.generate import adjacency_settles_uniqueness
 
 from .arrow import build, schema, sort_key
 
@@ -190,7 +191,20 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
     writer: pq.ParquetWriter | None = None
     out: pa.Schema | None = None
     try:
-        for batch in _prefetch(batches):
+        # Verified on the way in, not read back afterwards. The rows pass through here
+        # already sorted by the source, so comparing them costs the comparison alone, where
+        # establishing the same fact from the written file costs re-reading its sort columns --
+        # 467 MB on a quarter of a billion spikes. It runs inside the producer thread, so the
+        # comparison overlaps the Parquet encoding rather than adding to it. `commit` tells the
+        # validator which resources this settled; a validator handed an unknown packet still
+        # reads every one.
+        keys = sort_key(spec) or []
+        unique = spec["primary_key"] if keys and adjacency_settles_uniqueness(spec) else None
+        # Three stages, not two: building a batch, comparing it and encoding it cost 2.5 s,
+        # 2.2 s and 2.6 s on a 23 M-spike stream, so folding the comparison into the producer
+        # made it the bottleneck and gave back exactly what skipping the re-read saved. A queue
+        # either side of it lets all three run at once, and the slowest one sets the pace.
+        for batch in _prefetch(_prefetch(verify_order(batches, keys, unique)) if keys else batches):
             if out is None:
                 out = schema(spec, set(batch.schema.names))
                 writer = pq.ParquetWriter(path, out, **_options(resource_id, spec, out))
@@ -297,6 +311,7 @@ class PacketWriter:
         self._batches: dict[str, Iterable[pa.RecordBatch]] = {}
         self._derived: dict[str, list[str]] = {}
         self._runs: dict[str, str] = {}
+        self._ordered: set[str] = set()
         self._staged_arrays: dict[str, StagedArray] = {}
 
     def add(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> None:
@@ -467,8 +482,13 @@ class PacketWriter:
         return entries
 
     def _stage(self, staging: Path) -> list[dict[str, Any]]:
-        """Write every table under `staging` and return its manifest entries."""
+        """Write every table under `staging` and return its manifest entries.
+
+        Records in `_ordered` the resources whose physical order `_write_stream` established as
+        it wrote them, so the commit that follows need not read them back to learn it.
+        """
         entries = []
+        self._ordered = set()
         for resource_id in self.resources:
             spec = self._registry["tables"][resource_id]
             namespace, name = resource_id.split(".", 1)
@@ -477,6 +497,8 @@ class PacketWriter:
             path.parent.mkdir(parents=True, exist_ok=True)
             if resource_id in self._batches:
                 _write_stream(spec, self._batches[resource_id], path, resource_id)
+                if sort_key(spec):
+                    self._ordered.add(resource_id)
             else:
                 table = build(spec, self._tables[resource_id])
                 # No `row_group_size`: pyarrow's default is min(rows, 2**20), which puts each
@@ -600,7 +622,11 @@ class PacketWriter:
         #    so the candidate is written into staging rather than at the root, where its
         #    presence would announce a packet that is not yet committed.
         (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, None), indent=2) + "\n")
-        report = validate(open_packet(staging), limits=limits)
+        # Scan the order of everything except what `_write_stream` compared on the way in.
+        # Not a shortcut around the check: the same comparison ran, over the same rows, from
+        # the same code, one step earlier (R12 §4 still governs where it lives).
+        staged = {e["resource_id"] for e in entries}
+        report = validate(open_packet(staging), limits=limits, scan=staged - self._ordered)
         say(f"validated in {time.perf_counter() - clock:.1f} s")
         clock = time.perf_counter()
         if not report.passed:
@@ -705,7 +731,17 @@ class PacketWriter:
         # leaves the packet exactly as it was.
         restore = self._install_registry(root)
         try:
-            report = validate(Packet(root, Manifest.from_dict(candidate)), registry=dict(self._registry), limits=limits)
+            # Every rule runs over the whole packet (R32 §5), but physical order is re-read
+            # only for what this amendment writes. A file the amendment does not name is
+            # byte-identical to one already verified: R32 §3 forbids modifying it and R14 §2.3
+            # declares it immutable, so its row order cannot have changed. Re-deriving it costs
+            # 467 MB a table and can only reach the answer it reached before.
+            report = validate(
+                Packet(root, Manifest.from_dict(candidate)),
+                registry=dict(self._registry),
+                limits=limits,
+                scan={e["resource_id"] for e in entries} - self._ordered,
+            )
             if not report.passed:
                 raise CommitRefused(report, staging)
         except BaseException:

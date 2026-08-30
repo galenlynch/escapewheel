@@ -259,9 +259,10 @@ def test_a_later_batch_may_not_introduce_a_column(tmp_path, registry, minimal):
         writer.add(resource, rows)
     _add_spike_context(writer)
     plain = _spike_batch(10, "u1", 0)
+    later = _spike_batch(10, "u1", 10)  # continues the order, so the schema is what fails
     extra = pa.record_batch(
-        [*plain.columns, pa.array(['{"a":1}'] * 10)],
-        names=[*plain.schema.names, "metadata"],
+        [*later.columns, pa.array(['{"a":1}'] * 10)],
+        names=[*later.schema.names, "metadata"],
     )
     writer.add_batches("core.spike_events", iter([plain, extra]))
     with pytest.raises(ValueError, match="dropped silently"):
@@ -606,9 +607,44 @@ def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
             "t_tick": pa.array(range(rows), type=pa.int64()),
         }
     )
+    tail = pa.record_batch(
+        {
+            **{name: batch.column(name) for name in batch.schema.names if name != "t_tick"},
+            "t_tick": pa.array(range(rows, rows + batch.num_rows), type=pa.int64()),
+        },
+    ).slice(0, 1000)
     path = tmp_path / "spike_events.parquet"
-    _write_stream(spec, [batch, batch.slice(0, 1000)], path, "core.spike_events")
+    _write_stream(spec, [batch, tail], path, "core.spike_events")
 
     metadata = pq.ParquetFile(path).metadata
     assert metadata.num_row_groups == 2, "a batch was split into several row groups"
     assert [metadata.row_group(i).num_rows for i in range(2)] == [rows, 1000]
+
+
+def test_an_out_of_order_stream_is_refused_while_staging(tmp_path, registry, minimal):
+    """The order is established on the way in, so a bad stream fails before anything is written.
+
+    Previously this reached the file and surfaced as a physical_order warning after 467 MB of
+    re-reading; now it stops at the batch that breaks it.
+    """
+    from nwb_lake_validator import OrderViolation
+
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    _add_spike_context(writer)
+    writer.add_batches("core.spike_events", iter([_spike_batch(10, "u1", 10), _spike_batch(10, "u1", 0)]))
+    with pytest.raises(OrderViolation, match="sorts before"):
+        writer.commit(tmp_path / "pkt")
+
+
+def test_a_duplicate_across_batches_is_refused_while_staging(tmp_path, registry, minimal):
+    from nwb_lake_validator import OrderViolation
+
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    _add_spike_context(writer)
+    writer.add_batches("core.spike_events", iter([_spike_batch(10, "u1", 0), _spike_batch(1, "u1", 9)]))
+    with pytest.raises(OrderViolation, match="repeats"):
+        writer.commit(tmp_path / "pkt")
