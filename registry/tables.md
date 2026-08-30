@@ -8,7 +8,7 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-33 tables, 274 columns, 46 references, 47 Tier 2 rules
+33 tables, 276 columns, 46 references, 51 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
 derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29
 ```
@@ -60,6 +60,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `step_value` | float64 | nullable | R20 §5 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §5 | Value at position 0 (regular numeric axis). |
 | `step_ticks` | int64 | nullable | R20 §5 | Ticks advanced per position. |
+| `step_tick_den` | int64 | nullable | R20 §5 | Denominator of the step, in ticks. Absent means 1. |
 | `origin_tick` | int64 | nullable | R20 §5 | Tick at position 0. |
 | `clock_id` | string | nullable | R20 §5 | Clock the ticks are counted on (regular tick axis). |
 
@@ -81,14 +82,20 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `curation_id` | string | **required** |  | Curation ID. |
 | `t_tick` | int64 | **required** |  | Spike tick on clock_id, mapped through core.clock_anchors. |
 | `clock_id` | string | **required** |  | The clock these ticks are on, normally the session's reference. |
+| `time_bucket_tick` | int64 | **required** | R30 §3.1 | First tick of the bucket this spike falls in, on clock_id. |
 
 **Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `t_tick`  
-**Sort** — `session_id`, `sorting_run_id`, `curation_id`, `unit_id`, `t_tick`
+**Sort** — `session_id`, `clock_id`, `time_bucket_tick`, `sorting_run_id`, `curation_id`, `unit_id`, `t_tick`
 
 **References**
 
 - `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 2
+
+- `analysis.spike_events.bucket_contains_spike` — error: a spike precedes the start of the bucket it is labelled with
+- `analysis.spike_events.buckets_partition_time` — error: buckets overlap in tick range, so the layout they declare is not a partition
 
 ## `core`
 
@@ -161,6 +168,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `step_value` | float64 | nullable | R20 §2 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §2 | Value at position 0 (regular numeric axis). |
 | `step_ticks` | int64 | nullable | R20 §2 | Ticks advanced per position. |
+| `step_tick_den` | int64 | nullable | R33 §2 | Denominator of the step, in ticks. Absent means 1. |
 | `origin_tick` | int64 | nullable | R20 §2 | Tick at position 0. |
 | `clock_id` | string | nullable | R20 §2 | Clock the ticks are counted on (regular tick axis). |
 
@@ -172,7 +180,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `array_asset_id` → `core.array_assets` (`array_asset_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 6
+**Tier 2 rules** — 7
 
 - `core.array_dimensions.axis_index_contiguous` — error: axis_index is not contiguous from 0
 - `core.array_dimensions.one_coordinate_form` — error: an axis declares more than one coordinate form
@@ -180,6 +188,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.array_dimensions.numeric_axis_complete` — error: a regular numeric axis needs origin_value, step_value and coordinate_unit
 - `core.array_dimensions.labelled_axis_complete` — error: coordinate_resource and coordinate_position_column must be present together
 - `core.array_dimensions.coordinate_resource_is_core` — error: a core axis points outward at a non-core resource (R20 §5.1)
+- `core.array_dimensions.step_denominator_positive` — error: a step denominator is not positive, so the step it defines is meaningless
 
 ### `core.clock_anchors`
 
@@ -485,9 +494,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Primary key** — `processing_run_id`  
 **Sort** — the primary key (R10 §2)
 
-**Tier 2 rules** — 1
+**Tier 2 rules** — 2
 
 - `core.processing_runs.no_failed_runs` — error: a failed run is recorded in a committed packet
+- `core.processing_runs.materialization_records_software` — error: a materialization run does not record the software that produced it
 
 ### `core.session_experimenters`
 
@@ -694,7 +704,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `electrode_id` | string | **required** | R28 §2-4 | An electrode this unit was detected on. |
 | `channel_ordinal` | int64 | nullable | R28 §2-4 | 0-based position in the unit's channel list, where a dense array axis is indexed by it (R20 §2). Not an identifier; nothing joins on it. |
 | `is_primary` | bool | nullable | R28 §2-4 | Whether this is the unit's peak electrode. |
-| `amplitude` | float64 | nullable | R28 §2-4 | The unit's amplitude here, in core.sorting_runs.amplitude_unit. |
 
 **Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `electrode_id`  
 **Sort** — the primary key (R10 §2)

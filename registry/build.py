@@ -359,6 +359,16 @@ def build() -> dict:
     T("core.array_dimensions")["references"].append(
         {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]})
 
+    # ---- R33 §2 : an axis step may be rational -----------------------------------------------
+    # `step_ticks` becomes the numerator. Absent denominator means 1, so every row written
+    # under R20 keeps its meaning. A 30 ms PSTH bin is 937.5 ticks at 31,250 Hz and 29.97 fps
+    # is 1042.708..., neither of which an integer step can say.
+    SINCE[0] = "R33 §2"
+    add_col("core.array_dimensions",
+            col("step_tick_den", "int64", "nullable",
+                "Denominator of the step, in ticks. Absent means 1."),
+            after="step_ticks")
+
     # ---- R16 §2-3 : unit quality is many labels, attributed ------------------------------------
     SINCE[0] = "R16 §2-3"
     tables["core.unit_quality_labels"] = {
@@ -484,9 +494,7 @@ def build() -> dict:
                         "0-based position in the unit's channel list, where a dense array axis "
                         "is indexed by it (R20 §2). Not an identifier; nothing joins on it."),
                     col("is_primary", "bool", "nullable",
-                        "Whether this is the unit's peak electrode."),
-                    col("amplitude", "float64", "nullable",
-                        "The unit's amplitude here, in core.sorting_runs.amplitude_unit.")],
+                        "Whether this is the unit's peak electrode.")],
         "primary_key": [*unit_key, "electrode_id"],
         "references": [unit_ref,
                        {"columns": ["electrode_id"], "resource": "core.electrodes",
@@ -511,21 +519,6 @@ def build() -> dict:
         {"columns": ["electrode_id"], "resource": "core.electrodes",
          "resource_columns": ["electrode_id"]})
 
-    # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
-    authored = json.loads(RULES.read_text())
-    hand_written: dict[str, list[dict]] = authored["rules"]
-    unknown = sorted(set(hand_written) - set(tables))
-    if unknown:
-        raise SystemExit(f"rules.json names tables the registry does not define: {', '.join(unknown)}")
-    for resource, table_rules in hand_written.items():
-        expanded: list[dict[str, str]] = []
-        for rule in table_rules:
-            if template := rule.get("use"):
-                expanded.extend(expand(template, resource, rule, T(resource)["primary_key"]))
-            else:
-                expanded.append(rule)
-        T(resource)["rules"] = expanded
-
     # ---- R20 §5 : analysis arrays are described by analysis tables -------------------------------
     SINCE[0] = "R20 §5"
     import copy
@@ -545,10 +538,10 @@ def build() -> dict:
         tables[core_name.replace("core.", "analysis.")] = mirror
 
     # ---- 06 : spikes on the reference clock -------------------------------------------------
-    # No `since`: this is 06's own table, carried forward unamended, and R29 §2 makes absence
-    # mean exactly that. Its *stated derivation* -- flattening core.unit_spike_chunks -- was
-    # vacated by R5, so the columns survived and the reason for them did not; a revision has
-    # yet to record that the reason is now clock alignment. The schema below is 06's.
+    # The columns 06 defined carry no `since`, which under R29 §2 means exactly that. Only
+    # time_bucket_tick is new, and only the order is overridden -- R30 §3.2 replaces 03's
+    # recommendation for this table alone, because a common clock is what makes ordering by
+    # time meaningful and core does not have one.
     SINCE[0] = None
     tables["analysis.spike_events"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
@@ -558,7 +551,10 @@ def build() -> dict:
                     col("t_tick", "int64", "required",
                         "Spike tick on clock_id, mapped through core.clock_anchors."),
                     col("clock_id", "string", "required",
-                        "The clock these ticks are on, normally the session's reference.")],
+                        "The clock these ticks are on, normally the session's reference."),
+                    col("time_bucket_tick", "int64", "required",
+                        "First tick of the bucket this spike falls in, on clock_id.",
+                        since="R30 §3.1")],
         "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick"],
         "references": [{"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
                         "resource": "core.units",
@@ -566,7 +562,8 @@ def build() -> dict:
                                              "curation_id"]},
                        {"columns": ["clock_id"], "resource": "core.clocks",
                         "resource_columns": ["clock_id"]}],
-        "sort": ["session_id", "sorting_run_id", "curation_id", "unit_id", "t_tick"],
+        "sort": ["session_id", "clock_id", "time_bucket_tick", "sorting_run_id", "curation_id",
+                 "unit_id", "t_tick"],
         "rules": []}
 
     # ---- R7 : every table declares a key ---------------------------------------------------
@@ -576,6 +573,32 @@ def build() -> dict:
                  ("core.source_files", ["source_file_id"])]:
         T(n)["primary_key"] = k
 
+    # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
+    # Last, so every table exists to be named and every primary key is final -- R24's templates
+    # expand against the key, and R7 above is what settles three of them.
+    authored = json.loads(RULES.read_text())
+    hand_written: dict[str, list[dict]] = authored["rules"]
+    unknown = sorted(set(hand_written) - set(tables))
+    if unknown:
+        raise SystemExit(f"rules.json names tables the registry does not define: {', '.join(unknown)}")
+    for resource, table_rules in hand_written.items():
+        expanded: list[dict[str, str]] = []
+        for rule in table_rules:
+            if template := rule.get("use"):
+                expanded.extend(expand(template, resource, rule, T(resource)["primary_key"]))
+            else:
+                expanded.append(rule)
+        T(resource)["rules"] = expanded
+
+    # Held while the schema is unreleased. Version discipline is Phase 6, and a bump per
+    # revision numbers churn rather than releases.
+    #
+    # Holding it is safe because the thing R2 §8 protects -- a packet carrying a registry that
+    # identifies its content -- can only be broken by an *amendment*, which is the one case
+    # where a packet ends up retaining two. A packet built fresh embeds exactly one, so no
+    # version can be ambiguous inside it. `PacketWriter._install_registry` refuses the
+    # amendment that would create the ambiguity, so the bump happens when it is forced rather
+    # than on a schedule.
     return {"registry_version": "0.1.0",
             "semantic_standard_version": "nwb-lake-semantic-v0.1",
             "logical_standard_version": "nwb-lake-logical-v0.1",

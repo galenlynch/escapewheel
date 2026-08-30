@@ -37,6 +37,12 @@
         "level": "error",
         "message": "a core axis points outward at a non-core resource (R20 \u00a75.1)",
         "sql": "SELECT array_asset_id, axis_index, coordinate_resource FROM core_array_dimensions WHERE coordinate_resource IS NOT NULL AND coordinate_resource NOT LIKE 'core.%'"
+      },
+      {
+        "id": "core.array_dimensions.step_denominator_positive",
+        "level": "error",
+        "message": "a step denominator is not positive, so the step it defines is meaningless",
+        "sql": "SELECT array_asset_id, axis_index, step_tick_den FROM core_array_dimensions WHERE step_tick_den IS NOT NULL AND step_tick_den <= 0"
       }
     ],
     "core.clocks": [
@@ -95,6 +101,12 @@
         "level": "error",
         "message": "a failed run is recorded in a committed packet",
         "sql": "SELECT processing_run_id, activity_type FROM core_processing_runs WHERE status = 'failed'"
+      },
+      {
+        "id": "core.processing_runs.materialization_records_software",
+        "level": "error",
+        "message": "a materialization run does not record the software that produced it",
+        "sql": "SELECT processing_run_id, software_name, software_version FROM core_processing_runs WHERE activity_type = 'materialization' AND (software_name IS NULL OR software_version IS NULL)"
       }
     ],
     "core.sessions": [
@@ -157,7 +169,7 @@
         "id": "core.units.spike_summary_consistent",
         "level": "error",
         "message": "n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events",
-        "sql": "SELECT u.session_id, u.unit_id FROM core_units u LEFT JOIN ( SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM core_spike_events GROUP BY session_id, unit_id, sorting_run_id, curation_id ) s USING (session_id, unit_id, sorting_run_id, curation_id) WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM s.n) OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo) OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)"
+        "sql": "SELECT u.session_id, u.unit_id FROM core_units u LEFT JOIN ( SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM core_spike_events GROUP BY session_id, unit_id, sorting_run_id, curation_id ) s USING (session_id, unit_id, sorting_run_id, curation_id) WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM COALESCE(s.n, 0)) OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo) OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)"
       },
       {
         "id": "core.units.designated_label_is_recorded",
@@ -238,7 +250,7 @@
         "id": "core.array_assets.sample_rate_matches_axis",
         "level": "error",
         "message": "sample_rate_hz disagrees with the time axis step",
-        "sql": "SELECT a.array_asset_id, a.sample_rate_hz FROM core_array_assets a JOIN core_array_dimensions d USING (array_asset_id) JOIN core_clocks c ON c.clock_id = d.clock_id WHERE a.sample_rate_hz IS NOT NULL AND d.step_ticks IS NOT NULL AND c.tick_rate_hz IS NOT NULL AND abs(a.sample_rate_hz - c.tick_rate_hz / d.step_ticks) > 1e-6"
+        "sql": "SELECT a.array_asset_id, a.sample_rate_hz FROM core_array_assets a JOIN core_array_dimensions d USING (array_asset_id) JOIN core_clocks c ON c.clock_id = d.clock_id WHERE a.sample_rate_hz IS NOT NULL AND d.step_ticks / COALESCE(d.step_tick_den, 1) IS NOT NULL AND c.tick_rate_hz IS NOT NULL AND abs(a.sample_rate_hz - c.tick_rate_hz / d.step_ticks / COALESCE(d.step_tick_den, 1)) > 1e-6"
       }
     ],
     "core.array_channels": [
@@ -305,6 +317,20 @@
         "level": "error",
         "message": "channel_ordinal is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
         "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MAX(channel_ordinal) AS hi FROM core_unit_electrodes WHERE channel_ordinal IS NOT NULL GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(channel_ordinal) <> COUNT(*) - 1 OR MIN(channel_ordinal) <> 0"
+      }
+    ],
+    "analysis.spike_events": [
+      {
+        "id": "analysis.spike_events.bucket_contains_spike",
+        "level": "error",
+        "message": "a spike precedes the start of the bucket it is labelled with",
+        "sql": "SELECT session_id, unit_id, t_tick, time_bucket_tick FROM analysis_spike_events WHERE time_bucket_tick > t_tick"
+      },
+      {
+        "id": "analysis.spike_events.buckets_partition_time",
+        "level": "error",
+        "message": "buckets overlap in tick range, so the layout they declare is not a partition",
+        "sql": "SELECT a.session_id, a.clock_id, a.time_bucket_tick AS earlier_bucket, a.hi, b.time_bucket_tick AS later_bucket, b.lo FROM (SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM analysis_spike_events GROUP BY session_id, clock_id, time_bucket_tick) a JOIN (SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM analysis_spike_events GROUP BY session_id, clock_id, time_bucket_tick) b ON a.session_id = b.session_id AND a.clock_id = b.clock_id AND b.time_bucket_tick > a.time_bucket_tick WHERE b.lo <= a.hi"
       }
     ]
   }
