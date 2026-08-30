@@ -557,3 +557,27 @@ def test_an_undeclared_column_ahead_of_the_key_refuses():
 
     table = {"primary_key": ["a", "b"], "sort": ["a", "x", "b"], "columns": [{"name": "x"}]}
     assert not adjacency_settles_uniqueness(table)
+
+
+def test_a_dictionary_column_satisfies_a_string_declaration():
+    """A dictionary is an encoding, not a type: Parquet stores BYTE_ARRAY/String either way."""
+    from nwb_lake_validator import Report
+    from nwb_lake_validator.validator import _check_column
+
+    report = Report()
+    column = {"name": "session_id", "type": "string", "presence": "required"}
+    schema = pa.schema([pa.field("session_id", pa.dictionary(pa.int32(), pa.string()))])
+    _check_column("core.units", column, schema, report)
+    assert not report.findings
+
+
+def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
+    """Unwrapping the encoding must not unwrap the check."""
+    from nwb_lake_validator import Report
+    from nwb_lake_validator.validator import _check_column
+
+    report = Report()
+    column = {"name": "session_id", "type": "string", "presence": "required"}
+    schema = pa.schema([pa.field("session_id", pa.dictionary(pa.int32(), pa.int64()))])
+    _check_column("core.units", column, schema, report)
+    assert [f.check for f in report.findings] == ["schema.column_type"]

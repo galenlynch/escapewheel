@@ -62,6 +62,19 @@ validator   four layers over a packet, returning a Report
 Finding     one failure: level, check id, message, and the rows that caused it
 ```
 
+### The ordering scan reads identifiers as codes
+
+`_check_ordering` compares four string columns over a table the size of `core.spike_events`,
+so how they are held decides its cost. It reads them with `read_dictionary` and `_ranked`
+compares the *rank* of each dictionary value as int32 — never the codes, which are unordered,
+and never the dictionary itself, which `pc.less` decodes on both sides every call. `_breaks`
+makes one pass where `_descents` and `_repeats` each made their own: a descent needs a
+column's `less` mask and a duplicate needs its `same` mask, and one comparison yields both.
+
+Together those took a full validation of a 287 M-row packet from 66.3 s to 37.1 s.
+`nwb-lake-writer/docs/source/performance.md` carries the measurements and the dictionary
+rules; they apply on both sides of the boundary.
+
 ### Design decisions carried from the specification
 
 These are not local preferences; changing them breaks conformance.

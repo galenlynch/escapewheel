@@ -377,8 +377,14 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
                 f"{resource_id}.{column['name']} absent (presence={column['presence']})",
             )
         return
-    actual = str(schema.field(column["name"]).type)
-    if actual != ARROW_TYPES[column["type"]]:
+    actual = schema.field(column["name"]).type
+    # A dictionary is an encoding, not a type. Parquet has no dictionary type at all: the column
+    # is BYTE_ARRAY/String either way, and only the Arrow schema pyarrow stores as metadata
+    # distinguishes them. Comparing the wrapper would reject a conforming file over how its
+    # writer chose to hold the column, which is the storage-versus-meaning line R12 §4 draws.
+    if pa.types.is_dictionary(actual):
+        actual = actual.value_type
+    if str(actual) != ARROW_TYPES[column["type"]]:
         report.add(
             "error",
             "schema.column_type",
@@ -405,53 +411,69 @@ def _sortable(row: Sequence[Any]) -> tuple[tuple[bool, Any], ...]:
     return tuple((v is None, v) for v in row)
 
 
-def _neighbours(batch: Any, keys: Sequence[str]) -> tuple[Any, Any]:
-    """Per-row masks over `keys`: does row i+1 sort before row i, and does it equal it.
+def _ranked(column: Any) -> Any:
+    """Replace a dictionary column by its values' rank in sort order; leave any other alone.
 
-    Vectorized per column rather than per row: a quarter of a billion Python tuple
-    comparisons is minutes of wall clock, and the same comparison in Arrow is seconds. A
-    descent at row i means some key decreases there while every earlier key is equal, so the
-    equal-so-far mask carries forward across columns. Null sorts first, matching the writer.
+    Codes cannot be compared -- a dictionary is unordered -- but the rank of each code's value
+    can, and that is the same comparison over int32 rather than strings. Ranking is a few
+    hundred dictionary entries beside a batch of a hundred thousand rows, so it is free:
+    measured on 131,072 rows, 0.147 ms a column against 0.682 decoded to strings and 2.369
+    handing the dictionary to Arrow, which decodes both sides on every call.
+    """
+    if not pa.types.is_dictionary(column.type):
+        return column
+    values = column.dictionary
+    # argsort of argsort is the rank. Nulls sort last here and must stay null rather than
+    # become the largest value, since the comparison below gives them their own ordering.
+    rank = pc.sort_indices(pc.sort_indices(values))
+    rank = pc.if_else(pc.is_null(values), pa.scalar(None, rank.type), rank)
+    return rank.take(column.indices)
+
+
+def _compared(column: Any) -> tuple[Any, Any]:
+    """Per-row masks over one column: does row i+1 sort before row i, and does it equal it.
+
+    Null sorts first, matching the writer, and two nulls are equal.
+    """
+    n = len(column) - 1
+    prior, current = column.slice(0, n), column.slice(1, n)
+    prior_null, current_null = pc.is_null(prior), pc.is_null(current)
+    neither = pc.invert(pc.or_(prior_null, current_null))
+    less = pc.or_(pc.and_(current_null, pc.invert(prior_null)), pc.and_(neither, pc.less(current, prior)))
+    same = pc.or_(pc.and_(prior_null, current_null), pc.and_(neither, pc.equal(current, prior)))
+    return pc.fill_null(less, False), pc.fill_null(same, False)
+
+
+def _breaks(batch: Any, keys: Sequence[str], unique: Sequence[str] | None = None) -> tuple[list[int], list[int]]:
+    """Offsets where the batch descends over `keys`, and where it repeats over `unique`.
+
+    One pass over each column, not two. A descent needs the column's `less` mask and a
+    duplicate needs its `same` mask, and a single comparison yields both; asking for them
+    separately compared every column twice, which on the spike table's five-column key was the
+    ordering scan's largest single cost.
+
+    A descent at row i means some key decreases there while every earlier key is equal, so the
+    equal-so-far mask carries forward across columns in the sort's order. A duplicate does not
+    depend on order at all -- it is every key column equal at once -- which is why `unique` may
+    name the same columns in a different one.
     """
     n = batch.num_rows - 1
+    if n < 1:
+        return [], []
+    masks = {name: _compared(_ranked(batch.column(name))) for name in dict.fromkeys([*keys, *(unique or [])])}
     descending: Any = pa.array([False] * n)
     equal_so_far: Any = pa.array([True] * n)
     for key in keys:
-        column: Any = batch.column(key)
-        prior, current = column.slice(0, n), column.slice(1, n)
-        prior_null, current_null = pc.is_null(prior), pc.is_null(current)
-        # null < value, value !< null, null == null
-        less = pc.or_(
-            pc.and_(current_null, pc.invert(prior_null)),
-            pc.and_(pc.invert(pc.or_(prior_null, current_null)), pc.less(current, prior)),
-        )
-        same = pc.or_(
-            pc.and_(prior_null, current_null),
-            pc.and_(pc.invert(pc.or_(prior_null, current_null)), pc.equal(current, prior)),
-        )
-        descending = pc.or_(descending, pc.and_(equal_so_far, pc.fill_null(less, False)))
-        equal_so_far = pc.and_(equal_so_far, pc.fill_null(same, False))
-    return descending, equal_so_far
-
-
-def _descents(batch: Any, keys: Sequence[str]) -> list[int]:
-    """Offsets where a batch decreases lexicographically over `keys`."""
-    if batch.num_rows - 1 < 1:
-        return []
-    descending, _ = _neighbours(batch, keys)
-    return [i + 1 for i in pc.indices_nonzero(descending).to_pylist()]
-
-
-def _repeats(batch: Any, keys: Sequence[str]) -> list[int]:
-    """Offsets where a batch repeats the previous row over `keys`.
-
-    Uniqueness, for a table whose sort order makes duplicates neighbours -- the byproduct the
-    ordering scan already computes and used to discard.
-    """
-    if batch.num_rows - 1 < 1:
-        return []
-    _, equal = _neighbours(batch, keys)
-    return [i + 1 for i in pc.indices_nonzero(equal).to_pylist()]
+        less, same = masks[key]
+        descending = pc.or_(descending, pc.and_(equal_so_far, less))
+        equal_so_far = pc.and_(equal_so_far, same)
+    descents = [i + 1 for i in pc.indices_nonzero(descending).to_pylist()]
+    if not unique:
+        return descents, []
+    equal: Any = pa.array([True] * n)
+    for key in unique:
+        equal = pc.and_(equal, masks[key][1])
+    return descents, [i + 1 for i in pc.indices_nonzero(equal).to_pylist()]
 
 
 def _constant(path: Path, keys: Sequence[str]) -> set[str]:
@@ -528,22 +550,25 @@ def _check_ordering(
         duplicated: list[tuple[int, Any]] = []
         tail: tuple[Any, ...] | None = None
         start = 0
-        for batch in pq.ParquetFile(handle.path).iter_batches(batch_size=ORDER_BATCH, columns=keys):
+        # Read the string keys as codes. The scan compares them, and `_breaks` compares a
+        # dictionary by rank without ever materialising a string; decoding here would build a
+        # Python-free but still per-row copy of four identifier columns over the whole table.
+        coded = [k for k in keys if pa.types.is_string(handle.schema().field(k).type)]
+        reader = pq.ParquetFile(handle.path, read_dictionary=coded or None)
+        for batch in reader.iter_batches(batch_size=ORDER_BATCH, columns=keys):
             first = _row_at(batch, keys, 0)
             if tail is not None and _sortable(first) < _sortable(tail):
                 offending.append((start, tail, first))
+            descents, repeats = _breaks(batch, keys, unique)
             offending.extend(
-                (start + offset, _row_at(batch, keys, offset - 1), _row_at(batch, keys, offset))
-                for offset in _descents(batch, keys)
+                (start + offset, _row_at(batch, keys, offset - 1), _row_at(batch, keys, offset)) for offset in descents
             )
             if unique:
                 # The batch boundary needs its own comparison: the scan compares within a
                 # batch, so a duplicate split across two would otherwise pass unseen.
                 if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
                     duplicated.append((start, _row_at(batch, unique, 0)))
-                duplicated.extend(
-                    (start + offset, _row_at(batch, unique, offset)) for offset in _repeats(batch, unique)
-                )
+                duplicated.extend((start + offset, _row_at(batch, unique, offset)) for offset in repeats)
             tail = _row_at(batch, keys, batch.num_rows - 1)
             start += batch.num_rows
             if len(offending) >= ORDER_REPORT and len(duplicated) >= ORDER_REPORT:
@@ -614,7 +639,8 @@ def verify_order(batches: Iterable[Any], keys: Sequence[str], unique: Sequence[s
             first = _row_at(batch, keys, 0)
             if tail is not None and _sortable(first) < _sortable(tail):
                 raise OrderViolation(f"row {start} sorts before the row above it: {tail} then {first}")
-            if descents := _descents(batch, keys):
+            descents, repeats = _breaks(batch, keys, unique)
+            if descents:
                 offset = descents[0]
                 raise OrderViolation(
                     f"row {start + offset} sorts before the row above it: "
@@ -623,7 +649,7 @@ def verify_order(batches: Iterable[Any], keys: Sequence[str], unique: Sequence[s
             if unique:
                 if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
                     raise OrderViolation(f"row {start} repeats the key above it: {_row_at(batch, unique, 0)}")
-                if repeats := _repeats(batch, unique):
+                if repeats:
                     offset = repeats[0]
                     raise OrderViolation(
                         f"row {start + offset} repeats the key above it: {_row_at(batch, unique, offset)}"
