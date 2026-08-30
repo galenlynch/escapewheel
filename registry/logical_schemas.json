@@ -304,14 +304,20 @@
           "name": "clock_id",
           "type": "string",
           "presence": "required",
-          "description": "The clock these ticks are on, normally the session's reference."
+          "description": "The clock these ticks are on, normally the session's reference.",
+          "determined_by": [
+            "session_id"
+          ]
         },
         {
           "name": "time_bucket_tick",
           "type": "int64",
           "presence": "required",
           "description": "First tick of the bucket this spike falls in, on clock_id.",
-          "since": "R30 \u00a73.1"
+          "since": "R30 \u00a73.1",
+          "determined_by": [
+            "t_tick"
+          ]
         }
       ],
       "primary_key": [

@@ -51,10 +51,12 @@ def presence(required: str, typ: str) -> str:
 SINCE = [None]
 
 
-def col(name, typ, pres, desc, since=None):
+def col(name, typ, pres, desc, since=None, determined_by=None):
     entry = {"name": name, "type": typ, "presence": pres, "description": desc}
     if stamp := (since or SINCE[0]):
         entry["since"] = stamp
+    if determined_by is not None:
+        entry["determined_by"] = list(determined_by)
     return entry
 
 
@@ -551,10 +553,11 @@ def build() -> dict:
                     col("t_tick", "int64", "required",
                         "Spike tick on clock_id, mapped through core.clock_anchors."),
                     col("clock_id", "string", "required",
-                        "The clock these ticks are on, normally the session's reference."),
+                        "The clock these ticks are on, normally the session's reference.",
+                        determined_by=["session_id"]),
                     col("time_bucket_tick", "int64", "required",
                         "First tick of the bucket this spike falls in, on clock_id.",
-                        since="R30 §3.1")],
+                        since="R30 §3.1", determined_by=["t_tick"])],
         "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick"],
         "references": [{"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
                         "resource": "core.units",
