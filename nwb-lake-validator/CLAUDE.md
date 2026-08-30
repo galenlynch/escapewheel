@@ -104,6 +104,21 @@ These are not local preferences; changing them breaks conformance.
   on `core.event_streams` and `core.processing_run_inputs`. It is deliberately over-inclusive:
   a match in a comment costs time, a missed one costs correctness. `None` runs everything,
   which is what a first commit and an unknown packet both need.
+- **Validation does not reach the network by default** (R14 §2.3.2, R15 §4). Three levels:
+  manifest-internal codec consistency always; a packet-owned array's actual Zarr metadata
+  always; an external resource's URI, `size_bytes` and `codecs` only under `external=True`.
+  Whether an external resource is reachable is a property of the reader's situation, not of
+  the packet, so unreachable is a `warning` and a claim that resolved and disagrees is an
+  `error`. Exactly one of `external.unverified` and `external.verified` is reported, so a
+  passing run always says which mode produced it.
+- **The codec floor is per Zarr version** (R21 §3.3), in `FLOOR`. `gzip` is in R3 §7.2's
+  baseline and Zarr.jl reads it in v3 and not in v2, so a codec's readability belongs to the
+  `(version, codec)` pair. Outside the floor is `info`, not an error: such a packet conforms
+  and is simply not portable by default (R14 §2.2).
+- **What the manifest JSON Schema already refuses is not re-checked here.** R14 §2.3's
+  "absolute URI implies external" and R21 §3.2's "zarr_v2 implies external" are conditionals
+  in `manifest.schema.json`, and a packet breaking either cannot be opened at all. A second
+  copy in Python would never run.
 - **Identifiers come from `nwb_lake_reader.sql`.** The reader registers tables under
   flattened names and this package emits SQL against them; they must agree exactly, so there
   is one implementation and it lives there.

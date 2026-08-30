@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 import jsonschema
 import pyarrow as pa
@@ -316,16 +317,44 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         _check_one_array(resource, packet.array_resource(resource.resource_id), axes, report)
 
 
-def _check_codec_declarations(packet: Packet, report: Report) -> None:
+#: The codec floor, per Zarr version (R21 §3.3). A codec's readability is a property of the
+#: pair `(zarr_format, codec)` rather than of the codec: `gzip` is in R3 §7.2's baseline and
+#: Zarr.jl reads it in v3 and not in v2, because the two versions name codecs differently and
+#: the library registers only the v3 spelling. A MUST that one of the two target languages
+#: cannot honour is not a floor, so v2's row omits it.
+FLOOR = {
+    "zarr_v3": frozenset({"none", "gzip", "zstd", "blosc", "sharding_indexed"}),
+    "zarr_v2": frozenset({"none", "zstd", "blosc"}),
+}
+
+
+def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = False) -> None:
     """Layer 1b: manifest-internal codec consistency (R15 §4, level 1).
 
     Both sides are manifest fields, so this holds offline. Whether a declared codec matches
     the array's actual metadata is level 2 for packet-owned arrays and level 3 -- the
     requested external mode -- for the rest.
+
+    Parameters
+    ----------
+    resolved : bool, default False
+        Whether level 3 ran, in which case the external claims are not reported as unchecked.
     """
     declared: set[str] = set()
     for resource in packet.resources():
         declared |= set(resource.codecs)
+        # R14 §2.3's "absolute uri implies external" and R21 §3.2's "zarr_v2 implies external"
+        # are stated in the manifest JSON Schema, which refuses such a packet at open. Saying
+        # them again here would be a second, weaker copy that never runs. The floor is not
+        # expressible there -- it is a set relation between two fields -- so it lives here.
+        profile = str(resource.entry.get("physical_profile", ""))
+        if profile in FLOOR and (beyond := sorted(set(resource.codecs) - FLOOR[profile])):
+            report.add(
+                "info",
+                "codec.outside_the_floor",
+                f"{resource.resource_id} uses {', '.join(beyond)}, outside the {profile} floor; "
+                "conforming but not portable by default (R14 §2.2)",
+            )
     summary = set(packet.manifest.required_codecs)
     if declared != summary:
         detail = []
@@ -335,17 +364,97 @@ def _check_codec_declarations(packet: Packet, report: Report) -> None:
             detail.append(f"required_codecs lists {', '.join(extra)} that no resource uses")
         report.add("error", "manifest.required_codecs_is_the_union", "; ".join(detail))
 
-    # An external resource's codecs, sha256 and size_bytes are claims this mode does not
-    # verify (R14 §2.3.1, R15 §4). Say so, rather than let "passed" imply otherwise.
-    external = [r.resource_id for r in packet.resources() if r.is_external]
-    if external:
+    # An external resource's codecs, sha256 and size_bytes are claims the default mode does
+    # not verify (R14 §2.3.1, R15 §4). Say so, rather than let "passed" imply otherwise. The
+    # requested mode reports what it resolved instead, so the two never both speak.
+    if not resolved and (names := [r.resource_id for r in packet.resources() if r.is_external]):
         report.add(
             "info",
             "external.unverified",
-            f"{len(external)} external resource(s) not resolved; their codecs, sha256 and "
+            f"{len(names)} external resource(s) not resolved; their codecs, sha256 and "
             "size_bytes are unverified claims",
-            [(name,) for name in external],
+            [(name,) for name in names],
         )
+
+
+def _resolve_external(packet: Packet, report: Report) -> None:
+    """Level 3 (R15 §4): resolve external URIs and check what was claimed about them.
+
+    Requested explicitly, never by default. R14 §2.3.2 keeps structural validation off the
+    network because reachability, credentials and whether the validator is offline are
+    properties of the reader's situation rather than of the packet.
+
+    Findings are reported against the resource entry. An unreachable resource is a `warning`
+    and not an error: it says the claim could not be checked, which is the same standing the
+    default mode gives it, while a claim that resolved and *disagrees* is an error.
+    """
+    checked = 0
+    for resource in packet.resources():
+        if not resource.is_external:
+            continue
+        entry = resource.entry
+        path = _local(str(entry.get("uri", "")))
+        if path is None:
+            report.add(
+                "warning",
+                "external.unresolvable",
+                f"{resource.resource_id}: {entry.get('uri')} is not a local URI, so this mode cannot resolve it",
+            )
+            continue
+        if not path.exists():
+            report.add("warning", "external.unreachable", f"{resource.resource_id}: {path} does not exist")
+            continue
+        if (claimed := entry.get("size_bytes")) is not None:
+            actual = _tree_bytes(path)
+            if actual != claimed:
+                report.add(
+                    "error",
+                    "external.size_bytes",
+                    f"{resource.resource_id}: {actual:,} bytes, manifest claims {claimed:,}",
+                )
+        if declared := set(resource.codecs):
+            actual_codecs = _stored_codecs(path)
+            if actual_codecs is not None and actual_codecs != declared:
+                report.add(
+                    "error",
+                    "external.codecs",
+                    f"{resource.resource_id}: stores {', '.join(sorted(actual_codecs)) or 'no codec'}, "
+                    f"manifest declares {', '.join(sorted(declared))}",
+                )
+        checked += 1
+    if checked:
+        report.add("info", "external.verified", f"{checked} external resource(s) resolved and checked")
+
+
+def _local(uri: str) -> Path | None:
+    """Return the path a URI names, or None where it is not one this mode can open."""
+    if uri.startswith("file://"):
+        return Path(unquote(urlparse(uri).path))
+    if "://" in uri:
+        return None
+    return Path(uri)
+
+
+def _tree_bytes(path: Path) -> int:
+    """Total size of an array's chunk files, excluding its metadata documents."""
+    if path.is_file():
+        return path.stat().st_size
+    return sum(f.stat().st_size for f in path.iterdir() if f.is_file() and not f.name.startswith("."))
+
+
+def _stored_codecs(path: Path) -> set[str] | None:
+    """Codecs a Zarr v2 array declares, or None where the metadata is not v2 or not readable."""
+    meta = path / ".zarray"
+    if not meta.is_file():
+        return None
+    try:
+        parsed = json.loads(meta.read_text())
+    except (OSError, ValueError):
+        return None
+    names = {str(f["id"]) for f in parsed.get("filters") or []}
+    if compressor := parsed.get("compressor"):
+        names.add(str(compressor["id"]))
+    return names
 
 
 def _check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> dict[str, Any]:
@@ -807,6 +916,7 @@ def validate(
     limits: Mapping[str, Any] | None = None,
     scan: Collection[str] | None = None,
     recheck: Collection[str] | None = None,
+    external: bool = False,
 ) -> Report:
     """Validate a packet.
 
@@ -842,6 +952,12 @@ def validate(
         provenance both need. An amendment passes what it writes, because R32 §3 forbids it
         modifying anything else and R14 §2.3 declares those bytes immutable, so a rule reading
         only them is already answered.
+    external : bool, default False
+        Resolve external URIs and check the `sha256`, `size_bytes` and `codecs` claimed for
+        them (R15 §4, level 3). Off by default because R14 §2.3.2 forbids structural validation
+        reaching for a resource the packet does not own: whether one is reachable is a property
+        of the reader's situation, not of the packet. An unreachable resource is a warning; one
+        that resolves and disagrees with its claim is an error.
 
     Returns
     -------
@@ -863,7 +979,9 @@ def validate(
 
     if embedded is not None:
         _check_embedded_registry(packet, embedded, report)
-    _check_codec_declarations(packet, report)
+    _check_codec_declarations(packet, report, resolved=external)
+    if external:
+        _resolve_external(packet, report)
     _check_packet_owned_arrays(packet, report)
     _check_materialization_provenance(packet, report)
     present = _check_schemas(packet, effective["tables"], report)

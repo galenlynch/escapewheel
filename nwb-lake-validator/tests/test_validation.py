@@ -628,3 +628,93 @@ def test_recheck_still_catches_a_break_in_what_was_written(packet_root):
     _rewrite(packet_root, "trials", pa.concat_tables([duplicated, duplicated.slice(0, 1)]))
     report = validate(open_packet(packet_root), recheck={"core.trials"})
     assert not report.passed
+
+
+# -- R14/R15/R21: external resources -------------------------------------------------------
+
+
+def _external(root, **overrides):
+    """Point a packet at a Zarr v2 array beside it, the way an LFP reference does."""
+    array = root.parent / "external.zarr"
+    array.mkdir(exist_ok=True)
+    (array / ".zarray").write_text(
+        json.dumps(
+            {
+                "shape": [4, 2],
+                "chunks": [4, 2],
+                "dtype": "<i2",
+                "zarr_format": 2,
+                "compressor": {"id": "blosc"},
+                "filters": None,
+                "order": "C",
+                "fill_value": 0,
+            }
+        )
+    )
+    (array / "0.0").write_bytes(b"x" * 100)
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    entry = {
+        "resource_id": "core.probe.lfp",
+        "layer": "core",
+        "kind": "dense_array_asset",
+        "physical_profile": "zarr_v2",
+        "uri": array.resolve().as_uri(),
+        "external": True,
+        "codecs": ["blosc"],
+        "size_bytes": 100,
+        **overrides,
+    }
+    manifest["resources"].append(entry)
+    manifest["required_codecs"] = sorted({c for r in manifest["resources"] for c in r.get("codecs", [])})
+    (root / "nwb.packet.json").write_text(json.dumps(manifest))
+    return root
+
+
+def test_an_external_resource_is_reported_as_unverified_by_default(packet_root):
+    """R14 §2.3.2: structural validation must not reach for bytes the packet does not own."""
+    report = validate(open_packet(_external(packet_root)))
+    assert report.passed
+    assert [f.check for f in report.findings if f.level == "info"] == ["external.unverified"]
+
+
+def test_the_requested_mode_resolves_it(packet_root):
+    report = validate(open_packet(_external(packet_root)), external=True)
+    assert report.passed
+    checks = {f.check for f in report.findings}
+    assert "external.verified" in checks
+    assert "external.unverified" not in checks, "the two modes must not both speak"
+
+
+def test_a_size_that_disagrees_is_an_error_only_in_that_mode(packet_root):
+    root = _external(packet_root, size_bytes=999)
+    assert validate(open_packet(root)).passed
+    report = validate(open_packet(root), external=True)
+    assert not report.passed
+    assert "external.size_bytes" in {f.check for f in report.findings}
+
+
+def test_a_codec_that_disagrees_is_caught(packet_root):
+    root = _external(packet_root, codecs=["zstd"])
+    report = validate(open_packet(root), external=True)
+    assert "external.codecs" in {f.check for f in report.findings}
+
+
+def test_an_unreachable_resource_is_a_warning_not_an_error(packet_root):
+    """Reachability is a property of the reader's situation, not of the packet."""
+    root = _external(packet_root, uri="file:///nowhere/at/all.zarr")
+    report = validate(open_packet(root), external=True)
+    assert report.passed
+    assert "external.unreachable" in {f.check for f in report.findings}
+
+
+def test_a_codec_outside_its_versions_floor_is_reported(packet_root):
+    """R21 §3.3: gzip is in R3 §7.2's baseline and Zarr.jl reads it in v3 and not in v2."""
+    root = _external(packet_root, codecs=["gzip"])
+    report = validate(open_packet(root))
+    assert report.passed, "outside the floor is conforming, just not portable"
+    assert "codec.outside_the_floor" in {f.check for f in report.findings}
+
+
+def test_the_same_codec_inside_the_v3_floor_is_not_reported(packet_root):
+    root = _external(packet_root, physical_profile="zarr_v3", codecs=["gzip"])
+    assert "codec.outside_the_floor" not in {f.check for f in validate(open_packet(root)).findings}
