@@ -23,7 +23,7 @@ import json
 import os
 import shutil
 import time
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -481,15 +481,18 @@ class PacketWriter:
             )
         return entries
 
-    def _stage(self, staging: Path) -> list[dict[str, Any]]:
+    def _stage(self, staging: Path, only: Collection[str] | None = None) -> list[dict[str, Any]]:
         """Write every table under `staging` and return its manifest entries.
 
         Records in `_ordered` the resources whose physical order `_write_stream` established as
         it wrote them, so the commit that follows need not read them back to learn it.
         """
         entries = []
-        self._ordered = set()
+        if only is None:
+            self._ordered = set()
         for resource_id in self.resources:
+            if only is not None and resource_id not in only:
+                continue
             spec = self._registry["tables"][resource_id]
             namespace, name = resource_id.split(".", 1)
             relative = f"tables/{namespace}/{name}.parquet"
@@ -564,8 +567,9 @@ class PacketWriter:
         *,
         limits: Mapping[str, Any] | None = None,
         say: Callable[[str], None] = lambda _: None,
+        materialize: Sequence[Callable[[Any, PacketWriter], None]] = (),
     ) -> Report:
-        """Stage, validate, and commit.
+        """Stage, derive, validate, and commit.
 
         Parameters
         ----------
@@ -581,6 +585,10 @@ class PacketWriter:
             Progress reporter, called with the elapsed time of each stage. A commit is the
             long half of an import and the three stages cost very differently, so a caller
             deciding where to spend effort should not have to guess which one it is in.
+        materialize : sequence of callable, optional
+            Run after the core resources are staged and before anything is validated, each
+            given the staged packet and this writer. Derived resources are staged alongside the
+            rest and validated with them, so the packet is complete at its first version.
 
         Returns
         -------
@@ -618,10 +626,35 @@ class PacketWriter:
         (staging / "schemas").mkdir(parents=True, exist_ok=True)
         (staging / REGISTRY_PATH).write_text(json.dumps(self._registry, indent=2) + "\n")
 
-        # 2. validate them where they stand -- a staged packet needs a manifest to be opened,
-        #    so the candidate is written into staging rather than at the root, where its
-        #    presence would announce a packet that is not yet committed.
+        # 2. derive whatever the caller asked for from the staged packet, before anything is
+        #    validated or promoted. `05` stages 8 and 9 put materialization inside the import
+        #    pipeline, and a staged packet is already openable -- it needs a manifest, which is
+        #    written here anyway. Doing it now costs one validation over the finished packet;
+        #    doing it after the commit costs a second manifest, a version bump and a
+        #    revalidation of resources validated seconds earlier, which is what `amend` is for
+        #    and what a build the recipe fully describes should never pay.
         (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, None), indent=2) + "\n")
+        if materialize:
+            # Row counts, not just names: a materializer adds its own `core.processing_runs`
+            # row (R31 §2), and that table was staged in the pass above. Restaging only what is
+            # new would leave the run record in memory and the resource pointing at a run the
+            # packet does not contain -- which is exactly what the validator then says.
+            def counts() -> dict[str, int]:
+                return {r: len(self._tables.get(r, ())) for r in self.resources}
+
+            before = counts()
+            for derive in materialize:
+                derive(open_packet(staging), self)
+                say(f"derived {', '.join(sorted(set(self.resources) - set(before)))}")
+                before = {**before, **{r: n for r, n in counts().items() if r not in before}}
+            touched = {r for r, n in counts().items() if n != before.get(r, -1) or r not in before}
+            touched |= set(self.resources) - {e["resource_id"] for e in entries}
+            restaged = self._stage(staging, only=touched)
+            kept = [e for e in entries if e["resource_id"] not in touched]
+            entries = [*kept, *restaged]
+            (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, None), indent=2) + "\n")
+            say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
+            clock = time.perf_counter()
         # Scan the order of everything except what `_write_stream` compared on the way in.
         # Not a shortcut around the check: the same comparison ran, over the same rows, from
         # the same code, one step earlier (R12 §4 still governs where it lives).

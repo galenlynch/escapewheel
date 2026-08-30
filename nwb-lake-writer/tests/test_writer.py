@@ -648,3 +648,36 @@ def test_a_duplicate_across_batches_is_refused_while_staging(tmp_path, registry,
     writer.add_batches("core.spike_events", iter([_spike_batch(10, "u1", 0), _spike_batch(1, "u1", 9)]))
     with pytest.raises(OrderViolation, match="repeats"):
         writer.commit(tmp_path / "pkt")
+
+
+def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, registry, minimal):
+    """The run record lands in `core.processing_runs`, which staging has already written.
+
+    Restaging only what is new leaves that row in memory, and the derived resource then names a
+    run the packet does not contain — which the validator reports rather than the writer.
+    """
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id=root.name)
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    writer.add("core.processing_runs", [_run("run_import")])
+
+    def derive(packet, target):
+        target.add("core.processing_runs", [_run("run_derived")])
+
+    writer.commit(root, materialize=[derive])
+
+    runs = pq.read_table(root / "tables" / "core" / "processing_runs.parquet")
+    assert sorted(runs.column("processing_run_id").to_pylist()) == ["run_derived", "run_import"]
+    entries = [e for e in json.loads((root / "nwb.packet.json").read_text())["resources"]]
+    assert [e["resource_id"] for e in entries].count("core.processing_runs") == 1, "duplicated entry"
+
+
+def _run(run_id):
+    """One `core.processing_runs` row."""
+    return {
+        "processing_run_id": run_id,
+        "session_id": "s001",
+        "activity_type": "import",
+        "status": "succeeded",
+    }

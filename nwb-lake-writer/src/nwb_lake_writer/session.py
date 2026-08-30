@@ -25,6 +25,7 @@ import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -38,6 +39,11 @@ CONSUMES: dict[str, tuple[str, ...]] = {
     "nwb": ("sorter",),
     "waveforms": ("sorter", "nwb"),
 }
+
+#: Analysis resources a recipe may ask for by name, and the function that derives each from a
+#: staged packet. `05` stage 8 calls these optional, so a recipe that names none is complete.
+MATERIALIZERS: dict[str, str] = {"analysis.spike_events": "spike_events"}
+
 
 #: Rows per batch when streaming a spike table into staging, and therefore the row-group size:
 #: `_write_stream` makes one row group per batch, so the caller owns the boundaries.
@@ -187,6 +193,44 @@ def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[
     return got
 
 
+def _derive(options: Mapping[str, Any], packet: Any, writer: Any) -> None:
+    """Add one derived resource to a writer, reading its inputs from the staged packet."""
+    from . import materialize
+
+    materialize.into(packet, writer, **options)
+
+
+def materializers(recipe: Recipe) -> list[Callable[[Any, Any], None]]:
+    """Turn a recipe's `[[materialize]]` entries into callables `commit` can run.
+
+    Each is handed the staged packet and the writer, which is the pair `materialize.into` wants:
+    it reads the core resources from the one and adds the derived rows, the run record and the
+    lineage to the other.
+
+    Parameters
+    ----------
+    recipe : Recipe
+        The parsed recipe.
+
+    Returns
+    -------
+    list of callable
+        In the order declared, since one derived resource may feed another.
+
+    Raises
+    ------
+    RecipeError
+        If a resource is named that nothing knows how to derive.
+    """
+    built: list[Callable[[Any, Any], None]] = []
+    for spec in recipe.materialize:
+        if spec.resource not in MATERIALIZERS:
+            known = ", ".join(sorted(MATERIALIZERS)) or "nothing"
+            raise RecipeError(f"no materializer for {spec.resource}; this writer derives {known}")
+        built.append(partial(_derive, dict(spec.options)))
+    return built
+
+
 def build(recipe: Recipe, registry: Mapping[str, Any], *, say: Callable[[str], None] = lambda _: None) -> PacketWriter:
     """Run every source and return a writer holding the packet, uncommitted.
 
@@ -279,4 +323,4 @@ def _import_run(recipe: Recipe) -> dict[str, Any]:
     }
 
 
-__all__ = ["BATCH_ROWS", "CONSUMES", "Context", "RecipeError", "build", "order"]
+__all__ = ["BATCH_ROWS", "CONSUMES", "MATERIALIZERS", "Context", "RecipeError", "build", "materializers", "order"]

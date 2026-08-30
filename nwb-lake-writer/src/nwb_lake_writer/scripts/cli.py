@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from ..recipe import Recipe
-from ..session import build
+from ..session import build, materializers
 from ..writer import CommitRefused
 
 #: Source kinds ``init`` can inspect, and the adapter each names.
@@ -159,9 +159,10 @@ def _import(args: argparse.Namespace) -> int:
         print(f"[{time.perf_counter() - start:6.1f}s] {line}", flush=True)
 
     writer = build(recipe, registry, say=say)
+    derive = materializers(recipe)
     out = args.out or recipe.out
     try:
-        report = writer.commit(out, limits=recipe.limits or None, say=say)
+        report = writer.commit(out, limits=recipe.limits or None, say=say, materialize=derive)
     except CommitRefused as exc:
         for finding in exc.report.findings[:20]:
             print(f"  {finding.level:8s} {finding.check}: {finding.message}", file=sys.stderr)

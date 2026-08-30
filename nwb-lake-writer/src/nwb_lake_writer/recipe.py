@@ -40,6 +40,9 @@ RECIPE_SUPPLIES = ("core.sessions", "core.subjects", "core.processing_runs")
 #: Keys a `[[source]]` entry uses for itself; everything else is passed to the adapter.
 _SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes"})
 
+#: Keys a `[[materialize]]` entry uses for itself; the rest are the materializer's parameters.
+_MATERIALIZE_KEYS = frozenset({"resource"})
+
 
 @dataclass(frozen=True)
 class Problem:
@@ -144,6 +147,31 @@ class SourceSpec:
 
 
 @dataclass(frozen=True)
+class MaterializeSpec:
+    """An analysis resource to derive once the core resources are staged.
+
+    `05` stages 8 and 9 put materialization inside the import pipeline rather than after it, so
+    a recipe declares what to derive and the commit does it: core is staged, the staged packet
+    is opened, the resource is derived from it, and everything is validated together before
+    anything is promoted. Deriving into a *committed* packet is what `amend` is for, and paying
+    for that on a build the recipe fully describes is work nobody asked for -- a second
+    manifest, a version bump, a superseded copy to retain, and a revalidation of resources that
+    were validated moments earlier.
+
+    Attributes
+    ----------
+    resource : str
+        The resource ID to derive.
+    options : Mapping
+        Parameters for the materializer, such as `bucket_seconds`. They reach
+        `core.processing_runs.parameters` by way of the recipe document.
+    """
+
+    resource: str
+    options: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class Recipe:
     """A parsed session recipe.
 
@@ -172,6 +200,7 @@ class Recipe:
     subject: Mapping[str, Any]
     clocks: tuple[ClockSpec, ...]
     sources: tuple[SourceSpec, ...]
+    materialize: tuple[MaterializeSpec, ...]
     limits: Mapping[str, Any]
 
     @classmethod
@@ -233,6 +262,13 @@ class Recipe:
                     options={k: v for k, v in s.items() if k not in _SOURCE_KEYS},
                 )
                 for s in document.get("source", [])
+            ),
+            materialize=tuple(
+                MaterializeSpec(
+                    resource=str(m["resource"]),
+                    options={k: v for k, v in m.items() if k not in _MATERIALIZE_KEYS},
+                )
+                for m in document.get("materialize", [])
             ),
             limits=document.get("commit", {}),
         )
@@ -377,4 +413,4 @@ class Recipe:
         return problems
 
 
-__all__ = ["RECIPE_SUPPLIES", "ClockSpec", "Problem", "Recipe", "SourceSpec"]
+__all__ = ["RECIPE_SUPPLIES", "ClockSpec", "MaterializeSpec", "Problem", "Recipe", "SourceSpec"]

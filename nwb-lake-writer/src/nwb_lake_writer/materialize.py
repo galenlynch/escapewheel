@@ -34,6 +34,7 @@ from typing import Any
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from numpy.typing import NDArray
 
@@ -101,13 +102,15 @@ def _tick_rate(packet: Any, clock_id: str) -> int:
 def _mapped(batch: pa.RecordBatch, reference: str, anchors: Any, bound: float) -> tuple[Any, Any]:
     """Map one batch's ticks onto the reference clock, returning the ticks and what to keep."""
     ticks = np.asarray(batch.column("t_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
-    clocks = batch.column("clock_id").to_pylist()
+    clocks = batch.column("clock_id")
     parent = np.empty(ticks.size, dtype=np.int64)
     keep = np.zeros(ticks.size, dtype=bool)
     # A batch spans at most two streams, since the table is sorted by sorting_run_id and each
-    # stream is one run -- so this loop runs once or twice, not per row.
-    for name in dict.fromkeys(clocks):
-        where = np.array([i for i, c in enumerate(clocks) if c == name])
+    # stream is one run, so this loop runs once or twice. Its *body* must still stay in Arrow:
+    # asking for the column as Python strings to group it costs a string object per spike, and
+    # the comparison that follows is over a handful of distinct values either way.
+    for name in [n for n in pc.unique(clocks).to_pylist() if n is not None]:
+        where = np.flatnonzero(pc.equal(clocks, pa.scalar(name, pa.string())).to_numpy(zero_copy_only=False))
         if name == reference:
             parent[where], keep[where] = ticks[where], True
             continue
@@ -119,6 +122,14 @@ def _mapped(batch: pa.RecordBatch, reference: str, anchors: Any, bound: float) -
 
 class _Buckets:
     """Per-bucket Parquet spill files, written in the order rows arrive.
+
+    Parquet, although a spill is written once, read once and deleted, and its encoding
+    therefore has no reader to benefit. The encoding is not for a reader here, it is for the
+    disk: four of these seven columns are string identifiers, and dictionary-encoding them puts
+    a million rows in 2.7 MB where Arrow IPC needs 195 MB. Writing a batch costs 0.100 s
+    against IPC's 0.053 s, and over a full session that trade is worth taking on anything but
+    the fastest storage -- uncompressed IPC spills 56 GB and takes 321.8 s where this takes
+    76.6 s.
 
     Bucketing by time and sorting by unit inside each bucket needs no global sort, because
     `core.spike_events` is already ordered by `(sorting_run_id, curation_id, unit_id, t_tick)`
