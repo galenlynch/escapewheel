@@ -189,13 +189,15 @@
           "enum": [
             "parquet",
             "parquet_dataset",
+            "zarr_v2",
             "zarr_v3",
             "markdown",
             "json",
             "text",
             "pdf",
             "mp4"
-          ]
+          ],
+          "description": "Physical encoding of this resource. zarr_v2 is permitted only for an external resource (R21 \u00a73.2); a packet-owned array MUST be zarr_v3 (R21 \u00a73.1). The version is part of the profile because readability is a property of the (version, codec) pair, not of the codec alone."
         },
         "uri": {
           "type": "string",
@@ -336,6 +338,32 @@
           "then": {
             "required": [
               "extension_id"
+            ]
+          }
+        },
+        {
+          "if": {
+            "allOf": [
+              {
+                "properties": {
+                  "physical_profile": {
+                    "const": "zarr_v2"
+                  }
+                },
+                "required": [
+                  "physical_profile"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "external": {
+                "const": true
+              }
+            },
+            "required": [
+              "external"
             ]
           }
         }
