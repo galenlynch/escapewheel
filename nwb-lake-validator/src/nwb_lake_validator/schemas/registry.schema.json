@@ -189,6 +189,14 @@
           "type": "string",
           "minLength": 1,
           "description": "The revision that introduced or last changed this, e.g. 'R8 \u00a72' (R29 \u00a72). A citation for a reader, not a link a validator resolves; absent means it came from 02 unamended."
+        },
+        "determined_by": {
+          "description": "Columns whose values determine this one, so that rows agreeing on them agree here. An empty list declares a constant. Used to decide whether a table's sort order puts duplicate primary keys next to each other: a sort column that is determined by key columns cannot separate two rows that share a key.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
         }
       },
       "not": {

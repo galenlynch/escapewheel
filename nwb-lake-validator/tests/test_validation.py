@@ -519,3 +519,41 @@ def test_scanning_nothing_leaves_the_ordering_unchecked(packet_root):
     assert not any(
         f.check == "core.trials.physical_order" for f in validate(open_packet(packet_root), scan=set()).findings
     )
+
+
+def test_a_column_determined_by_the_key_cannot_separate_duplicates():
+    """R30 sorts `analysis.spike_events` by two columns that precede its key.
+
+    `clock_id` is the session's reference clock and `time_bucket_tick` is a function of
+    `t_tick`, so neither varies between rows sharing a key, and duplicates stay neighbours.
+    """
+    from nwb_lake_validator.generate import adjacency_settles_uniqueness
+
+    table = {
+        "primary_key": ["session_id", "t_tick"],
+        "sort": ["session_id", "clock_id", "time_bucket_tick", "t_tick"],
+        "columns": [
+            {"name": "clock_id", "type": "string", "presence": "required", "determined_by": ["session_id"]},
+            {"name": "time_bucket_tick", "type": "int64", "presence": "required", "determined_by": ["t_tick"]},
+        ],
+    }
+    assert adjacency_settles_uniqueness(table)
+
+
+def test_a_column_determined_by_a_non_key_still_refuses():
+    """The dependency must be on the key: anything else can order duplicates apart."""
+    from nwb_lake_validator.generate import adjacency_settles_uniqueness
+
+    table = {
+        "primary_key": ["a", "b"],
+        "sort": ["a", "x", "b"],
+        "columns": [{"name": "x", "type": "string", "presence": "required", "determined_by": ["c"]}],
+    }
+    assert not adjacency_settles_uniqueness(table)
+
+
+def test_an_undeclared_column_ahead_of_the_key_refuses():
+    from nwb_lake_validator.generate import adjacency_settles_uniqueness
+
+    table = {"primary_key": ["a", "b"], "sort": ["a", "x", "b"], "columns": [{"name": "x"}]}
+    assert not adjacency_settles_uniqueness(table)

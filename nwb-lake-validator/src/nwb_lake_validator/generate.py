@@ -39,22 +39,33 @@ class Check:
 
 
 def adjacency_settles_uniqueness(table: Mapping[str, Any]) -> bool:
-    """Whether a table's sort order puts duplicate keys next to each other.
+    """Whether a table's sort order puts duplicate primary keys next to each other.
 
-    True when the first `len(key)` sort columns are the key columns, in any order: two rows
-    equal on the whole key then agree on that whole prefix, so nothing can sort between them.
-    A shim streaming the file in order can settle uniqueness by comparing neighbours, which
-    costs nothing on top of the ordering check it already performs -- against a `GROUP BY`
-    that measured 26 GB of spill on 287 M spikes, because the key is four string columns and
-    an aggregate materialises every one of them.
+    Two rows sharing a key are neighbours when nothing in the sort can order between them. That
+    holds when every sort column up to and including the last key column is either a key column
+    itself, or one the registry declares `determined_by` a subset of the key: a column that is a
+    function of the key takes the same value in both rows, so it cannot separate them.
 
-    False when the key is not a prefix of the sort. A sort of `(a, b, x)` with key `(a, b)`
-    groups equal keys together but `x` may order duplicates apart, so neighbours are not
-    enough and the aggregate is the only correct check.
+    `analysis.spike_events` is the case that needs the second clause. R30 §3.2 sorts it by
+    `(session_id, clock_id, time_bucket_tick, …)` so a time filter and a unit filter both prune,
+    which puts two non-key columns ahead of the key — but `clock_id` is the session's reference
+    clock and `time_bucket_tick` is a function of `t_tick`, so neither varies between rows that
+    share a key. Without the declaration a 287 M-row `GROUP BY` runs and spills 27 GB to settle
+    what one comparison per row already answers.
+
+    False where a sort column genuinely varies within a key: a sort of `(a, x, b)` with key
+    `(a, b)` lets `x` order duplicates apart, so neighbours are not enough and the aggregate is
+    the only correct check.
     """
     key = table.get("primary_key")
     sort = table.get("sort")
-    return bool(key and sort and len(sort) >= len(key) and set(sort[: len(key)]) == set(key))
+    if not key or not sort:
+        return False
+    determined = {c["name"]: set(c["determined_by"]) for c in table.get("columns", []) if "determined_by" in c}
+    positions = [sort.index(k) for k in key if k in sort]
+    if len(positions) != len(key):
+        return False
+    return all(column in key or determined.get(column, {object()}) <= set(key) for column in sort[: max(positions) + 1])
 
 
 def generate(
