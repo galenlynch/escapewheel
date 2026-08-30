@@ -19,7 +19,7 @@ This repository implements a specification maintained in sibling repositories un
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. |
-| `revisions/` | R1–R32, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `revisions/` | R1–R35, all accepted. Where they disagree with the frozen docs, the revision binds. |
 | `registry/` | `logical_schemas.json` (33 tables), its meta-schema, and the manifest JSON Schema. |
 | `fixtures/` | Phase 0 packets and the conformance corpus — 16 packets with expected findings as data. |
 | `conformance/` | Probes producing the measured evidence the revisions cite. |
