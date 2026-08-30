@@ -145,11 +145,43 @@ def test_a_uri_base_replaces_the_local_path(nwb):
     assert array.uri == "s3://bucket/s.nwb/processing/ecephys/LFP/ElectricalSeries45883-1-LFP/data"
 
 
-def test_a_uri_base_reports_no_verified_size(nwb):
-    """R14 §2.3.1: only bytes actually looked at may be reported as verified, and a local copy
-    says nothing about what a remote URI resolves to."""
-    assert _source(nwb, uri_base="s3://bucket/s.nwb").external_arrays()["core.45883-1.lfp"].size_bytes is None
-    assert _source(nwb).external_arrays()["core.45883-1.lfp"].size_bytes is not None
+def test_an_unreachable_store_leaves_the_claim_unmade(nwb):
+    """R36 §2.4: bytes beside the writer are not the bytes a remote URI names, so a store it
+    cannot reach records nothing rather than what it measured of a local copy."""
+    source = _source(nwb, uri_base="s3://bucket/s.nwb")
+    array = source.external_arrays()["core.45883-1.lfp"]
+    assert (array.size_bytes, array.sha256, array.verified_at) == (None, None, None)
+    assert any("nothing verified" in n for n in source.notes)
+
+
+def test_a_reachable_store_is_sized_whole(nwb):
+    """R36 §2.1: a dense array asset is a prefix, so its size counts the metadata too."""
+    array = _source(nwb).external_arrays()["core.45883-1.lfp"]
+    on_disk = sum(
+        f.stat().st_size
+        for f in (nwb / "processing/ecephys/LFP" / "ElectricalSeries45883-1-LFP" / "data").rglob("*")
+        if f.is_file()
+    )
+    assert array.size_bytes == on_disk
+    assert array.verified_at is not None
+    assert array.sha256 is None, "a digest reads every byte and is asked for separately"
+
+
+def test_a_digest_is_recorded_when_asked(nwb):
+    from nwb_lake_reader.stores import digest
+
+    array = _source(nwb, verify="sha256").external_arrays()["core.45883-1.lfp"]
+    assert array.sha256 == digest(array.uri)
+
+
+def test_verify_none_records_nothing(nwb):
+    array = _source(nwb, verify="none").external_arrays()["core.45883-1.lfp"]
+    assert (array.size_bytes, array.sha256, array.verified_at) == (None, None, None)
+
+
+def test_an_unknown_verify_mode_is_refused(nwb):
+    with pytest.raises(ValueError, match="verify must be"):
+        _source(nwb, verify="md5")
 
 
 def test_a_series_with_no_matching_clock_is_refused(nwb):

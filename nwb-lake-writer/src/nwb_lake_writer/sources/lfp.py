@@ -68,6 +68,10 @@ class LFPSource:
         Absolute base the referenced arrays live under, without a trailing slash, to which the
         series path is appended. Absent, the local path is used as a `file://` URI, which makes
         a packet that resolves only on this machine.
+    verify : str, default "size"
+        What to establish about the referenced bytes: `size` lists the store, `sha256` also
+        digests it, `none` records no claim. A remote base needs `nwb-lake-reader[remote]` and
+        a backend for its scheme; unreachable leaves the claim unmade rather than guessed.
     """
 
     def __init__(
@@ -78,12 +82,16 @@ class LFPSource:
         clocks: Any = (),
         electrodes: Any = None,
         uri_base: str | None = None,
+        verify: str = "size",
     ) -> None:
         self.root = Path(root)
         self.session_id = session_id
         self.clocks = list(clocks)
         self.electrodes = dict(electrodes or {})
         self.uri_base = uri_base.rstrip("/") if uri_base else None
+        if verify not in {"none", "size", "sha256"}:
+            raise ValueError(f"verify must be none, size or sha256, not {verify!r}")
+        self.verify = verify
         self.notes: list[str] = []
         self._rates: dict[str, float] = {}
         self._series = (
@@ -179,20 +187,43 @@ class LFPSource:
                 physical_profile="zarr_v2",
                 codecs=self._codecs(meta),
             )
-            if self.uri_base is None:
-                # Only the bytes actually looked at may be reported as verified (R14 §2.3.1).
-                # Pointed elsewhere, the local size says nothing about what the URI resolves to.
-                size = sum(f.stat().st_size for f in (series / DATA).iterdir() if not f.name.startswith("."))
-                array = ExternalArray(
-                    array_asset_id=array.array_asset_id,
-                    uri=array.uri,
-                    physical_profile=array.physical_profile,
-                    codecs=array.codecs,
-                    size_bytes=size,
-                    verified_at=datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
-                )
-            out[self.resource_id(series)] = array
+            out[self.resource_id(series)] = self._verified(array)
         return out
+
+    def _verified(self, array: Any) -> Any:
+        """Record what looking at the referenced bytes established, or nothing (R14 §2.3.1).
+
+        Resolves the URI the manifest will carry, not the local copy beside it: bytes next to
+        the writer are not the bytes the URI names, however likely they are to be identical.
+        A store it cannot reach leaves the claim unmade, which is a packet saying less rather
+        than saying something untrue (R36 §2.4).
+
+        `size_bytes` is the whole prefix, metadata documents included, because a dense array
+        asset is a prefix of many objects and its `.zarray` is part of what it is (R36 §2.1).
+        """
+        from nwb_lake_reader.stores import StoreUnreachable, digest, listing
+
+        from ..writer import ExternalArray
+
+        if self.verify == "none":
+            return array
+        try:
+            found = listing(array.uri)
+            # A prefix has no natural digest, so R36 §2.2 defines one. It reads every byte --
+            # 3.9 s an array here -- which is why it is asked for separately.
+            checksum = digest(array.uri) if self.verify == "sha256" else None
+        except StoreUnreachable as exc:
+            self.notes.append(f"{array.array_asset_id}: nothing verified, {exc}")
+            return array
+        return ExternalArray(
+            array_asset_id=array.array_asset_id,
+            uri=array.uri,
+            physical_profile=array.physical_profile,
+            codecs=array.codecs,
+            sha256=checksum,
+            size_bytes=found.size_bytes,
+            verified_at=datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
+        )
 
     def array_assets(self) -> list[dict[str, Any]]:
         """`core.array_assets`, one row per series."""
