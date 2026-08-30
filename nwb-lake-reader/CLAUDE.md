@@ -19,8 +19,8 @@ This repository implements a specification maintained in sibling repositories un
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. |
-| `revisions/` | R1–R26, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (30 tables), its meta-schema, and the manifest JSON Schema. |
+| `revisions/` | R1–R32, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `registry/` | `logical_schemas.json` (33 tables), its meta-schema, and the manifest JSON Schema. |
 | `fixtures/` | Phase 0 packets and the conformance corpus — 16 packets with expected findings as data. |
 | `conformance/` | Probes producing the measured evidence the revisions cite. |
 | `nwb-lake-validator/` | Phase 2. Depends on this package; adds `nwb-lake validate`. |
@@ -43,8 +43,13 @@ one. It was split out because its correctness is pinned to a *registry* version 
 package's API is not — every new table or rule would otherwise force a reader release for
 code that had not changed.
 
-**Not yet.** Zarr array access (Phase 5). Writing, importing, and analysis materialization
-belong to `nwb-lake-writer` and its successors; this one stays a reader.
+**Also delivered.** Dense array access (Phase 5) — `ArrayResource`, `Packet.array_resource()`
+and `Packet.array_resources()`. Metadata needs no Zarr: an array declares its shape, dtype,
+chunk grid, fill value and codecs in a JSON document in the store, so what an array *is* costs
+nothing. Only `read()` needs Zarr, behind the `arrays` extra.
+
+**Not yet.** Writing, importing, and analysis materialization belong to `nwb-lake-writer` and
+its successors; this one stays a reader.
 
 ## Architecture
 
@@ -57,10 +62,14 @@ sql                    resource ID -> SQL identifier; public because the validat
                        against the names this package registers, and the two must agree
 ```
 
-`Resource` records what the manifest *says*; `TableResource` reads it. `ArrayResource`
-arrives at Phase 5 and should mirror `TableResource`'s shape. `Packet.table()` and
-`Packet.duckdb()` delegate to `TableResource` rather than touching the filesystem
-themselves.
+`Resource` records what the manifest *says*; `TableResource` and `ArrayResource` read it.
+`Packet.table()` and `Packet.duckdb()` delegate to `TableResource` rather than touching the
+filesystem themselves, and `Packet.array_resource()` to `ArrayResource`.
+
+The two handles split their dependencies the same way and for the same reason. A table needs
+PyArrow to read and DuckDB only to query; an array needs nothing to describe and Zarr only to
+read. That is what lets the validator check R15 §4 level 2 — declared codecs against the
+store's own metadata — without depending on Zarr at all.
 
 Errors derive from `PacketError` so callers can catch the family.
 
@@ -80,8 +89,9 @@ These are not local preferences; changing them breaks conformance.
   written against registry 0.1.0 stays readable when the reference registry moves on.
   Reading does not require the registry at all; validation does.
 - **`required_codecs` must be checked before opening any array** (R3 §7.2), failing with the
-  codec named rather than attempting the read. `Packet.check_codecs()` does this; it matters
-  from Phase 5.
+  codec named rather than attempting the read. `Packet.check_codecs()` does this, and
+  `ArrayResource.codecs` reports what a store actually uses, which is the other side of the
+  same comparison.
 - **A complete read path exists without a SQL engine.** `table()`, the accessors, and
   `TableResource` go through PyArrow; `Packet.duckdb()` and `Packet.sql()` are read paths
   too, and they do need DuckDB. The point is that they are not the *only* ones, so a minimal

@@ -7,15 +7,16 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.dataset as pads
 
 from .errors import ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
 from .manifest import Manifest, Resource
-from .resources import TableResource
+from .resources import ArrayResource, TableResource, as_dictionary
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
-    import pyarrow as pa
 
 #: What a column constraint may be: a scalar for equality, a two-item tuple for a closed
 #: range, or None to leave the column unconstrained.
@@ -23,8 +24,9 @@ Predicate = str | int | float | bool | tuple[Any, Any] | None
 
 REGISTRY_PATH = "schemas/logical_schemas.json"
 
-#: Zarr codecs every conforming reader must support (R3 §7.2). Arrays arrive at Phase 5;
-#: this is declared here so a packet requiring more can be rejected before it is opened.
+#: Zarr codecs every conforming reader must support (R3 §7.2). Declared here so a packet
+#: requiring more can be rejected before it is opened. A resource declaring a codec outside
+#: this set is refused only when it is the one being opened (R15 §2).
 BASELINE_CODECS = frozenset({"none", "gzip", "zstd"})
 
 
@@ -150,6 +152,31 @@ class Packet:
         """
         return TableResource(self.resource(resource_id), self._root)
 
+    def array_resource(self, resource_id: str) -> ArrayResource:
+        """Get a readable handle for a dense array resource.
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID.
+
+        Returns
+        -------
+        ArrayResource
+            A handle that can answer what the array is without Zarr, and read it with Zarr.
+        """
+        return ArrayResource(self.resource(resource_id), self._root)
+
+    def array_resources(self) -> tuple[ArrayResource, ...]:
+        """Every dense array the packet declares, in manifest order.
+
+        Returns
+        -------
+        tuple of ArrayResource
+            One handle per `dense_array_asset` resource.
+        """
+        return tuple(ArrayResource(resource, self._root) for resource in self.resources(kind="dense_array_asset"))
+
     # -- the registry the packet carries --------------------------------------------
 
     @property
@@ -226,6 +253,7 @@ class Packet:
         resource_id: str,
         *,
         columns: list[str] | None = None,
+        decode: bool = True,
         **where: Predicate,
     ) -> pa.Table:
         """Read a table resource into memory, optionally narrowed.
@@ -243,6 +271,16 @@ class Packet:
             Dotted resource ID.
         columns : list of str, optional
             Read only these columns. Reading every column is the default.
+        decode : bool, default True
+            Return plain strings. Pass False to keep the columns the file dictionary-encoded
+            as `dictionary<string, int32>`, which reading a whole identity column wants:
+            `unit_id` over 287 M spikes is 0.23 s and 1.15 GB that way against 2.29 s and
+            12.75 GB decoded, and the decoded read needs 13.6 GB to finish. Filtered reads
+            never come close, so the default is the predictable type rather than the fast one.
+
+            Whichever is chosen applies to both access paths, so the schema does not depend on
+            whether a constraint was passed. Named like `columns`, this shadows a constraint
+            on a column of the same name.
         **where : str, int, float, bool, tuple, or None
             Column constraints. A scalar means equality, a two-item tuple means a closed
             range, and ``None`` leaves the column unconstrained.
@@ -257,12 +295,18 @@ class Packet:
         >>> packet.table("core.events", event_type="reward")           # doctest: +SKIP
         >>> packet.table("core.spike_events", t_tick=(30_000, 60_000))  # doctest: +SKIP
         """
-        if not where and columns is None:
-            return self.table_resource(resource_id).to_arrow()
-        dataset = self.table_resource(resource_id).dataset()
-        return dataset.to_table(columns=columns, filter=self._predicate(where))
+        handle = self.table_resource(resource_id)
+        if not where:
+            # Projection is not a filter. Sending it through the dataset would decode every
+            # row and re-encode it, which on a whole identity column is 4.6 s against 0.3 s.
+            return handle.to_arrow(columns=columns, decode=decode)
+        # Read decoded, which is much the faster way to run a filter, then put the type back.
+        # The route differs between a whole read and a filtered one; the type returned does
+        # not, because a caller should not have to know which branch it took.
+        table = handle.dataset(decode=True).to_table(columns=columns, filter=self._predicate(where))
+        return table if decode else as_dictionary(table, handle.dictionary_columns())
 
-    def scan(self, resource_id: str) -> pads.Dataset:
+    def scan(self, resource_id: str, *, decode: bool = True) -> pads.Dataset:
         """Open a resource lazily, without reading it.
 
         Use this for what constraints cannot express: streaming a resource too large to
@@ -279,7 +323,7 @@ class Packet:
         pyarrow.dataset.Dataset
             A lazy dataset over the resource.
         """
-        return self.table_resource(resource_id).dataset()
+        return self.table_resource(resource_id).dataset(decode=decode)
 
     def duckdb(self, *, connection: duckdb.DuckDBPyConnection | None = None) -> duckdb.DuckDBPyConnection:
         """Register every table resource as a view and return the connection.
@@ -419,28 +463,41 @@ class Packet:
 
     def spike_times(
         self,
-        unit_id: str,
+        unit_id: str | None = None,
         *,
+        units: pa.Table | None = None,
         session_id: str | None = None,
         sorting_run_id: str | None = None,
         curation_id: str | None = None,
         t_tick: tuple[int, int] | None = None,
     ) -> pa.Table:
-        """Read one unit's spike times.
+        """Read spike times for one unit, or for a table of them.
 
         Returns ``clock_id`` alongside ``t_tick`` because a tick has no meaning without the
         clock it was counted on.
 
-        A unit is identified by ``(session_id, unit_id, sorting_run_id, curation_id)``, so a
-        packet holding more than one sorting or curation of the same unit needs those
-        arguments to disambiguate.
+        A unit is identified by ``(session_id, unit_id, sorting_run_id, curation_id)``, never
+        by ``unit_id`` alone. Passing `units` carries that whole identity, so a packet holding
+        two sortings of the same unit cannot be read ambiguously; naming `unit_id` on its own
+        leaves the caller to supply the rest and to notice when they have not.
+
+        It is also the fast path. `core.units` is thousands of rows and `core.spike_events` is
+        hundreds of millions, so resolving which units are wanted in the small table and
+        pushing their keys into the large one is the shape this format is built for: the keys
+        are compared against row-group statistics, and groups that cannot match are never
+        read. The alternative -- reading identity columns back out of the spike table to work
+        out which rows are wanted -- decodes one string per spike and costs orders of
+        magnitude more.
 
         Parameters
         ----------
-        unit_id : str
-            The unit.
+        unit_id : str, optional
+            One unit. Mutually exclusive with `units`.
+        units : pyarrow.Table, optional
+            Units to read, as returned by :meth:`units` and filtered however the caller
+            likes. Only its key columns are used; any others are ignored.
         session_id, sorting_run_id, curation_id : str, optional
-            Narrow the unit's identifying context.
+            Narrow the identifying context when naming a single `unit_id`.
         t_tick : tuple of int, optional
             Keep only spikes within this closed tick range, on the unit's own clock.
 
@@ -448,16 +505,96 @@ class Packet:
         -------
         pyarrow.Table
             Columns ``t_tick`` and ``clock_id``, in stored order.
+
+        Raises
+        ------
+        ValueError
+            If both or neither of `unit_id` and `units` are given.
+
+        Examples
+        --------
+        >>> packet.spike_times(units=packet.units(quality_label="sua"))  # doctest: +SKIP
         """
-        return self.table(
-            "core.spike_events",
-            columns=["t_tick", "clock_id"],
-            unit_id=unit_id,
-            session_id=session_id,
-            sorting_run_id=sorting_run_id,
-            curation_id=curation_id,
-            t_tick=t_tick,
-        )
+        if (unit_id is None) == (units is None):
+            raise ValueError("name exactly one of unit_id or units")
+        if unit_id is not None:
+            return self.table(
+                "core.spike_events",
+                columns=["t_tick", "clock_id"],
+                unit_id=unit_id,
+                session_id=session_id,
+                sorting_run_id=sorting_run_id,
+                curation_id=curation_id,
+                t_tick=t_tick,
+            )
+
+        assert units is not None  # the exclusivity check above settles this
+        keys = self._reference_columns("core.spike_events", "core.units")
+        missing = [k for k in keys if k not in units.schema.names]
+        if missing:
+            raise ValueError(f"units is missing {missing}, which identify a unit in this packet")
+        # The values must match the type the scan produces. `units` comes back with its
+        # identity columns dictionary-encoded -- that is what makes reading them cheap -- and
+        # a dictionary array will not compare against a string column.
+        tests = []
+        for key in keys:
+            values = units.column(key).unique()
+            if pa.types.is_dictionary(values.type):
+                values = values.cast(pa.string())
+            tests.append(pc.field(key).isin(values))
+        wanted = tests[0]
+        for test in tests[1:]:
+            wanted = wanted & test
+        if t_tick is not None:
+            wanted = wanted & (pc.field("t_tick") >= t_tick[0]) & (pc.field("t_tick") <= t_tick[1])
+        return self.scan("core.spike_events").to_table(columns=["t_tick", "clock_id"], filter=wanted)
+
+    def _reference_columns(self, resource_id: str, parent: str) -> list[str]:
+        """Return the columns by which one resource references another, per the registry.
+
+        The registry declares 46 of these and nothing read them. For spikes and units it is
+        the four-column contextual identity, which is the whole reason to take it from the
+        registry rather than write it out here and let the two drift.
+        """
+        registry = self.registry
+        table = (registry or {}).get("tables", {}).get(resource_id, {})
+        for reference in table.get("references", []):
+            if reference["resource"] == parent:
+                return list(reference["columns"])
+        raise ResourceNotFoundError(f"the registry declares no reference from {resource_id} to {parent}")
+
+    def distinct(self, resource_id: str, column: str) -> pa.ChunkedArray[Any]:
+        """Return the distinct values of a column, from whichever table owns them.
+
+        A foreign key means the parent table holds every value the child may carry, and it is
+        the smaller table by construction -- `core.units` is thousands of rows where
+        `core.spike_events` is hundreds of millions. So the answer comes from the parent, and
+        the fact table is never scanned. Falls back to reading the column when no reference
+        covers it, which is the honest thing rather than a wrong answer.
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID.
+        column : str
+            The column whose values are wanted.
+
+        Returns
+        -------
+        pyarrow.Array
+            The distinct values, unordered.
+        """
+        registry = self.registry
+        table = (registry or {}).get("tables", {}).get(resource_id, {})
+        for reference in table.get("references", []):
+            if column not in reference["columns"]:
+                continue
+            at = reference["columns"].index(column)
+            parent = reference["resource"]
+            if parent not in {r.resource_id for r in self.resources()}:
+                continue
+            return self.table(parent, columns=[reference["resource_columns"][at]]).column(0).unique()
+        return self.table(resource_id, columns=[column]).column(0).unique()
 
 
 def open_packet(path: str | Path, *, validate_manifest: bool = True) -> Packet:

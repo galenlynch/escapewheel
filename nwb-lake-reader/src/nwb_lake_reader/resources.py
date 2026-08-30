@@ -1,15 +1,23 @@
 """Readable handles for the resources a manifest declares.
 
 A :class:`~nwb_lake_reader.manifest.Resource` records what the manifest says. The classes
-here bind one to a packet root and read it. ``ArrayResource`` arrives with Zarr support at
-Phase 5 and should mirror this shape.
+here bind one to a packet root and read it.
+
+:class:`TableResource` needs PyArrow. :class:`ArrayResource` needs nothing at all to answer
+what an array is -- a Zarr array declares its shape, chunking and codecs in a JSON document
+beside the chunks -- and Zarr only to read values. The array path costs what it uses, the way
+DuckDB does behind the `sql` extra.
 """
 
 from __future__ import annotations
 
+import json
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
+import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.dataset as pads
 import pyarrow.parquet as pq
 
@@ -20,7 +28,91 @@ from .sql import sql_name
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
     import polars as pl
-    import pyarrow as pa
+
+
+#: Arrow types a Parquet dictionary decodes to. Only these are worth asking back as
+#: dictionaries; a numeric column gains nothing and an index would cost more than the value.
+_DICTIONARY_TYPES = ("string", "large_string", "binary", "large_binary")
+
+#: Where a Zarr array keeps its metadata. v3 names it `zarr.json`; v2, which R21 §3 permits
+#: an external array to use, names it `.zarray`. Both are JSON.
+_ZARR_METADATA: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
+
+
+def as_dictionary(table: pa.Table, columns: Iterable[str]) -> pa.Table:
+    """Re-encode named string columns as dictionaries, leaving the rest alone.
+
+    Used to give one return type to two read strategies. A whole-file read gets its
+    dictionary from Parquet directly, which is the cheap direction; a filtered read is faster
+    decoded and then re-encoded here, because the rows a filter leaves are few. Measured on
+    572,551 rows: 0.041 s decoded, 0.019 s to re-encode, against 1.318 s asking the scanner
+    for dictionaries -- and 132.8 MB becomes 18.5 MB.
+    """
+    wanted = set(columns)
+    if not wanted:
+        return table
+    arrays, fields = [], []
+    for name in table.schema.names:
+        column = table.column(name)
+        if name in wanted and pa.types.is_string(column.type):
+            column = pc.dictionary_encode(column)
+        arrays.append(column)
+        fields.append(pa.field(name, column.type))
+    return pa.table(arrays, schema=pa.schema(fields))
+
+
+def _resolve(resource: Resource, root: Path) -> Path:
+    """Resolve a declared URI against the packet root.
+
+    Parameters
+    ----------
+    resource : Resource
+        The manifest entry.
+    root : Path
+        Packet root directory.
+
+    Returns
+    -------
+    Path
+        The resolved path.
+
+    Raises
+    ------
+    ResourceUnreadableError
+        If the path does not exist.
+    """
+    declared = Path(resource.uri)
+    resolved = declared if declared.is_absolute() else root / declared
+    if not resolved.exists():
+        raise ResourceUnreadableError(f"{resource.resource_id}: {resource.uri} does not resolve under {root}")
+    return resolved
+
+
+def _codec_names(codecs: Iterable[Mapping[str, Any]]) -> list[str]:
+    """Flatten a Zarr v3 codec pipeline to names, outermost first.
+
+    The mandatory `bytes` codec is dropped, matching what a manifest declares (R15 §2). A
+    sharding codec is reported together with the codecs nested inside it, because reading one
+    chunk needs all of them.
+
+    Parameters
+    ----------
+    codecs : iterable of Mapping
+        The `codecs` array from a Zarr v3 metadata document.
+
+    Returns
+    -------
+    list of str
+        Codec names.
+    """
+    names = []
+    for codec in codecs:
+        name = str(codec.get("name", ""))
+        if name and name != "bytes":
+            names.append(name)
+        if nested := codec.get("configuration", {}).get("codecs"):
+            names.extend(_codec_names(nested))
+    return names
 
 
 class TableResource:
@@ -76,16 +168,66 @@ class TableResource:
         ResourceUnreadableError
             If the path does not exist.
         """
-        declared = Path(self._resource.uri)
-        resolved = declared if declared.is_absolute() else self._root / declared
-        if not resolved.exists():
-            raise ResourceUnreadableError(
-                f"{self.resource_id}: {self._resource.uri} does not resolve under {self._root}"
-            )
-        return resolved
+        return _resolve(self._resource, self._root)
 
-    def to_arrow(self) -> pa.Table:
+    def dictionary_columns(self) -> list[str]:
+        """Columns the file stores dictionary-encoded, and so can return without decoding.
+
+        Parquet writes a low-cardinality column as small integer indices into a dictionary
+        held once per row group. Asking for the values decodes those indices back into one
+        string per row, which for an identity column repeated over every row of a large table
+        is the dominant cost of reading it: measured on 20 M spikes, the five identity columns
+        of `core.spike_events` are 0.40 GB read as dictionaries and 4.38 GB decoded, 0.08 s
+        against 0.67 s. On disk they are 9.4 MB for 287 M rows.
+
+        Only columns the writer actually dictionary-encoded are named. Requesting a dictionary
+        for a column stored some other way makes Arrow build one during the read, which for a
+        high-cardinality column costs more than the strings it replaces.
+
+        Returns
+        -------
+        list of str
+            Column names, in schema order. Empty when the resource is partitioned, since the
+            fragments need not agree on encoding.
+        """
+        if self._resource.is_partitioned:
+            return []
+        try:
+            metadata = pq.ParquetFile(self.path).metadata
+        except Exception:  # noqa: BLE001 - an unreadable file is reported by the caller
+            return []
+        if not metadata.num_row_groups:
+            return []
+        schema = metadata.schema.to_arrow_schema()
+        group = metadata.row_group(0)
+        named = []
+        for index in range(group.num_columns):
+            column = group.column(index)
+            name = column.path_in_schema
+            if name not in schema.names or str(schema.field(name).type) not in _DICTIONARY_TYPES:
+                continue
+            if "RLE_DICTIONARY" in column.encodings or "PLAIN_DICTIONARY" in column.encodings:
+                named.append(name)
+        return named
+
+    def to_arrow(self, *, columns: list[str] | None = None, decode: bool = True) -> pa.Table:
         """Read the resource into memory, in stored order.
+
+        Parameters
+        ----------
+        columns : list of str, optional
+            Read only these columns. Projection is not a filter: it goes straight to the
+            Parquet reader, which never touches the column chunks left out.
+        decode : bool, default True
+            Return plain strings, which is what a caller expects and what everything
+            downstream already handles. Pass False to keep the columns as
+            `dictionary<string, int32>`, the form the file stores.
+
+            That is worth reaching for only when reading a whole identity column, which is
+            the one case where decoding dominates: `unit_id` over 287 M spikes is 0.23 s and
+            1.15 GB kept against 2.29 s and 12.75 GB decoded, and the decoded read needs
+            13.6 GB of memory to complete at all. Filtered reads never approach it, so the
+            default stays the predictable one rather than the fast one.
 
         Returns
         -------
@@ -93,18 +235,36 @@ class TableResource:
             The table.
         """
         if self._resource.is_partitioned:
-            return self.dataset().to_table()
-        return pq.read_table(self.path)
+            return self.dataset(decode=decode).to_table(columns=columns)
+        if decode:
+            return pq.read_table(self.path, columns=columns)
+        wanted = self.dictionary_columns()
+        if columns is not None:
+            wanted = [name for name in wanted if name in columns]
+        return pq.read_table(self.path, columns=columns, read_dictionary=wanted or None)
 
-    def dataset(self) -> pads.Dataset:
+    def dataset(self, *, decode: bool = True) -> pads.Dataset:
         """Open the resource as a PyArrow dataset without reading it.
+
+        Parameters
+        ----------
+        decode : bool, default True
+            The opposite default to :meth:`to_arrow`, and measured rather than assumed. A
+            filtered scan returns few rows, so the strings it decodes are cheap -- but the
+            dictionaries are per row group, and reconciling 1,891 of them costs far more than
+            the decoding it saves: 1.3 s against 0.037 s selecting 24 units, and 1.7 s against
+            0.033 s selecting one. A whole-file read is the reverse, which is why `to_arrow`
+            defaults the other way.
 
         Returns
         -------
         pyarrow.dataset.Dataset
             A lazy dataset, suitable for predicate pushdown over large resources.
         """
-        return pads.dataset(self.path, format="parquet", partitioning="hive")
+        columns = [] if decode else self.dictionary_columns()
+        options = pads.ParquetReadOptions(dictionary_columns=columns) if columns else None
+        fmt = pads.ParquetFileFormat(read_options=options) if options else pads.ParquetFileFormat()
+        return pads.dataset(self.path, format=fmt, partitioning="hive")
 
     def schema(self) -> pa.Schema:
         """Read the resource's Arrow schema without reading its data.
@@ -160,3 +320,196 @@ class TableResource:
         target = f"{self.path}/**/*.parquet" if self._resource.is_partitioned else str(self.path)
         frame: pl.LazyFrame = _pl.scan_parquet(target)
         return frame
+
+
+class ArrayResource:
+    """A dense array resource bound to a packet root.
+
+    Metadata and values have different costs, and this class keeps them apart. A Zarr array's
+    metadata is a JSON document in the store, so shape, dtype, chunking, fill value and codecs
+    are all answerable with no Zarr library present -- which is what lets a validator check
+    R15 §4's level 2 without taking a dependency on the thing it is checking. Only
+    :meth:`read` needs Zarr, behind the ``arrays`` extra.
+    """
+
+    def __init__(self, resource: Resource, root: Path) -> None:
+        """Bind a declared array resource to the packet root that contains it.
+
+        Parameters
+        ----------
+        resource : Resource
+            The manifest entry.
+        root : Path
+            Packet root directory.
+        """
+        self._resource = resource
+        self._root = root
+        self._metadata: dict[str, Any] | None = None
+        self._array: Any = None
+
+    @property
+    def resource(self) -> Resource:
+        """The underlying manifest entry."""
+        return self._resource
+
+    @property
+    def resource_id(self) -> str:
+        """The dotted resource ID."""
+        return self._resource.resource_id
+
+    def __repr__(self) -> str:
+        """Return a representation naming the resource and its URI."""
+        return f"<ArrayResource {self.resource_id!r} at {self._resource.uri}>"
+
+    @property
+    def path(self) -> Path:
+        """Resolve the resource's URI to a filesystem path.
+
+        Returns
+        -------
+        Path
+            The resolved path.
+
+        Raises
+        ------
+        ResourceUnreadableError
+            If the path does not exist.
+        """
+        return _resolve(self._resource, self._root)
+
+    @property
+    def zarr_format(self) -> Literal[2, 3]:
+        """Which Zarr version the store actually uses, 3 or 2.
+
+        Read from the store, never from the manifest's ``physical_profile``: the two agreeing
+        is what R15 §4's level 2 checks, so taking the manifest's word would make the check
+        compare a value with itself.
+
+        Returns
+        -------
+        int
+            3 or 2.
+
+        Raises
+        ------
+        ResourceUnreadableError
+            If neither metadata document is present.
+        """
+        root = self.path
+        for version, name in _ZARR_METADATA.items():
+            if (root / name).is_file():
+                return version
+        raise ResourceUnreadableError(f"{self.resource_id}: {root} holds no Zarr metadata document")
+
+    def metadata(self) -> dict[str, Any]:
+        """Read and parse the array's own Zarr metadata document.
+
+        Returns
+        -------
+        dict
+            The parsed document, read once and kept.
+        """
+        if self._metadata is None:
+            parsed: dict[str, Any] = json.loads((self.path / _ZARR_METADATA[self.zarr_format]).read_text())
+            self._metadata = parsed
+        return self._metadata
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        """The array's shape, in stored axis order (R3 §5)."""
+        return tuple(int(n) for n in self.metadata()["shape"])
+
+    @property
+    def dtype(self) -> str:
+        """The array's data type, spelled as Zarr spells it."""
+        meta = self.metadata()
+        return str(meta["data_type"] if self.zarr_format == 3 else meta["dtype"])
+
+    @property
+    def chunks(self) -> tuple[int, ...]:
+        """The unit of a read: the inner chunk where the array is sharded, the grid otherwise."""
+        meta = self.metadata()
+        if self.zarr_format == 2:
+            return tuple(int(n) for n in meta["chunks"])
+        for codec in meta.get("codecs", ()):
+            if codec.get("name") == "sharding_indexed":
+                return tuple(int(n) for n in codec["configuration"]["chunk_shape"])
+        return tuple(int(n) for n in meta["chunk_grid"]["configuration"]["chunk_shape"])
+
+    @property
+    def shards(self) -> tuple[int, ...] | None:
+        """The unit of one object where the array is sharded, None where it is not.
+
+        Sharding is what lets the chunk be the unit of the question without making one file
+        per chunk, which against object storage is one request per chunk.
+        """
+        meta = self.metadata()
+        if self.zarr_format == 2:
+            return None
+        if not any(codec.get("name") == "sharding_indexed" for codec in meta.get("codecs", ())):
+            return None
+        return tuple(int(n) for n in meta["chunk_grid"]["configuration"]["chunk_shape"])
+
+    @property
+    def fill_value(self) -> Any:
+        """The value an unwritten chunk reads as. R3 §7.1 requires one to be declared."""
+        return self.metadata().get("fill_value")
+
+    @property
+    def codecs(self) -> tuple[str, ...]:
+        """Every codec the array actually uses, outermost first, excluding ``bytes``.
+
+        Comparable directly against :attr:`Resource.codecs`, which is what the manifest claims.
+        """
+        meta = self.metadata()
+        if self.zarr_format == 3:
+            return tuple(_codec_names(meta.get("codecs", ())))
+        names = []
+        if compressor := meta.get("compressor"):
+            names.append(str(compressor["id"]))
+        names.extend(str(f["id"]) for f in (meta.get("filters") or ()))
+        return tuple(names)
+
+    def open(self) -> Any:
+        """Open the array for reading values, once, and keep it open.
+
+        Held rather than reopened because opening is not free next to the read it enables:
+        one unit of a sharded array costs 0.7 ms to read and 1.4 ms to reopen the store for,
+        so a loop over units spends twice as long opening as reading.
+
+        Zarr is an optional dependency; install it with the ``arrays`` extra.
+
+        Returns
+        -------
+        zarr.Array
+            The array, opened read-only.
+
+        Raises
+        ------
+        ImportError
+            If Zarr is not installed.
+        """
+        if self._array is None:
+            try:
+                import zarr
+            except ImportError as exc:  # pragma: no cover - exercised only without the extra
+                raise ImportError("reading array values requires zarr; install the 'arrays' extra") from exc
+            self._array = zarr.open_array(str(self.path), mode="r", zarr_format=self.zarr_format)
+        return self._array
+
+    def read(self, selection: Any = ...) -> Any:
+        """Read the array, or part of it, into memory.
+
+        Parameters
+        ----------
+        selection : optional
+            Any selection Zarr accepts. Defaults to the whole array. Prefer a selection
+            aligned to :attr:`chunks`, which is the unit the store decompresses.
+
+        Returns
+        -------
+        numpy.ndarray
+            The values.
+        """
+        array = self.open()
+        return array[...] if selection is ... else array[selection]

@@ -95,7 +95,10 @@ def _extend(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) ->
     """
     provided = set()
     for entry in entry_points(group=COMMAND_GROUP):
-        entry.load()(subcommands)
+        try:
+            entry.load()(subcommands)
+        except Exception as exc:  # noqa: BLE001 - see _broken
+            _broken(subcommands, entry.name, exc)
         provided.add(entry.name)
 
     for name, distribution in EXTENSIONS.items():
@@ -105,6 +108,33 @@ def _extend(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) ->
             # package rather than an argument the real subcommand would have accepted.
             absent.add_argument("args", nargs=argparse.REMAINDER)
             absent.set_defaults(func=_absent(name, distribution))
+
+
+def _broken(subcommands: argparse._SubParsersAction[argparse.ArgumentParser], name: str, exc: Exception) -> None:
+    """Register a subcommand that reports why it could not load.
+
+    A package registering a callable that raises would otherwise take down the whole command:
+    the exception propagates out of `build_parser`, so `nwb-lake validate` stops working
+    because something unrelated is broken. Discovery is open by design, so one bad entry point
+    is a thing that will happen, and the failure belongs to the subcommand that caused it.
+
+    Parameters
+    ----------
+    subcommands : argparse._SubParsersAction
+        The subparser action to register against.
+    name : str
+        Subcommand name.
+    exc : Exception
+        What loading raised.
+    """
+    parser = subcommands.add_parser(name, help="failed to load")
+    parser.add_argument("args", nargs=argparse.REMAINDER)
+
+    def run(args: argparse.Namespace) -> int:
+        print(f"error: `nwb-lake {name}` failed to load: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
+
+    parser.set_defaults(func=run)
 
 
 def _absent(name: str, distribution: str) -> Callable[[argparse.Namespace], int]:

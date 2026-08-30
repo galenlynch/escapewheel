@@ -8,7 +8,46 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-grayscale-inverted-border.json)](https://github.com/copier-org/copier)
 
-Tools to read NWB lakes
+Read NWB-Lake packets: Parquet tables, Zarr v3 arrays, and the JSON manifest binding them.
+
+A packet is a directory. This package opens one, resolves its resources by dotted ID rather
+than by path, and hands back Arrow tables and Zarr arrays. It does not write packets and does
+not validate their contents beyond the manifest's own shape — that is
+[nwb-lake-validator](../nwb-lake-validator).
+
+```python
+from nwb_lake_reader import open_packet
+
+packet = open_packet("session_packet/")
+packet.manifest.sessions  # what it covers
+trials = packet.trials(session_id="s001")  # a pyarrow.Table
+spikes = packet.spike_times(units=["unit_0001"])  # pushed down, not scanned
+
+array = packet.array_resource("core.waveform_mean")
+array.shape, array.dtype, array.chunks, array.codecs  # no Zarr needed for any of this
+array.read((slice(0, 1),))  # this needs Zarr
+```
+
+## What it costs to install
+
+The mandatory dependency closure is **jsonschema and pyarrow**, and that is the point rather
+than an accident. A complete read path exists without a SQL engine, which is what keeps a
+native reader viable in a language that has no embedded one — the reason `03` bans nested
+Parquet types. Everything heavier is an extra:
+
+| Extra | Brings | Needed for |
+|---|---|---|
+| `sql` | DuckDB | `Packet.sql()`, `Packet.duckdb()`, and all validation |
+| `arrays` | Zarr | `ArrayResource.read()` only — shape, dtype, chunking and codecs are read from the store's own JSON |
+| `polars` | Polars | `TableResource.scan_polars()` |
+
+## Two handles
+
+`Resource` records what the manifest *says*. `TableResource` and `ArrayResource` read it.
+`Packet.table()` and `Packet.duckdb()` delegate to the first, `Packet.array_resource()` to the
+second; neither touches the filesystem itself. Both split their dependencies the same way: a
+table needs PyArrow to read and DuckDB only to query, an array needs nothing to describe and
+Zarr only to read.
 
 ## Installation
 

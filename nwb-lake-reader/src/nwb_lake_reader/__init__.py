@@ -19,13 +19,14 @@ from .errors import (
 )
 from .manifest import Manifest, Resource
 from .packet import BASELINE_CODECS, Packet, Predicate, open_packet
-from .resources import TableResource
+from .resources import ArrayResource, TableResource
 from .sql import quote, sql_name
 
 __version__ = version("nwb-lake-reader")
 
 __all__ = [
     "BASELINE_CODECS",
+    "ArrayResource",
     "Manifest",
     "ManifestError",
     "Packet",

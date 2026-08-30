@@ -47,3 +47,94 @@ def test_missing_file_raises_on_access_not_construction(packet_root):
     (packet_root / "tables" / "core" / "trials.parquet").unlink()
     with pytest.raises(ResourceUnreadableError):
         _ = handle.path
+
+
+# -- dictionary-encoded identity columns -------------------------------------------------
+
+
+def test_dictionary_columns_names_what_the_file_encoded(packet_root):
+    """Only columns the writer dictionary-encoded, and only ones a dictionary helps."""
+    handle = open_packet(packet_root).table_resource("core.trials")
+    named = handle.dictionary_columns()
+    schema = handle.schema()
+    assert named, "the fixture writes low-cardinality strings, which pyarrow dictionary-encodes"
+    assert all(str(schema.field(n).type) == "string" for n in named)
+    assert "start_tick" not in named
+
+
+def test_reads_return_plain_strings(packet_root):
+    """The default is the predictable type. Keeping the file's own encoding is opt-in,
+    because the case it helps -- reading a whole identity column -- is not one an analysis
+    performs, and changing what every read returns to serve it is not a trade worth making.
+    """
+    table = open_packet(packet_root).table("core.trials")
+    assert all(str(table.schema.field(n).type) == "string" for n in handle_strings(table))
+
+
+def test_the_schema_does_not_depend_on_whether_you_filtered(packet_root):
+    """The read strategy differs between a whole read and a filtered one; the type must not.
+
+    A caller should not have to know which branch its arguments took, and code that checks a
+    column's type, concatenates two results, or converts to pandas must not change behaviour
+    because a constraint was passed.
+    """
+    packet = open_packet(packet_root)
+    whole = packet.table("core.trials")
+    first = whole.column("trial_id").to_pylist()[0]
+    filtered = packet.table("core.trials", trial_id=first)
+    assert whole.schema.types == filtered.schema.types
+    assert filtered.num_rows == 1
+
+
+def test_results_from_both_paths_concatenate(packet_root):
+    """The point of one type: two reads compose."""
+    import pyarrow as pa
+
+    packet = open_packet(packet_root)
+    whole = packet.table("core.trials")
+    first = whole.column("trial_id").to_pylist()[0]
+    filtered = packet.table("core.trials", trial_id=first)
+    assert pa.concat_tables([whole, filtered]).num_rows == whole.num_rows + 1
+
+
+def test_keeping_the_dictionary_is_uniform_too(packet_root):
+    """Whichever is asked for applies to both paths, so the schema never depends on the
+    arguments -- which is the whole reason `decode` is a promise about the type rather than
+    about how the file is read."""
+    packet = open_packet(packet_root)
+    whole = packet.table("core.trials", decode=False)
+    first = whole.column("trial_id").to_pylist()[0]
+    filtered = packet.table("core.trials", trial_id=first, decode=False)
+    assert whole.schema.types == filtered.schema.types
+    assert all(str(whole.schema.field(n).type).startswith("dictionary") for n in handle_strings(whole))
+
+
+def test_decode_can_be_forced_either_way(packet_root):
+    packet = open_packet(packet_root)
+    kept = packet.table("core.trials", columns=["trial_id"], decode=False)
+    assert str(kept.schema.field("trial_id").type).startswith("dictionary")
+    table = open_packet(packet_root).table("core.trials", decode=True)
+    assert all(str(table.schema.field(n).type) == "string" for n in handle_strings(table))
+
+
+def test_values_are_the_same_either_way(packet_root):
+    """A dictionary is an encoding, not a different answer."""
+    encoded = open_packet(packet_root).table("core.trials")
+    decoded = open_packet(packet_root).table("core.trials", decode=True)
+    assert encoded.num_rows == decoded.num_rows
+    for name in handle_strings(decoded):
+        assert encoded.column(name).to_pylist() == decoded.column(name).to_pylist()
+
+
+def test_a_pushed_predicate_still_matches(packet_root):
+    """Filters compare against dictionary values, so pushdown is unaffected."""
+    every = open_packet(packet_root).table("core.trials")
+    first = every.column("trial_id").to_pylist()[0]
+    picked = open_packet(packet_root).table("core.trials", trial_id=first)
+    assert picked.num_rows == 1
+    assert picked.column("trial_id").to_pylist() == [first]
+
+
+def handle_strings(table):
+    """String-ish column names, whichever encoding they came back in."""
+    return [n for n in table.schema.names if str(table.schema.field(n).type).startswith(("string", "dictionary"))]

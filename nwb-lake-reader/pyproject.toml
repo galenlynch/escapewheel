@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "nwb-lake-reader"
 description = "Tools to read NWB lakes"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
   { name = "Allen Institute for Neural Dynamics" },
   { name = "Galen Lynch", email = "galen@galenlynch.com" },
@@ -26,6 +26,9 @@ dependencies = [
 # is SQL and lives in nwb-lake-validator, which depends on this extra.
 sql = ["duckdb>=1.5.5"]
 polars = ["polars>=1.0"]
+# Zarr is optional for the same reason: an array declares its shape, chunking and codecs in a
+# JSON document, so what an array *is* costs nothing, and only reading values needs a library.
+arrays = ["zarr>=3"]
 
 [project.urls]
 Repository = "https://github.com/AllenNeuralDynamics/nwb-lake-reader/"
@@ -114,3 +117,8 @@ module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
+
+[[tool.mypy.overrides]]
+# zarr is the `arrays` extra, absent on a table-only install.
+module = "zarr.*"
+ignore_missing_imports = true
