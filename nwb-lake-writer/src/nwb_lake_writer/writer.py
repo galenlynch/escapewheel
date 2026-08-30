@@ -730,9 +730,9 @@ class PacketWriter:
         packet_version : str, optional
             The new version. Defaults to bumping the minor component.
         limits : Mapping, optional
-            DuckDB settings bounding validation. An amendment revalidates the whole packet
-            (R32 §5), so it needs at least what the original commit needed, and usually more:
-            the added resource is registered alongside everything already there.
+            DuckDB settings bounding validation. R35 §5 narrows an amendment to the rules
+            attached to a written resource or naming one, but every table is still registered
+            alongside it, so a surviving rule may read anything the packet holds.
 
         Returns
         -------
@@ -787,16 +787,18 @@ class PacketWriter:
         # leaves the packet exactly as it was.
         restore = self._install_registry(root)
         try:
-            # Every rule runs over the whole packet (R32 §5), but physical order is re-read
-            # only for what this amendment writes. A file the amendment does not name is
-            # byte-identical to one already verified: R32 §3 forbids modifying it and R14 §2.3
-            # declares it immutable, so its row order cannot have changed. Re-deriving it costs
-            # 467 MB a table and can only reach the answer it reached before.
+            # Both halves of the amendment are bounded by what it writes (R35). Physical order
+            # is re-read only for those files, and only the rules attached to one or naming one
+            # re-run. A file the amendment does not name is byte-identical to one already
+            # verified -- R32 §3 forbids modifying it and R14 §2.3 declares it immutable -- so
+            # its order cannot have changed and a rule reading only it is already answered.
+            written = {e["resource_id"] for e in entries}
             report = validate(
                 Packet(root, Manifest.from_dict(candidate)),
                 registry=dict(self._registry),
                 limits=limits,
-                scan={e["resource_id"] for e in entries} - self._ordered,
+                scan=written - self._ordered,
+                recheck=written,
             )
             if not report.passed:
                 raise CommitRefused(report, staging)

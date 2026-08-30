@@ -309,6 +309,35 @@ def test_an_amendment_adds_a_resource(tmp_path, registry, minimal):
     assert packet.table("core.processing_runs").num_rows == 1
 
 
+def test_an_amendment_re_runs_only_the_rules_its_resources_implicate(tmp_path, registry, minimal):
+    """R35 §5. What it writes is what it must re-check; everything else is immutable."""
+    import nwb_lake_writer.writer as module
+
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    seen = {}
+    real = module.validate
+
+    def spy(packet, **kwargs):
+        seen.update(kwargs)
+        return real(packet, **kwargs)
+
+    module.validate = spy
+    try:
+        assert _amend(root, registry, {"core.processing_runs": _runs()}).passed
+    finally:
+        module.validate = real
+    assert seen["recheck"] == {"core.processing_runs"}
+
+
+def test_an_amendment_still_validates_what_it_writes(tmp_path, registry, minimal):
+    """Narrowing must not narrow away the added resource: `status` is a closed vocabulary."""
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    with pytest.raises(CommitRefused):
+        _amend(root, registry, {"core.processing_runs": _runs(status="finished")})
+
+
 def test_an_amendment_bumps_the_version_and_says_what_it_supersedes(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     _write(root, registry, minimal)
