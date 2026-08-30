@@ -72,6 +72,15 @@ regular-tick axis states the whole time base in three integers on the clock the 
 already on. Both upstream defects disappear rather than being carried forward, and the
 per-probe drift the grid would have introduced -- up to 70 ms over a session -- goes with them.
 
+**In production the arrays are on S3, and `uri_base` is how the recipe says so.** Set it and
+the manifest points at `s3://.../ElectricalSeries<probe>-LFP/data`; leave it and the packet
+records a `file://` URI that resolves only on the machine that built it. A remote base also
+suppresses `size_bytes` and `verified_at`, because R14 §2.3.1 lets a packet report only what
+was actually looked at and a local copy says nothing about what a remote URI resolves to. The
+consequence is worth knowing: **a production packet currently carries no verified fact about
+its LFP at all.** Closing that needs the writer to reach the real URI, which is the same
+capability `validate(external=True)` needs and neither has yet.
+
 `LFPSource` derives the step from the *interval* between the first two timestamps rather than
 their values: the sign fault ruins the values and leaves the spacing alone. A ratio that is not
 a whole number of probe ticks is refused, because then this is not a decimation of that stream.
