@@ -38,7 +38,32 @@ class Check:
     sql: str
 
 
-def generate(registry: Mapping[str, Any], *, only: set[str] | None = None, advisory: bool = False) -> list[Check]:
+def adjacency_settles_uniqueness(table: Mapping[str, Any]) -> bool:
+    """Whether a table's sort order puts duplicate keys next to each other.
+
+    True when the first `len(key)` sort columns are the key columns, in any order: two rows
+    equal on the whole key then agree on that whole prefix, so nothing can sort between them.
+    A shim streaming the file in order can settle uniqueness by comparing neighbours, which
+    costs nothing on top of the ordering check it already performs -- against a `GROUP BY`
+    that measured 26 GB of spill on 287 M spikes, because the key is four string columns and
+    an aggregate materialises every one of them.
+
+    False when the key is not a prefix of the sort. A sort of `(a, b, x)` with key `(a, b)`
+    groups equal keys together but `x` may order duplicates apart, so neighbours are not
+    enough and the aggregate is the only correct check.
+    """
+    key = table.get("primary_key")
+    sort = table.get("sort")
+    return bool(key and sort and len(sort) >= len(key) and set(sort[: len(key)]) == set(key))
+
+
+def generate(
+    registry: Mapping[str, Any],
+    *,
+    only: set[str] | None = None,
+    advisory: bool = False,
+    aggregate: set[str] | None = None,
+) -> list[Check]:
     """Build every check a registry implies.
 
     Parameters
@@ -90,7 +115,8 @@ def generate(registry: Mapping[str, Any], *, only: set[str] | None = None, advis
                     )
                 )
 
-        if key := table.get("primary_key"):
+        by_scan = adjacency_settles_uniqueness(table) and resource not in (aggregate or set())
+        if (key := table.get("primary_key")) and not by_scan:
             columns = ", ".join(quote(k) for k in key)
             checks.append(
                 Check(

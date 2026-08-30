@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import contextlib
 import json
-from collections.abc import Mapping, Sequence
+import shutil
+import tempfile
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
 from pathlib import Path
@@ -23,9 +25,9 @@ import jsonschema
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
-from nwb_lake_reader import Packet, PacketError, sql_name
+from nwb_lake_reader import Packet, PacketError, ResourceUnreadableError, sql_name
 
-from .generate import generate
+from .generate import adjacency_settles_uniqueness, generate
 
 #: Registry column type -> the Arrow type a conforming writer must emit (R3 §2.1).
 ARROW_TYPES = {
@@ -168,6 +170,152 @@ def _check_embedded_registry(packet: Packet, embedded: Mapping[str, Any], report
         )
 
 
+def _check_materialization_provenance(packet: Packet, report: Report) -> None:
+    """Layer 1c: every analysis resource names the run that produced it (R31 §5).
+
+    Not SQL, and deliberately. `processing_run_id` lives in the manifest, which no query sees,
+    so a Tier 1 foreign key cannot reach it -- a rule written in SQL here would pass silently
+    on a packet whose manifest names a run that does not exist, which is the failure mode R12
+    was written about.
+    """
+    analysis = [r for r in packet.resources() if r.layer == "analysis"]
+    if not analysis:
+        return
+
+    for resource_id in sorted(r.resource_id for r in analysis if not r.entry.get("processing_run_id")):
+        report.add(
+            "error",
+            "provenance.no_processing_run",
+            f"{resource_id} is derived but names no processing_run_id (R31 §3)",
+        )
+
+    named = {r.entry["processing_run_id"] for r in analysis if r.entry.get("processing_run_id")}
+    if not named:
+        return
+    try:
+        runs = packet.table("core.processing_runs", columns=["processing_run_id"])
+    except PacketError:
+        report.add(
+            "error",
+            "provenance.no_processing_runs_table",
+            f"{len(named)} resource(s) name a processing run but the packet carries no core.processing_runs",
+        )
+        return
+    for missing in sorted(named - set(runs.column("processing_run_id").to_pylist())):
+        report.add(
+            "error",
+            "provenance.unknown_processing_run",
+            f"processing_run_id {missing!r} appears in no row of core.processing_runs (R31 §5)",
+        )
+
+
+def _declared_axes(packet: Packet, owned: Sequence[Any], report: Report) -> dict[str, set[int]] | None:
+    """Axis indices `core.array_dimensions` gives per array asset, or None if it has none.
+
+    A null `axis_index` is skipped: it is a required column, so Tier 1 reports it, and
+    counting it here would report the same defect a second time as a rank disagreement.
+    """
+    try:
+        rows = packet.table("core.array_dimensions", columns=["array_asset_id", "axis_index"])
+    except PacketError:
+        report.add(
+            "error",
+            "array.no_array_dimensions_table",
+            f"{len(owned)} packet-owned array(s) but no core.array_dimensions, so no axis is named (R3 §3.0)",
+        )
+        return None
+    axes: dict[str, set[int]] = {}
+    for asset, axis in zip(
+        rows.column("array_asset_id").to_pylist(), rows.column("axis_index").to_pylist(), strict=True
+    ):
+        if asset is not None and axis is not None:
+            axes.setdefault(str(asset), set()).add(int(axis))
+    return axes
+
+
+def _check_one_array(resource: Any, handle: Any, axes: dict[str, set[int]] | None, report: Report) -> None:
+    """Check one packet-owned array against the metadata document in its own store."""
+    try:
+        metadata = handle.metadata()
+        actual = set(handle.codecs)
+        rank = len(handle.shape)
+    except (ResourceUnreadableError, OSError, ValueError, KeyError) as exc:
+        report.add("error", "array.unreadable", f"{resource.resource_id}: {exc}")
+        return
+
+    if handle.zarr_format != 3:
+        report.add(
+            "error",
+            "array.not_zarr_v3",
+            f"{resource.resource_id} is packet-owned but stored as Zarr v{handle.zarr_format}; "
+            "R21 §3.1 allows v2 only for an array the packet references",
+        )
+
+    declared = set(resource.codecs)
+    if declared != actual:
+        detail = []
+        if undeclared := sorted(actual - declared):
+            detail.append(f"the store uses {', '.join(undeclared)}, which the manifest omits")
+        if unused := sorted(declared - actual):
+            detail.append(f"the manifest declares {', '.join(unused)}, which the store does not use")
+        report.add("error", "array.codecs_disagree_with_store", f"{resource.resource_id}: {'; '.join(detail)} (R15 §4)")
+
+    if "transpose" in actual:
+        report.add(
+            "error",
+            "array.transpose_codec",
+            f"{resource.resource_id} uses the transpose codec, which R3 §5 forbids: axes are stored in the "
+            "order the packet declares them",
+        )
+
+    if (grid := metadata.get("chunk_grid", {}).get("name")) != "regular":
+        report.add(
+            "error",
+            "array.irregular_chunk_grid",
+            f"{resource.resource_id} declares a {grid!r} chunk grid; R3 §7.1 requires a regular one",
+        )
+
+    if "fill_value" not in metadata:
+        report.add(
+            "error", "array.no_fill_value", f"{resource.resource_id} declares no fill_value, which R3 §7.1 requires"
+        )
+
+    asset = resource.entry.get("array_asset_id")
+    if asset is None:
+        report.add(
+            "error",
+            "array.no_array_asset_id",
+            f"{resource.resource_id} names no array_asset_id, so core.array_dimensions cannot reach it",
+        )
+    elif axes is not None and (named := axes.get(str(asset), set())) != set(range(rank)):
+        report.add(
+            "error",
+            "array.rank_disagrees_with_dimensions",
+            f"{resource.resource_id} has rank {rank} but core.array_dimensions gives axis_index "
+            f"{sorted(named) or 'none'} for {asset!r}; R3 §5 requires one row per stored axis",
+        )
+
+
+def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
+    """Layer 1c: every packet-owned array against its own Zarr metadata (R15 §4, level 2).
+
+    Always runs, and needs no Zarr: a Zarr array's metadata is a JSON document in the store,
+    which `ArrayResource` parses directly. The packet owns these bytes, so an array it
+    describes wrongly is a defect in the packet rather than in the reader's situation. An
+    external array is level 3 and stays with the requested mode, where
+    `_check_codec_declarations` already reports it as `info`.
+
+    Storage, not values, so the shim and not SQL (R12 §4). No query can see a chunk grid, and
+    a codec the manifest omits is exactly the kind of disagreement a SQL rule passes silently.
+    """
+    owned = [r for r in packet.resources(kind="dense_array_asset") if not r.is_external]
+    if not owned:
+        return
+    axes = _declared_axes(packet, owned, report)
+    for resource in owned:
+        _check_one_array(resource, packet.array_resource(resource.resource_id), axes, report)
+
+
 def _check_codec_declarations(packet: Packet, report: Report) -> None:
     """Layer 1b: manifest-internal codec consistency (R15 §4, level 1).
 
@@ -257,8 +405,8 @@ def _sortable(row: Sequence[Any]) -> tuple[tuple[bool, Any], ...]:
     return tuple((v is None, v) for v in row)
 
 
-def _descents(batch: Any, keys: Sequence[str]) -> list[int]:
-    """Offsets where a batch decreases lexicographically over `keys`.
+def _neighbours(batch: Any, keys: Sequence[str]) -> tuple[Any, Any]:
+    """Per-row masks over `keys`: does row i+1 sort before row i, and does it equal it.
 
     Vectorized per column rather than per row: a quarter of a billion Python tuple
     comparisons is minutes of wall clock, and the same comparison in Arrow is seconds. A
@@ -266,8 +414,6 @@ def _descents(batch: Any, keys: Sequence[str]) -> list[int]:
     equal-so-far mask carries forward across columns. Null sorts first, matching the writer.
     """
     n = batch.num_rows - 1
-    if n < 1:
-        return []
     descending: Any = pa.array([False] * n)
     equal_so_far: Any = pa.array([True] * n)
     for key in keys:
@@ -285,16 +431,87 @@ def _descents(batch: Any, keys: Sequence[str]) -> list[int]:
         )
         descending = pc.or_(descending, pc.and_(equal_so_far, pc.fill_null(less, False)))
         equal_so_far = pc.and_(equal_so_far, pc.fill_null(same, False))
+    return descending, equal_so_far
+
+
+def _descents(batch: Any, keys: Sequence[str]) -> list[int]:
+    """Offsets where a batch decreases lexicographically over `keys`."""
+    if batch.num_rows - 1 < 1:
+        return []
+    descending, _ = _neighbours(batch, keys)
     return [i + 1 for i in pc.indices_nonzero(descending).to_pylist()]
 
 
-def _check_ordering(tables: Mapping[str, Any], present: Mapping[str, Any], report: Report) -> None:
-    """Layer 3: declared sort order, read in written order (R10 §2, R12 §2)."""
+def _repeats(batch: Any, keys: Sequence[str]) -> list[int]:
+    """Offsets where a batch repeats the previous row over `keys`.
+
+    Uniqueness, for a table whose sort order makes duplicates neighbours -- the byproduct the
+    ordering scan already computes and used to discard.
+    """
+    if batch.num_rows - 1 < 1:
+        return []
+    _, equal = _neighbours(batch, keys)
+    return [i + 1 for i in pc.indices_nonzero(equal).to_pylist()]
+
+
+def _constant(path: Path, keys: Sequence[str]) -> set[str]:
+    """Return the sort keys the file stores as a single value, which cannot affect ordering.
+
+    A column holding one value never decreases and is always equal to itself, so it contributes
+    nothing to either the descent mask or the duplicate mask — yet it is still decoded and
+    compared once per row. Parquet answers this from the footer: row-group statistics carry each
+    column's min and max, so a constant column is knowable without reading a page of it.
+
+    `session_id` is the usual case. A single-session packet otherwise spends a fifth of its
+    ordering scan proving that a constant is not descending.
+
+    The caller must keep at least one key. If every key is constant then every row is equal on
+    the whole key, which is a table of duplicates rather than a table needing no check, and
+    dropping them all would report neither.
+    """
+    metadata = pq.ParquetFile(path).metadata
+    names = metadata.schema.names
+    constant = set()
+    for key in keys:
+        if key not in names:
+            continue
+        column = names.index(key)
+        seen: set[Any] = set()
+        for group in range(metadata.num_row_groups):
+            statistics = metadata.row_group(group).column(column).statistics
+            if statistics is None or not statistics.has_min_max or statistics.null_count:
+                seen = {object(), object()}  # unknown, so keep the column
+                break
+            seen |= {statistics.min, statistics.max}
+        if len(seen) == 1:
+            constant.add(key)
+    return constant
+
+
+def _check_ordering(tables: Mapping[str, Any], present: Mapping[str, Any], report: Report) -> set[str]:
+    """Layer 3: declared sort order, and the uniqueness that order settles (R10 §2, R12 §2).
+
+    One pass answers both. A table sorted by its primary key puts duplicates next to each
+    other, so comparing neighbours -- which this scan already does to find descents -- decides
+    uniqueness too. `generate` leaves the `GROUP BY` out for those tables: on 287 M spikes it
+    spilled 26 GB, because the key is four string columns and an aggregate materialises every
+    one of them, while the scan reads them in order and holds one batch.
+    """
+    unsound: set[str] = set()
     for resource_id, handle in present.items():
-        keys = tables[resource_id].get("sort")
+        spec = tables[resource_id]
+        keys = spec.get("sort")
         if not keys:
             continue
+        unique = spec["primary_key"] if adjacency_settles_uniqueness(spec) else None
+        # A constant column decides nothing, so drop it from both the order and the key it
+        # settles -- but never to nothing, since a wholly constant key is every row duplicated.
+        constant = _constant(handle.path, keys)
+        keys = [k for k in keys if k not in constant] or list(keys)
+        if unique:
+            unique = [k for k in unique if k not in constant] or list(unique)
         offending: list[tuple[int, Any, Any]] = []
+        duplicated: list[tuple[int, Any]] = []
         tail: tuple[Any, ...] | None = None
         start = 0
         for batch in pq.ParquetFile(handle.path).iter_batches(batch_size=ORDER_BATCH, columns=keys):
@@ -305,18 +522,45 @@ def _check_ordering(tables: Mapping[str, Any], present: Mapping[str, Any], repor
                 (start + offset, _row_at(batch, keys, offset - 1), _row_at(batch, keys, offset))
                 for offset in _descents(batch, keys)
             )
+            if unique:
+                # The batch boundary needs its own comparison: the scan compares within a
+                # batch, so a duplicate split across two would otherwise pass unseen.
+                if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
+                    duplicated.append((start, _row_at(batch, unique, 0)))
+                duplicated.extend(
+                    (start + offset, _row_at(batch, unique, offset)) for offset in _repeats(batch, unique)
+                )
             tail = _row_at(batch, keys, batch.num_rows - 1)
             start += batch.num_rows
-            if len(offending) >= ORDER_REPORT:
-                del offending[ORDER_REPORT:]
+            if len(offending) >= ORDER_REPORT and len(duplicated) >= ORDER_REPORT:
                 break
         if offending:
             report.add(
                 "warning",
                 f"{resource_id}.physical_order",
                 f"rows are not in declared sort order ({', '.join(keys)})",
-                [(f"row {i}", str(prev), str(cur)) for i, prev, cur in offending],
+                [(f"row {i}", str(prev), str(cur)) for i, prev, cur in offending[:ORDER_REPORT]],
             )
+        if unique and offending:
+            # Adjacency settles uniqueness only for a file actually in order: a duplicate
+            # anywhere but beside its twin is invisible to a scan of neighbours. Ordering is a
+            # warning by design -- a packet in the wrong order still conforms -- so uniqueness
+            # falls back to the aggregate rather than being escalated or skipped.
+            unsound.add(resource_id)
+        elif duplicated:
+            report.add(
+                "error",
+                f"{resource_id}.primary_key_unique",
+                "duplicate primary key",
+                [(f"row {i}", str(row)) for i, row in duplicated[:ORDER_REPORT]],
+            )
+    return unsound
+
+
+def _tail_key(tail: tuple[Any, ...], keys: Sequence[str], unique: Sequence[str]) -> tuple[Any, ...]:
+    """Return the key columns of a row already pulled out over the sort columns."""
+    index = {name: position for position, name in enumerate(keys)}
+    return tuple(tail[index[name]] for name in unique)
 
 
 #: Registry column type -> the DuckDB type used for the empty stand-in tables below.
@@ -365,6 +609,35 @@ def _bounded(connection: Any, limits: Mapping[str, Any], spill: Path | None = No
     return connection
 
 
+@contextlib.contextmanager
+def _spill_beside(packet: Packet) -> Iterator[Path | None]:
+    """Yield a directory for DuckDB to spill into, removed afterwards.
+
+    Beside the packet, not inside it. The filesystem has to be the packet's -- `/tmp` is tmpfs
+    on several distributions, so spilling there consumes the memory the limit exists to bound
+    -- but the packet root is the wrong place to put it: validating a packet would write into
+    a directory whose bytes are supposed to be settled (R14 §2.3), leave it behind, and fail
+    outright on read-only media. Measured on 287 M spikes, the uniqueness check spills 26 GB,
+    which is 31x the packet it is checking.
+    """
+    root = getattr(packet, "root", None)
+    if root is None:
+        yield None
+        return
+    root = Path(root)
+    for parent in (root.parent, root):
+        try:
+            spill = Path(tempfile.mkdtemp(prefix=".validate-", dir=parent))
+        except OSError:
+            continue
+        try:
+            yield spill
+        finally:
+            shutil.rmtree(spill, ignore_errors=True)
+        return
+    yield None
+
+
 def _run_rules(
     packet: Packet,
     registry: Mapping[str, Any],
@@ -372,34 +645,38 @@ def _run_rules(
     report: Report,
     advisory: bool,
     limits: Mapping[str, Any] | None = None,
+    unsound: set[str] | None = None,
 ) -> None:
     """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
-    spill = Path(packet.root) / ".duckdb-spill" if hasattr(packet, "root") else None
-    connection = _bounded(packet.duckdb(), LIMITS if limits is None else limits, spill)
-
-    # A Tier 2 rule may reference a table other than the one it is declared on --
-    # core.clocks.one_alignment_model reads core.clock_anchors, for instance. A packet that
-    # does not declare a table genuinely has no rows of it, so an empty stand-in lets such a
-    # rule evaluate rather than fail to run. A table that IS declared but unreadable is a
-    # different case, already reported as resource.missing.
-    for resource_id, spec in registry["tables"].items():
-        if resource_id in present:
-            continue
-        columns = ", ".join(f'"{c["name"]}" {_DDL[c["type"]]}' for c in spec["columns"])
-        connection.sql(f"CREATE OR REPLACE TABLE {sql_name(resource_id)} ({columns})")
-
-    connection.sql("CREATE OR REPLACE TABLE manifest_sessions (session_id VARCHAR)")
-    for session in packet.manifest.sessions:
-        connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
-
-    for check in generate(registry, only=set(present), advisory=advisory):
+    with _spill_beside(packet) as spill:
+        connection = _bounded(packet.duckdb(), LIMITS if limits is None else limits, spill)
         try:
-            rows = _offending(connection, check.sql)
-        except Exception as exc:  # noqa: BLE001 - an engine error is a finding, not a crash
-            report.add("error", check.id, f"check could not run: {str(exc).splitlines()[0][:90]}")
-            continue
-        if rows:
-            report.add(check.level, check.id, check.message, rows)
+            # A Tier 2 rule may reference a table other than the one it is declared on --
+            # core.clocks.one_alignment_model reads core.clock_anchors, for instance. A packet that
+            # does not declare a table genuinely has no rows of it, so an empty stand-in lets such a
+            # rule evaluate rather than fail to run. A table that IS declared but unreadable is a
+            # different case, already reported as resource.missing.
+            for resource_id, spec in registry["tables"].items():
+                if resource_id in present:
+                    continue
+                columns = ", ".join(f'"{c["name"]}" {_DDL[c["type"]]}' for c in spec["columns"])
+                connection.sql(f"CREATE OR REPLACE TABLE {sql_name(resource_id)} ({columns})")
+
+            connection.sql("CREATE OR REPLACE TABLE manifest_sessions (session_id VARCHAR)")
+            for session in packet.manifest.sessions:
+                connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
+
+            for check in generate(registry, only=set(present), advisory=advisory, aggregate=unsound or set()):
+                try:
+                    rows = _offending(connection, check.sql)
+                except Exception as exc:  # noqa: BLE001 - an engine error is a finding, not a crash
+                    report.add("error", check.id, f"check could not run: {str(exc).splitlines()[0][:90]}")
+                    continue
+                if rows:
+                    report.add(check.level, check.id, check.message, rows)
+        finally:
+            with contextlib.suppress(Exception):
+                connection.close()
 
 
 def _offending(connection: Any, sql: str) -> list[tuple[Any, ...]]:
@@ -463,9 +740,11 @@ def validate(
     if embedded is not None:
         _check_embedded_registry(packet, embedded, report)
     _check_codec_declarations(packet, report)
+    _check_packet_owned_arrays(packet, report)
+    _check_materialization_provenance(packet, report)
     present = _check_schemas(packet, effective["tables"], report)
-    _check_ordering(effective["tables"], present, report)
-    _run_rules(packet, effective, present, report, advisory, limits)
+    unsound = _check_ordering(effective["tables"], present, report)
+    _run_rules(packet, effective, present, report, advisory, limits, unsound)
     return report
 
 

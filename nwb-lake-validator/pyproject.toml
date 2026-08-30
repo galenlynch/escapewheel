@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "nwb-lake-validator"
 description = "Tools to validate NWB lakes"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
   { name = "Allen Institute for Neural Dynamics" },
   { name = "Galen Lynch", email = "galen@galenlynch.com" },

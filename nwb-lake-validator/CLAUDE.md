@@ -25,8 +25,8 @@ When behaviour here seems arbitrary, the reason is there.
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. `05` is the import and validation pipeline. |
-| `revisions/` | R1–R26, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (30 tables), its meta-schema, and the manifest JSON Schema. |
+| `revisions/` | R1–R32, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `registry/` | `logical_schemas.json` (33 tables), its meta-schema, and the manifest JSON Schema. |
 | `fixtures/` | The conformance corpus — 16 packets with expected findings as data. |
 | `nwb-lake-reader/` | The read path. This package's only runtime dependency of substance. |
 
@@ -45,8 +45,14 @@ and the `nwb-lake validate` subcommand with an optional JSON report.
 `nwb-lake validate --advisory`. They are never `error`, so enabling them cannot change whether
 a packet passed, and the report records whether they ran.
 
+**Also delivered.** Level 2 (R15 §4) — every packet-owned array against the metadata document
+in its own store: codecs, Zarr version, chunk grid, fill value, and rank against
+`core.array_dimensions`. The shim, not SQL (R12 §4), and it needs no Zarr, because the metadata
+is JSON. It caught a real defect on its first run: a sharded array whose manifest declared only
+the inner codec.
+
 **Not yet.** The external mode (R15 §4, level 3): nothing resolves an external URI or checks
-its `sha256`, `size_bytes`, or actual codecs. Needed for Phase 5.
+its `sha256`, `size_bytes`, or actual codecs. Needed for the LFP arrays.
 
 ## Architecture
 
