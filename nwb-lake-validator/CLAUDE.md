@@ -25,7 +25,7 @@ When behaviour here seems arbitrary, the reason is there.
 | Sibling | Contents |
 |---|---|
 | `nwb_lake_poc_docs/` | The frozen specification. Never edited. `05` is the import and validation pipeline. |
-| `revisions/` | R1–R32, all accepted. Where they disagree with the frozen docs, the revision binds. |
+| `revisions/` | R1–R35, all accepted. Where they disagree with the frozen docs, the revision binds. |
 | `registry/` | `logical_schemas.json` (33 tables), its meta-schema, and the manifest JSON Schema. |
 | `fixtures/` | The conformance corpus — 16 packets with expected findings as data. |
 | `nwb-lake-reader/` | The read path. This package's only runtime dependency of substance. |
@@ -96,6 +96,14 @@ These are not local preferences; changing them breaks conformance.
   package's idea of the schema silently overrule the packet's own.
 - **A nullable foreign key needs an `IS NOT NULL` guard.** Six of the registry's references
   are nullable; without the guard every null row reports as an unresolved reference.
+- **An amendment re-runs only the rules its own resources implicate** (R35 §5). `validate`
+  takes `recheck`, the resources just written; a check survives when it is attached to one or
+  when its SQL *names* one. The name test is syntactic over R2 §7's flattened form, which is
+  what makes it sound without the registry promising that no existing rule references a
+  resource added later — amending `core.processing_runs` re-runs foreign-key checks declared
+  on `core.event_streams` and `core.processing_run_inputs`. It is deliberately over-inclusive:
+  a match in a comment costs time, a missed one costs correctness. `None` runs everything,
+  which is what a first commit and an unknown packet both need.
 - **Identifiers come from `nwb_lake_reader.sql`.** The reader registers tables under
   flattened names and this package emits SQL against them; they must agree exactly, so there
   is one implementation and it lives there.

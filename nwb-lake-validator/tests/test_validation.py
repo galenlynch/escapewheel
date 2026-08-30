@@ -6,6 +6,7 @@ import pytest
 from nwb_lake_reader import PacketError, open_packet
 
 from nwb_lake_validator import generate, validate
+from nwb_lake_validator.generate import Check, concerns
 
 
 def _rewrite(root, name, table):
@@ -581,3 +582,49 @@ def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
     schema = pa.schema([pa.field("session_id", pa.dictionary(pa.int32(), pa.int64()))])
     _check_column("core.units", column, schema, report)
     assert [f.check for f in report.findings] == ["schema.column_type"]
+
+
+# -- R35 §5: an amendment re-runs only the rules its own resources implicate ---------------
+
+
+def _check(sql, resource="core.units"):
+    return Check(f"{resource}.rule", "error", "message", sql, resource)
+
+
+def test_a_rule_attached_to_a_written_resource_runs():
+    assert concerns(_check("SELECT * FROM core_units"), {"core.units"})
+
+
+def test_a_rule_whose_query_names_a_written_resource_runs():
+    """The syntactic test is what makes R32 §5's objection answerable without the registry
+    promising that no existing rule references a resource added later."""
+    sql = "SELECT c.unit_id FROM core_units c LEFT JOIN analysis_spike_events p ON c.unit_id = p.unit_id"
+    assert concerns(_check(sql), {"analysis.spike_events"})
+
+
+def test_a_rule_reading_only_untouched_resources_may_be_skipped():
+    assert not concerns(_check("SELECT * FROM core_units"), {"analysis.spike_events"})
+
+
+def test_the_test_errs_toward_running():
+    """R35 §5: a match inside a comment costs time, a missed one costs correctness."""
+    sql = "SELECT * FROM core_units -- nothing to do with analysis_spike_events"
+    assert concerns(_check(sql), {"analysis.spike_events"})
+
+
+def test_recheck_narrows_the_rules_that_run(packet_root):
+    """A packet that passes still passes, over fewer checks."""
+    packet = open_packet(packet_root)
+    registry = packet.registry
+    every = generate(registry, only=set(registry["tables"]))
+    narrowed = [c for c in every if concerns(c, {"core.trials"})]
+    assert 0 < len(narrowed) < len(every)
+    assert validate(open_packet(packet_root), recheck={"core.trials"}).passed
+
+
+def test_recheck_still_catches_a_break_in_what_was_written(packet_root):
+    """Narrowing must not narrow away the resource the amendment actually wrote."""
+    duplicated = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
+    _rewrite(packet_root, "trials", pa.concat_tables([duplicated, duplicated.slice(0, 1)]))
+    report = validate(open_packet(packet_root), recheck={"core.trials"})
+    assert not report.passed

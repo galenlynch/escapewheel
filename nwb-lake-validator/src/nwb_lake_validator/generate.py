@@ -9,7 +9,7 @@ Every check is SQL returning offending rows; an empty result is a pass (R2 §7.3
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -30,12 +30,33 @@ class Check:
         What a non-empty result means.
     sql : str
         A query returning offending rows.
+    resource : str
+        The resource the check is declared on. Not necessarily the only one its query reads.
     """
 
     id: str
     level: str
     message: str
     sql: str
+    resource: str
+
+
+def concerns(check: Check, written: Collection[str]) -> bool:
+    """Whether R35 §5 obliges `check` to run when `written` are the resources just written.
+
+    A check must run when it is attached to one of them, or when its query names one. Anything
+    else reads only files an amendment may not modify (R32 §3) and R14 §2.3 declares immutable,
+    so it can only reach the verdict it reached before.
+
+    The test is syntactic, over the flattened name a query must use (R2 §7), because that is
+    what makes it sound without the registry having to promise that no existing rule references
+    a resource added later. It is deliberately over-inclusive: a match inside a string literal
+    or a comment re-runs a check that did not need it, which costs time, where missing one costs
+    correctness.
+    """
+    if check.resource in written:
+        return True
+    return any(sql_name(resource) in check.sql for resource in written)
 
 
 def adjacency_settles_uniqueness(table: Mapping[str, Any]) -> bool:
@@ -112,6 +133,7 @@ def generate(
                         "error",
                         f"required column {column['name']} contains nulls",
                         f"SELECT * FROM {name} WHERE {quote(column['name'])} IS NULL",
+                        resource,
                     )
                 )
             if values := column.get("enum"):
@@ -123,6 +145,7 @@ def generate(
                         "error",
                         f"{column['name']} carries a value outside its closed vocabulary",
                         f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({allowed})",
+                        resource,
                     )
                 )
 
@@ -135,6 +158,7 @@ def generate(
                     "error",
                     "duplicate primary key",
                     f"SELECT {columns}, COUNT(*) AS n FROM {name} GROUP BY {columns} HAVING COUNT(*) > 1",
+                    resource,
                 )
             )
 
@@ -154,12 +178,13 @@ def generate(
                     "error",
                     f"{', '.join(ref['columns'])} does not resolve to {ref['resource']}",
                     f"SELECT DISTINCT {selected} FROM {name} c LEFT JOIN {parent} p ON {on} WHERE {where}",
+                    resource,
                 )
             )
 
         for rule in table.get("rules", []):
             if rule.get("advisory") and not advisory:
                 continue
-            checks.append(Check(rule["id"], rule["level"], rule["message"], rule["sql"]))
+            checks.append(Check(rule["id"], rule["level"], rule["message"], rule["sql"], resource))
 
     return checks

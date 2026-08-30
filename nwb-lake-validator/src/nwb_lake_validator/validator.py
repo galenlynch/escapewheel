@@ -27,7 +27,7 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from nwb_lake_reader import Packet, PacketError, ResourceUnreadableError, sql_name
 
-from .generate import adjacency_settles_uniqueness, generate
+from .generate import adjacency_settles_uniqueness, concerns, generate
 
 #: Registry column type -> the Arrow type a conforming writer must emit (R3 §2.1).
 ARROW_TYPES = {
@@ -748,6 +748,7 @@ def _run_rules(
     advisory: bool,
     limits: Mapping[str, Any] | None = None,
     unsound: set[str] | None = None,
+    recheck: Collection[str] | None = None,
 ) -> None:
     """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
     with _spill_beside(packet) as spill:
@@ -768,7 +769,10 @@ def _run_rules(
             for session in packet.manifest.sessions:
                 connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
 
-            for check in generate(registry, only=set(present), advisory=advisory, aggregate=unsound or set()):
+            checks = generate(registry, only=set(present), advisory=advisory, aggregate=unsound or set())
+            if recheck is not None:
+                checks = [check for check in checks if concerns(check, recheck)]
+            for check in checks:
                 try:
                     rows = _offending(connection, check.sql)
                 except Exception as exc:  # noqa: BLE001 - an engine error is a finding, not a crash
@@ -802,6 +806,7 @@ def validate(
     advisory: bool = False,
     limits: Mapping[str, Any] | None = None,
     scan: Collection[str] | None = None,
+    recheck: Collection[str] | None = None,
 ) -> Report:
     """Validate a packet.
 
@@ -830,6 +835,13 @@ def validate(
         the same code, one step earlier. What it costs is the distinction between "the batches
         handed to Parquet were ordered" and "the file is ordered", and that gap is closed by
         `_write_stream` making each batch exactly one row group.
+    recheck : collection of str, optional
+        Resources this call has just written, restricting the rules to those R35 §5 obliges to
+        run: the ones attached to such a resource, and the ones whose query names one. `None`,
+        the default, runs every rule, which is what a first commit and a packet of unknown
+        provenance both need. An amendment passes what it writes, because R32 §3 forbids it
+        modifying anything else and R14 §2.3 declares those bytes immutable, so a rule reading
+        only them is already answered.
 
     Returns
     -------
@@ -856,7 +868,7 @@ def validate(
     _check_materialization_provenance(packet, report)
     present = _check_schemas(packet, effective["tables"], report)
     unsound = _check_ordering(effective["tables"], present, report, scan)
-    _run_rules(packet, effective, present, report, advisory, limits, unsound)
+    _run_rules(packet, effective, present, report, advisory, limits, unsound, recheck)
     return report
 
 
