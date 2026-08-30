@@ -111,6 +111,10 @@ These are not local preferences; changing them breaks conformance.
   the packet, so unreachable is a `warning` and a claim that resolved and disagrees is an
   `error`. Exactly one of `external.unverified` and `external.verified` is reported, so a
   passing run always says which mode produced it.
+- **Level 3 is two levels, because they cost differently** (R36 §2.3). `external=True` lists
+  the store and checks `size_bytes` and codecs — 65 ms over a session's twelve LFP arrays.
+  `checksums=True` also recomputes `sha256`, which reads every byte: 47 s over 6.83 GB here,
+  and a bill as well as a wait against an object store. Never one flag.
 - **The codec floor is per Zarr version** (R21 §3.3), in `FLOOR`. `gzip` is in R3 §7.2's
   baseline and Zarr.jl reads it in v3 and not in v2, so a codec's readability belongs to the
   `(version, codec)` pair. Outside the floor is `info`, not an error: such a packet conforms

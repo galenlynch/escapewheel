@@ -652,6 +652,7 @@ def _external(root, **overrides):
         )
     )
     (array / "0.0").write_bytes(b"x" * 100)
+    total = sum(f.stat().st_size for f in array.rglob("*") if f.is_file())
     manifest = json.loads((root / "nwb.packet.json").read_text())
     entry = {
         "resource_id": "core.probe.lfp",
@@ -661,10 +662,10 @@ def _external(root, **overrides):
         "uri": array.resolve().as_uri(),
         "external": True,
         "codecs": ["blosc"],
-        "size_bytes": 100,
+        "size_bytes": total,
         **overrides,
     }
-    manifest["resources"].append(entry)
+    manifest["resources"].append({k: v for k, v in entry.items() if v is not None})
     manifest["required_codecs"] = sorted({c for r in manifest["resources"] for c in r.get("codecs", [])})
     (root / "nwb.packet.json").write_text(json.dumps(manifest))
     return root
@@ -683,6 +684,12 @@ def test_the_requested_mode_resolves_it(packet_root):
     checks = {f.check for f in report.findings}
     assert "external.verified" in checks
     assert "external.unverified" not in checks, "the two modes must not both speak"
+
+
+def test_size_bytes_counts_the_whole_prefix_including_its_metadata(packet_root):
+    """A dense array asset is a prefix of many objects, so its size is a list, not a stat.
+    Excluding the metadata document would make the writer and the validator disagree."""
+    assert validate(open_packet(_external(packet_root)), external=True).passed
 
 
 def test_a_size_that_disagrees_is_an_error_only_in_that_mode(packet_root):

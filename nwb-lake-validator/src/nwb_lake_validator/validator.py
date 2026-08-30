@@ -20,13 +20,13 @@ from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
 
 import jsonschema
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from nwb_lake_reader import Packet, PacketError, ResourceUnreadableError, sql_name
+from nwb_lake_reader.stores import StoreUnreachable, digest, listing, read_member
 
 from .generate import adjacency_settles_uniqueness, concerns, generate
 
@@ -377,7 +377,7 @@ def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = F
         )
 
 
-def _resolve_external(packet: Packet, report: Report) -> None:
+def _resolve_external(packet: Packet, report: Report, checksums: bool = False) -> None:
     """Level 3 (R15 §4): resolve external URIs and check what was claimed about them.
 
     Requested explicitly, never by default. R14 §2.3.2 keeps structural validation off the
@@ -387,69 +387,68 @@ def _resolve_external(packet: Packet, report: Report) -> None:
     Findings are reported against the resource entry. An unreachable resource is a `warning`
     and not an error: it says the claim could not be checked, which is the same standing the
     default mode gives it, while a claim that resolved and *disagrees* is an error.
+
+    Parameters
+    ----------
+    checksums : bool, default False
+        Also recompute `sha256`, which reads every byte -- 6.8 GB for a session's LFP -- where
+        the rest of this mode is a list operation. Off separately for that reason.
     """
     checked = 0
     for resource in packet.resources():
         if not resource.is_external:
             continue
         entry = resource.entry
-        path = _local(str(entry.get("uri", "")))
-        if path is None:
+        uri = str(entry.get("uri", ""))
+        try:
+            found = listing(uri)
+        except StoreUnreachable as exc:
+            report.add("warning", "external.unreachable", f"{resource.resource_id}: {exc}")
+            continue
+        if (claimed := entry.get("size_bytes")) is not None and found.size_bytes != claimed:
             report.add(
-                "warning",
-                "external.unresolvable",
-                f"{resource.resource_id}: {entry.get('uri')} is not a local URI, so this mode cannot resolve it",
+                "error",
+                "external.size_bytes",
+                f"{resource.resource_id}: {found.size_bytes:,} bytes over {len(found.members)} object(s), "
+                f"manifest claims {claimed:,}",
             )
-            continue
-        if not path.exists():
-            report.add("warning", "external.unreachable", f"{resource.resource_id}: {path} does not exist")
-            continue
-        if (claimed := entry.get("size_bytes")) is not None:
-            actual = _tree_bytes(path)
-            if actual != claimed:
-                report.add(
-                    "error",
-                    "external.size_bytes",
-                    f"{resource.resource_id}: {actual:,} bytes, manifest claims {claimed:,}",
-                )
         if declared := set(resource.codecs):
-            actual_codecs = _stored_codecs(path)
-            if actual_codecs is not None and actual_codecs != declared:
+            stored = _stored_codecs(uri, found)
+            if stored is not None and stored != declared:
                 report.add(
                     "error",
                     "external.codecs",
-                    f"{resource.resource_id}: stores {', '.join(sorted(actual_codecs)) or 'no codec'}, "
+                    f"{resource.resource_id}: stores {', '.join(sorted(stored)) or 'no codec'}, "
                     f"manifest declares {', '.join(sorted(declared))}",
+                )
+        if checksums and (claimed_sha := entry.get("sha256")) is not None:
+            try:
+                actual = digest(uri)
+            except StoreUnreachable as exc:
+                report.add("warning", "external.unreachable", f"{resource.resource_id}: {exc}")
+                continue
+            if actual != claimed_sha:
+                report.add(
+                    "error",
+                    "external.sha256",
+                    f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed_sha[:16]}…",
                 )
         checked += 1
     if checked:
         report.add("info", "external.verified", f"{checked} external resource(s) resolved and checked")
 
 
-def _local(uri: str) -> Path | None:
-    """Return the path a URI names, or None where it is not one this mode can open."""
-    if uri.startswith("file://"):
-        return Path(unquote(urlparse(uri).path))
-    if "://" in uri:
-        return None
-    return Path(uri)
+def _stored_codecs(uri: str, found: Any) -> set[str] | None:
+    """Codecs a Zarr v2 array declares, or None where the metadata is not v2 or not readable.
 
-
-def _tree_bytes(path: Path) -> int:
-    """Total size of an array's chunk files, excluding its metadata documents."""
-    if path.is_file():
-        return path.stat().st_size
-    return sum(f.stat().st_size for f in path.iterdir() if f.is_file() and not f.name.startswith("."))
-
-
-def _stored_codecs(path: Path) -> set[str] | None:
-    """Codecs a Zarr v2 array declares, or None where the metadata is not v2 or not readable."""
-    meta = path / ".zarray"
-    if not meta.is_file():
+    Read through the same store the listing came from, so an object store answers it the way a
+    filesystem does.
+    """
+    if not any(key == ".zarray" for key, _ in found.members):
         return None
     try:
-        parsed = json.loads(meta.read_text())
-    except (OSError, ValueError):
+        parsed = json.loads(read_member(uri, ".zarray"))
+    except (ValueError, StoreUnreachable):
         return None
     names = {str(f["id"]) for f in parsed.get("filters") or []}
     if compressor := parsed.get("compressor"):
@@ -917,6 +916,7 @@ def validate(
     scan: Collection[str] | None = None,
     recheck: Collection[str] | None = None,
     external: bool = False,
+    checksums: bool = False,
 ) -> Report:
     """Validate a packet.
 
@@ -958,6 +958,9 @@ def validate(
         reaching for a resource the packet does not own: whether one is reachable is a property
         of the reader's situation, not of the packet. An unreachable resource is a warning; one
         that resolves and disagrees with its claim is an error.
+    checksums : bool, default False
+        With `external`, also recompute each `sha256`. Separate because it reads every byte,
+        where the rest of that mode lists: a session's LFP is 6.8 GB over 2,496 objects.
 
     Returns
     -------
@@ -981,7 +984,7 @@ def validate(
         _check_embedded_registry(packet, embedded, report)
     _check_codec_declarations(packet, report, resolved=external)
     if external:
-        _resolve_external(packet, report)
+        _resolve_external(packet, report, checksums)
     _check_packet_owned_arrays(packet, report)
     _check_materialization_provenance(packet, report)
     present = _check_schemas(packet, effective["tables"], report)
