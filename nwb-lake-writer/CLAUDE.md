@@ -17,9 +17,11 @@ Wall-clock values without a UTC offset are refused rather than assumed (`arrow.N
 (`inspect`, `init`, `import`), and dense array staging. Two real AIND sessions commit clean
 from a recipe, 248 M and 287 M spikes.
 
-**Not yet.** External resources (R14/R15 level 3): LFP referenced rather than owned, and
-`core.array_channels` with R19 per-channel gain, offset and `inter_sample_shift`. The NWB
-adapter already prints a note it cannot clear until that lands.
+**Also delivered.** LFP, referenced rather than owned (R14 §2.3, R21 §3.2): twelve Zarr v2
+arrays, 6.8 GB the packet points at and does not copy, with `core.array_channels` carrying
+R19's per-channel `inter_sample_shift` and the electrode behind each position.
+
+**Not yet.** Media assets, and an external mode that resolves anything but a `file://` URI.
 
 ## Scope
 
@@ -59,6 +61,24 @@ committed packet says what produced it and `code_uri` names the recipe by digest
 
 See **The CLI** below for the commands. A recipe is checked against the registry before any
 source is opened, so the problems that cost a four-minute build are reported in milliseconds.
+
+### LFP: referenced, and timed by its probe rather than by its timestamps
+
+The NWB stores 7,983,750 float64 timestamps per series -- 767 MB across twelve -- on a
+regenerated nominal grid, with the sign of `t0` flipped so the array reads as 268 days before
+the spikes. The packet stores none of them. Measured across four probes, LFP sample 0 lands
+within 0.2 ms of the probe's own sample 0 and advances exactly 24 AP ticks a sample, so R20's
+regular-tick axis states the whole time base in three integers on the clock the spikes are
+already on. Both upstream defects disappear rather than being carried forward, and the
+per-probe drift the grid would have introduced -- up to 70 ms over a session -- goes with them.
+
+`LFPSource` derives the step from the *interval* between the first two timestamps rather than
+their values: the sign fault ruins the values and leaves the spacing alone. A ratio that is not
+a whole number of probe ticks is refused, because then this is not a decimation of that stream.
+
+`conversion` is one value per series here, so it stays on `core.array_assets`; repeating it
+down 96 channel rows would buy nothing (R3 §3.0). `inter_sample_shift` genuinely varies -- eight
+distinct values within a series -- which is what R19 added the column for.
 
 ### Two things about the sources that will bite
 

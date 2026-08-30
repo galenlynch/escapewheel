@@ -710,3 +710,59 @@ def _run(run_id):
         "activity_type": "import",
         "status": "succeeded",
     }
+
+
+def test_a_referenced_array_is_declared_external_and_copied_nowhere(tmp_path, registry, minimal):
+    """R14 §2.3: the bytes stay where they are and the packet says where that is."""
+    from nwb_lake_writer.writer import ExternalArray
+
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    writer.reference_array(
+        "core.probe.lfp",
+        ExternalArray(
+            array_asset_id="probe.lfp",
+            uri="s3://bucket/lfp",
+            physical_profile="zarr_v2",
+            codecs=("blosc",),
+            size_bytes=17,
+        ),
+    )
+    assert writer.commit(root).passed
+    entry = next(
+        r
+        for r in json.loads((root / "nwb.packet.json").read_text())["resources"]
+        if r["resource_id"] == "core.probe.lfp"
+    )
+    assert entry["external"] is True
+    assert entry["physical_profile"] == "zarr_v2"
+    assert entry["uri"] == "s3://bucket/lfp"
+    assert entry["size_bytes"] == 17
+    assert not (root / "arrays").exists(), "nothing was copied"
+
+
+def test_a_relative_reference_is_refused(tmp_path, registry):
+    """A relative URI resolves against a packet the bytes do not live in."""
+    from nwb_lake_writer.writer import ExternalArray
+
+    writer = PacketWriter(registry, packet_id="s001")
+    with pytest.raises(ValueError, match="not absolute"):
+        writer.reference_array("core.probe.lfp", ExternalArray(array_asset_id="probe.lfp", uri="arrays/lfp"))
+
+
+def test_a_referenced_codec_joins_required_codecs(tmp_path, registry, minimal):
+    """R15 §3: the top-level list is the union, so a reader can answer the whole-packet question."""
+    from nwb_lake_writer.writer import ExternalArray
+
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    writer.reference_array(
+        "core.probe.lfp",
+        ExternalArray(array_asset_id="probe.lfp", uri="s3://bucket/lfp", physical_profile="zarr_v2", codecs=("blosc",)),
+    )
+    writer.commit(root)
+    assert json.loads((root / "nwb.packet.json").read_text())["required_codecs"] == ["blosc"]

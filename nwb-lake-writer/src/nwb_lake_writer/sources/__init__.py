@@ -7,6 +7,7 @@ exists because no single source carries a whole session -- see
 """
 
 from .aind import AcquisitionStream, SessionSource
+from .lfp import LFPSource
 from .nwb import NWBSource, SourceDefect
 from .sorter import SortedStream, SorterSource
 from .sync import SyncSource, SyncStream
@@ -14,6 +15,7 @@ from .waveforms import WaveformSource
 
 __all__ = [
     "AcquisitionStream",
+    "LFPSource",
     "NWBSource",
     "SessionSource",
     "SortedStream",

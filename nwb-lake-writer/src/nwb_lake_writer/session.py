@@ -38,6 +38,9 @@ from .writer import PacketWriter, StagedArray
 CONSUMES: dict[str, tuple[str, ...]] = {
     "nwb": ("sorter",),
     "waveforms": ("sorter", "nwb"),
+    # The probe clock an LFP axis advances on comes from the sorter; the electrode behind each
+    # channel comes from the NWB.
+    "lfp": ("sorter", "nwb"),
 }
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
@@ -85,12 +88,16 @@ class Context:
     electrodes : dict
         Global electrode row index to `electrode_id`, for a source that reads an array indexed
         by row rather than by ID.
+    clocks : dict
+        Clock ID to declared tick rate, for a source placing an array axis on one. An axis
+        advances in ticks (R20 §2), so a step cannot be derived without the rate.
     """
 
     session_id: str
     sources: dict[str, Any] = field(default_factory=dict)
     units: dict[tuple[str, str], dict[str, str]] = field(default_factory=dict)
     electrodes: dict[int, str] = field(default_factory=dict)
+    clocks: dict[str, float] = field(default_factory=dict)
 
 
 def order(recipe: Recipe) -> list[SourceSpec]:
@@ -133,7 +140,7 @@ def order(recipe: Recipe) -> list[SourceSpec]:
 
 def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
     """Construct one adapter, supplying whatever earlier sources produced for it."""
-    from .sources import NWBSource, SorterSource, SyncSource, WaveformSource
+    from .sources import LFPSource, NWBSource, SorterSource, SyncSource, WaveformSource
 
     options = dict(spec.options)
     if spec.kind == "sorter":
@@ -147,6 +154,14 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         clock = _reference_clock(recipe, context)
         return NWBSource(
             spec.root, clock=clock, zone=zone, session_id=context.session_id, units=context.units, **options
+        )
+    if spec.kind == "lfp":
+        return LFPSource(
+            spec.root,
+            session_id=context.session_id,
+            clocks=sorted(context.clocks),
+            electrodes=context.electrodes,
+            **options,
         )
     if spec.kind == "waveforms":
         return WaveformSource(
@@ -175,6 +190,7 @@ def _harvest(spec: SourceSpec, source: Any, context: Context) -> None:
             }
             for row in source.units()
         }
+        context.clocks.update({c["clock_id"]: float(c["tick_rate_hz"]) for c in source.clocks()})
     if spec.kind == "nwb":
         context.electrodes = dict(enumerate(row["electrode_id"] for row in source.electrodes()))
 
@@ -182,6 +198,9 @@ def _harvest(spec: SourceSpec, source: Any, context: Context) -> None:
 def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[dict[str, Any]]]:
     """Return a source's records, with the arguments its kind needs to produce them."""
     got: dict[str, list[dict[str, Any]]]
+    if spec.kind == "lfp":
+        lfp: dict[str, list[dict[str, Any]]] = source.records(rates=context.clocks)
+        return lfp
     sorter = context.sources.get("sorter") if spec.kind == "sync" else None
     if sorter is not None:
         # Anchor only the streams the sorting made a clock for. The rig aligns more than it
@@ -284,6 +303,10 @@ def build(recipe: Recipe, registry: Mapping[str, Any], *, say: Callable[[str], N
             counts["core.spike_events"] = source.spike_count
         if spec.kind == "waveforms" and spec.options.get("array_asset_id", "waveform_mean"):
             _stage_array(writer, spec, source, say)
+        if spec.kind == "lfp":
+            for resource_id, array in source.external_arrays().items():
+                writer.reference_array(resource_id, array)
+                say(f"  referenced {resource_id} ({array.physical_profile}, {', '.join(array.codecs) or 'no codec'})")
 
         for note in getattr(source, "notes", []):
             say(f"  note: {note}")

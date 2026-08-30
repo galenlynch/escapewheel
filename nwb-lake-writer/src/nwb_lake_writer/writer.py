@@ -290,6 +290,29 @@ class StagedArray:
     fill_value: Any = 0
 
 
+@dataclass(frozen=True)
+class ExternalArray:
+    """A dense array the packet references rather than owns (R14 §2.3).
+
+    Referencing is the expected form for a large one. Copying duplicates the bulk of a dataset
+    for no gain, and transcoding to the portable floor throws away the acquisition's own
+    compression -- 5.8 GB of LFP across twelve probes, against three integers per series once
+    R20 replaces its timestamps.
+
+    `sha256`, `size_bytes` and `verified_at` record what was true when someone looked, not a
+    promise about now: immutability covers packet-owned bytes only (R14 §2.3.1), and an
+    external array may change or vanish without the packet changing at all.
+    """
+
+    array_asset_id: str
+    uri: str
+    physical_profile: str = "zarr_v3"
+    codecs: tuple[str, ...] = ()
+    sha256: str | None = None
+    size_bytes: int | None = None
+    verified_at: str | None = None
+
+
 class CommitRefused(Exception):
     """Validation found errors, so nothing was committed.
 
@@ -336,6 +359,7 @@ class PacketWriter:
         self._runs: dict[str, str] = {}
         self._ordered: set[str] = set()
         self._staged_arrays: dict[str, StagedArray] = {}
+        self._referenced_arrays: dict[str, ExternalArray] = {}
 
     def add(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> None:
         """Add records for one table.
@@ -446,6 +470,32 @@ class PacketWriter:
             raise ValueError(f"{resource_id} already has an array staged")
         self._staged_arrays[resource_id] = array
 
+    def reference_array(self, resource_id: str, array: ExternalArray) -> None:
+        """Record a dense array the packet references rather than owns (R14 §2.3).
+
+        No bytes are copied and none are read: structural validation must not reach the network
+        (R14 §2.3.2), so what this records is a claim. A validator reports it as `info` in its
+        default mode and checks it only when asked.
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID.
+        array : ExternalArray
+            The URI, its Zarr version, and whatever was verified.
+
+        Raises
+        ------
+        ValueError
+            If this resource already has an array, or if the URI is not absolute -- a relative
+            one would resolve against a packet the bytes do not live in.
+        """
+        if resource_id in self._staged_arrays or resource_id in self._referenced_arrays:
+            raise ValueError(f"{resource_id} already has an array")
+        if "://" not in array.uri:
+            raise ValueError(f"{resource_id}: {array.uri!r} is not absolute, so it cannot resolve without the packet")
+        self._referenced_arrays[resource_id] = array
+
     def produced_by(self, resource_id: str, processing_run_id: str) -> None:
         """Name the run that produced a resource (R31 §2).
 
@@ -502,6 +552,28 @@ class PacketWriter:
                     "size_bytes": written,
                 }
             )
+        return entries
+
+    def _reference_arrays(self) -> list[dict[str, Any]]:
+        """Return a manifest entry per referenced array. Copies nothing and reads nothing."""
+        entries = []
+        for resource_id, array in self._referenced_arrays.items():
+            entry = {
+                "resource_id": resource_id,
+                "layer": resource_id.split(".", 1)[0],
+                "kind": "dense_array_asset",
+                "physical_profile": array.physical_profile,
+                "uri": array.uri,
+                "array_asset_id": array.array_asset_id,
+                "canonical": True,
+                "validation_state": "not_run",
+                "external": True,
+                "codecs": list(array.codecs),
+            }
+            for name in ("sha256", "size_bytes", "verified_at"):
+                if (value := getattr(array, name)) is not None:
+                    entry[name] = value
+            entries.append(entry)
         return entries
 
     def _stage(self, staging: Path, only: Collection[str] | None = None) -> list[dict[str, Any]]:
@@ -643,7 +715,7 @@ class PacketWriter:
 
         # 1. staged resources, plus the registry they were written against
         clock = time.perf_counter()
-        entries = [*self._stage(staging), *self._stage_arrays(staging)]
+        entries = [*self._stage(staging), *self._stage_arrays(staging), *self._reference_arrays()]
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
         clock = time.perf_counter()
         (staging / "schemas").mkdir(parents=True, exist_ok=True)

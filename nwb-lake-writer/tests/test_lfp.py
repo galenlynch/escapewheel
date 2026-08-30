@@ -1,0 +1,163 @@
+"""The LFP source: external references, and the axes that make them readable."""
+
+import json
+
+import pytest
+
+from nwb_lake_writer.sources.lfp import LFPSource
+from nwb_lake_writer.sources.nwb import SourceDefect
+
+CLOCK = "experiment1.Neuropix-PXI-100.45883-1.samples"
+RATES = {CLOCK: 30000.0}
+
+
+def _array(path, meta):
+    path.mkdir(parents=True, exist_ok=True)
+    (path / ".zarray").write_text(json.dumps(meta))
+
+
+def _series(root, probe="45883-1", *, rows=1000, channels=2, compressor=None, step_hz=1250.0):
+    """A minimal NWB-Zarr LFP series: data, timestamps, and an electrodes region."""
+    import numcodecs
+    import numpy as np
+
+    series = root / "processing/ecephys/LFP" / f"ElectricalSeries{probe}-LFP"
+    _array(
+        series / "data",
+        {
+            "shape": [rows, channels],
+            "chunks": [rows, channels],
+            "dtype": "<i2",
+            "zarr_format": 2,
+            "compressor": compressor if compressor is not None else {"id": "blosc"},
+            "filters": None,
+            "order": "C",
+            "fill_value": 0,
+        },
+    )
+    (series / "data" / "0.0").write_bytes(b"\x00" * 16)
+    (series / "data" / ".zattrs").write_text(json.dumps({"conversion": 2.34e-06, "offset": 0.0, "unit": "volts"}))
+
+    stamps = np.arange(4, dtype=np.float64) / step_hz
+    _array(
+        series / "timestamps",
+        {
+            "shape": [4],
+            "chunks": [4],
+            "dtype": "<f8",
+            "zarr_format": 2,
+            "compressor": {"id": "zstd", "level": 1},
+            "filters": None,
+            "order": "C",
+            "fill_value": 0.0,
+        },
+    )
+    (series / "timestamps" / "0").write_bytes(numcodecs.Zstd(1).encode(stamps.tobytes()))
+
+    region = np.arange(channels, dtype=np.int64)
+    _array(
+        series / "electrodes",
+        {
+            "shape": [channels],
+            "chunks": [channels],
+            "dtype": "<i8",
+            "zarr_format": 2,
+            "compressor": {"id": "zstd", "level": 1},
+            "filters": None,
+            "order": "C",
+            "fill_value": 0,
+        },
+    )
+    (series / "electrodes" / "0").write_bytes(numcodecs.Zstd(1).encode(region.tobytes()))
+    return series
+
+
+@pytest.fixture
+def nwb(tmp_path):
+    root = tmp_path / "s.nwb"
+    _series(root)
+    return root
+
+
+def _source(root, **kwargs):
+    kwargs.setdefault("clocks", [CLOCK])
+    kwargs.setdefault("electrodes", {0: "45883-1.CH0", 1: "45883-1.CH4"})
+    return LFPSource(root, session_id="s1", **kwargs)
+
+
+def test_the_time_axis_is_ticks_on_the_probes_own_clock(nwb):
+    """R20: three integers replace 7,983,750 float64 timestamps, and 24 is derived not assumed."""
+    axis = _source(nwb).records(rates=RATES)["core.array_dimensions"][0]
+    assert axis["clock_id"] == CLOCK
+    assert (axis["origin_tick"], axis["step_ticks"], axis["step_tick_den"]) == (0, 24, 1)
+
+
+def test_the_step_comes_from_the_interval_not_the_values(nwb):
+    """The sign fault ruins the timestamps' values; it leaves their spacing alone."""
+    root = nwb.parent / "flipped.nwb"
+    _series(root)
+    source = _source(root)
+    # A different decimation must be read off the data rather than assumed.
+    other = nwb.parent / "other.nwb"
+    _series(other, step_hz=2500.0)
+    assert source.records(rates=RATES)["core.array_dimensions"][0]["step_ticks"] == 24
+    assert _source(other).records(rates=RATES)["core.array_dimensions"][0]["step_ticks"] == 12
+
+
+def test_a_non_integer_decimation_is_refused(nwb):
+    """If a sample is not a whole number of probe ticks, this is not a decimation of it."""
+    root = nwb.parent / "odd.nwb"
+    _series(root, step_hz=1111.0)
+    with pytest.raises(SourceDefect, match="not an integer"):
+        _source(root).records(rates=RATES)
+
+
+def test_the_channel_axis_points_at_the_channel_table(nwb):
+    """LFP keeps every fourth contact, so the axis cannot be a range (R20 §2)."""
+    axis = _source(nwb).records(rates=RATES)["core.array_dimensions"][1]
+    assert axis["coordinate_resource"] == "core.array_channels"
+    assert axis["coordinate_position_column"] == "channel_index"
+
+
+def test_channels_name_electrodes_and_carry_the_acquisition_offset(nwb):
+    rows = _source(nwb).records(rates=RATES)["core.array_channels"]
+    assert [r["electrode_id"] for r in rows] == ["45883-1.CH0", "45883-1.CH4"]
+    assert all(r["axis_index"] == 1 for r in rows)
+
+
+def test_conversion_stays_on_the_asset(nwb):
+    """One value per series here, so repeating it down the channels would buy nothing (R3 §3.0)."""
+    got = _source(nwb).records(rates=RATES)
+    assert got["core.array_assets"][0]["conversion"] == pytest.approx(2.34e-06)
+    assert all(r.get("conversion") is None for r in got["core.array_channels"])
+
+
+def test_the_reference_declares_zarr_v2_and_its_codec(nwb):
+    """R21 §3.2: only an external resource may be v2, and R15 §2 declares its codecs per resource."""
+    array = _source(nwb).external_arrays()["core.45883-1.lfp"]
+    assert array.physical_profile == "zarr_v2"
+    assert array.codecs == ("blosc",)
+    assert array.uri.startswith("file://")
+
+
+def test_a_uri_base_replaces_the_local_path(nwb):
+    array = _source(nwb, uri_base="s3://bucket/s.nwb/").external_arrays()["core.45883-1.lfp"]
+    assert array.uri == "s3://bucket/s.nwb/processing/ecephys/LFP/ElectricalSeries45883-1-LFP/data"
+
+
+def test_a_uri_base_reports_no_verified_size(nwb):
+    """R14 §2.3.1: only bytes actually looked at may be reported as verified, and a local copy
+    says nothing about what a remote URI resolves to."""
+    assert _source(nwb, uri_base="s3://bucket/s.nwb").external_arrays()["core.45883-1.lfp"].size_bytes is None
+    assert _source(nwb).external_arrays()["core.45883-1.lfp"].size_bytes is not None
+
+
+def test_a_series_with_no_matching_clock_is_refused(nwb):
+    with pytest.raises(SourceDefect, match="clocks end in"):
+        _source(nwb, clocks=[]).records(rates=RATES)
+
+
+def test_an_nwb_with_no_lfp_group_yields_nothing(tmp_path):
+    source = _source(tmp_path / "empty.nwb")
+    assert source.records(rates=RATES)["core.array_assets"] == []
+    assert any("no series found" in n for n in source.notes)
