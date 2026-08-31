@@ -30,6 +30,27 @@ def test_a_multi_chunk_array_reassembles(tmp_path):
     assert read_array(path).tolist() == values.tolist()
 
 
+def test_a_limit_decodes_only_the_chunks_that_hold_it(tmp_path):
+    """The saving is the point: an LFP series is 7,983,750 timestamps and callers want two."""
+    values = np.arange(10, dtype=np.float64)
+    path = nwbfixture.array(tmp_path / "a", values)
+    _rechunk(path, values, stride=4)
+    (path / "2").unlink()  # a full read would refuse this array; a bounded one never looks
+    assert read_array(path, limit=2).tolist() == [0.0, 1.0]
+    assert read_array(path, limit=5).tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
+
+
+def test_a_limit_past_the_end_is_the_whole_array(tmp_path):
+    nwbfixture.array(tmp_path / "a", np.arange(3, dtype=np.int64))
+    assert read_array(tmp_path / "a", limit=99).tolist() == [0, 1, 2]
+
+
+def test_a_limit_of_nothing_reads_nothing(tmp_path):
+    nwbfixture.array(tmp_path / "a", np.arange(3, dtype=np.int64))
+    empty = read_array(tmp_path / "a", limit=0)
+    assert empty.tolist() == [] and empty.dtype == np.int64
+
+
 def test_a_pickled_array_is_refused_not_unpickled(tmp_path):
     nwbfixture.array(tmp_path / "a", ["<ref>"], filter_id="pickle")
     with pytest.raises(UnsupportedEncoding, match="pickled"):

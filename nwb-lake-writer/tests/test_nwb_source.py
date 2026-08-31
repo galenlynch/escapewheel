@@ -41,6 +41,55 @@ def only(rows, **match):
 # -- what it reads -------------------------------------------------------------------
 
 
+def _units(nwb, *, refuses=True):
+    """A units table with one ragged column.
+
+    `refuses` writes that column in an encoding this package will not decode, so that reading
+    it would leave a note -- which is how a test sees that it was not read.
+    """
+    units = nwbfixture.group(nwb / "units", neurodata_type="Units", colnames=["spike_times"])
+    nwbfixture.array(units / "id", np.array([0], dtype=np.int64))
+    nwbfixture.array(units / "ks_unit_id", np.array([7], dtype=np.int64))
+    nwbfixture.text(units / "device_name", ["probeA"])
+    for axis in ("ccf_ml", "ccf_ap", "ccf_dv"):
+        nwbfixture.array(units / axis, np.array([100.0]))
+    if refuses:
+        nwbfixture.array(units / "spike_times", ["<ref>"], filter_id="pickle")
+    else:
+        nwbfixture.array(units / "spike_times", np.array([0.1, 0.2, 0.3]))
+    nwbfixture.array(units / "spike_times_index", np.array([3], dtype=np.int64))
+    return {("probeA", "7"): {"unit_id": "u1", "sorting_run_id": "run", "curation_id": "cur"}}
+
+
+def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
+    """`units/spike_times` is 287 M values against 6,781 rows, and no builder can use it as
+    one: it is written here in an encoding that refuses, so reading it would leave a note."""
+    units = _units(nwb)
+    source = NWBSource(nwb, clock=harp, zone=PACIFIC, units=units)
+    assert source.unit_coordinates() == [
+        {
+            "session_id": SESSION,
+            "unit_id": "u1",
+            "sorting_run_id": "run",
+            "curation_id": "cur",
+            "coordinate_frame": "ccf",
+            "x_um": 100.0,
+            "y_um": 100.0,
+            "z_um": 100.0,
+        }
+    ]
+    assert [note for note in source.notes if "spike_times" in note] == []
+
+
+def test_the_index_beside_a_ragged_column_is_still_read(nwb, harp):
+    """It is one value per row, which is what makes the column beside it ragged."""
+    units = _units(nwb, refuses=False)
+    source = NWBSource(nwb, clock=harp, zone=PACIFIC, units=units)
+    columns = source._table("units")
+    assert "spike_times" not in columns
+    assert columns["spike_times_index"].tolist() == [3]
+
+
 def test_it_reads_the_tables_the_nwb_is_the_authority_for(source):
     counts = {resource: len(rows) for resource, rows in source.records().items()}
     assert counts == {

@@ -95,7 +95,7 @@ def attrs(path: Path) -> dict[str, Any]:
     return parsed
 
 
-def read_array(path: Path) -> NDArray[Any]:
+def read_array(path: Path, limit: int | None = None) -> NDArray[Any]:
     """Read a one-dimensional Zarr v2 array, whatever zarr-python makes of it.
 
     Chunks are decoded with the codecs the array declares, so a numeric ``fill_value`` on a
@@ -108,11 +108,15 @@ def read_array(path: Path) -> NDArray[Any]:
     ----------
     path : Path
         The array directory.
+    limit : int, optional
+        Stop after this many values. Only the chunks holding them are decoded, which matters
+        where an array is large and the caller wants its head: an LFP series stores 7,983,750
+        timestamps and the sampling interval is the first two.
 
     Returns
     -------
     numpy.ndarray
-        The values, trimmed to the declared shape.
+        The values, trimmed to the declared shape, or to `limit` where that is smaller.
 
     Raises
     ------
@@ -134,6 +138,11 @@ def read_array(path: Path) -> NDArray[Any]:
     pipeline = [numcodecs.get_codec(f) for f in filters]
     length, stride = int(meta["shape"][0]), int(meta["chunks"][0])
     dtype = np.dtype(meta["dtype"])
+    if limit is not None:
+        length = min(length, max(limit, 0))
+
+    if length == 0:  # an empty array, or a caller that asked for nothing
+        return np.empty(0, dtype=dtype)
 
     pieces = []
     for index in range((length + stride - 1) // stride):

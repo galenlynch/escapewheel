@@ -159,7 +159,7 @@ class LFPSource(Compensates):
         The interval survives the sign fault that ruins the values, and the ratio it gives is a
         small integer or this is not a decimation of the probe's stream at all.
         """
-        stamps = self.store.array(series / "timestamps")[:2]
+        stamps = self.store.head(series / "timestamps", 2)
         if stamps.size < 2 or not np.isfinite(stamps).all() or stamps[1] == stamps[0]:
             raise SourceDefect(f"{series.name}: timestamps give no interval, so the axis step is unknown")
         exact = clock_rate * float(stamps[1] - stamps[0])

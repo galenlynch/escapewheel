@@ -194,7 +194,14 @@ class NWBSource(Compensates):
         return self.store.attrs(path)
 
     def _table(self, path: str) -> dict[str, NDArray[Any]]:
-        """Read an hdmf table's columns, skipping any this package will not decode.
+        """Read an hdmf table's row-aligned columns, skipping any this package will not decode.
+
+        **A column an `<name>_index` declares ragged is not read.** Its rows are runs rather
+        than values, so indexing it by a table row -- which is what every caller here does --
+        is wrong for all but the first row; a caller that wants one reads it with its index,
+        as `unit_electrodes` does. It is also where the bytes are: `units/spike_times` is
+        287 M values against the table's 6,781 rows, and decoding it accounts for most of the
+        time this adapter spends reading.
 
         Cached: a table is consulted by more than one builder, and re-reading it would
         repeat every note it produced.
@@ -205,8 +212,10 @@ class NWBSource(Compensates):
         node = self.root / path
         out: dict[str, NDArray[Any]] = {}
         if node.is_dir():
-            for name in self.store.members(path):
-                if not self.store.is_array(f"{path}/{name}"):
+            names = self.store.members(path)
+            ragged = {name.removesuffix("_index") for name in names if name.endswith("_index")}
+            for name in names:
+                if name in ragged or not self.store.is_array(f"{path}/{name}"):
                     continue
                 try:
                     out[name] = self.store.array(f"{path}/{name}")

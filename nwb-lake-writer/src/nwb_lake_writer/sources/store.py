@@ -7,6 +7,10 @@ its six `units/` arrays twice within itself. None of that is expensive enough to
 own; what matters is that two readers of the same bytes can disagree, and a cache shared by
 both makes that impossible rather than unlikely.
 
+A memo retains what it reads, for the whole build. That is free for the columns an adapter
+keeps anyway and expensive for one it samples: reading an array whole to look at its head
+costs its full size held, so :meth:`SourceStore.head` decodes only the chunks it needs.
+
 Only reads that are *pure* live here. `NWBSource._table` stays where it is because it produces
 notes, and a note about a skipped column belongs to the adapter that asked, not to whichever
 one happened to ask first.
@@ -37,6 +41,7 @@ class SourceStore:
         self.root = Path(root).resolve()
         self._arrays: dict[str, NDArray[Any]] = {}
         self._attrs: dict[str, dict[str, Any]] = {}
+        self._heads: dict[tuple[str, int], NDArray[Any]] = {}
         self._members: dict[str, list[str]] = {}
         self._json: dict[str, dict[str, Any] | None] = {}
 
@@ -65,6 +70,20 @@ class SourceStore:
         if key not in self._arrays:
             self._arrays[key] = read_array(self.path(path))
         return self._arrays[key]
+
+    def head(self, path: str | Path, count: int) -> NDArray[Any]:
+        """Read the first `count` values of an array, memoized.
+
+        Decodes only the chunks holding them, and keeps only those: an LFP series stores
+        7,983,750 timestamps and `_decimation` wants two, so reading it whole and slicing
+        costs 64 MB retained per series for 16 bytes used.
+        """
+        key = self._key(path)
+        if key in self._arrays:
+            return self._arrays[key][:count]
+        if (key, count) not in self._heads:
+            self._heads[key, count] = read_array(self.path(path), limit=count)
+        return self._heads[key, count]
 
     def attrs(self, path: str | Path = "") -> dict[str, Any]:
         """Read a node's attributes, memoized."""

@@ -48,6 +48,37 @@ def test_a_failure_is_not_cached(tmp_path):
             store.array("general/extracellular_ephys/electrodes/group")
 
 
+def test_head_reads_only_the_chunks_it_needs(tmp_path):
+    """64 MB decoded and retained per LFP series, to use two values, is what this avoids."""
+    from tests.test_zarr_compat import _rechunk
+
+    values = np.arange(10, dtype=np.float64)
+    path = nwbfixture.array(tmp_path / "a", values)
+    _rechunk(path, values, stride=4)
+    (path / "2").unlink()
+    assert SourceStore(tmp_path).head("a", 2).tolist() == [0.0, 1.0]
+
+
+def test_head_is_memoized_per_count(store, monkeypatch):
+    from nwb_lake_writer.sources import store as module
+
+    calls = []
+    real = module.read_array
+    monkeypatch.setattr(module, "read_array", lambda p, **kw: calls.append(kw) or real(p, **kw))
+    store.head("intervals/trials/start_time", 1)
+    store.head("intervals/trials/start_time", 1)
+    assert calls == [{"limit": 1}]
+
+
+def test_head_is_served_from_a_full_read_already_made(store, monkeypatch):
+    """Whichever call comes first, the bytes are decoded once."""
+    from nwb_lake_writer.sources import store as module
+
+    store.array("intervals/trials/start_time")
+    monkeypatch.setattr(module, "read_array", lambda *a, **k: pytest.fail("read again"))
+    assert store.head("intervals/trials/start_time", 1).tolist() == [1.0]
+
+
 def test_members_and_attrs_are_memoized(store):
     assert store.members("acquisition") == store.members("acquisition")
     assert store.attrs("") == store.attrs("")
