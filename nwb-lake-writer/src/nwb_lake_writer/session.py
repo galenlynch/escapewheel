@@ -31,10 +31,15 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from .recipe import Recipe, SourceSpec
+from .sources.compensations import describe
 from .writer import PacketWriter, StagedArray
 
 #: Which sources a kind consumes the output of. Data-flow between adapters, which the
 #: registry cannot express; see the module docstring.
+#: Kinds that read a Zarr source through :class:`~nwb_lake_writer.sources.store.SourceStore`,
+#: and so share one open store per root.
+_SHARED_SOURCES = frozenset({"nwb", "waveforms", "lfp"})
+
 CONSUMES: dict[str, tuple[str, ...]] = {
     "nwb": ("sorter",),
     "waveforms": ("sorter", "nwb"),
@@ -91,6 +96,10 @@ class Context:
     clocks : dict
         Clock ID to declared tick rate, for a source placing an array axis on one. An axis
         advances in ticks (R20 §2), so a step cannot be derived without the rate.
+    stores : dict
+        Resolved source root to its open store. Three adapters in a real recipe read the same
+        `.nwb`; sharing the store means they cannot disagree about what is in it, and stops the
+        electrode table being parsed once per adapter.
     """
 
     session_id: str
@@ -98,6 +107,7 @@ class Context:
     units: dict[tuple[str, str], dict[str, str]] = field(default_factory=dict)
     electrodes: dict[int, str] = field(default_factory=dict)
     clocks: dict[str, float] = field(default_factory=dict)
+    stores: dict[Path, Any] = field(default_factory=dict)
 
 
 def order(recipe: Recipe) -> list[SourceSpec]:
@@ -141,8 +151,11 @@ def order(recipe: Recipe) -> list[SourceSpec]:
 def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
     """Construct one adapter, supplying whatever earlier sources produced for it."""
     from .sources import LFPSource, NWBSource, SorterSource, SyncSource, WaveformSource
+    from .sources.store import store_for
 
     options = dict(spec.options)
+    if spec.kind in _SHARED_SOURCES:
+        options["store"] = store_for(spec.root, context.stores)
     if spec.kind == "sorter":
         return SorterSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "sync":
@@ -257,7 +270,13 @@ def materializers(recipe: Recipe, memory_budget: int | str = 0) -> list[Callable
     return built
 
 
-def build(recipe: Recipe, registry: Mapping[str, Any], *, say: Callable[[str], None] = lambda _: None) -> PacketWriter:
+def build(
+    recipe: Recipe,
+    registry: Mapping[str, Any],
+    *,
+    say: Callable[[str], None] = lambda _: None,
+    strict: bool = False,
+) -> PacketWriter:
     """Run every source and return a writer holding the packet, uncommitted.
 
     Parameters
@@ -269,6 +288,11 @@ def build(recipe: Recipe, registry: Mapping[str, Any], *, say: Callable[[str], N
         The registry to write against.
     say : callable, optional
         Progress reporter.
+    strict : bool, default False
+        Refuse the build on any adapter note. A note is something the importer worked around --
+        an absent column, a dropped timestamp, an offset that disagreed -- and every one is a
+        place the packet says less than the source could have. Off by default because working
+        around them is the point of an adapter; on in CI, where a new one is news.
 
     Returns
     -------
@@ -286,6 +310,7 @@ def build(recipe: Recipe, registry: Mapping[str, Any], *, say: Callable[[str], N
         writer.add("core.subjects", [dict(recipe.subject)])
 
     counts: dict[str, int] = {}
+    applied: list[str] = []
     for spec in order(recipe):
         say(f"{spec.kind} -> {', '.join(spec.owns) or 'nothing it owns'}")
         source = _build_source(spec, recipe, context)
@@ -310,8 +335,13 @@ def build(recipe: Recipe, registry: Mapping[str, Any], *, say: Callable[[str], N
 
         for note in getattr(source, "notes", []):
             say(f"  note: {note}")
+        applied.extend(getattr(source, "compensations", []))
+        if strict and (refused := list(getattr(source, "notes", []))):
+            raise RecipeError(f"{spec.kind}: {len(refused)} note(s) under --strict; first is {refused[0]}")
 
-    writer.add("core.processing_runs", [_import_run(recipe)])
+    writer.add("core.processing_runs", [_import_run(recipe, applied)])
+    for entry in describe(applied):
+        say(f"  compensated: {entry['id']}")
     for resource, total in sorted(counts.items()):
         say(f"  {resource:44s} {total:>12,}")
     return writer
@@ -331,12 +361,17 @@ def _stage_array(writer: PacketWriter, spec: SourceSpec, source: Any, say: Calla
     )
 
 
-def _import_run(recipe: Recipe) -> dict[str, Any]:
+def _import_run(recipe: Recipe, compensations: list[str] | None = None) -> dict[str, Any]:
     """Build the `core.processing_runs` row for this import, carrying the recipe as its parameters.
 
     `05` Stage 3 wants normalization deterministic in declared parameters. Putting the recipe
     itself in `parameters` is what makes the run record answerable rather than merely present:
     a reader can see what produced the packet, and `code_uri` names the file it came from.
+
+    The compensations go in beside it because a recipe alone does not determine the output: two
+    runs of the same recipe against the same bytes differ if the importer's assumptions about
+    those bytes changed. A packet that names them can be found again when a defect is fixed
+    upstream.
     """
     from . import __version__
 
@@ -347,7 +382,11 @@ def _import_run(recipe: Recipe) -> dict[str, Any]:
         "software_name": "nwb-lake-writer",
         "software_version": __version__,
         "code_uri": f"sha256:{recipe.digest}",
-        "parameters": json.dumps(recipe.document, default=str, sort_keys=True),
+        "parameters": json.dumps(
+            {"recipe": recipe.document, "compensations": describe(compensations or [])},
+            default=str,
+            sort_keys=True,
+        ),
         "started_at": datetime.now(UTC).isoformat(),
         "status": "succeeded",
     }

@@ -52,7 +52,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..clock import Clock
-from .zarr_compat import UnsupportedEncoding, attrs, members, read_array
+from .compensations import Compensates
+from .store import SourceStore
+from .zarr_compat import UnsupportedEncoding
 
 #: NWB writes the literal string ``None`` where a value is absent -- in `laser_location`,
 #: `auto_train_stage`, `was_generated_by`. Treated as null when mapped into a typed core
@@ -113,7 +115,7 @@ def _clean(value: Any) -> Any:
     return value
 
 
-class NWBSource:
+class NWBSource(Compensates):
     """An NWB file, read as records against a declared clock and zone.
 
     Parameters
@@ -159,15 +161,18 @@ class NWBSource:
         prefix: str = "",
         trial_metadata: bool = True,
         units: Mapping[tuple[str, str], Mapping[str, str]] | None = None,
+        store: Any = None,
     ) -> None:
         if not isinstance(zone, ZoneInfo):
             raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
         self.root = _resolve(Path(root))
+        self.store = store if store is not None else SourceStore(self.root)
         self.clock = clock
         self.zone = zone
         self.prefix = prefix
         self.trial_metadata = trial_metadata
         self.units = dict(units or {})
+        Compensates.__init__(self)
         self.notes: list[str] = []
         self._cache: dict[str, Any] = {}
         self.session_id = session_id or _one(self._array("general/session_id")) or self.root.stem
@@ -180,14 +185,13 @@ class NWBSource:
 
     def _array(self, path: str) -> NDArray[Any]:
         """Read one array, or an empty one if it is absent."""
-        target = self.root / path
-        if not (target / ".zarray").is_file():
+        if not self.store.is_array(path):
             return np.empty(0)
-        return read_array(target)
+        return self.store.array(path)
 
     def _attrs(self, path: str = "") -> dict[str, Any]:
         """Read one node's attributes."""
-        return attrs(self.root / path)
+        return self.store.attrs(path)
 
     def _table(self, path: str) -> dict[str, NDArray[Any]]:
         """Read an hdmf table's columns, skipping any this package will not decode.
@@ -201,11 +205,11 @@ class NWBSource:
         node = self.root / path
         out: dict[str, NDArray[Any]] = {}
         if node.is_dir():
-            for name in members(node):
-                if not (node / name / ".zarray").is_file():
+            for name in self.store.members(path):
+                if not self.store.is_array(f"{path}/{name}"):
                     continue
                 try:
-                    out[name] = read_array(node / name)
+                    out[name] = self.store.array(f"{path}/{name}")
                 except UnsupportedEncoding as refused:
                     self.notes.append(f"{path}/{name}: not read; {str(refused).rsplit('/', 1)[-1]}")
         self._cache[path] = out
@@ -231,6 +235,7 @@ class NWBSource:
             self.notes.append(f"{label}: no offset stored; read as {self.zone.key}")
             return value.replace(tzinfo=self.zone)
         if value.utcoffset() != expected:
+            self.compensate("nwb.stored_offset_kept")
             self.notes.append(
                 f"{label}: stored offset {_offset(value.utcoffset())} disagrees with "
                 f"{self.zone.key}'s {_offset(expected)} for {value.replace(tzinfo=None).isoformat()}; kept as stored"
@@ -262,9 +267,7 @@ class NWBSource:
         if "subjects" in self._cache:
             cached: list[dict[str, Any]] = self._cache["subjects"]
             return cached
-        columns = {
-            name: _one(self._array(f"general/subject/{name}")) for name in members(self.root / "general/subject")
-        }
+        columns = {name: _one(self._array(f"general/subject/{name}")) for name in self.store.members("general/subject")}
         born = self._instant(columns.get("date_of_birth"), "subject.date_of_birth")
         row: dict[str, Any] = {
             "subject_id": columns.get("subject_id") or self.session_id,
@@ -309,7 +312,7 @@ class NWBSource:
     def devices(self) -> list[dict[str, Any]]:
         """`core.devices`, one row per NWB Device."""
         rows = []
-        for name in members(self.root / "general/devices"):
+        for name in self.store.members("general/devices"):
             described = self._attrs(f"general/devices/{name}")
             description = str(described.get("description", ""))
             parsed = DEVICE_DESCRIPTION.match(description)
@@ -335,7 +338,7 @@ class NWBSource:
         """
         devices = {row["name"]: row for row in self.devices()}
         rows = []
-        for name in members(self.root / "general/extracellular_ephys"):
+        for name in self.store.members("general/extracellular_ephys"):
             if name == "electrodes":
                 continue
             described = self._attrs(f"general/extracellular_ephys/{name}")
@@ -547,10 +550,14 @@ class NWBSource:
         acquisition = self.root / "acquisition"
         if not acquisition.is_dir():
             return
-        for name in members(acquisition):
-            if not (acquisition / name / "timestamps" / ".zarray").is_file():
+        for name in self.store.members("acquisition"):
+            if not self.store.is_array(f"acquisition/{name}/timestamps"):
                 continue
-            yield name, read_array(acquisition / name / "timestamps"), self._array(f"acquisition/{name}/data")
+            yield (
+                name,
+                self.store.array(f"acquisition/{name}/timestamps"),
+                self._array(f"acquisition/{name}/data"),
+            )
 
     def event_streams(self) -> list[dict[str, Any]]:
         """`core.event_streams`, one row per acquisition TimeSeries.

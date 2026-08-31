@@ -40,6 +40,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from ..clock import Clock, epoch_from
+from .compensations import Compensates
 from .nwb import SourceDefect, _offset
 
 #: `session.json`'s own name for the file, used to accept either it or its directory.
@@ -76,7 +77,7 @@ class AcquisitionStream:
         return self.stop - self.start
 
 
-class SessionSource:
+class SessionSource(Compensates):
     """An asset's `session.json`, read against a declared zone.
 
     Parameters
@@ -110,6 +111,7 @@ class SessionSource:
         if not self.path.is_file():
             raise SourceDefect(f"{path} holds no {SESSION_JSON}")
         self.zone = zone
+        Compensates.__init__(self)
         self.notes: list[str] = []
         self._streams: list[AcquisitionStream] | None = None
         self._document: dict[str, Any] = json.loads(self.path.read_text())
@@ -125,6 +127,7 @@ class SessionSource:
         disagreement is reported, not resolved in the file's favour.
         """
         value = datetime.fromisoformat(raw)
+        self.compensate("aind.stored_offset_distrusted")
         localized = value.replace(tzinfo=self.zone)
         if value.tzinfo is not None and value.utcoffset() != localized.utcoffset():
             self.notes.append(

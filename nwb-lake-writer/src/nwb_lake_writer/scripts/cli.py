@@ -161,7 +161,7 @@ def _import(args: argparse.Namespace) -> int:
     # One budget for the build. The CLI wins over the recipe, because the recipe travels with
     # the data and the machine packaging it does not.
     budget = args.memory_budget or recipe.memory_budget
-    writer = build(recipe, registry, say=say)
+    writer = build(recipe, registry, say=say, strict=args.strict)
     derive = materializers(recipe, memory_budget=budget)
     limits = {k: v for k, v in recipe.limits.items() if k != "memory_budget"}
     if budget and "memory_limit" not in limits:
@@ -203,6 +203,11 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     importer.add_argument("--out", type=Path, help="packet root, overriding [packet].out")
     importer.add_argument("--registry", type=Path, help="registry, overriding [packet].registry")
     importer.add_argument("--check", action="store_true", help="check the recipe and stop")
+    importer.add_argument(
+        "--strict",
+        action="store_true",
+        help="refuse the build on any adapter note, each of which is something worked around",
+    )
     importer.add_argument(
         "--memory-budget",
         metavar="N",

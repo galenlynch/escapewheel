@@ -136,6 +136,33 @@ resource owned twice, an owned resource the registry does not define, and an own
 known from two documents with no data in hand. A nullable one is a warning, because
 `generate(only=...)` silently skips a foreign-key check whose target is absent.
 
+### One source is read once
+
+Three adapters in a real recipe open the same `.nwb`, and two of them read the electrode
+table; `WaveformSource` read its six `units/` arrays twice within itself. `SourceStore` holds
+one memoized reader per resolved root and `Context` shares it. The saving is small; the point
+is that two readers of the same bytes can no longer disagree. An adapter built on its own gets
+a private store, so nothing about sharing leaks into how one is written or tested.
+
+`NWBSource._table` stays outside the store because it produces notes, and a note about a
+skipped column belongs to the adapter that asked rather than to whichever asked first.
+
+### The importer records what it assumed about its sources
+
+Every adapter works around something known to be wrong upstream — `inventory/` carries eight
+measured defects. A correction is silent by construction, which is fine until the fault is
+fixed: an importer still compensating for a defect its source no longer has produces a packet
+wrong in the opposite direction, and nothing in it says so.
+
+So a compensation is declared, registered in `sources/compensations.py` with its evidence, and
+every one an import applied lands in `core.processing_runs.parameters`. A knowing pass-through
+is registered too — choosing not to correct is as much an assumption as choosing to. Adding one
+without a citation into `inventory/` is refused by the tests.
+
+`--strict` refuses a build on any adapter note. A note is a place the packet says less than the
+source could have; working around them is the point of an adapter, so it is off by default and
+on in CI, where a new one is news.
+
 ### Ordering comes from the adapters, not the registry
 
 A foreign key constrains validity, not write order: Parquet files are independent and nothing
@@ -188,6 +215,7 @@ nwb-lake inspect sorter /data/sorted    # 05 Stage 1: what one source offers
 nwb-lake init --session-id s001 \       # a recipe draft, contested resources flagged
   --source sorter=/data/sorted --source nwb=/data/session.nwb
 nwb-lake import session.toml --check    # every problem, before any I/O
+nwb-lake import session.toml --strict   # refuse anything the adapters worked around
 nwb-lake import session.toml            # 05 Stages 2-6
 ```
 

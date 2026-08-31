@@ -32,15 +32,15 @@ once. `conversion` is *not*: it is one value per series here, so it stays on
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
+from .compensations import Compensates
 from .nwb import SourceDefect
-from .zarr_compat import read_array
+from .store import SourceStore
 
 #: Where an NWB keeps its LFP series.
 GROUP = "processing/ecephys/LFP"
@@ -50,7 +50,7 @@ GROUP = "processing/ecephys/LFP"
 DATA = "data"
 
 
-class LFPSource:
+class LFPSource(Compensates):
     """An NWB's LFP series, as external array assets plus the tables describing their axes.
 
     Parameters
@@ -83,8 +83,10 @@ class LFPSource:
         electrodes: Any = None,
         uri_base: str | None = None,
         verify: str = "size",
+        store: Any = None,
     ) -> None:
         self.root = Path(root)
+        self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.clocks = list(clocks)
         self.electrodes = dict(electrodes or {})
@@ -92,6 +94,7 @@ class LFPSource:
         if verify not in {"none", "size", "sha256"}:
             raise ValueError(f"verify must be none, size or sha256, not {verify!r}")
         self.verify = verify
+        Compensates.__init__(self)
         self.notes: list[str] = []
         self._rates: dict[str, float] = {}
         self._series = (
@@ -133,16 +136,13 @@ class LFPSource:
     # -- what the store declares --------------------------------------------------------
 
     def _zarray(self, path: Path) -> dict[str, Any]:
-        meta = path / ".zarray"
-        if not meta.is_file():
+        meta = self.store.zarray(path)
+        if meta is None:
             raise SourceDefect(f"{path}: no .zarray, so it is not a Zarr v2 array")
-        parsed: dict[str, Any] = json.loads(meta.read_text())
-        return parsed
+        return meta
 
     def _zattrs(self, path: Path) -> dict[str, Any]:
-        meta = path / ".zattrs"
-        parsed: dict[str, Any] = json.loads(meta.read_text()) if meta.is_file() else {}
-        return parsed
+        return self.store.attrs(path)
 
     @staticmethod
     def _codecs(meta: dict[str, Any]) -> tuple[str, ...]:
@@ -159,7 +159,7 @@ class LFPSource:
         The interval survives the sign fault that ruins the values, and the ratio it gives is a
         small integer or this is not a decimation of the probe's stream at all.
         """
-        stamps = read_array(series / "timestamps")[:2]
+        stamps = self.store.array(series / "timestamps")[:2]
         if stamps.size < 2 or not np.isfinite(stamps).all() or stamps[1] == stamps[0]:
             raise SourceDefect(f"{series.name}: timestamps give no interval, so the axis step is unknown")
         exact = clock_rate * float(stamps[1] - stamps[0])
@@ -258,6 +258,7 @@ class LFPSource:
             clock_id = self._clock(series)
             meta = self._zarray(series / DATA)
             step = self._decimation(series, self._clock_rate(clock_id))
+            self.compensate("lfp.timestamps_distrusted")
             rows.append(
                 {
                     "array_asset_id": self.array_asset_id(series),
@@ -296,13 +297,13 @@ class LFPSource:
     def array_channels(self) -> list[dict[str, Any]]:
         """`core.array_channels`, one row per channel of every series (R19 §2)."""
         table = self.root / "general/extracellular_ephys/electrodes"
-        channel = read_array(table / "channel_name") if (table / "channel_name").is_dir() else None
-        shift = read_array(table / "inter_sample_shift") if (table / "inter_sample_shift").is_dir() else None
+        channel = self.store.array(table / "channel_name") if (table / "channel_name").is_dir() else None
+        shift = self.store.array(table / "inter_sample_shift") if (table / "inter_sample_shift").is_dir() else None
         if shift is None:
             self.notes.append("electrodes/inter_sample_shift: absent, so array channels carry no acquisition offset")
         rows = []
         for series in self._series:
-            region = read_array(series / "electrodes")
+            region = self.store.array(series / "electrodes")
             for index, source_row in enumerate(int(r) for r in region):
                 rows.append(
                     {

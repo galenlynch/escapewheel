@@ -31,6 +31,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .nwb import SourceDefect
+from .store import SourceStore
 
 #: Samples either side of the window used to estimate what the average left behind. Only for
 #: reporting; the scale comes from the range, not from this.
@@ -75,8 +76,10 @@ class WaveformSource:
         electrodes: dict[int, str] | None = None,
         array_asset_id: str = "waveform_mean",
         prefix: str = "",
+        store: Any = None,
     ) -> None:
         self.root = Path(root)
+        self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.units = dict(units)
         self.electrodes = dict(electrodes or {})
@@ -137,15 +140,13 @@ class WaveformSource:
             return self._built
         import zarr
 
-        from .zarr_compat import read_array
-
         group = self.root / "units"
         array = zarr.open_array(str(group / "waveform_mean"), mode="r", zarr_format=2)
-        device = read_array(group / "device_name")
-        ks = read_array(group / "ks_unit_id")
-        electrode_rows = read_array(group / "electrodes")
-        bounds = read_array(group / "electrodes_index")
-        extremum = read_array(group / "extremum_channel_index")
+        device = self.store.array(group / "device_name")
+        ks = self.store.array(group / "ks_unit_id")
+        electrode_rows = self.store.array(group / "electrodes")
+        bounds = self.store.array(group / "electrodes_index")
+        extremum = self.store.array(group / "extremum_channel_index")
 
         total, samples = array.shape[0], array.shape[1]
         keep, identity, support, slabs, peak = self._scan(array, device, ks)
@@ -181,15 +182,13 @@ class WaveformSource:
         return self._built
         import zarr
 
-        from .zarr_compat import read_array
-
         group = self.root / "units"
         dense = np.asarray(zarr.open_array(str(group / "waveform_mean"), mode="r", zarr_format=2)[:])
-        device = read_array(group / "device_name")
-        ks = read_array(group / "ks_unit_id")
-        electrode_rows = read_array(group / "electrodes")
-        bounds = read_array(group / "electrodes_index")
-        extremum = read_array(group / "extremum_channel_index")
+        device = self.store.array(group / "device_name")
+        ks = self.store.array(group / "ks_unit_id")
+        electrode_rows = self.store.array(group / "electrodes")
+        bounds = self.store.array(group / "electrodes_index")
+        extremum = self.store.array(group / "extremum_channel_index")
 
         width = max((s.size for s in _support(dense, dense.shape[2])), default=0)
         if not width:
