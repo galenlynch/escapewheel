@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import unquote, urlparse
 
 import pyarrow as pa
-import pyarrow.compute as pc
 import pyarrow.dataset as pads
 import pyarrow.parquet as pq
 
@@ -42,28 +41,6 @@ _DICTIONARY_TYPES = ("string", "large_string", "binary", "large_binary")
 #: without a backend for its scheme (R21 §3.2).
 _ZARR_PROFILES: dict[str, Literal[2, 3]] = {"zarr_v2": 2, "zarr_v3": 3}
 _ZARR_METADATA: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
-
-
-def as_dictionary(table: pa.Table, columns: Iterable[str]) -> pa.Table:
-    """Re-encode named string columns as dictionaries, leaving the rest alone.
-
-    Used to give one return type to two read strategies. A whole-file read gets its
-    dictionary from Parquet directly, which is the cheap direction; a filtered read is faster
-    decoded and then re-encoded here, because the rows a filter leaves are few. Measured on
-    572,551 rows: 0.041 s decoded, 0.019 s to re-encode, against 1.318 s asking the scanner
-    for dictionaries -- and 132.8 MB becomes 18.5 MB.
-    """
-    wanted = set(columns)
-    if not wanted:
-        return table
-    arrays, fields = [], []
-    for name in table.schema.names:
-        column = table.column(name)
-        if name in wanted and pa.types.is_string(column.type):
-            column = pc.dictionary_encode(column)
-        arrays.append(column)
-        fields.append(pa.field(name, column.type))
-    return pa.table(arrays, schema=pa.schema(fields))
 
 
 def _resolve(resource: Resource, root: Path) -> Path:

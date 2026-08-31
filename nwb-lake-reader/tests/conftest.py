@@ -222,3 +222,65 @@ def packet_root(tmp_path):
         )
     )
     return root
+
+
+@pytest.fixture
+def two_clock_packet(tmp_path, packet_root):
+    """A packet whose spikes are on a probe clock and whose session reports on another.
+
+    The realistic shape: anchors relate the two, and only a mapped tick is comparable with a
+    behavioural event. Anchor pairs are exact multiples so the expected ticks are exact.
+    """
+    import shutil
+
+    root = tmp_path / "two_clock"
+    shutil.copytree(packet_root, root)
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    by_id = {r["resource_id"]: r for r in manifest["resources"]}
+
+    sessions = pa.table(
+        {
+            "session_id": pa.array(["s001"]),
+            "subject_id": pa.array(["m001"]),
+            "session_start_time": pa.array([1_756_000_000_000_000], type=pa.timestamp("us", tz="UTC")),
+            "reference_clock_id": pa.array(["harp"]),
+        }
+    )
+    # Probe tick 0 is harp tick 1,000,000, and the probe runs at 30 kHz against harp's 31,250.
+    n = 8
+    anchors = pa.table(
+        {
+            "clock_id": pa.array(["probe"] * n),
+            "anchor_index": pa.array(list(range(n)), type=pa.int64()),
+            "t_tick": pa.array([i * 30_000 for i in range(n)], type=pa.int64()),
+            "parent_tick": pa.array([1_000_000 + i * 31_250 for i in range(n)], type=pa.int64()),
+        }
+    )
+    spikes = pa.table(
+        {
+            "session_id": pa.array(["s001"] * 3),
+            "unit_id": pa.array(["unit_001", "unit_001", "unit_003"]),
+            "sorting_run_id": pa.array(["sort_001"] * 3),
+            "curation_id": pa.array(["cur_001"] * 3),
+            "t_tick": pa.array([30_000, 60_000, 90_000], type=pa.int64()),
+            "clock_id": pa.array(["probe", "probe", "harp"]),
+        }
+    )
+    events = pa.table(
+        {
+            "session_id": pa.array(["s001"]),
+            "event_id": pa.array(["ev_1"]),
+            "event_type": pa.array(["go_cue"]),
+            "t_tick": pa.array([1_200_000], type=pa.int64()),
+            "clock_id": pa.array(["harp"]),
+        }
+    )
+    for resource_id, name, table in (
+        ("core.sessions", "sessions", sessions),
+        ("core.spike_events", "spike_events", spikes),
+        ("core.events", "events", events),
+    ):
+        by_id[resource_id]["uri"] = _write(root, name, table)
+    manifest["resources"].append(_resource("core.clock_anchors", _write(root, "clock_anchors", anchors)))
+    (root / "nwb.packet.json").write_text(json.dumps(manifest, indent=2))
+    return root

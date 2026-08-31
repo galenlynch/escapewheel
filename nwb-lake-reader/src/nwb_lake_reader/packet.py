@@ -11,9 +11,11 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as pads
 
+from .clocks import BOUND, NotAligned, anchors, mapped, stored_span
+from .dictionaries import as_dictionary, constant
 from .errors import ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
 from .manifest import Manifest, Resource
-from .resources import ArrayResource, TableResource, as_dictionary
+from .resources import ArrayResource, TableResource
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
@@ -28,6 +30,11 @@ REGISTRY_PATH = "schemas/logical_schemas.json"
 #: requiring more can be rejected before it is opened. A resource declaring a codec outside
 #: this set is refused only when it is the one being opened (R15 §2).
 BASELINE_CODECS = frozenset({"none", "gzip", "zstd"})
+
+#: Ask for ticks exactly as the file stores them. Spikes are counted on the probe that
+#: recorded them, so stored ticks from two probes are not comparable and neither is a stored
+#: tick against a behavioural event -- which is why reaching them takes saying so.
+STORED = "stored"
 
 
 class Packet:
@@ -50,6 +57,8 @@ class Packet:
         self._root = root
         self._manifest = manifest
         self._by_id = {r.resource_id: r for r in manifest.resources}
+        self._anchor_cache: dict[str, Any] | None = None
+        self._reference_cache: str | None = None
 
     @property
     def root(self) -> Path:
@@ -440,8 +449,9 @@ class Packet:
         event_type: str | None = None,
         session_id: str | None = None,
         t_tick: tuple[int, int] | None = None,
+        clock: str | None = None,
     ) -> pa.Table:
-        """Read ``core.events``, optionally filtered.
+        """Read ``core.events``, on the packet's reference clock unless told otherwise.
 
         Parameters
         ----------
@@ -451,15 +461,23 @@ class Packet:
         session_id : str, optional
             Keep only this session.
         t_tick : tuple of int, optional
-            Keep only events within this closed tick range. Ticks are only comparable
-            within one clock, so pair this with a session or an event type that pins one.
+            Keep only events within this closed tick range, stated on the clock the result
+            comes back on -- so a range and the ticks it selects are always in the same space.
+            A loose translation of it is pushed into the Parquet reader for pruning and the
+            exact one applied after mapping.
+        clock : str, optional
+            The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
+            :data:`STORED` for the ticks the file holds.
 
         Returns
         -------
         pyarrow.Table
-            Matching events.
+            Matching events, with `t_tick` on `clock` and `clock_id` naming it.
         """
-        return self.table("core.events", event_type=event_type, session_id=session_id, t_tick=t_tick)
+        found = self.table(
+            "core.events", event_type=event_type, session_id=session_id, t_tick=self._span(t_tick, clock)
+        )
+        return found if clock == STORED else self._narrowed(self.on_clock(found, clock), t_tick)
 
     def spike_times(
         self,
@@ -470,11 +488,15 @@ class Packet:
         sorting_run_id: str | None = None,
         curation_id: str | None = None,
         t_tick: tuple[int, int] | None = None,
+        clock: str | None = None,
     ) -> pa.Table:
         """Read spike times for one unit, or for a table of them.
 
-        Returns ``clock_id`` alongside ``t_tick`` because a tick has no meaning without the
-        clock it was counted on.
+        **On the reference clock by default.** A spike is counted on the probe that recorded
+        it, so stored ticks from two probes are not comparable and neither is a stored tick
+        against a behavioural event; returning them by default makes the wrong answer the
+        easy one. `clock_id` comes back alongside `t_tick` either way, because a tick has no
+        meaning without the clock it was counted on.
 
         A unit is identified by ``(session_id, unit_id, sorting_run_id, curation_id)``, never
         by ``unit_id`` alone. Passing `units` carries that whole identity, so a packet holding
@@ -499,7 +521,13 @@ class Packet:
         session_id, sorting_run_id, curation_id : str, optional
             Narrow the identifying context when naming a single `unit_id`.
         t_tick : tuple of int, optional
-            Keep only spikes within this closed tick range, on the unit's own clock.
+            Keep only spikes within this closed tick range, stated on the clock the result
+            comes back on, not on the unit's stored clock -- a range and the ticks it selects
+            are always in the same space. Pass `clock=STORED` for both in stored ticks.
+        clock : str, optional
+            The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
+            :data:`STORED` for the ticks the file holds. Mapping drops a spike the anchors
+            cannot place, exactly as `analysis.spike_events` does.
 
         Returns
         -------
@@ -518,15 +546,16 @@ class Packet:
         if (unit_id is None) == (units is None):
             raise ValueError("name exactly one of unit_id or units")
         if unit_id is not None:
-            return self.table(
+            found = self.table(
                 "core.spike_events",
                 columns=["t_tick", "clock_id"],
                 unit_id=unit_id,
                 session_id=session_id,
                 sorting_run_id=sorting_run_id,
                 curation_id=curation_id,
-                t_tick=t_tick,
+                t_tick=self._span(t_tick, clock),
             )
+            return found if clock == STORED else self._narrowed(self.on_clock(found, clock), t_tick)
 
         assert units is not None  # the exclusivity check above settles this
         keys = self._reference_columns("core.spike_events", "core.units")
@@ -545,9 +574,133 @@ class Packet:
         wanted = tests[0]
         for test in tests[1:]:
             wanted = wanted & test
-        if t_tick is not None:
-            wanted = wanted & (pc.field("t_tick") >= t_tick[0]) & (pc.field("t_tick") <= t_tick[1])
-        return self.scan("core.spike_events").to_table(columns=["t_tick", "clock_id"], filter=wanted)
+        if (pushed := self._span(t_tick, clock)) is not None:
+            wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
+        found = self.scan("core.spike_events").to_table(columns=["t_tick", "clock_id"], filter=wanted)
+        return found if clock == STORED else self._narrowed(self.on_clock(found, clock), t_tick)
+
+    def reference_clock(self, *, session_id: str | None = None) -> str:
+        """Return the clock this packet reports times on (R27 §2).
+
+        Parameters
+        ----------
+        session_id : str, optional
+            Which session's reference to return. Only needed where a multi-session packet's
+            sessions disagree, which is refused rather than resolved by picking one.
+
+        Returns
+        -------
+        str
+            The declared `clock_id`.
+
+        Raises
+        ------
+        NotAligned
+            If no session declares one, if the named session does not, or if sessions declare
+            different clocks and none was named.
+        """
+        if session_id is None and self._reference_cache is not None:
+            return self._reference_cache
+        table = self.table("core.sessions")
+        if "reference_clock_id" not in table.column_names:
+            raise NotAligned("core.sessions carries no reference_clock_id (R27 §2)")
+        declared = {
+            session: clock
+            for session, clock in zip(
+                table.column("session_id").to_pylist(), table.column("reference_clock_id").to_pylist(), strict=True
+            )
+            if clock
+        }
+        if session_id is not None:
+            if session_id not in declared:
+                raise NotAligned(f"session {session_id!r} declares no reference_clock_id (R27 §2)")
+            return str(declared[session_id])
+        named = sorted(set(declared.values()))
+        if not named:
+            raise NotAligned("no session declares a reference_clock_id (R27 §2)")
+        if len(named) > 1:
+            raise NotAligned(f"sessions declare different reference clocks {named}; name a session_id")
+        self._reference_cache = str(named[0])
+        return self._reference_cache
+
+    def on_clock(self, table: pa.Table, clock: str | None = None, *, bound: float = BOUND) -> pa.Table:
+        """Return `table` with its ticks on one clock.
+
+        A row whose tick the anchors cannot place is **dropped**, which is what R27 §5.3
+        leaves undefined and what `analysis.spike_events` does with the same rows. Reading
+        `core` through this and reading the materialized table therefore agree.
+
+        Parameters
+        ----------
+        table : pyarrow.Table
+            Any table carrying `t_tick` and `clock_id`.
+        clock : str, optional
+            The clock to map onto. Defaults to :meth:`reference_clock`.
+        bound : float, optional
+            How far from an anchor the mapping stays defined, in median anchor intervals.
+
+        Returns
+        -------
+        pyarrow.Table
+            The same columns, `t_tick` on `clock` and `clock_id` naming it, minus the rows
+            where the mapping is undefined.
+        """
+        if table.num_rows == 0:
+            return table
+        columns = {name: _flat(table.column(name)) for name in ("t_tick", "clock_id")}
+        present = _clocks_in(columns["clock_id"])
+        target = clock or self._default_clock(present)
+        if present == [target]:
+            # Already there. Worth the check: it is the whole single-clock case, and it keeps
+            # a packet with no anchors readable.
+            return table
+        ticks, keep = mapped(pa.record_batch(columns), target, self._anchors(), bound)
+        names = table.column_names
+        out = table.set_column(names.index("t_tick"), "t_tick", pa.array(ticks))
+        out = out.set_column(names.index("clock_id"), "clock_id", constant(target, table.num_rows))
+        return out.filter(pa.array(keep))
+
+    def _span(self, span: tuple[int, int] | None, clock: str | None) -> tuple[int, int] | None:
+        """Widen a range stated on the result's clock into one the file can be pruned by."""
+        if span is None or clock == STORED:
+            return span
+        try:
+            target = clock or self.reference_clock()
+        except NotAligned:
+            return span
+        return stored_span(self._anchors(), target, span)
+
+    def _narrowed(self, table: pa.Table, span: tuple[int, int] | None) -> pa.Table:
+        """Apply the caller's range exactly, now that every row is on one clock."""
+        if span is None:
+            return table
+        ticks = table.column("t_tick")
+        return table.filter(pc.and_(pc.greater_equal(ticks, span[0]), pc.less_equal(ticks, span[1])))
+
+    def _default_clock(self, present: list[str]) -> str:
+        """Which clock to map onto when the caller named none.
+
+        The declared reference, or -- where a packet declares none -- the one clock the rows
+        are already on, since there is then nothing to reconcile and nothing to get wrong.
+        Rows spanning clocks with no reference declared are refused: that is exactly the case
+        where returning them as stored invites a comparison that means nothing.
+        """
+        try:
+            return self.reference_clock()
+        except NotAligned:
+            if len(present) == 1:
+                return present[0]
+            raise
+
+    def _anchors(self) -> dict[str, Any]:
+        """`core.clock_anchors` per clock, read once per packet.
+
+        Cached because an accessor is called per unit: reading the anchor table for each of
+        6,781 units would cost more than the spikes do.
+        """
+        if self._anchor_cache is None:
+            self._anchor_cache = anchors(self)
+        return self._anchor_cache
 
     def _reference_columns(self, resource_id: str, parent: str) -> list[str]:
         """Return the columns by which one resource references another, per the registry.
@@ -595,6 +748,20 @@ class Packet:
                 continue
             return self.table(parent, columns=[reference["resource_columns"][at]]).column(0).unique()
         return self.table(resource_id, columns=[column]).column(0).unique()
+
+
+def _clocks_in(column: pa.Array) -> list[str]:
+    """Distinct clock IDs in a column, read from its dictionary where it has one."""
+    listed = column.dictionary if pa.types.is_dictionary(column.type) else pc.unique(column)
+    return sorted({v for v in listed.to_pylist() if v is not None})
+
+
+def _flat(column: Any) -> pa.Array:
+    """Return one Array from a column that may arrive in chunks."""
+    combined = column.combine_chunks() if isinstance(column, pa.ChunkedArray) else column
+    if isinstance(combined, pa.ChunkedArray):
+        return combined.chunk(0) if combined.num_chunks else combined.cast(combined.type).combine_chunks()
+    return combined
 
 
 def open_packet(path: str | Path, *, validate_manifest: bool = True) -> Packet:

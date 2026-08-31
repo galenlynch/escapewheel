@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from importlib.metadata import version
 
+from .clocks import BOUND, NotAligned, Unanchored, align
 from .errors import (
     ManifestError,
     PacketError,
@@ -18,7 +19,7 @@ from .errors import (
     UnsupportedCodecError,
 )
 from .manifest import Manifest, Resource
-from .packet import BASELINE_CODECS, Packet, Predicate, open_packet
+from .packet import BASELINE_CODECS, STORED, Packet, Predicate, open_packet
 from .resources import ArrayResource, TableResource
 from .sql import quote, sql_name
 
@@ -26,9 +27,12 @@ __version__ = version("nwb-lake-reader")
 
 __all__ = [
     "BASELINE_CODECS",
+    "BOUND",
+    "STORED",
     "ArrayResource",
     "Manifest",
     "ManifestError",
+    "NotAligned",
     "Packet",
     "PacketError",
     "Predicate",
@@ -36,8 +40,10 @@ __all__ = [
     "ResourceNotFoundError",
     "ResourceUnreadableError",
     "TableResource",
+    "Unanchored",
     "UnsupportedCodecError",
     "__version__",
+    "align",
     "open_packet",
     "quote",
     "sql_name",

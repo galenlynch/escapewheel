@@ -1,6 +1,6 @@
 import pytest
 
-from nwb_lake_reader import open_packet
+from nwb_lake_reader import STORED, NotAligned, open_packet
 
 
 def test_trials_unfiltered(packet_root):
@@ -77,8 +77,15 @@ def test_accessors_push_predicates_into_the_reader(packet_root, monkeypatch):
     """
     import pyarrow.parquet as pq
 
-    def refuse(*args, **kwargs):
-        raise AssertionError("accessors must not load a whole table; push the predicate down")
+    real = pq.read_table
+
+    def refuse(source, *args, **kwargs):
+        # Only the spike table. Reading `core.sessions` or `core.clock_anchors` whole is what
+        # returning ticks on a declared clock takes, and both are one row per session or per
+        # sync pulse -- the cost this guards against is per spike.
+        if "spike" in str(source):
+            raise AssertionError("accessors must not load a whole table; push the predicate down")
+        return real(source, *args, **kwargs)
 
     monkeypatch.setattr(pq, "read_table", refuse)
     assert open_packet(packet_root).units(quality_label="sua").num_rows == 1
@@ -137,3 +144,74 @@ def test_scan_is_lazy(packet_root):
     assert isinstance(dataset, pads.Dataset)
     assert dataset.to_table(filter=pads.field("event_type") == "lick").num_rows == 0
     assert pq  # the import exists so the lazy contrast is explicit
+
+
+# -- the packet's default clock (R27 §2) --------------------------------------------------
+
+
+def test_spike_times_come_back_on_the_reference_clock(two_clock_packet):
+    """A spike is counted on its probe; a caller comparing that to behaviour needs the map."""
+    pkt = open_packet(two_clock_packet)
+    assert pkt.reference_clock() == "harp"
+    result = pkt.spike_times("unit_001")
+    assert set(result.to_pydict()["clock_id"]) == {"harp"}
+    assert result.to_pydict()["t_tick"] == [1_031_250, 1_062_500]
+
+
+def test_stored_ticks_take_saying_so(two_clock_packet):
+    """The unsynchronized answer is still reachable -- it just cannot be reached by accident."""
+    result = open_packet(two_clock_packet).spike_times("unit_001", clock=STORED)
+    assert set(result.to_pydict()["clock_id"]) == {"probe"}
+    assert result.to_pydict()["t_tick"] == [30_000, 60_000]
+
+
+def test_events_come_back_on_the_reference_clock(two_clock_packet):
+    result = open_packet(two_clock_packet).events(event_type="go_cue")
+    assert set(result.to_pydict()["clock_id"]) == {"harp"}
+
+
+def test_a_packet_with_one_clock_needs_no_declaration(packet_root):
+    """Nothing to reconcile, so nothing to declare; the fixture packet declares none."""
+    pkt = open_packet(packet_root)
+    with pytest.raises(NotAligned, match="reference_clock_id"):
+        pkt.reference_clock()
+    assert set(pkt.spike_times("unit_001").to_pydict()["clock_id"]) == {"imec_ap_s001"}
+
+
+def test_rows_spanning_clocks_with_no_reference_are_refused(two_clock_packet, monkeypatch):
+    """Returning these as stored would invite a comparison that means nothing."""
+    pkt = open_packet(two_clock_packet)
+    spanning = pkt.table("core.spike_events")
+    monkeypatch.setattr(pkt, "reference_clock", _raise_unaligned)
+    assert sorted(set(spanning.to_pydict()["clock_id"])) == ["harp", "probe"]
+    with pytest.raises(NotAligned):
+        pkt.on_clock(spanning)
+
+
+def _raise_unaligned(**kwargs):
+    raise NotAligned("no reference declared")
+
+
+def test_a_tick_range_is_stated_on_the_clock_the_result_uses(two_clock_packet):
+    """The range and the ticks it selects must be in one space, or the caller is comparing
+    a reference tick against a probe tick without being told."""
+    pkt = open_packet(two_clock_packet)
+    whole = pkt.spike_times("unit_001").to_pydict()["t_tick"]
+    assert whole == [1_031_250, 1_062_500]
+    # A range around the first spike, on the reference clock, must not select the second.
+    narrowed = pkt.spike_times("unit_001", t_tick=(1_031_000, 1_031_500)).to_pydict()["t_tick"]
+    assert narrowed == [1_031_250]
+    # The same numbers read as stored probe ticks select nothing, and say so rather than
+    # quietly returning the whole train.
+    assert pkt.spike_times("unit_001", t_tick=(1_031_000, 1_031_500), clock=STORED).num_rows == 0
+
+
+def test_a_stored_range_still_selects_stored_ticks(two_clock_packet):
+    result = open_packet(two_clock_packet).spike_times("unit_001", t_tick=(29_000, 31_000), clock=STORED)
+    assert result.to_pydict()["t_tick"] == [30_000]
+
+
+def test_an_event_range_is_on_the_reference_clock(two_clock_packet):
+    pkt = open_packet(two_clock_packet)
+    assert pkt.events(t_tick=(1_100_000, 1_300_000)).num_rows == 1
+    assert pkt.events(t_tick=(1_300_000, 1_400_000)).num_rows == 0

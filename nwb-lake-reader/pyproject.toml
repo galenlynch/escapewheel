@@ -17,6 +17,9 @@ version = "0.1.0"
 
 dependencies = [
     "jsonschema>=4.26.0",
+    # Clock alignment is array arithmetic (`clocks.py`), so numpy is a direct dependency
+    # rather than one inherited from pyarrow, which no longer requires it.
+    "numpy>=1.26",
     "pyarrow>=25.0.1",
 ]
 
