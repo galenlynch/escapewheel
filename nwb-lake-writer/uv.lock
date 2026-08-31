@@ -1204,6 +1204,7 @@ version = "0.1.0"
 source = { editable = "../nwb-lake-reader" }
 dependencies = [
     { name = "jsonschema" },
+    { name = "numpy" },
     { name = "pyarrow" },
 ]
 
@@ -1217,6 +1218,7 @@ requires-dist = [
     { name = "duckdb", marker = "extra == 'sql'", specifier = ">=1.5.5" },
     { name = "fsspec", marker = "extra == 'remote'", specifier = ">=2024.6" },
     { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "numpy", specifier = ">=1.26" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0" },
     { name = "pyarrow", specifier = ">=25.0.1" },
     { name = "zarr", marker = "extra == 'arrays'", specifier = ">=3" },
