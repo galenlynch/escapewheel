@@ -51,8 +51,8 @@ def test_it_reads_the_tables_the_nwb_is_the_authority_for(source):
         "core.probes": 1,
         "core.electrodes": 2,
         "core.electrode_coordinates": 3,  # both electrodes in the probe frame, one in CCF
-        "core.event_streams": 2,
-        "core.events": 2,
+        "core.event_streams": 4,
+        "core.events": 4,
         "core.trials": 1,
     }
 
@@ -72,7 +72,14 @@ def test_the_asset_directory_is_accepted_as_well_as_the_nwb(tmp_path, harp):
 
 
 def test_seconds_become_ticks_on_the_declared_clock(source):
-    assert [e["t_tick"] for e in source.records()["core.events"]] == [31250, 62500]
+    events = source.records()["core.events"]
+    acquisition = [e["t_tick"] for e in events if e["event_type"].endswith("lick")]
+    assert acquisition == [31250, 62500]
+    # The trial columns land on the same clock: 1.2 s and 1.5 s at 31,250 Hz.
+    assert {e["event_type"]: e["t_tick"] for e in events if "trial" in str(e.get("payload"))} == {
+        "go_cue": 37500,
+        "reward_outcome": 46875,
+    }
 
 
 def test_a_clock_the_times_are_not_on_is_refused(tmp_path, harp):
@@ -83,7 +90,8 @@ def test_a_clock_the_times_are_not_on_is_refused(tmp_path, harp):
     ticks -- and there a rate one hertz out is refused.
     """
     nwb = nwbfixture.build(tmp_path, seconds=(0.000032, 0.000064))
-    assert [e["t_tick"] for e in NWBSource(nwb, clock=harp, zone=PACIFIC).records()["core.events"]] == [1, 2]
+    ticks = [e["t_tick"] for e in NWBSource(nwb, clock=harp, zone=PACIFIC).records()["core.events"]]
+    assert ticks[:2] == [1, 2]
     wrong = Clock("c", session_id=SESSION, name="c", tick_rate_num=31251, origin="e")
     with pytest.raises(OffGrid):
         NWBSource(nwb, clock=wrong, zone=PACIFIC).records()
@@ -232,7 +240,7 @@ def test_the_records_commit_as_a_valid_packet(source, registry, tmp_path):
 
     packet = open_packet(tmp_path / "packet")
     assert list(packet.sessions) == [SESSION]
-    assert packet.table("core.events").column("t_tick").to_pylist() == [31250, 62500]
+    assert packet.table("core.events").column("t_tick").to_pylist() == [31250, 37500, 46875, 62500]
     carried = json.loads(packet.table("core.trials").column("metadata").to_pylist()[0])
     assert carried["auto_train_stage"] == "None"  # metadata is verbatim, not normalized
     # NumPy's integers and booleans are not Python's, and JSON knows only Python's.
@@ -246,3 +254,70 @@ def test_notes_do_not_grow_when_a_builder_is_called_twice(source):
     once = list(source.notes)
     source.events()
     assert source.notes == once
+
+
+# -- a moment recorded as a trial column is still an event ---------------------------------
+
+
+def test_trial_timing_columns_become_events(source):
+    """A task writes the go cue into its trials table because it happens once a trial. It is
+    still a moment on a clock, and a query should find it without knowing the task's shape."""
+    kinds = {e["event_type"] for e in source.events()}
+    assert {"go_cue", "reward_outcome"} <= kinds
+
+
+def test_a_trial_event_names_its_trial(source):
+    """The payload is what lets `analysis.trials_wide` denormalise it back (`06`)."""
+    go = next(e for e in source.events() if e["event_type"] == "go_cue")
+    assert go["payload"]["trial_id"] == next(t["trial_id"] for t in source.trials())
+    assert go["stream_id"] in {s["event_stream_id"] for s in source.event_streams()}
+
+
+def test_a_trial_event_is_on_the_declared_clock(source, harp):
+    go = next(e for e in source.events() if e["event_type"] == "go_cue")
+    assert go["clock_id"] == harp.clock_id
+    assert go["t_tick"] == harp.ticks(np.array([1.2]))[0]
+
+
+def test_a_trial_that_never_reached_the_moment_emits_no_event(tmp_path, harp):
+    """Absence is a fact about the trial, not a null to carry -- which is why these are events
+    rather than columns on `core.trials`."""
+    root = nwbfixture.build(tmp_path)
+    nwbfixture.array(root / "intervals/trials/goCue_start_time", np.array([np.nan]))
+    source = NWBSource(root, clock=harp, zone=PACIFIC, session_id=SESSION, units={})
+    assert not [e for e in source.events() if e["event_type"] == "go_cue"]
+    assert "go_cue" in {s["name"] for s in source.event_streams()}
+
+
+def test_a_condition_is_named_where_the_task_varies_one(source):
+    """A foraging session has no stimulus; what it varies is the reward probability pair."""
+    assert {t.get("condition_id") for t in source.trials()} == {None}, "one trial cannot vary"
+
+
+def test_a_varying_reward_probability_pair_names_the_condition(tmp_path, harp):
+    root = nwbfixture.build(tmp_path)
+    trials = root / "intervals/trials"
+    for name, values in {
+        "id": np.array([0, 1, 2], dtype=np.int64),
+        "start_time": np.array([1.0, 3.0, 5.0]),
+        "stop_time": np.array([2.0, 4.0, 6.0]),
+        "reward_probabilityL": np.array([0.7, 0.7, 0.1]),
+        "reward_probabilityR": np.array([0.1, 0.1, 0.7]),
+        "animal_response": np.array([1.0, 1.0, 0.0]),
+        "rewarded_historyL": np.array([False, True, False]),
+        "rewarded_historyR": np.array([True, False, False]),
+        "goCue_start_time": np.array([1.2, 3.2, 5.2]),
+        "reward_outcome_time": np.array([1.5, 3.5, 5.5]),
+        "laser_on_trial": np.array([0, 0, 0], dtype=np.int64),
+        "auto_train_engaged": np.array([False, False, False]),
+    }.items():
+        nwbfixture.array(trials / name, values)
+    nwbfixture.text(trials / "auto_train_stage", ["None", "None", "None"])
+    source = NWBSource(root, clock=harp, zone=PACIFIC, session_id=SESSION, units={})
+    assert [t["condition_id"] for t in source.trials()] == ["p0.7_0.1", "p0.7_0.1", "p0.1_0.7"]
+
+
+def test_a_trial_event_column_is_not_repeated_in_metadata(source):
+    """It is in core.events now, so carrying it again would be the duplication R3 §3.0 bans."""
+    metadata = next(t for t in source.trials()).get("metadata") or {}
+    assert "goCue_start_time" not in metadata

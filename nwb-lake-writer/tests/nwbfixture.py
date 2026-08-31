@@ -140,6 +140,8 @@ def build(root: Path, *, seconds=(1.0, 2.0), trial_stop=None, session_offset="-0
     array(trials / "rewarded_historyL", np.array([False]))
     array(trials / "rewarded_historyR", np.array([True]))
     array(trials / "reward_probabilityL", np.array([0.4]))
+    array(trials / "goCue_start_time", np.array([1.2]))
+    array(trials / "reward_outcome_time", np.array([1.5]))
     array(trials / "laser_on_trial", np.array([0], dtype=np.int64))
     array(trials / "auto_train_engaged", np.array([False]))
     text(trials / "auto_train_stage", ["None"])

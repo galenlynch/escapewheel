@@ -66,8 +66,20 @@ DEVICE_DESCRIPTION = re.compile(r"^Model:\s*(?P<model>.+?)\s*-\s*Serial number:\
 #: `animal_response` in AIND's dynamic-foraging trials, per the column's own description.
 CHOICE = {0.0: "left", 1.0: "right", 2.0: "none"}
 
+#: Trial columns that are *events*, and the type each becomes. A task writes these into the
+#: trials table because they happen once a trial, but a moment on a clock is an event whatever
+#: table it arrives in: they belong in `core.events` so a query can find them without knowing
+#: which task shape put them where. `analysis.trials_wide` denormalises them back (`06`).
+TRIAL_EVENTS = {
+    "goCue_start_time": "go_cue",
+    "reward_outcome_time": "reward_outcome",
+    "delay_start_time": "delay_start",
+}
+
 #: Trial columns this adapter maps into `core.trials`; the rest go to its metadata verbatim.
-TRIAL_MAPPED = frozenset({"start_time", "stop_time", "animal_response", "rewarded_historyL", "rewarded_historyR"})
+TRIAL_MAPPED = frozenset(
+    {"start_time", "stop_time", "animal_response", "rewarded_historyL", "rewarded_historyR", *TRIAL_EVENTS}
+)
 
 #: R19 §3: CCF's `ml`, `ap`, `dv` occupy `x_um`, `y_um`, `z_um` in that order.
 CCF_AXES = ("ccf_ml", "ccf_ap", "ccf_dv")
@@ -558,7 +570,22 @@ class NWBSource:
                     "metadata": {"description": self._attrs(f"acquisition/{name}").get("description")},
                 }
             )
+        for column, kind in self._trial_event_columns():
+            rows.append(
+                {
+                    "event_stream_id": self.prefix + kind,
+                    "session_id": self.session_id,
+                    "name": kind,
+                    "clock_id": self.clock.clock_id,
+                    "metadata": {"description": f"intervals/trials/{column}, one per trial"},
+                }
+            )
         return rows
+
+    def _trial_event_columns(self) -> list[tuple[str, str]]:
+        """Trial columns that carry a moment, in the order `TRIAL_EVENTS` names them."""
+        columns = self._table("intervals/trials")
+        return [(name, kind) for name, kind in TRIAL_EVENTS.items() if name in columns]
 
     def events(self) -> list[dict[str, Any]]:
         """`core.events`, one row per timestamp on an acquisition TimeSeries.
@@ -586,6 +613,35 @@ class NWBSource:
                 if varies and payloads is not None:
                     row["payload"] = {"value": _clean(payloads[position])}
                 rows.append(row)
+        rows.extend(self._trial_events())
+        return rows
+
+    def _trial_events(self) -> list[dict[str, Any]]:
+        """`core.events` for the moments a task recorded as trial columns.
+
+        A trial that did not reach one -- no go cue because the animal never engaged -- has NaN
+        there, and no event happened, so no row is emitted. That is why these cannot simply be
+        columns on `core.trials`: absence is a fact about the trial, not a null to carry.
+        """
+        columns = self._table("intervals/trials")
+        if not columns:
+            return []
+        identifiers = columns.get("id", np.arange(len(columns["start_time"])))
+        rows = []
+        for column, kind in self._trial_event_columns():
+            ticks, finite = self._ticks(columns[column], f"intervals/trials/{column}")
+            for tick, index in zip(ticks, np.flatnonzero(finite), strict=True):
+                rows.append(
+                    {
+                        "session_id": self.session_id,
+                        "event_id": f"{kind}:{int(identifiers[index])}",
+                        "stream_id": self.prefix + kind,
+                        "event_type": kind,
+                        "t_tick": int(tick),
+                        "clock_id": self.clock.clock_id,
+                        "payload": {"trial_id": f"{self.prefix}trial_{int(identifiers[index]):04d}"},
+                    }
+                )
         return rows
 
     def trials(self) -> list[dict[str, Any]]:
@@ -609,6 +665,7 @@ class NWBSource:
             for i in range(len(start))
         ]
         unmapped = [name for name in columns if name not in TRIAL_MAPPED and name != "id"]
+        conditions = self._conditions(columns, len(start))
         rows = []
         for index in range(len(start)):
             row: dict[str, Any] = {
@@ -621,10 +678,30 @@ class NWBSource:
             }
             if "animal_response" in columns:
                 row["choice"] = CHOICE.get(float(columns["animal_response"][index]))
+            if (condition := conditions[index]) is not None:
+                row["condition_id"] = condition
             if self.trial_metadata and unmapped:
                 row["metadata"] = {name: columns[name][index] for name in unmapped}
             rows.append(row)
         return rows
+
+    @staticmethod
+    def _conditions(columns: Mapping[str, NDArray[Any]], n: int) -> list[str | None]:
+        """Name each trial's condition, where the task varies one.
+
+        A foraging session has no stimulus and no condition column; what it varies is the pair
+        of reward probabilities, held constant within a block and changed between them. That
+        pair *is* the condition, and naming it is what lets `core.trials.condition_id` be
+        anything but null -- 8 distinct pairs over 10 blocks on the session this was measured
+        against. A task that varies nothing leaves the column null, which is honest.
+        """
+        left, right = columns.get("reward_probabilityL"), columns.get("reward_probabilityR")
+        if left is None or right is None:
+            return [None] * n
+        pairs = [(float(left[i]), float(right[i])) for i in range(n)]
+        if len({p for p in pairs if not (np.isnan(p[0]) or np.isnan(p[1]))}) < 2:
+            return [None] * n  # constant is not a condition
+        return [None if np.isnan(a) or np.isnan(b) else f"p{a:g}_{b:g}" for a, b in pairs]
 
     # -- assembly ---------------------------------------------------------------------
 
