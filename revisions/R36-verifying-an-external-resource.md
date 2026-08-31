@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-08-30 |
+| **Status** | **Accepted** 2026-08-30 |
 | **Amends** | R14 §2.3, R15 §4 |
 | **Depends on** | R14 (external resources), R15 (validation levels), R21 (per-resource Zarr version) |
 | **Profile** | `nwb-lake-portable-v0.1` |
