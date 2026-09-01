@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-01 |
+| **Status** | **Accepted** 2026-09-01 |
 | **Amends** | R9 §2 (the provenance tables), R31 §3 (what names a producing run) |
 | **Depends on** | R9 (light provenance), R31 (materialization provenance), R32 (amending a committed packet) |
 | **Profile** | `nwb-lake-portable-v0.1` |
