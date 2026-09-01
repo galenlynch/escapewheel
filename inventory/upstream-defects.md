@@ -376,7 +376,7 @@ Because `aind-ephys-rig-qc` materializes the result per sample, every consumer o
 
 ---
 
-## 10. The HARP clock board emits a malformed frame twice a session, and loses 1.6 ms of phase each time
+## 10. The HARP clock board restarts a frame twice a session, and loses 1.6 ms of phase each time
 
 Found by asking why R40's measured *maximum* extrapolation error is 1.6 ms when its p95 is
 117 µs. It is not a bad sync pulse, and R37 §3.2's terminal-anchor test cannot reach it. The
@@ -413,12 +413,38 @@ barcode edge is emitted 1.6 ms later than it would have been.
 | frame 3515 | 59.00 ms | +1633 µs |
 | all 6,384 others | 39.00 ms | within 100 µs |
 
+No bit is stretched: every run in both malformed frames is an exact whole millisecond, 0.0 µs
+of departure. The frame is longer only because it contains twenty extra bit-periods.
+
 ### It is the wire, not the recording, and not the decode
 
 Both record nodes — two independent DAQ cards — see the same two malformed frames at the same
 local times to 0.1 ms. A recording artifact could not do that, and could not make *subsequent*
 frames arrive late. The decode is software (`harp.clock.decode_harp_clock`, run offline by
 rig QC) and cannot lengthen a signal.
+
+### The 1 Hz sync pulse is unaffected, which is what isolates the fault
+
+The sync pulse on TTL line 1 — the signal every probe stream sees and the one this packet's
+anchors are built from — keeps perfect cadence: **not one interval in the session departs from
+its median by more than 100 µs**, at the glitches or anywhere else. `rig.json` declares a
+`SYNC` digital output from the Neuropixels basestation to the NI PXIe-6341, so it is a
+different device on a different crystal, and an independent witness.
+
+Measuring the barcode's start against the sync pulse preceding it:
+
+```text
+offset drifts smoothly 53.0 -> 69.7 ms across 6,386 barcodes   (~2.6 ppm, basestation vs HARP)
+jumps larger than 0.5 ms:  exactly two
+    after barcode 2235   +1600 µs
+    after barcode 3515   +1633 µs
+```
+
+Both jumps land on the malformed frames. So relative to a stable outside reference the HARP
+frame walks 1.6 ms later, twice, at exactly the moments its transmitter restarts — and the
+signal this packet anchors on never moved at all. The error enters only because
+`align_timestamps_to_anchor_points` takes the barcode start as the local time of each second,
+so a phase step in the *labelling* channel is imprinted on the perfectly good *timing* channel.
 
 ### What each half costs
 
@@ -448,11 +474,21 @@ misplaced against its neighbours; this is a level change they all agree with.
 It is also why R40 §2.2 gates on p95 rather than on the maximum: the maximum here reports two
 upstream events, not the quality of the estimator being bounded.
 
+### What the rig metadata says about the board
+
+`rig.json` declares `daqs[5]` as a **Harp clock synchronization board**,
+`harp_device_type {"name": "Clock Synchronizer", "whoami": 1152}`, `is_clock_generator: true`,
+manufacturer Champalimaud Foundation — the stock part, with no mention of White Rabbit anywhere
+in the document. But that entry carries `core_version: ""`, `firmware_version: null`,
+`hardware_version: null` and `serial_number: null`, where the Harp Behavior board beside it
+records `core_version: "1.11"`. The metadata therefore names a device *type* and cannot confirm
+or exclude a substituted or re-flashed board. If this rig runs a re-implemented synchronizer,
+the metadata does not say so, and that gap is itself worth closing.
+
 ### Upstream
 
 Two reports, not one. **The board** should not restart a frame mid-transmission, and should not
-lose output phase when it does — the rig runs a recent re-implementation of the synchronizer, so
-this is a candidate firmware defect rather than long-standing behaviour. **The decoder** could
+lose output phase when it does. **The decoder** could
 detect both halves cheaply and currently detects neither directly: a frame whose span is not 39
 bit-periods is malformed regardless of what it decodes to, and a barcode interval that departs
 from the cadence by more than a bit-period is a phase step that `remove_outliers` does not model.
