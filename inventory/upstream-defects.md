@@ -9,6 +9,39 @@ Measured 2026-08-28 to 2026-09-01. Nothing here has been filed.
 
 ---
 
+## 0. Where the ephys facts actually live
+
+Not a defect, but the reason several below were reachable at all. Open Ephys writes its own
+metadata beside the data, and it is the authority for the recording — the aind-data-schema
+JSONs are derived from it and lossy:
+
+| file | where | what it alone carries |
+|---|---|---|
+| `sync_messages.txt` | `Record Node N/experimentM/recordingK/` | **A real UTC instant, to the millisecond**, and every stream's counter value at that moment |
+| `settings.xml` | `Record Node N/` | Signal chain, stream names and rates, probe serials; `<INFO><DATE>` stamps the same instant to the second in the machine's local zone |
+| `structure.oebin` | beside `sync_messages.txt` | Channel counts, bit-volt scaling, stream layout |
+
+`session.json` truncates the acquisition window to whole seconds, which is what makes its
+ephys stream 0.88 s short of the spikes, and its stored UTC offset is wrong three ways (§5).
+`sync_messages.txt` has neither problem. On `ecephys_776259_2025-04-09` its Software Time is
+`1744244712090` ms — `2025-04-10T00:25:12.090Z` — against `session.json`'s
+`2025-04-09T17:25:12+00:00`, which is the same instant to the second, mislabelled `+00:00`
+when it is Pacific.
+
+**Two nodes give two independent estimates.** Node 109 stamps `…712090`, node 111 `…712153`.
+Mapping each node's earliest stream tick 0 onto HARP and subtracting, the two agree on HARP's
+tick zero to **31 ms**. Within a node the streams reach their first sample over 36–80 ms, since
+the node writes each stream's first available sample rather than a simultaneous set. So the
+epoch is good to ~±50 ms, against ~±1 s for the derivation it replaces — and it is not circular,
+pairing a wall clock with an instrument event rather than with the first spike.
+
+**Caution: none of this is in a partial mirror.** A local copy synced for events and metadata
+may hold only `events/` and the JSONs; these files live beside `continuous/` and come with it.
+On S3 they are small and independently fetchable —
+`s3://aind-open-data/<asset>/ecephys/ecephys_clipped/Record Node N/`.
+
+---
+
 ## 1. `timestamps_reference_time` is wrong by 134 days
 
 **Repo:** `nwb-zarr-smasher` / `ecephys-behavior-nwb-smasher-capsule`
