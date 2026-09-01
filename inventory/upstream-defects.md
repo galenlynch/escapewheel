@@ -376,146 +376,147 @@ Because `aind-ephys-rig-qc` materializes the result per sample, every consumer o
 
 ---
 
-## 10. The HARP clock board restarts a frame twice a session, and loses 1.6 ms of phase each time
+## 10. The barcode line loses 1.6 ms of phase, twice, with nothing to restore it
 
 Found by asking why R40's measured *maximum* extrapolation error is 1.6 ms when its p95 is
-117 µs. It is not a bad sync pulse, and R37 §3.2's terminal-anchor test cannot reach it. The
-first version of this entry called it "HARP time stepping backwards"; that was the observable,
-not the cause, and the cause is more specific and more actionable.
+117 µs. Two earlier versions of this entry misattributed it — first to HARP time "stepping
+backwards", then to the synchronizer board. Both were wrong; the evidence is below.
 
 ### What the signal does
 
-The HARP clock line carries, once a second, a 32-bit count of whole seconds: a low start bit,
-then four bytes LSB-first separated by two-bit high/low transitions, at 1 kHz — **39 bit-periods,
-39 ms**. Every frame in this session is 39.00 ms (p1 39.00, p99 39.03) except two, which are
-**59.00 ms** — exactly twenty bit-periods long. Reconstructing the bits:
+The clock line carries a 32-bit count of whole seconds as four UART bytes at 1 kBaud, LSB
+first — 39 bit-periods, 39 ms. Every frame in the session is 39.00 ms except two, which are
+**59.00 ms**: six bytes instead of four.
 
 ```text
-good  frame (39):  000000000101101010110000011011000000000
-                   S00000000..11111111..22222222..33333333
-bad   frame (59):  01000000010110101011000001101101101010110000011011000000000
+normal   burst 2234:  00 AB B0 00        -> 0x00B0AB00 = 11578112
+glitched burst 2235:  01 AB B0 AB B0 00  -> bytes 1 and 2 re-sent
 ```
 
-The malformed frame is `frame[0:29]` followed by `frame[9:39]`. The board transmitted the start
-bit, byte 0, byte 1 and byte 2, then **restarted mid-frame** and re-sent byte 1, byte 2 and
-byte 3. Two bytes go out twice.
+Every bit is an exact whole millisecond; nothing is stretched. The decoder reads bit-periods
+31-38 for byte 3, which now hold the repeat of byte 1 (0xAB), so it decodes `0xABB0AB01` =
+2880482049 — the corrupt value observed, to the bit.
 
-### And it loses phase
+### The harm is the phase, not the corrupt frame
 
-The interval from the malformed frame to the next is **1001.70 ms** against a median cadence of
-1000.07 ms. Every other interval in the session is within 100 µs of that median. The cadence
-then resumes, so the 1.6 ms is not a pause but a **permanent phase step**: every subsequent
-barcode edge is emitted 1.6 ms later than it would have been.
-
-| | frame span | interval to next |
-|---|---:|---:|
-| frame 2235 | 59.00 ms | +1600 µs |
-| frame 3515 | 59.00 ms | +1633 µs |
-| all 6,384 others | 39.00 ms | within 100 µs |
-
-No bit is stretched: every run in both malformed frames is an exact whole millisecond, 0.0 µs
-of departure. The frame is longer only because it contains twenty extra bit-periods.
-
-### It is the wire, not the recording, and not the decode
-
-Both record nodes — two independent DAQ cards — see the same two malformed frames at the same
-local times to 0.1 ms. A recording artifact could not do that, and could not make *subsequent*
-frames arrive late. The decode is software (`harp.clock.decode_harp_clock`, run offline by
-rig QC) and cannot lengthen a signal.
-
-### The 1 Hz sync pulse is unaffected, which is what isolates the fault
-
-The sync pulse on TTL line 1 — the signal every probe stream sees and the one this packet's
-anchors are built from — keeps perfect cadence: **not one interval in the session departs from
-its median by more than 100 µs**, at the glitches or anywhere else. `rig.json` declares a
-`SYNC` digital output from the Neuropixels basestation to the NI PXIe-6341, so it is a
-different device on a different crystal, and an independent witness.
-
-Measuring the barcode's start against the sync pulse preceding it:
+The corrupt frame is caught: `remove_outliers` discards it. What is not caught is that the
+transmitter overran by 20 ms, re-synchronised, and recovered only 18.4 ms of it:
 
 ```text
-offset drifts smoothly 53.0 -> 69.7 ms across 6,386 barcodes   (~2.6 ppm, basestation vs HARP)
-jumps larger than 0.5 ms:  exactly two
-    after barcode 2235   +1600 µs
-    after barcode 3515   +1633 µs
+normal   burst: span 39 ms, idle 961.10 ms -> start-to-start 1000.100 ms
+glitched burst: span 59 ms, idle 942.70 ms -> start-to-start 1001.700 ms
+                            ^ shortened by 18.40 ms, leaving 1.60 ms lost
 ```
 
-Both jumps land on the malformed frames. So relative to a stable outside reference the HARP
-frame walks 1.6 ms later, twice, at exactly the moments its transmitter restarts — and the
-signal this packet anchors on never moved at all. The error enters only because
-`align_timestamps_to_anchor_points` takes the barcode start as the local time of each second,
-so a phase step in the *labelling* channel is imprinted on the perfectly good *timing* channel.
+That residual is never recovered. Measured in NI-DAQ samples, the two events are +48 and +49
+samples — **1617 +/- 17 µs, the same both times**, so the size is set by the frame structure
+rather than by chance. Content is unaffected: repairing byte 3 gives a sequence advancing by
+exactly 1 at all 6,385 steps. A sub-second phase error cannot be expressed in integer seconds,
+so the message is blind to it.
 
-### What each half costs
+Detectability: a step shows as a long barcode interval whether or not it corrupts a frame, and
+the normal cadence spread is 5 samples, so **any step above ~170 µs is visible in the cadence
+alone**. Exactly two occur.
 
-**The malformed frame** is caught. `convert_barcode` reads byte 3 from fixed bit-periods 31–38,
-which in a 59-bit frame land in the repeated region, so byte 3 decodes to garbage while the low
-24 bits stay correct — `0xab000000` and `0xb0000000` of error, entirely in the top byte.
-`remove_outliers` then discards both, warning `2 outliers found in the decoded Harp clock`.
+### Which path, and why nothing restores it
 
-**The phase step is not caught by anything**, and it is the part that reaches the data. The
-board's counter never moves backwards — the decoded seconds are strictly +1 throughout. What
-moves is *when* the edge marking each second is emitted, so a local time converted to HARP comes
-out 1.6 ms low after each glitch. Twice, both negative, **net −3.1 ms across the session**.
+`rig.json` for this session declares only two inputs to the ephys DAQ: `Ch 0 <- Basestation`
+(the SYNC pulse) and `Ch 1 <- NI PCIe-6363`, a National Instruments card on the *behaviour*
+computer. **No Harp device is connected to the ephys DAQ at all.** The barcode was generated by
+a Windows PC, outside Harp's clock-distribution loop.
 
-### What a consumer sees
+That matters because both real Harp paths self-correct every second:
 
-Times either side of a step are internally consistent and offset from each other by 1.6 ms.
-Nothing within a trial is affected. A measurement comparing the first third of a session against
-the last carries up to 3.1 ms, which matters for a 1 ms cross-correlogram bin and nothing coarser.
+| path | restoring force | accumulates? |
+|---|---|---|
+| native bus -> Behavior board | `TCC1_CNT = 31231 - converging` — hard counter reload each second (`core.atxmega/Firmware/Library/hwbp_sync.c`) | no |
+| WhiteRabbit aux -> DAQ | next emission scheduled at an absolute Harp second, recomputed from the counter each cycle | no |
+| **NI PCIe-6363 -> DAQ** | **none** | **yes, without limit** |
 
-### Workaround
+So the phase error lives in the one path with no feedback. Observed rate 2 per 6,386 s, both
+the same sign: **~0.9 ms/hour, accumulating monotonically, with no bound in the mechanism.**
 
-None, and deliberately. The anchors represent the phase step faithfully — interpolation between
-them reproduces the upstream timestamps to 0.1 µs (§9) — and it is permanent, so withholding the
-anchors at the step would smear it rather than remove it. R37 §3.2's test is for an anchor
-misplaced against its neighbours; this is a level change they all agree with.
+And it settles what moved. Had the *counter* stepped, every slave would have followed it — they
+reload from it every second — so the whole Harp domain would have moved coherently and
+ephys-versus-behaviour would be preserved. It did not.
 
-It is also why R40 §2.2 gates on p95 rather than on the maximum: the maximum here reports two
-upstream events, not the quality of the estimator being bounded.
+### The damage
 
-### What the rig metadata says about the board
+Behaviour, trials, licks and rewards are Harp-native and land **exactly** on the 31,250 Hz grid
+(0.000 ns departure, measured). Spikes reach Harp through the barcode. So the error is entirely
+a *relative* offset between the two:
 
-`rig.json` declares `daqs[5]` as a **Harp clock synchronization board**,
-`harp_device_type {"name": "Clock Synchronizer", "whoami": 1152}`, `is_clock_generator: true`,
-manufacturer Champalimaud Foundation — the stock part, with no mention of White Rabbit anywhere
-in the document. But that entry carries `core_version: ""`, `firmware_version: null`,
-`hardware_version: null` and `serial_number: null`, where the Harp Behavior board beside it
-records `core_version: "1.11"`. The metadata therefore names a device *type* and cannot confirm
-or exclude a substituted or re-flashed board. If this rig runs a re-implemented synchronizer,
-the metadata does not say so, and that gap is itself worth closing.
+| session time | ephys offset | measured spike-event latency |
+|---|---|---|
+| 0 - 2235 s | 0 | correct |
+| 2235 - 2237 s | ramps to -1.600 ms | — |
+| 2237 - 3515 s | -1.600 ms | 1.6 ms too short |
+| 3515 - 3517 s | ramps to -3.233 ms | — |
+| 3517 - 6387 s | -3.233 ms | 3.2 ms too short |
+
+The transition is a two-second ramp rather than a jump: the segment spanning a discarded barcode
+maps 2 Harp seconds onto 2.0018 s of local time, so the rate is compressed by ~4e-4 for two
+seconds. The map stays **strictly monotonic** throughout — smallest step 999.1684 ms over 6,388
+pulses — so nothing is reordered or duplicated. `SyncSource.pulses` enforces that independently
+and would refuse the source otherwise (R13 §3).
+
+Cross-probe timing is **unaffected**: the steps land at the same Harp instants on all twelve
+probe clocks, agreeing to one tick, so probe-to-probe comparisons cancel it exactly.
+
+What it costs where it bites: 3.2 ms is 97 probe samples, about one spike width. A 30 ms PSTH
+bin sees 0.1 of a bin; a 1 ms bin sees 2-3; LFP-behaviour phase sees 46 deg at 40 Hz and 116 deg
+at 100 Hz.
+
+### It is not universal
+
+| session | barcode source | glitches |
+|---|---|---|
+| 776259, 2025-04-09 | NI PCIe-6363 (PC-driven) | **2** in 6,386 s |
+| 837772, 2026-06-27 | `harp_white_rabbit`, whoami 1404, `DI line 5` | **0** in 5,362 s |
+
+Same rig (`323_EPHYS2`), 14 months apart, the barcode moved from a PC-driven NI card to the
+WhiteRabbit board driving the line directly. One clean session is not proof — at the 776259 rate
+you would expect ~1.7 events in 5,362 s, so P(0) ~ 0.18 — but it is evidence, and it points at
+the signal path rather than at any Harp board.
 
 ### The decoder's outlier test is fragile in a way that would be catastrophic
 
-`remove_outliers` splits the decoded sequence wherever consecutive values do not differ by 1 and
-discards every run of length 1. A single corrupt barcode is therefore caught, which is what
-happened twice here.
-
-But the corruption is *structured*: the malformed frame keeps the low 24 bits and rewrites byte 3
-with a fixed pattern, so a second consecutive glitch would decode to exactly one more than the
-first. Two corrupt values differing by 1 are a run of length 2, which the test keeps — while the
-correct values either side become runs of length 1 and are discarded:
+`remove_outliers` splits where consecutive values do not differ by 1 and discards runs of length
+1. A single corrupt barcode is caught, which is what happened here. But the corruption is
+*structured* — it keeps the low 24 bits and rewrites byte 3 with a fixed pattern — so two
+consecutive glitches would decode one apart, forming a run of length 2 that the test **keeps**,
+while the correct neighbours become runs of length 1 and are **discarded**:
 
 ```text
 remove_outliers([good, corrupt, corrupt+1, good])  keeps  [2880482049, 2880482050]
 ```
 
-That injects anchor points **93.6 years** from the truth, makes the anchor sequence
-non-monotonic, and gives the per-segment fit a negative slope — time running backwards inside
-the segment. The warning it emits would name the *good* values as the outliers.
+That injects anchors 93.6 years out and gives the per-segment fit a negative slope. The two
+glitches here were 1280 s apart; nothing prevents adjacency. The test should require a barcode's
+value to agree with its *arrival time*, not merely that consecutive values differ by 1.
 
-It did not happen in this session; the two glitches were 1280 s apart. Nothing prevents it. The
-test should require a barcode's value to agree with its *arrival time* — a decoded second whose
-frame arrives a second after the previous one must be the previous second plus one — rather than
-only that consecutive values differ by 1.
+### What this packet does about it
 
-### Upstream
+Nothing, deliberately. The anchors carry the phase step faithfully — interpolation between them
+reproduces the upstream timestamps to 0.1 µs (§9) — and it is permanent, so withholding the
+anchors at the step would smear it rather than remove it. R37 §3.2's test is for an anchor
+misplaced against its neighbours; this is a level change they all agree with.
 
-Three reports, not one, and the third may matter most. **The board** should not restart a frame
-mid-transmission, and should not lose output phase when it does. **The decoder** could
-detect both halves cheaply and currently detects neither directly: a frame whose span is not 39
-bit-periods is malformed regardless of what it decodes to, and a barcode interval that departs
-from the cadence by more than a bit-period is a phase step that `remove_outliers` does not model.
-Neither is in `harp-python` as of `jsiegle/harp-python@decode-clock` `c73984a`. **And
-`remove_outliers` should not be able to prefer two corrupt anchors over two good ones.** Not
-filed.
+It is also why R40 §2.2 gates on p95 rather than the maximum: the maximum reports these two
+upstream events, not the quality of the estimator being bounded.
+
+### Upstream, and one rig recommendation
+
+1. **The signal path.** A 1 kBaud clock waveform generated by a Windows PC has no restoring
+   force and is outside Harp's discipline loop. Driving the line from a Harp board removes the
+   whole failure mode, which is what the later rig does.
+2. **`harp-python`.** `remove_outliers` must not be able to prefer two corrupt anchors over two
+   good ones, and a frame whose span is not 39 bit-periods is malformed regardless of what it
+   decodes to. Neither check exists as of `jsiegle/harp-python@decode-clock` `c73984a`.
+3. **The rig.** Nothing recorded here can verify the barcode's phase against Harp's own time:
+   every event stream in the packet is Harp-native and behavioural, and none is visible in the
+   ephys signal, so there is no cross-domain fiducial. Routing one Harp-native digital output to
+   a spare DAQ line — the NI-DAQ uses 2 of 16 — would make the ephys-to-behaviour offset a
+   continuously monitored quantity rather than an unverifiable assumption.
+
+Not filed.
