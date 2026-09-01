@@ -52,6 +52,15 @@ COMPENSATIONS: dict[str, Compensation] = {
         action="the stored offset is dropped and the reading localised to the declared zone",
         evidence="inventory/upstream-defects.md, nwb-zarr-776259-2025-04-09.md §3.1",
     ),
+    "aind.tick_zero_from_stream_start": Compensation(
+        defect="a HARP clock free-runs from device power-on, so tick 0 is a power-on instant "
+        "no file records; the NWB's timestamps_reference_time claims to locate it and is wrong "
+        "by 134 days",
+        action="tick 0 is placed by pairing the ephys stream's declared start with the first "
+        "spike observed on the clock, which is accurate to about a second -- the stream's "
+        "whole-second stamp plus the sub-second wait for the first of thousands of units",
+        evidence="inventory/nwb-zarr-776259-2025-04-09.md §3.1, §3.3",
+    ),
     "nwb.stored_offset_kept": Compensation(
         defect="the NWB stamps -07:53 on a date of birth, the Local Mean Time of the Pacific "
         "coast and the signature of localising a date without a database",

@@ -30,6 +30,8 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import numpy as np
+
 from .recipe import Recipe, SourceSpec
 from .sources.compensations import describe
 from .writer import PacketWriter, StagedArray
@@ -46,6 +48,10 @@ CONSUMES: dict[str, tuple[str, ...]] = {
     # The probe clock an LFP axis advances on comes from the sorter; the electrode behind each
     # channel comes from the NWB.
     "lfp": ("sorter", "nwb"),
+    # Locating tick 0 takes a tick observed at the ephys stream's declared start: the first
+    # spike, from the sorter, mapped onto the reference clock through the sync anchors. The
+    # observation windows it writes cover the event streams the NWB declares.
+    "session": ("sorter", "sync", "nwb"),
 }
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
@@ -108,6 +114,11 @@ class Context:
     electrodes: dict[int, str] = field(default_factory=dict)
     clocks: dict[str, float] = field(default_factory=dict)
     stores: dict[Path, Any] = field(default_factory=dict)
+    #: The reference clock, as the recipe declares it. A `session` source rewrites its row
+    #: with a `tick_zero_utc`; every other adapter uses it as given.
+    reference: Any = None
+    #: `core.event_streams` IDs the NWB declared, which the observation windows cover.
+    event_streams: list[str] = field(default_factory=list)
 
 
 def order(recipe: Recipe) -> list[SourceSpec]:
@@ -164,7 +175,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         return SyncSource(spec.root, session_id=context.session_id, first_samples=samples, **options)
     if spec.kind == "nwb":
         zone = ZoneInfo(str(options.pop("zone")))
-        clock = _reference_clock(recipe, context)
+        clock = context.reference or _reference_clock(recipe, context)
         return NWBSource(
             spec.root, clock=clock, zone=zone, session_id=context.session_id, units=context.units, **options
         )
@@ -176,6 +187,10 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
             electrodes=context.electrodes,
             **options,
         )
+    if spec.kind == "session":
+        from .sources import SessionSource
+
+        return SessionSource(spec.root, zone=ZoneInfo(str(options.pop("zone"))), session_id=context.session_id)
     if spec.kind == "waveforms":
         return WaveformSource(
             spec.root, session_id=context.session_id, units=context.units, electrodes=context.electrodes, **options
@@ -206,6 +221,39 @@ def _harvest(spec: SourceSpec, source: Any, context: Context) -> None:
         context.clocks.update({c["clock_id"]: float(c["tick_rate_hz"]) for c in source.clocks()})
     if spec.kind == "nwb":
         context.electrodes = dict(enumerate(row["electrode_id"] for row in source.electrodes()))
+        context.event_streams = [row["event_stream_id"] for row in source.event_streams()]
+
+
+def _first_spike_tick(context: Context) -> int:
+    """Return the earliest spike in the session, on the reference clock.
+
+    `core.units` carries `first_spike_tick` per unit on its own probe's clock, so the earliest
+    is a minimum per clock mapped through that clock's anchors, not a minimum of raw ticks:
+    ticks from two probes are not comparable, which is the whole reason the anchors exist.
+    """
+    from nwb_lake_reader.clocks import align
+
+    sorter, sync = context.sources["sorter"], context.sources["sync"]
+    anchors: dict[str, tuple[list[int], list[int]]] = {}
+    for row in sync.anchors():
+        at, parent = anchors.setdefault(row["clock_id"], ([], []))
+        at.append(row["t_tick"])
+        parent.append(row["parent_tick"])
+
+    earliest: list[int] = []
+    for row in sorter.units():
+        # A unit names no clock; its sorting run does, by the convention the two adapters
+        # already meet on -- the same one `SyncSource.anchors` defaults to.
+        tick, clock_id = row.get("first_spike_tick"), f"{row.get('sorting_run_id')}.samples"
+        if tick is None or clock_id not in anchors:
+            continue
+        at, parent = anchors[clock_id]
+        mapped, defined = align(np.array([tick], dtype=np.int64), np.array(at), np.array(parent))
+        if defined[0]:
+            earliest.append(int(mapped[0]))
+    if not earliest:
+        raise RecipeError("no unit carries a first_spike_tick on an anchored clock, so tick 0 cannot be located")
+    return min(earliest)
 
 
 def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[dict[str, Any]]]:
@@ -214,6 +262,17 @@ def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[
     if spec.kind == "lfp":
         lfp: dict[str, list[dict[str, Any]]] = source.records(rates=context.clocks)
         return lfp
+    if spec.kind == "session":
+        clock = context.reference
+        return source.records(
+            at_tick=_first_spike_tick(context),
+            clock_id=clock.clock_id,
+            tick_rate_num=clock.tick_rate_num,
+            tick_rate_den=clock.tick_rate_den,
+            name=clock.name,
+            origin=clock.origin,
+            event_stream_ids=context.event_streams,
+        )
     sorter = context.sources.get("sorter") if spec.kind == "sync" else None
     if sorter is not None:
         # Anchor only the streams the sorting made a clock for. The rig aligns more than it
@@ -301,6 +360,8 @@ def build(
     """
     session_id = str(recipe.session["session_id"])
     context = Context(session_id=session_id)
+    if recipe.session.get("reference_clock_id"):
+        context.reference = _reference_clock(recipe, context)
     writer = PacketWriter(registry, packet_id=recipe.packet_id, description=recipe.description)
 
     writer.add(

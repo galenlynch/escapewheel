@@ -306,5 +306,49 @@ class SessionSource(Compensates):
             for event_stream_id in event_stream_ids
         ]
 
+    def records(
+        self,
+        *,
+        at_tick: int,
+        clock_id: str,
+        tick_rate_num: int,
+        tick_rate_den: int = 1,
+        name: str | None = None,
+        origin: str | None = None,
+        event_stream_ids: list[str] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Return the tables this source owns: the reference clock, and when each stream was watched.
+
+        Both need a tick the JSON does not contain, so `at_tick` is the caller's to supply --
+        a tick observed at the ephys stream's declared start, which is what locates tick 0.
+
+        Parameters
+        ----------
+        at_tick : int
+            The tick observed at the ephys stream's declared start.
+        clock_id, tick_rate_num, tick_rate_den, name, origin
+            The clock to build, as for :meth:`clock`.
+        event_stream_ids : list of str, optional
+            The `core.event_streams` observed in the behaviour window.
+
+        Returns
+        -------
+        dict
+            `core.clocks` and `core.event_stream_observation_intervals`.
+        """
+        built = self.clock(
+            clock_id=clock_id,
+            at_tick=at_tick,
+            tick_rate_num=tick_rate_num,
+            tick_rate_den=tick_rate_den,
+            name=name,
+            origin=origin,
+        )
+        self.compensate("aind.tick_zero_from_stream_start")
+        return {
+            "core.clocks": [built.record()],
+            "core.event_stream_observation_intervals": self.observation_intervals(built, list(event_stream_ids or [])),
+        }
+
 
 __all__ = ["SESSION_JSON", "AcquisitionStream", "SessionSource"]

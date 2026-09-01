@@ -220,3 +220,35 @@ def test_notes_do_not_grow_when_the_file_is_read_twice(source):
     offsets = [n for n in source.notes if "replaced with" in n]
     source.behavior()
     assert [n for n in source.notes if "replaced with" in n] == offsets
+
+
+# -- what the build asks for --------------------------------------------------------
+
+
+def test_records_supply_the_clock_and_the_windows(source):
+    """The two facts no data file carries, in the shape a recipe's ownership takes."""
+    got = source.records(
+        at_tick=FIRST_SPIKE_TICK,
+        clock_id="harp",
+        tick_rate_num=HARP_TICK_RATE_HZ,
+        name="HARP rig clock",
+        origin="HARP epoch",
+        event_stream_ids=["left_lick", "right_lick"],
+    )
+    assert set(got) == {"core.clocks", "core.event_stream_observation_intervals"}
+    clock = got["core.clocks"][0]
+    assert clock["clock_id"] == "harp" and clock["tick_zero_utc"] is not None
+    windows = got["core.event_stream_observation_intervals"]
+    assert [w["event_stream_id"] for w in windows] == ["left_lick", "right_lick"]
+    assert len({(w["start_tick"], w["stop_tick"]) for w in windows}) == 1, "one acquisition, one window"
+
+
+def test_locating_tick_zero_is_recorded_as_a_compensation(source):
+    """It rests on an assumption no source states, so the packet must say it was made."""
+    source.records(at_tick=FIRST_SPIKE_TICK, clock_id="harp", tick_rate_num=HARP_TICK_RATE_HZ)
+    assert "aind.tick_zero_from_stream_start" in source.compensations
+
+
+def test_no_event_streams_means_no_windows(source):
+    got = source.records(at_tick=FIRST_SPIKE_TICK, clock_id="harp", tick_rate_num=HARP_TICK_RATE_HZ)
+    assert got["core.event_stream_observation_intervals"] == []
