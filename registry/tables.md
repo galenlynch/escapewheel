@@ -8,16 +8,16 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-33 tables, 276 columns, 46 references, 51 Tier 2 rules
+34 tables, 283 columns, 49 references, 54 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39
 ```
 
 ## Contents
 
 **analysis** (3) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.spike_events`](#analysisspike_events)
 
-**core** (30) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.trial_tags`](#coretrial_tags) · [`core.trials`](#coretrials) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
+**core** (31) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.trial_tags`](#coretrial_tags) · [`core.trials`](#coretrials) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
 
 ## `analysis`
 
@@ -215,6 +215,32 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.clock_anchors.monotonic` — error: anchor sequences do not increase together, so interpolation is undefined
 - `core.clock_anchors.gap_within_bound` — warning: an anchor gap exceeds twice the median, leaving ticks the mapping does not define (R27 5.3)
 
+### `core.clock_observation_intervals`
+
+*Introduced by R38 §2.1 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | string | **required** | R38 §2.1 | Session ID. |
+| `clock_id` | string | **required** | R38 §2.1 | The clock that was observing. |
+| `interval_index` | int64 | **required** | R38 §2.1 | 0-based position in this clock's interval sequence. |
+| `start_tick` | int64 | **required** | R38 §2.1 | First tick observed, on `clock_id` itself. |
+| `stop_tick` | int64 | **required** | R38 §2.1 | Last tick observed, on `clock_id` itself. |
+
+**Primary key** — `session_id`, `clock_id`, `interval_index`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 3
+
+- `core.clock_observation_intervals.interval_valid` — error: stop_tick precedes start_tick
+- `core.clock_observation_intervals.index_contiguous` — error: interval_index is not contiguous from 0
+- `core.clock_observation_intervals.non_overlapping` — error: observation windows overlap, which would double-count observed time
+
 ### `core.clocks`
 
 | Column | Type | Presence | Since | Description |
@@ -375,7 +401,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 **Tier 2 rules** — 1
 
-- `core.event_streams.observation_declared` — info *(advisory, R26)*: streams carry no observation intervals, so no rate over them has a denominator
+- `core.event_streams.observation_declared` — info *(advisory, R26)*: streams carry no observation intervals and their clock declares none, so no rate over them has a denominator
 
 ### `core.events`
 
@@ -402,7 +428,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Tier 2 rules** — 2
 
 - `core.events.clock_matches_stream` — error: an event's clock_id disagrees with its stream's
-- `core.events.within_observation` — warning: events fall outside every declared observation window for their stream
+- `core.events.within_observation` — warning: events fall outside the observation window in force for their stream
 
 ### `core.media_assets`
 
@@ -529,6 +555,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `task_name` | string | nullable |  | Task/protocol name. |
 | `source_session_id` | string | nullable |  | Source-system session ID if different. |
 | `metadata` | json_string | optional |  | Additional session metadata. |
+| `t_zero_tick` | int64 | nullable | R39 §2.2 | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
 
 **Primary key** — `session_id`  
 **Sort** — `session_id`
@@ -552,6 +579,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `sorting_run_id` | string | **required** |  | Stable sorting run ID. |
 | `session_id` | string | **required** |  | Session ID. |
 | `probe_id` | string | nullable |  | Probe ID. |
+| `clock_id` | string | **required** | R38 §2.2 | Clock the run's spike ticks are counted on. |
 | `sorter_name` | string | nullable |  | Sorter name. |
 | `sorter_version` | string | nullable |  | Sorter version. |
 | `amplitude_unit` | string | nullable | R11 §2 | Unit of core.spike_events.amplitude for this run, e.g. uV, adc. |
@@ -563,6 +591,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 **Primary key** — `sorting_run_id`  
 **Sort** — `sorting_run_id`
+
+**References**
+
+- `clock_id` → `core.clocks` (`clock_id`)
 
 **Tier 2 rules** — 1
 
@@ -608,7 +640,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Tier 2 rules** — 2
 
 - `core.spike_events.ticks_within_clock_span` — warning: negative ticks on a clock with no absolute reference
-- `core.spike_events.within_observation` — warning: spikes fall outside every declared observation window for their unit
+- `core.spike_events.within_observation` — warning: spikes fall outside the observation window in force for their unit
 
 ### `core.subjects`
 
@@ -808,5 +840,5 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.units.spike_summary_consistent` — error: n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events
 - `core.units.designated_label_is_recorded` — error: the designated quality label is not among the recorded ones
 - `core.units.designated_label_pair_complete` — error: quality_label and quality_label_source must be present together
-- `core.units.observation_declared` — info *(advisory, R26)*: units carry no observation intervals, so no rate over them has a denominator
+- `core.units.observation_declared` — info *(advisory, R26)*: units carry no observation intervals and their clock declares none, so no rate over them has a denominator
 - `core.units.default_electrode_is_declared` — error: the designated electrode is not one the unit was detected on (R28 2.1)

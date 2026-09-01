@@ -371,6 +371,50 @@ def build() -> dict:
                 "Denominator of the step, in ticks. Absent means 1."),
             after="step_ticks")
 
+    # ---- R38 §2 : observation belongs to the clock ----------------------------------------------
+    # A unit was observable while its probe was running; a sensor was watched while its
+    # acquisition was. Written per unit that is one window copied once per unit -- 6,781 on a
+    # session of this size -- and per stream another copy. The window is a property of the
+    # device, so it lives on the clock, and the ticks need no clock column because the key is
+    # the clock. That is what keeps every containment check a same-clock comparison, which is
+    # the conversion R25 §4 could not write.
+    SINCE[0] = "R38 §2.1"
+    tables["core.clock_observation_intervals"] = {
+        "columns": [col("session_id", "string", "required", "Session ID."),
+                    col("clock_id", "string", "required", "The clock that was observing."),
+                    col("interval_index", "int64", "required",
+                        "0-based position in this clock's interval sequence."),
+                    col("start_tick", "int64", "required",
+                        "First tick observed, on `clock_id` itself."),
+                    col("stop_tick", "int64", "required",
+                        "Last tick observed, on `clock_id` itself.")],
+        "primary_key": ["session_id", "clock_id", "interval_index"],
+        "references": [{"columns": ["session_id"], "resource": "core.sessions",
+                        "resource_columns": ["session_id"]},
+                       {"columns": ["clock_id"], "resource": "core.clocks",
+                        "resource_columns": ["clock_id"]}],
+        "sort": None, "rules": [], "since": SINCE[0]}
+
+    # A unit finds its clock through its sorting run. Without this the only route is the string
+    # convention `{sorting_run_id}.samples`, which the adapters agree on and no rule can see.
+    SINCE[0] = "R38 §2.2"
+    add_col("core.sorting_runs",
+            col("clock_id", "string", "required",
+                "Clock the run's spike ticks are counted on."),
+            after="probe_id")
+    T("core.sorting_runs").setdefault("references", []).append(
+        {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]})
+
+    # ---- R39 §2.2 : the session's time origin ---------------------------------------------------
+    # The earliest observation start, on the reference clock. Declared rather than recomputed by
+    # every reader: it survives amendment unchanged, and a reader need not know which resources
+    # carry windows. Optional, because a packet declaring no observation declares no origin.
+    SINCE[0] = "R39 §2.2"
+    add_col("core.sessions",
+            col("t_zero_tick", "int64", "nullable",
+                "Earliest observed tick, on `reference_clock_id`; the origin seconds count from."),
+            after="session_end_time")
+
     # ---- R16 §2-3 : unit quality is many labels, attributed ------------------------------------
     SINCE[0] = "R16 §2-3"
     tables["core.unit_quality_labels"] = {
@@ -608,7 +652,7 @@ def build() -> dict:
             # Every revision whose decisions are applied above, so the registry says what it
             # was derived from rather than leaving it to the block comments.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             "revisions": [f"R{n}" for n in range(1, 30)]},
+                             "revisions": [f"R{n}" for n in range(1, 40)]},
             "tables": dict(sorted(tables.items()))}
 
 

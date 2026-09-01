@@ -153,8 +153,8 @@
       {
         "id": "core.spike_events.within_observation",
         "level": "warning",
-        "message": "spikes fall outside every declared observation window for their unit",
-        "sql": "SELECT s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, s.t_tick FROM core_spike_events s WHERE EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id) AND NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id AND s.t_tick BETWEEN o.start_tick AND o.stop_tick)"
+        "message": "spikes fall outside the observation window in force for their unit",
+        "sql": "SELECT s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, s.t_tick FROM core_spike_events s WHERE CASE WHEN EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id) THEN NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id AND s.t_tick BETWEEN o.start_tick AND o.stop_tick) WHEN EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id) THEN NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id AND s.t_tick BETWEEN c.start_tick AND c.stop_tick) ELSE FALSE END"
       }
     ],
     "core.trials": [
@@ -187,8 +187,8 @@
         "id": "core.units.observation_declared",
         "level": "info",
         "advisory": true,
-        "message": "units carry no observation intervals, so no rate over them has a denominator",
-        "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id FROM core_units u LEFT JOIN core_unit_observation_intervals o ON u.session_id = o.session_id AND u.unit_id = o.unit_id AND u.sorting_run_id = o.sorting_run_id AND u.curation_id = o.curation_id WHERE o.unit_id IS NULL"
+        "message": "units carry no observation intervals and their clock declares none, so no rate over them has a denominator",
+        "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id FROM core_units u JOIN core_sorting_runs r ON u.sorting_run_id = r.sorting_run_id WHERE NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = u.session_id AND o.unit_id = u.unit_id AND o.sorting_run_id = u.sorting_run_id AND o.curation_id = u.curation_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = u.session_id AND c.clock_id = r.clock_id)"
       },
       {
         "id": "core.units.default_electrode_is_declared",
@@ -279,8 +279,8 @@
       {
         "id": "core.events.within_observation",
         "level": "warning",
-        "message": "events fall outside every declared observation window for their stream",
-        "sql": "SELECT e.session_id, e.event_id, e.stream_id, e.t_tick FROM core_events e WHERE EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id) AND NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id AND e.t_tick BETWEEN o.start_tick AND o.stop_tick)"
+        "message": "events fall outside the observation window in force for their stream",
+        "sql": "SELECT e.session_id, e.event_id, e.stream_id, e.t_tick FROM core_events e JOIN core_event_streams s ON e.stream_id = s.event_stream_id WHERE CASE WHEN EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id) THEN NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id AND e.t_tick BETWEEN o.start_tick AND o.stop_tick) WHEN EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id) THEN NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id AND e.t_tick BETWEEN c.start_tick AND c.stop_tick) ELSE FALSE END"
       }
     ],
     "core.event_stream_observation_intervals": [
@@ -301,8 +301,8 @@
         "id": "core.event_streams.observation_declared",
         "level": "info",
         "advisory": true,
-        "message": "streams carry no observation intervals, so no rate over them has a denominator",
-        "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s LEFT JOIN core_event_stream_observation_intervals o ON s.event_stream_id = o.event_stream_id WHERE o.event_stream_id IS NULL"
+        "message": "streams carry no observation intervals and their clock declares none, so no rate over them has a denominator",
+        "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s WHERE NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
       }
     ],
     "core.unit_electrodes": [
@@ -331,6 +331,20 @@
         "level": "error",
         "message": "buckets overlap in tick range, so the layout they declare is not a partition",
         "sql": "SELECT a.session_id, a.clock_id, a.time_bucket_tick AS earlier_bucket, a.hi, b.time_bucket_tick AS later_bucket, b.lo FROM (SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM analysis_spike_events GROUP BY session_id, clock_id, time_bucket_tick) a JOIN (SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM analysis_spike_events GROUP BY session_id, clock_id, time_bucket_tick) b ON a.session_id = b.session_id AND a.clock_id = b.clock_id AND b.time_bucket_tick > a.time_bucket_tick WHERE b.lo <= a.hi"
+      }
+    ],
+    "core.clock_observation_intervals": [
+      {
+        "use": "interval",
+        "start": "start_tick",
+        "stop": "stop_tick",
+        "partition_of": [
+          "session_id",
+          "clock_id"
+        ],
+        "index": "interval_index",
+        "overlap_op": "<=",
+        "overlap_message": "observation windows overlap, which would double-count observed time"
       }
     ]
   }

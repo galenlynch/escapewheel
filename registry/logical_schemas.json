@@ -33,7 +33,17 @@
       "R26",
       "R27",
       "R28",
-      "R29"
+      "R29",
+      "R30",
+      "R31",
+      "R32",
+      "R33",
+      "R34",
+      "R35",
+      "R36",
+      "R37",
+      "R38",
+      "R39"
     ]
   },
   "tables": {
@@ -834,6 +844,92 @@
       ],
       "since": "R13 \u00a73"
     },
+    "core.clock_observation_intervals": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Session ID.",
+          "since": "R38 \u00a72.1"
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "description": "The clock that was observing.",
+          "since": "R38 \u00a72.1"
+        },
+        {
+          "name": "interval_index",
+          "type": "int64",
+          "presence": "required",
+          "description": "0-based position in this clock's interval sequence.",
+          "since": "R38 \u00a72.1"
+        },
+        {
+          "name": "start_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "First tick observed, on `clock_id` itself.",
+          "since": "R38 \u00a72.1"
+        },
+        {
+          "name": "stop_tick",
+          "type": "int64",
+          "presence": "required",
+          "description": "Last tick observed, on `clock_id` itself.",
+          "since": "R38 \u00a72.1"
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "clock_id",
+        "interval_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
+      "sort": null,
+      "rules": [
+        {
+          "id": "core.clock_observation_intervals.interval_valid",
+          "level": "error",
+          "message": "stop_tick precedes start_tick",
+          "sql": "SELECT session_id, clock_id, interval_index, start_tick, stop_tick FROM core_clock_observation_intervals WHERE stop_tick < start_tick"
+        },
+        {
+          "id": "core.clock_observation_intervals.index_contiguous",
+          "level": "error",
+          "message": "interval_index is not contiguous from 0",
+          "sql": "SELECT session_id, clock_id, COUNT(*) AS n FROM core_clock_observation_intervals GROUP BY session_id, clock_id HAVING MAX(interval_index) <> COUNT(*) - 1 OR MIN(interval_index) <> 0"
+        },
+        {
+          "id": "core.clock_observation_intervals.non_overlapping",
+          "level": "error",
+          "message": "observation windows overlap, which would double-count observed time",
+          "sql": "SELECT session_id, clock_id, interval_index, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, clock_id ORDER BY interval_index) AS prev_stop FROM core_clock_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
+        }
+      ],
+      "since": "R38 \u00a72.1"
+    },
     "core.clocks": {
       "columns": [
         {
@@ -1428,8 +1524,8 @@
           "id": "core.event_streams.observation_declared",
           "level": "info",
           "advisory": true,
-          "message": "streams carry no observation intervals, so no rate over them has a denominator",
-          "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s LEFT JOIN core_event_stream_observation_intervals o ON s.event_stream_id = o.event_stream_id WHERE o.event_stream_id IS NULL"
+          "message": "streams carry no observation intervals and their clock declares none, so no rate over them has a denominator",
+          "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s WHERE NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
         }
       ],
       "since": "R23 \u00a72-3"
@@ -1545,8 +1641,8 @@
         {
           "id": "core.events.within_observation",
           "level": "warning",
-          "message": "events fall outside every declared observation window for their stream",
-          "sql": "SELECT e.session_id, e.event_id, e.stream_id, e.t_tick FROM core_events e WHERE EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id) AND NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id AND e.t_tick BETWEEN o.start_tick AND o.stop_tick)"
+          "message": "events fall outside the observation window in force for their stream",
+          "sql": "SELECT e.session_id, e.event_id, e.stream_id, e.t_tick FROM core_events e JOIN core_event_streams s ON e.stream_id = s.event_stream_id WHERE CASE WHEN EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id) THEN NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = e.stream_id AND e.t_tick BETWEEN o.start_tick AND o.stop_tick) WHEN EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id) THEN NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id AND e.t_tick BETWEEN c.start_tick AND c.stop_tick) ELSE FALSE END"
         }
       ]
     },
@@ -2004,6 +2100,13 @@
           "type": "json_string",
           "presence": "optional",
           "description": "Additional session metadata."
+        },
+        {
+          "name": "t_zero_tick",
+          "type": "int64",
+          "presence": "nullable",
+          "description": "Earliest observed tick, on `reference_clock_id`; the origin seconds count from.",
+          "since": "R39 \u00a72.2"
         }
       ],
       "primary_key": [
@@ -2080,6 +2183,13 @@
           "description": "Probe ID."
         },
         {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "description": "Clock the run's spike ticks are counted on.",
+          "since": "R38 \u00a72.2"
+        },
+        {
           "name": "sorter_name",
           "type": "string",
           "presence": "nullable",
@@ -2133,7 +2243,17 @@
       "primary_key": [
         "sorting_run_id"
       ],
-      "references": [],
+      "references": [
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
       "sort": [
         "sorting_run_id"
       ],
@@ -2308,8 +2428,8 @@
         {
           "id": "core.spike_events.within_observation",
           "level": "warning",
-          "message": "spikes fall outside every declared observation window for their unit",
-          "sql": "SELECT s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, s.t_tick FROM core_spike_events s WHERE EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id) AND NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id AND s.t_tick BETWEEN o.start_tick AND o.stop_tick)"
+          "message": "spikes fall outside the observation window in force for their unit",
+          "sql": "SELECT s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, s.t_tick FROM core_spike_events s WHERE CASE WHEN EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id) THEN NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = s.session_id AND o.unit_id = s.unit_id AND o.sorting_run_id = s.sorting_run_id AND o.curation_id = s.curation_id AND s.t_tick BETWEEN o.start_tick AND o.stop_tick) WHEN EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id) THEN NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id AND s.t_tick BETWEEN c.start_tick AND c.stop_tick) ELSE FALSE END"
         }
       ]
     },
@@ -3103,8 +3223,8 @@
           "id": "core.units.observation_declared",
           "level": "info",
           "advisory": true,
-          "message": "units carry no observation intervals, so no rate over them has a denominator",
-          "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id FROM core_units u LEFT JOIN core_unit_observation_intervals o ON u.session_id = o.session_id AND u.unit_id = o.unit_id AND u.sorting_run_id = o.sorting_run_id AND u.curation_id = o.curation_id WHERE o.unit_id IS NULL"
+          "message": "units carry no observation intervals and their clock declares none, so no rate over them has a denominator",
+          "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id FROM core_units u JOIN core_sorting_runs r ON u.sorting_run_id = r.sorting_run_id WHERE NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = u.session_id AND o.unit_id = u.unit_id AND o.sorting_run_id = u.sorting_run_id AND o.curation_id = u.curation_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = u.session_id AND c.clock_id = r.clock_id)"
         },
         {
           "id": "core.units.default_electrode_is_declared",
