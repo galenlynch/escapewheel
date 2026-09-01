@@ -356,6 +356,9 @@ class SorterSource:
                     "sorting_run_id": self._sorting_run_id(stream),
                     "session_id": self.session_id,
                     "probe_id": self._probe_id(stream),
+                    # R41 §2.1: the sorting is reachable from the provenance graph, which is
+                    # what lets a packet carrying two of them say which to read.
+                    "processing_run_id": self._run_id(stream, "spike_sorting"),
                     # R38 §2.2: a unit reaches its clock through its run, so a rule can see the
                     # link the string convention below only implied.
                     "clock_id": self._clock_id(stream),
@@ -369,6 +372,50 @@ class SorterSource:
                         "run_time_s": log.get("run_time"),
                         "sorted_at_naive": log.get("datetime"),
                     },
+                }
+            )
+        return rows
+
+    def _run_id(self, stream: SortedStream, activity: str) -> str:
+        """Return the `core.processing_runs` ID for one activity on one stream (R41 §2.1)."""
+        return f"{self.prefix}{stream.key}.{activity}"
+
+    def processing_runs(self) -> list[dict[str, Any]]:
+        """`core.processing_runs`, one per stream per activity that made something here.
+
+        R9 records what ran; R41 §2.1 makes the sorting and the curation *reachable* from it,
+        which is the whole basis for saying later which of two sortings a consumer should read.
+        The facts come from the sorted asset's own logs -- the same ones `sorting_runs` and
+        `curation_versions` already report -- so this restates nothing the packet must derive.
+
+        `supersedes` stays null. A first import supersedes nothing, and a writer that does not
+        know what a run replaced must not guess (R41 §2.2).
+        """
+        rows = []
+        for stream in self.streams():
+            info = self._json(stream, "si_folder.json")
+            log = info.get("annotations", {}).get("__sorting_info__", {}).get("log", {})
+            curation = self._json(stream, "curation.json")
+            rows.append(
+                {
+                    "processing_run_id": self._run_id(stream, "spike_sorting"),
+                    "session_id": self.session_id,
+                    "activity_type": "spike_sorting",
+                    "software_name": log.get("sorter_name") or "unknown",
+                    "software_version": log.get("sorter_version"),
+                    "status": "failed" if log.get("error") else "succeeded",
+                    "metadata": {"spikeinterface_version": info.get("version"), "stream": stream.path.name},
+                }
+            )
+            rows.append(
+                {
+                    "processing_run_id": self._run_id(stream, "curation"),
+                    "session_id": self.session_id,
+                    "activity_type": "curation",
+                    "software_name": "spikeinterface",
+                    "software_version": curation.get("format_version"),
+                    "status": "succeeded",
+                    "metadata": {"stream": stream.path.name},
                 }
             )
         return rows
@@ -388,6 +435,7 @@ class SorterSource:
                     "curation_id": self._curation_id(stream),
                     "sorting_run_id": self._sorting_run_id(stream),
                     "session_id": self.session_id,
+                    "processing_run_id": self._run_id(stream, "curation"),  # R41 §2.1
                     "curation_tool": "spikeinterface",
                     "metadata": {
                         "format_version": curation.get("format_version"),
@@ -743,6 +791,7 @@ class SorterSource:
             "core.units": self.units(),
             "core.unit_quality_labels": self.unit_quality_labels(),
             "core.clock_observation_intervals": self.observation_intervals(),
+            "core.processing_runs": self.processing_runs(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 

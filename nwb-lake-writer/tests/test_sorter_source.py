@@ -365,3 +365,34 @@ def test_a_multi_segment_recording_declares_no_window(tmp_path):
     source = SorterSource(root, session_id=SESSION)
     assert source.observation_intervals() == []
     assert any("2 recording segments" in note for note in source.notes)
+
+
+# -- provenance the currency mechanism needs (R41 §2.1) ---------------------------------
+
+
+def test_each_stream_declares_the_runs_that_made_it(source):
+    runs = rows_of(source, "core.processing_runs")
+    kinds = {r["activity_type"] for r in runs}
+    assert kinds == {"spike_sorting", "curation"}
+    assert len(runs) == 2 * len(source.streams())
+    assert all(r["session_id"] == SESSION for r in runs)
+    assert all(r["status"] == "succeeded" for r in runs)
+
+
+def test_the_sorting_and_the_curation_name_their_runs(source):
+    known = {r["processing_run_id"] for r in rows_of(source, "core.processing_runs")}
+    for resource in ("core.sorting_runs", "core.curation_versions"):
+        named = [r["processing_run_id"] for r in rows_of(source, resource)]
+        assert named and all(n in known for n in named), resource
+
+
+def test_a_sorting_and_its_curation_name_different_runs(source):
+    """Re-curating without re-sorting is the common case, so they cannot share a run."""
+    sorting = {r["sorting_run_id"]: r["processing_run_id"] for r in rows_of(source, "core.sorting_runs")}
+    for cur in rows_of(source, "core.curation_versions"):
+        assert cur["processing_run_id"] != sorting[cur["sorting_run_id"]]
+
+
+def test_supersedes_is_left_unset(source):
+    """R41 §2.2: a first import supersedes nothing, and a writer must not guess."""
+    assert all(r.get("supersedes") is None for r in rows_of(source, "core.processing_runs"))
