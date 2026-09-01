@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-08-31 |
+| **Status** | **Accepted** 2026-08-31 |
 | **Amends** | R27 §5.2, §5.3 |
 | **Depends on** | R13 (anchor alignment), R27 (clock graph integrity) |
 | **Profile** | `nwb-lake-portable-v0.1` |
