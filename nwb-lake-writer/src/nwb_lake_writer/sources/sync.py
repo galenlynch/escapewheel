@@ -46,6 +46,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,56 @@ ARCHIVE = "original_timestamps.npy"
 
 #: `Record Node 109` in the clipped tree's directory name.
 NODE = re.compile(r"^Record Node (?P<node>\d+)$")
+
+#: What a record node writes beside its data: when it started, and where each stream's
+#: counter stood at that moment.
+SYNC_MESSAGES = "sync_messages.txt"
+
+#: `Software Time (milliseconds since midnight Jan 1st 1970 UTC): 1744244712090`.
+SOFTWARE_TIME = re.compile(r"Software Time \(milliseconds since midnight Jan 1st 1970 UTC\):\s*(\d+)")
+
+#: `Start Time for Neuropix-PXI (100) - 46110 @ 30000 Hz: 103017730`.
+START_TIME = re.compile(
+    r"Start Time for (?P<processor>.+?) \((?P<id>\d+)\) - (?P<stream>\S+) @ \S+ Hz:\s*(?P<sample>\d+)"
+)
+
+
+@dataclass(frozen=True)
+class RecordingStart:
+    """What one record node says about when it began.
+
+    `started` is a real UTC instant, to the millisecond, written by the node itself. Nothing
+    else in an ecephys asset carries one: `settings.xml` stamps the same moment to the second
+    in the machine's local zone, and the aind-data-schema documents round it further. That is
+    what makes this the only non-circular way to locate a free-running counter's tick zero --
+    every other route pairs a wall clock with a datum, and a datum is the thing being placed.
+
+    `samples` is each stream's counter at that moment, which is the value a raw sample number
+    must be made relative to. The node lists every stream it *saw*, not only the ones it owns.
+    """
+
+    node: str
+    started: datetime
+    samples: dict[str, int]
+
+
+def read_sync_messages(path: Path, node: str) -> RecordingStart | None:
+    """Parse a record node's `sync_messages.txt`, or None where it has none."""
+    if not path.is_file():
+        return None
+    text = path.read_text()
+    stamp = SOFTWARE_TIME.search(text)
+    if not stamp:
+        return None
+    return RecordingStart(
+        node=node,
+        started=datetime.fromtimestamp(int(stamp.group(1)) / 1000, tz=timezone.utc),
+        samples={
+            f"{m['processor'].replace(' ', '')}-{m['id']}.{m['stream']}": int(m["sample"])
+            for m in START_TIME.finditer(text)
+        },
+    )
+
 
 #: How many neighbours a terminal anchor is predicted from in R37 §3.2's test, and how many
 #: interior anchors the same prediction is repeated at to get the distribution it is judged
@@ -226,6 +277,7 @@ class SyncSource:
         self._observed: list[tuple[int, int]] = []
         self._pulses: dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]] = {}
         self._aligned: list[SyncStream] | None = None
+        self._starts: dict[str, RecordingStart | None] = {}
         self._unanchored: set[str] = set()
 
     # -- discovery ----------------------------------------------------------------------
@@ -317,16 +369,35 @@ class SyncSource:
             out.append(first)
         return out
 
+    def started(self, stream: SyncStream) -> RecordingStart | None:
+        """Return what the record node behind a stream says about when it began, memoized."""
+        if stream.node not in self._starts:
+            recording = stream.path.parent.parent.parent
+            self._starts[stream.node] = read_sync_messages(recording / SYNC_MESSAGES, stream.node)
+            if self._starts[stream.node] is None:
+                self.notes.append(f"{stream.node}: no {SYNC_MESSAGES}; the node's start instant is unknown")
+        return self._starts[stream.node]
+
     def _first_sample(self, stream: SyncStream) -> int:
-        """Find the recording's first raw sample, supplied or read from element 0 on disk."""
+        """Find the recording's first raw sample.
+
+        Three sources, in the order of how directly each says it. A supplied value wins because
+        a caller that states one has a reason. Then the record node's own `sync_messages.txt`,
+        which is where a supplied value comes from anyway. Only then the 1.3 GB counter array
+        beside the data, read at element 0 through a memory map -- correct, but it requires the
+        continuous data to be present, and a packet built from events and a sorting has no
+        reason to hold it.
+        """
         for candidate in (stream.uid, stream.key):
             if candidate in self.first_samples:
                 return self.first_samples[candidate]
+        if (start := self.started(stream)) is not None and stream.stream in start.samples:
+            return start.samples[stream.stream]
         continuous = stream.path.parent.parent.parent / "continuous" / stream.stream / "sample_numbers.npy"
         if not continuous.is_file():
             raise SourceDefect(
-                f"{stream.key}: no first sample supplied and {continuous} is absent, so a raw "
-                "counter cannot be made recording-relative"
+                f"{stream.key}: no first sample supplied, no {SYNC_MESSAGES}, and {continuous} is "
+                "absent, so a raw counter cannot be made recording-relative"
             )
         return int(np.load(continuous, mmap_mode="r")[0])
 

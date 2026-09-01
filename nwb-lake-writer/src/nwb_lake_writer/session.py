@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from functools import partial
 from math import ceil
 from pathlib import Path
@@ -33,7 +33,7 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 from numpy.typing import NDArray
-from nwb_lake_reader.clocks import BOUND
+from nwb_lake_reader.clocks import BOUND, align
 
 from .recipe import Recipe, SourceSpec
 from .sources.compensations import describe
@@ -138,6 +138,8 @@ class Context:
     measured_bound: dict[str, Any] = field(default_factory=dict)
     #: The anchors and the bound, once `alignment` has settled them.
     _alignment: tuple[dict[str, Any], float] | None = None
+    #: What the build itself observed, reported beside the adapters' own notes.
+    notes: list[str] = field(default_factory=list)
 
     def alignment(self) -> tuple[dict[str, Any], float]:
         """Return the anchors and the bound to map at, measured once and kept.
@@ -375,6 +377,57 @@ def _time_origin(
     return min(starts) if starts else None
 
 
+def _recorded_epoch(context: Context, by_clock: Mapping[str, Any], bound: float) -> datetime | None:
+    """Locate the reference clock's tick 0 in wall clock, from the record nodes' own stamps.
+
+    Each node writes `sync_messages.txt` when it starts: a UTC instant to the millisecond, and
+    the counter value of every stream at that moment. A stream's tick 0 *is* that counter
+    value, so mapping tick 0 onto the reference gives a (reference tick, UTC) pair -- which is
+    what `tick_zero_utc` is, and the only route to it that pairs a wall clock with an
+    instrument event rather than with a datum. Every other route pairs it with the first spike,
+    and the first spike is the thing being placed.
+
+    A node's streams do not all reach their first sample at the same moment: the node opens the
+    file and writes each stream's first available sample, so a stream is at or after the stamp,
+    never before. The earliest is therefore the closest, and the spread over the rest bounds
+    the error. Two nodes give two independent estimates; their disagreement is reported.
+    """
+    sync = context.sources.get("sync")
+    reference = context.reference
+    if sync is None or reference is None:
+        return None
+    rate = reference.tick_rate_num / (reference.tick_rate_den or 1)
+    namer = _clock_namer(context)
+    per_node: dict[str, list[int]] = {}
+    stamps: dict[str, datetime] = {}
+    for stream in sync.aligned():
+        clock = namer(stream) if namer else None
+        started = sync.started(stream)
+        if clock is None or started is None or clock not in by_clock:
+            continue
+        converted, defined = align(np.array([0], dtype=np.int64), *by_clock[clock], bound=bound)
+        if defined[0]:
+            per_node.setdefault(stream.node, []).append(int(converted[0]))
+            stamps[stream.node] = started.started
+
+    estimates = [stamps[node] - timedelta(seconds=min(ticks) / rate) for node, ticks in per_node.items()]
+    if not estimates:
+        return None
+    earliest, latest = min(estimates), max(estimates)
+    if len(estimates) > 1:
+        context.notes.append(
+            f"tick_zero_utc: {len(estimates)} record nodes agree to {(latest - earliest).total_seconds() * 1e3:.0f} ms"
+        )
+    for node, ticks in sorted(per_node.items()):
+        if len(ticks) > 1:
+            context.notes.append(
+                f"{node}: its streams reach sample 0 over "
+                f"{(max(ticks) - min(ticks)) / rate * 1e3:.0f} ms, which bounds the estimate"
+            )
+    # The mean of the nodes' estimates; each is independently derived and neither is better.
+    return earliest + (latest - earliest) / 2
+
+
 def _first_spike_tick(context: Context, by_clock: Mapping[str, Any], bound: float) -> int:
     """Return the earliest spike in the session, on the reference clock.
 
@@ -409,6 +462,7 @@ def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[
         clock = context.reference
         session: dict[str, list[dict[str, Any]]] = source.records(
             at_tick=_first_spike_tick(context, *context.alignment()),
+            epoch=_recorded_epoch(context, *context.alignment()),
             clock_id=clock.clock_id,
             tick_rate_num=clock.tick_rate_num,
             tick_rate_den=clock.tick_rate_den,
@@ -548,6 +602,8 @@ def build(
             raise RecipeError(f"{spec.kind}: {len(refused)} note(s) under --strict; first is {refused[0]}")
 
     _declare_origin(context, say)
+    for note in context.notes:
+        say(f"  note: {note}")
     writer.add(
         "core.sessions",
         [

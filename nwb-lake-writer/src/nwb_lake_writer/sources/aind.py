@@ -241,15 +241,21 @@ class SessionSource(Compensates):
         name: str | None = None,
         origin: str | None = None,
         stream: AcquisitionStream | None = None,
+        epoch: datetime | None = None,
     ) -> Clock:
-        """Build a clock whose `tick_zero_utc` comes from :meth:`epoch`.
+        """Build a clock, preferring a supplied `tick_zero_utc` to one derived here.
+
+        A caller that can locate tick 0 from an instrument's own record should: this source's
+        :meth:`epoch` pairs a wall clock with the first spike, and the JSON it reads rounds to
+        the second. Where the caller passes one, nothing here is consulted and no compensation
+        is claimed.
 
         Returns
         -------
         Clock
             Ready to hand to another adapter, and to write via `Clock.record()`.
         """
-        instant = self.epoch(at_tick, stream=stream, tick_rate_num=tick_rate_num, tick_rate_den=tick_rate_den)
+        instant = epoch or self.epoch(at_tick, stream=stream, tick_rate_num=tick_rate_num, tick_rate_den=tick_rate_den)
         return Clock(
             clock_id=clock_id,
             session_id=self.session_id,
@@ -336,6 +342,7 @@ class SessionSource(Compensates):
         name: str | None = None,
         origin: str | None = None,
         event_stream_ids: list[str] | None = None,
+        epoch: datetime | None = None,
     ) -> dict[str, list[dict[str, Any]]]:
         """Return the tables this source owns: the reference clock, and when each stream was watched.
 
@@ -350,6 +357,9 @@ class SessionSource(Compensates):
             The clock to build, as for :meth:`clock`.
         event_stream_ids : list of str, optional
             The `core.event_streams` observed in the behaviour window.
+        epoch : datetime, optional
+            `tick_zero_utc`, where the caller located it from something better than this
+            source's JSON. Supplying it makes `at_tick` unused for the clock.
 
         Returns
         -------
@@ -363,8 +373,10 @@ class SessionSource(Compensates):
             tick_rate_den=tick_rate_den,
             name=name,
             origin=origin,
+            epoch=epoch,
         )
-        self.compensate("aind.tick_zero_from_stream_start")
+        if epoch is None:
+            self.compensate("aind.tick_zero_from_stream_start")
         return {
             "core.clocks": [built.record()],
             "core.event_stream_observation_intervals": self.observation_intervals(built, list(event_stream_ids or [])),

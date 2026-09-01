@@ -1,5 +1,6 @@
 """The sync adapter turns shared pulses into anchors, and refuses the unaligned stubs."""
 
+from datetime import datetime, timezone
 from itertools import pairwise
 
 import numpy as np
@@ -26,7 +27,7 @@ def source(tree):
 
 #: Real usage names a clock only for streams that carry ticks; the NI-DAQ does not.
 def probes_only(stream):
-    return f"{stream.key}.samples" if stream.stream.startswith("probe") else None
+    return f"{stream.key}.samples" if "probe" in stream.stream else None
 
 
 def anchors_of(source, **kwargs):
@@ -55,23 +56,23 @@ def test_only_the_owned_streams_are_aligned(source):
     """The archive rig-qc leaves is the only signal, so ownership is detected."""
     aligned = {(s.node, s.stream) for s in source.aligned()}
     assert aligned == {
-        ("109", "probeA"),
-        ("109", "probeB"),
+        ("109", "Neuropix-PXI-100.probeA"),
+        ("109", "Neuropix-PXI-100.probeB"),
         ("109", "NI-DAQmx-107"),  # 111's is the same device recorded twice; see below
-        ("111", "probeC"),
+        ("111", "Neuropix-PXI-100.probeC"),
     }
 
 
 def test_a_stub_is_skipped_and_reported(source):
     """Its seconds are acquisition-local; taken at face value they are 17.7 Ms out."""
     source.aligned()
-    assert any("probeC" in n and "acquisition-local" in n for n in source.notes)
+    assert any("Neuropix-PXI-100.probeC" in n and "acquisition-local" in n for n in source.notes)
     assert sum("skipped" in n for n in source.notes) == 3
 
 
 def test_a_tree_with_nothing_aligned_is_a_defect(tmp_path):
     events = tmp_path / "Record Node 109" / "experiment1" / "recording1" / "events"
-    syncfixture.stream(events, "probeA", first_sample=1000, aligned=False)
+    syncfixture.stream(events, "Neuropix-PXI-100.probeA", first_sample=1000, aligned=False)
     with pytest.raises(SourceDefect, match="no stream .* carries HARP-aligned"):
         SyncSource(tmp_path, session_id=SESSION).aligned()
 
@@ -87,13 +88,13 @@ def test_an_absent_experiment_is_a_defect(tree):
 def test_ticks_are_recording_relative(source):
     """`spikes.npy` indexes the recording, so a raw counter must lose its acquisition base."""
     by_clock = anchors_of(source)
-    ticks = [t for t, _ in by_clock["experiment1.probeA.samples"]]
+    ticks = [t for t, _ in by_clock["experiment1.Neuropix-PXI-100.probeA.samples"]]
     assert ticks == [1000 + i * AP_HZ for i in range(N_PULSES)]
 
 
 def test_parent_ticks_are_harp(source):
     by_clock = anchors_of(source)
-    parents = [p for _, p in by_clock["experiment1.probeB.samples"]]
+    parents = [p for _, p in by_clock["experiment1.Neuropix-PXI-100.probeB.samples"]]
     assert parents[0] == round(HARP_START * HARP_TICK_RATE_HZ)
     assert np.allclose(np.diff(parents), HARP_TICK_RATE_HZ)
 
@@ -101,8 +102,8 @@ def test_parent_ticks_are_harp(source):
 def test_the_same_pulse_lands_on_the_same_parent_tick(source):
     """Two streams, one physical pulse: the anchor into HARP must agree."""
     by_clock = anchors_of(source)
-    a = [p for _, p in by_clock["experiment1.probeA.samples"]]
-    b = [p for _, p in by_clock["experiment1.probeB.samples"]]
+    a = [p for _, p in by_clock["experiment1.Neuropix-PXI-100.probeA.samples"]]
+    b = [p for _, p in by_clock["experiment1.Neuropix-PXI-100.probeB.samples"]]
     assert a == b
 
 
@@ -131,11 +132,11 @@ def test_a_stream_may_decline_a_clock(source):
 def test_a_counter_that_goes_backwards_is_refused(tmp_path):
     """R27 §6: a reset mid-recording is two clocks, and this is not one of them."""
     events = tmp_path / "Record Node 109" / "experiment1" / "recording1" / "events"
-    ttl = syncfixture.stream(events, "probeA", first_sample=1000, aligned=True)
+    ttl = syncfixture.stream(events, "Neuropix-PXI-100.probeA", first_sample=1000, aligned=True)
     ts = np.load(ttl / "timestamps.npy")
     ts[6:] -= 500.0  # the counter reset
     np.save(ttl / "timestamps.npy", ts)
-    source = SyncSource(tmp_path, session_id=SESSION, first_samples={"experiment1.probeA": 1000})
+    source = SyncSource(tmp_path, session_id=SESSION, first_samples={"experiment1.Neuropix-PXI-100.probeA": 1000})
     with pytest.raises(SourceDefect, match="do not increase on both clocks"):
         source.anchors(clock_id_for=probes_only)
 
@@ -157,8 +158,8 @@ def test_the_first_sample_is_read_from_disk_when_not_supplied(tmp_path):
     """Element 0 of a 1.3 GB array, memory-mapped, so the file is never touched."""
     syncfixture.build(tmp_path, with_continuous=True)
     source = SyncSource(tmp_path, session_id=SESSION)
-    rows = source.anchors(clock_id_for=lambda s: f"{s.key}.samples" if s.stream.startswith("probe") else None)
-    first = min(r["t_tick"] for r in rows if r["clock_id"] == "experiment1.probeA.samples")
+    rows = source.anchors(clock_id_for=lambda s: f"{s.key}.samples" if "probe" in s.stream else None)
+    first = min(r["t_tick"] for r in rows if r["clock_id"] == "experiment1.Neuropix-PXI-100.probeA.samples")
     assert first == 1000
 
 
@@ -183,7 +184,7 @@ def test_a_prefix_reaches_the_clock_and_the_anchors(tree):
         tree, session_id=SESSION, prefix="A_", first_samples={f"experiment1.{k}": v for k, v in FIRST_SAMPLE.items()}
     )
     assert source.clock().clock_id == "A_harp"
-    rows = source.anchors(clock_id_for=lambda st: f"A_{st.key}.samples" if st.stream.startswith("probe") else None)
+    rows = source.anchors(clock_id_for=lambda st: f"A_{st.key}.samples" if "probe" in st.stream else None)
     assert all(r["clock_id"].startswith("A_") for r in rows)
 
 
@@ -269,3 +270,48 @@ def test_reading_the_anchors_twice_reads_the_pulses_once(source):
     source.anchors(clock_id_for=probes_only)
     assert len(source.notes) == before
     assert len(source.observation_intervals()) == 1
+
+
+# -- what the record node itself says ---------------------------------------------------
+
+
+def test_a_node_states_when_it_began_and_where_every_counter_stood(tmp_path):
+    """`sync_messages.txt` is the one file in an ecephys asset carrying a real UTC instant."""
+    tree = syncfixture.build(tmp_path, with_sync_messages=True)
+    source = SyncSource(tree, session_id=SESSION)
+    stream = next(s for s in source.aligned() if s.node == "109")
+    started = source.started(stream)
+    assert started.started == datetime(2025, 4, 10, 0, 25, 12, 90_000, tzinfo=timezone.utc)
+    assert started.samples["Neuropix-PXI-100.probeA"] == FIRST_SAMPLE["Neuropix-PXI-100.probeA"]
+    # It lists every stream the node saw, owned or not, as the TTL directories do.
+    assert set(FIRST_SAMPLE) <= set(started.samples)
+
+
+def test_the_node_supplies_the_first_sample_nobody_else_did(tmp_path):
+    """Which is where a hand-made first_samples.json got its numbers anyway."""
+    tree = syncfixture.build(tmp_path, with_sync_messages=True)
+    told = anchors_of(
+        SyncSource(tree, session_id=SESSION, first_samples={f"experiment1.{k}": v for k, v in FIRST_SAMPLE.items()})
+    )
+    found = anchors_of(SyncSource(tree, session_id=SESSION))
+    assert found == told
+
+
+def test_a_supplied_first_sample_still_wins(tmp_path):
+    """A caller that states one has a reason, and the node cannot know it."""
+    tree = syncfixture.build(tmp_path, with_sync_messages=True)
+    key = "experiment1.Neuropix-PXI-100.probeA"
+    shifted = anchors_of(
+        SyncSource(tree, session_id=SESSION, first_samples={key: FIRST_SAMPLE[key.split(".", 1)[1]] + 7})
+    )
+    # probeA's first pulse is 1000 samples into the recording, so overstating where the
+    # recording began by seven puts that pulse seven ticks earlier.
+    assert shifted["experiment1.Neuropix-PXI-100.probeA.samples"][0][0] == 1000 - 7
+
+
+def test_without_the_file_the_older_routes_still_apply(tree):
+    """A tree with neither the file nor the counter array refuses rather than guessing."""
+    source = SyncSource(tree, session_id=SESSION)
+    with pytest.raises(SourceDefect, match="sync_messages"):
+        source.anchors(clock_id_for=probes_only)
+    assert any("no sync_messages.txt" in note for note in source.notes)

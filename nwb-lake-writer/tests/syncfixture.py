@@ -74,23 +74,58 @@ def stream(
     return ttl
 
 
-#: Node 109 owns probeA and probeB; node 111 owns probeC and carries stubs of the others.
-OWNED = {"109": ("probeA", "probeB"), "111": ("probeC",)}
-FIRST_SAMPLE = {"probeA": 44_259_994, "probeB": 44_251_369, "probeC": 44_255_501}
+#: Node 109 owns probeA and probeB; node 111 owns probeC and carries stubs of the others. The
+#: names are the shape Open Ephys writes, `<processor>-<id>.<stream>`, because that is what a
+#: node's own `sync_messages.txt` composes to and what a lookup there has to match.
+OWNED = {"109": ("Neuropix-PXI-100.probeA", "Neuropix-PXI-100.probeB"), "111": ("Neuropix-PXI-100.probeC",)}
+FIRST_SAMPLE = {
+    "Neuropix-PXI-100.probeA": 44_259_994,
+    "Neuropix-PXI-100.probeB": 44_251_369,
+    "Neuropix-PXI-100.probeC": 44_255_501,
+}
 
 
-def build(root: Path, *, experiment: str = "experiment1", with_continuous: bool = False) -> Path:
+#: When each node says it began, milliseconds since the epoch. They differ, as two nodes
+#: starting independently do, and the difference is what bounds an epoch derived from them.
+STARTED_MS = {"109": 1_744_244_712_090, "111": 1_744_244_712_153}
+
+
+def sync_messages(recording: Path, node: str) -> Path:
+    """Write a record node's `sync_messages.txt`, as Open Ephys does.
+
+    It lists every stream the node *saw*, owned or not, which is the same asymmetry the TTL
+    directories carry: a value here does not mean the node's timestamps are HARP.
+    """
+    lines = [f"Software Time (milliseconds since midnight Jan 1st 1970 UTC): {STARTED_MS[node]}"]
+    lines += [
+        # The node names the processor and the stream separately; the directory beside the
+        # data is what the two compose to, which is what a lookup has to reconstruct.
+        f"Start Time for Neuropix-PXI (100) - {name.rsplit('.', 1)[-1]} @ {AP_HZ} Hz: {first}"
+        for name, first in FIRST_SAMPLE.items()
+    ]
+    lines.append(f"Start Time for NI-DAQmx (107) - PXIe-6341 @ {AP_HZ} Hz: 44000000")
+    path = recording / "sync_messages.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n")
+    return path
+
+
+def build(
+    root: Path, *, experiment: str = "experiment1", with_continuous: bool = False, with_sync_messages: bool = False
+) -> Path:
     """Write two record nodes, each owning some streams and stubbing the rest."""
     for node, owns in OWNED.items():
         recording = root / f"Record Node {node}" / experiment / "recording1"
         events = recording / "events"
+        if with_sync_messages:
+            sync_messages(recording, node)
         for name, first in FIRST_SAMPLE.items():
             stream(
                 events,
                 name,
                 first_sample=first,
                 aligned=name in owns,
-                pulse_offset=1000 if name == "probeA" else 0,
+                pulse_offset=1000 if name == "Neuropix-PXI-100.probeA" else 0,
                 continuous=(recording / "continuous") if (with_continuous and name in owns) else None,
             )
         # The NI-DAQ is aligned and carries no ticks of its own.
