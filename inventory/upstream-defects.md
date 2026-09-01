@@ -372,3 +372,65 @@ The fix is to give the out-of-range regions their own terminal-anchored models r
 folding them onto index 0, which is the same correction R37 §3.1 makes to this specification.
 Because `aind-ephys-rig-qc` materializes the result per sample, every consumer of a session's
 `timestamps.npy` inherits it, and re-running the alignment is the only way to clear it.
+
+
+---
+
+## 10. HARP time steps back ~1.5 ms twice a session
+
+Found while asking why R40's measured *maximum* extrapolation error is 1.6 ms when its p95 is
+117 µs. It is not a bad sync pulse, and R37 §3.2's terminal-anchor test cannot reach it.
+
+Taking each sync-pulse interval's departure from the probe's own sample counter, two intervals
+per session are short — and the deficit is permanent, not a spike that recovers:
+
+```text
+   i       t_tick           parent        Δt    Δparent   implied ratio
+3514    105471714     361855998090     30000      31250      1.0416667
+3515    105501714     361856029316     30000      31226      1.0408667   ← −768 µs
+3516    105531714     361856060540     30000      31224      1.0408000   ← −832 µs
+3517    105561714     361856091790     30000      31250      1.0416667   ← resumes, 1.6 ms behind
+```
+
+**It is HARP, not the probes.** The two steps fall at the *same HARP instants* —
+11,578,111.942 s and 11,579,391.939 s — on all twelve probe streams, which are twelve
+independent sample counters in two record nodes:
+
+| | step 1 | step 2 | net |
+|---|---:|---:|---:|
+| every stream | −1471 to −1504 µs | −1567 to −1600 µs | −3.1 ms |
+
+The spread across streams is one HARP tick, which is quantization. Each probe's own Δt is a
+regular 30,000 throughout.
+
+**It is not a missing barcode.** The barcode line carries 6,388 barcodes, one per second, nine
+pulses each, with no irregular interval anywhere in the session.
+
+**The alignment is otherwise doing its job.** Per sync-pulse interval, against the probe clock:
+
+| | p50 | p95 | max |
+|---|---:|---:|---:|
+| before alignment (Open Ephys software time) | 7.2 µs | 525.7 µs | 1813.6 µs |
+| after alignment (rig-qc, HARP) | 16.2 µs | 58.9 µs | 831.6 µs |
+
+p95 improves ninefold and the residual median of 16.2 µs is half a HARP tick — the quantization
+floor, so the alignment is at its own resolution everywhere except these two points.
+
+**Cause not established.** Either HARP's counter genuinely stepped, or one barcode in each pair
+decoded to a value ~1.5 ms low. The pre-alignment timestamps carry ±1.8 ms of software jitter,
+which is larger than the step, so the step cannot be isolated in them. Distinguishing the two
+needs the decoded barcode values, which the packet does not carry.
+
+**Workaround:** none, and deliberately. The anchors represent the shift faithfully —
+interpolation between them reproduces the upstream timestamps to 0.1 µs (§9) — and the shift is
+*permanent*, so withholding the anchors at the step would not remove it, only smear it across a
+wider interpolation. R37 §3.2's test is for anchors that are individually misplaced against
+their neighbours; this is a level change that every subsequent anchor agrees with.
+
+**What it means for a consumer.** Times either side of a step are internally consistent and
+offset from each other by 1.5 ms. Nothing within a trial is affected. A measurement comparing
+the first third of a session against the last carries up to 3.1 ms of offset, which matters for
+a 1 ms cross-correlogram bin and for nothing coarser.
+
+It is also why R40 §2.2 gates on p95 rather than on the maximum: the maximum here reports two
+upstream events, not the quality of the estimator being bounded.
