@@ -13,7 +13,7 @@ import pyarrow.dataset as pads
 
 from .clocks import BOUND, NotAligned, anchors, mapped, stored_span
 from .dictionaries import as_dictionary, constant
-from .errors import ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
+from .errors import NoTimeOrigin, ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
 from .manifest import Manifest, Resource
 from .resources import ArrayResource, TableResource
 
@@ -59,6 +59,7 @@ class Packet:
         self._by_id = {r.resource_id: r for r in manifest.resources}
         self._anchor_cache: dict[str, Any] | None = None
         self._reference_cache: str | None = None
+        self._origin_cache: dict[str | None, tuple[int, int, int]] = {}
 
     @property
     def root(self) -> Path:
@@ -450,6 +451,7 @@ class Packet:
         session_id: str | None = None,
         t_tick: tuple[int, int] | None = None,
         clock: str | None = None,
+        seconds: bool = False,
     ) -> pa.Table:
         """Read ``core.events``, on the packet's reference clock unless told otherwise.
 
@@ -468,6 +470,9 @@ class Packet:
         clock : str, optional
             The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
             :data:`STORED` for the ticks the file holds.
+        seconds : bool, default False
+            Add a `t_second` column from the packet's declared origin (R39 §2.3). Refuses on
+            a packet that declares none, and on ticks that are not on the reference clock.
 
         Returns
         -------
@@ -477,7 +482,9 @@ class Packet:
         found = self.table(
             "core.events", event_type=event_type, session_id=session_id, t_tick=self._span(t_tick, clock)
         )
-        return found if clock == STORED else self._narrowed(self.on_clock(found, clock), t_tick)
+        if clock != STORED:
+            found = self._narrowed(self.on_clock(found, clock), t_tick)
+        return self.seconds(found, session_id=session_id) if seconds else found
 
     def spike_times(
         self,
@@ -489,6 +496,7 @@ class Packet:
         curation_id: str | None = None,
         t_tick: tuple[int, int] | None = None,
         clock: str | None = None,
+        seconds: bool = False,
     ) -> pa.Table:
         """Read spike times for one unit, or for a table of them.
 
@@ -528,6 +536,9 @@ class Packet:
             The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
             :data:`STORED` for the ticks the file holds. Mapping drops a spike the anchors
             cannot place, exactly as `analysis.spike_events` does.
+        seconds : bool, default False
+            Add a `t_second` column from the packet's declared origin (R39 §2.3). Refuses on
+            a packet that declares none, and on ticks that are not on the reference clock.
 
         Returns
         -------
@@ -555,7 +566,9 @@ class Packet:
                 curation_id=curation_id,
                 t_tick=self._span(t_tick, clock),
             )
-            return found if clock == STORED else self._narrowed(self.on_clock(found, clock), t_tick)
+            if clock != STORED:
+                found = self._narrowed(self.on_clock(found, clock), t_tick)
+            return self.seconds(found, session_id=session_id) if seconds else found
 
         assert units is not None  # the exclusivity check above settles this
         keys = self._reference_columns("core.spike_events", "core.units")
@@ -577,7 +590,9 @@ class Packet:
         if (pushed := self._span(t_tick, clock)) is not None:
             wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
         found = self.scan("core.spike_events").to_table(columns=["t_tick", "clock_id"], filter=wanted)
-        return found if clock == STORED else self._narrowed(self.on_clock(found, clock), t_tick)
+        if clock != STORED:
+            found = self._narrowed(self.on_clock(found, clock), t_tick)
+        return self.seconds(found, session_id=session_id) if seconds else found
 
     def reference_clock(self, *, session_id: str | None = None) -> str:
         """Return the clock this packet reports times on (R27 §2).
@@ -622,6 +637,94 @@ class Packet:
             raise NotAligned(f"sessions declare different reference clocks {named}; name a session_id")
         self._reference_cache = str(named[0])
         return self._reference_cache
+
+    def t_zero(self, *, session_id: str | None = None) -> int:
+        """Return the session's time origin, on the reference clock (R39 §2.2).
+
+        The earliest tick at which any of the session's clocks was observing. It is read from
+        `core.sessions.t_zero_tick` rather than recomputed: the writer took the minimum across
+        clocks through R13's mapping, which is arithmetic a reader should not have to repeat
+        and would not repeat identically.
+
+        Raises
+        ------
+        NoTimeOrigin
+            If the packet declares none.
+        """
+        return self._origin(session_id)[0]
+
+    def seconds(self, table: pa.Table, *, session_id: str | None = None) -> pa.Table:
+        """Add a `t_second` column to a table whose ticks are on the reference clock.
+
+        R39 §2.3: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the
+        declared rational so nothing is lost to the rounded `tick_rate_hz`.
+
+        The tick stays. Seconds are derived and this does not pretend otherwise -- a caller
+        that needs to compare, join or bucket still has the exact integer beside the float.
+
+        Seconds may be negative. Data outside its own observation window is a real and
+        reported condition (R38 §2.5), and the origin is not clamped to hide it.
+
+        Raises
+        ------
+        NoTimeOrigin
+            If the packet declares no origin.
+        NotAligned
+            If the table's ticks are not on the reference clock, since seconds from any other
+            clock's ticks would be a different quantity wearing the same name.
+        """
+        origin, num, den = self._origin(session_id)
+        reference = self.reference_clock(session_id=session_id)
+        present = _clocks_in(_flat(table.column("clock_id"))) if table.num_rows else [reference]
+        if present != [reference]:
+            raise NotAligned(
+                f"seconds are defined on {reference!r} (R39 §2.3), but these ticks are on "
+                f"{present}; map them with on_clock first"
+            )
+        offset = pc.subtract(table.column("t_tick"), pa.scalar(origin, pa.int64()))
+        return table.append_column("t_second", pc.divide(pc.cast(offset, pa.float64()), float(num) / float(den)))
+
+    def _origin(self, session_id: str | None) -> tuple[int, int, int]:
+        """Return the origin and the reference clock's rational rate, read once per session."""
+        if session_id in self._origin_cache:
+            return self._origin_cache[session_id]
+        sessions = self.table("core.sessions")
+        if "t_zero_tick" not in sessions.column_names:
+            raise NoTimeOrigin("core.sessions carries no t_zero_tick, so seconds are undefined (R39 §2.3)")
+        declared = {
+            session: tick
+            for session, tick in zip(
+                sessions.column("session_id").to_pylist(), sessions.column("t_zero_tick").to_pylist(), strict=True
+            )
+            if tick is not None
+        }
+        if session_id is not None:
+            if session_id not in declared:
+                raise NoTimeOrigin(f"session {session_id!r} declares no t_zero_tick (R39 §2.3)")
+            origin = int(declared[session_id])
+        else:
+            found = sorted(set(declared.values()))
+            if not found:
+                raise NoTimeOrigin("no session declares a t_zero_tick, so seconds are undefined (R39 §2.3)")
+            if len(found) > 1:
+                raise NoTimeOrigin(f"sessions declare different origins {found}; name a session_id")
+            origin = int(found[0])
+        num, den = self._tick_rate(self.reference_clock(session_id=session_id))
+        self._origin_cache[session_id] = (origin, num, den)
+        return self._origin_cache[session_id]
+
+    def _tick_rate(self, clock_id: str) -> tuple[int, int]:
+        """Return a clock's rational tick rate, which R39 §2.3 prefers to `tick_rate_hz`."""
+        clocks = self.table("core.clocks")
+        names = clocks.column("clock_id").to_pylist()
+        if clock_id not in names:
+            raise NotAligned(f"core.clocks declares no {clock_id!r}, so its rate is unknown")
+        row = names.index(clock_id)
+        num = clocks.column("tick_rate_num")[row].as_py()
+        den = clocks.column("tick_rate_den")[row].as_py() if "tick_rate_den" in clocks.column_names else 1
+        if not num:
+            raise NotAligned(f"{clock_id!r} declares no tick_rate_num, so seconds cannot be derived")
+        return int(num), int(den or 1)
 
     def on_clock(self, table: pa.Table, clock: str | None = None, *, bound: float = BOUND) -> pa.Table:
         """Return `table` with its ticks on one clock.

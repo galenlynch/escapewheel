@@ -21,3 +21,12 @@ class ResourceUnreadableError(PacketError):
 
 class UnsupportedCodecError(PacketError):
     """The packet requires a codec this reader does not support."""
+
+
+class NoTimeOrigin(PacketError):
+    """The packet declares no `t_zero_tick`, so seconds are not defined (R39 §2.3).
+
+    Tick zero, the session's wall-clock start and the first datum are all available and all
+    wrong. A consumer that picks one silently produces numbers that cannot be compared with
+    another consumer's, so this is raised instead.
+    """

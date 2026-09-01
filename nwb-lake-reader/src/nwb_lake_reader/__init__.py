@@ -13,6 +13,7 @@ from importlib.metadata import version
 from .clocks import BOUND, NotAligned, Unanchored, align
 from .errors import (
     ManifestError,
+    NoTimeOrigin,
     PacketError,
     ResourceNotFoundError,
     ResourceUnreadableError,
@@ -32,6 +33,7 @@ __all__ = [
     "ArrayResource",
     "Manifest",
     "ManifestError",
+    "NoTimeOrigin",
     "NotAligned",
     "Packet",
     "PacketError",

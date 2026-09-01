@@ -1,6 +1,7 @@
+import pyarrow as pa
 import pytest
 
-from nwb_lake_reader import STORED, NotAligned, open_packet
+from nwb_lake_reader import STORED, NotAligned, NoTimeOrigin, open_packet
 
 
 def test_trials_unfiltered(packet_root):
@@ -215,3 +216,43 @@ def test_an_event_range_is_on_the_reference_clock(two_clock_packet):
     pkt = open_packet(two_clock_packet)
     assert pkt.events(t_tick=(1_100_000, 1_300_000)).num_rows == 1
     assert pkt.events(t_tick=(1_300_000, 1_400_000)).num_rows == 0
+
+
+# -- seconds (R39 §2.3) ----------------------------------------------------------------
+
+
+def test_the_origin_is_read_not_recomputed(two_clock_packet):
+    """The writer took the minimum across clocks through R13's map; a reader repeats none of it."""
+    assert open_packet(two_clock_packet).t_zero() == 1_000_000
+
+
+def test_seconds_run_from_the_declared_origin(two_clock_packet):
+    """A spike at probe tick 30,000 is harp tick 1,031,250, one harp second past the origin."""
+    found = open_packet(two_clock_packet).spike_times("unit_001", seconds=True)
+    assert found.column("t_tick").to_pylist() == [1_031_250, 1_062_500]
+    assert found.column("t_second").to_pylist() == [1.0, 2.0]
+
+
+def test_seconds_are_derived_beside_the_tick_not_instead_of_it(two_clock_packet):
+    found = open_packet(two_clock_packet).events(seconds=True)
+    assert "t_tick" in found.column_names
+    assert found.column("t_second").to_pylist() == [pytest.approx(6.4)]
+
+
+def test_seconds_may_be_negative(two_clock_packet):
+    """R39 §2.3: data outside its window is reported, not clamped away."""
+    before = pa.table({"t_tick": pa.array([968_750], type=pa.int64()), "clock_id": pa.array(["harp"])})
+    assert open_packet(two_clock_packet).seconds(before).column("t_second").to_pylist() == [-1.0]
+
+
+def test_a_packet_with_no_origin_refuses_rather_than_inventing_one(packet_root):
+    """R39 §2.3: tick zero, the wall clock and the first datum are all available and all wrong."""
+    with pytest.raises(NoTimeOrigin):
+        open_packet(packet_root).t_zero()
+
+
+def test_seconds_refuse_ticks_that_are_not_on_the_reference(two_clock_packet):
+    """Seconds from a probe tick would be a different quantity wearing the same name."""
+    packet = open_packet(two_clock_packet)
+    with pytest.raises(NotAligned):
+        packet.seconds(packet.spike_times("unit_001", clock=STORED))
