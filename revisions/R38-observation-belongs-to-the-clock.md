@@ -128,3 +128,10 @@ experiment1 on Neuropix-PXI-100.45883-1"*, so `start_tick` is 0 and `stop_tick` 
 length. HARP's window is the span of the barcode train that defines HARP time on this rig, which
 is HARP-native and needs no wall clock either. No window in this packet requires a conversion to
 write.
+
+The recording length survives into the sorted asset: SpikeInterface records the sorted
+recording's attributes as `recording_info` beside the sorting, so a packet built from a sorting
+plus a sync tree needs neither the compressed AP data nor a metadata document that rounds to
+whole seconds. Measured across the twelve probe clocks, the last spike falls 4 to 14 samples
+inside its clock's window — one waveform's half-width, which is what a sorter that cannot centre
+a template at the very end leaves.

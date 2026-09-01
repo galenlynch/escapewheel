@@ -110,8 +110,10 @@ On `ecephys_776259_2025-04-09`, reference clock `harp` at 31,250 Hz:
 | first behaviour event | 361,751,328,953 | +166.31 s |
 
 Under §2.1 the origin is the earliest clock observation start: a probe clock's tick 0, which
-maps to **361,746,131,857**. HARP's own window, the barcode span, begins 0.78 s later.
+maps to **361,746,131,863**. HARP's own window, the sync train's span, begins 0.73 s later.
 
-The value is the same as the circular derivation gives. That is the point: the number was never
-wrong, only unjustified, and it now follows from what the packet declares rather than from which
-datum an importer happened to pair with a JSON timestamp.
+The value agrees with the circular derivation to 6 ticks, 192 µs. That is the point: the number
+was never wrong, only unjustified, and it now follows from what the packet declares rather than
+from which datum an importer happened to pair with a JSON timestamp. The 6 ticks are the
+difference between R37 §3.1's terminal-anchored estimator and the intercept-based one the first
+measurement used, over a clock whose first anchor R37 §3.2 now withholds.
