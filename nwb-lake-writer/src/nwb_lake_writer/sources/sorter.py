@@ -356,6 +356,9 @@ class SorterSource:
                     "sorting_run_id": self._sorting_run_id(stream),
                     "session_id": self.session_id,
                     "probe_id": self._probe_id(stream),
+                    # R38 §2.2: a unit reaches its clock through its run, so a rule can see the
+                    # link the string convention below only implied.
+                    "clock_id": self._clock_id(stream),
                     "sorter_name": log.get("sorter_name") or params.get("sorter_name"),
                     "sorter_version": log.get("sorter_version"),
                     "amplitude_unit": self._amplitude_unit(stream),

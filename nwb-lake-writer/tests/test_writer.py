@@ -193,7 +193,9 @@ def _spike_batch(n, unit, first_tick):
 def _add_spike_context(writer):
     """The rows core.spike_events references, so a commit can validate."""
     writer.add(
-        "core.sorting_runs", [{"sorting_run_id": "sort_1", "session_id": "s001", "amplitude_unit": "uV"}]
+        "core.sorting_runs",
+        # R38 2.2: a run names the clock its spikes are counted on.
+        [{"sorting_run_id": "sort_1", "session_id": "s001", "clock_id": "harp_s001", "amplitude_unit": "uV"}],
     )  # R11 2: spikes carry amplitudes
     writer.add("core.curation_versions", [{"curation_id": "cur_1", "sorting_run_id": "sort_1", "session_id": "s001"}])
     writer.add(
