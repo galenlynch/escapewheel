@@ -120,10 +120,66 @@ def read_sync_messages(path: Path, node: str) -> RecordingStart | None:
 #: positions is enough for a stable 99th percentile and costs a millisecond.
 NEIGHBOURS, INTERIOR = 30, 600
 
+#: A phase discontinuity in the reference alignment larger than this is reported, in seconds.
+#:
+#: Measured on `ecephys_776259_2025-04-09`: an anchor interval's parent advance departs from the
+#: clock's own median ratio by at most 160 µs across 76,622 intervals, while two known upstream
+#: discontinuities cost 672-832 µs each. 400 µs sits between them with about twice the margin
+#: either way. It is well below R40's 3 ms alignment tolerance, so a packet can carry a reported
+#: discontinuity and still align within bound -- reporting is not refusing.
+DISCONTINUITY = 4e-4
+
 #: Which percentile of a clock's own interior residuals a terminal anchor must stay inside.
 #: Stated on the clock's spread rather than as a fixed tolerance because anchor quality is a
 #: property of a rig and a session, not of the format (R37 §3.2).
 SUSPECT_PERCENTILE = 99.0
+
+
+def phase_discontinuities(
+    ticks: NDArray[np.int64], parents: NDArray[np.int64], rate: float, limit: float = DISCONTINUITY
+) -> list[dict[str, Any]]:
+    """Find places where the parent clock's phase steps against this clock's own rate.
+
+    An anchor interval should advance the parent by the interval's own length times the clock
+    ratio. Where it does not, the parent's phase moved -- and because R13's map is exact at
+    every anchor, the map faithfully carries that step rather than smoothing it away. Nothing
+    downstream can see it, so the writer says so.
+
+    Consecutive offending intervals are one event: a step arrives as a ramp over the two
+    intervals either side of a discarded upstream anchor rather than as a jump.
+
+    Parameters
+    ----------
+    ticks, parents : numpy.ndarray of int64
+        The anchor pairs, strictly increasing.
+    rate : float
+        The parent clock's rate in hertz, to report sizes as durations.
+    limit : float
+        The smallest discontinuity worth reporting, in seconds.
+
+    Returns
+    -------
+    list of dict
+        One entry per event: where it is on both clocks, and how far the parent moved.
+    """
+    if ticks.size < 3:
+        return []
+    step, parent_step = np.diff(ticks).astype(np.float64), np.diff(parents).astype(np.float64)
+    ratio = float(np.median(parent_step / step))
+    residual = parent_step - step * ratio
+    offending = np.flatnonzero(np.abs(residual) > limit * rate)
+    if not offending.size:
+        return []
+    events = np.split(offending, np.flatnonzero(np.diff(offending) > 1) + 1)
+    return [
+        {
+            "t_tick": int(ticks[group[0]]),
+            "parent_tick": int(parents[group[0]]),
+            "seconds": round(float(residual[group].sum()) / rate, 9),
+            "anchor_intervals": int(group.size),
+        }
+        for group in events
+    ]
 
 
 def _predict(at: int, ticks: NDArray[np.int64], parents: NDArray[np.int64], frm: int) -> float:
@@ -274,6 +330,10 @@ class SyncSource:
         self.notes: list[str] = []
         #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters.
         self.withheld: dict[str, dict[str, Any]] = {}
+        #: Clock ID to phase steps found in the parent's alignment, for the run's parameters.
+        #: Reported, never corrected: whether a step also moved the devices timestamped on the
+        #: parent is not knowable from the packet, and subtracting it would be wrong if it did.
+        self.discontinuities: dict[str, list[dict[str, Any]]] = {}
         self._observed: list[tuple[int, int]] = []
         self._pulses: dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]] = {}
         self._aligned: list[SyncStream] | None = None
@@ -508,6 +568,13 @@ class SyncSource:
             f"{stream.key}: {ticks.size} anchors, ticks {int(ticks[0])}..{int(ticks[-1])}, "
             f"parent {int(parents[0])}..{int(parents[-1])}"
         )
+        if stepped := phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ):
+            self.discontinuities[clock] = stepped
+            self.notes.append(
+                f"{stream.key}: {len(stepped)} phase discontinuit"
+                f"{'y' if len(stepped) == 1 else 'ies'} in the reference alignment, "
+                + ", ".join(f"{e['seconds'] * 1e3:+.2f} ms at tick {e['t_tick']}" for e in stepped)
+            )
         self._pulses[clock] = (ticks, parents)
         return ticks, parents
 

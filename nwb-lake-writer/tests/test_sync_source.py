@@ -8,7 +8,7 @@ import pytest
 
 from nwb_lake_writer.clock import HARP_TICK_RATE_HZ
 from nwb_lake_writer.sources import SourceDefect, SyncSource
-from nwb_lake_writer.sources.sync import suspect_terminals
+from nwb_lake_writer.sources.sync import phase_discontinuities, suspect_terminals
 from tests import syncfixture
 from tests.syncfixture import AP_HZ, FIRST_SAMPLE, HARP_START, N_PULSES
 
@@ -315,3 +315,49 @@ def test_without_the_file_the_older_routes_still_apply(tree):
     with pytest.raises(SourceDefect, match="sync_messages"):
         source.anchors(clock_id_for=probes_only)
     assert any("no sync_messages.txt" in note for note in source.notes)
+
+
+# -- phase discontinuities in the parent's alignment ------------------------------------
+
+
+def _straight(n=200, ratio=HARP_TICK_RATE_HZ / AP_HZ):
+    ticks = np.arange(n, dtype=np.int64) * AP_HZ + 1000
+    return ticks, np.rint(ticks * ratio).astype(np.int64) + 553_191_712_312
+
+
+def test_a_clean_alignment_reports_nothing():
+    assert phase_discontinuities(*_straight(), HARP_TICK_RATE_HZ) == []
+
+
+def test_a_phase_step_is_found_and_sized():
+    """A permanent step: the parent falls behind and stays behind."""
+    ticks, parents = _straight()
+    parents[100:] -= 50  # 50 harp ticks = 1.6 ms, the size measured upstream
+    (found,) = phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ)
+    assert found["seconds"] == pytest.approx(-50 / HARP_TICK_RATE_HZ)
+    assert found["t_tick"] == ticks[99]
+
+
+def test_a_step_spread_over_two_intervals_is_one_event(source):
+    """Upstream it arrives as a ramp, because the alignment absorbs it across a dropped anchor."""
+    ticks, parents = _straight()
+    parents[100] -= 25
+    parents[101:] -= 50
+    (found,) = phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ)
+    assert found["anchor_intervals"] == 2
+    assert found["seconds"] == pytest.approx(-50 / HARP_TICK_RATE_HZ)
+
+
+def test_ordinary_quantisation_is_not_a_discontinuity():
+    """Half a parent tick of rounding on every anchor must not be reported."""
+    ticks, parents = _straight()
+    rng = np.random.default_rng(0)
+    parents += rng.integers(-2, 3, parents.size)
+    assert phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ) == []
+
+
+def test_the_limit_is_a_duration(source):
+    ticks, parents = _straight()
+    parents[100:] -= 20  # 640 µs
+    assert phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ, limit=1e-3) == []
+    assert phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ, limit=1e-4)

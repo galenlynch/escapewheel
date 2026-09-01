@@ -727,10 +727,14 @@ def _alignment_parameters(context: Context | None) -> dict[str, Any]:
     """Return what a run should record about how it aligned clocks, or nothing."""
     if context is None:
         return {}
-    withheld = getattr(context.sources.get("sync"), "withheld", {})
+    sync = context.sources.get("sync")
+    withheld = getattr(sync, "withheld", {})
     recorded = {}
     if withheld:
         recorded["withheld_anchors"] = withheld
+    if stepped := getattr(sync, "discontinuities", {}):
+        # Reported so a consumer can see them, never corrected -- see SyncSource.discontinuities.
+        recorded["phase_discontinuities"] = stepped
     if context.measured_bound:
         recorded["alignment_bound"] = context.measured_bound
     return recorded
