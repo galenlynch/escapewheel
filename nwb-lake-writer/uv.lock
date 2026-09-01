@@ -1275,6 +1275,7 @@ version = "0.1.0"
 source = { editable = "../nwb-lake-validator" }
 dependencies = [
     { name = "jsonschema" },
+    { name = "numpy" },
     { name = "nwb-lake-reader", extra = ["sql"] },
     { name = "pyarrow" },
 ]
@@ -1282,6 +1283,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "numpy", specifier = ">=1.26" },
     { name = "nwb-lake-reader", extras = ["sql"], editable = "../nwb-lake-reader" },
     { name = "pyarrow", specifier = ">=25.0.1" },
 ]

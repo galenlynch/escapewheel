@@ -328,3 +328,40 @@ def test_two_labels_in_one_category_are_kept_unprojected(tmp_path):
     row = next(q for q in source.unit_quality_labels() if q["source"] == "manual")
     assert (row["label"], row["normalized_label"]) == ("noise|MUA", None)
     assert any("2 labels in category" in note for note in source.notes)
+
+
+# -- observation windows (R38 §2.3) ----------------------------------------------------
+
+
+def test_a_sample_clock_declares_the_recording_it_counts(source):
+    """The window is `[0, length - 1]`, from the analyzer's `recording_info`.
+
+    It comes from the recording rather than from the spikes on purpose: a denominator taken
+    from the numerator makes every firing rate identical (R25 §3), and a unit that fired
+    nothing was still observed.
+    """
+    rows = source.observation_intervals()
+    assert {r["clock_id"] for r in rows} == {c["clock_id"] for c in source.clocks()}
+    for row in rows:
+        assert (row["interval_index"], row["start_tick"], row["stop_tick"]) == (0, 0, sorterfixture.N_SAMPLES[0] - 1)
+
+
+def test_the_window_contains_every_spike_on_its_clock(source):
+    """R38 §2.5's claim, which is what makes `within_observation` worth inheriting."""
+    stop = {r["clock_id"]: r["stop_tick"] for r in source.observation_intervals()}
+    for row in source.units():
+        clock = f"{row['sorting_run_id']}.samples"
+        assert row["last_spike_tick"] <= stop[clock]
+
+
+def test_a_stream_with_no_analyzer_declares_no_window(tmp_path):
+    root = sorterfixture.build(tmp_path / "sorted", analyzer=False)
+    assert SorterSource(root, session_id=SESSION).observation_intervals() == []
+
+
+def test_a_multi_segment_recording_declares_no_window(tmp_path):
+    """Each segment restarts the counter, so its length is not one interval on one clock."""
+    root = sorterfixture.build(tmp_path / "sorted", n_samples=(100, 200))
+    source = SorterSource(root, session_id=SESSION)
+    assert source.observation_intervals() == []
+    assert any("2 recording segments" in note for note in source.notes)

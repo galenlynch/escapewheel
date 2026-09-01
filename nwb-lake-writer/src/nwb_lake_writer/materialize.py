@@ -35,7 +35,7 @@ from typing import Any
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
-from nwb_lake_reader.clocks import BOUND, NotAligned, anchors, mapped, reference_clock
+from nwb_lake_reader.clocks import NotAligned, anchors, declared_bound, mapped, reference_clock
 from nwb_lake_reader.dictionaries import constant
 
 #: Rows per batch, and therefore per row group and per unit of writer memory. Measured: 128 K
@@ -208,7 +208,7 @@ def spike_events(
     packet: Any,
     *,
     reference: str | None = None,
-    bound: float = BOUND,
+    bound: float | None = None,
     bucket_seconds: int = BUCKET_SECONDS,
     scratch: Path | None = None,
     memory_budget: int | str = 0,
@@ -226,8 +226,10 @@ def spike_events(
         `core.sessions`.
     reference : str, optional
         The clock to map onto. Defaults to `core.sessions.reference_clock_id` (R27 §2).
-    bound : float
-        Passed to :func:`~nwb_lake_writer.align.align`.
+    bound : float, optional
+        Passed to :func:`~nwb_lake_reader.clocks.align`. Defaults to what the packet's own
+        import run measured (R37 §3.3), so a table derived here places the same spikes the
+        packet's `t_zero_tick` was taken over.
     bucket_seconds : int
         Bucket width, in seconds of the reference clock. A transform parameter `06` requires
         the packet to declare, not something a reader can recover from the data.
@@ -257,6 +259,7 @@ def spike_events(
         anchors, or if the reference clock declares no tick rate.
     """
     reference = reference or reference_clock(packet)
+    bound = declared_bound(packet) if bound is None else bound
     width = bucket_seconds * _tick_rate(packet, reference)
     by_clock = anchors(packet)
     handle = packet.table_resource("core.spike_events")
@@ -320,7 +323,7 @@ def into(
     writer: Any,
     *,
     reference: str | None = None,
-    bound: float = BOUND,
+    bound: float | None = None,
     bucket_seconds: int = BUCKET_SECONDS,
     run_id: str = RUN_ID,
     memory_budget: int | str = 0,
@@ -346,6 +349,7 @@ def into(
     from . import __version__
 
     resource = "analysis.spike_events"
+    bound = declared_bound(packet) if bound is None else bound
     started = datetime.now(tz=timezone.utc)
     writer.add_batches(
         resource,

@@ -26,11 +26,14 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from functools import partial
+from math import ceil
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
 import numpy as np
+from numpy.typing import NDArray
+from nwb_lake_reader.clocks import BOUND
 
 from .recipe import Recipe, SourceSpec
 from .sources.compensations import describe
@@ -78,6 +81,12 @@ MATERIALIZERS: dict[str, str] = {"analysis.spike_events": "spike_events"}
 #: So the row group is both the fetch unit and the prune unit for us, and pruning is what costs.
 BATCH_ROWS = 1_000_000
 
+#: The most error a mapping may carry before R37 §3.3 calls it undefined, in ticks of the
+#: parent clock. One is that revision's default: a HARP tick is 32 µs, which is the
+#: quantization the anchors themselves are recorded at, so a bound stated any tighter would
+#: be asking the estimator to beat the measurement.
+TOLERANCE = 1.0
+
 
 class RecipeError(Exception):
     """A recipe cannot be built: a source kind is unknown, or its dependencies do not order."""
@@ -122,6 +131,26 @@ class Context:
     #: Session facts a source derived that the recipe does not state, merged into
     #: `core.sessions` after every source has run.
     session_extra: dict[str, Any] = field(default_factory=dict)
+    #: `core.clock_observation_intervals` rows, whatever source produced them, since R39's
+    #: origin is a minimum across all of them and no single adapter sees them all.
+    observed: list[dict[str, Any]] = field(default_factory=list)
+    #: What `_bound_for` measured, for the import run's parameters (R37 §3.3, §4).
+    measured_bound: dict[str, Any] = field(default_factory=dict)
+    #: The anchors and the bound, once `alignment` has settled them.
+    _alignment: tuple[dict[str, Any], float] | None = None
+
+    def alignment(self) -> tuple[dict[str, Any], float]:
+        """Return the anchors and the bound to map at, measured once and kept.
+
+        Every mapping in a build has to use the same bound, or the packet says one thing about
+        which ticks are convertible and its own origin says another.
+        """
+        if self._alignment is None:
+            by_clock = _anchors(self)
+            reach = {row["clock_id"]: int(row["start_tick"]) for row in self.observed}
+            bound, self.measured_bound = _bound_for(by_clock, reach, TOLERANCE)
+            self._alignment = (dict(by_clock), bound)
+        return self._alignment
 
 
 def order(recipe: Recipe) -> list[SourceSpec]:
@@ -249,7 +278,104 @@ def _declared_start(recipe: Recipe) -> datetime | None:
     return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
 
 
-def _first_spike_tick(context: Context) -> int:
+def _anchors(context: Context) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]]:
+    """Return the sync source's anchors as arrays per clock, in the shape `align` wants."""
+    collected: dict[str, tuple[list[int], list[int]]] = {}
+    for row in context.sources["sync"].anchors(clock_id_for=_clock_namer(context)):
+        at, parent = collected.setdefault(row["clock_id"], ([], []))
+        at.append(row["t_tick"])
+        parent.append(row["parent_tick"])
+    return {
+        clock: (np.array(at, dtype=np.int64), np.array(parent, dtype=np.int64))
+        for clock, (at, parent) in collected.items()
+    }
+
+
+def _bound_for(
+    by_clock: Mapping[str, tuple[NDArray[np.int64], NDArray[np.int64]]],
+    reach: Mapping[str, int],
+    tolerance: float,
+) -> tuple[float, dict[str, Any]]:
+    """Choose the bound to map at, measuring it as R37 §3.3 requires.
+
+    A packet whose earliest data sits inside one median anchor interval of its first anchor
+    needs nothing; R27 §5.3's default covers it and this returns it unmeasured. Where it does
+    not -- and withholding a displaced first anchor (R37 §3.2) is what usually makes it not --
+    the writer may go further only by measuring the estimator at the distance it intends to
+    use and finding it within `tolerance`.
+
+    Parameters
+    ----------
+    by_clock : Mapping
+        Anchor pairs per clock.
+    reach : Mapping
+        Clock ID to the earliest tick that must map, which is the clock's own window start.
+    tolerance : float
+        The most error the mapping may carry, in parent ticks. R37 §3.3's default is one.
+
+    Returns
+    -------
+    tuple
+        The bound in median anchor intervals, and the measurement, for the run's parameters.
+    """
+    from nwb_lake_reader.clocks import extrapolation_error
+
+    needed = 0.0
+    for clock, (at, _) in by_clock.items():
+        if (earliest := reach.get(clock)) is None:
+            continue
+        gap = float(at[0] - earliest)
+        needed = max(needed, gap / float(np.median(np.diff(at))))
+    if needed <= BOUND:
+        return BOUND, {}
+
+    distance = ceil(needed)
+    measured = {clock: extrapolation_error(at, parent, distance) for clock, (at, parent) in by_clock.items()}
+    worst = max((m["median"] for m in measured.values() if m), default=float("inf"))
+    report: dict[str, Any] = {
+        "distance": distance,
+        "tolerance": tolerance,
+        "median_error": round(worst, 2),
+        "per_clock": {clock: {k: round(v, 2) for k, v in m.items()} for clock, m in measured.items() if m},
+    }
+    if worst > tolerance:
+        report["used"] = BOUND
+        return BOUND, report
+    report["used"] = float(distance)
+    return float(distance), report
+
+
+def _time_origin(
+    context: Context,
+    intervals: list[dict[str, Any]],
+    by_clock: Mapping[str, tuple[NDArray[np.int64], NDArray[np.int64]]],
+    bound: float,
+) -> int | None:
+    """R39 §2.1: the earliest observation start among the session's clocks, on the reference.
+
+    Returns None where any clock's window start cannot be mapped, since a minimum taken over
+    some of the clocks is not the minimum R39 §2.2 requires a writer to declare -- and R39
+    §2.4 says an origin the writer cannot compute is one it must not state.
+    """
+    from nwb_lake_reader.clocks import align
+
+    reference = context.reference.clock_id if context.reference else None
+    starts: list[int] = []
+    for row in intervals:
+        clock, start = row["clock_id"], int(row["start_tick"])
+        if clock == reference:
+            starts.append(start)
+            continue
+        if clock not in by_clock:
+            return None
+        converted, defined = align(np.array([start], dtype=np.int64), *by_clock[clock], bound=bound)
+        if not defined[0]:
+            return None
+        starts.append(int(converted[0]))
+    return min(starts) if starts else None
+
+
+def _first_spike_tick(context: Context, by_clock: Mapping[str, Any], bound: float) -> int:
     """Return the earliest spike in the session, on the reference clock.
 
     `core.units` carries `first_spike_tick` per unit on its own probe's clock, so the earliest
@@ -258,24 +384,16 @@ def _first_spike_tick(context: Context) -> int:
     """
     from nwb_lake_reader.clocks import align
 
-    sorter, sync = context.sources["sorter"], context.sources["sync"]
-    anchors: dict[str, tuple[list[int], list[int]]] = {}
-    for row in sync.anchors():
-        at, parent = anchors.setdefault(row["clock_id"], ([], []))
-        at.append(row["t_tick"])
-        parent.append(row["parent_tick"])
-
     earliest: list[int] = []
-    for row in sorter.units():
+    for row in context.sources["sorter"].units():
         # A unit names no clock; its sorting run does, by the convention the two adapters
         # already meet on -- the same one `SyncSource.anchors` defaults to.
         tick, clock_id = row.get("first_spike_tick"), f"{row.get('sorting_run_id')}.samples"
-        if tick is None or clock_id not in anchors:
+        if tick is None or clock_id not in by_clock:
             continue
-        at, parent = anchors[clock_id]
-        mapped, defined = align(np.array([tick], dtype=np.int64), np.array(at), np.array(parent))
+        converted, defined = align(np.array([tick], dtype=np.int64), *by_clock[clock_id], bound=bound)
         if defined[0]:
-            earliest.append(int(mapped[0]))
+            earliest.append(int(converted[0]))
     if not earliest:
         raise RecipeError("no unit carries a first_spike_tick on an anchored clock, so tick 0 cannot be located")
     return min(earliest)
@@ -290,7 +408,7 @@ def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[
     if spec.kind == "session":
         clock = context.reference
         session: dict[str, list[dict[str, Any]]] = source.records(
-            at_tick=_first_spike_tick(context),
+            at_tick=_first_spike_tick(context, *context.alignment()),
             clock_id=clock.clock_id,
             tick_rate_num=clock.tick_rate_num,
             tick_rate_den=clock.tick_rate_den,
@@ -299,15 +417,25 @@ def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[
             event_stream_ids=context.event_streams,
         )
         return session
-    sorter = context.sources.get("sorter") if spec.kind == "sync" else None
-    if sorter is not None:
-        # Anchor only the streams the sorting made a clock for. The rig aligns more than it
-        # sorts, and an anchor on a clock that does not exist is a dangling reference.
-        known = {c["clock_id"] for c in sorter.clocks()}
-        got = source.records(clock_id_for=lambda st: c if (c := f"{st.key}.samples") in known else None)
-    else:
-        got = source.records()
+    if spec.kind == "sync":
+        return dict(source.records(clock_id_for=_clock_namer(context)))
+    got = source.records()
     return got
+
+
+def _clock_namer(context: Context) -> Any:
+    """Return the map from a sync stream to the clock its ticks are on, or None for neither.
+
+    Anchor only the streams the sorting made a clock for. The rig aligns more than it sorts --
+    the NI-DAQ carries the sync pulse and no ticks of its own -- and an anchor on a clock the
+    packet does not declare is a dangling reference. Every caller that asks the sync source
+    for anchors uses this, so the packet and the alignment behind it see the same set.
+    """
+    sorter = context.sources.get("sorter")
+    if sorter is None:
+        return None
+    known = {c["clock_id"] for c in sorter.clocks()}
+    return lambda stream: name if (name := f"{stream.key}.samples") in known else None
 
 
 def _derive(options: Mapping[str, Any], packet: Any, writer: Any) -> None:
@@ -401,11 +529,7 @@ def build(
         context.sources[spec.kind] = source
         _harvest(spec, source, context, recipe)
 
-        for resource, rows in _records(spec, source, context).items():
-            if resource not in spec.claims:
-                continue
-            writer.add(resource, rows)
-            counts[resource] = counts.get(resource, 0) + len(rows)
+        _add_records(writer, spec, source, context, counts)
 
         if "core.spike_events" in spec.claims:
             writer.add_batches("core.spike_events", source.spike_batches(batch_rows=BATCH_ROWS))
@@ -423,6 +547,7 @@ def build(
         if strict and (refused := list(getattr(source, "notes", []))):
             raise RecipeError(f"{spec.kind}: {len(refused)} note(s) under --strict; first is {refused[0]}")
 
+    _declare_origin(context, say)
     writer.add(
         "core.sessions",
         [
@@ -433,7 +558,7 @@ def build(
             }
         ],
     )
-    writer.add("core.processing_runs", [_import_run(recipe, applied)])
+    writer.add("core.processing_runs", [_import_run(recipe, applied, context)])
     for entry in describe(applied):
         say(f"  compensated: {entry['id']}")
     for resource, total in sorted(counts.items()):
@@ -455,7 +580,9 @@ def _stage_array(writer: PacketWriter, spec: SourceSpec, source: Any, say: Calla
     )
 
 
-def _import_run(recipe: Recipe, compensations: list[str] | None = None) -> dict[str, Any]:
+def _import_run(
+    recipe: Recipe, compensations: list[str] | None = None, context: Context | None = None
+) -> dict[str, Any]:
     """Build the `core.processing_runs` row for this import, carrying the recipe as its parameters.
 
     `05` Stage 3 wants normalization deterministic in declared parameters. Putting the recipe
@@ -477,7 +604,13 @@ def _import_run(recipe: Recipe, compensations: list[str] | None = None) -> dict[
         "software_version": __version__,
         "code_uri": f"sha256:{recipe.digest}",
         "parameters": json.dumps(
-            {"recipe": recipe.document, "compensations": describe(compensations or [])},
+            {
+                "recipe": recipe.document,
+                "compensations": describe(compensations or []),
+                # R37 §3.2 and §4: what the terminal-anchor test withheld, and the measurement
+                # that justifies mapping further than R27 §5.3's default.
+                **_alignment_parameters(context),
+            },
             default=str,
             sort_keys=True,
         ),
@@ -486,4 +619,58 @@ def _import_run(recipe: Recipe, compensations: list[str] | None = None) -> dict[
     }
 
 
-__all__ = ["BATCH_ROWS", "CONSUMES", "MATERIALIZERS", "Context", "RecipeError", "build", "materializers", "order"]
+def _add_records(
+    writer: PacketWriter,
+    spec: SourceSpec,
+    source: Any,
+    context: Context,
+    counts: dict[str, int],
+) -> None:
+    """Add every table a source owns to the writer, counting the rows."""
+    for resource, rows in _records(spec, source, context).items():
+        if resource not in spec.claims:
+            continue
+        if resource == "core.clock_observation_intervals":
+            # R39's origin is a minimum across every clock, and no adapter sees them all.
+            context.observed.extend(rows)
+        writer.add(resource, rows)
+        counts[resource] = counts.get(resource, 0) + len(rows)
+
+
+def _declare_origin(context: Context, say: Callable[[str], None]) -> None:
+    """Put R39's time origin on the session, or say why the packet gets none."""
+    if not (context.observed and context.reference):
+        return
+    by_clock, bound = context.alignment()
+    origin = _time_origin(context, context.observed, by_clock, bound)
+    if origin is None:
+        say("  no t_zero_tick: a clock's observation start does not map to the reference (R39 §2.4)")
+        return
+    context.session_extra["t_zero_tick"] = origin
+    say(f"  t_zero_tick {origin:,} on {context.reference.clock_id} (R39 §2.1)")
+
+
+def _alignment_parameters(context: Context | None) -> dict[str, Any]:
+    """Return what a run should record about how it aligned clocks, or nothing."""
+    if context is None:
+        return {}
+    withheld = getattr(context.sources.get("sync"), "withheld", {})
+    recorded = {}
+    if withheld:
+        recorded["withheld_anchors"] = withheld
+    if context.measured_bound:
+        recorded["alignment_bound"] = context.measured_bound
+    return recorded
+
+
+__all__ = [
+    "BATCH_ROWS",
+    "CONSUMES",
+    "MATERIALIZERS",
+    "TOLERANCE",
+    "Context",
+    "RecipeError",
+    "build",
+    "materializers",
+    "order",
+]

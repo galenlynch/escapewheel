@@ -56,7 +56,12 @@ def zarr_array(path: Path, values) -> Path:
     return path
 
 
-def stream(root: Path, name: str, *, spikes, unit_ids=UNIT_IDS, analyzer=True, return_in_uv=True):
+#: How long the recording behind a stream ran, in its own samples. Comfortably past the last
+#: spike, as a real one is: a sorter cannot centre a template at the very end.
+N_SAMPLES = (100,)
+
+
+def stream(root: Path, name: str, *, spikes, unit_ids=UNIT_IDS, analyzer=True, return_in_uv=True, n_samples=N_SAMPLES):
     """Write one curated stream, and optionally its SortingAnalyzer.
 
     Parameters
@@ -119,6 +124,12 @@ def stream(root: Path, name: str, *, spikes, unit_ids=UNIT_IDS, analyzer=True, r
         zarr.mkdir(parents=True, exist_ok=True)
         (zarr / ".zgroup").write_text(json.dumps({"zarr_format": 2}))
         (zarr / ".zattrs").write_text(json.dumps({"settings": {"return_in_uV": return_in_uv}}))
+        # `recording_info` lives only in the consolidated metadata, as SpikeInterface writes
+        # it, and carries the recording length R38 2.3 makes a sample clock's window.
+        recording = {"recording_attributes": {"sampling_frequency": 30000.0}}
+        if n_samples is not None:
+            recording["recording_attributes"]["num_samples"] = list(n_samples)
+        (zarr / ".zmetadata").write_text(json.dumps({"metadata": {"recording_info/.zattrs": recording}}))
         zarr_array(
             zarr / "extensions" / "spike_amplitudes" / "amplitudes",
             np.arange(len(spikes), dtype=np.float32) * -1.0,
@@ -137,8 +148,8 @@ NAMES = (
 SPIKES = [(0, 10), (3, 11), (1, 12), (5, 20), (0, 25), (3, 26), (2, 30), (0, 41), (4, 55), (5, 60)]
 
 
-def build(root: Path, *, analyzer=True) -> Path:
+def build(root: Path, *, analyzer=True, n_samples=N_SAMPLES) -> Path:
     """Write the whole asset: three streams across two experiments."""
     for name in NAMES:
-        stream(root, name, spikes=SPIKES, analyzer=analyzer)
+        stream(root, name, spikes=SPIKES, analyzer=analyzer, n_samples=n_samples)
     return root

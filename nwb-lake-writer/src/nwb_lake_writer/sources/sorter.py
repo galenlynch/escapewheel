@@ -50,7 +50,7 @@ from numpy.typing import NDArray
 
 from ..clock import Clock
 from .nwb import SourceDefect
-from .zarr_compat import attrs, read_array
+from .zarr_compat import attrs, attrs_at, read_array
 
 #: ``experiment1_Record Node 109#Neuropix-PXI-100.50720-1_recording1``. The probe token holds
 #: no underscore, which is what lets the recording suffix be split off unambiguously.
@@ -406,6 +406,55 @@ class SorterSource:
         path = self.root.parent / "postprocessed" / f"{stream.path.name}.zarr"
         return path if path.is_dir() else None
 
+    def _recording_length(self, stream: SortedStream) -> int | None:
+        """How many samples the sorted recording holds, from the analyzer's `recording_info`.
+
+        This is the one place the length of the raw acquisition survives into the sorted
+        asset: SpikeInterface records the recording's attributes beside the sorting, so a
+        packet built from a sorting alone can still say when the probe was running without
+        reaching for the compressed AP data or for a JSON that rounds to whole seconds.
+        """
+        analyzer = self._analyzer(stream)
+        if analyzer is None:
+            return None
+        recorded = attrs_at(analyzer, "recording_info").get("recording_attributes") or {}
+        lengths = recorded.get("num_samples") or []
+        if len(lengths) != 1:
+            # Each segment restarts the counter, so a multi-segment recording is more than one
+            # clock (R27 §3) and its length is not one interval on this one.
+            self.notes.append(f"{stream.key}: {len(lengths)} recording segments; no observation window written")
+            return None
+        return int(lengths[0])
+
+    def observation_intervals(self) -> list[dict[str, Any]]:
+        """`core.clock_observation_intervals`, one window per stream's sample clock.
+
+        R38 §2.3: a sample clock's window is the extent of the recording it counts, which for
+        a clock whose origin is sample 0 is `[0, length - 1]`. It is deliberately not derived
+        from the spikes -- a denominator taken from the numerator makes every rate identical --
+        and it is the fact that makes the window independent of what the sorting found: a unit
+        that fires nothing was still observed.
+
+        Measured on `ecephys_776259_2025-04-09`, the last spike on each of the twelve probe
+        clocks falls 4 to 14 samples inside its clock's window, which is one waveform's
+        half-width and is what a sorter that cannot centre a template at the very end leaves.
+        """
+        rows = []
+        for stream in self.streams():
+            length = self._recording_length(stream)
+            if length is None:
+                continue
+            rows.append(
+                {
+                    "session_id": self.session_id,
+                    "clock_id": self._clock_id(stream),
+                    "interval_index": 0,
+                    "start_tick": 0,
+                    "stop_tick": length - 1,
+                }
+            )
+        return rows
+
     def _amplitude_unit(self, stream: SortedStream) -> str | None:
         """`uV` or `adc`, from the analyzer's own setting (R11 §2).
 
@@ -693,6 +742,7 @@ class SorterSource:
             "core.curation_versions": self.curation_versions(),
             "core.units": self.units(),
             "core.unit_quality_labels": self.unit_quality_labels(),
+            "core.clock_observation_intervals": self.observation_intervals(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 

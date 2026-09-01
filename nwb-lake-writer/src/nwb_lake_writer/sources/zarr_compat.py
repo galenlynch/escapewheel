@@ -95,6 +95,24 @@ def attrs(path: Path) -> dict[str, Any]:
     return parsed
 
 
+def attrs_at(root: Path, node: str) -> dict[str, Any]:
+    """Read a node's attributes from its own ``.zattrs`` or from the store's ``.zmetadata``.
+
+    A consolidated store need not write a directory per node, and SpikeInterface's does not:
+    a `SortingAnalyzer`'s `recording_info` -- which carries the length of the recording that
+    was sorted -- exists only inside ``.zmetadata``. Reading one without the other finds
+    nothing and reports it as an absent fact rather than an unread one.
+    """
+    if direct := attrs(root / node):
+        return direct
+    marker = root / ".zmetadata"
+    if not marker.is_file():
+        return {}
+    consolidated = json.loads(marker.read_text()).get("metadata") or {}
+    found: dict[str, Any] = consolidated.get(f"{node}/.zattrs") or {}
+    return found
+
+
 def read_array(path: Path, limit: int | None = None) -> NDArray[Any]:
     """Read a one-dimensional Zarr v2 array, whatever zarr-python makes of it.
 

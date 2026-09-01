@@ -7,6 +7,7 @@ import pytest
 
 from nwb_lake_writer.clock import HARP_TICK_RATE_HZ
 from nwb_lake_writer.sources import SourceDefect, SyncSource
+from nwb_lake_writer.sources.sync import suspect_terminals
 from tests import syncfixture
 from tests.syncfixture import AP_HZ, FIRST_SAMPLE, HARP_START, N_PULSES
 
@@ -209,3 +210,62 @@ def test_a_node_qualified_first_sample_wins(source, tmp_path):
     stream = next(s for s in source.aligned() if s.stream == "NI-DAQmx-107")
     source.first_samples = {stream.key: 111, stream.uid: 222}
     assert source._first_sample(stream) == 222
+
+
+# -- the terminal-anchor test (R37 §3.2) -----------------------------------------------
+
+#: Enough anchors for `suspect_terminals` to have an interior to judge against.
+LONG = 200
+
+
+def _train(displacement=0):
+    """A clean anchor train at 30 kHz against 31,250, with the first anchor displaced."""
+    ticks = np.arange(LONG, dtype=np.int64) * AP_HZ + 1000
+    parents = np.rint(ticks * (HARP_TICK_RATE_HZ / AP_HZ)).astype(np.int64) + 553_191_712_312
+    parents[0] += displacement
+    return ticks, parents
+
+
+def test_a_clean_train_withholds_nothing():
+    first, last, _ = suspect_terminals(*_train())
+    assert (first, last) == (False, False)
+
+
+def test_a_displaced_first_anchor_is_withheld():
+    """The upstream defect R37 §5 traces: only the first anchor of a stream is misplaced."""
+    first, last, residuals = suspect_terminals(*_train(displacement=200))
+    assert (first, last) == (True, False)
+    assert residuals["first"] == pytest.approx(200, abs=2)
+    assert residuals["threshold"] < 200
+
+
+def test_too_short_a_train_is_not_judged():
+    """Two anchors define no interior, so there is no distribution to be an outlier of."""
+    ticks, parents = _train()
+    assert suspect_terminals(ticks[:5], parents[:5]) == (False, False, {})
+
+
+# -- the reference clock's window (R38 §2.1) -------------------------------------------
+
+
+def test_the_harp_window_spans_the_sync_train(source):
+    """HARP-native, so the window needs no conversion -- which is the shape's whole point."""
+    source.anchors(clock_id_for=probes_only)
+    (window,) = source.observation_intervals()
+    assert window["clock_id"] == "harp"
+    assert window["start_tick"] == round(HARP_START * HARP_TICK_RATE_HZ)
+    assert window["stop_tick"] == round((HARP_START + N_PULSES - 1) * HARP_TICK_RATE_HZ)
+
+
+def test_no_window_before_the_anchors_are_read(source):
+    """The span is what reading the pulses saw, so there is nothing to say before that."""
+    assert source.observation_intervals() == []
+
+
+def test_reading_the_anchors_twice_reads_the_pulses_once(source):
+    """`build` asks for them once to locate tick 0 and once to write them."""
+    source.anchors(clock_id_for=probes_only)
+    before = len(source.notes)
+    source.anchors(clock_id_for=probes_only)
+    assert len(source.notes) == before
+    assert len(source.observation_intervals()) == 1

@@ -63,6 +63,69 @@ ARCHIVE = "original_timestamps.npy"
 #: `Record Node 109` in the clipped tree's directory name.
 NODE = re.compile(r"^Record Node (?P<node>\d+)$")
 
+#: How many neighbours a terminal anchor is predicted from in R37 §3.2's test, and how many
+#: interior anchors the same prediction is repeated at to get the distribution it is judged
+#: against. Thirty neighbours is what R37 §3.1 measured a local rate over; six hundred
+#: positions is enough for a stable 99th percentile and costs a millisecond.
+NEIGHBOURS, INTERIOR = 30, 600
+
+#: Which percentile of a clock's own interior residuals a terminal anchor must stay inside.
+#: Stated on the clock's spread rather than as a fixed tolerance because anchor quality is a
+#: property of a rig and a session, not of the format (R37 §3.2).
+SUSPECT_PERCENTILE = 99.0
+
+
+def _predict(at: int, ticks: NDArray[np.int64], parents: NDArray[np.int64], frm: int) -> float:
+    """R37 §3.1's estimator: the fitted rate, applied from the anchor at index `frm`."""
+    centre_t, centre_p = float(ticks.mean()), float(parents.mean())
+    dt = ticks.astype(np.float64) - centre_t
+    slope = float(dt @ (parents.astype(np.float64) - centre_p) / (dt @ dt))
+    return float(parents[frm]) + slope * float(at - ticks[frm])
+
+
+def suspect_terminals(
+    ticks: NDArray[np.int64],
+    parents: NDArray[np.int64],
+    *,
+    neighbours: int = NEIGHBOURS,
+    interior: int = INTERIOR,
+) -> tuple[bool, bool, dict[str, float]]:
+    """Apply R37 §3.2's test to a clock's first and last anchor.
+
+    Each terminal anchor is predicted from the `neighbours` anchors on its inward side and
+    the residual compared against the same one-sided residual taken at `interior` interior
+    positions. A terminal anchor outside that distribution's 99th percentile is one the
+    writer has reason to believe is misplaced, and R37 §3.2 says such an anchor is not
+    written.
+
+    The interior positions are the control that makes the test mean anything: they run the
+    identical estimator where nothing is suspected, so a large residual at the end is
+    attributable to the anchor rather than to the estimator being poorly conditioned there.
+
+    Returns
+    -------
+    tuple
+        Whether to drop the first anchor, whether to drop the last, and the residuals in
+        parent ticks -- `first`, `last` and the `threshold` they were judged against.
+    """
+    room = neighbours + 2
+    if ticks.size < room + 2:
+        return False, False, {}
+    control = np.abs(
+        [
+            _predict(ticks[i], ticks[i + 1 : i + 1 + neighbours], parents[i + 1 : i + 1 + neighbours], 0) - parents[i]
+            for i in range(1, min(interior, ticks.size - room))
+        ]
+    )
+    threshold = float(np.percentile(control, SUSPECT_PERCENTILE))
+    first = float(parents[0] - _predict(ticks[0], ticks[1 : 1 + neighbours], parents[1 : 1 + neighbours], 0))
+    last = float(parents[-1] - _predict(ticks[-1], ticks[-1 - neighbours : -1], parents[-1 - neighbours : -1], -1))
+    return (
+        abs(first) > threshold,
+        abs(last) > threshold,
+        {"first": round(first, 1), "last": round(last, 1), "threshold": round(threshold, 1)},
+    )
+
 
 @dataclass(frozen=True)
 class SyncStream:
@@ -158,6 +221,12 @@ class SyncSource:
         self.first_samples = dict(first_samples or {})
         self.prefix = prefix
         self.notes: list[str] = []
+        #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters.
+        self.withheld: dict[str, dict[str, Any]] = {}
+        self._observed: list[tuple[int, int]] = []
+        self._pulses: dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]] = {}
+        self._aligned: list[SyncStream] | None = None
+        self._unanchored: set[str] = set()
 
     # -- discovery ----------------------------------------------------------------------
 
@@ -189,7 +258,13 @@ class SyncSource:
         return found
 
     def aligned(self) -> list[SyncStream]:
-        """Return the streams a node owns, which are the ones carrying HARP time."""
+        """Return the streams a node owns, which are the ones carrying HARP time.
+
+        Memoized: a build asks for the anchors more than once, and a note repeated per ask
+        reads as a repeated defect rather than as one seen twice.
+        """
+        if self._aligned is not None:
+            return self._aligned
         every = self.streams()
         keep = [s for s in every if s.aligned]
         for skipped in (s for s in every if not s.aligned):
@@ -200,7 +275,8 @@ class SyncSource:
         if not keep:
             raise SourceDefect(f"{self.root}: no stream in {self.experiment} carries HARP-aligned timestamps")
 
-        return self._deduplicate(keep)
+        self._aligned = self._deduplicate(keep)
+        return self._aligned
 
     def _deduplicate(self, keep: list[SyncStream]) -> list[SyncStream]:
         """Drop a stream that is another one recorded twice.
@@ -305,18 +381,11 @@ class SyncSource:
         for stream in self.aligned():
             clock = name_of(stream)
             if clock is None:
-                self.notes.append(f"{stream.key}: no clock declared for it; anchored to nothing")
+                if stream.key not in self._unanchored:
+                    self._unanchored.add(stream.key)
+                    self.notes.append(f"{stream.key}: no clock declared for it; anchored to nothing")
                 continue
-            first = self._first_sample(stream)
-            samples, seconds = self._rises(stream)
-            ticks = samples - first
-            parents = np.rint(seconds * HARP_TICK_RATE_HZ).astype(np.int64)
-            if not ((np.diff(ticks) > 0).all() and (np.diff(parents) > 0).all()):
-                raise SourceDefect(
-                    f"{stream.key}: sync pulses do not increase on both clocks, so interpolation "
-                    "between them is undefined (R13 §3). A counter that reset mid-recording is two "
-                    "clocks, not one (R27 §6)"
-                )
+            ticks, parents = self.pulses(stream, clock)
             rows += [
                 {
                     "clock_id": clock,
@@ -326,18 +395,79 @@ class SyncSource:
                 }
                 for index, (tick, parent) in enumerate(zip(ticks, parents, strict=True))
             ]
-            self.notes.append(
-                f"{stream.key}: {ticks.size} anchors, ticks {int(ticks[0])}..{int(ticks[-1])}, "
-                f"parent {int(parents[0])}..{int(parents[-1])}"
-            )
         del parent_clock_id  # named for the caller's benefit; the parent lives on core.clocks
         return rows
+
+    def pulses(self, stream: SyncStream, clock: str) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+        """One stream's usable sync pulses as `(ticks, parent ticks)`, memoized.
+
+        Memoized because reading a stream's pulses is where R37 §3.2's test runs and where the
+        observed span is recorded, and both must happen exactly once however many times a
+        caller asks for the anchors. Keyed on the clock name, since that is what the caller
+        varies -- a stream anchored to nothing never reaches here.
+        """
+        if clock in self._pulses:
+            return self._pulses[clock]
+        first = self._first_sample(stream)
+        samples, seconds = self._rises(stream)
+        ticks = samples - first
+        parents = np.rint(seconds * HARP_TICK_RATE_HZ).astype(np.int64)
+        if not ((np.diff(ticks) > 0).all() and (np.diff(parents) > 0).all()):
+            raise SourceDefect(
+                f"{stream.key}: sync pulses do not increase on both clocks, so interpolation "
+                "between them is undefined (R13 §3). A counter that reset mid-recording is two "
+                "clocks, not one (R27 §6)"
+            )
+        # The window HARP was observed over is the whole pulse train, recorded before the test
+        # below removes anchors: withholding one is a statement about how well its parent tick
+        # is placed, not about whether the rig was running then.
+        self._observed.append((int(parents[0]), int(parents[-1])))
+        drop_first, drop_last, residuals = suspect_terminals(ticks, parents)
+        if drop_first or drop_last:
+            kept = slice(1 if drop_first else None, -1 if drop_last else None)
+            ticks, parents = ticks[kept], parents[kept]
+            withheld = ["first"] * drop_first + ["last"] * drop_last
+            self.withheld[clock] = {"anchors": withheld, **residuals}
+            self.notes.append(
+                f"{stream.key}: withheld the {' and '.join(withheld)} anchor; residual "
+                f"{residuals['first']:.0f}/{residuals['last']:.0f} parent ticks against a "
+                f"{residuals['threshold']:.0f}-tick interior threshold (R37 §3.2)"
+            )
+        self.notes.append(
+            f"{stream.key}: {ticks.size} anchors, ticks {int(ticks[0])}..{int(ticks[-1])}, "
+            f"parent {int(parents[0])}..{int(parents[-1])}"
+        )
+        self._pulses[clock] = (ticks, parents)
+        return ticks, parents
+
+    def observation_intervals(self) -> list[dict[str, Any]]:
+        """`core.clock_observation_intervals` for the reference clock (R38 §2.1).
+
+        The window is the span of the sync train, which is HARP-native and so needs no
+        conversion: every pulse carries a HARP time, and their extent is the interval over
+        which this session has HARP time at all. Outside it the reference clock is not
+        unobserved so much as unwitnessed, and either way nothing in the packet is on it.
+
+        :meth:`anchors` must have run, since the span is what it saw.
+        """
+        if not self._observed:
+            return []
+        return [
+            {
+                "session_id": self.session_id,
+                "clock_id": self.clock().clock_id,
+                "interval_index": 0,
+                "start_tick": min(start for start, _ in self._observed),
+                "stop_tick": max(stop for _, stop in self._observed),
+            }
+        ]
 
     def records(self, *, clock_id_for: Any = None) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records, keyed by resource ID."""
         built = {
             "core.clocks": [self.clock().record()],
             "core.clock_anchors": self.anchors(clock_id_for=clock_id_for),
+            "core.clock_observation_intervals": self.observation_intervals(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 
