@@ -252,3 +252,11 @@ def test_locating_tick_zero_is_recorded_as_a_compensation(source):
 def test_no_event_streams_means_no_windows(source):
     got = source.records(at_tick=FIRST_SPIKE_TICK, clock_id="harp", tick_rate_num=HARP_TICK_RATE_HZ)
     assert got["core.event_stream_observation_intervals"] == []
+
+
+def test_the_extent_spans_every_stream(source):
+    """Acquisition is staggered, so the session ends when its last stream does."""
+    start, stop = source.extent()
+    windows = source.streams()
+    assert start == min(w.start for w in windows) and stop == max(w.stop for w in windows)
+    assert start.tzinfo is not None and stop > start

@@ -119,6 +119,9 @@ class Context:
     reference: Any = None
     #: `core.event_streams` IDs the NWB declared, which the observation windows cover.
     event_streams: list[str] = field(default_factory=list)
+    #: Session facts a source derived that the recipe does not state, merged into
+    #: `core.sessions` after every source has run.
+    session_extra: dict[str, Any] = field(default_factory=dict)
 
 
 def order(recipe: Recipe) -> list[SourceSpec]:
@@ -219,6 +222,9 @@ def _harvest(spec: SourceSpec, source: Any, context: Context) -> None:
             for row in source.units()
         }
         context.clocks.update({c["clock_id"]: float(c["tick_rate_hz"]) for c in source.clocks()})
+    if spec.kind == "session":
+        # The recipe states when the session began; only the metadata says when it stopped.
+        context.session_extra["session_end_time"] = source.extent()[1]
     if spec.kind == "nwb":
         context.electrodes = dict(enumerate(row["electrode_id"] for row in source.electrodes()))
         context.event_streams = [row["event_stream_id"] for row in source.event_streams()]
@@ -364,9 +370,6 @@ def build(
         context.reference = _reference_clock(recipe, context)
     writer = PacketWriter(registry, packet_id=recipe.packet_id, description=recipe.description)
 
-    writer.add(
-        "core.sessions", [{"session_id": session_id, **{k: v for k, v in recipe.session.items() if k != "session_id"}}]
-    )
     if recipe.subject:
         writer.add("core.subjects", [dict(recipe.subject)])
 
@@ -400,6 +403,16 @@ def build(
         if strict and (refused := list(getattr(source, "notes", []))):
             raise RecipeError(f"{spec.kind}: {len(refused)} note(s) under --strict; first is {refused[0]}")
 
+    writer.add(
+        "core.sessions",
+        [
+            {
+                "session_id": session_id,
+                **{k: v for k, v in recipe.session.items() if k != "session_id"},
+                **context.session_extra,
+            }
+        ],
+    )
     writer.add("core.processing_runs", [_import_run(recipe, applied)])
     for entry in describe(applied):
         say(f"  compensated: {entry['id']}")

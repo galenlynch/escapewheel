@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -305,6 +305,26 @@ class SessionSource(Compensates):
             {"event_stream_id": event_stream_id, "interval_index": 0, "start_tick": start, "stop_tick": stop}
             for event_stream_id in event_stream_ids
         ]
+
+    def extent(self) -> tuple[datetime, datetime]:
+        """When the session began and ended, across every declared stream.
+
+        The union, not one stream's window: acquisition is staggered -- here ephys starts
+        first and behaviour runs 24 minutes past it -- and a session that ended when its
+        first stream did would exclude data the packet holds.
+
+        Returns
+        -------
+        tuple of datetime
+            Earliest start and latest stop, in UTC.
+        """
+        windows = self.streams()
+        if not windows:
+            raise SourceDefect(f"{self.path}: no data_streams, so the session has no extent")
+        return (
+            min(w.start for w in windows).astimezone(timezone.utc),
+            max(w.stop for w in windows).astimezone(timezone.utc),
+        )
 
     def records(
         self,
