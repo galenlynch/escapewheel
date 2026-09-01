@@ -485,11 +485,37 @@ records `core_version: "1.11"`. The metadata therefore names a device *type* and
 or exclude a substituted or re-flashed board. If this rig runs a re-implemented synchronizer,
 the metadata does not say so, and that gap is itself worth closing.
 
+### The decoder's outlier test is fragile in a way that would be catastrophic
+
+`remove_outliers` splits the decoded sequence wherever consecutive values do not differ by 1 and
+discards every run of length 1. A single corrupt barcode is therefore caught, which is what
+happened twice here.
+
+But the corruption is *structured*: the malformed frame keeps the low 24 bits and rewrites byte 3
+with a fixed pattern, so a second consecutive glitch would decode to exactly one more than the
+first. Two corrupt values differing by 1 are a run of length 2, which the test keeps — while the
+correct values either side become runs of length 1 and are discarded:
+
+```text
+remove_outliers([good, corrupt, corrupt+1, good])  keeps  [2880482049, 2880482050]
+```
+
+That injects anchor points **93.6 years** from the truth, makes the anchor sequence
+non-monotonic, and gives the per-segment fit a negative slope — time running backwards inside
+the segment. The warning it emits would name the *good* values as the outliers.
+
+It did not happen in this session; the two glitches were 1280 s apart. Nothing prevents it. The
+test should require a barcode's value to agree with its *arrival time* — a decoded second whose
+frame arrives a second after the previous one must be the previous second plus one — rather than
+only that consecutive values differ by 1.
+
 ### Upstream
 
-Two reports, not one. **The board** should not restart a frame mid-transmission, and should not
-lose output phase when it does. **The decoder** could
+Three reports, not one, and the third may matter most. **The board** should not restart a frame
+mid-transmission, and should not lose output phase when it does. **The decoder** could
 detect both halves cheaply and currently detects neither directly: a frame whose span is not 39
 bit-periods is malformed regardless of what it decodes to, and a barcode interval that departs
 from the cadence by more than a bit-period is a phase step that `remove_outliers` does not model.
-Neither is in `harp-python` as of `jsiegle/harp-python@decode-clock` `c73984a`. Not filed.
+Neither is in `harp-python` as of `jsiegle/harp-python@decode-clock` `c73984a`. **And
+`remove_outliers` should not be able to prefer two corrupt anchors over two good ones.** Not
+filed.
