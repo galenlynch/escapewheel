@@ -9,18 +9,23 @@ that arithmetic is written. A spike's tick is exact on its probe's clock and mea
 beside another probe's; the anchors are what relate them, and this turns the relation into
 numbers.
 
-Three rules, and the third is the one that costs
-------------------------------------------------
+Three rules, and the second is the one that was wrong
+-----------------------------------------------------
 
 Let *m* be the median interval between a clock's anchors.
 
 1. Between two anchors no more than 2*m* apart, linear interpolation on that pair.
-2. Beyond the terminal anchors, out to *m*, the **globally fitted rate** -- never the terminal
-   segment's slope. Measured on real sync pulses, a global fit predicts held-out anchors to
-   6-18 µs at one second and stays under 1.4 samples at a minute, while the terminal segment
-   degrades to ~0.9 ms. That difference is the whole reason R27 replaced R13's ban.
+2. Beyond the terminal anchors, ``parent(a) + rate * (t - a)`` where *a* is the nearer
+   terminal anchor and `rate` is fitted over the whole sequence (R37 §3.1). Both halves
+   matter and for different reasons. The *rate* is global because a terminal segment's slope
+   comes from two anchors and degrades to ~0.9 ms; the *offset* is the terminal anchor's own
+   parent tick because a global fit's intercept carries the session's clock wander -- ±1.7 ms
+   over 6,387 s here, which a straight line cannot bend to follow. Anchoring at the terminal
+   anchor drops p95 extrapolation error from 525 µs to 258 µs (R37 §2).
 3. Anywhere further than *m* from every anchor -- past the ends, or inside a wider gap -- the
-   mapping is undefined, and this returns a mask saying so rather than a plausible number.
+   mapping is undefined by default, and this returns a mask saying so rather than a plausible
+   number. R37 §3.3 makes the real bound one on *error*: a caller that has measured its own
+   clocks may widen `bound`, and one that has not gets R27 §5.3's distance unchanged.
 
 The mask is not a formality. On a real session the first sync pulse arrives 18,000 to 28,000
 samples after the recording starts, so the spikes in that window have no defined parent tick
@@ -115,11 +120,18 @@ def align(
     parent = np.rint(np.interp(ticks, anchor_t, anchor_p)).astype(np.int64)
 
     # Outside the anchor span np.interp clamps to the terminal value, which is a wrong answer
-    # rather than a missing one, so both ends are recomputed at the fitted rate.
-    slope, intercept = rate(anchor_t, anchor_p)
-    outside = (ticks < anchor_t[0]) | (ticks > anchor_t[-1])
-    if outside.any():
-        parent[outside] = np.rint(slope * ticks[outside].astype(np.float64) + intercept).astype(np.int64)
+    # rather than a missing one, so both ends are recomputed. R37 §3.1: the globally fitted
+    # rate, applied from the terminal anchor's own parent tick. The fit's intercept is not
+    # used -- it is the one place a line has to represent the whole session's wander at once,
+    # and it misses local truth by an amount that does not shrink with distance.
+    slope, _ = rate(anchor_t, anchor_p)
+    for end, tick, parent_tick in (
+        (ticks < anchor_t[0], anchor_t[0], anchor_p[0]),
+        (ticks > anchor_t[-1], anchor_t[-1], anchor_p[-1]),
+    ):
+        if end.any():
+            offsets = (ticks[end] - tick).astype(np.float64)
+            parent[end] = parent_tick + np.rint(slope * offsets).astype(np.int64)
 
     # Distance to the nearest anchor, which is what the bound is on -- the same threshold for
     # a gap between anchors and for the unanchored ends.
@@ -128,6 +140,53 @@ def align(
     right = np.minimum(left + 1, anchor_t.size - 1)
     nearest = np.minimum(np.abs(ticks - anchor_t[left]), np.abs(anchor_t[right] - ticks))
     return parent, nearest <= span
+
+
+def extrapolation_error(
+    anchor_t: NDArray[np.int64],
+    anchor_p: NDArray[np.int64],
+    distance: float,
+) -> dict[str, float]:
+    """Measure :func:`align`'s out-of-range estimator at a given distance, in parent ticks.
+
+    R37 §3.3 makes the bound one on error rather than on distance, and requires a writer that
+    wants more than R27 §5.3's one median interval to *measure* it at the distance it intends
+    to use. This is that measurement: every interior anchor stands in for a terminal one, the
+    §3.1 estimator predicts the anchor `distance` median intervals further on, and the spread
+    of the residuals is what the tolerance is compared against.
+
+    Interior positions are used because a terminal anchor is the one place the answer cannot
+    be checked -- there is nothing beyond it to compare against -- and because a clock's
+    interior is where its wander is representative rather than exceptional.
+
+    Parameters
+    ----------
+    anchor_t, anchor_p : numpy.ndarray of int64
+        The anchor pairs, strictly increasing.
+    distance : float
+        How far beyond the terminal anchor to predict, in median anchor intervals.
+
+    Returns
+    -------
+    dict
+        `median`, `p95` and `max` absolute error in parent ticks, and the `n` predictions
+        they were taken over. Empty where the clock has too few anchors to measure at all.
+    """
+    anchor_t = np.asarray(anchor_t, dtype=np.int64)
+    anchor_p = np.asarray(anchor_p, dtype=np.int64)
+    step = round(distance) or 1
+    if anchor_t.size < step + 3:
+        return {}
+    slope, _ = rate(anchor_t, anchor_p)
+    frm = np.arange(anchor_t.size - step)
+    predicted = anchor_p[frm] + slope * (anchor_t[frm + step] - anchor_t[frm]).astype(np.float64)
+    error = np.abs(anchor_p[frm + step].astype(np.float64) - predicted)
+    return {
+        "median": float(np.median(error)),
+        "p95": float(np.percentile(error, 95)),
+        "max": float(error.max()),
+        "n": int(error.size),
+    }
 
 
 class NotAligned(ValueError):
@@ -146,6 +205,39 @@ def anchors(packet: Any) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]
         order = np.argsort(tick[where], kind="stable")
         out[name] = (tick[where][order], parent[where][order])
     return out
+
+
+def declared_bound(packet: Any) -> float:
+    """Return the alignment bound the packet's writer established, or `BOUND`.
+
+    R37 §3.3 lets a writer map further than one median anchor interval once it has *measured*
+    the estimator at the distance it intends to use, and R37 §4 puts that record in
+    `core.processing_runs.parameters` rather than adding a column. So this is where the number
+    lives, and reading it is what makes a consumer's mapping match the writer's: a packet whose
+    spikes were placed at a bound of two and whose reader maps at one disagrees with itself
+    about which of its own rows have a time.
+
+    The largest bound any run measured wins, since a run that widened the bound is the one that
+    wrote the ticks in question. A packet with no such record maps at `BOUND`, which is what
+    R37 §3.3 says a packet that says nothing means.
+    """
+    import json
+
+    try:
+        runs = packet.table("core.processing_runs", columns=["parameters"])
+    except Exception:  # noqa: BLE001 -- an absent or unreadable table is simply no record
+        return BOUND
+    found = [BOUND]
+    for raw in runs.column("parameters").to_pylist():
+        if not raw:
+            continue
+        try:
+            measured = json.loads(raw).get("alignment_bound") or {}
+        except (TypeError, ValueError):
+            continue
+        if isinstance(measured, dict) and isinstance(measured.get("used"), int | float):
+            found.append(float(measured["used"]))
+    return max(found)
 
 
 def reference_clock(packet: Any) -> str:
@@ -215,6 +307,8 @@ __all__ = [
     "Unanchored",
     "align",
     "anchors",
+    "declared_bound",
+    "extrapolation_error",
     "mapped",
     "rate",
     "reference_clock",

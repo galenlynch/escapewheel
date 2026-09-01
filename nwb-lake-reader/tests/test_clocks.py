@@ -1,9 +1,12 @@
 """Mapping ticks onto a parent clock, and refusing where the mapping is undefined."""
 
+import json
+
 import numpy as np
+import pyarrow as pa
 import pytest
 
-from nwb_lake_reader.clocks import Unanchored, align, rate
+from nwb_lake_reader.clocks import BOUND, Unanchored, align, declared_bound, extrapolation_error, rate
 
 AP, HARP = 30000, 31250
 
@@ -71,7 +74,7 @@ def test_a_wider_bound_admits_more():
 
 def test_extrapolation_uses_the_fitted_rate_not_the_last_segment():
     """R27 §5.2: the terminal segment's slope comes from two anchors and degrades; the
-    global fit does not. A jittered final anchor must not steer the extrapolation."""
+    global fit does not. A jittered final anchor must not steer the *rate*."""
     jittered = ANCHOR_P.copy()
     jittered[-1] += 400  # one bad edge detection
     beyond = np.array([ANCHOR_T[-1] + AP // 2], dtype=np.int64)
@@ -79,6 +82,36 @@ def test_extrapolation_uses_the_fitted_rate_not_the_last_segment():
     assert defined.all()
     segment = jittered[-1] + (jittered[-1] - jittered[-2]) // 2
     assert abs(int(parent[0]) - segment) > 100  # not the terminal segment's answer
+
+
+def test_extrapolation_starts_at_the_terminal_anchor():
+    """R37 §3.1: the offset is the terminal anchor's parent tick, not a global intercept.
+
+    Displacing every anchor by a constant moves the extrapolation by exactly that constant,
+    which is what "anchored at the terminal anchor" means and what an intercept-based
+    estimator cannot promise once the sequence is not straight.
+    """
+    half = AP // 2
+    for step in (0, 7919):
+        parent, defined = align(np.array([ANCHOR_T[-1] + half], dtype=np.int64), ANCHOR_T, ANCHOR_P + step)
+        assert defined.all()
+        assert int(parent[0]) == ANCHOR_P[-1] + step + HARP // 2
+
+
+def test_a_bent_sequence_extrapolates_from_where_it_ended():
+    """The finding R37 was written for: a clock that wanders leaves a fitted line offset
+    from local truth at the ends, and the offset does not shrink with distance."""
+    bend = np.rint(200 * np.sin(np.arange(8) * 0.7)).astype(np.int64)
+    wandering = ANCHOR_P + bend
+    parent, _ = align(np.array([ANCHOR_T[-1] + AP], dtype=np.int64), ANCHOR_T, wandering)
+    slope, intercept = rate(ANCHOR_T, wandering)
+    # One interval on from the last anchor, at the fitted rate, wherever that anchor sits --
+    # which the intercept-based answer misses by the bend the line could not follow.
+    assert int(parent[0]) == round(wandering[-1] + slope * AP)
+    # The intercept-based answer differs by the last anchor's residual from the line -- an
+    # offset that is there at any distance, since both estimators use the same rate.
+    residual = wandering[-1] - (slope * ANCHOR_T[-1] + intercept)
+    assert round(slope * (ANCHOR_T[-1] + AP) + intercept) == pytest.approx(int(parent[0]) - residual, abs=1)
 
 
 def test_the_fit_recovers_a_clean_rate():
@@ -123,3 +156,56 @@ def test_a_million_ticks_map_without_a_python_loop():
     parent, defined = align(many.astype(np.int64), ANCHOR_T, ANCHOR_P)
     assert defined.all()
     assert bool((np.diff(parent) >= 0).all())  # monotone in, monotone out
+
+
+# -- measuring the bound (R37 §3.3) ----------------------------------------------------
+
+
+def test_a_clean_clock_extrapolates_within_quantization():
+    """The estimator on a straight sequence costs rounding and nothing else."""
+    measured = extrapolation_error(ANCHOR_T, ANCHOR_P, 1)
+    assert measured["n"] == ANCHOR_T.size - 1
+    assert measured["max"] <= 1
+
+
+def test_error_grows_with_the_bend_not_with_the_distance():
+    """R37 §2's finding: what costs is the sequence's wander, not how far you reach."""
+    wandering = ANCHOR_P + np.rint(300 * np.sin(np.arange(ANCHOR_T.size) * 0.9)).astype(np.int64)
+    assert extrapolation_error(ANCHOR_T, wandering, 1)["median"] > extrapolation_error(ANCHOR_T, ANCHOR_P, 1)["median"]
+
+
+def test_too_few_anchors_measure_nothing():
+    assert extrapolation_error(ANCHOR_T[:3], ANCHOR_P[:3], 5) == {}
+
+
+# -- reading the bound a writer established (R37 §4) ------------------------------------
+
+
+class _Runs:
+    """A packet stub carrying only what `declared_bound` reads."""
+
+    def __init__(self, *parameters):
+        self._table = pa.table({"parameters": pa.array(parameters, pa.string())})
+
+    def table(self, resource_id, columns=None):
+        del resource_id, columns
+        return self._table
+
+
+def test_a_packet_that_says_nothing_maps_at_the_default():
+    assert declared_bound(_Runs(json.dumps({"recipe": {}}))) == BOUND
+
+
+def test_the_measured_bound_is_read_from_the_run_that_measured_it():
+    """R37 §4 puts it in `parameters` rather than in a column, so this is where it lives."""
+    assert declared_bound(_Runs(json.dumps({"alignment_bound": {"used": 2.0, "distance": 2}}))) == 2.0
+
+
+def test_the_widest_measured_bound_wins():
+    runs = _Runs(json.dumps({"alignment_bound": {"used": 3.0}}), json.dumps({"bound": 1.0}), None)
+    assert declared_bound(runs) == 3.0
+
+
+def test_an_unreadable_record_is_no_record():
+    """Free-form JSON someone else wrote must not be able to break a read path."""
+    assert declared_bound(_Runs("not json", json.dumps({"alignment_bound": "nonsense"}))) == BOUND
