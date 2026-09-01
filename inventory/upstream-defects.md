@@ -5,7 +5,7 @@ Found while writing the Phase 3 adapters against `ecephys_776259_2025-04-09` and
 specification, and each is worked around in `nwb-lake-writer` — the workarounds are noted so
 they can be removed once a fix lands.
 
-Measured 2026-08-28 and 2026-08-29. Nothing here has been filed.
+Measured 2026-08-28 to 2026-09-01. Nothing here has been filed.
 
 ---
 
@@ -259,3 +259,51 @@ believable number. The gap is left visible.
 **Not currently load-bearing, by luck.** `core.units.default_electrode_id` is null for every
 unit in the packet, so the corpus's `undetected_default` check has nothing to catch. Had the
 adapter filled it from `extremum_channel_index`, all 609 would be validation errors.
+
+---
+
+## 9. `harp-python` maps out-of-range timestamps with the global fit, displacing every stream's first sync pulse
+
+`harp.clock.align_timestamps_to_anchor_points` builds one linear model per barcode segment and,
+at index 0, a least-squares fit over every barcode. It then selects a model per timestamp:
+
+```python
+nearest = np.searchsorted(start_times, timestamps_to_align, side="left")
+nearest[nearest == N] = 0
+aligned = timestamps_to_align * slopes[nearest] + offsets[nearest]
+```
+
+`searchsorted` yields 0 before the first anchor and `N` after the last, and the second line
+folds `N` onto 0. Both out-of-range regions are therefore mapped by the global fit while every
+interior point uses its own segment.
+
+It predicts the measurement exactly. On `ecephys_776259_2025-04-09` the barcode anchors span
+11,575,877.001 → 11,582,264.039 s; the sync pulses span 11,575,876.947 → 11,582,263.930. The
+first pulse falls 54 ms **before** the first barcode and comes out displaced; the last falls
+109 ms **inside** the last barcode and is clean.
+
+Measured against each clock's own interior spread — predict an anchor from a one-sided fit over
+its thirty neighbours, and compare the residual against the same statistic taken at 600 interior
+positions:
+
+| | median | p99 | first anchor | last anchor |
+|---|---:|---:|---:|---:|
+| interior residual | 2.5–30 µs | 126–140 µs | | |
+| ten of twelve probe clocks | | | 156–288 µs | 4–33 µs |
+| 46110 and 46122 | | | 4–10 µs | 4–10 µs |
+
+Only the first anchor of a stream is affected, and only where the first pulse preceded the first
+barcode. Nothing below this layer is implicated: Open Ephys's `sample_numbers` are exact and its
+`original_timestamps` carry no terminal anomaly, only ±1.2 ms of software jitter throughout,
+which the alignment otherwise removes to a single sample.
+
+**Workaround:** `SyncSource` applies R37 §3.2's test and withholds a terminal anchor whose
+residual exceeds its own clock's interior 99th percentile — ten of twelve first anchors on this
+session, no last anchors. What it withheld goes in `core.processing_runs.parameters`. Because
+that moves the first usable anchor from 0.66 s to 1.66 s, the build then measures the
+extrapolation error at the distance it needs (R37 §3.3) and maps at two median anchor intervals,
+which costs 0.96 parent ticks at the median — inside R37's one-tick tolerance.
+
+**Upstream:** drafted against `jsiegle/harp-python@decode-clock` commit `c73984a`; not filed.
+The fix is to give the out-of-range regions their own terminal-anchored models rather than
+folding them onto index 0, which is the same correction R37 §3.1 makes to this specification.
