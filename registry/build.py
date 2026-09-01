@@ -620,6 +620,57 @@ def build() -> dict:
                  ("core.source_files", ["source_file_id"])]:
         T(n)["primary_key"] = k
 
+    # ---- R41 : which derived thing is current ----------------------------------------------
+    # A project re-sorts, re-curates and runs new models over the same video, and the format
+    # already lets the alternatives coexist. What it could not say is which to use. R32 gives
+    # snapshots and `parent_curation_id` gives lineage for curation alone; a snapshot cannot
+    # express currency, because all three sortings are inside it.
+    #
+    # Keyed on the producing run rather than on any core table, so an R17 extension's outputs
+    # are reachable without the core registry knowing its tables. That needs the graph wired
+    # up first: only `core.event_streams` referenced `core.processing_runs` (R23).
+    SINCE[0] = "R41 §2.1"
+    for name, after in (("core.sorting_runs", "sorter_version"),
+                        ("core.curation_versions", "curation_tool_version")):
+        add_col(name, col("processing_run_id", "string", "nullable",
+                          "The run that produced this record, where provenance is recorded."),
+                after=after)
+        T(name).setdefault("references", []).append(
+            {"columns": ["processing_run_id"], "resource": "core.processing_runs",
+             "resource_columns": ["processing_run_id"]})
+
+    # Lineage, generalising `parent_curation_id` to every activity. A claim about intent, not
+    # about correctness: the superseded run keeps its rows, which is the point of keeping both.
+    SINCE[0] = "R41 §2.2"
+    add_col("core.processing_runs",
+            col("supersedes", "string", "nullable", "The run this one replaces, if any."),
+            after="activity_type")
+    T("core.processing_runs").setdefault("references", []).append(
+        {"columns": ["supersedes"], "resource": "core.processing_runs",
+         "resource_columns": ["processing_run_id"]})
+
+    # The choice itself. Separate from the run log because that log should never be revised
+    # while a preference changes whenever someone changes their mind -- objects and refs.
+    SINCE[0] = "R41 §2.3"
+    tables["core.preferred_runs"] = {
+        "columns": [col("session_id", "string", "required", "Session ID."),
+                    col("activity_type", "string", "required",
+                        "Which kind of output this preference is about. Open, as R9 §6 leaves it."),
+                    col("scope", "string", "required",
+                        "What it applies to -- a probe_id, an array_asset_id, a camera -- or the "
+                        "session_id itself where the preference is session-wide."),
+                    col("processing_run_id", "string", "required", "The preferred run."),
+                    col("chosen_at", "timestamp", "nullable", "When the choice was made."),
+                    col("reason", "string", "nullable", "Why, in one line.")],
+        # `scope` is required rather than nullable because R7 wants a real key, and a nullable
+        # key column makes uniqueness ill-defined.
+        "primary_key": ["session_id", "activity_type", "scope"],
+        "references": [{"columns": ["session_id"], "resource": "core.sessions",
+                        "resource_columns": ["session_id"]},
+                       {"columns": ["processing_run_id"], "resource": "core.processing_runs",
+                        "resource_columns": ["processing_run_id"]}],
+        "sort": None, "rules": [], "since": SINCE[0]}
+
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
     # expand against the key, and R7 above is what settles three of them.
@@ -652,7 +703,7 @@ def build() -> dict:
             # Every revision whose decisions are applied above, so the registry says what it
             # was derived from rather than leaving it to the block comments.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             "revisions": [f"R{n}" for n in range(1, 40)]},
+                             "revisions": [f"R{n}" for n in range(1, 42)]},
             "tables": dict(sorted(tables.items()))}
 
 

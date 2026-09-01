@@ -8,16 +8,16 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-34 tables, 283 columns, 49 references, 54 Tier 2 rules
+35 tables, 292 columns, 54 references, 59 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41
 ```
 
 ## Contents
 
 **analysis** (3) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.spike_events`](#analysisspike_events)
 
-**core** (31) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.trial_tags`](#coretrial_tags) · [`core.trials`](#coretrials) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
+**core** (32) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.trial_tags`](#coretrial_tags) · [`core.trials`](#coretrials) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
 
 ## `analysis`
 
@@ -288,6 +288,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `curator` | string | nullable |  | Curator. |
 | `curation_tool` | string | nullable |  | Tool. |
 | `curation_tool_version` | string | nullable |  | Tool version. |
+| `processing_run_id` | string | nullable | R41 §2.1 | The run that produced this record, where provenance is recorded. |
 | `parent_curation_id` | string | nullable |  | Parent curation. |
 | `created_at` | timestamp | nullable |  | Creation time. |
 | `notes` | string | nullable |  | Notes. |
@@ -295,6 +296,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 **Primary key** — `curation_id`  
 **Sort** — `curation_id`
+
+**References**
+
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
 ### `core.devices`
 
@@ -461,6 +466,33 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Primary key** — `media_asset_id`, `frame_index`  
 **Sort** — `media_asset_id`, `frame_index`
 
+### `core.preferred_runs`
+
+*Introduced by R41 §2.3 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | string | **required** | R41 §2.3 | Session ID. |
+| `activity_type` | string | **required** | R41 §2.3 | Which kind of output this preference is about. Open, as R9 §6 leaves it. |
+| `scope` | string | **required** | R41 §2.3 | What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide. |
+| `processing_run_id` | string | **required** | R41 §2.3 | The preferred run. |
+| `chosen_at` | timestamp | nullable | R41 §2.3 | When the choice was made. |
+| `reason` | string | nullable | R41 §2.3 | Why, in one line. |
+
+**Primary key** — `session_id`, `activity_type`, `scope`  
+**Sort** — the primary key (R10 §2)
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
+
+**Tier 2 rules** — 3
+
+- `core.preferred_runs.activity_matches_run` — error: a preference names a run whose activity_type differs from the preference's
+- `core.preferred_runs.run_in_session` — error: a preference names a run belonging to another session
+- `core.preferred_runs.not_superseded` — warning: the preferred run is superseded by another run
+
 ### `core.probes`
 
 | Column | Type | Presence | Since | Description |
@@ -508,6 +540,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `processing_run_id` | string | **required** |  | Stable processing run ID. |
 | `session_id` | string | nullable |  | Session ID if session-scoped. |
 | `activity_type` | string | **required** | R8 §3-4 | import, validation, sorting, curation, materialization, etc. |
+| `supersedes` | string | nullable | R41 §2.2 | The run this one replaces, if any. |
 | `software_name` | string | nullable |  | Software name. |
 | `software_version` | string | nullable |  | Software version. |
 | `code_uri` | string | nullable |  | Code reference. |
@@ -520,10 +553,16 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Primary key** — `processing_run_id`  
 **Sort** — the primary key (R10 §2)
 
-**Tier 2 rules** — 2
+**References**
+
+- `supersedes` → `core.processing_runs` (`processing_run_id`)
+
+**Tier 2 rules** — 4
 
 - `core.processing_runs.no_failed_runs` — error: a failed run is recorded in a committed packet
 - `core.processing_runs.materialization_records_software` — error: a materialization run does not record the software that produced it
+- `core.processing_runs.supersedes_not_self` — error: a run supersedes itself
+- `core.processing_runs.supersedes_well_founded` — error: the supersedes chain contains a cycle
 
 ### `core.session_experimenters`
 
@@ -582,6 +621,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `clock_id` | string | **required** | R38 §2.2 | Clock the run's spike ticks are counted on. |
 | `sorter_name` | string | nullable |  | Sorter name. |
 | `sorter_version` | string | nullable |  | Sorter version. |
+| `processing_run_id` | string | nullable | R41 §2.1 | The run that produced this record, where provenance is recorded. |
 | `amplitude_unit` | string | nullable | R11 §2 | Unit of core.spike_events.amplitude for this run, e.g. uV, adc. |
 | `parameters` | json_string | optional |  | Sorter parameters. |
 | `input_array_asset_id` | string | nullable |  | Input array asset. |
@@ -595,6 +635,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **References**
 
 - `clock_id` → `core.clocks` (`clock_id`)
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
 **Tier 2 rules** — 1
 

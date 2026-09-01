@@ -107,6 +107,18 @@
         "level": "error",
         "message": "a materialization run does not record the software that produced it",
         "sql": "SELECT processing_run_id, software_name, software_version FROM core_processing_runs WHERE activity_type = 'materialization' AND (software_name IS NULL OR software_version IS NULL)"
+      },
+      {
+        "id": "core.processing_runs.supersedes_not_self",
+        "level": "error",
+        "message": "a run supersedes itself",
+        "sql": "SELECT processing_run_id FROM core_processing_runs WHERE supersedes = processing_run_id"
+      },
+      {
+        "id": "core.processing_runs.supersedes_well_founded",
+        "level": "error",
+        "message": "the supersedes chain contains a cycle",
+        "sql": "WITH RECURSIVE up(processing_run_id, ancestor, depth) AS (SELECT processing_run_id, supersedes, 1 FROM core_processing_runs WHERE supersedes IS NOT NULL UNION ALL SELECT u.processing_run_id, r.supersedes, u.depth + 1 FROM up u JOIN core_processing_runs r ON r.processing_run_id = u.ancestor WHERE r.supersedes IS NOT NULL AND u.depth < 64) SELECT DISTINCT processing_run_id FROM up WHERE ancestor = processing_run_id OR depth >= 64"
       }
     ],
     "core.sessions": [
@@ -345,6 +357,26 @@
         "index": "interval_index",
         "overlap_op": "<=",
         "overlap_message": "observation windows overlap, which would double-count observed time"
+      }
+    ],
+    "core.preferred_runs": [
+      {
+        "id": "core.preferred_runs.activity_matches_run",
+        "level": "error",
+        "message": "a preference names a run whose activity_type differs from the preference's",
+        "sql": "SELECT p.session_id, p.activity_type, p.scope, r.activity_type FROM core_preferred_runs p JOIN core_processing_runs r USING (processing_run_id) WHERE r.activity_type IS DISTINCT FROM p.activity_type"
+      },
+      {
+        "id": "core.preferred_runs.run_in_session",
+        "level": "error",
+        "message": "a preference names a run belonging to another session",
+        "sql": "SELECT p.session_id, p.processing_run_id, r.session_id FROM core_preferred_runs p JOIN core_processing_runs r USING (processing_run_id) WHERE r.session_id IS NOT NULL AND r.session_id IS DISTINCT FROM p.session_id"
+      },
+      {
+        "id": "core.preferred_runs.not_superseded",
+        "level": "warning",
+        "message": "the preferred run is superseded by another run",
+        "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes = p.processing_run_id)"
       }
     ]
   }
