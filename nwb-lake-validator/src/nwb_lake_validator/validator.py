@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
+import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
@@ -208,6 +209,77 @@ def _check_materialization_provenance(packet: Packet, report: Report) -> None:
             "provenance.unknown_processing_run",
             f"processing_run_id {missing!r} appears in no row of core.processing_runs (R31 §5)",
         )
+
+
+def _check_time_origin(packet: Packet, report: Report) -> None:
+    """Layer 1d: `t_zero_tick` is the earliest observation start on the reference clock (R39 §2.4).
+
+    Not SQL, and for the reason R39 §2.4 gives: the minimum is taken across clocks, and getting
+    a clock's `start_tick` onto the reference is R13's anchor-based mapping -- arithmetic no
+    query expresses. A packet declaring no origin is conforming and is not checked; one that
+    declares a *wrong* origin silently shifts every second a consumer derives, which is why the
+    check exists at all.
+    """
+    from nwb_lake_reader.clocks import align, anchors, declared_bound, reference_clock
+
+    try:
+        sessions = packet.table("core.sessions")
+        intervals = packet.table("core.clock_observation_intervals")
+    except PacketError:
+        return
+    if "t_zero_tick" not in sessions.column_names or not intervals.num_rows:
+        return
+    declared = [t for t in sessions.column("t_zero_tick").to_pylist() if t is not None]
+    if not declared:
+        return
+
+    try:
+        reference, by_clock = reference_clock(packet), anchors(packet)
+        bound = declared_bound(packet)
+    except (PacketError, ValueError) as refused:
+        report.add("error", "time.origin_unmappable", f"t_zero_tick is declared but {refused}")
+        return
+
+    starts: list[int] = []
+    for clock, start in zip(
+        intervals.column("clock_id").to_pylist(), intervals.column("start_tick").to_pylist(), strict=True
+    ):
+        if clock == reference:
+            starts.append(int(start))
+            continue
+        if clock not in by_clock:
+            report.add(
+                "error",
+                "time.origin_unmappable",
+                f"{clock} declares an observation window but no anchors, so the minimum R39 §2.1 "
+                "defines cannot be taken",
+                [(clock,)],
+            )
+            return
+        converted, defined = align(np.array([start], dtype=np.int64), *by_clock[clock], bound=bound)
+        if not defined[0]:
+            report.add(
+                "error",
+                "time.origin_unmappable",
+                f"{clock}'s observation start does not map to {reference} within the alignment "
+                "bound, so no origin is defined (R39 §2.4)",
+                [(clock, str(start))],
+            )
+            return
+        starts.append(int(converted[0]))
+
+    expected = min(starts)
+    for stated in declared:
+        # The writer's own estimator is not bit-reproducible from the packet -- it may have
+        # fitted over anchors it then withheld -- so agreement is judged at R37 §3.3's
+        # tolerance of one parent tick rather than exactly.
+        if abs(int(stated) - expected) > 1:
+            report.add(
+                "error",
+                "time.origin_not_earliest",
+                f"t_zero_tick is {stated} but the earliest observation start on {reference} is {expected} (R39 §2.1)",
+                [(str(stated), str(expected))],
+            )
 
 
 def _declared_axes(packet: Packet, owned: Sequence[Any], report: Report) -> dict[str, set[int]] | None:
@@ -987,6 +1059,7 @@ def validate(
         _resolve_external(packet, report, checksums)
     _check_packet_owned_arrays(packet, report)
     _check_materialization_provenance(packet, report)
+    _check_time_origin(packet, report)
     present = _check_schemas(packet, effective["tables"], report)
     unsound = _check_ordering(effective["tables"], present, report, scan)
     _run_rules(packet, effective, present, report, advisory, limits, unsound, recheck)

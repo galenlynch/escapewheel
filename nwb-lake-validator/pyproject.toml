@@ -20,6 +20,7 @@ version = "0.1.0"
 dependencies = [
     "nwb-lake-reader[sql]",
     "jsonschema>=4.26.0",
+    "numpy>=1.26",
     "pyarrow>=25.0.1",
 ]
 
