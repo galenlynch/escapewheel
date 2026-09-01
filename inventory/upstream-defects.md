@@ -376,61 +376,84 @@ Because `aind-ephys-rig-qc` materializes the result per sample, every consumer o
 
 ---
 
-## 10. HARP time steps back ~1.5 ms twice a session
+## 10. The HARP clock board emits a malformed frame twice a session, and loses 1.6 ms of phase each time
 
-Found while asking why R40's measured *maximum* extrapolation error is 1.6 ms when its p95 is
-117 µs. It is not a bad sync pulse, and R37 §3.2's terminal-anchor test cannot reach it.
+Found by asking why R40's measured *maximum* extrapolation error is 1.6 ms when its p95 is
+117 µs. It is not a bad sync pulse, and R37 §3.2's terminal-anchor test cannot reach it. The
+first version of this entry called it "HARP time stepping backwards"; that was the observable,
+not the cause, and the cause is more specific and more actionable.
 
-Taking each sync-pulse interval's departure from the probe's own sample counter, two intervals
-per session are short — and the deficit is permanent, not a spike that recovers:
+### What the signal does
+
+The HARP clock line carries, once a second, a 32-bit count of whole seconds: a low start bit,
+then four bytes LSB-first separated by two-bit high/low transitions, at 1 kHz — **39 bit-periods,
+39 ms**. Every frame in this session is 39.00 ms (p1 39.00, p99 39.03) except two, which are
+**59.00 ms** — exactly twenty bit-periods long. Reconstructing the bits:
 
 ```text
-   i       t_tick           parent        Δt    Δparent   implied ratio
-3514    105471714     361855998090     30000      31250      1.0416667
-3515    105501714     361856029316     30000      31226      1.0408667   ← −768 µs
-3516    105531714     361856060540     30000      31224      1.0408000   ← −832 µs
-3517    105561714     361856091790     30000      31250      1.0416667   ← resumes, 1.6 ms behind
+good  frame (39):  000000000101101010110000011011000000000
+                   S00000000..11111111..22222222..33333333
+bad   frame (59):  01000000010110101011000001101101101010110000011011000000000
 ```
 
-**It is HARP, not the probes.** The two steps fall at the *same HARP instants* —
-11,578,111.942 s and 11,579,391.939 s — on all twelve probe streams, which are twelve
-independent sample counters in two record nodes:
+The malformed frame is `frame[0:29]` followed by `frame[9:39]`. The board transmitted the start
+bit, byte 0, byte 1 and byte 2, then **restarted mid-frame** and re-sent byte 1, byte 2 and
+byte 3. Two bytes go out twice.
 
-| | step 1 | step 2 | net |
-|---|---:|---:|---:|
-| every stream | −1471 to −1504 µs | −1567 to −1600 µs | −3.1 ms |
+### And it loses phase
 
-The spread across streams is one HARP tick, which is quantization. Each probe's own Δt is a
-regular 30,000 throughout.
+The interval from the malformed frame to the next is **1001.70 ms** against a median cadence of
+1000.07 ms. Every other interval in the session is within 100 µs of that median. The cadence
+then resumes, so the 1.6 ms is not a pause but a **permanent phase step**: every subsequent
+barcode edge is emitted 1.6 ms later than it would have been.
 
-**It is not a missing barcode.** The barcode line carries 6,388 barcodes, one per second, nine
-pulses each, with no irregular interval anywhere in the session.
+| | frame span | interval to next |
+|---|---:|---:|
+| frame 2235 | 59.00 ms | +1600 µs |
+| frame 3515 | 59.00 ms | +1633 µs |
+| all 6,384 others | 39.00 ms | within 100 µs |
 
-**The alignment is otherwise doing its job.** Per sync-pulse interval, against the probe clock:
+### It is the wire, not the recording, and not the decode
 
-| | p50 | p95 | max |
-|---|---:|---:|---:|
-| before alignment (Open Ephys software time) | 7.2 µs | 525.7 µs | 1813.6 µs |
-| after alignment (rig-qc, HARP) | 16.2 µs | 58.9 µs | 831.6 µs |
+Both record nodes — two independent DAQ cards — see the same two malformed frames at the same
+local times to 0.1 ms. A recording artifact could not do that, and could not make *subsequent*
+frames arrive late. The decode is software (`harp.clock.decode_harp_clock`, run offline by
+rig QC) and cannot lengthen a signal.
 
-p95 improves ninefold and the residual median of 16.2 µs is half a HARP tick — the quantization
-floor, so the alignment is at its own resolution everywhere except these two points.
+### What each half costs
 
-**Cause not established.** Either HARP's counter genuinely stepped, or one barcode in each pair
-decoded to a value ~1.5 ms low. The pre-alignment timestamps carry ±1.8 ms of software jitter,
-which is larger than the step, so the step cannot be isolated in them. Distinguishing the two
-needs the decoded barcode values, which the packet does not carry.
+**The malformed frame** is caught. `convert_barcode` reads byte 3 from fixed bit-periods 31–38,
+which in a 59-bit frame land in the repeated region, so byte 3 decodes to garbage while the low
+24 bits stay correct — `0xab000000` and `0xb0000000` of error, entirely in the top byte.
+`remove_outliers` then discards both, warning `2 outliers found in the decoded Harp clock`.
 
-**Workaround:** none, and deliberately. The anchors represent the shift faithfully —
-interpolation between them reproduces the upstream timestamps to 0.1 µs (§9) — and the shift is
-*permanent*, so withholding the anchors at the step would not remove it, only smear it across a
-wider interpolation. R37 §3.2's test is for anchors that are individually misplaced against
-their neighbours; this is a level change that every subsequent anchor agrees with.
+**The phase step is not caught by anything**, and it is the part that reaches the data. The
+board's counter never moves backwards — the decoded seconds are strictly +1 throughout. What
+moves is *when* the edge marking each second is emitted, so a local time converted to HARP comes
+out 1.6 ms low after each glitch. Twice, both negative, **net −3.1 ms across the session**.
 
-**What it means for a consumer.** Times either side of a step are internally consistent and
-offset from each other by 1.5 ms. Nothing within a trial is affected. A measurement comparing
-the first third of a session against the last carries up to 3.1 ms of offset, which matters for
-a 1 ms cross-correlogram bin and for nothing coarser.
+### What a consumer sees
+
+Times either side of a step are internally consistent and offset from each other by 1.6 ms.
+Nothing within a trial is affected. A measurement comparing the first third of a session against
+the last carries up to 3.1 ms, which matters for a 1 ms cross-correlogram bin and nothing coarser.
+
+### Workaround
+
+None, and deliberately. The anchors represent the phase step faithfully — interpolation between
+them reproduces the upstream timestamps to 0.1 µs (§9) — and it is permanent, so withholding the
+anchors at the step would smear it rather than remove it. R37 §3.2's test is for an anchor
+misplaced against its neighbours; this is a level change they all agree with.
 
 It is also why R40 §2.2 gates on p95 rather than on the maximum: the maximum here reports two
 upstream events, not the quality of the estimator being bounded.
+
+### Upstream
+
+Two reports, not one. **The board** should not restart a frame mid-transmission, and should not
+lose output phase when it does — the rig runs a recent re-implementation of the synchronizer, so
+this is a candidate firmware defect rather than long-standing behaviour. **The decoder** could
+detect both halves cheaply and currently detects neither directly: a frame whose span is not 39
+bit-periods is malformed regardless of what it decodes to, and a barcode interval that departs
+from the cadence by more than a bit-period is a phase step that `remove_outliers` does not model.
+Neither is in `harp-python` as of `jsiegle/harp-python@decode-clock` `c73984a`. Not filed.
