@@ -337,6 +337,38 @@ that moves the first usable anchor from 0.66 s to 1.66 s, the build then measure
 extrapolation error at the distance it needs (R37 §3.3) and maps at two median anchor intervals,
 which costs 0.96 parent ticks at the median — inside R37's one-tick tolerance.
 
+**Confirmed against an independent implementation, 2026-09-01.** `aind-ephys-export-nwb`
+solves the same problem a different way: it loads `continuous/<stream>/timestamps.npy` — a dense
+float64 per sample, which `aind-ephys-rig-qc` has rewritten to HARP — calls
+`recording.set_times(sync_times)` and `sorting.register_recording(recording)`, so a spike time is
+a lookup into that array at the spike's frame. No interpolation, no anchors, and no way to say
+"undefined".
+
+Comparing that array's element 0 — the HARP time of the recording's sample 0 — against the same
+quantity reconstructed from our anchors:
+
+| stream | first anchor | theirs − ours | its own residual, §3.2 |
+|---|---|---:|---:|
+| 46110 | kept | **+0.1 µs** | +10.3 µs |
+| 46122 | kept | **+0.8 µs** | +4.2 µs |
+| 45883-1 | withheld | +135.0 µs | +156.5 µs |
+| 46113 | withheld | −157.2 µs | −163.4 µs |
+| 46116-1 | withheld | −260.8 µs | −258.2 µs |
+| 50209 | withheld | +305.9 µs | +287.5 µs |
+
+The separation is total. On the two streams whose first anchor the test *kept*, six thousand
+anchors and a piecewise map reproduce a 191.6 M-element array to **under a microsecond** — so the
+sparse representation loses nothing. On the four it *withheld*, the difference is that stream's
+own displacement, in sign and magnitude. Sample 0 lies before the first barcode, so the dense
+array computes it with the global fit; the defect is baked into every sample of the out-of-range
+region and cannot be removed downstream, because by then it is data rather than a model.
+
+Over whole spike trains the two agree to **9 µs median, 24 µs p95** across 263,094 spikes — a
+quarter of a probe sample, and consistent with our rounding to integer HARP ticks being the whole
+of the residual.
+
 **Upstream:** drafted against `jsiegle/harp-python@decode-clock` commit `c73984a`; not filed.
 The fix is to give the out-of-range regions their own terminal-anchored models rather than
 folding them onto index 0, which is the same correction R37 §3.1 makes to this specification.
+Because `aind-ephys-rig-qc` materializes the result per sample, every consumer of a session's
+`timestamps.npy` inherits it, and re-running the alignment is the only way to clear it.
