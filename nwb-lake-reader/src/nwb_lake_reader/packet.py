@@ -11,7 +11,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as pads
 
-from .clocks import BOUND, NotAligned, anchors, mapped, stored_span
+from .clocks import NotAligned, anchors, declared_bound, mapped, stored_span
 from .dictionaries import as_dictionary, constant
 from .errors import NoTimeOrigin, ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
 from .manifest import Manifest, Resource
@@ -60,6 +60,7 @@ class Packet:
         self._anchor_cache: dict[str, Any] | None = None
         self._reference_cache: str | None = None
         self._origin_cache: dict[str | None, tuple[int, int, int]] = {}
+        self._bound_cache: float | None = None
 
     @property
     def root(self) -> Path:
@@ -726,12 +727,16 @@ class Packet:
             raise NotAligned(f"{clock_id!r} declares no tick_rate_num, so seconds cannot be derived")
         return int(num), int(den or 1)
 
-    def on_clock(self, table: pa.Table, clock: str | None = None, *, bound: float = BOUND) -> pa.Table:
+    def on_clock(self, table: pa.Table, clock: str | None = None, *, bound: float | None = None) -> pa.Table:
         """Return `table` with its ticks on one clock.
 
         A row whose tick the anchors cannot place is **dropped**, which is what R27 §5.3
         leaves undefined and what `analysis.spike_events` does with the same rows. Reading
-        `core` through this and reading the materialized table therefore agree.
+        `core` through this and reading the materialized table therefore agree -- which is
+        why the bound defaults to the one the packet's writer established and recorded
+        (R37 §3.3), not to R27 §5.3's. A reader mapping at a narrower bound than the writer
+        used drops rows the packet's own derived table kept, and the two disagree about
+        which spikes exist.
 
         Parameters
         ----------
@@ -741,6 +746,7 @@ class Packet:
             The clock to map onto. Defaults to :meth:`reference_clock`.
         bound : float, optional
             How far from an anchor the mapping stays defined, in median anchor intervals.
+            Defaults to :func:`~nwb_lake_reader.clocks.declared_bound`.
 
         Returns
         -------
@@ -757,7 +763,9 @@ class Packet:
             # Already there. Worth the check: it is the whole single-clock case, and it keeps
             # a packet with no anchors readable.
             return table
-        ticks, keep = mapped(pa.record_batch(columns), target, self._anchors(), bound)
+        ticks, keep = mapped(
+            pa.record_batch(columns), target, self._anchors(), self._bound() if bound is None else bound
+        )
         names = table.column_names
         out = table.set_column(names.index("t_tick"), "t_tick", pa.array(ticks))
         out = out.set_column(names.index("clock_id"), "clock_id", constant(target, table.num_rows))
@@ -794,6 +802,12 @@ class Packet:
             if len(present) == 1:
                 return present[0]
             raise
+
+    def _bound(self) -> float:
+        """Return the bound the writer established, read once per packet."""
+        if self._bound_cache is None:
+            self._bound_cache = declared_bound(self)
+        return self._bound_cache
 
     def _anchors(self) -> dict[str, Any]:
         """`core.clock_anchors` per clock, read once per packet.

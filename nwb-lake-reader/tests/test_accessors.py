@@ -2,6 +2,7 @@ import pyarrow as pa
 import pytest
 
 from nwb_lake_reader import STORED, NotAligned, NoTimeOrigin, open_packet
+from tests.conftest import _resource, _write
 
 
 def test_trials_unfiltered(packet_root):
@@ -256,3 +257,24 @@ def test_seconds_refuse_ticks_that_are_not_on_the_reference(two_clock_packet):
     packet = open_packet(two_clock_packet)
     with pytest.raises(NotAligned):
         packet.seconds(packet.spike_times("unit_001", clock=STORED))
+
+
+def test_mapping_uses_the_bound_the_writer_established(two_clock_packet, tmp_path):
+    """R37 §3.3: a reader mapping at a narrower bound drops rows the packet's own derived
+    table kept, and the two then disagree about which spikes exist."""
+    import json
+    import shutil
+
+    root = tmp_path / "wide"
+    shutil.copytree(two_clock_packet, root)
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    runs = pa.table({"parameters": pa.array([json.dumps({"alignment_bound": {"used": 3.0}})])})
+    manifest["resources"].append(_resource("core.processing_runs", _write(root, "processing_runs", runs)))
+    (root / "nwb.packet.json").write_text(json.dumps(manifest))
+
+    # Two anchor intervals before the first anchor: outside R27 §5.3's default, inside the
+    # bound this packet says its writer measured.
+    far = pa.table({"t_tick": pa.array([-60_000], type=pa.int64()), "clock_id": pa.array(["probe"])})
+    packet = open_packet(root)
+    assert packet.on_clock(far).num_rows == 1
+    assert packet.on_clock(far, bound=1.0).num_rows == 0
