@@ -210,7 +210,7 @@ def _reference_clock(recipe: Recipe, context: Context) -> Any:
     raise RecipeError(f"no [[clock]] declares {wanted!r}, which [session].reference_clock_id names")
 
 
-def _harvest(spec: SourceSpec, source: Any, context: Context) -> None:
+def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) -> None:
     """Take from a built source whatever the sources after it consume."""
     if spec.kind == "sorter":
         # The NWB names a quad-base probe's shanks separately and the sorting run ID ends in
@@ -223,11 +223,30 @@ def _harvest(spec: SourceSpec, source: Any, context: Context) -> None:
         }
         context.clocks.update({c["clock_id"]: float(c["tick_rate_hz"]) for c in source.clocks()})
     if spec.kind == "session":
-        # The recipe states when the session began; only the metadata says when it stopped.
-        context.session_extra["session_end_time"] = source.extent()[1]
+        # Both ends come from the declared stream windows rather than from the recipe: a
+        # hand-entered start is a transcription of the same fact, and the two disagreeing
+        # silently is worse than either being wrong loudly.
+        began, ended = source.extent()
+        context.session_extra["session_start_time"] = began
+        context.session_extra["session_end_time"] = ended
+        if (declared := _declared_start(recipe)) is not None and abs((declared - began).total_seconds()) > 1:
+            source.notes.append(
+                f"[session].session_start_time {declared.isoformat()} disagrees with the earliest "
+                f"declared stream window {began.isoformat()}; the window is used"
+            )
     if spec.kind == "nwb":
         context.electrodes = dict(enumerate(row["electrode_id"] for row in source.electrodes()))
         context.event_streams = [row["event_stream_id"] for row in source.event_streams()]
+
+
+def _declared_start(recipe: Recipe) -> datetime | None:
+    """Return the recipe's own `session_start_time`, parsed, or None where it declares none."""
+    raw = recipe.session.get("session_start_time")
+    if raw is None:
+        return None
+    if isinstance(raw, datetime):
+        return raw if raw.tzinfo else raw.replace(tzinfo=UTC)
+    return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
 
 
 def _first_spike_tick(context: Context) -> int:
@@ -270,7 +289,7 @@ def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[
         return lfp
     if spec.kind == "session":
         clock = context.reference
-        return source.records(
+        session: dict[str, list[dict[str, Any]]] = source.records(
             at_tick=_first_spike_tick(context),
             clock_id=clock.clock_id,
             tick_rate_num=clock.tick_rate_num,
@@ -279,6 +298,7 @@ def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[
             origin=clock.origin,
             event_stream_ids=context.event_streams,
         )
+        return session
     sorter = context.sources.get("sorter") if spec.kind == "sync" else None
     if sorter is not None:
         # Anchor only the streams the sorting made a clock for. The rig aligns more than it
@@ -379,7 +399,7 @@ def build(
         say(f"{spec.kind} -> {', '.join(spec.owns) or 'nothing it owns'}")
         source = _build_source(spec, recipe, context)
         context.sources[spec.kind] = source
-        _harvest(spec, source, context)
+        _harvest(spec, source, context, recipe)
 
         for resource, rows in _records(spec, source, context).items():
             if resource not in spec.claims:
