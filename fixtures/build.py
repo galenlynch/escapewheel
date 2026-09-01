@@ -150,6 +150,8 @@ def content() -> dict[str, list[dict]]:
              "event_type": "lick", "t_tick": 6900, "clock_id": "behavior_s001"}],
         "core.sorting_runs": [
             {"sorting_run_id": "sort_ks4_001", "session_id": "s001", "probe_id": "probe0",
+             # R38 §2.2: the clock a unit reaches through its run.
+             "clock_id": "imec_ap_s001",
              "sorter_name": "kilosort4", "sorter_version": "4.0.16",
              "amplitude_unit": "uV", "started_at": START + timedelta(hours=2),
              "ended_at": START + timedelta(hours=3)}],
