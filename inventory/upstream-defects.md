@@ -555,6 +555,30 @@ upstream events, not the quality of the estimator being bounded.
 2. **`harp-python`.** `remove_outliers` must not be able to prefer two corrupt anchors over two
    good ones, and a frame whose span is not 39 bit-periods is malformed regardless of what it
    decodes to. Neither check exists as of `jsiegle/harp-python@decode-clock` `c73984a`.
+### What the behaviour asset settles, and what it does not
+
+The behaviour data is in the *same* asset (`behavior/.../raw.harp/`), so the Harp register
+streams were checkable after all. Two results:
+
+**No Harp device lost its second count.** `LickometerEventsLeft/Event_8.bin` and its right-hand
+twin are per-second `TimestampSecond` heartbeats — 7,859 messages each, Harp seconds
+11,576,034 → 11,583,892, so both glitch instants (11,578,113 and 11,579,393) are covered. Every
+one of the 7,858 steps is exactly +1: no second skipped, none repeated, on either device. A
+resync would very likely have disturbed that, so this is evidence against one — though not
+proof, since a resync recovers the count and the phase change it makes is sub-second anyway.
+The sub-second field is constant at 26,960 ticks on every message, which is self-referential and
+therefore blind to a phase step by construction.
+
+**And there is no cross-domain fiducial, demonstrated rather than assumed.**
+`LickometerEventsLeft/Event_32.bin` holds 5,282 messages alternating 0/1 — exactly 2,641 rises,
+matching the NWB's `left_lick_time` count. Comparing the two series directly gives **0.0 µs
+difference at every one of the 2,641 events**, in all three intervals either side of the
+glitches. The NWB copies the Harp device timestamps verbatim.
+
+So every Harp-derived series in the packet traces to one clock domain and cannot witness that
+domain's own phase. Confirming which side moved needs a signal that is Harp-timestamped *and*
+visible in the ephys, and this rig records none.
+
 3. **The rig.** Nothing recorded here can verify the barcode's phase against Harp's own time:
    every event stream in the packet is Harp-native and behavioural, and none is visible in the
    ephys signal, so there is no cross-domain fiducial. Routing one Harp-native digital output to
