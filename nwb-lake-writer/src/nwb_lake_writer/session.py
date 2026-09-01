@@ -81,11 +81,18 @@ MATERIALIZERS: dict[str, str] = {"analysis.spike_events": "spike_events"}
 #: So the row group is both the fetch unit and the prune unit for us, and pruning is what costs.
 BATCH_ROWS = 1_000_000
 
-#: The most error a mapping may carry before R37 §3.3 calls it undefined, in ticks of the
-#: parent clock. One is that revision's default: a HARP tick is 32 µs, which is the
-#: quantization the anchors themselves are recorded at, so a bound stated any tighter would
-#: be asking the estimator to beat the measurement.
-TOLERANCE = 1.0
+#: The most error a mapping may carry before R40 §2.1 calls it undefined, in **seconds**.
+#:
+#: A duration rather than a tick count, because it is a claim about time and not about one
+#: clock's granularity. Three milliseconds is R40's default: above every measured p95 by a
+#: factor of four or more -- the estimator costs 117 µs at the two anchor intervals this
+#: session needs, and 805 µs at a hundred and twenty -- while staying far below anything that
+#: moves an analysis, the finest PSTH bin measured against this format being 30 ms.
+#:
+#: R37 §3.3's original default of one parent tick is 32 µs, which is *below* the estimator's
+#: own median at every distance, so it gated on measurement noise: this session passed it by
+#: 4%, and failing would have stranded the first 1.7 s of every stream.
+TOLERANCE = 3e-3
 
 
 class RecipeError(Exception):
@@ -149,8 +156,9 @@ class Context:
         """
         if self._alignment is None:
             by_clock = _anchors(self)
-            reach = {row["clock_id"]: int(row["start_tick"]) for row in self.observed}
-            bound, self.measured_bound = _bound_for(by_clock, reach, TOLERANCE)
+            reach = {row["clock_id"]: (int(row["start_tick"]), int(row["stop_tick"])) for row in self.observed}
+            rate = self.reference.tick_rate_num / (self.reference.tick_rate_den or 1) if self.reference else 1.0
+            bound, self.measured_bound = _bound_for(by_clock, reach, TOLERANCE, rate)
             self._alignment = (dict(by_clock), bound)
         return self._alignment
 
@@ -295,25 +303,32 @@ def _anchors(context: Context) -> dict[str, tuple[NDArray[np.int64], NDArray[np.
 
 def _bound_for(
     by_clock: Mapping[str, tuple[NDArray[np.int64], NDArray[np.int64]]],
-    reach: Mapping[str, int],
+    reach: Mapping[str, tuple[int, int]],
     tolerance: float,
+    rate: float,
 ) -> tuple[float, dict[str, Any]]:
-    """Choose the bound to map at, measuring it as R37 §3.3 requires.
+    """Choose the bound to map at, measuring it as R37 §3.3 and R40 §2 require.
 
     A packet whose earliest data sits inside one median anchor interval of its first anchor
     needs nothing; R27 §5.3's default covers it and this returns it unmeasured. Where it does
     not -- and withholding a displaced first anchor (R37 §3.2) is what usually makes it not --
     the writer may go further only by measuring the estimator at the distance it intends to
-    use and finding it within `tolerance`.
+    use and finding its **95th percentile** within `tolerance` (R40 §2.2). The median is not a
+    statement about what a consumer may rely on.
 
     Parameters
     ----------
     by_clock : Mapping
         Anchor pairs per clock.
     reach : Mapping
-        Clock ID to the earliest tick that must map, which is the clock's own window start.
+        Clock ID to the span that must map, which is the clock's own observation window. Both
+        ends count: a session whose sync train stops well before its recording does needs the
+        bound at the far end, and only the window says so.
     tolerance : float
-        The most error the mapping may carry, in parent ticks. R37 §3.3's default is one.
+        The most error the mapping may carry, in seconds (R40 §2.1).
+    rate : float
+        The parent clock's rate in hertz, which turns that duration into the parent ticks the
+        measurement is in.
 
     Returns
     -------
@@ -324,27 +339,29 @@ def _bound_for(
 
     needed = 0.0
     for clock, (at, _) in by_clock.items():
-        if (earliest := reach.get(clock)) is None:
+        if (window := reach.get(clock)) is None:
             continue
-        gap = float(at[0] - earliest)
-        needed = max(needed, gap / float(np.median(np.diff(at))))
+        interval = float(np.median(np.diff(at)))
+        needed = max(needed, (at[0] - window[0]) / interval, (window[1] - at[-1]) / interval)
     if needed <= BOUND:
         return BOUND, {}
 
     distance = ceil(needed)
+    allowed = tolerance * rate
     measured = {clock: extrapolation_error(at, parent, distance) for clock, (at, parent) in by_clock.items()}
-    worst = max((m["median"] for m in measured.values() if m), default=float("inf"))
+    worst = max((m["p95"] for m in measured.values() if m), default=float("inf"))
     report: dict[str, Any] = {
         "distance": distance,
-        "tolerance": tolerance,
-        "median_error": round(worst, 2),
+        "tolerance_seconds": tolerance,
+        # Every statistic, so a reader may judge the packet by a stricter rule than the
+        # writer applied (R40 §2.2).
+        "p95_error_seconds": round(worst / rate, 9),
+        "median_error_seconds": round(max((m["median"] for m in measured.values() if m), default=0.0) / rate, 9),
+        "max_error_seconds": round(max((m["max"] for m in measured.values() if m), default=0.0) / rate, 9),
         "per_clock": {clock: {k: round(v, 2) for k, v in m.items()} for clock, m in measured.items() if m},
     }
-    if worst > tolerance:
-        report["used"] = BOUND
-        return BOUND, report
-    report["used"] = float(distance)
-    return float(distance), report
+    report["used"] = BOUND if worst > allowed else float(distance)
+    return report["used"], report
 
 
 def _time_origin(

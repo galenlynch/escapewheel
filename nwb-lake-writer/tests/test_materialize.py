@@ -90,6 +90,20 @@ def test_an_unmappable_spike_is_dropped(tmp_path):
     assert out["t_tick"] == [500_000_000]
 
 
+def test_a_dropped_spike_is_counted(tmp_path):
+    """R40 §2.3: a derived table one row short looks exactly like a derived table."""
+    counted: list[int] = [0]
+    rows(Fake(tmp_path, ticks=[1000, 1000 + 20 * AP], clocks=[PROBE] * 2), dropped=counted)
+    assert counted == [1]
+
+
+def test_dropping_nothing_is_counted_too(tmp_path):
+    """A recorded zero is the evidence the bound was sufficient, not an assumption."""
+    counted: list[int] = [0]
+    rows(Fake(tmp_path, ticks=[1000, 1000 + AP], clocks=[PROBE] * 2), dropped=counted)
+    assert counted == [0]
+
+
 def test_the_reference_comes_from_the_session(tmp_path):
     """R27 §2: the session declares what its times are reported on."""
     out = rows(Fake(tmp_path, ticks=[1000], clocks=[PROBE]))

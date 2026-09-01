@@ -212,6 +212,7 @@ def spike_events(
     bucket_seconds: int = BUCKET_SECONDS,
     scratch: Path | None = None,
     memory_budget: int | str = 0,
+    dropped: list[int] | None = None,
 ) -> Iterator[pa.RecordBatch]:
     """`analysis.spike_events` -- core spikes on the reference clock, bucketed by time.
 
@@ -240,6 +241,9 @@ def spike_events(
         Bytes the partition may occupy before it spills, as a number or a string such as
         `"10GB"`. Bucketing is a transpose -- every unit spans every bucket, so no streaming
         pass can emit in order -- and the partition either fits in memory or goes to disk.
+    dropped : list of int, optional
+        A one-element list the count of unmappable spikes is accumulated into, since a
+        generator cannot return one. R40 §2.3 requires the producing run to record it.
         Held with identifiers as dictionary codes it is 36 bytes a row, so a session of 287 M
         spikes wants 10.4 GB; the same rows spill to 0.5 GB of Parquet instead. Zero, the
         default, holds no more than one batch per bucket, because whether ten gigabytes is
@@ -261,6 +265,7 @@ def spike_events(
     reference = reference or reference_clock(packet)
     bound = declared_bound(packet) if bound is None else bound
     width = bucket_seconds * _tick_rate(packet, reference)
+    dropped = [0] if dropped is None else dropped
     by_clock = anchors(packet)
     handle = packet.table_resource("core.spike_events")
     columns = ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick", "clock_id"]
@@ -279,6 +284,10 @@ def spike_events(
         reader = pq.ParquetFile(handle.path, read_dictionary=coded)
         for batch in reader.iter_batches(batch_size=BATCH_ROWS, columns=columns):
             parent, keep = mapped(batch, reference, by_clock, bound)
+            # R40 §2.3: counted whether or not any are dropped. A recorded zero is the
+            # evidence the bound was sufficient; silence is what let a reader and this
+            # writer disagree about which spikes exist without either noticing.
+            dropped[0] += int(keep.size - keep.sum())
             if not keep.any():
                 continue
             taken = np.flatnonzero(keep)
@@ -337,9 +346,10 @@ def into(
 
     `bucket_seconds` goes in `parameters` because it cannot be recovered from the data -- a
     table whose buckets all happen to be non-empty looks the same at 300 s as at 299 s
-    (R31 §3). `memory_budget` and `scratch` do not: they change how the rows are produced, not
-    which rows they are, and recording them would make two identical packets claim different
-    provenance.
+    (R31 §3). So does the count of spikes this could not place (R40 §2.3), which is otherwise
+    invisible: a derived table one row short looks exactly like a derived table. `memory_budget`
+    and `scratch` do not: they change how the rows are produced, not which rows they are, and
+    recording them would make two identical packets claim different provenance.
 
     Returns
     -------
@@ -351,6 +361,7 @@ def into(
     resource = "analysis.spike_events"
     bound = declared_bound(packet) if bound is None else bound
     started = datetime.now(tz=timezone.utc)
+    dropped: list[int] = [0]
     writer.add_batches(
         resource,
         spike_events(
@@ -360,6 +371,7 @@ def into(
             bucket_seconds=bucket_seconds,
             memory_budget=memory_budget,
             scratch=scratch,
+            dropped=dropped,
         ),
     )
     writer.derives(resource, ["core.spike_events", "core.clock_anchors", "core.clocks"])
@@ -375,6 +387,9 @@ def into(
                     "bucket_seconds": bucket_seconds,
                     "bound": bound,
                     "reference_clock_id": reference,
+                    # R40 §2.3. Recorded even when zero: that a bound was sufficient is a
+                    # fact about this packet, not an assumption a reader should have to make.
+                    "spikes_without_a_defined_mapping": dropped[0],
                 },
                 "started_at": started,
                 "ended_at": datetime.now(tz=timezone.utc),
