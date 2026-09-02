@@ -41,7 +41,14 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "two_primaries": ("warning", "core.unit_electrodes.one_primary"),
     "gapped_ordinal": ("error", "core.unit_electrodes.ordinal_contiguous"),
     "undetected_default": ("error", "core.units.default_electrode_is_declared"),
+    "undeclared_currency": ("info", "core.processing_runs.undeclared_currency"),
+    "unscoped_runs": ("info", "core.processing_runs.scope_undeclared"),
 }
+
+#: Packets whose expected finding is advisory (R26 §3). Advisory rules are off by default --
+#: enabling them must never change whether a packet passed -- so these run with them on, and
+#: the `info` level they carry keeps the verdict unchanged either way.
+ADVISORY = {"undeclared_currency", "unscoped_runs"}
 
 
 def main() -> int:
@@ -49,7 +56,7 @@ def main() -> int:
     print(f"{'packet':26s} {'expected':9s} {'result':22s} findings")
     print("-" * 80)
     for name, expect in EXPECTED.items():
-        report = validate(open_packet(HERE / "packets" / name))
+        report = validate(open_packet(HERE / "packets" / name), advisory=name in ADVISORY)
         if expect is None:
             ok = report.passed and report.warnings == 0
             verdict = "clean" if ok else "UNEXPECTED FINDINGS"

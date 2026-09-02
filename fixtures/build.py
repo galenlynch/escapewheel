@@ -346,6 +346,28 @@ def variants():
             {"clock_id": "behavior_s001", "anchor_index": i, "t_tick": t,
              "parent_tick": t * 30}
             for i, t in enumerate([0, 1000, 2000, 3000, 23_000, 24_000, 25_000])]
+    def undeclared_currency(c):
+        # One probe sorted twice with nothing saying which to read (R41 §2.4). Both runs carry
+        # a scope, so the packet says enough to know they compete -- which is what separates
+        # this from `unscoped_runs` below.
+        c["core.processing_runs"][0]["scope"] = "s001"
+        for suffix in ("a", "b"):
+            c["core.processing_runs"].append(
+                {"processing_run_id": f"run_sort_{suffix}", "session_id": "s001",
+                 "activity_type": "spike_sorting", "scope": "probe_001",
+                 "software_name": "kilosort4", "software_version": "4.0.0",
+                 "status": "succeeded", "started_at": START + timedelta(hours=6),
+                 "ended_at": START + timedelta(hours=7)})
+    def unscoped_runs(c):
+        # Two runs of one activity, neither saying what it is about, so whether they compete
+        # cannot be determined (R44 §2.3). The fix is to record the scopes, not to choose.
+        for suffix in ("a", "b"):
+            c["core.processing_runs"].append(
+                {"processing_run_id": f"run_pose_{suffix}", "session_id": "s001",
+                 "activity_type": "pose_estimation", "software_name": "sleap",
+                 "software_version": "1.3.0", "status": "succeeded",
+                 "started_at": START + timedelta(hours=6),
+                 "ended_at": START + timedelta(hours=7)})
     return {"dup_pk": dup_pk, "orphan_fk": orphan_fk, "null_required": null_required,
             "bad_vocabulary": bad_vocabulary, "bad_interval": bad_interval,
             "stale_summary": stale_summary,
@@ -358,7 +380,8 @@ def variants():
             "no_reference_clock": no_reference_clock, "clock_cycle": clock_cycle,
             "unreachable_clock": unreachable_clock, "unaligned_clock": unaligned_clock,
             "wide_anchor_gap": wide_anchor_gap, "two_primaries": two_primaries,
-            "gapped_ordinal": gapped_ordinal, "undetected_default": undetected_default}
+            "gapped_ordinal": gapped_ordinal, "undetected_default": undetected_default,
+            "undeclared_currency": undeclared_currency, "unscoped_runs": unscoped_runs}
 
 
 def main():
