@@ -254,6 +254,52 @@
           "type": "string",
           "format": "date-time"
         },
+        "members": {
+          "description": "What a prefix held when someone looked (R51 \u00a72.1). A record, not a resolution rule: a reader hands an external prefix to its own library, which addresses members by key and never enumerates. Optional, and only meaningful where uri names a prefix.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "key",
+              "size_bytes"
+            ],
+            "properties": {
+              "key": {
+                "description": "Relative to uri, with / separators.",
+                "type": "string",
+                "minLength": 1
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "store_digest": {
+                "description": "What the store itself said about this member, in the store's own algorithm (R51 \u00a72.2). Never a substitute for sha256: it answers whether anything has changed in place, not whether these are the bytes.",
+                "type": "object",
+                "required": [
+                  "algorithm",
+                  "value"
+                ],
+                "properties": {
+                  "algorithm": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
         "codecs": {
           "description": "Zarr codecs this resource's array uses, excluding the mandatory bytes codec (R15 \u00a72). A reader checks these before opening this resource and must not refuse the packet over a codec used only by resources it does not open.",
           "type": "array",
