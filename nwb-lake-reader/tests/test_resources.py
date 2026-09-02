@@ -1,6 +1,6 @@
 import pytest
 
-from nwb_lake_reader import ResourceUnreadableError, open_packet
+from nwb_lake_reader import ResourceNotFoundError, ResourceUnreadableError, open_packet
 
 
 def test_handle_reads_and_describes(packet_root):
@@ -204,3 +204,58 @@ def test_a_windows_drive_is_not_a_scheme(tmp_path):
 
     with pytest.raises(ResourceUnreadableError, match="does not resolve under"):
         assert _array_resource("C:/data/lfp.zarr").store
+
+
+@pytest.fixture
+def array_packet(tmp_path, packet_root):
+    """The fixture packet plus one small packet-owned Zarr v3 array."""
+    zarr = pytest.importorskip("zarr")
+    import json
+    import shutil
+
+    import numpy as np
+
+    root = tmp_path / "with_array"
+    shutil.copytree(packet_root, root)
+    store = root / "arrays" / "lfp.zarr"
+    array = zarr.create_array(store=str(store), shape=(4, 3), chunks=(2, 3), dtype="int16")
+    array[:] = np.arange(12, dtype="int16").reshape(4, 3)
+
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    manifest["resources"].append(
+        {
+            "resource_id": "core.lfp",
+            "layer": "core",
+            "kind": "dense_array_asset",
+            "schema_id": "core.lfp.v0.1",
+            "physical_profile": "zarr_v3",
+            "uri": "arrays/lfp.zarr",
+            "canonical": True,
+            "validation_state": "passed",
+            # R15 §2: codecs are declared per resource, so a reader can check before opening.
+            "codecs": ["bytes", "zstd"],
+        }
+    )
+    (root / "nwb.packet.json").write_text(json.dumps(manifest, indent=2))
+    return root
+
+
+def test_array_opens_a_declared_array(array_packet):
+    """`07` Phase 5 names this call; it is the counterpart of `table` and does the same job."""
+    packet = open_packet(array_packet)
+    opened = packet.array("core.lfp")
+    assert opened.shape == (4, 3)
+    assert opened[0, 0] == 0
+    assert opened[3, 2] == 11
+
+
+def test_array_agrees_with_the_handle(array_packet):
+    """Sugar, so it must return what the two-step form returns."""
+    packet = open_packet(array_packet)
+    assert packet.array("core.lfp").shape == packet.array_resource("core.lfp").shape
+
+
+def test_array_reports_an_undeclared_resource(array_packet):
+    """Same failure as `table`, so the two behave alike where they can."""
+    with pytest.raises(ResourceNotFoundError):
+        open_packet(array_packet).array("core.not_declared")

@@ -169,6 +169,13 @@ These are not local preferences; changing them breaks conformance.
 withdrew that table, so `spike_times()` filters the flat `core.spike_events` instead, and
 returns `clock_id` alongside `t_tick` — a tick has no meaning without its clock.
 
+`07` Phase 5 wants `core.array_assets` validated "against actual Zarr dtype/shape". **Both
+columns were struck** — R3 §3.3 lists `shape` and `dtype` as `removed`, because the Zarr array
+declares them and R3 §3.0 forbids restating what the data declares. What survives is the
+agreement that is *not* recoverable from the array alone, and the validator checks it: rank
+against `core.array_dimensions`, declared `codecs` against the store, `zarr_format`, and R3 §5's
+transpose ban.
+
 `07` names the CLI `nwb-lake`, which this package claims under `[project.scripts]`. Later
 packages **cannot** also claim it — two distributions declaring the same console script is a
 conflict, and the last one installed wins silently. So they register a callable under the

@@ -190,6 +190,40 @@ class Packet:
         """
         return ArrayResource(self.resource(resource_id), self._root)
 
+    def array(self, resource_id: str) -> Any:
+        """Open a declared array for reading values.
+
+        The counterpart of :meth:`table`, and Packet's for the same reason: both are resolution
+        and IO, which is what this class is for, rather than a transformation over what they
+        return. Equivalent to ``array_resource(resource_id).open()``; use the handle directly
+        for `shape`, `dtype`, `codecs` or a chunk-aligned :meth:`~ArrayResource.read`, none of
+        which need the array opened.
+
+        Zarr is an optional dependency; install it with the ``arrays`` extra.
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID.
+
+        Returns
+        -------
+        zarr.Array
+            The array, opened read-only.
+
+        Raises
+        ------
+        ResourceNotFoundError
+            If the manifest declares no such resource.
+        ResourceUnreadableError
+            If the resource does not resolve to a readable store.
+
+        Examples
+        --------
+        >>> packet.array("core.waveform_mean")[0]  # doctest: +SKIP
+        """
+        return self.array_resource(resource_id).open()
+
     def array_resources(self) -> tuple[ArrayResource, ...]:
         """Every dense array the packet declares, in manifest order.
 
