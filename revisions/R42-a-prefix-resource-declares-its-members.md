@@ -2,12 +2,16 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-01 |
+| **Status** | **Withdrawn** 2026-09-02 |
 | **Amends** | R14 §2.3 (what immutability covers), R32 §2 (what an amendment may add), R36 §3 (the deferred `parquet_dataset` case) |
 | **Depends on** | R14 (external resources), R32 (amending a committed packet), R35 (bounded revalidation), R36 (verifying a prefix) |
 | **Profile** | `nwb-lake-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
+
+> **Withdrawn 2026-09-02, unimplemented.** The read case is measured and negative (§4.1); what
+> remains is a write cost that no session here has yet had to pay. See §5. R51 no longer depends
+> on this and carries the member array it needs, scoped to what needs one.
 
 ## 1. Motivation
 
@@ -157,3 +161,32 @@ members: a ratio of 1.9 against S3's 2.2. A layout change is not what buys it, a
 
 So partitioning does not pay for itself on read. What §1 offers is the write cost above, and §2.1
 is what makes that cost safe to take.
+
+## 5. Why this is withdrawn
+
+**The read case does not exist.** §4.1 measures it: under DuckDB the single file wins every query
+cold and warm, and under pyarrow the member arms win only the queries that cannot prune — a scan
+parallelism effect that reproduces at the same ratio on local disk, where there are no round trips
+to skip. The argument that an object store would change the answer was the reason this stayed open
+after the local measurement said no, and it does not survive being measured.
+
+**The write case is real and unpaid.** Adding a sorting rewrites 650 MB where partitioning writes
+one member of it, quadratic in accumulated sortings. But no session in the corpus has a second
+sorting, so the cost is hypothetical, and a revision held open against a hypothetical cost is a
+revision that will be re-argued rather than used.
+
+**Most of the machinery exists to make partitioning safe, not to make it useful.** §1's snapshot
+failure — an old manifest retroactively acquiring content, because a prefix is resolved by listing
+— is *created by* partitioning. Unpartitioned, it does not arise. §2.2's ordering rule exists only
+because a multi-file table has rows to concatenate. Both fall with the motivation.
+
+**What was worth keeping is narrower, and R51 now carries it.** §2.1's member array is useful for
+a prefix that already exists — an external dense array asset, 208 objects for one LFP series —
+where it gives per-member facts a place to live. R51 declares that array itself, as a **MAY** on
+an external resource and a record rather than a resolution rule. What it does not take is §2.1's
+MUST on packet-owned prefixes, which would have bound one resource in every packet built so far
+(`core.waveform_mean`, three objects) for a case nothing has needed.
+
+Revisit this if sortings accumulate, if a session's tables outgrow one file for reasons other than
+currency, or if multi-session packets make `session_id` partitioning the natural layout. The
+measurement in §4.1 is about one table at one size on one store, and says nothing about those.

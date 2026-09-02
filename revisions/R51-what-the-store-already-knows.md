@@ -3,8 +3,9 @@
 | | |
 |---|---|
 | **Status** | **Proposed** 2026-09-02 |
-| **Amends** | R36 §2.2 (the digest over a member listing), R36 §2.3 (the two verification levels) |
-| **Depends on** | R14 (external resources), R36 (verifying a prefix), R42 (a prefix declares its members — *proposed*) |
+| **Amends** | R14 §2.3 (what an external resource records), R36 §2.2 (the digest over a member listing), R36 §2.3 (the two verification levels) |
+| **Depends on** | R14 (external resources), R36 (verifying a prefix) |
+| **Supersedes** | R42 §2.1 (the member array), for external prefixes only — R42 is withdrawn |
 | **Profile** | `nwb-lake-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
@@ -50,10 +51,37 @@ external resource's recorded facts mean.
 
 ## 2. Decision
 
-### 2.1 A member may record what the store said about it
+### 2.1 An external prefix resource may declare its members
 
-Where a manifest records per-member facts — R42 §2.1's `members` array, or R36 §2.2's listing —
-each member **MAY** additionally carry:
+R36 §2.2 computes a listing to digest it and keeps nothing; a manifest has no place to record a
+per-member fact. R42 §2.1 proposed one and is withdrawn — its motivation was partitioning a table,
+which measured negative on read. The array itself is still needed here, so this revision declares
+it, scoped to the prefixes that already exist.
+
+A resource with `external: true` whose `uri` names a **prefix** rather than a single object
+**MAY** declare `members`: an array of
+
+```json
+{"key": "c/0/0", "size_bytes": 3054612, "sha256": "…", "store_digest": {…}}
+```
+
+with `key` relative to `uri` using `/` separators, and `sha256` and `store_digest` each optional.
+
+**It is a record of what was seen, not a resolution rule.** A reader does not consult it: an
+external dense array asset is handed its URI and opened by its own library, which addresses chunks
+by key and never enumerates. R14 §2.3.1 already fixes the standing of such a record — what was
+true at validation, not a promise about now — and this changes nothing about that.
+
+Where `members` accompanies R36 §2.2's `sha256`, the listing digested **MUST** be the declared
+one, so the enumeration and the digest cannot disagree.
+
+Declaring members also makes level 3a per-member rather than aggregate. `size_bytes` on the
+resource is a total, so two members changing in opposite directions leave it correct; the same
+listing that produces the total can compare each member instead, at no additional request.
+
+### 2.2 A member may record what the store said about it
+
+Each member **MAY** carry:
 
 ```json
 {"key": "0.0", "size_bytes": 3054612, "sha256": "…",
@@ -68,7 +96,7 @@ multipart ETag (§1.1).
 `store_digest` is never a substitute for `sha256`. It is the store's word, in the store's
 algorithm, about the object as the store holds it.
 
-### 2.2 A third verification level, between listing and reading
+### 2.3 A third verification level, between listing and reading
 
 R36 §2.3 defines two: `external=True` lists and checks sizes and codecs; `checksums=True` also
 recomputes sha256. **Add a third, between them:**
@@ -87,7 +115,7 @@ by orders of magnitude in cost, and the difference is a bill as well as a wait.
 | store digest | nothing has changed in place since recording | **~1.31 s** (same listing) |
 | sha256 | the bytes are the bytes the manifest describes | **88 s** |
 
-### 2.3 What a passing check may be reported as
+### 2.4 What a passing check may be reported as
 
 A store-digest pass **MUST NOT** be reported as a checksum verification. It establishes something
 weaker and store-specific, so it gets its own finding — as R36 §2.3's levels already do, where
@@ -121,16 +149,24 @@ revision does not disturb that; it adds a cheaper question with a weaker answer.
   it does today.
 - **No dependence on S3.** `algorithm` is open, and a store offering nothing simply yields
   nothing to record. The mechanism is "write down what the store said", not "write down an ETag".
+- **No change to how a resource resolves.** `members` records what was seen; it does not tell a
+  reader what to read, and does not forbid enumeration. That rule belonged to R42, where a
+  partitioned table's rows *were* its members; here the reader never enumerates in the first place.
+- **Nothing about packet-owned prefixes.** R42 §2.1 would have made `members` a MUST for them,
+  binding `core.waveform_mean` in every packet built so far. This says nothing about them: their
+  bytes are covered by R14 §2.3's immutability, which is a stronger guarantee than a record.
 - **No claim that MD5 is sufficient.** §1.1 and §2.3 exist to stop a store-digest pass being read
   as a checksum pass.
 
 ## 5. Open
 
-- **Whether this should wait for R42.** R42 §2.1 adds the `members` array this hangs on, and is
-  held because partitioning buys nothing measurable. Without it, `store_digest` has nowhere per
-  member to live and would have to sit on the resource as a digest-of-digests — expressible, but
-  it loses the per-member checkability R36 §2.2 chose deliberately.
-- **Whether a writer should record `sha256` at all for a large external resource.** The packets
-  built so far set `verify="size"` and record none, so R36's level 3b currently verifies nothing
-  on any packet in existence. At 88 s per packet rather than eight minutes, recording it is now
-  affordable, and this revision is a poor substitute for simply doing so.
+- **Whether a `MAY` that no writer exercises is worth the schema.** `members` and `store_digest`
+  are both optional, so a packet recording neither is unaffected — which is every packet today.
+  The mechanism is only worth adding if a writer will record it, and that is the same decision
+  §2.1 of the withdrawn R42 would have forced and this one does not.
+- **What the writer should record, now that the cost is known.** A packet's twelve LFP prefixes
+  cost 0.33 s to list, 75 s to digest from local disk and 88 s from S3, against a whole-packet
+  build of 1 min 51 s — so the writer's default stays `size`, and a `store_digest` is available
+  for the price of the listing it already does. That makes this revision's level the only content
+  check a default build could afford, which strengthens it; it also means the level exists to
+  serve a default that a `verify` command at publication time (R36 §2.4) might make unnecessary.
