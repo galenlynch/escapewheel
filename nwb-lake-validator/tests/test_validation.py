@@ -725,3 +725,42 @@ def test_a_codec_outside_its_versions_floor_is_reported(packet_root):
 def test_the_same_codec_inside_the_v3_floor_is_not_reported(packet_root):
     root = _external(packet_root, physical_profile="zarr_v3", codecs=["gzip"])
     assert "codec.outside_the_floor" not in {f.check for f in validate(open_packet(root)).findings}
+
+
+def test_a_requested_digest_with_nothing_recorded_says_so(packet_root):
+    """R36 §2.4: a packet need not record a sha256, and every packet built so far records none.
+    Asking for checksums and finding nothing to compare must not report a clean verification."""
+    report = validate(open_packet(_external(packet_root)), external=True, checksums=True)
+    assert report.passed, "a claim the packet never made is not a failure"
+    assert "external.no_checksum" in {f.check for f in report.findings}
+    verified = next(f for f in report.findings if f.check == "external.verified")
+    assert "sha256" not in verified.message, "it compared none, so it must not claim any"
+
+
+def test_a_recorded_digest_is_compared(packet_root):
+    from nwb_lake_validator.stores import digest
+
+    root = _external(packet_root)
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    entry = next(r for r in manifest["resources"] if r.get("external"))
+    entry["sha256"] = digest(entry["uri"])
+    (root / "nwb.packet.json").write_text(json.dumps(manifest))
+    report = validate(open_packet(root), external=True, checksums=True)
+    assert report.passed
+    assert "external.no_checksum" not in {f.check for f in report.findings}
+    assert "1 sha256" in next(f for f in report.findings if f.check == "external.verified").message
+
+
+def test_a_digest_that_disagrees_is_an_error(packet_root):
+    root = _external(packet_root, sha256="0" * 64)
+    assert validate(open_packet(root), external=True).passed, "not read without checksums"
+    report = validate(open_packet(root), external=True, checksums=True)
+    assert not report.passed
+    assert "external.sha256" in {f.check for f in report.findings}
+
+
+def test_the_summary_names_what_it_compared(packet_root):
+    """"Resolved and checked" said nothing about which claims were actually tested."""
+    report = validate(open_packet(_external(packet_root)), external=True)
+    message = next(f for f in report.findings if f.check == "external.verified").message
+    assert "1 codecs" in message and "1 size_bytes" in message

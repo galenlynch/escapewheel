@@ -19,7 +19,13 @@ from ..validator import validate
 def _validate(args: argparse.Namespace) -> int:
     """Validate a packet against the registry it embeds."""
     packet = open_packet(args.packet)
-    report = validate(packet, advisory=args.advisory)
+    # A digest is pointless without resolving, so asking for one asks for the level under it.
+    report = validate(
+        packet,
+        advisory=args.advisory,
+        external=args.external or args.checksums,
+        checksums=args.checksums,
+    )
     for finding in report.findings:
         print(f"  {finding.level:8s} {finding.check}: {finding.message}")
         for row in finding.rows:
@@ -48,5 +54,17 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         "--advisory",
         action="store_true",
         help="also run advisory rules; they are never errors, so the verdict cannot change",
+    )
+    parser.add_argument(
+        "--external",
+        action="store_true",
+        help="reach external resources and check their size and codecs (R15 §4 level 3a); "
+        "off by default because reachability is your situation, not the packet's",
+    )
+    parser.add_argument(
+        "--checksums",
+        action="store_true",
+        help="also recompute each external sha256, reading every byte (level 3b); implies "
+        "--external, and reports the resources that recorded no digest to compare",
     )
     parser.set_defaults(func=_validate)

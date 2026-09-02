@@ -15,6 +15,7 @@ import contextlib
 import json
 import shutil
 import tempfile
+from collections import Counter
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
@@ -460,54 +461,91 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False) -
     and not an error: it says the claim could not be checked, which is the same standing the
     default mode gives it, while a claim that resolved and *disagrees* is an error.
 
+    **A check with nothing to compare against is reported, not counted as a pass.** A manifest
+    need not record `sha256` or `size_bytes`, and a Zarr v3 array does not carry its codecs where
+    `_stored_codecs` reads them -- so any of the three can be absent on a resource that resolves
+    cleanly. `external.verified` therefore names what it compared rather than asserting a resource
+    was "checked", and a requested digest with nothing to compare gets its own finding.
+
     Parameters
     ----------
     checksums : bool, default False
-        Also recompute `sha256`, which reads every byte -- 6.8 GB for a session's LFP -- where
-        the rest of this mode is a list operation. Off separately for that reason.
+        Also recompute `sha256`, which reads every byte -- 6.8 GB for a session's LFP, 75 s from
+        local disk and 88 s from S3 -- where the rest of this mode is a list operation. Off
+        separately for that reason.
     """
     checked = 0
+    compared: Counter[str] = Counter()
+    unchecksummed: list[str] = []
     for resource in packet.resources():
         if not resource.is_external:
             continue
-        entry = resource.entry
-        uri = str(entry.get("uri", ""))
-        try:
-            found = listing(uri)
-        except StoreUnreachable as exc:
-            report.add("warning", "external.unreachable", f"{resource.resource_id}: {exc}")
+        fields = _compare_external(resource, report, checksums)
+        if fields is None:
             continue
-        if (claimed := entry.get("size_bytes")) is not None and found.size_bytes != claimed:
+        checked += 1
+        compared.update(fields)
+        if checksums and "sha256" not in fields:
+            unchecksummed.append(resource.resource_id)
+    if unchecksummed:
+        report.add(
+            "warning",
+            "external.no_checksum",
+            f"{len(unchecksummed)} of {checked} resolved resource(s) record no sha256, so a digest "
+            "was asked for and nothing was compared against (R36 §2.4)",
+            [(name,) for name in unchecksummed],
+        )
+    if checked:
+        did = ", ".join(f"{count} {field}" for field, count in sorted(compared.items())) or "nothing"
+        report.add("info", "external.verified", f"{checked} external resource(s) resolved; compared {did}")
+
+
+def _compare_external(resource: Any, report: Report, checksums: bool) -> list[str] | None:
+    """Check one external resource, returning the fields actually compared.
+
+    None means the store could not be reached, which is already reported and leaves the resource
+    out of every count: nothing about it was established either way.
+    """
+    entry = resource.entry
+    uri = str(entry.get("uri", ""))
+    try:
+        found = listing(uri)
+    except StoreUnreachable as exc:
+        report.add("warning", "external.unreachable", f"{resource.resource_id}: {exc}")
+        return None
+    fields = []
+    if (claimed := entry.get("size_bytes")) is not None:
+        fields.append("size_bytes")
+        if found.size_bytes != claimed:
             report.add(
                 "error",
                 "external.size_bytes",
                 f"{resource.resource_id}: {found.size_bytes:,} bytes over {len(found.members)} object(s), "
                 f"manifest claims {claimed:,}",
             )
-        if declared := set(resource.codecs):
-            stored = _stored_codecs(uri, found)
-            if stored is not None and stored != declared:
-                report.add(
-                    "error",
-                    "external.codecs",
-                    f"{resource.resource_id}: stores {', '.join(sorted(stored)) or 'no codec'}, "
-                    f"manifest declares {', '.join(sorted(declared))}",
-                )
-        if checksums and (claimed_sha := entry.get("sha256")) is not None:
-            try:
-                actual = digest(uri)
-            except StoreUnreachable as exc:
-                report.add("warning", "external.unreachable", f"{resource.resource_id}: {exc}")
-                continue
-            if actual != claimed_sha:
-                report.add(
-                    "error",
-                    "external.sha256",
-                    f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed_sha[:16]}…",
-                )
-        checked += 1
-    if checked:
-        report.add("info", "external.verified", f"{checked} external resource(s) resolved and checked")
+    if (declared := set(resource.codecs)) and (stored := _stored_codecs(uri, found)) is not None:
+        fields.append("codecs")
+        if stored != declared:
+            report.add(
+                "error",
+                "external.codecs",
+                f"{resource.resource_id}: stores {', '.join(sorted(stored)) or 'no codec'}, "
+                f"manifest declares {', '.join(sorted(declared))}",
+            )
+    if checksums and (claimed_sha := entry.get("sha256")) is not None:
+        try:
+            actual = digest(uri)
+        except StoreUnreachable as exc:
+            report.add("warning", "external.unreachable", f"{resource.resource_id}: {exc}")
+            return None
+        fields.append("sha256")
+        if actual != claimed_sha:
+            report.add(
+                "error",
+                "external.sha256",
+                f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed_sha[:16]}…",
+            )
+    return fields
 
 
 def _stored_codecs(uri: str, found: Any) -> set[str] | None:
