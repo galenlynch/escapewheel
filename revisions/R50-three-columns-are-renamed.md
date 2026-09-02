@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-02 |
+| **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R28 §2 (`core.unit_electrodes.channel_ordinal`), R41 §2.2 (`core.processing_runs.supersedes`), R33 §2 (`step_ticks`) |
 | **Depends on** | R33 (rational axis steps), R41 (a run may name the run it replaces), R48 (a column declares its role) |
 | **Profile** | `nwb-lake-portable-v0.1` |

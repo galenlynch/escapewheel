@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-02 |
+| **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R18 §2 (`core.unit_observation_intervals`), R25 §2 (`core.event_stream_observation_intervals`), R38 §2.1 (`core.clock_observation_intervals`), R24 §3 (the `interval` template) |
 | **Depends on** | R7 (every table declares a key), R10 (sort by the primary key), R24 (rule templates), R45 (a tick interval is closed) |
 | **Profile** | `nwb-lake-portable-v0.1` |

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-02 |
+| **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R41 §2.3 (`core.preferred_runs`), R44 §2.1 (`core.processing_runs.scope`), R44 §3 (no validation of the referent) |
 | **Depends on** | R8 (open vocabularies), R41 (currency), R44 (a run declares its scope) |
 | **Profile** | `nwb-lake-portable-v0.1` |

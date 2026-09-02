@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-02 |
+| **Status** | **Accepted** 2026-09-02 |
 | **Amends** | `02_core_logical_schemas.md` (references on eleven tables); R28 §2 (which fixed one instance of this) |
 | **Depends on** | R2 (the registry format), R7 (every table declares a key), R9 (provenance tables), R28 (`core.array_channels.electrode_id`) |
 | **Profile** | `nwb-lake-portable-v0.1` |

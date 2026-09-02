@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-02 |
+| **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R2 §3 (the registry's column object); R3 §6 (the index-base taxonomy) |
 | **Depends on** | R2 (the registry format), R3 (the cross-language floor), R8 (source labels are strings), R29 (`since`), R45 (a tick is a coordinate) |
 | **Profile** | `nwb-lake-portable-v0.1` |
