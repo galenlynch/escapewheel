@@ -2733,13 +2733,15 @@
           "name": "start_tick",
           "type": "int64",
           "presence": "required",
-          "description": "Trial start tick."
+          "description": "First tick of the trial, inclusive, on `clock_id`.",
+          "since": "R45 \u00a72.4"
         },
         {
           "name": "stop_tick",
           "type": "int64",
           "presence": "required",
-          "description": "Trial stop tick."
+          "description": "Last tick of the trial, inclusive, on `clock_id`.",
+          "since": "R45 \u00a72.4"
         },
         {
           "name": "clock_id",

@@ -683,6 +683,14 @@ def build() -> dict:
                 "session_id itself where the run is session-wide. Open, as activity_type is."),
             after="activity_type")
 
+    # `02` described these only as "Trial start tick" / "Trial stop tick", so a consumer
+    # counting events in a trial had to choose `<` or `<=` and the packet did not say which.
+    # No overlap rule is added: R25 §7's reasoning stands, since trials need not partition a
+    # session and in some paradigms may nest by design.
+    SINCE[0] = "R45 §2.4"
+    amend("core.trials", "start_tick", description="First tick of the trial, inclusive, on `clock_id`.")
+    amend("core.trials", "stop_tick", description="Last tick of the trial, inclusive, on `clock_id`.")
+
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
     # expand against the key, and R7 above is what settles three of them.

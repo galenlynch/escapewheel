@@ -724,8 +724,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | string | **required** |  | Session ID. |
 | `trial_id` | string | **required** |  | Stable trial ID. |
-| `start_tick` | int64 | **required** |  | Trial start tick. |
-| `stop_tick` | int64 | **required** |  | Trial stop tick. |
+| `start_tick` | int64 | **required** | R45 §2.4 | First tick of the trial, inclusive, on `clock_id`. |
+| `stop_tick` | int64 | **required** | R45 §2.4 | Last tick of the trial, inclusive, on `clock_id`. |
 | `clock_id` | string | **required** |  | Clock for start/stop ticks. |
 | `condition_id` | string | nullable |  | Experimental condition. |
 | `stimulus_id` | string | nullable |  | Stimulus ID. |
