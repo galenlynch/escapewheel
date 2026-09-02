@@ -907,3 +907,56 @@ def _coordinate_table(root, *, rows, keyed=True):
             }
         )
         (root / "nwb.packet.json").write_text(json.dumps(manifest))
+
+
+def test_a_packet_owned_arrays_axis_length_is_checked_too(packet_root):
+    """The external path checked axis lengths and the packet-owned one only checked rank, though
+    the owned array's shape is already in hand. The two now derive extent the same way."""
+    root = _add_array(packet_root, declared=["blosc", "sharding_indexed"], external=False, axes=3)
+    _coordinate_table(root, rows=2)  # _zarr_v3 is [4, 2, 3], so axis 1 is 2
+    assert validate(open_packet(root)).passed
+
+    _coordinate_table(root, rows=5)
+    report = validate(open_packet(root))
+    assert not report.passed, "an owned array is checked without asking, unlike an external one"
+    assert "array.shape_disagrees_with_coordinates" in {f.check for f in report.findings}
+
+
+# -- R52: a packet-owned resource's digest -------------------------------------------------
+
+
+def _record_owned_digests(root, *, corrupt=None):
+    """Record a sha256 per packet-owned resource, as a writer does since R52."""
+    from nwb_lake_validator.stores import digest
+
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    for entry in manifest["resources"]:
+        if not entry.get("external"):
+            entry["sha256"] = digest(str(root / entry["uri"]))
+    if corrupt is not None:
+        next(e for e in manifest["resources"] if e["resource_id"] == corrupt)["sha256"] = "0" * 64
+    (root / "nwb.packet.json").write_text(json.dumps(manifest))
+    return root
+
+
+def test_packet_owned_digests_are_checked(packet_root):
+    report = validate(open_packet(_record_owned_digests(packet_root)), checksums=True)
+    assert report.passed
+    assert "owned.verified" in {f.check for f in report.findings}
+    assert "owned.no_checksum" not in {f.check for f in report.findings}
+
+
+def test_a_packet_owned_file_that_changed_is_an_error(packet_root):
+    """R35 §2 bounds revalidation on immutability. This is what checks the premise."""
+    root = _record_owned_digests(packet_root, corrupt="core.trials")
+    assert validate(open_packet(root)).passed, "not read without checksums"
+    report = validate(open_packet(root), checksums=True)
+    assert not report.passed
+    assert "owned.sha256" in {f.check for f in report.findings}
+
+
+def test_a_packet_recording_no_owned_digest_says_so(packet_root):
+    """Every packet built before R52 records none; that is a warning, not a silent pass."""
+    report = validate(open_packet(packet_root), checksums=True)
+    assert report.passed
+    assert "owned.no_checksum" in {f.check for f in report.findings}

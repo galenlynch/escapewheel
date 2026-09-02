@@ -283,31 +283,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
             )
 
 
-def _declared_axes(packet: Packet, owned: Sequence[Any], report: Report) -> dict[str, set[int]] | None:
-    """Axis indices `core.array_dimensions` gives per array asset, or None if it has none.
-
-    A null `axis_index` is skipped: it is a required column, so Tier 1 reports it, and
-    counting it here would report the same defect a second time as a rank disagreement.
-    """
-    try:
-        rows = packet.table("core.array_dimensions", columns=["array_asset_id", "axis_index"])
-    except PacketError:
-        report.add(
-            "error",
-            "array.no_array_dimensions_table",
-            f"{len(owned)} packet-owned array(s) but no core.array_dimensions, so no axis is named (R3 §3.0)",
-        )
-        return None
-    axes: dict[str, set[int]] = {}
-    for asset, axis in zip(
-        rows.column("array_asset_id").to_pylist(), rows.column("axis_index").to_pylist(), strict=True
-    ):
-        if asset is not None and axis is not None:
-            axes.setdefault(str(asset), set()).add(int(axis))
-    return axes
-
-
-def _check_one_array(resource: Any, handle: Any, axes: dict[str, set[int]] | None, report: Report) -> None:
+def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], report: Report) -> None:
     """Check one packet-owned array against the metadata document in its own store."""
     try:
         metadata = handle.metadata()
@@ -361,12 +337,31 @@ def _check_one_array(resource: Any, handle: Any, axes: dict[str, set[int]] | Non
             "array.no_array_asset_id",
             f"{resource.resource_id} names no array_asset_id, so core.array_dimensions cannot reach it",
         )
-    elif axes is not None and (named := axes.get(str(asset), set())) != set(range(rank)):
+        return
+    if not (declared := extents.get(str(asset), {})):
+        return
+    if set(declared) != set(range(rank)):
         report.add(
             "error",
             "array.rank_disagrees_with_dimensions",
             f"{resource.resource_id} has rank {rank} but core.array_dimensions gives axis_index "
-            f"{sorted(named) or 'none'} for {asset!r}; R3 §5 requires one row per stored axis",
+            f"{sorted(declared) or 'none'} for {asset!r}; R3 §5 requires one row per stored axis",
+        )
+        return
+    # An axis whose coordinates are a table has one row per position, so that count is its length.
+    # The external path checks this too; a packet-owned array gets the stronger check for free,
+    # since its shape is already in hand.
+    offending = [
+        (axis, length, int(handle.shape[axis]))
+        for axis, length in sorted(declared.items())
+        if length is not None and int(handle.shape[axis]) != length
+    ]
+    if offending:
+        report.add(
+            "error",
+            "array.shape_disagrees_with_coordinates",
+            f"{resource.resource_id}: {len(offending)} axis/axes are not the length their coordinate table gives them",
+            [(f"axis {axis}", f"{rows} rows", f"stored {stored}") for axis, rows, stored in offending],
         )
 
 
@@ -385,9 +380,15 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     owned = [r for r in packet.resources(kind="dense_array_asset") if not r.is_external]
     if not owned:
         return
-    axes = _declared_axes(packet, owned, report)
+    extents = _declared_extents(packet)
+    if not extents:
+        report.add(
+            "error",
+            "array.no_array_dimensions_table",
+            f"{len(owned)} packet-owned array(s) but no core.array_dimensions, so no axis is named (R3 §3.0)",
+        )
     for resource in owned:
-        _check_one_array(resource, packet.array_resource(resource.resource_id), axes, report)
+        _check_one_array(resource, packet.array_resource(resource.resource_id), extents, report)
 
 
 #: The codec floor, per Zarr version (R21 §3.3). A codec's readability is a property of the
@@ -447,6 +448,56 @@ def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = F
             f"{len(names)} external resource(s) not resolved; their codecs, sha256 and "
             "size_bytes are unverified claims",
             [(name,) for name in names],
+        )
+
+
+def _check_owned_digests(packet: Packet, report: Report) -> None:
+    """R52 §2.3: recompute the digest of every packet-owned resource that records one.
+
+    A disagreement is an **error**, where the external equivalent is one too but means something
+    weaker. An external resource that changed is the world moving under a packet that never
+    promised otherwise (R14 §2.3.1); a packet-owned file that changed is the packet being wrong
+    about itself, and it is the premise R35 §2 spends to bound revalidation.
+
+    A resource recording no digest is not checked, and the count is reported rather than passed
+    over -- every packet built before R52 records none.
+    """
+    checked, matched, skipped = 0, 0, []
+    for resource in packet.resources():
+        if resource.is_external:
+            continue
+        entry = resource.entry
+        if (claimed := entry.get("sha256")) is None:
+            skipped.append(resource.resource_id)
+            continue
+        try:
+            actual = digest(str(packet.root / str(entry.get("uri", ""))))
+        except StoreUnreachable as exc:
+            report.add("error", "resource.missing", f"{resource.resource_id}: {exc}")
+            continue
+        checked += 1
+        if actual == claimed:
+            matched += 1
+        else:
+            report.add(
+                "error",
+                "owned.sha256",
+                f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed[:16]}… — "
+                "a packet-owned file is immutable (R14 §2.3) and R35 §2 bounds revalidation on that",
+            )
+    if skipped:
+        report.add(
+            "warning",
+            "owned.no_checksum",
+            f"{len(skipped)} packet-owned resource(s) record no sha256, so immutability was not "
+            "checked for them (R52 §2.3)",
+            [(name,) for name in skipped[:20]],
+        )
+    if checked:
+        report.add(
+            "info",
+            "owned.verified",
+            f"{matched} of {checked} packet-owned resource(s) digested to what the manifest records",
         )
 
 
@@ -929,6 +980,30 @@ def _constant(path: Path, keys: Sequence[str]) -> set[str]:
     return constant
 
 
+def _ordering_scan(
+    handle: Any, keys: Sequence[str], unique: Sequence[str] | None
+) -> tuple[list[str], list[str] | None, Iterator[Any]]:
+    """Read the key columns for the ordering scan, and drop the keys that decide nothing.
+
+    A constant column never decreases and is always equal to itself, so it contributes to neither
+    mask -- yet it is still decoded and compared once per row. Parquet answers it from the footer.
+    Never to nothing: a wholly constant key is every row duplicated, not a table needing no check.
+
+    The footer is read here, so a damaged one raises before the scan starts. The pages are not:
+    the caller steps the iterator so a decompression failure becomes a finding at the point it
+    happens, and the scan stays streaming.
+    """
+    constant = _constant(handle.path, keys)
+    kept = [k for k in keys if k not in constant] or list(keys)
+    settles = ([k for k in unique if k not in constant] or list(unique)) if unique else None
+    # Read the string keys as codes. The scan compares them, and `_breaks` compares a dictionary
+    # by rank without ever materialising a string; decoding here would build a Python-free but
+    # still per-row copy of four identifier columns over the whole table.
+    coded = [k for k in kept if pa.types.is_string(handle.schema().field(k).type)]
+    reader = pq.ParquetFile(handle.path, read_dictionary=coded or None)
+    return kept, settles, reader.iter_batches(batch_size=ORDER_BATCH, columns=kept)
+
+
 def _check_ordering(
     tables: Mapping[str, Any],
     present: Mapping[str, Any],
@@ -955,64 +1030,81 @@ def _check_ordering(
         if scan is not None and resource_id not in scan:
             continue
         spec = tables[resource_id]
-        keys = spec.get("sort")
-        if not keys:
+        if not spec.get("sort"):
             continue
-        unique = spec["primary_key"] if adjacency_settles_uniqueness(spec) else None
-        # A constant column decides nothing, so drop it from both the order and the key it
-        # settles -- but never to nothing, since a wholly constant key is every row duplicated.
-        constant = _constant(handle.path, keys)
-        keys = [k for k in keys if k not in constant] or list(keys)
-        if unique:
-            unique = [k for k in unique if k not in constant] or list(unique)
-        offending: list[tuple[int, Any, Any]] = []
-        duplicated: list[tuple[int, Any]] = []
-        tail: tuple[Any, ...] | None = None
-        start = 0
-        # Read the string keys as codes. The scan compares them, and `_breaks` compares a
-        # dictionary by rank without ever materialising a string; decoding here would build a
-        # Python-free but still per-row copy of four identifier columns over the whole table.
-        coded = [k for k in keys if pa.types.is_string(handle.schema().field(k).type)]
-        reader = pq.ParquetFile(handle.path, read_dictionary=coded or None)
-        for batch in reader.iter_batches(batch_size=ORDER_BATCH, columns=keys):
-            first = _row_at(batch, keys, 0)
-            if tail is not None and _sortable(first) < _sortable(tail):
-                offending.append((start, tail, first))
-            descents, repeats = _breaks(batch, keys, unique)
-            offending.extend(
-                (start + offset, _row_at(batch, keys, offset - 1), _row_at(batch, keys, offset)) for offset in descents
-            )
-            if unique:
-                # The batch boundary needs its own comparison: the scan compares within a
-                # batch, so a duplicate split across two would otherwise pass unseen.
-                if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
-                    duplicated.append((start, _row_at(batch, unique, 0)))
-                duplicated.extend((start + offset, _row_at(batch, unique, offset)) for offset in repeats)
-            tail = _row_at(batch, keys, batch.num_rows - 1)
-            start += batch.num_rows
-            if len(offending) >= ORDER_REPORT and len(duplicated) >= ORDER_REPORT:
-                break
-        if offending:
-            report.add(
-                "warning",
-                f"{resource_id}.physical_order",
-                f"rows are not in declared sort order ({', '.join(keys)})",
-                [(f"row {i}", str(prev), str(cur)) for i, prev, cur in offending[:ORDER_REPORT]],
-            )
-        if unique and offending:
-            # Adjacency settles uniqueness only for a file actually in order: a duplicate
-            # anywhere but beside its twin is invisible to a scan of neighbours. Ordering is a
-            # warning by design -- a packet in the wrong order still conforms -- so uniqueness
-            # falls back to the aggregate rather than being escalated or skipped.
+        if _scan_one_ordering(resource_id, handle, spec, report):
             unsound.add(resource_id)
-        elif duplicated:
-            report.add(
-                "error",
-                f"{resource_id}.primary_key_unique",
-                "duplicate primary key",
-                [(f"row {i}", str(row)) for i, row in duplicated[:ORDER_REPORT]],
-            )
     return unsound
+
+
+def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], report: Report) -> bool:
+    """One table's ordering scan. True where uniqueness must fall back to the aggregate."""
+    keys = spec["sort"]
+    unique = spec["primary_key"] if adjacency_settles_uniqueness(spec) else None
+    offending: list[tuple[int, Any, Any]] = []
+    duplicated: list[tuple[int, Any]] = []
+    tail: tuple[Any, ...] | None = None
+    start = 0
+    try:
+        keys, unique, batches = _ordering_scan(handle, keys, unique)
+    except (OSError, pa.ArrowException) as exc:
+        report.add("error", "resource.unreadable", f"{resource_id}: {exc}")
+        return False
+    damaged = None
+    while True:
+        # Stepped rather than iterated, so a page that fails to decompress becomes a finding
+        # instead of a traceback -- without wrapping the scan body, where the same exception type
+        # would mean something else. Streaming is not negotiable here: this table is 287 M rows,
+        # and holding its key columns is the difference between one batch and 26 GB.
+        try:
+            batch = next(batches)
+        except StopIteration:
+            break
+        except (OSError, pa.ArrowException) as exc:
+            damaged = exc
+            break
+        first = _row_at(batch, keys, 0)
+        if tail is not None and _sortable(first) < _sortable(tail):
+            offending.append((start, tail, first))
+        descents, repeats = _breaks(batch, keys, unique)
+        offending.extend(
+            (start + offset, _row_at(batch, keys, offset - 1), _row_at(batch, keys, offset)) for offset in descents
+        )
+        if unique:
+            # The batch boundary needs its own comparison: the scan compares within a batch, so a
+            # duplicate split across two would otherwise pass unseen.
+            if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
+                duplicated.append((start, _row_at(batch, unique, 0)))
+            duplicated.extend((start + offset, _row_at(batch, unique, offset)) for offset in repeats)
+        tail = _row_at(batch, keys, batch.num_rows - 1)
+        start += batch.num_rows
+        if len(offending) >= ORDER_REPORT and len(duplicated) >= ORDER_REPORT:
+            break
+    if damaged is not None:
+        # The order cannot be established, so nothing partial is reported for it: what the scan
+        # saw before the damage says nothing about the file as a whole.
+        report.add("error", "resource.unreadable", f"{resource_id}: {damaged}")
+        return False
+    if offending:
+        report.add(
+            "warning",
+            f"{resource_id}.physical_order",
+            f"rows are not in declared sort order ({', '.join(keys)})",
+            [(f"row {i}", str(prev), str(cur)) for i, prev, cur in offending[:ORDER_REPORT]],
+        )
+        # Adjacency settles uniqueness only for a file actually in order: a duplicate anywhere but
+        # beside its twin is invisible to a scan of neighbours. Ordering is a warning by design --
+        # a packet in the wrong order still conforms -- so uniqueness falls back to the aggregate
+        # rather than being escalated or skipped.
+        return bool(unique)
+    if duplicated:
+        report.add(
+            "error",
+            f"{resource_id}.primary_key_unique",
+            "duplicate primary key",
+            [(f"row {i}", str(row)) for i, row in duplicated[:ORDER_REPORT]],
+        )
+    return False
 
 
 class OrderViolation(Exception):
@@ -1271,8 +1363,9 @@ def validate(
         of the reader's situation, not of the packet. An unreachable resource is a warning; one
         that resolves and disagrees with its claim is an error.
     checksums : bool, default False
-        With `external`, also recompute each `sha256`. Separate because it reads every byte,
-        where the rest of that mode lists: a session's LFP is 6.8 GB over 2,496 objects.
+        Recompute every recorded `sha256`: each packet-owned resource (R52 §2.3), and with
+        `external`, each external one too. Separate because it reads every byte -- 0.60 s for the
+        1,209 MB a packet owns, against 75 s for the 6.8 GB of LFP it merely references.
     store_digests : bool, default False
         With `external`, also compare each member's recorded `store_digest` against what the
         store reports now (R51 §2.3). This is the level between the other two: it costs the
@@ -1303,6 +1396,8 @@ def validate(
     _check_codec_declarations(packet, report, resolved=external)
     if external:
         _resolve_external(packet, report, checksums, store_digests)
+    if checksums:
+        _check_owned_digests(packet, report)
     _check_packet_owned_arrays(packet, report)
     _check_materialization_provenance(packet, report)
     _check_time_origin(packet, report)
