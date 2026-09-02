@@ -671,6 +671,18 @@ def build() -> dict:
                         "resource_columns": ["processing_run_id"]}],
         "sort": None, "rules": [], "since": SINCE[0]}
 
+    # What the run is about, so `core.preferred_runs` has something to join to. Without it the
+    # ambiguity rule groups by activity while the preference is keyed by activity and scope, and
+    # twelve probes sorted once each are indistinguishable from one probe sorted twelve times.
+    # Nullable because provenance is SHOULD (R9 §5); a run that omits it is undeterminable
+    # rather than unique.
+    SINCE[0] = "R44 §2.1"
+    add_col("core.processing_runs",
+            col("scope", "string", "nullable",
+                "What this run is about -- a probe_id, an array_asset_id, a camera -- or the "
+                "session_id itself where the run is session-wide. Open, as activity_type is."),
+            after="activity_type")
+
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
     # expand against the key, and R7 above is what settles three of them.

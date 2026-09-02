@@ -119,6 +119,20 @@
         "level": "error",
         "message": "the supersedes chain contains a cycle",
         "sql": "WITH RECURSIVE up(processing_run_id, ancestor, depth) AS (SELECT processing_run_id, supersedes, 1 FROM core_processing_runs WHERE supersedes IS NOT NULL UNION ALL SELECT u.processing_run_id, r.supersedes, u.depth + 1 FROM up u JOIN core_processing_runs r ON r.processing_run_id = u.ancestor WHERE r.supersedes IS NOT NULL AND u.depth < 64) SELECT DISTINCT processing_run_id FROM up WHERE ancestor = processing_run_id OR depth >= 64"
+      },
+      {
+        "id": "core.processing_runs.undeclared_currency",
+        "level": "info",
+        "advisory": true,
+        "message": "several runs share an activity and scope and none is preferred, so a consumer cannot choose between them",
+        "sql": "WITH grouped AS ( SELECT session_id, activity_type, scope, count(*) AS n FROM core_processing_runs WHERE scope IS NOT NULL GROUP BY session_id, activity_type, scope HAVING count(*) > 1) SELECT g.session_id, g.activity_type, g.scope, g.n FROM grouped g WHERE NOT EXISTS ( SELECT 1 FROM core_preferred_runs p WHERE p.activity_type = g.activity_type AND p.scope = g.scope AND (p.session_id = g.session_id OR (p.session_id IS NULL AND g.session_id IS NULL)))"
+      },
+      {
+        "id": "core.processing_runs.scope_undeclared",
+        "level": "info",
+        "advisory": true,
+        "message": "an activity has several runs and at least one records no scope, so whether they compete cannot be determined",
+        "sql": "WITH per_activity AS ( SELECT session_id, activity_type, count(*) AS n, count(*) FILTER (WHERE scope IS NULL) AS unscoped FROM core_processing_runs GROUP BY session_id, activity_type) SELECT session_id, activity_type, n, unscoped FROM per_activity WHERE n > 1 AND unscoped > 0"
       }
     ],
     "core.sessions": [

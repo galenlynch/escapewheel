@@ -8,7 +8,7 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-35 tables, 292 columns, 54 references, 59 Tier 2 rules
+35 tables, 293 columns, 54 references, 61 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
 derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41
 ```
@@ -540,6 +540,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `processing_run_id` | string | **required** |  | Stable processing run ID. |
 | `session_id` | string | nullable |  | Session ID if session-scoped. |
 | `activity_type` | string | **required** | R8 §3-4 | import, validation, sorting, curation, materialization, etc. |
+| `scope` | string | nullable | R44 §2.1 | What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Open, as activity_type is. |
 | `supersedes` | string | nullable | R41 §2.2 | The run this one replaces, if any. |
 | `software_name` | string | nullable |  | Software name. |
 | `software_version` | string | nullable |  | Software version. |
@@ -557,12 +558,14 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `supersedes` → `core.processing_runs` (`processing_run_id`)
 
-**Tier 2 rules** — 4
+**Tier 2 rules** — 6
 
 - `core.processing_runs.no_failed_runs` — error: a failed run is recorded in a committed packet
 - `core.processing_runs.materialization_records_software` — error: a materialization run does not record the software that produced it
 - `core.processing_runs.supersedes_not_self` — error: a run supersedes itself
 - `core.processing_runs.supersedes_well_founded` — error: the supersedes chain contains a cycle
+- `core.processing_runs.undeclared_currency` — info *(advisory, R26)*: several runs share an activity and scope and none is preferred, so a consumer cannot choose between them
+- `core.processing_runs.scope_undeclared` — info *(advisory, R26)*: an activity has several runs and at least one records no scope, so whether they compete cannot be determined
 
 ### `core.session_experimenters`
 
