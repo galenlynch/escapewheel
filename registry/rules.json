@@ -17,8 +17,8 @@
       {
         "id": "core.array_dimensions.tick_axis_complete",
         "level": "error",
-        "message": "a regular tick axis needs clock_id, origin_tick and step_ticks",
-        "sql": "SELECT array_asset_id, axis_index FROM core_array_dimensions WHERE origin_tick IS NOT NULL AND (step_ticks IS NULL OR clock_id IS NULL)"
+        "message": "a regular tick axis needs clock_id, origin_tick and step_tick_num",
+        "sql": "SELECT array_asset_id, axis_index FROM core_array_dimensions WHERE origin_tick IS NOT NULL AND (step_tick_num IS NULL OR clock_id IS NULL)"
       },
       {
         "id": "core.array_dimensions.numeric_axis_complete",
@@ -111,14 +111,14 @@
       {
         "id": "core.processing_runs.supersedes_not_self",
         "level": "error",
-        "message": "a run supersedes itself",
-        "sql": "SELECT processing_run_id FROM core_processing_runs WHERE supersedes = processing_run_id"
+        "message": "a run supersedes_run_id itself",
+        "sql": "SELECT processing_run_id FROM core_processing_runs WHERE supersedes_run_id = processing_run_id"
       },
       {
         "id": "core.processing_runs.supersedes_well_founded",
         "level": "error",
         "message": "the supersedes chain contains a cycle",
-        "sql": "WITH RECURSIVE up(processing_run_id, ancestor, depth) AS (SELECT processing_run_id, supersedes, 1 FROM core_processing_runs WHERE supersedes IS NOT NULL UNION ALL SELECT u.processing_run_id, r.supersedes, u.depth + 1 FROM up u JOIN core_processing_runs r ON r.processing_run_id = u.ancestor WHERE r.supersedes IS NOT NULL AND u.depth < 64) SELECT DISTINCT processing_run_id FROM up WHERE ancestor = processing_run_id OR depth >= 64"
+        "sql": "WITH RECURSIVE up(processing_run_id, ancestor, depth) AS (SELECT processing_run_id, supersedes_run_id, 1 FROM core_processing_runs WHERE supersedes_run_id IS NOT NULL UNION ALL SELECT u.processing_run_id, r.supersedes_run_id, u.depth + 1 FROM up u JOIN core_processing_runs r ON r.processing_run_id = u.ancestor WHERE r.supersedes_run_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT processing_run_id FROM up WHERE ancestor = processing_run_id OR depth >= 64"
       },
       {
         "id": "core.processing_runs.undeclared_currency",
@@ -133,6 +133,18 @@
         "advisory": true,
         "message": "an activity has several runs and at least one records no scope, so whether they compete cannot be determined",
         "sql": "WITH per_activity AS ( SELECT session_id, activity_type, count(*) AS n, count(*) FILTER (WHERE scope IS NULL) AS unscoped FROM core_processing_runs GROUP BY session_id, activity_type) SELECT session_id, activity_type, n, unscoped FROM per_activity WHERE n > 1 AND unscoped > 0"
+      },
+      {
+        "id": "core.processing_runs.scope_pair_complete",
+        "level": "error",
+        "message": "a run declares one half of its scope; the pair is what carries the meaning (R49 \u00a72.4)",
+        "sql": "SELECT processing_run_id, scope_kind, scope FROM core_processing_runs WHERE (scope IS NULL) <> (scope_kind IS NULL)"
+      },
+      {
+        "id": "core.processing_runs.scope_resolves",
+        "level": "error",
+        "message": "a scope names a resource of its declared kind that does not exist (R49 \u00a72.5)",
+        "sql": "WITH known AS (SELECT 'core.sessions' AS kind, session_id AS id FROM core_sessions UNION ALL SELECT 'core.probes', probe_id FROM core_probes UNION ALL SELECT 'core.array_assets', array_asset_id FROM core_array_assets UNION ALL SELECT 'core.devices', device_id FROM core_devices UNION ALL SELECT 'core.event_streams', event_stream_id FROM core_event_streams UNION ALL SELECT 'core.electrodes', electrode_id FROM core_electrodes) SELECT processing_run_id, scope_kind, scope FROM core_processing_runs r WHERE r.scope_kind IN (SELECT DISTINCT kind FROM known) AND NOT EXISTS (SELECT 1 FROM known k WHERE k.kind = r.scope_kind AND k.id = r.scope)"
       }
     ],
     "core.sessions": [
@@ -260,7 +272,6 @@
           "sorting_run_id",
           "curation_id"
         ],
-        "index": "interval_index",
         "overlap_op": "<=",
         "overlap_message": "observation windows overlap, which would double-count observed time"
       }
@@ -276,7 +287,7 @@
         "id": "core.array_assets.sample_rate_matches_axis",
         "level": "error",
         "message": "sample_rate_hz disagrees with the time axis step",
-        "sql": "SELECT a.array_asset_id, a.sample_rate_hz FROM core_array_assets a JOIN core_array_dimensions d USING (array_asset_id) JOIN core_clocks c ON c.clock_id = d.clock_id WHERE a.sample_rate_hz IS NOT NULL AND d.step_ticks / COALESCE(d.step_tick_den, 1) IS NOT NULL AND c.tick_rate_hz IS NOT NULL AND abs(a.sample_rate_hz - c.tick_rate_hz / d.step_ticks / COALESCE(d.step_tick_den, 1)) > 1e-6"
+        "sql": "SELECT a.array_asset_id, a.sample_rate_hz FROM core_array_assets a JOIN core_array_dimensions d USING (array_asset_id) JOIN core_clocks c ON c.clock_id = d.clock_id WHERE a.sample_rate_hz IS NOT NULL AND d.step_tick_num / COALESCE(d.step_tick_den, 1) IS NOT NULL AND c.tick_rate_hz IS NOT NULL AND abs(a.sample_rate_hz - c.tick_rate_hz / d.step_tick_num / COALESCE(d.step_tick_den, 1)) > 1e-6"
       }
     ],
     "core.array_channels": [
@@ -317,7 +328,6 @@
         "partition_of": [
           "event_stream_id"
         ],
-        "index": "interval_index",
         "overlap_op": "<=",
         "overlap_message": "observation windows overlap, which would double-count observed time"
       }
@@ -339,10 +349,10 @@
         "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n FROM core_unit_electrodes WHERE is_primary GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING COUNT(*) > 1"
       },
       {
-        "id": "core.unit_electrodes.ordinal_contiguous",
+        "id": "core.unit_electrodes.channel_index_contiguous",
         "level": "error",
-        "message": "channel_ordinal is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
-        "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MAX(channel_ordinal) AS hi FROM core_unit_electrodes WHERE channel_ordinal IS NOT NULL GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(channel_ordinal) <> COUNT(*) - 1 OR MIN(channel_ordinal) <> 0"
+        "message": "channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
+        "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core_unit_electrodes WHERE channel_index IS NOT NULL GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
       }
     ],
     "analysis.spike_events": [
@@ -368,7 +378,6 @@
           "session_id",
           "clock_id"
         ],
-        "index": "interval_index",
         "overlap_op": "<=",
         "overlap_message": "observation windows overlap, which would double-count observed time"
       }
@@ -390,7 +399,13 @@
         "id": "core.preferred_runs.not_superseded",
         "level": "warning",
         "message": "the preferred run is superseded by another run",
-        "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes = p.processing_run_id)"
+        "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes_run_id = p.processing_run_id)"
+      },
+      {
+        "id": "core.preferred_runs.scope_resolves",
+        "level": "error",
+        "message": "a scope names a resource of its declared kind that does not exist (R49 \u00a72.5)",
+        "sql": "WITH known AS (SELECT 'core.sessions' AS kind, session_id AS id FROM core_sessions UNION ALL SELECT 'core.probes', probe_id FROM core_probes UNION ALL SELECT 'core.array_assets', array_asset_id FROM core_array_assets UNION ALL SELECT 'core.devices', device_id FROM core_devices UNION ALL SELECT 'core.event_streams', event_stream_id FROM core_event_streams UNION ALL SELECT 'core.electrodes', electrode_id FROM core_electrodes) SELECT session_id, activity_type, scope_kind, scope FROM core_preferred_runs r WHERE r.scope_kind IN (SELECT DISTINCT kind FROM known) AND NOT EXISTS (SELECT 1 FROM known k WHERE k.kind = r.scope_kind AND k.id = r.scope)"
       }
     ]
   }

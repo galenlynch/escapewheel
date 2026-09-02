@@ -68,6 +68,14 @@ check("reference target columns exist",
 check("reference arity matches",
       [(n, r["resource"]) for n, t in T.items() for r in t["references"]
        if len(r["columns"]) != len(r["resource_columns"])])
+# R48 §2.3. A structural index may also be a foreign-key component, so a client converting one
+# side and not the other would break the join. Both sides sharing a role is what makes converting
+# every structural_index column join-preserving by construction.
+_role = {(n, c["name"]): c["role"] for n, t in T.items() for c in t["columns"]}
+check("a reference relates columns of the same role",
+      [(n, a, r["resource"], b) for n, t in T.items() for r in t["references"]
+       for a, b in zip(r["columns"], r["resource_columns"])
+       if _role.get((n, a)) != _role.get((r["resource"], b))])
 check("source labels are strings",
       [(n, c["name"], c["type"]) for n, t in T.items() for c in t["columns"]
        if c["name"].endswith("_label") and c["type"] != "string"])

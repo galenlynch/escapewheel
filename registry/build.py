@@ -51,8 +51,88 @@ def presence(required: str, typ: str) -> str:
 SINCE = [None]
 
 
+#: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a
+#: build error, so a column cannot be added without deciding what kind of thing it is. There is
+#: deliberately no default -- a default would make a forgotten classification indistinguishable
+#: from a deliberate one, which is the drift R48 exists to stop.
+#:
+#: Keyed by name rather than by (table, column) because a name means one thing throughout: no
+#: name in the registry carries two roles. R50's renames are what made that true -- before them
+#: `supersedes` held a run ID without saying so, and `step_ticks` read as a coordinate while
+#: holding a duration.
+#: Names that exist only between `02` and the revision that renames them (R5 §5, R8 §2). They
+#: need a role because they pass through `col`, and they are `data` for the same reason their
+#: renamed forms are: R8 §2 made them strings, and a string cannot be an offset (R48 §2.4).
+TRANSIENT = ("local_electrode_index", "local_channel_index", "local_unit_index")
+
+#: Names on tables and columns a revision withdraws, which `02` still defines and which therefore
+#: pass through `col` before being struck. They carry their honest role rather than a placeholder,
+#: so that reviving one would not revive a wrong classification with it.
+WITHDRAWN = {
+    # R9 §2: the entity/activity/edge provenance graph.
+    "activity_id": "identifier", "entity_id": "identifier", "source_entity_id": "identifier",
+    "target_entity_id": "identifier", "resource_id": "identifier",
+    "entity_type": "data", "relationship_type": "data",
+    # R5 §4: core.unit_spike_chunks, withdrawn with its table.
+    "chunk_index": "sequence_position", "t_min_tick": "coordinate", "t_max_tick": "coordinate",
+    # R3 §3.3: the array declares its own dtype.
+    "dtype": "data",
+}
+
+ROLES: dict[str, str] = dict.fromkeys(TRANSIENT, "data") | WITHDRAWN
+for _role, _names in {
+    "identifier": (
+        "array_asset_id", "clock_id", "condition_id", "coordinate_array_asset_id", "curation_id",
+        "default_electrode_id", "device_id", "electrode_id", "event_id", "event_stream_id",
+        "input_array_asset_id", "media_asset_id", "parent_clock_id", "parent_curation_id", "probe_id",
+        "processing_run_id", "reference_clock_id", "session_id", "sorting_run_id", "source_file_id",
+        "source_session_id", "stimulus_id", "stream_id", "subject_id", "supersedes_run_id", "trial_id",
+        "unit_id",
+    ),
+    "coordinate": (
+        "first_spike_tick", "last_spike_tick", "origin_tick", "parent_tick", "start_tick", "stop_tick",
+        "t_tick", "t_zero_tick", "time_bucket_tick",
+    ),
+    "structural_index": (
+        "axis_index", "channel_index", "frame_index",
+    ),
+    "sequence_position": (
+        "anchor_index",
+    ),
+    "data": (
+        "activity_type", "amplitude", "amplitude_unit", "brain_region", "channel_label", "choice",
+        "chosen_at", "code_uri", "confidence", "conversion", "coordinate_frame",
+        "coordinate_position_column", "coordinate_resource", "coordinate_unit", "created_at",
+        "curation_tool", "curation_tool_version", "curator", "date_of_birth", "dimension_name", "dropped",
+        "ended_at", "event_type", "experimenter", "firing_rate_hz", "format", "genotype", "impedance_ohm",
+        "insertion_name", "institution", "inter_sample_shift", "is_primary", "kind", "label",
+        "local_channel_label", "local_electrode_label", "local_unit_label", "manufacturer", "metadata",
+        "model", "modified_at", "n_spikes", "name", "normalized_label", "notes", "offset", "origin",
+        "origin_value", "parameters", "payload", "probe_type", "pts", "quality_label",
+        "quality_label_source", "reason", "rewarded", "sample_rate_hz", "scope", "scope_kind",
+        "semantic_type", "serial_number", "session_description", "session_end_time", "session_start_time",
+        "sex", "sha256", "size_bytes", "software_name", "software_version", "sorter_name", "sorter_version",
+        "source", "species", "started_at", "status", "step_tick_den", "step_tick_num", "step_value",
+        "strain", "tag", "target_region", "task_name", "tick_rate_den", "tick_rate_hz", "tick_rate_num",
+        "tick_zero_utc", "transform_offset", "transform_slope", "transform_to_parent", "unit", "uri",
+        "x_um", "y_um", "z_um",
+    ),
+}.items():
+    ROLES.update(dict.fromkeys(_names, _role))
+
+
+def role_of(name: str) -> str:
+    """Return a column's role, refusing a column nobody has classified (R48 §2.2)."""
+    try:
+        return ROLES[name]
+    except KeyError:
+        raise SystemExit(
+            f"column {name!r} declares no role; add it to ROLES (R48 §2.2). "
+            "The choice is data, identifier, coordinate, structural_index or sequence_position."
+        ) from None
+
 def col(name, typ, pres, desc, since=None, determined_by=None):
-    entry = {"name": name, "type": typ, "presence": pres, "description": desc}
+    entry = {"name": name, "type": typ, "presence": pres, "role": role_of(name), "description": desc}
     if stamp := (since or SINCE[0]):
         entry["since"] = stamp
     if determined_by is not None:
@@ -96,16 +176,20 @@ def expand(template: str, resource: str, call: dict, key: list[str]) -> list[dic
     if subject is None:
         return rules
 
-    index, op = call["index"], call["overlap_op"]
+    # R47 §2.3: `index` is optional. Without one the rule orders by `start`, which is what it
+    # compares against, so the check is an overlap test and nothing else -- ordering by a stored
+    # index was correct only while index order happened to be time order, which nothing required.
+    index, op = call.get("index"), call["overlap_op"]
     by = ", ".join(subject)
-    rules.append({"id": f"{resource}.index_contiguous", "level": "error",
-                  "message": f"{index} is not contiguous from 0",
-                  "sql": (f"SELECT {by}, COUNT(*) AS n FROM {name} GROUP BY {by} "
-                          f"HAVING MAX({index}) <> COUNT(*) - 1 OR MIN({index}) <> 0")})
+    if index is not None:
+        rules.append({"id": f"{resource}.index_contiguous", "level": "error",
+                      "message": f"{index} is not contiguous from 0",
+                      "sql": (f"SELECT {by}, COUNT(*) AS n FROM {name} GROUP BY {by} "
+                              f"HAVING MAX({index}) <> COUNT(*) - 1 OR MIN({index}) <> 0")})
     rules.append({"id": f"{resource}.non_overlapping", "level": "error",
                   "message": call["overlap_message"],
                   "sql": (f"SELECT {report}, {start}, {stop} FROM (SELECT *, LAG({stop}) OVER "
-                          f"(PARTITION BY {by} ORDER BY {index}) AS prev_stop FROM {name}) "
+                          f"(PARTITION BY {by} ORDER BY {index or start}) AS prev_stop FROM {name}) "
                           f"WHERE prev_stop IS NOT NULL AND {start} {op} prev_stop")})
     return rules
 
@@ -142,6 +226,9 @@ def build() -> dict:
         for c in T(t)["columns"]:
             if c["name"] == old:
                 c["name"] = new
+                # The role follows the name (R48 §2.1): a rename that changes what a column is
+                # must change its role, and one that does not is a no-op here.
+                c["role"] = role_of(new)
                 if SINCE[0]: c["since"] = SINCE[0]
     def amend(t, name, **changes):
         """Change a column in place, recording the revision that did it (R29 §2).
@@ -300,13 +387,12 @@ def build() -> dict:
                     col("unit_id", "string", "required", "Unit ID."),
                     col("sorting_run_id", "string", "required", "Sorting run ID."),
                     col("curation_id", "string", "required", "Curation ID."),
-                    col("interval_index", "int64", "required",
-                        "0-based position in this unit's interval sequence."),
                     col("start_tick", "int64", "required", "First tick, inclusive."),
                     col("stop_tick", "int64", "required", "Last tick, inclusive."),
                     col("clock_id", "string", "required", "Clock for the interval bounds.")],
-        "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id",
-                        "interval_index"],
+        # R47 §2.2: `start_tick` keys it. Two rows of one partition cannot share a start while
+        # interval_valid and non_overlapping hold, so uniqueness is by construction.
+        "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "start_tick"],
         "references": [{"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
                         "resource": "core.units",
                         "resource_columns": ["session_id", "unit_id", "sorting_run_id",
@@ -346,7 +432,7 @@ def build() -> dict:
     for name, typ, desc in [
             ("clock_id", "string", "Clock the ticks are counted on (regular tick axis)."),
             ("origin_tick", "int64", "Tick at position 0."),
-            ("step_ticks", "int64", "Ticks advanced per position."),
+            ("step_tick_num", "int64", "Ticks advanced per position (numerator)."),
             ("origin_value", "float64", "Value at position 0 (regular numeric axis)."),
             ("step_value", "float64", "Increment per position."),
             ("coordinate_unit", "string", "Unit of the numeric coordinate values."),
@@ -362,14 +448,14 @@ def build() -> dict:
         {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]})
 
     # ---- R33 §2 : an axis step may be rational -----------------------------------------------
-    # `step_ticks` becomes the numerator. Absent denominator means 1, so every row written
+    # `step_tick_num` is the numerator. Absent denominator means 1, so every row written
     # under R20 keeps its meaning. A 30 ms PSTH bin is 937.5 ticks at 31,250 Hz and 29.97 fps
     # is 1042.708..., neither of which an integer step can say.
     SINCE[0] = "R33 §2"
     add_col("core.array_dimensions",
             col("step_tick_den", "int64", "nullable",
                 "Denominator of the step, in ticks. Absent means 1."),
-            after="step_ticks")
+            after="step_tick_num")
 
     # ---- R38 §2 : observation belongs to the clock ----------------------------------------------
     # A unit was observable while its probe was running; a sensor was watched while its
@@ -382,13 +468,11 @@ def build() -> dict:
     tables["core.clock_observation_intervals"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("clock_id", "string", "required", "The clock that was observing."),
-                    col("interval_index", "int64", "required",
-                        "0-based position in this clock's interval sequence."),
                     col("start_tick", "int64", "required",
                         "First tick observed, on `clock_id` itself."),
                     col("stop_tick", "int64", "required",
                         "Last tick observed, on `clock_id` itself.")],
-        "primary_key": ["session_id", "clock_id", "interval_index"],
+        "primary_key": ["session_id", "clock_id", "start_tick"],  # R47 §2.2
         "references": [{"columns": ["session_id"], "resource": "core.sessions",
                         "resource_columns": ["session_id"]},
                        {"columns": ["clock_id"], "resource": "core.clocks",
@@ -481,13 +565,11 @@ def build() -> dict:
     SINCE[0] = "R25 §2"
     tables["core.event_stream_observation_intervals"] = {
         "columns": [col("event_stream_id", "string", "required", "The stream being observed."),
-                    col("interval_index", "int64", "required",
-                        "0-based position in this stream's interval sequence."),
                     col("start_tick", "int64", "required",
                         "First observed tick, on the stream's clock."),
                     col("stop_tick", "int64", "required",
                         "Last observed tick, on the stream's clock.")],
-        "primary_key": ["event_stream_id", "interval_index"],
+        "primary_key": ["event_stream_id", "start_tick"],  # R47 §2.2
         # No clock_id: core.event_streams declares one, and an interval is meaningless without
         # joining to its stream anyway, so repeating it buys nothing (R25 2.1).
         "references": [{"columns": ["event_stream_id"], "resource": "core.event_streams",
@@ -536,7 +618,7 @@ def build() -> dict:
                     col("curation_id", "string", "required", "Curation ID."),
                     col("electrode_id", "string", "required",
                         "An electrode this unit was detected on."),
-                    col("channel_ordinal", "int64", "nullable",
+                    col("channel_index", "int64", "nullable",
                         "0-based position in the unit's channel list, where a dense array axis "
                         "is indexed by it (R20 §2). Not an identifier; nothing joins on it."),
                     col("is_primary", "bool", "nullable",
@@ -643,10 +725,10 @@ def build() -> dict:
     # about correctness: the superseded run keeps its rows, which is the point of keeping both.
     SINCE[0] = "R41 §2.2"
     add_col("core.processing_runs",
-            col("supersedes", "string", "nullable", "The run this one replaces, if any."),
+            col("supersedes_run_id", "string", "nullable", "The run this one replaces, if any."),
             after="activity_type")
     T("core.processing_runs").setdefault("references", []).append(
-        {"columns": ["supersedes"], "resource": "core.processing_runs",
+        {"columns": ["supersedes_run_id"], "resource": "core.processing_runs",
          "resource_columns": ["processing_run_id"]})
 
     # The choice itself. Separate from the run log because that log should never be revised
@@ -656,6 +738,8 @@ def build() -> dict:
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("activity_type", "string", "required",
                         "Which kind of output this preference is about. Open, as R9 §6 leaves it."),
+                    col("scope_kind", "string", "required", "The resource whose primary key "
+                        "`scope` holds, as a dotted resource ID (R49 §2.2). Open.", since="R49 §2.1"),
                     col("scope", "string", "required",
                         "What it applies to -- a probe_id, an array_asset_id, a camera -- or the "
                         "session_id itself where the preference is session-wide."),
@@ -664,7 +748,9 @@ def build() -> dict:
                     col("reason", "string", "nullable", "Why, in one line.")],
         # `scope` is required rather than nullable because R7 wants a real key, and a nullable
         # key column makes uniqueness ill-defined.
-        "primary_key": ["session_id", "activity_type", "scope"],
+        # R49 §2.3: the pair is the address. Without the kind, a probe and a device sharing an
+        # identifier would collide on one preference row.
+        "primary_key": ["session_id", "activity_type", "scope_kind", "scope"],
         "references": [{"columns": ["session_id"], "resource": "core.sessions",
                         "resource_columns": ["session_id"]},
                        {"columns": ["processing_run_id"], "resource": "core.processing_runs",
@@ -690,6 +776,57 @@ def build() -> dict:
     SINCE[0] = "R45 §2.4"
     amend("core.trials", "start_tick", description="First tick of the trial, inclusive, on `clock_id`.")
     amend("core.trials", "stop_tick", description="Last tick of the trial, inclusive, on `clock_id`.")
+
+    # R49 §2.1-2.2: the kind is a dotted resource ID, so a consumer resolves generically --
+    # read the kind, take that resource's primary key from the registry, resolve. That is what
+    # lets an R17 extension scope to its own tables without the core registry knowing them.
+    SINCE[0] = "R49 §2.1"
+    add_col("core.processing_runs",
+            col("scope_kind", "string", "nullable",
+                "The resource whose primary key `scope` holds, as a dotted resource ID -- "
+                "`core.probes`, `core.array_assets`. Open (R8 §4); a value naming no declared "
+                "resource means the scope is not a packet resource. Set with `scope` or not at all."),
+            after="scope")
+
+    # ---- R50 : three columns are renamed -----------------------------------------------------
+    # channel_ordinal -> channel_index: R28 chose `ordinal` to say "not an identifier"; R48's role
+    # says that for every such column, leaving a name that claims a position where the value is a
+    # 0-based offset. supersedes -> supersedes_run_id: the only reference column not following the
+    # `_id` convention. step_ticks -> step_tick_num: agrees with step_tick_den and tick_rate_num,
+    # and cannot be misread as a coordinate the way a `_ticks` plural can.
+    SINCE[0] = "R50 §2"
+    amend("core.unit_electrodes", "channel_index",
+          description="0-based position of this electrode in the unit's channel list, where a "
+                      "dense array axis is indexed by it (R20 §2). Nothing joins on it.")
+    amend("core.processing_runs", "supersedes_run_id",
+          description="The run this one replaces, if any.")
+
+    # ---- R46 : the references the registry never declared -----------------------------------
+    # Tier 1 generates an anti-join per declared reference, so an undeclared one is a check that
+    # never runs: a packet naming a probe that is not in core.probes validated clean. The reader
+    # degrades too -- `distinct` answers from the parent table only where a reference says it may.
+    # `array_asset_id` keys both core and analysis assets; the layering settles it, since a core
+    # table must not reference an analysis resource (06).
+    SINCE[0] = "R46 §2.1"
+    for child, column, parent, parent_column in [
+            ("core.sorting_runs", "session_id", "core.sessions", "session_id"),
+            ("core.sorting_runs", "probe_id", "core.probes", "probe_id"),
+            ("core.sorting_runs", "input_array_asset_id", "core.array_assets", "array_asset_id"),
+            ("core.curation_versions", "session_id", "core.sessions", "session_id"),
+            ("core.curation_versions", "sorting_run_id", "core.sorting_runs", "sorting_run_id"),
+            ("core.curation_versions", "parent_curation_id", "core.curation_versions", "curation_id"),
+            ("core.processing_runs", "session_id", "core.sessions", "session_id"),
+            ("core.devices", "session_id", "core.sessions", "session_id"),
+            ("core.array_assets", "session_id", "core.sessions", "session_id"),
+            ("core.array_assets", "clock_id", "core.clocks", "clock_id"),
+            ("core.array_dimensions", "coordinate_array_asset_id", "core.array_assets", "array_asset_id"),
+            ("core.media_assets", "session_id", "core.sessions", "session_id"),
+            ("core.media_assets", "clock_id", "core.clocks", "clock_id"),
+            ("core.media_frames", "clock_id", "core.clocks", "clock_id"),
+            ("analysis.array_assets", "session_id", "core.sessions", "session_id"),
+            ("analysis.array_assets", "clock_id", "core.clocks", "clock_id")]:
+        T(child).setdefault("references", []).append(
+            {"columns": [column], "resource": parent, "resource_columns": [parent_column]})
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
@@ -723,7 +860,8 @@ def build() -> dict:
             # Every revision whose decisions are applied above, so the registry says what it
             # was derived from rather than leaving it to the block comments.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             "revisions": [f"R{n}" for n in range(1, 42)]},
+                             # R42 is proposed and deliberately held (see the root CLAUDE.md), so it is not here.
+                             "revisions": [f"R{n}" for n in [*range(1, 42), *range(43, 51)]]},
             "tables": dict(sorted(tables.items()))}
 
 

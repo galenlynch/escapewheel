@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-35 tables, 293 columns, 54 references, 61 Tier 2 rules
+35 tables, 292 columns, 70 references, 61 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50
 ```
 
 ## Contents
@@ -44,6 +44,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Primary key** — `array_asset_id`  
 **Sort** — `array_asset_id`
 
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
 ### `analysis.array_dimensions`
 
 *Introduced by R20 §5 (R29 §2). A column with no revision came from `02` unamended.*
@@ -59,7 +64,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `coordinate_unit` | string | nullable | R20 §5 | Unit of the numeric coordinate values. |
 | `step_value` | float64 | nullable | R20 §5 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §5 | Value at position 0 (regular numeric axis). |
-| `step_ticks` | int64 | nullable | R20 §5 | Ticks advanced per position. |
+| `step_tick_num` | int64 | nullable | R20 §5 | Ticks advanced per position (numerator). |
 | `step_tick_den` | int64 | nullable | R20 §5 | Denominator of the step, in ticks. Absent means 1. |
 | `origin_tick` | int64 | nullable | R20 §5 | Tick at position 0. |
 | `clock_id` | string | nullable | R20 §5 | Clock the ticks are counted on (regular tick axis). |
@@ -120,6 +125,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Primary key** — `array_asset_id`  
 **Sort** — `array_asset_id`
 
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
 **Tier 2 rules** — 2
 
 - `core.array_assets.one_scaling_level` — error: scaling is declared both on the array and per channel
@@ -167,7 +177,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `coordinate_unit` | string | nullable | R20 §2 | Unit of the numeric coordinate values. |
 | `step_value` | float64 | nullable | R20 §2 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §2 | Value at position 0 (regular numeric axis). |
-| `step_ticks` | int64 | nullable | R20 §2 | Ticks advanced per position. |
+| `step_tick_num` | int64 | nullable | R20 §2 | Ticks advanced per position (numerator). |
 | `step_tick_den` | int64 | nullable | R33 §2 | Denominator of the step, in ticks. Absent means 1. |
 | `origin_tick` | int64 | nullable | R20 §2 | Tick at position 0. |
 | `clock_id` | string | nullable | R20 §2 | Clock the ticks are counted on (regular tick axis). |
@@ -179,12 +189,13 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `array_asset_id` → `core.array_assets` (`array_asset_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `coordinate_array_asset_id` → `core.array_assets` (`array_asset_id`)
 
 **Tier 2 rules** — 7
 
 - `core.array_dimensions.axis_index_contiguous` — error: axis_index is not contiguous from 0
 - `core.array_dimensions.one_coordinate_form` — error: an axis declares more than one coordinate form
-- `core.array_dimensions.tick_axis_complete` — error: a regular tick axis needs clock_id, origin_tick and step_ticks
+- `core.array_dimensions.tick_axis_complete` — error: a regular tick axis needs clock_id, origin_tick and step_tick_num
 - `core.array_dimensions.numeric_axis_complete` — error: a regular numeric axis needs origin_value, step_value and coordinate_unit
 - `core.array_dimensions.labelled_axis_complete` — error: coordinate_resource and coordinate_position_column must be present together
 - `core.array_dimensions.coordinate_resource_is_core` — error: a core axis points outward at a non-core resource (R20 §5.1)
@@ -223,11 +234,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | string | **required** | R38 §2.1 | Session ID. |
 | `clock_id` | string | **required** | R38 §2.1 | The clock that was observing. |
-| `interval_index` | int64 | **required** | R38 §2.1 | 0-based position in this clock's interval sequence. |
 | `start_tick` | int64 | **required** | R38 §2.1 | First tick observed, on `clock_id` itself. |
 | `stop_tick` | int64 | **required** | R38 §2.1 | Last tick observed, on `clock_id` itself. |
 
-**Primary key** — `session_id`, `clock_id`, `interval_index`  
+**Primary key** — `session_id`, `clock_id`, `start_tick`  
 **Sort** — the primary key (R10 §2)
 
 **References**
@@ -235,10 +245,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 3
+**Tier 2 rules** — 2
 
 - `core.clock_observation_intervals.interval_valid` — error: stop_tick precedes start_tick
-- `core.clock_observation_intervals.index_contiguous` — error: interval_index is not contiguous from 0
 - `core.clock_observation_intervals.non_overlapping` — error: observation windows overlap, which would double-count observed time
 
 ### `core.clocks`
@@ -300,6 +309,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **References**
 
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
+- `session_id` → `core.sessions` (`session_id`)
+- `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
+- `parent_curation_id` → `core.curation_versions` (`curation_id`)
 
 ### `core.devices`
 
@@ -315,6 +327,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 **Primary key** — `device_id`  
 **Sort** — `device_id`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
 
 ### `core.electrode_coordinates`
 
@@ -363,21 +379,19 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
 | `event_stream_id` | string | **required** | R25 §2 | The stream being observed. |
-| `interval_index` | int64 | **required** | R25 §2 | 0-based position in this stream's interval sequence. |
 | `start_tick` | int64 | **required** | R25 §2 | First observed tick, on the stream's clock. |
 | `stop_tick` | int64 | **required** | R25 §2 | Last observed tick, on the stream's clock. |
 
-**Primary key** — `event_stream_id`, `interval_index`  
+**Primary key** — `event_stream_id`, `start_tick`  
 **Sort** — the primary key (R10 §2)
 
 **References**
 
 - `event_stream_id` → `core.event_streams` (`event_stream_id`)
 
-**Tier 2 rules** — 3
+**Tier 2 rules** — 2
 
 - `core.event_stream_observation_intervals.interval_valid` — error: stop_tick precedes start_tick
-- `core.event_stream_observation_intervals.index_contiguous` — error: interval_index is not contiguous from 0
 - `core.event_stream_observation_intervals.non_overlapping` — error: observation windows overlap, which would double-count observed time
 
 ### `core.event_streams`
@@ -451,6 +465,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Primary key** — `media_asset_id`  
 **Sort** — the primary key (R10 §2)
 
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
 ### `core.media_frames`
 
 | Column | Type | Presence | Since | Description |
@@ -466,6 +485,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Primary key** — `media_asset_id`, `frame_index`  
 **Sort** — `media_asset_id`, `frame_index`
 
+**References**
+
+- `clock_id` → `core.clocks` (`clock_id`)
+
 ### `core.preferred_runs`
 
 *Introduced by R41 §2.3 (R29 §2). A column with no revision came from `02` unamended.*
@@ -474,12 +497,13 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | string | **required** | R41 §2.3 | Session ID. |
 | `activity_type` | string | **required** | R41 §2.3 | Which kind of output this preference is about. Open, as R9 §6 leaves it. |
+| `scope_kind` | string | **required** | R49 §2.1 | The resource whose primary key `scope` holds, as a dotted resource ID (R49 §2.2). Open. |
 | `scope` | string | **required** | R41 §2.3 | What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide. |
 | `processing_run_id` | string | **required** | R41 §2.3 | The preferred run. |
 | `chosen_at` | timestamp | nullable | R41 §2.3 | When the choice was made. |
 | `reason` | string | nullable | R41 §2.3 | Why, in one line. |
 
-**Primary key** — `session_id`, `activity_type`, `scope`  
+**Primary key** — `session_id`, `activity_type`, `scope_kind`, `scope`  
 **Sort** — the primary key (R10 §2)
 
 **References**
@@ -487,11 +511,12 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `session_id` → `core.sessions` (`session_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
-**Tier 2 rules** — 3
+**Tier 2 rules** — 4
 
 - `core.preferred_runs.activity_matches_run` — error: a preference names a run whose activity_type differs from the preference's
 - `core.preferred_runs.run_in_session` — error: a preference names a run belonging to another session
 - `core.preferred_runs.not_superseded` — warning: the preferred run is superseded by another run
+- `core.preferred_runs.scope_resolves` — error: a scope names a resource of its declared kind that does not exist (R49 §2.5)
 
 ### `core.probes`
 
@@ -541,7 +566,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | string | nullable |  | Session ID if session-scoped. |
 | `activity_type` | string | **required** | R8 §3-4 | import, validation, sorting, curation, materialization, etc. |
 | `scope` | string | nullable | R44 §2.1 | What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Open, as activity_type is. |
-| `supersedes` | string | nullable | R41 §2.2 | The run this one replaces, if any. |
+| `scope_kind` | string | nullable | R49 §2.1 | The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. Open (R8 §4); a value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
+| `supersedes_run_id` | string | nullable | R50 §2 | The run this one replaces, if any. |
 | `software_name` | string | nullable |  | Software name. |
 | `software_version` | string | nullable |  | Software version. |
 | `code_uri` | string | nullable |  | Code reference. |
@@ -556,16 +582,19 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 **References**
 
-- `supersedes` → `core.processing_runs` (`processing_run_id`)
+- `supersedes_run_id` → `core.processing_runs` (`processing_run_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
-**Tier 2 rules** — 6
+**Tier 2 rules** — 8
 
 - `core.processing_runs.no_failed_runs` — error: a failed run is recorded in a committed packet
 - `core.processing_runs.materialization_records_software` — error: a materialization run does not record the software that produced it
-- `core.processing_runs.supersedes_not_self` — error: a run supersedes itself
+- `core.processing_runs.supersedes_not_self` — error: a run supersedes_run_id itself
 - `core.processing_runs.supersedes_well_founded` — error: the supersedes chain contains a cycle
 - `core.processing_runs.undeclared_currency` — info *(advisory, R26)*: several runs share an activity and scope and none is preferred, so a consumer cannot choose between them
 - `core.processing_runs.scope_undeclared` — info *(advisory, R26)*: an activity has several runs and at least one records no scope, so whether they compete cannot be determined
+- `core.processing_runs.scope_pair_complete` — error: a run declares one half of its scope; the pair is what carries the meaning (R49 §2.4)
+- `core.processing_runs.scope_resolves` — error: a scope names a resource of its declared kind that does not exist (R49 §2.5)
 
 ### `core.session_experimenters`
 
@@ -639,6 +668,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `clock_id` → `core.clocks` (`clock_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
+- `session_id` → `core.sessions` (`session_id`)
+- `probe_id` → `core.probes` (`probe_id`)
+- `input_array_asset_id` → `core.array_assets` (`array_asset_id`)
 
 **Tier 2 rules** — 1
 
@@ -778,7 +810,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `sorting_run_id` | string | **required** | R28 §2-4 | Sorting run ID. |
 | `curation_id` | string | **required** | R28 §2-4 | Curation ID. |
 | `electrode_id` | string | **required** | R28 §2-4 | An electrode this unit was detected on. |
-| `channel_ordinal` | int64 | nullable | R28 §2-4 | 0-based position in the unit's channel list, where a dense array axis is indexed by it (R20 §2). Not an identifier; nothing joins on it. |
+| `channel_index` | int64 | nullable | R50 §2 | 0-based position of this electrode in the unit's channel list, where a dense array axis is indexed by it (R20 §2). Nothing joins on it. |
 | `is_primary` | bool | nullable | R28 §2-4 | Whether this is the unit's peak electrode. |
 
 **Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `electrode_id`  
@@ -792,7 +824,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **Tier 2 rules** — 2
 
 - `core.unit_electrodes.one_primary` — warning: a unit designates more than one peak electrode (R28 2)
-- `core.unit_electrodes.ordinal_contiguous` — error: channel_ordinal is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there
+- `core.unit_electrodes.channel_index_contiguous` — error: channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there
 
 ### `core.unit_observation_intervals`
 
@@ -804,12 +836,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `unit_id` | string | **required** | R18 §2 | Unit ID. |
 | `sorting_run_id` | string | **required** | R18 §2 | Sorting run ID. |
 | `curation_id` | string | **required** | R18 §2 | Curation ID. |
-| `interval_index` | int64 | **required** | R18 §2 | 0-based position in this unit's interval sequence. |
 | `start_tick` | int64 | **required** | R18 §2 | First tick, inclusive. |
 | `stop_tick` | int64 | **required** | R18 §2 | Last tick, inclusive. |
 | `clock_id` | string | **required** | R18 §2 | Clock for the interval bounds. |
 
-**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `interval_index`  
+**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `start_tick`  
 **Sort** — the primary key (R10 §2)
 
 **References**
@@ -817,10 +848,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 3
+**Tier 2 rules** — 2
 
 - `core.unit_observation_intervals.interval_valid` — error: stop_tick precedes start_tick
-- `core.unit_observation_intervals.index_contiguous` — error: interval_index is not contiguous from 0
 - `core.unit_observation_intervals.non_overlapping` — error: observation windows overlap, which would double-count observed time
 
 ### `core.unit_quality_labels`

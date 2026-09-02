@@ -45,7 +45,15 @@
       "R38",
       "R39",
       "R40",
-      "R41"
+      "R41",
+      "R43",
+      "R44",
+      "R45",
+      "R46",
+      "R47",
+      "R48",
+      "R49",
+      "R50"
     ]
   },
   "tables": {
@@ -55,6 +63,7 @@
           "name": "array_asset_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable array asset ID.",
           "since": "R20 \u00a75"
         },
@@ -62,6 +71,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R20 \u00a75"
         },
@@ -69,6 +79,7 @@
           "name": "semantic_type",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Semantic type, e.g. ElectricalSeries.",
           "vocabulary": "open",
           "since": "R20 \u00a75"
@@ -77,6 +88,7 @@
           "name": "name",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Human-readable name.",
           "since": "R20 \u00a75"
         },
@@ -84,6 +96,7 @@
           "name": "kind",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "`raw`, `ap`, `lfp`, `waveform`, etc.",
           "vocabulary": "open",
           "since": "R20 \u00a75"
@@ -92,6 +105,7 @@
           "name": "uri",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "URI/path to array store.",
           "since": "R20 \u00a75"
         },
@@ -99,6 +113,7 @@
           "name": "format",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "`zarr_v3` for portable profile.",
           "since": "R20 \u00a75"
         },
@@ -106,6 +121,7 @@
           "name": "clock_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Clock for time axis.",
           "since": "R20 \u00a75"
         },
@@ -113,6 +129,7 @@
           "name": "sample_rate_hz",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Sample rate if regularly sampled.",
           "since": "R20 \u00a75"
         },
@@ -120,6 +137,7 @@
           "name": "unit",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Physical unit.",
           "since": "R20 \u00a75"
         },
@@ -127,6 +145,7 @@
           "name": "conversion",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Multiply stored values by this before offset.",
           "since": "R20 \u00a75"
         },
@@ -134,6 +153,7 @@
           "name": "offset",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Add after conversion.",
           "since": "R20 \u00a75"
         },
@@ -141,6 +161,7 @@
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata.",
           "since": "R20 \u00a75"
         }
@@ -148,7 +169,26 @@
       "primary_key": [
         "array_asset_id"
       ],
-      "references": [],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
       "sort": [
         "array_asset_id"
       ],
@@ -161,6 +201,7 @@
           "name": "array_asset_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Array asset ID.",
           "since": "R20 \u00a75"
         },
@@ -168,6 +209,7 @@
           "name": "axis_index",
           "type": "int64",
           "presence": "required",
+          "role": "structural_index",
           "description": "0-based axis position in stored order (R3 \u00a75).",
           "since": "R20 \u00a75"
         },
@@ -175,6 +217,7 @@
           "name": "dimension_name",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Axis name.",
           "since": "R20 \u00a75"
         },
@@ -182,6 +225,7 @@
           "name": "coordinate_position_column",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Which column of that resource holds the 0-based position.",
           "since": "R20 \u00a75"
         },
@@ -189,6 +233,7 @@
           "name": "coordinate_resource",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Resource whose rows are this axis's positions (labelled axis).",
           "since": "R20 \u00a75"
         },
@@ -196,6 +241,7 @@
           "name": "coordinate_array_asset_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "A 1-D array holding one value per position (irregular axis).",
           "since": "R20 \u00a75"
         },
@@ -203,6 +249,7 @@
           "name": "coordinate_unit",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Unit of the numeric coordinate values.",
           "since": "R20 \u00a75"
         },
@@ -210,6 +257,7 @@
           "name": "step_value",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Increment per position.",
           "since": "R20 \u00a75"
         },
@@ -217,20 +265,23 @@
           "name": "origin_value",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Value at position 0 (regular numeric axis).",
           "since": "R20 \u00a75"
         },
         {
-          "name": "step_ticks",
+          "name": "step_tick_num",
           "type": "int64",
           "presence": "nullable",
-          "description": "Ticks advanced per position.",
+          "role": "data",
+          "description": "Ticks advanced per position (numerator).",
           "since": "R20 \u00a75"
         },
         {
           "name": "step_tick_den",
           "type": "int64",
           "presence": "nullable",
+          "role": "data",
           "description": "Denominator of the step, in ticks. Absent means 1.",
           "since": "R20 \u00a75"
         },
@@ -238,6 +289,7 @@
           "name": "origin_tick",
           "type": "int64",
           "presence": "nullable",
+          "role": "coordinate",
           "description": "Tick at position 0.",
           "since": "R20 \u00a75"
         },
@@ -245,6 +297,7 @@
           "name": "clock_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Clock the ticks are counted on (regular tick axis).",
           "since": "R20 \u00a75"
         }
@@ -286,36 +339,42 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "unit_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Unit ID."
         },
         {
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Sorting run ID."
         },
         {
           "name": "curation_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Curation ID."
         },
         {
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "Spike tick on clock_id, mapped through core.clock_anchors."
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "The clock these ticks are on, normally the session's reference.",
           "determined_by": [
             "session_id"
@@ -325,6 +384,7 @@
           "name": "time_bucket_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "First tick of the bucket this spike falls in, on clock_id.",
           "since": "R30 \u00a73.1",
           "determined_by": [
@@ -395,18 +455,21 @@
           "name": "array_asset_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable array asset ID."
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "semantic_type",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Semantic type, e.g. ElectricalSeries.",
           "vocabulary": "open",
           "since": "R8 \u00a73-4"
@@ -415,12 +478,14 @@
           "name": "name",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Human-readable name."
         },
         {
           "name": "kind",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "`raw`, `ap`, `lfp`, `waveform`, etc.",
           "vocabulary": "open",
           "since": "R8 \u00a73-4"
@@ -429,55 +494,82 @@
           "name": "uri",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "URI/path to array store."
         },
         {
           "name": "format",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "`zarr_v3` for portable profile."
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Clock for time axis."
         },
         {
           "name": "sample_rate_hz",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Sample rate if regularly sampled."
         },
         {
           "name": "unit",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Physical unit."
         },
         {
           "name": "conversion",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Multiply stored values by this before offset."
         },
         {
           "name": "offset",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Add after conversion."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
       "primary_key": [
         "array_asset_id"
       ],
-      "references": [],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
       "sort": [
         "array_asset_id"
       ],
@@ -492,7 +584,7 @@
           "id": "core.array_assets.sample_rate_matches_axis",
           "level": "error",
           "message": "sample_rate_hz disagrees with the time axis step",
-          "sql": "SELECT a.array_asset_id, a.sample_rate_hz FROM core_array_assets a JOIN core_array_dimensions d USING (array_asset_id) JOIN core_clocks c ON c.clock_id = d.clock_id WHERE a.sample_rate_hz IS NOT NULL AND d.step_ticks / COALESCE(d.step_tick_den, 1) IS NOT NULL AND c.tick_rate_hz IS NOT NULL AND abs(a.sample_rate_hz - c.tick_rate_hz / d.step_ticks / COALESCE(d.step_tick_den, 1)) > 1e-6"
+          "sql": "SELECT a.array_asset_id, a.sample_rate_hz FROM core_array_assets a JOIN core_array_dimensions d USING (array_asset_id) JOIN core_clocks c ON c.clock_id = d.clock_id WHERE a.sample_rate_hz IS NOT NULL AND d.step_tick_num / COALESCE(d.step_tick_den, 1) IS NOT NULL AND c.tick_rate_hz IS NOT NULL AND abs(a.sample_rate_hz - c.tick_rate_hz / d.step_tick_num / COALESCE(d.step_tick_den, 1)) > 1e-6"
         }
       ]
     },
@@ -502,12 +594,14 @@
           "name": "array_asset_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Array asset ID."
         },
         {
           "name": "axis_index",
           "type": "int64",
           "presence": "required",
+          "role": "structural_index",
           "description": "Axis that channel_index indexes, in stored order.",
           "since": "R3 \u00a76.1"
         },
@@ -515,24 +609,28 @@
           "name": "channel_index",
           "type": "int64",
           "presence": "required",
+          "role": "structural_index",
           "description": "Channel dimension index."
         },
         {
           "name": "electrode_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Electrode ID."
         },
         {
           "name": "channel_label",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Human-readable channel label."
         },
         {
           "name": "inter_sample_shift",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Acquisition time offset within one sample period, in sample periods.",
           "since": "R19 \u00a72"
         },
@@ -540,6 +638,7 @@
           "name": "unit",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Physical unit of the converted value.",
           "since": "R19 \u00a72"
         },
@@ -547,6 +646,7 @@
           "name": "offset",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Add after conversion.",
           "since": "R19 \u00a72"
         },
@@ -554,6 +654,7 @@
           "name": "conversion",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Multiply stored values by this before offset.",
           "since": "R19 \u00a72"
         },
@@ -561,6 +662,7 @@
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -609,6 +711,7 @@
           "name": "array_asset_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Array asset ID.",
           "since": "R3 \u00a73.1-3.3"
         },
@@ -616,6 +719,7 @@
           "name": "axis_index",
           "type": "int64",
           "presence": "required",
+          "role": "structural_index",
           "description": "0-based axis position in stored order (R3 \u00a75).",
           "since": "R3 \u00a73.1-3.3"
         },
@@ -623,6 +727,7 @@
           "name": "dimension_name",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Axis name.",
           "since": "R3 \u00a73.1-3.3"
         },
@@ -630,6 +735,7 @@
           "name": "coordinate_position_column",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Which column of that resource holds the 0-based position.",
           "since": "R20 \u00a72"
         },
@@ -637,6 +743,7 @@
           "name": "coordinate_resource",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Resource whose rows are this axis's positions (labelled axis).",
           "since": "R20 \u00a72"
         },
@@ -644,6 +751,7 @@
           "name": "coordinate_array_asset_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "A 1-D array holding one value per position (irregular axis).",
           "since": "R20 \u00a72"
         },
@@ -651,6 +759,7 @@
           "name": "coordinate_unit",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Unit of the numeric coordinate values.",
           "since": "R20 \u00a72"
         },
@@ -658,6 +767,7 @@
           "name": "step_value",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Increment per position.",
           "since": "R20 \u00a72"
         },
@@ -665,20 +775,23 @@
           "name": "origin_value",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Value at position 0 (regular numeric axis).",
           "since": "R20 \u00a72"
         },
         {
-          "name": "step_ticks",
+          "name": "step_tick_num",
           "type": "int64",
           "presence": "nullable",
-          "description": "Ticks advanced per position.",
+          "role": "data",
+          "description": "Ticks advanced per position (numerator).",
           "since": "R20 \u00a72"
         },
         {
           "name": "step_tick_den",
           "type": "int64",
           "presence": "nullable",
+          "role": "data",
           "description": "Denominator of the step, in ticks. Absent means 1.",
           "since": "R33 \u00a72"
         },
@@ -686,6 +799,7 @@
           "name": "origin_tick",
           "type": "int64",
           "presence": "nullable",
+          "role": "coordinate",
           "description": "Tick at position 0.",
           "since": "R20 \u00a72"
         },
@@ -693,6 +807,7 @@
           "name": "clock_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Clock the ticks are counted on (regular tick axis).",
           "since": "R20 \u00a72"
         }
@@ -719,6 +834,15 @@
           "resource_columns": [
             "clock_id"
           ]
+        },
+        {
+          "columns": [
+            "coordinate_array_asset_id"
+          ],
+          "resource": "core.array_assets",
+          "resource_columns": [
+            "array_asset_id"
+          ]
         }
       ],
       "sort": [
@@ -741,8 +865,8 @@
         {
           "id": "core.array_dimensions.tick_axis_complete",
           "level": "error",
-          "message": "a regular tick axis needs clock_id, origin_tick and step_ticks",
-          "sql": "SELECT array_asset_id, axis_index FROM core_array_dimensions WHERE origin_tick IS NOT NULL AND (step_ticks IS NULL OR clock_id IS NULL)"
+          "message": "a regular tick axis needs clock_id, origin_tick and step_tick_num",
+          "sql": "SELECT array_asset_id, axis_index FROM core_array_dimensions WHERE origin_tick IS NOT NULL AND (step_tick_num IS NULL OR clock_id IS NULL)"
         },
         {
           "id": "core.array_dimensions.numeric_axis_complete",
@@ -777,6 +901,7 @@
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "The clock being aligned.",
           "since": "R13 \u00a73"
         },
@@ -784,6 +909,7 @@
           "name": "anchor_index",
           "type": "int64",
           "presence": "required",
+          "role": "sequence_position",
           "description": "0-based position in this clock's anchor sequence.",
           "since": "R13 \u00a73"
         },
@@ -791,6 +917,7 @@
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "Tick on clock_id.",
           "since": "R13 \u00a73"
         },
@@ -798,6 +925,7 @@
           "name": "parent_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "The corresponding tick on parent_clock_id.",
           "since": "R13 \u00a73"
         }
@@ -852,6 +980,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R38 \u00a72.1"
         },
@@ -859,20 +988,15 @@
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "The clock that was observing.",
-          "since": "R38 \u00a72.1"
-        },
-        {
-          "name": "interval_index",
-          "type": "int64",
-          "presence": "required",
-          "description": "0-based position in this clock's interval sequence.",
           "since": "R38 \u00a72.1"
         },
         {
           "name": "start_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "First tick observed, on `clock_id` itself.",
           "since": "R38 \u00a72.1"
         },
@@ -880,6 +1004,7 @@
           "name": "stop_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "Last tick observed, on `clock_id` itself.",
           "since": "R38 \u00a72.1"
         }
@@ -887,7 +1012,7 @@
       "primary_key": [
         "session_id",
         "clock_id",
-        "interval_index"
+        "start_tick"
       ],
       "references": [
         {
@@ -915,19 +1040,13 @@
           "id": "core.clock_observation_intervals.interval_valid",
           "level": "error",
           "message": "stop_tick precedes start_tick",
-          "sql": "SELECT session_id, clock_id, interval_index, start_tick, stop_tick FROM core_clock_observation_intervals WHERE stop_tick < start_tick"
-        },
-        {
-          "id": "core.clock_observation_intervals.index_contiguous",
-          "level": "error",
-          "message": "interval_index is not contiguous from 0",
-          "sql": "SELECT session_id, clock_id, COUNT(*) AS n FROM core_clock_observation_intervals GROUP BY session_id, clock_id HAVING MAX(interval_index) <> COUNT(*) - 1 OR MIN(interval_index) <> 0"
+          "sql": "SELECT session_id, clock_id, start_tick, start_tick, stop_tick FROM core_clock_observation_intervals WHERE stop_tick < start_tick"
         },
         {
           "id": "core.clock_observation_intervals.non_overlapping",
           "level": "error",
           "message": "observation windows overlap, which would double-count observed time",
-          "sql": "SELECT session_id, clock_id, interval_index, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, clock_id ORDER BY interval_index) AS prev_stop FROM core_clock_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
+          "sql": "SELECT session_id, clock_id, start_tick, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, clock_id ORDER BY start_tick) AS prev_stop FROM core_clock_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
         }
       ],
       "since": "R38 \u00a72.1"
@@ -938,48 +1057,56 @@
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable clock ID."
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "name",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Human-readable clock name."
         },
         {
           "name": "tick_rate_hz",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Tick rate as float, required unless exact tick rate provided."
         },
         {
           "name": "tick_rate_num",
           "type": "int64",
           "presence": "nullable",
+          "role": "data",
           "description": "Exact rational numerator."
         },
         {
           "name": "tick_rate_den",
           "type": "int64",
           "presence": "nullable",
+          "role": "data",
           "description": "Exact rational denominator."
         },
         {
           "name": "origin",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Origin description."
         },
         {
           "name": "tick_zero_utc",
           "type": "timestamp",
           "presence": "nullable",
+          "role": "data",
           "description": "Wall-clock instant of tick 0 on this clock.",
           "since": "R6 \u00a72"
         },
@@ -987,12 +1114,14 @@
           "name": "parent_clock_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Parent/reference clock."
         },
         {
           "name": "transform_slope",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Parent ticks per this clock's tick, as measured.",
           "since": "R3 \u00a73.4"
         },
@@ -1000,6 +1129,7 @@
           "name": "transform_offset",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Parent-clock tick at this clock's tick 0.",
           "since": "R3 \u00a73.4"
         },
@@ -1007,12 +1137,14 @@
           "name": "transform_to_parent",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Clock alignment transform."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -1099,42 +1231,49 @@
           "name": "curation_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable curation ID."
         },
         {
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Sorting run ID."
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "curator",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Curator."
         },
         {
           "name": "curation_tool",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Tool."
         },
         {
           "name": "curation_tool_version",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Tool version."
         },
         {
           "name": "processing_run_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "The run that produced this record, where provenance is recorded.",
           "since": "R41 \u00a72.1"
         },
@@ -1142,24 +1281,28 @@
           "name": "parent_curation_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Parent curation."
         },
         {
           "name": "created_at",
           "type": "timestamp",
           "presence": "nullable",
+          "role": "data",
           "description": "Creation time."
         },
         {
           "name": "notes",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Notes."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -1175,6 +1318,33 @@
           "resource_columns": [
             "processing_run_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "sorting_run_id"
+          ],
+          "resource": "core.sorting_runs",
+          "resource_columns": [
+            "sorting_run_id"
+          ]
+        },
+        {
+          "columns": [
+            "parent_curation_id"
+          ],
+          "resource": "core.curation_versions",
+          "resource_columns": [
+            "curation_id"
+          ]
         }
       ],
       "sort": [
@@ -1188,49 +1358,66 @@
           "name": "device_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable device ID."
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Session if device record is session-scoped."
         },
         {
           "name": "name",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Human-readable name."
         },
         {
           "name": "manufacturer",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Manufacturer."
         },
         {
           "name": "model",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Model."
         },
         {
           "name": "serial_number",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Serial number."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
       "primary_key": [
         "device_id"
       ],
-      "references": [],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        }
+      ],
       "sort": [
         "device_id"
       ],
@@ -1242,6 +1429,7 @@
           "name": "electrode_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Electrode ID.",
           "since": "R19 \u00a73"
         },
@@ -1249,6 +1437,7 @@
           "name": "coordinate_frame",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "The frame these coordinates are in.",
           "since": "R19 \u00a73",
           "vocabulary": "open"
@@ -1257,6 +1446,7 @@
           "name": "x_um",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "X in micrometres, in that frame.",
           "since": "R19 \u00a73"
         },
@@ -1264,6 +1454,7 @@
           "name": "y_um",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Y in micrometres.",
           "since": "R19 \u00a73"
         },
@@ -1271,6 +1462,7 @@
           "name": "z_um",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Z in micrometres.",
           "since": "R19 \u00a73"
         }
@@ -1300,24 +1492,28 @@
           "name": "electrode_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable electrode ID."
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "probe_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Probe ID."
         },
         {
           "name": "local_electrode_label",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
           "since": "R8 \u00a72"
         },
@@ -1325,6 +1521,7 @@
           "name": "local_channel_label",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
           "since": "R8 \u00a72"
         },
@@ -1332,18 +1529,21 @@
           "name": "brain_region",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Region label."
         },
         {
           "name": "impedance_ohm",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Impedance."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -1381,20 +1581,15 @@
           "name": "event_stream_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "The stream being observed.",
-          "since": "R25 \u00a72"
-        },
-        {
-          "name": "interval_index",
-          "type": "int64",
-          "presence": "required",
-          "description": "0-based position in this stream's interval sequence.",
           "since": "R25 \u00a72"
         },
         {
           "name": "start_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "First observed tick, on the stream's clock.",
           "since": "R25 \u00a72"
         },
@@ -1402,13 +1597,14 @@
           "name": "stop_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "Last observed tick, on the stream's clock.",
           "since": "R25 \u00a72"
         }
       ],
       "primary_key": [
         "event_stream_id",
-        "interval_index"
+        "start_tick"
       ],
       "references": [
         {
@@ -1427,19 +1623,13 @@
           "id": "core.event_stream_observation_intervals.interval_valid",
           "level": "error",
           "message": "stop_tick precedes start_tick",
-          "sql": "SELECT event_stream_id, interval_index, start_tick, stop_tick FROM core_event_stream_observation_intervals WHERE stop_tick < start_tick"
-        },
-        {
-          "id": "core.event_stream_observation_intervals.index_contiguous",
-          "level": "error",
-          "message": "interval_index is not contiguous from 0",
-          "sql": "SELECT event_stream_id, COUNT(*) AS n FROM core_event_stream_observation_intervals GROUP BY event_stream_id HAVING MAX(interval_index) <> COUNT(*) - 1 OR MIN(interval_index) <> 0"
+          "sql": "SELECT event_stream_id, start_tick, start_tick, stop_tick FROM core_event_stream_observation_intervals WHERE stop_tick < start_tick"
         },
         {
           "id": "core.event_stream_observation_intervals.non_overlapping",
           "level": "error",
           "message": "observation windows overlap, which would double-count observed time",
-          "sql": "SELECT event_stream_id, interval_index, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY event_stream_id ORDER BY interval_index) AS prev_stop FROM core_event_stream_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
+          "sql": "SELECT event_stream_id, start_tick, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY event_stream_id ORDER BY start_tick) AS prev_stop FROM core_event_stream_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
         }
       ],
       "since": "R25 \u00a72"
@@ -1450,6 +1640,7 @@
           "name": "event_stream_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable ID.",
           "since": "R23 \u00a72-3"
         },
@@ -1457,6 +1648,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R23 \u00a72-3"
         },
@@ -1464,6 +1656,7 @@
           "name": "name",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Human-readable name, e.g. left_lick_sensor.",
           "since": "R23 \u00a72-3"
         },
@@ -1471,6 +1664,7 @@
           "name": "device_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "The device that produced it, where one is identified.",
           "since": "R23 \u00a72-3"
         },
@@ -1478,6 +1672,7 @@
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "The clock its events are timed on.",
           "since": "R23 \u00a72-3"
         },
@@ -1485,6 +1680,7 @@
           "name": "processing_run_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 \u00a74: the manifest records outputs per resource and cannot distinguish streams within one table.",
           "since": "R23 \u00a72-3"
         },
@@ -1492,6 +1688,7 @@
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Free-form metadata.",
           "since": "R23 \u00a72-3"
         }
@@ -1555,18 +1752,21 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "event_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable event ID."
         },
         {
           "name": "stream_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "The stream this event belongs to.",
           "since": "R23 \u00a72-3"
         },
@@ -1574,6 +1774,7 @@
           "name": "event_type",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Event type.",
           "vocabulary": "open",
           "reserved_values": [
@@ -1590,24 +1791,28 @@
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "Event tick."
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Event clock."
         },
         {
           "name": "payload",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Event payload."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -1671,18 +1876,21 @@
           "name": "media_asset_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable media asset ID."
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "semantic_type",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "e.g. BehaviorVideo.",
           "vocabulary": "open",
           "since": "R8 \u00a73-4"
@@ -1691,37 +1899,61 @@
           "name": "name",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Name."
         },
         {
           "name": "uri",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Media file URI."
         },
         {
           "name": "format",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "e.g. mp4."
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Clock for frame timing."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
       "primary_key": [
         "media_asset_id"
       ],
-      "references": [],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
       "sort": null,
       "rules": []
     },
@@ -1731,42 +1963,49 @@
           "name": "media_asset_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Media asset ID."
         },
         {
           "name": "frame_index",
           "type": "int64",
           "presence": "required",
+          "role": "structural_index",
           "description": "Frame index."
         },
         {
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "Frame time tick."
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Clock ID."
         },
         {
           "name": "pts",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Media presentation timestamp if relevant."
         },
         {
           "name": "dropped",
           "type": "bool",
           "presence": "nullable",
+          "role": "data",
           "description": "Dropped-frame flag."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -1774,7 +2013,17 @@
         "media_asset_id",
         "frame_index"
       ],
-      "references": [],
+      "references": [
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
       "sort": [
         "media_asset_id",
         "frame_index"
@@ -1787,6 +2036,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R41 \u00a72.3"
         },
@@ -1794,13 +2044,23 @@
           "name": "activity_type",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Which kind of output this preference is about. Open, as R9 \u00a76 leaves it.",
           "since": "R41 \u00a72.3"
+        },
+        {
+          "name": "scope_kind",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "The resource whose primary key `scope` holds, as a dotted resource ID (R49 \u00a72.2). Open.",
+          "since": "R49 \u00a72.1"
         },
         {
           "name": "scope",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide.",
           "since": "R41 \u00a72.3"
         },
@@ -1808,6 +2068,7 @@
           "name": "processing_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "The preferred run.",
           "since": "R41 \u00a72.3"
         },
@@ -1815,6 +2076,7 @@
           "name": "chosen_at",
           "type": "timestamp",
           "presence": "nullable",
+          "role": "data",
           "description": "When the choice was made.",
           "since": "R41 \u00a72.3"
         },
@@ -1822,6 +2084,7 @@
           "name": "reason",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Why, in one line.",
           "since": "R41 \u00a72.3"
         }
@@ -1829,6 +2092,7 @@
       "primary_key": [
         "session_id",
         "activity_type",
+        "scope_kind",
         "scope"
       ],
       "references": [
@@ -1869,7 +2133,13 @@
           "id": "core.preferred_runs.not_superseded",
           "level": "warning",
           "message": "the preferred run is superseded by another run",
-          "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes = p.processing_run_id)"
+          "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes_run_id = p.processing_run_id)"
+        },
+        {
+          "id": "core.preferred_runs.scope_resolves",
+          "level": "error",
+          "message": "a scope names a resource of its declared kind that does not exist (R49 \u00a72.5)",
+          "sql": "WITH known AS (SELECT 'core.sessions' AS kind, session_id AS id FROM core_sessions UNION ALL SELECT 'core.probes', probe_id FROM core_probes UNION ALL SELECT 'core.array_assets', array_asset_id FROM core_array_assets UNION ALL SELECT 'core.devices', device_id FROM core_devices UNION ALL SELECT 'core.event_streams', event_stream_id FROM core_event_streams UNION ALL SELECT 'core.electrodes', electrode_id FROM core_electrodes) SELECT session_id, activity_type, scope_kind, scope FROM core_preferred_runs r WHERE r.scope_kind IN (SELECT DISTINCT kind FROM known) AND NOT EXISTS (SELECT 1 FROM known k WHERE k.kind = r.scope_kind AND k.id = r.scope)"
         }
       ],
       "since": "R41 \u00a72.3"
@@ -1880,60 +2150,70 @@
           "name": "probe_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable probe ID."
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "device_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Associated device."
         },
         {
           "name": "name",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Probe name."
         },
         {
           "name": "probe_type",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Probe type, e.g. Neuropixels 1.0."
         },
         {
           "name": "manufacturer",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Manufacturer."
         },
         {
           "name": "serial_number",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Serial number."
         },
         {
           "name": "insertion_name",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Insertion label."
         },
         {
           "name": "target_region",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Intended target."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -1971,6 +2251,7 @@
           "name": "processing_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "The run.",
           "since": "R9"
         },
@@ -1978,6 +2259,7 @@
           "name": "source_file_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "A source file the run consumed.",
           "since": "R9"
         }
@@ -2019,18 +2301,21 @@
           "name": "processing_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable processing run ID."
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Session ID if session-scoped."
         },
         {
           "name": "activity_type",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "import, validation, sorting, curation, materialization, etc.",
           "vocabulary": "open",
           "since": "R8 \u00a73-4"
@@ -2039,56 +2324,73 @@
           "name": "scope",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Open, as activity_type is.",
           "since": "R44 \u00a72.1"
         },
         {
-          "name": "supersedes",
+          "name": "scope_kind",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
+          "description": "The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. Open (R8 \u00a74); a value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all.",
+          "since": "R49 \u00a72.1"
+        },
+        {
+          "name": "supersedes_run_id",
+          "type": "string",
+          "presence": "nullable",
+          "role": "identifier",
           "description": "The run this one replaces, if any.",
-          "since": "R41 \u00a72.2"
+          "since": "R50 \u00a72"
         },
         {
           "name": "software_name",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Software name."
         },
         {
           "name": "software_version",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Software version."
         },
         {
           "name": "code_uri",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Code reference."
         },
         {
           "name": "parameters",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Parameters."
         },
         {
           "name": "started_at",
           "type": "timestamp",
           "presence": "nullable",
+          "role": "data",
           "description": "Start time."
         },
         {
           "name": "ended_at",
           "type": "timestamp",
           "presence": "nullable",
+          "role": "data",
           "description": "End time."
         },
         {
           "name": "status",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "succeeded, failed, partial, etc.",
           "enum": [
             "succeeded",
@@ -2101,6 +2403,7 @@
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -2110,11 +2413,20 @@
       "references": [
         {
           "columns": [
-            "supersedes"
+            "supersedes_run_id"
           ],
           "resource": "core.processing_runs",
           "resource_columns": [
             "processing_run_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
           ]
         }
       ],
@@ -2135,14 +2447,14 @@
         {
           "id": "core.processing_runs.supersedes_not_self",
           "level": "error",
-          "message": "a run supersedes itself",
-          "sql": "SELECT processing_run_id FROM core_processing_runs WHERE supersedes = processing_run_id"
+          "message": "a run supersedes_run_id itself",
+          "sql": "SELECT processing_run_id FROM core_processing_runs WHERE supersedes_run_id = processing_run_id"
         },
         {
           "id": "core.processing_runs.supersedes_well_founded",
           "level": "error",
           "message": "the supersedes chain contains a cycle",
-          "sql": "WITH RECURSIVE up(processing_run_id, ancestor, depth) AS (SELECT processing_run_id, supersedes, 1 FROM core_processing_runs WHERE supersedes IS NOT NULL UNION ALL SELECT u.processing_run_id, r.supersedes, u.depth + 1 FROM up u JOIN core_processing_runs r ON r.processing_run_id = u.ancestor WHERE r.supersedes IS NOT NULL AND u.depth < 64) SELECT DISTINCT processing_run_id FROM up WHERE ancestor = processing_run_id OR depth >= 64"
+          "sql": "WITH RECURSIVE up(processing_run_id, ancestor, depth) AS (SELECT processing_run_id, supersedes_run_id, 1 FROM core_processing_runs WHERE supersedes_run_id IS NOT NULL UNION ALL SELECT u.processing_run_id, r.supersedes_run_id, u.depth + 1 FROM up u JOIN core_processing_runs r ON r.processing_run_id = u.ancestor WHERE r.supersedes_run_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT processing_run_id FROM up WHERE ancestor = processing_run_id OR depth >= 64"
         },
         {
           "id": "core.processing_runs.undeclared_currency",
@@ -2157,6 +2469,18 @@
           "advisory": true,
           "message": "an activity has several runs and at least one records no scope, so whether they compete cannot be determined",
           "sql": "WITH per_activity AS ( SELECT session_id, activity_type, count(*) AS n, count(*) FILTER (WHERE scope IS NULL) AS unscoped FROM core_processing_runs GROUP BY session_id, activity_type) SELECT session_id, activity_type, n, unscoped FROM per_activity WHERE n > 1 AND unscoped > 0"
+        },
+        {
+          "id": "core.processing_runs.scope_pair_complete",
+          "level": "error",
+          "message": "a run declares one half of its scope; the pair is what carries the meaning (R49 \u00a72.4)",
+          "sql": "SELECT processing_run_id, scope_kind, scope FROM core_processing_runs WHERE (scope IS NULL) <> (scope_kind IS NULL)"
+        },
+        {
+          "id": "core.processing_runs.scope_resolves",
+          "level": "error",
+          "message": "a scope names a resource of its declared kind that does not exist (R49 \u00a72.5)",
+          "sql": "WITH known AS (SELECT 'core.sessions' AS kind, session_id AS id FROM core_sessions UNION ALL SELECT 'core.probes', probe_id FROM core_probes UNION ALL SELECT 'core.array_assets', array_asset_id FROM core_array_assets UNION ALL SELECT 'core.devices', device_id FROM core_devices UNION ALL SELECT 'core.event_streams', event_stream_id FROM core_event_streams UNION ALL SELECT 'core.electrodes', electrode_id FROM core_electrodes) SELECT processing_run_id, scope_kind, scope FROM core_processing_runs r WHERE r.scope_kind IN (SELECT DISTINCT kind FROM known) AND NOT EXISTS (SELECT 1 FROM known k WHERE k.kind = r.scope_kind AND k.id = r.scope)"
         }
       ]
     },
@@ -2166,6 +2490,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R3 \u00a73.1-3.3"
         },
@@ -2173,6 +2498,7 @@
           "name": "experimenter",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "One experimenter.",
           "since": "R3 \u00a73.1-3.3"
         }
@@ -2205,24 +2531,28 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable session ID."
         },
         {
           "name": "subject_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Subject ID."
         },
         {
           "name": "session_start_time",
           "type": "timestamp",
           "presence": "required",
+          "role": "data",
           "description": "Session start time if known; if unknown use explicit null only in non-strict test packets."
         },
         {
           "name": "session_end_time",
           "type": "timestamp",
           "presence": "nullable",
+          "role": "data",
           "description": "When the session ended, UTC. Metadata, not derived from the tables (R25 5).",
           "since": "R25 \u00a72"
         },
@@ -2230,6 +2560,7 @@
           "name": "reference_clock_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "The clock this session's times are reported on by default (R27 2).",
           "since": "R27 \u00a72"
         },
@@ -2237,36 +2568,42 @@
           "name": "session_description",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Human-readable session description."
         },
         {
           "name": "institution",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Institution/lab."
         },
         {
           "name": "task_name",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Task/protocol name."
         },
         {
           "name": "source_session_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Source-system session ID if different."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional session metadata."
         },
         {
           "name": "t_zero_tick",
           "type": "int64",
           "presence": "nullable",
+          "role": "coordinate",
           "description": "Earliest observed tick, on `reference_clock_id`; the origin seconds count from.",
           "since": "R39 \u00a72.2"
         }
@@ -2330,24 +2667,28 @@
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable sorting run ID."
         },
         {
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "probe_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Probe ID."
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Clock the run's spike ticks are counted on.",
           "since": "R38 \u00a72.2"
         },
@@ -2355,18 +2696,21 @@
           "name": "sorter_name",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Sorter name."
         },
         {
           "name": "sorter_version",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Sorter version."
         },
         {
           "name": "processing_run_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "The run that produced this record, where provenance is recorded.",
           "since": "R41 \u00a72.1"
         },
@@ -2374,6 +2718,7 @@
           "name": "amplitude_unit",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Unit of core.spike_events.amplitude for this run, e.g. uV, adc.",
           "since": "R11 \u00a72",
           "vocabulary": "open"
@@ -2382,30 +2727,35 @@
           "name": "parameters",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Sorter parameters."
         },
         {
           "name": "input_array_asset_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Input array asset."
         },
         {
           "name": "started_at",
           "type": "timestamp",
           "presence": "nullable",
+          "role": "data",
           "description": "Start time."
         },
         {
           "name": "ended_at",
           "type": "timestamp",
           "presence": "nullable",
+          "role": "data",
           "description": "End time."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -2430,6 +2780,33 @@
           "resource_columns": [
             "processing_run_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "probe_id"
+          ],
+          "resource": "core.probes",
+          "resource_columns": [
+            "probe_id"
+          ]
+        },
+        {
+          "columns": [
+            "input_array_asset_id"
+          ],
+          "resource": "core.array_assets",
+          "resource_columns": [
+            "array_asset_id"
+          ]
         }
       ],
       "sort": [
@@ -2450,42 +2827,49 @@
           "name": "source_file_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable source file ID."
         },
         {
           "name": "uri",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Source URI/path."
         },
         {
           "name": "format",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Source format."
         },
         {
           "name": "sha256",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Checksum."
         },
         {
           "name": "size_bytes",
           "type": "int64",
           "presence": "nullable",
+          "role": "data",
           "description": "Size."
         },
         {
           "name": "modified_at",
           "type": "timestamp",
           "presence": "nullable",
+          "role": "data",
           "description": "Modification time if known."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -2502,48 +2886,56 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "unit_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Unit ID."
         },
         {
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Sorting run ID."
         },
         {
           "name": "curation_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Curation ID."
         },
         {
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "Spike tick."
         },
         {
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Clock ID."
         },
         {
           "name": "amplitude",
           "type": "float32",
           "presence": "nullable",
+          "role": "data",
           "description": "Spike amplitude if available."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
@@ -2617,42 +3009,49 @@
           "name": "subject_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable subject ID."
         },
         {
           "name": "species",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Species."
         },
         {
           "name": "strain",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Strain/background."
         },
         {
           "name": "sex",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Sex if recorded."
         },
         {
           "name": "date_of_birth",
           "type": "date",
           "presence": "nullable",
+          "role": "data",
           "description": "Date of birth if known."
         },
         {
           "name": "genotype",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Genotype summary."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional subject metadata."
         }
       ],
@@ -2671,6 +3070,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R3 \u00a73.1-3.3"
         },
@@ -2678,6 +3078,7 @@
           "name": "trial_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Trial ID.",
           "since": "R3 \u00a73.1-3.3"
         },
@@ -2685,6 +3086,7 @@
           "name": "tag",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "Tag value.",
           "since": "R3 \u00a73.1-3.3"
         }
@@ -2721,18 +3123,21 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "trial_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable trial ID."
         },
         {
           "name": "start_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "First tick of the trial, inclusive, on `clock_id`.",
           "since": "R45 \u00a72.4"
         },
@@ -2740,6 +3145,7 @@
           "name": "stop_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "Last tick of the trial, inclusive, on `clock_id`.",
           "since": "R45 \u00a72.4"
         },
@@ -2747,36 +3153,42 @@
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Clock for start/stop ticks."
         },
         {
           "name": "condition_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Experimental condition."
         },
         {
           "name": "stimulus_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Stimulus ID."
         },
         {
           "name": "choice",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Choice label."
         },
         {
           "name": "rewarded",
           "type": "bool",
           "presence": "nullable",
+          "role": "data",
           "description": "Reward outcome."
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional trial metadata."
         }
       ],
@@ -2823,6 +3235,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R28 \u00a72-4"
         },
@@ -2830,6 +3243,7 @@
           "name": "unit_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Unit ID.",
           "since": "R28 \u00a72-4"
         },
@@ -2837,6 +3251,7 @@
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Sorting run ID.",
           "since": "R28 \u00a72-4"
         },
@@ -2844,6 +3259,7 @@
           "name": "curation_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Curation ID.",
           "since": "R28 \u00a72-4"
         },
@@ -2851,6 +3267,7 @@
           "name": "coordinate_frame",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "The frame these coordinates are in. Open, as R19 \u00a73 left it.",
           "since": "R28 \u00a72-4"
         },
@@ -2858,6 +3275,7 @@
           "name": "x_um",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "X in micrometres, in that frame.",
           "since": "R28 \u00a72-4"
         },
@@ -2865,6 +3283,7 @@
           "name": "y_um",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Y in micrometres.",
           "since": "R28 \u00a72-4"
         },
@@ -2872,6 +3291,7 @@
           "name": "z_um",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Z in micrometres.",
           "since": "R28 \u00a72-4"
         }
@@ -2910,6 +3330,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R28 \u00a72-4"
         },
@@ -2917,6 +3338,7 @@
           "name": "unit_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Unit ID.",
           "since": "R28 \u00a72-4"
         },
@@ -2924,6 +3346,7 @@
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Sorting run ID.",
           "since": "R28 \u00a72-4"
         },
@@ -2931,6 +3354,7 @@
           "name": "curation_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Curation ID.",
           "since": "R28 \u00a72-4"
         },
@@ -2938,20 +3362,23 @@
           "name": "electrode_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "An electrode this unit was detected on.",
           "since": "R28 \u00a72-4"
         },
         {
-          "name": "channel_ordinal",
+          "name": "channel_index",
           "type": "int64",
           "presence": "nullable",
-          "description": "0-based position in the unit's channel list, where a dense array axis is indexed by it (R20 \u00a72). Not an identifier; nothing joins on it.",
-          "since": "R28 \u00a72-4"
+          "role": "structural_index",
+          "description": "0-based position of this electrode in the unit's channel list, where a dense array axis is indexed by it (R20 \u00a72). Nothing joins on it.",
+          "since": "R50 \u00a72"
         },
         {
           "name": "is_primary",
           "type": "bool",
           "presence": "nullable",
+          "role": "data",
           "description": "Whether this is the unit's peak electrode.",
           "since": "R28 \u00a72-4"
         }
@@ -2998,10 +3425,10 @@
           "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n FROM core_unit_electrodes WHERE is_primary GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING COUNT(*) > 1"
         },
         {
-          "id": "core.unit_electrodes.ordinal_contiguous",
+          "id": "core.unit_electrodes.channel_index_contiguous",
           "level": "error",
-          "message": "channel_ordinal is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
-          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MAX(channel_ordinal) AS hi FROM core_unit_electrodes WHERE channel_ordinal IS NOT NULL GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(channel_ordinal) <> COUNT(*) - 1 OR MIN(channel_ordinal) <> 0"
+          "message": "channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
+          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core_unit_electrodes WHERE channel_index IS NOT NULL GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
         }
       ],
       "since": "R28 \u00a72-4"
@@ -3012,6 +3439,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R18 \u00a72"
         },
@@ -3019,6 +3447,7 @@
           "name": "unit_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Unit ID.",
           "since": "R18 \u00a72"
         },
@@ -3026,6 +3455,7 @@
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Sorting run ID.",
           "since": "R18 \u00a72"
         },
@@ -3033,20 +3463,15 @@
           "name": "curation_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Curation ID.",
-          "since": "R18 \u00a72"
-        },
-        {
-          "name": "interval_index",
-          "type": "int64",
-          "presence": "required",
-          "description": "0-based position in this unit's interval sequence.",
           "since": "R18 \u00a72"
         },
         {
           "name": "start_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "First tick, inclusive.",
           "since": "R18 \u00a72"
         },
@@ -3054,6 +3479,7 @@
           "name": "stop_tick",
           "type": "int64",
           "presence": "required",
+          "role": "coordinate",
           "description": "Last tick, inclusive.",
           "since": "R18 \u00a72"
         },
@@ -3061,6 +3487,7 @@
           "name": "clock_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Clock for the interval bounds.",
           "since": "R18 \u00a72"
         }
@@ -3070,7 +3497,7 @@
         "unit_id",
         "sorting_run_id",
         "curation_id",
-        "interval_index"
+        "start_tick"
       ],
       "references": [
         {
@@ -3104,19 +3531,13 @@
           "id": "core.unit_observation_intervals.interval_valid",
           "level": "error",
           "message": "stop_tick precedes start_tick",
-          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, interval_index, start_tick, stop_tick FROM core_unit_observation_intervals WHERE stop_tick < start_tick"
-        },
-        {
-          "id": "core.unit_observation_intervals.index_contiguous",
-          "level": "error",
-          "message": "interval_index is not contiguous from 0",
-          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n FROM core_unit_observation_intervals GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(interval_index) <> COUNT(*) - 1 OR MIN(interval_index) <> 0"
+          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, start_tick, start_tick, stop_tick FROM core_unit_observation_intervals WHERE stop_tick < start_tick"
         },
         {
           "id": "core.unit_observation_intervals.non_overlapping",
           "level": "error",
           "message": "observation windows overlap, which would double-count observed time",
-          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, interval_index, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, unit_id, sorting_run_id, curation_id ORDER BY interval_index) AS prev_stop FROM core_unit_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
+          "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, start_tick, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, unit_id, sorting_run_id, curation_id ORDER BY start_tick) AS prev_stop FROM core_unit_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
         }
       ],
       "since": "R18 \u00a72"
@@ -3127,6 +3548,7 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID.",
           "since": "R16 \u00a72-3"
         },
@@ -3134,6 +3556,7 @@
           "name": "unit_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Unit ID.",
           "since": "R16 \u00a72-3"
         },
@@ -3141,6 +3564,7 @@
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Sorting run ID.",
           "since": "R16 \u00a72-3"
         },
@@ -3148,6 +3572,7 @@
           "name": "curation_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Curation ID.",
           "since": "R16 \u00a72-3"
         },
@@ -3155,6 +3580,7 @@
           "name": "source",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "What produced the label, e.g. kilosort, decoder, bombcell.",
           "since": "R16 \u00a72-3",
           "vocabulary": "open"
@@ -3163,6 +3589,7 @@
           "name": "label",
           "type": "string",
           "presence": "required",
+          "role": "data",
           "description": "The source's own label, verbatim.",
           "since": "R16 \u00a72-3",
           "vocabulary": "open"
@@ -3171,6 +3598,7 @@
           "name": "normalized_label",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Declared projection onto the closed set. Null where the source's label does not project.",
           "since": "R16 \u00a72-3",
           "enum": [
@@ -3183,6 +3611,7 @@
           "name": "confidence",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "The source's confidence, where it reports one.",
           "since": "R16 \u00a72-3"
         }
@@ -3228,36 +3657,42 @@
           "name": "session_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Session ID."
         },
         {
           "name": "unit_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Stable unit ID."
         },
         {
           "name": "probe_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Probe ID."
         },
         {
           "name": "sorting_run_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Sorting run ID."
         },
         {
           "name": "curation_id",
           "type": "string",
           "presence": "required",
+          "role": "identifier",
           "description": "Curation ID."
         },
         {
           "name": "local_unit_label",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
           "since": "R8 \u00a72"
         },
@@ -3265,6 +3700,7 @@
           "name": "quality_label",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Quality label.",
           "enum": [
             "sua",
@@ -3277,6 +3713,7 @@
           "name": "quality_label_source",
           "type": "string",
           "presence": "nullable",
+          "role": "data",
           "description": "Which core.unit_quality_labels source the designated label came from.",
           "since": "R16 \u00a72-3",
           "vocabulary": "open"
@@ -3285,18 +3722,21 @@
           "name": "default_electrode_id",
           "type": "string",
           "presence": "nullable",
+          "role": "identifier",
           "description": "Default electrode."
         },
         {
           "name": "firing_rate_hz",
           "type": "float64",
           "presence": "nullable",
+          "role": "data",
           "description": "Firing rate if known."
         },
         {
           "name": "n_spikes",
           "type": "int64",
           "presence": "nullable",
+          "role": "data",
           "description": "Total spikes for this unit in this context.",
           "since": "R5"
         },
@@ -3304,6 +3744,7 @@
           "name": "first_spike_tick",
           "type": "int64",
           "presence": "nullable",
+          "role": "coordinate",
           "description": "Lowest t_tick for this unit.",
           "since": "R5"
         },
@@ -3311,6 +3752,7 @@
           "name": "last_spike_tick",
           "type": "int64",
           "presence": "nullable",
+          "role": "coordinate",
           "description": "Highest t_tick for this unit.",
           "since": "R5"
         },
@@ -3318,6 +3760,7 @@
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
+          "role": "data",
           "description": "Additional metadata."
         }
       ],
