@@ -17,4 +17,6 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0.dev0"
 
-__all__ = ["Clock", "CommitRefused", "NonFinite", "OffGrid", "PacketWriter", "__version__"]
+from .verify import verify
+
+__all__ = ["Clock", "CommitRefused", "NonFinite", "OffGrid", "PacketWriter", "__version__", "verify"]

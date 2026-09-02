@@ -30,6 +30,11 @@ nwb = ["numcodecs>=0.13"]
 # Writing a packet-owned dense array needs a Zarr v3 writer (R21 §3.1); reading a v2 one
 # still does not, which is what `sources/zarr_compat.py` exists for.
 arrays = ["zarr>=3"]
+# `nwb-lake verify` reaches a store to record what is there (R36 §2.4), and `verify = "members"`
+# on a remote uri_base does the same at build time. The client lives with the validator, which
+# is where the verification code is; this only asks for it.
+remote = ["nwb-lake-validator[remote]"]
+s3 = ["nwb-lake-validator[s3]"]
 
 [project.entry-points."nwb_lake.commands"]
 # 07 names one CLI. nwb-lake-reader owns the console script and discovers this group.

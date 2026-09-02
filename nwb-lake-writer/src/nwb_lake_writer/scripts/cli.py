@@ -196,6 +196,20 @@ def _import(args: argparse.Namespace) -> int:
     return 0
 
 
+def _verify(args: argparse.Namespace) -> int:
+    """Record what is true about a committed packet's external resources (R36 §2.4)."""
+    from ..verify import verify
+
+    report, manifest = verify(args.packet, level=args.level)
+    for finding in report.findings:
+        print(f"  {finding.level:8s} {finding.check}: {finding.message}")
+    if not report.passed:
+        print(f"\nnothing recorded — {report.errors} error(s); the packet stays at its version")
+        return 1
+    print(f"\n{manifest['packet_id']}: recorded at version {manifest['packet_version']}")
+    return 0
+
+
 def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     """Add ``import``, ``inspect`` and ``init`` to the ``nwb-lake`` command.
 
@@ -215,6 +229,19 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     init.add_argument("--session-id", required=True)
     init.add_argument("--out", type=Path, help="write here rather than to stdout")
     init.set_defaults(func=_init)
+
+    verifier = subcommands.add_parser(
+        "verify", help="record what is true about a committed packet's external resources"
+    )
+    verifier.add_argument("packet", type=Path, help="packet root holding a committed manifest")
+    verifier.add_argument(
+        "--level",
+        choices=("size", "members", "sha256"),
+        default="members",
+        help="how much to establish; sha256 reads every byte, which is the cost R36 §2.4 puts "
+        "at publication rather than in a build (default: members)",
+    )
+    verifier.set_defaults(func=_verify)
 
     importer = subcommands.add_parser("import", help="build and commit a packet from a recipe")
     importer.add_argument("recipe", type=Path)
