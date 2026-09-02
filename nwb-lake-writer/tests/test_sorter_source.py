@@ -393,6 +393,26 @@ def test_a_sorting_and_its_curation_name_different_runs(source):
         assert cur["processing_run_id"] != sorting[cur["sorting_run_id"]]
 
 
+def test_every_run_declares_its_scope(source):
+    """R44 §2.1: without it, twelve probes sorted once each look like twelve alternatives."""
+    runs = rows_of(source, "core.processing_runs")
+    assert all(r.get("scope") for r in runs), "a run with no scope is undeterminable (R44 §2.3)"
+
+    sorting = [r for r in runs if r["activity_type"] == "spike_sorting"]
+    probes = {r["probe_id"] for r in rows_of(source, "core.sorting_runs")}
+    assert {r["scope"] for r in sorting} == probes
+    # One run per scope is what makes the packet unambiguous by computation.
+    assert len({r["scope"] for r in sorting}) == len(sorting)
+
+
+def test_a_curation_is_scoped_to_its_sorting_not_its_probe(source):
+    """Choosing the sorting already narrows the curation, so scoping to the probe would only
+    restate that ambiguity instead of composing with it."""
+    curations = [r for r in rows_of(source, "core.processing_runs") if r["activity_type"] == "curation"]
+    sortings = {r["sorting_run_id"] for r in rows_of(source, "core.sorting_runs")}
+    assert {r["scope"] for r in curations} == sortings
+
+
 def test_supersedes_is_left_unset(source):
     """R41 §2.2: a first import supersedes nothing, and a writer must not guess."""
     assert all(r.get("supersedes") is None for r in rows_of(source, "core.processing_runs"))

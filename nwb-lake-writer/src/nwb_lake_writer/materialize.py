@@ -359,6 +359,7 @@ def into(
     from . import __version__
 
     resource = "analysis.spike_events"
+    session = packet.sessions[0] if len(packet.sessions) == 1 else None
     bound = declared_bound(packet) if bound is None else bound
     started = datetime.now(tz=timezone.utc)
     dropped: list[int] = [0]
@@ -380,7 +381,12 @@ def into(
         [
             {
                 "processing_run_id": run_id,
+                "session_id": session,
                 "activity_type": "materialization",
+                # R44 §2.1: session-wide, so the session is the scope. Both stay null on a
+                # multi-session packet rather than naming one of several, because a writer that
+                # cannot determine a fact records nothing (R36 §2.4).
+                "scope": session,
                 "software_name": "nwb_lake_writer",
                 "software_version": __version__,
                 "parameters": {

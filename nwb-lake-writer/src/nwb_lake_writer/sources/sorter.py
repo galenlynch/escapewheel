@@ -389,7 +389,8 @@ class SorterSource:
         `curation_versions` already report -- so this restates nothing the packet must derive.
 
         `supersedes` stays null. A first import supersedes nothing, and a writer that does not
-        know what a run replaced must not guess (R41 §2.2).
+        know what a run replaced must not guess (R41 §2.2). `scope` is set, because a run whose
+        subject is unrecorded is undeterminable rather than unique (R44 §2.3).
         """
         rows = []
         for stream in self.streams():
@@ -401,6 +402,9 @@ class SorterSource:
                     "processing_run_id": self._run_id(stream, "spike_sorting"),
                     "session_id": self.session_id,
                     "activity_type": "spike_sorting",
+                    # R44 §2.1. The probe is what a sorting is *about*, so two sortings of one
+                    # probe are alternatives and twelve probes sorted once each are not.
+                    "scope": self._probe_id(stream),
                     "software_name": log.get("sorter_name") or "unknown",
                     "software_version": log.get("sorter_version"),
                     "status": "failed" if log.get("error") else "succeeded",
@@ -412,6 +416,10 @@ class SorterSource:
                     "processing_run_id": self._run_id(stream, "curation"),
                     "session_id": self.session_id,
                     "activity_type": "curation",
+                    # The sorting rather than the probe: a curation is of one sorting, so
+                    # choosing the sorting already narrows this, and scoping to the probe would
+                    # restate that ambiguity instead of composing with it.
+                    "scope": self._sorting_run_id(stream),
                     "software_name": "spikeinterface",
                     "software_version": curation.get("format_version"),
                     "status": "succeeded",

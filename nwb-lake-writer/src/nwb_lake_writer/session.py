@@ -673,6 +673,8 @@ def _import_run(
         "processing_run_id": f"import.{recipe.digest[:12]}",
         "session_id": recipe.session.get("session_id"),
         "activity_type": "import",
+        # R44 §2.1: an import is session-wide, and a session-wide run names the session.
+        "scope": recipe.session.get("session_id"),
         "software_name": "nwb-lake-writer",
         "software_version": __version__,
         "code_uri": f"sha256:{recipe.digest}",

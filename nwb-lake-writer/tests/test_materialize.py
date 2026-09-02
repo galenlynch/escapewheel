@@ -27,6 +27,7 @@ class Fake:
         self._clocks = pa.table({"clock_id": [REF, PROBE], "tick_rate_hz": [float(HARP), float(AP)]})
         unit_of = unit_of or (lambda i: f"u{i % 2:02d}")
         self._sessions = pa.table({"session_id": ["s1"], "reference_clock_id": [reference]})
+        self.sessions = ("s1",)
         n = 8
         at = np.arange(n, dtype=np.int64) * AP + 1000
         ap = np.arange(n, dtype=np.int64) * HARP + 500_000_000
