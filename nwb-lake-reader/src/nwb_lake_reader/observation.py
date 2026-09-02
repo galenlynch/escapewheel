@@ -19,6 +19,27 @@ neither has a default, because the error this exists to prevent is arithmetic ra
 access: dividing by the wrong span, not failing to look one up. A packet that declares no
 windows gets an empty table and no invented extent, as R39 §2.3 requires of an absent origin.
 
+An accessor returning a single point process also *attaches* its support, so :func:`rate_of`
+can be called on the result without looking anything up. That convenience needs a guard rather
+than trust, because Arrow's schema metadata survives exactly the wrong operations:
+
+===============  ==============  ==================================
+operation        metadata kept   support still describes the rows
+===============  ==============  ==================================
+``filter``       yes             **no**
+``slice``        yes             **no**
+``concat``       yes             **no**
+``sort_by``      yes             yes
+``select``       yes             yes
+``group_by``     no              no
+===============  ==============  ==================================
+
+The three that keep it are the three that invalidate it, so an attached window would otherwise
+be silently wrong for a filtered table -- too long a denominator, and a rate too low. The
+attachment therefore carries the row count it was computed for, and :func:`support_of` refuses
+a table whose count has changed. Row count separates the cases exactly: it catches all three
+hazards and passes both harmless ones.
+
 Ticks are inclusive
 -------------------
 
@@ -30,6 +51,7 @@ one tick; the writer follows the column definition.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 import pyarrow as pa
@@ -392,6 +414,121 @@ def observed_seconds(packet: Any, windows: pa.Table) -> float:
     return total
 
 
+#: Schema-metadata keys carrying an attached support and the row count it describes.
+SUPPORT_KEY = b"nwb_lake.support"
+ROWS_KEY = b"nwb_lake.support_rows"
+
+
+class StaleSupport(ValueError):
+    """A table carries a support that no longer describes it.
+
+    Raised when the row count has changed since the support was attached -- a filter, a slice
+    or a concatenation. The support itself is still true of the thing it was read for; it is
+    the association with *these rows* that has broken, so re-read rather than adjust.
+    """
+
+
+def attach_support(table: pa.Table, windows: pa.Table) -> pa.Table:
+    """Return `table` carrying `windows` as its support, fingerprinted by row count.
+
+    For one point process. Attaching windows that differ between the rows would make
+    :func:`rate_of` average over denominators that are not interchangeable, so an accessor
+    returning several units attaches nothing and leaves the caller to group and look up.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        The rows the support describes.
+    windows : pyarrow.Table
+        Windows from :func:`unit_windows` or :func:`stream_windows`.
+
+    Returns
+    -------
+    pyarrow.Table
+        The same rows, with the support in `schema.metadata`. Unchanged when `windows` is empty,
+        so an absent support is absent rather than empty.
+    """
+    if not windows.num_rows:
+        return table
+    carried = [
+        {"clock_id": r["clock_id"], "start_tick": r["start_tick"], "stop_tick": r["stop_tick"]}
+        for r in windows.to_pylist()
+    ]
+    metadata = dict(table.schema.metadata or {})
+    metadata[SUPPORT_KEY] = json.dumps(carried).encode()
+    metadata[ROWS_KEY] = str(table.num_rows).encode()
+    return table.replace_schema_metadata(metadata)
+
+
+def support_of(table: pa.Table) -> pa.Table | None:
+    """Return the support attached to `table`, or None if it carries none.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        A table from an accessor that attaches support.
+
+    Returns
+    -------
+    pyarrow.Table or None
+        Columns ``clock_id``, ``start_tick`` and ``stop_tick``.
+
+    Raises
+    ------
+    StaleSupport
+        If the row count has changed since the support was attached.
+    """
+    metadata = table.schema.metadata or {}
+    if SUPPORT_KEY not in metadata:
+        return None
+    expected = int(metadata[ROWS_KEY])
+    if table.num_rows != expected:
+        raise StaleSupport(
+            f"support was attached for {expected} rows and this table has {table.num_rows}; "
+            "read it again rather than adjusting the denominator"
+        )
+    rows = json.loads(metadata[SUPPORT_KEY])
+    return pa.table(
+        {
+            "clock_id": pa.array([r["clock_id"] for r in rows], type=pa.string()),
+            "start_tick": pa.array([r["start_tick"] for r in rows], type=pa.int64()),
+            "stop_tick": pa.array([r["stop_tick"] for r in rows], type=pa.int64()),
+        }
+    )
+
+
+def rate_of(packet: Any, table: pa.Table) -> float:
+    """Return the rate of a table's rows over the support attached to it.
+
+    Parameters
+    ----------
+    packet : Packet
+        The packet the table came from, for its clocks' rates.
+    table : pyarrow.Table
+        Rows from an accessor that attaches support.
+
+    Returns
+    -------
+    float
+        Rows per second.
+
+    Raises
+    ------
+    LookupError
+        If the table carries no support. Nothing is guessed: the caller resolves the windows
+        with :func:`unit_windows` and divides with :func:`rate`.
+    StaleSupport
+        If the rows have changed since the support was attached.
+    """
+    windows = support_of(table)
+    if windows is None:
+        raise LookupError(
+            "this table carries no support, so its rate has no denominator; "
+            "resolve one with unit_windows or stream_windows and use rate()"
+        )
+    return rate(table.num_rows, observed_seconds(packet, windows))
+
+
 def rate(count: int, seconds: float) -> float:
     """Return events per second.
 
@@ -425,14 +562,20 @@ __all__ = [
     "CLOCK_INTERVALS",
     "DECLARED",
     "INHERITED",
+    "ROWS_KEY",
     "STREAM_INTERVALS",
+    "SUPPORT_KEY",
     "UNIT_INTERVALS",
     "VIEWS",
+    "StaleSupport",
+    "attach_support",
     "clock_windows",
     "observed_seconds",
     "observed_ticks",
     "rate",
+    "rate_of",
     "register_views",
     "stream_windows",
+    "support_of",
     "unit_windows",
 ]

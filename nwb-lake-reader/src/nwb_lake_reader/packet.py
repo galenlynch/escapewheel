@@ -15,7 +15,7 @@ from .clocks import NotAligned, anchors, declared_bound, mapped, stored_span
 from .dictionaries import as_dictionary, constant
 from .errors import NoTimeOrigin, ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
 from .manifest import Manifest, Resource
-from .observation import register_views
+from .observation import attach_support, register_views, unit_windows
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity
 from .runs import check as _check_runs
@@ -72,6 +72,7 @@ class Packet:
         self._origin_cache: dict[str | None, tuple[int, int, int]] = {}
         self._bound_cache: float | None = None
         self._ambiguity_cache: tuple[Ambiguity, ...] | None = None
+        self._support_cache: pa.Table | None = None
 
     @property
     def root(self) -> Path:
@@ -569,7 +570,11 @@ class Packet:
         Returns
         -------
         pyarrow.Table
-            Columns ``t_tick`` and ``clock_id``, in stored order.
+            Columns ``t_tick`` and ``clock_id``, in stored order. When one `unit_id` is named
+            and no `t_tick` range is given, the result carries the unit's observation window
+            (R38) in `schema.metadata`, so :func:`~nwb_lake_reader.observation.rate_of` needs
+            no second lookup. A range-narrowed read carries none: the span is the caller's
+            choice and is no denominator for it.
 
         Raises
         ------
@@ -597,7 +602,13 @@ class Packet:
             )
             if clock != STORED:
                 found = self._narrowed(self.on_clock(found, clock), t_tick)
-            return self.seconds(found, session_id=session_id) if seconds else found
+            if seconds:
+                found = self.seconds(found, session_id=session_id)
+            if t_tick is None:
+                # Only for the unit's whole record. A range-narrowed read is a subset the
+                # caller chose, and the window it was observed over is no denominator for it.
+                found = attach_support(found, self._unit_support(unit_id, sorting_run_id, curation_id))
+            return found
 
         assert units is not None  # the exclusivity check above settles this
         keys = self._reference_columns("core.spike_events", "core.units")
@@ -798,6 +809,23 @@ class Packet:
         out = table.set_column(names.index("t_tick"), "t_tick", pa.array(ticks))
         out = out.set_column(names.index("clock_id"), "clock_id", constant(target, table.num_rows))
         return out.filter(pa.array(keep))
+
+    def _unit_support(self, unit_id: str, sorting_run_id: str | None, curation_id: str | None) -> pa.Table:
+        """Return one unit's observation windows, from the packet's resolved set (R38).
+
+        The resolution is read once per packet and filtered here, because it reads three tables
+        and this is called per unit.
+        """
+        if self._support_cache is None:
+            self._support_cache = unit_windows(self)
+        windows = self._support_cache
+        if not windows.num_rows:
+            return windows
+        keep = pc.equal(windows.column("unit_id"), unit_id)
+        for column, value in (("sorting_run_id", sorting_run_id), ("curation_id", curation_id)):
+            if value is not None:
+                keep = pc.and_(keep, pc.equal(windows.column(column), value))
+        return windows.filter(keep)
 
     def _span(self, span: tuple[int, int] | None, clock: str | None) -> tuple[int, int] | None:
         """Widen a range stated on the result's clock into one the file can be pruned by."""

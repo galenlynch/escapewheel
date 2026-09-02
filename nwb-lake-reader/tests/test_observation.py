@@ -16,12 +16,16 @@ from nwb_lake_reader import open_packet
 from nwb_lake_reader.observation import (
     DECLARED,
     INHERITED,
+    StaleSupport,
+    attach_support,
     clock_windows,
     observed_seconds,
     observed_ticks,
     rate,
+    rate_of,
     register_views,
     stream_windows,
+    support_of,
     unit_windows,
 )
 
@@ -280,3 +284,68 @@ def test_the_stream_view_agrees_with_the_function(stream_packet):
     from_sql = sorted(con.sql(f"SELECT {', '.join(columns)} FROM stream_observation").fetchall())
     from_arrow = sorted(tuple(r[c] for c in columns) for r in stream_windows(stream_packet).to_pylist())
     assert from_sql == from_arrow
+
+
+# -- support carried on the result (option B, guarded by a fingerprint) ------------------
+
+
+def test_a_single_unit_read_carries_its_support(observed_packet):
+    """So a rate needs no second lookup on the path where the answer is unambiguous."""
+    spikes = observed_packet.spike_times("unit_001")
+    carried = support_of(spikes)
+    assert carried is not None
+    assert carried.to_pylist() == [{"clock_id": CLOCK, "start_tick": 0, "stop_tick": 999}]
+    assert rate_of(observed_packet, spikes) == pytest.approx(spikes.num_rows / 1.0)
+
+
+def test_a_refined_unit_carries_its_own_window(observed_packet):
+    """The attachment follows the resolution, so a refinement reaches the denominator."""
+    carried = support_of(observed_packet.spike_times("unit_002"))
+    assert carried.to_pylist() == [{"clock_id": CLOCK, "start_tick": 100, "stop_tick": 599}]
+
+
+def test_filtering_invalidates_the_support_loudly(observed_packet):
+    """Arrow keeps metadata through a filter, so without the fingerprint this would silently
+    divide by a window the remaining rows no longer span."""
+    spikes = observed_packet.spike_times("unit_001")
+    fewer = spikes.slice(0, 1)
+    with pytest.raises(StaleSupport, match="read it again"):
+        support_of(fewer)
+    with pytest.raises(StaleSupport):
+        rate_of(observed_packet, fewer)
+
+
+def test_concatenation_is_caught_too(observed_packet):
+    """The other direction: more rows over the same window would read as a doubled rate."""
+    spikes = observed_packet.spike_times("unit_001")
+    with pytest.raises(StaleSupport):
+        support_of(pa.concat_tables([spikes, spikes]))
+
+
+def test_reordering_and_projection_stay_valid(observed_packet):
+    """Neither changes which rows the support describes, so neither should be refused."""
+    spikes = observed_packet.spike_times("unit_001")
+    expected = rate_of(observed_packet, spikes)
+    assert rate_of(observed_packet, spikes.sort_by("t_tick")) == pytest.approx(expected)
+    assert rate_of(observed_packet, spikes.select(["t_tick"])) == pytest.approx(expected)
+
+
+def test_a_range_narrowed_read_carries_no_support(observed_packet):
+    """The span is the caller's choice, so the observation window is no denominator for it."""
+    narrowed = observed_packet.spike_times("unit_001", t_tick=(0, 100))
+    assert support_of(narrowed) is None
+    with pytest.raises(LookupError, match="no support"):
+        rate_of(observed_packet, narrowed)
+
+
+def test_a_many_unit_read_carries_no_support(observed_packet):
+    """Two units with different windows have no single denominator, so none is attached."""
+    spikes = observed_packet.spike_times(units=observed_packet.units())
+    assert support_of(spikes) is None
+
+
+def test_attaching_an_empty_support_attaches_nothing(observed_packet):
+    """Absent, not empty: an empty attachment would read as a declared zero-length window."""
+    bare = observed_packet.table("core.spike_events", columns=["t_tick"])
+    assert support_of(bare) is None
+    assert support_of(attach_support(bare, unit_windows(observed_packet).slice(0, 0))) is None
