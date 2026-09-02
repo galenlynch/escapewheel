@@ -318,6 +318,22 @@ class ExternalArray:
     members: tuple[dict[str, Any], ...] | None = None
 
 
+def _digest(path: Path) -> str:
+    """R52 §2.1: what the packet says its own bytes are.
+
+    Recorded for every packet-owned resource and not optional, because the promise it makes
+    checkable is not optional either: R14 §2.3 declares these bytes immutable and R35 §2 spends
+    that, bounding revalidation after an amendment to what the amendment wrote. Costs 0.5% of a
+    build -- the bytes were just written, so they are in page cache and hash at ~2 GB/s.
+
+    A prefix goes through R36 §2.2's canonical listing, a single file is its own bytes; `digest`
+    already distinguishes them.
+    """
+    from nwb_lake_validator.stores import digest
+
+    return digest(str(path))
+
+
 class CommitRefused(Exception):
     """Validation found errors, so nothing was committed.
 
@@ -555,6 +571,7 @@ class PacketWriter:
                     "validation_state": "not_run",
                     "codecs": list(declared_codecs(spec)),
                     "size_bytes": written,
+                    "sha256": _digest(path),
                 }
             )
         return entries
@@ -627,6 +644,7 @@ class PacketWriter:
                 "canonical": True,
                 "validation_state": "not_run",
             }
+            entry["sha256"] = _digest(path)
             if lineage := self._derived.get(resource_id):
                 entry["derived_from"] = lineage
             if run := self._runs.get(resource_id):
