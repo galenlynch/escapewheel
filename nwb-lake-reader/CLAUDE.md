@@ -176,19 +176,16 @@ agreement that is *not* recoverable from the array alone, and the validator chec
 against `core.array_dimensions`, declared `codecs` against the store, `zarr_format`, and R3 §5's
 transpose ban.
 
-### Reaching an object store
+### This package reaches no object store
 
-`stores` is scheme-agnostic through fsspec, and the `s3` extra brings `s3fs`. Two things
-measured against a real bucket that are not obvious:
+`stores` moved to **nwb-lake-validator**, because no read path here uses it. A table resolves to
+a local path or is refused; a Zarr array is handed its URI and `zarr` opens it with its own
+backend; DuckDB reaches an object store through its own C++ client. What needs a store client is
+R36's verification -- list a prefix, hash its members -- which is the validator's job, so the
+`remote` and `s3` extras live there now.
 
-- **An expired AWS profile breaks a *public* bucket.** s3fs picks up the ambient config, tries to
-  refresh an SSO token, and fails before it ever considers that the object needs no credentials.
-  Reading open data therefore needs `fsspec.config.conf["s3"] = {"anon": True}` (or
-  `FSSPEC_S3_ANON=true`), not merely an absence of credentials.
-- **Concurrency is the whole performance story, not the client.** Digesting one 509 MB LFP array
-  reads at 15.7 MB/s one object at a time and 94 MB/s across eight; swapping s3fs for
-  `pyarrow.fs` moves it by about a quarter in either direction. `digest` uses a pool for that
-  reason, and `WORKERS` is where the number lives.
+Keep it that way. If a read path here ever needs a remote byte, the engine that reads it brings
+its own transport; this package should not acquire one.
 
 `07` names the CLI `nwb-lake`, which this package claims under `[project.scripts]`. Later
 packages **cannot** also claim it — two distributions declaring the same console script is a

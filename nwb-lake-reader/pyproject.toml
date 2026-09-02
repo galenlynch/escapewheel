@@ -32,14 +32,6 @@ polars = ["polars>=1.0"]
 # Zarr is optional for the same reason: an array declares its shape, chunking and codecs in a
 # JSON document, so what an array *is* costs nothing, and only reading values needs a library.
 arrays = ["zarr>=3"]
-# Reaching an external resource is optional for the third time and the same reason: a packet
-# says where bytes are, and only a caller that asks to resolve them needs a client. A backend
-# for the scheme is separate again -- s3fs for s3://, gcsfs for gs://.
-remote = ["fsspec>=2024.6"]
-# A scheme backend, separate from fsspec for the same reason fsspec is separate from the reader:
-# a packet says where bytes are, and only a caller resolving them needs a client for that scheme.
-# s3fs brings fsspec with it, so the `s3` extra alone is enough to reach an s3:// resource.
-s3 = ["s3fs>=2024.6"]
 
 [project.urls]
 Repository = "https://github.com/AllenNeuralDynamics/nwb-lake-reader/"
