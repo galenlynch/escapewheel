@@ -24,7 +24,7 @@ from ..session import build, materializers
 from ..writer import CommitRefused
 
 #: Source kinds ``init`` can inspect, and the adapter each names.
-KINDS = ("sorter", "sync", "nwb", "waveforms")
+KINDS = ("sorter", "sync", "nwb", "waveforms", "lfp")
 
 #: Where a resource goes when more than one source offers it. The winner is the source that
 #: knows most about it: the NWB knows a probe's type and manufacturer where the sorter knows
@@ -45,6 +45,12 @@ def _open(kind: str, root: Path, session_id: str) -> Any:
         return SorterSource(root, session_id=session_id)
     if kind == "sync":
         return SyncSource(root, session_id=session_id)
+    if kind == "lfp":
+        from ..sources import LFPSource
+
+        # Inspecting reads what the series declare; the clock and electrode maps a build passes
+        # in change what the rows say, not how many there are.
+        return LFPSource(root, session_id=session_id)
     if kind == "nwb":
         from zoneinfo import ZoneInfo
 
@@ -100,7 +106,7 @@ def _init(args: argparse.Namespace) -> int:
         lines += [f'  "{r}",' for r in owned]
         lines += ["]"]
         lines += [f"# also offers {r}, owned here by {PREFERRED.get(r, 'another source')}" for r in passed]
-        lines += [""]
+        lines += [*HINTS.get(kind, ()), ""]
 
     text = "\n".join(lines)
     if args.out is None:
@@ -109,6 +115,17 @@ def _init(args: argparse.Namespace) -> int:
         args.out.write_text(text)
         print(f"drafted {args.out}")
     return 0
+
+
+#: Options a drafted `[[source]]` mentions but does not set, commented out. They change what a
+#: packet claims rather than what it contains, so a default standing in for the decision is worse
+#: than an absence someone has to look at.
+HINTS = {
+    "lfp": (
+        '# uri_base = "s3://bucket/prefix"   # where the referenced arrays actually live',
+        '# verify = "sha256"                 # digest them, not just size: 75 s here, 88 s from S3',
+    ),
+}
 
 
 def _wins(kind: str, offering: list[str]) -> bool:

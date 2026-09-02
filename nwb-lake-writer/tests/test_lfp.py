@@ -193,3 +193,26 @@ def test_an_nwb_with_no_lfp_group_yields_nothing(tmp_path):
     source = _source(tmp_path / "empty.nwb")
     assert source.records(rates=RATES)["core.array_assets"] == []
     assert any("no series found" in n for n in source.notes)
+
+
+def test_offers_counts_the_channels_it_can_supply(nwb):
+    """`05` Stage 1 must name every resource a recipe has this source own, and the recipe
+    owns `core.array_channels`. It was left out, so `inspect` under-reported the source."""
+    source = _source(nwb)
+    assert source.offers()["core.array_channels"] == len(source.array_channels())
+
+
+def test_channels_are_offered_without_an_electrode_map(nwb):
+    """The rows exist either way; a map only decides whether they name an electrode."""
+    bare = LFPSource(nwb, session_id="s1", clocks=[CLOCK])
+    assert bare.offers() == _source(nwb).offers()
+
+
+def test_init_can_draft_an_lfp_source(nwb):
+    """It is the only kind that produces external resources, so it is the only one whose
+    `uri_base` and `verify` a recipe has to set — and it could not be drafted at all."""
+    from nwb_lake_writer.scripts.cli import HINTS, KINDS, _open
+
+    assert "lfp" in KINDS
+    assert _open("lfp", nwb, "s1").offers() == _source(nwb).offers()
+    assert any("verify" in hint for hint in HINTS["lfp"])

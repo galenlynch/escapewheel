@@ -70,8 +70,16 @@ class LFPSource(Compensates):
         a packet that resolves only on this machine.
     verify : str, default "size"
         What to establish about the referenced bytes: `size` lists the store, `sha256` also
-        digests it, `none` records no claim. A remote base needs `nwb-lake-reader[remote]` and
-        a backend for its scheme; unreachable leaves the claim unmade rather than guessed.
+        digests it, `none` records no claim. A remote base needs `nwb-lake-validator[remote]`
+        and a backend for its scheme; unreachable leaves the claim unmade rather than guessed.
+
+        The default is `size` on cost. Listing a session's twelve LFP prefixes is 0.33 s;
+        digesting the 6.83 GB behind them is 75 s from local disk and 88 s from S3, against a
+        whole-packet build of 1 min 51 s. A digest is a publication-time cost that `size` is
+        not, so a packet meant to outlive the machine that built it should ask for `sha256`
+        here, and a development round trip should not. A packet recording no digest is not
+        silently treated as verified: `validate --checksums` reports what it had nothing to
+        compare against.
     """
 
     def __init__(
@@ -335,8 +343,19 @@ class LFPSource(Compensates):
         }
 
     def offers(self) -> dict[str, int]:
-        """`05` Stage 1: how many rows of each resource this source can supply."""
-        return {"core.array_assets": len(self._series), "core.array_dimensions": 2 * len(self._series)}
+        """`05` Stage 1: how many rows of each resource this source can supply.
+
+        `core.array_channels` is counted from each series' electrode region, which is what
+        `array_channels` iterates. It is offered whether or not an electrode map was given:
+        without one the rows still exist and name no electrode, so omitting it here would
+        under-report the source against the resource a recipe has it own.
+        """
+        channels = sum(len(self.store.array(series / "electrodes")) for series in self._series)
+        return {
+            "core.array_assets": len(self._series),
+            "core.array_dimensions": 2 * len(self._series),
+            "core.array_channels": channels,
+        }
 
 
 __all__ = ["GROUP", "LFPSource"]
