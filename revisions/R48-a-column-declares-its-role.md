@@ -64,7 +64,21 @@ exactly the drift this revision exists to stop. A generator SHOULD therefore tak
 required argument, so that adding a column without deciding is an error where the column is
 written rather than a finding later.
 
-### 2.3 What it replaces in R3 §6
+### 2.3 A reference relates columns of the same role
+
+Both columns of every column pair in a `references` entry **MUST** carry the same role.
+
+This is what makes R3 §6's obligation safe to act on mechanically. A structural index may also be
+a foreign-key component — `core.array_channels.axis_index` references
+`core.array_dimensions.axis_index` — so a client converting one side and not the other would break
+the join. Because both sides always share a role, **converting every `structural_index` column
+converts both sides of any join between them**, and the reference still resolves. Conversion is
+join-preserving by construction rather than by the client being careful.
+
+It is checkable in `registry/check.py` against the registry alone, and holds today: 74 column
+pairs across 54 references, none mixed.
+
+### 2.4 What it replaces in R3 §6
 
 R3 §6's two categories become the vocabulary above, and its lists become data. Specifically:
 
@@ -79,7 +93,7 @@ R3 §6's two categories become the vocabulary above, and its lists become data. 
 R3 §6's prose is retained as the rationale for `structural_index`; what changes is that the
 classification is no longer only prose.
 
-### 2.4 A description states meaning, not base
+### 2.5 A description states meaning, not base
 
 A column whose role is declared **SHOULD NOT** restate its base in its description. The seven that
 do today are the symptom §1 measures, and the role makes them redundant.
@@ -117,6 +131,10 @@ Over the registry as it stands, 293 columns:
 specification already fixes: `_id` names a stable ID and `_tick` names a tick value. The ten are
 the six structural indices and the four sequence positions, each already carrying its base in its
 own description.
+
+One invariant comes free and is worth checking: every reference already relates columns of the
+same role — 74 column pairs, none mixed — so §2.3 records a property the registry has rather than
+imposing one it must be edited to satisfy.
 
 Every packet already written stays valid: `role` describes columns whose values are unchanged, and
 a packet embeds the registry it was written against (R2 §8), so an older packet keeps validating
