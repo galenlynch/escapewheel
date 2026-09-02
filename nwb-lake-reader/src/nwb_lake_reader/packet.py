@@ -16,6 +16,8 @@ from .dictionaries import as_dictionary, constant
 from .errors import NoTimeOrigin, ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
 from .manifest import Manifest, Resource
 from .resources import ArrayResource, TableResource
+from .runs import Ambiguity
+from .runs import check as _check_runs
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
@@ -35,6 +37,13 @@ BASELINE_CODECS = frozenset({"none", "gzip", "zstd"})
 #: recorded them, so stored ticks from two probes are not comparable and neither is a stored
 #: tick against a behavioural event -- which is why reaching them takes saying so.
 STORED = "stored"
+
+
+#: The activities whose runs produce units and spikes, so the accessors returning those know
+#: what to check for currency (R41 §2.4). An accessor already names one resource; naming what
+#: produces it is not the general activity-to-table map R44 §2.4 rejects, which an extension's
+#: tables could never be added to.
+SORTING_ACTIVITIES = ("spike_sorting", "curation")
 
 
 class Packet:
@@ -61,6 +70,7 @@ class Packet:
         self._reference_cache: str | None = None
         self._origin_cache: dict[str | None, tuple[int, int, int]] = {}
         self._bound_cache: float | None = None
+        self._ambiguity_cache: tuple[Ambiguity, ...] | None = None
 
     @property
     def root(self) -> Path:
@@ -442,7 +452,16 @@ class Packet:
         -------
         pyarrow.Table
             Matching units.
+
+        Raises
+        ------
+        AmbiguousRun
+            If the packet holds two sortings or curations of one probe and does not say which
+            to read (R41 §2.4). Returning both concatenated is two complete sets of units with
+            nothing marking the seam, so every count taken over the result is wrong. Read
+            ``table("core.units")`` to get the rows anyway.
         """
+        _check_runs(self, SORTING_ACTIVITIES)
         return self.table("core.units", session_id=session_id, quality_label=quality_label)
 
     def events(
@@ -550,6 +569,8 @@ class Packet:
         ------
         ValueError
             If both or neither of `unit_id` and `units` are given.
+        AmbiguousRun
+            If the packet does not say which sorting to read (R41 §2.4).
 
         Examples
         --------
@@ -557,6 +578,7 @@ class Packet:
         """
         if (unit_id is None) == (units is None):
             raise ValueError("name exactly one of unit_id or units")
+        _check_runs(self, SORTING_ACTIVITIES)
         if unit_id is not None:
             found = self.table(
                 "core.spike_events",

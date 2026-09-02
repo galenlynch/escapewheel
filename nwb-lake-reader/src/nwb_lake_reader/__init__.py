@@ -12,6 +12,7 @@ from importlib.metadata import version
 
 from .clocks import BOUND, NotAligned, Unanchored, align
 from .errors import (
+    AmbiguousRun,
     ManifestError,
     NoTimeOrigin,
     PacketError,
@@ -22,6 +23,7 @@ from .errors import (
 from .manifest import Manifest, Resource
 from .packet import BASELINE_CODECS, STORED, Packet, Predicate, open_packet
 from .resources import ArrayResource, TableResource
+from .runs import Ambiguity, ambiguities, preferred_run
 from .sql import quote, sql_name
 
 __version__ = version("nwb-lake-reader")
@@ -30,6 +32,8 @@ __all__ = [
     "BASELINE_CODECS",
     "BOUND",
     "STORED",
+    "Ambiguity",
+    "AmbiguousRun",
     "ArrayResource",
     "Manifest",
     "ManifestError",
@@ -46,7 +50,9 @@ __all__ = [
     "UnsupportedCodecError",
     "__version__",
     "align",
+    "ambiguities",
     "open_packet",
+    "preferred_run",
     "quote",
     "sql_name",
 ]

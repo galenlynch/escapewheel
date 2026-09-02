@@ -30,3 +30,13 @@ class NoTimeOrigin(PacketError):
     wrong. A consumer that picks one silently produces numbers that cannot be compared with
     another consumer's, so this is raised instead.
     """
+
+
+class AmbiguousRun(PacketError):
+    """Several runs produced the same thing and the packet does not say which to read.
+
+    R41 §2.4. Reading them all concatenated is the failure this prevents: two sortings of one
+    probe are two complete sets of units, so every count taken over both is wrong and nothing
+    about the result says so. Picking the newest, or the first, produces numbers that cannot be
+    compared with another consumer's.
+    """
