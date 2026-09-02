@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-02 |
+| **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R14 §2.3 (what an external resource records), R36 §2.2 (the digest over a member listing), R36 §2.3 (the two verification levels) |
 | **Depends on** | R14 (external resources), R36 (verifying a prefix) |
 | **Supersedes** | R42 §2.1 (the member array), for external prefixes only — R42 is withdrawn |
@@ -24,9 +24,9 @@ perform anyway.** Measured on the objects a real packet references:
 0.0      size=3054612   ETag="4bb679e9a7658fca582eee9456244ebf"  multipart=False
 ```
 
-For a **single-part** object an S3 ETag is the MD5 of its content. All 208 members of that array
-are single-part, and the values arrive in the same `list_objects_v2` response that R36 level 3a
-already issues. A HEAD per object would also yield `ChecksumCRC32` with
+For a **single-part** object an S3 ETag is the MD5 of its content. 2,394 of the 2,496 members a
+real packet references are single-part (§3), and the values arrive in the same `list_objects_v2`
+response that R36 level 3a already issues. A HEAD per object would also yield `ChecksumCRC32` with
 `ChecksumType: FULL_OBJECT`, but that costs one request per member where the ETag costs none.
 
 So there is a check available at **list cost** — 1.31 s for a whole packet against 88 s — that
@@ -127,19 +127,34 @@ verified nothing, not that everything passed.
 
 ## 3. Evidence
 
-`s3://aind-open-data`, the LFP array a real packet references, 208 objects and 508,986,967 bytes:
+`s3://aind-open-data`, the twelve LFP prefixes a real packet references — 2,496 objects and
+6.83 GB:
 
 | | |
 |---|---|
-| members that are single-part, so their ETag is a content hash | **208 of 208** |
-| ETags returned by the listing R36 level 3a already performs | **208, at no extra request** |
+| members single-part, so their ETag is a content hash | **2,394 of 2,496 (96%)** |
+| ETags returned by the listing R36 level 3a already performs | **all of them, at no extra request** |
 | additional checksum available per object | `ChecksumCRC32`, at one HEAD each |
-| whole packet, 2,496 objects and 6.83 GB: list | **1.31 s** |
-| whole packet: sha256 over every byte | **88 s** |
+| recording every member from the store | **2.09 s** |
+| validating them against the store, whole packet | **3.3 s** |
+| sha256 over every byte, whole packet | **88 s** |
+
+**The 96% is the point, not a footnote.** Eleven of the twelve prefixes are single-part
+throughout; one — `core.46110.lfp`, the largest at 950 MB — has 102 of its 208 chunks uploaded
+multipart, at 5.8–5.9 MB each. §1.1 anticipated multipart in the abstract; measured, it is
+present in the first real packet asked, and it is not a property of the array's role or its
+writer but of how large its individual chunks happened to be.
+
+So a validator that reported a store-digest pass without saying what it skipped would report a
+clean check on an array where **half the members were never looked at**. That is what §2.3's
+skipped count is for, and why it is a requirement rather than a nicety.
 
 The digest itself was verified identical computed from S3 and from local disk
 (`3660170e5c3f2205…`), so R36 §2.2's canonical listing is store-independent as intended. This
 revision does not disturb that; it adds a cheaper question with a weaker answer.
+
+Recording members costs no requests and 304 KB of manifest against 15.7 KB without them, which
+is why a writer opts in (`verify = "members"`) rather than getting it by default.
 
 ## 4. What this does not do
 
@@ -158,15 +173,16 @@ revision does not disturb that; it adds a cheaper question with a weaker answer.
 - **No claim that MD5 is sufficient.** §1.1 and §2.3 exist to stop a store-digest pass being read
   as a checksum pass.
 
-## 5. Open
+## 5. Settled on acceptance
 
-- **Whether a `MAY` that no writer exercises is worth the schema.** `members` and `store_digest`
-  are both optional, so a packet recording neither is unaffected — which is every packet today.
-  The mechanism is only worth adding if a writer will record it, and that is the same decision
-  §2.1 of the withdrawn R42 would have forced and this one does not.
-- **What the writer should record, now that the cost is known.** A packet's twelve LFP prefixes
-  cost 0.33 s to list, 75 s to digest from local disk and 88 s from S3, against a whole-packet
-  build of 1 min 51 s — so the writer's default stays `size`, and a `store_digest` is available
-  for the price of the listing it already does. That makes this revision's level the only content
-  check a default build could afford, which strengthens it; it also means the level exists to
-  serve a default that a `verify` command at publication time (R36 §2.4) might make unnecessary.
+- **Is a `MAY` no writer exercises worth the schema?** The writer exercises it: `verify` gains a
+  `members` level between `size` and `sha256`, costing the requests `size` already makes. It is
+  not the default, because 2,496 members is 304 KB of manifest against 15.7 KB without them.
+- **What the writer should record.** Unchanged by this: the default stays `size` on the
+  measurement in R42 §4.1's neighbourhood — 0.33 s to list against 75 s to digest, on a build of
+  1 min 51 s. What this adds is a level that costs the listing, so a packet that wants any content
+  check without paying for a digest now has one.
+- **Whether this substitutes for verifying at publication.** It does not. R36 §2.4's workflow —
+  verify once the bytes have landed where the manifest says — is still unbuilt, and a
+  `store_digest` recorded at build time answers "has this changed since the build", which is the
+  question a publication step would ask better.
