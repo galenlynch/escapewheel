@@ -201,7 +201,7 @@ class LFPSource(Compensates):
         `size_bytes` is the whole prefix, metadata documents included, because a dense array
         asset is a prefix of many objects and its `.zarray` is part of what it is (R36 §2.1).
         """
-        from nwb_lake_reader.stores import StoreUnreachable, digest, listing
+        from nwb_lake_validator.stores import StoreUnreachable, digest, listing
 
         from ..writer import ExternalArray
 

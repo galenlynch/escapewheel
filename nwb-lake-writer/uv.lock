@@ -1216,14 +1216,13 @@ sql = [
 [package.metadata]
 requires-dist = [
     { name = "duckdb", marker = "extra == 'sql'", specifier = ">=1.5.5" },
-    { name = "fsspec", marker = "extra == 'remote'", specifier = ">=2024.6" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0" },
     { name = "pyarrow", specifier = ">=25.0.1" },
     { name = "zarr", marker = "extra == 'arrays'", specifier = ">=3" },
 ]
-provides-extras = ["sql", "polars", "arrays", "remote"]
+provides-extras = ["sql", "polars", "arrays"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1282,11 +1281,14 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fsspec", marker = "extra == 'remote'", specifier = ">=2024.6" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "nwb-lake-reader", extras = ["sql"], editable = "../nwb-lake-reader" },
     { name = "pyarrow", specifier = ">=25.0.1" },
+    { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.6" },
 ]
+provides-extras = ["remote", "s3"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -168,7 +168,7 @@ def test_a_reachable_store_is_sized_whole(nwb):
 
 
 def test_a_digest_is_recorded_when_asked(nwb):
-    from nwb_lake_reader.stores import digest
+    from nwb_lake_validator.stores import digest
 
     array = _source(nwb, verify="sha256").external_arrays()["core.45883-1.lfp"]
     assert array.sha256 == digest(array.uri)
