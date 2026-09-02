@@ -299,9 +299,13 @@ class ExternalArray:
     compression -- 5.8 GB of LFP across twelve probes, against three integers per series once
     R20 replaces its timestamps.
 
-    `sha256`, `size_bytes` and `verified_at` record what was true when someone looked, not a
-    promise about now: immutability covers packet-owned bytes only (R14 §2.3.1), and an
-    external array may change or vanish without the packet changing at all.
+    `sha256`, `size_bytes`, `members` and `verified_at` record what was true when someone
+    looked, not a promise about now: immutability covers packet-owned bytes only (R14 §2.3.1),
+    and an external array may change or vanish without the packet changing at all.
+
+    `members` is R51 §2.1's record of what the prefix held, each entry carrying whatever the
+    store said about itself. It is a record and not a resolution rule -- a reader hands the URI
+    to Zarr, which addresses chunks by key and never enumerates.
     """
 
     array_asset_id: str
@@ -311,6 +315,7 @@ class ExternalArray:
     sha256: str | None = None
     size_bytes: int | None = None
     verified_at: str | None = None
+    members: tuple[dict[str, Any], ...] | None = None
 
 
 class CommitRefused(Exception):
@@ -573,6 +578,8 @@ class PacketWriter:
             for name in ("sha256", "size_bytes", "verified_at"):
                 if (value := getattr(array, name)) is not None:
                     entry[name] = value
+            if array.members is not None:
+                entry["members"] = [dict(member) for member in array.members]
             entries.append(entry)
         return entries
 

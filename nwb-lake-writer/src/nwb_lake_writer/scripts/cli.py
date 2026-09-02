@@ -123,7 +123,8 @@ def _init(args: argparse.Namespace) -> int:
 HINTS = {
     "lfp": (
         '# uri_base = "s3://bucket/prefix"   # where the referenced arrays actually live',
-        '# verify = "sha256"                 # digest them, not just size: 75 s here, 88 s from S3',
+        '# verify = "members"                # record R51 members and store digests, at list cost',
+        '# verify = "sha256"                 # digest every byte too: 75 s here, 88 s from S3',
     ),
 }
 

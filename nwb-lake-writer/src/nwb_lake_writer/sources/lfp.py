@@ -69,17 +69,26 @@ class LFPSource(Compensates):
         series path is appended. Absent, the local path is used as a `file://` URI, which makes
         a packet that resolves only on this machine.
     verify : str, default "size"
-        What to establish about the referenced bytes: `size` lists the store, `sha256` also
-        digests it, `none` records no claim. A remote base needs `nwb-lake-validator[remote]`
-        and a backend for its scheme; unreachable leaves the claim unmade rather than guessed.
+        What to establish about the referenced bytes, each level including the one before it:
 
-        The default is `size` on cost. Listing a session's twelve LFP prefixes is 0.33 s;
-        digesting the 6.83 GB behind them is 75 s from local disk and 88 s from S3, against a
-        whole-packet build of 1 min 51 s. A digest is a publication-time cost that `size` is
-        not, so a packet meant to outlive the machine that built it should ask for `sha256`
-        here, and a development round trip should not. A packet recording no digest is not
-        silently treated as verified: `validate --checksums` reports what it had nothing to
-        compare against.
+        - `none` records no claim.
+        - `size` lists the store and records the total.
+        - `members` also records R51 §2.1's per-member listing, carrying whatever content hash
+          the store handed over with it. Same request, so it costs what `size` costs; what it
+          buys is a per-member check where the total hides two members changing in opposite
+          directions, and `validate --store-digests` to see whether anything changed in place.
+        - `sha256` also digests every byte.
+
+        A remote base needs `nwb-lake-validator[remote]` and a backend for its scheme;
+        unreachable leaves the claim unmade rather than guessed.
+
+        The default is `size` on cost and on manifest size. Listing a session's twelve LFP
+        prefixes is 0.33 s and digesting the 6.83 GB behind them is 75 s from local disk and
+        88 s from S3, against a whole-packet build of 1 min 51 s -- so a digest is a
+        publication-time cost that a build should not pay by default. `members` costs no
+        requests but 2,496 entries of manifest, which is why it is not the default either. A
+        packet recording neither is not silently treated as verified: `validate --checksums`
+        and `--store-digests` each report what they had nothing to compare against.
     """
 
     def __init__(
@@ -99,8 +108,8 @@ class LFPSource(Compensates):
         self.clocks = list(clocks)
         self.electrodes = dict(electrodes or {})
         self.uri_base = uri_base.rstrip("/") if uri_base else None
-        if verify not in {"none", "size", "sha256"}:
-            raise ValueError(f"verify must be none, size or sha256, not {verify!r}")
+        if verify not in {"none", "size", "members", "sha256"}:
+            raise ValueError(f"verify must be none, size, members or sha256, not {verify!r}")
         self.verify = verify
         Compensates.__init__(self)
         self.notes: list[str] = []
@@ -223,6 +232,14 @@ class LFPSource(Compensates):
         except StoreUnreachable as exc:
             self.notes.append(f"{array.array_asset_id}: nothing verified, {exc}")
             return array
+        members = None
+        if self.verify in {"members", "sha256"}:
+            members = tuple(_member_entry(member) for member in found.members)
+            if not found.digested_by_store:
+                self.notes.append(
+                    f"{array.array_asset_id}: the store offered no content hash for any of its "
+                    f"{len(found.members)} members, so they record size only"
+                )
         return ExternalArray(
             array_asset_id=array.array_asset_id,
             uri=array.uri,
@@ -231,6 +248,7 @@ class LFPSource(Compensates):
             sha256=checksum,
             size_bytes=found.size_bytes,
             verified_at=datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
+            members=members,
         )
 
     def array_assets(self) -> list[dict[str, Any]]:
@@ -356,6 +374,17 @@ class LFPSource(Compensates):
             "core.array_dimensions": 2 * len(self._series),
             "core.array_channels": channels,
         }
+
+
+def _member_entry(member: Any) -> dict[str, Any]:
+    """One R51 §2.1 member entry, omitting what the store said nothing about."""
+    entry: dict[str, Any] = {"key": member.key, "size_bytes": member.size_bytes}
+    if member.store_digest is not None:
+        entry["store_digest"] = {
+            "algorithm": member.store_digest.algorithm,
+            "value": member.store_digest.value,
+        }
+    return entry
 
 
 __all__ = ["GROUP", "LFPSource"]

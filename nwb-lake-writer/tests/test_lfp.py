@@ -216,3 +216,33 @@ def test_init_can_draft_an_lfp_source(nwb):
     assert "lfp" in KINDS
     assert _open("lfp", nwb, "s1").offers() == _source(nwb).offers()
     assert any("verify" in hint for hint in HINTS["lfp"])
+
+
+def test_members_records_what_the_prefix_held(nwb):
+    """R51 §2.1: the listing already enumerates, so recording it costs no extra request."""
+    from nwb_lake_validator.stores import listing
+
+    array = _source(nwb, verify="members").external_arrays()["core.45883-1.lfp"]
+    held = listing(array.uri)
+    assert array.members is not None
+    assert [m["key"] for m in array.members] == [m.key for m in held.members]
+    assert sum(m["size_bytes"] for m in array.members) == array.size_bytes
+
+
+def test_a_local_store_offers_no_content_hash(nwb):
+    """A filesystem has no ETag, so members record size only and the source says so."""
+    source = _source(nwb, verify="members")
+    array = source.external_arrays()["core.45883-1.lfp"]
+    assert all("store_digest" not in m for m in array.members)
+    assert any("offered no content hash" in note for note in source.notes)
+
+
+def test_size_records_no_members(nwb):
+    """The levels are cumulative, so the one below records nothing of the one above."""
+    assert _source(nwb, verify="size").external_arrays()["core.45883-1.lfp"].members is None
+
+
+def test_a_digest_also_records_the_members_it_digested(nwb):
+    """R51 §2.1: where both are present the digested listing must be the declared one."""
+    array = _source(nwb, verify="sha256").external_arrays()["core.45883-1.lfp"]
+    assert array.sha256 is not None and array.members is not None
