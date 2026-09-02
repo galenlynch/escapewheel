@@ -281,6 +281,15 @@ class TableResource:
             return self.dataset().schema
         return pq.read_schema(self.path)
 
+    @property
+    def is_local(self) -> bool:
+        """Whether the resource resolves to a filesystem path rather than a store URI.
+
+        A single-letter scheme is a Windows drive, not a URI scheme.
+        """
+        scheme = urlparse(self._resource.uri).scheme
+        return not scheme or scheme == "file" or len(scheme) == 1
+
     def register(self, connection: duckdb.DuckDBPyConnection, *, name: str | None = None) -> str:
         """Register the resource as a view on a DuckDB connection.
 
@@ -297,7 +306,10 @@ class TableResource:
             The view name used.
         """
         view = name or self.sql_name
-        target = f"{self.path}/**/*.parquet" if self._resource.is_partitioned else str(self.path)
+        # A remote table is handed over as its URI: DuckDB reads an object store through its own
+        # client, so resolving to a local path first is the thing that would make it unreadable.
+        base = str(self.path) if self.is_local else self._resource.uri
+        target = f"{base}/**/*.parquet" if self._resource.is_partitioned else base
         connection.sql(f"CREATE OR REPLACE VIEW {view} AS SELECT * FROM '{target}'")
         return view
 

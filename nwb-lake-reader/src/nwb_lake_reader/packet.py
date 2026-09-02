@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
+import warnings
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -413,12 +415,24 @@ class Packet:
                     "TableResource.dataset() all go through PyArrow."
                 ) from exc
             con = _duckdb.connect()
-        for resource in self.resources(kind="table") + self.resources(kind="materialized_table"):
+        tables = self.resources(kind="table") + self.resources(kind="materialized_table")
+        if any(not TableResource(r, self._root).is_local for r in tables):
+            _prepare_remote(con)
+        skipped = []
+        for resource in tables:
             handle = TableResource(resource, self._root)
             try:
                 handle.register(con)
-            except ResourceUnreadableError:
-                continue
+            except ResourceUnreadableError as exc:
+                # Not silently: an unregistered view fails later as "table does not exist",
+                # which points at the query rather than at the resource that could not be read.
+                skipped.append(f"{resource.resource_id} ({exc})")
+        if skipped:
+            listed = "\n  ".join(skipped)
+            warnings.warn(
+                f"{len(skipped)} table(s) could not be registered and are absent from this connection:\n  {listed}",
+                stacklevel=2,
+            )
         # After the tables, because DuckDB binds a view at creation and one over a table this
         # packet does not declare is refused rather than deferred.
         register_views(con)
@@ -821,6 +835,25 @@ class Packet:
                 continue
             return self.table(parent, columns=[reference["resource_columns"][at]]).column(0).unique()
         return self.table(resource_id, columns=[column]).column(0).unique()
+
+
+def _prepare_remote(connection: duckdb.DuckDBPyConnection) -> None:
+    """Set up a connection that will read from an object store.
+
+    Two settings, and getting either wrong fails quietly. `httpfs` is what lets DuckDB open an
+    `s3://` URI at all. `enable_object_cache` keeps Parquet footers across queries and is worth
+    16x on a repeated read -- 3.38 s against 0.21 s over one session's spikes -- with no error
+    and no signal when it is off, which is the kind of wrong this package exists to prevent.
+
+    Credentials are deliberately **not** set. Whether a store is reachable is a property of the
+    caller's situation rather than of the packet (R14 §2.3), so a caller supplies its own secret;
+    what this removes is the setup a caller cannot be expected to know.
+    """
+    with contextlib.suppress(Exception):  # an older duckdb, or an extension it cannot fetch
+        connection.execute("INSTALL httpfs")
+        connection.execute("LOAD httpfs")
+    with contextlib.suppress(Exception):
+        connection.execute("SET enable_object_cache=true")
 
 
 def open_packet(path: str | Path, *, validate_manifest: bool = True) -> Packet:
