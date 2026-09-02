@@ -23,8 +23,9 @@ def _validate(args: argparse.Namespace) -> int:
     report = validate(
         packet,
         advisory=args.advisory,
-        external=args.external or args.checksums,
+        external=args.external or args.checksums or args.store_digests,
         checksums=args.checksums,
+        store_digests=args.store_digests,
     )
     for finding in report.findings:
         print(f"  {finding.level:8s} {finding.check}: {finding.message}")
@@ -60,6 +61,12 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         action="store_true",
         help="reach external resources and check their size and codecs (R15 §4 level 3a); "
         "off by default because reachability is your situation, not the packet's",
+    )
+    parser.add_argument(
+        "--store-digests",
+        action="store_true",
+        help="also compare each declared member's store digest with what the store reports now "
+        "(R51 §2.3); implies --external and costs only the listing it already does",
     )
     parser.add_argument(
         "--checksums",

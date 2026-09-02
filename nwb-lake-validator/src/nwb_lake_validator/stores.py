@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -81,25 +82,62 @@ def _filesystem(uri: str) -> tuple[Any, str]:
 
 
 @dataclass(frozen=True)
+class StoreDigest:
+    """A content hash the store computed itself, in the store's own algorithm (R51 §2.2).
+
+    Never a substitute for sha256: it answers whether anything changed in place, not whether
+    these are the bytes a manifest describes.
+    """
+
+    algorithm: str
+    value: str
+
+
+@dataclass(frozen=True)
+class Member:
+    """One object under a prefix.
+
+    Attributes
+    ----------
+    key : str
+        Relative to the URI, with `/` separators. Empty for a single-object resource.
+    size_bytes : int
+        What the store reports.
+    store_digest : StoreDigest or None
+        Present only where the store hands one over with the listing and it is a content hash
+        of the whole object. A local filesystem offers none.
+    """
+
+    key: str
+    size_bytes: int
+    store_digest: StoreDigest | None = None
+
+
+@dataclass(frozen=True)
 class Listing:
     """What a store holds under one URI.
 
     Attributes
     ----------
-    members : tuple
-        ``(key, size)`` for every object, keyed relative to the URI and sorted. A single-object
-        resource has one member whose key is the empty string.
+    members : tuple of Member
+        Every object, keyed relative to the URI and sorted by key. A single-object resource has
+        one member whose key is the empty string.
     size_bytes : int
         Total across the members.
     """
 
-    members: tuple[tuple[str, int], ...]
+    members: tuple[Member, ...]
     size_bytes: int
 
     @property
     def is_single_object(self) -> bool:
         """Whether the URI names one object rather than a prefix of many."""
-        return len(self.members) == 1 and self.members[0][0] == ""
+        return len(self.members) == 1 and self.members[0].key == ""
+
+    @property
+    def digested_by_store(self) -> int:
+        """How many members the store offered a usable content hash for."""
+        return sum(1 for member in self.members if member.store_digest is not None)
 
 
 def listing(uri: str) -> Listing:
@@ -117,29 +155,51 @@ def listing(uri: str) -> Listing:
     if is_local(uri):
         root = local_path(uri)
         if root.is_file():
-            return Listing(((("", root.stat().st_size)),), root.stat().st_size)
+            return Listing((Member("", root.stat().st_size),), root.stat().st_size)
         if not root.is_dir():
             raise StoreUnreachable(f"{uri} does not exist")
-        found = sorted((str(f.relative_to(root)), f.stat().st_size) for f in root.rglob("*") if f.is_file())
+        found = [Member(str(f.relative_to(root)), f.stat().st_size) for f in root.rglob("*") if f.is_file()]
     else:
         filesystem, path = _filesystem(uri)
         try:
             if filesystem.isfile(path):
-                size = int(filesystem.info(path)["size"])
-                return Listing(((("", size)),), size)
+                info = filesystem.info(path)
+                return Listing((Member("", int(info["size"]), store_digest(info)),), int(info["size"]))
             entries = filesystem.find(path, detail=True)
         except FileNotFoundError as exc:
             raise StoreUnreachable(f"{uri} does not exist") from exc
         except Exception as exc:
             raise StoreUnreachable(f"{uri}: {exc}") from exc
-        found = sorted(
-            (key[len(path) :].lstrip("/"), int(info.get("size") or 0))
+        found = [
+            Member(key[len(path) :].lstrip("/"), int(info.get("size") or 0), store_digest(info))
             for key, info in entries.items()
             if info.get("type") == "file"
-        )
+        ]
     if not found:
         raise StoreUnreachable(f"{uri} holds nothing")
-    return Listing(tuple(found), sum(size for _, size in found))
+    found.sort(key=lambda member: member.key)
+    return Listing(tuple(found), sum(member.size_bytes for member in found))
+
+
+def store_digest(info: Mapping[str, Any]) -> StoreDigest | None:
+    """Return what a listing entry says about its own content, or None where it says nothing.
+
+    S3 hands an ETag back with the listing at no extra request, and for a **single-part** object
+    that ETag is the MD5 of its content. Three things disqualify one (R51 §1.1):
+
+    - A multipart ETag is a hash of part hashes with the part count appended, so the same bytes
+      uploaded with a different part size give a different value. It says nothing portable and
+      MUST NOT be recorded.
+    - Anything that is not 32 hex digits is not an MD5, whatever the store called it.
+    - A store that offers no ETag at all -- every local filesystem -- offers nothing to record.
+    """
+    raw = info.get("ETag") or info.get("etag")
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip('"')
+    if len(value) != 32 or any(character not in "0123456789abcdef" for character in value.lower()):
+        return None
+    return StoreDigest("md5", value.lower())
 
 
 def digest(uri: str, *, workers: int = WORKERS) -> str:
@@ -175,14 +235,14 @@ def digest(uri: str, *, workers: int = WORKERS) -> str:
     found = listing(uri)
     if found.is_single_object:
         return _member_digest(uri, "")
-    keys = [key for key, _ in found.members]
+    keys = [member.key for member in found.members]
     if workers > 1 and len(keys) > 1:
         # `map` preserves order, which the canonical listing depends on.
         with ThreadPoolExecutor(min(workers, len(keys))) as pool:
             digested = list(pool.map(lambda key: _member_digest(uri, key), keys))
     else:
         digested = [_member_digest(uri, key) for key in keys]
-    rows = [[key, size, sha] for (key, size), sha in zip(found.members, digested, strict=True)]
+    rows = [[m.key, m.size_bytes, sha] for m, sha in zip(found.members, digested, strict=True)]
     canonical = json.dumps(rows, separators=(",", ":"), sort_keys=False, ensure_ascii=True)
     return hashlib.sha256(canonical.encode()).hexdigest()
 
@@ -228,10 +288,13 @@ __all__ = [
     "BLOCK",
     "WORKERS",
     "Listing",
+    "Member",
+    "StoreDigest",
     "StoreUnreachable",
     "digest",
     "is_local",
     "listing",
     "local_path",
     "read_member",
+    "store_digest",
 ]

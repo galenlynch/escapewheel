@@ -450,7 +450,7 @@ def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = F
         )
 
 
-def _resolve_external(packet: Packet, report: Report, checksums: bool = False) -> None:
+def _resolve_external(packet: Packet, report: Report, checksums: bool = False, store_digests: bool = False) -> None:
     """Level 3 (R15 §4): resolve external URIs and check what was claimed about them.
 
     Requested explicitly, never by default. R14 §2.3.2 keeps structural validation off the
@@ -473,6 +473,10 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False) -
         Also recompute `sha256`, which reads every byte -- 6.8 GB for a session's LFP, 75 s from
         local disk and 88 s from S3 -- where the rest of this mode is a list operation. Off
         separately for that reason.
+    store_digests : bool, default False
+        Also compare each declared member's `store_digest` against what the store reports now
+        (R51 §2.3). The listing already performed carries the values, so this is the same 1.31 s
+        the level below it costs, and it answers a weaker question than `checksums` does.
     """
     checked = 0
     compared: Counter[str] = Counter()
@@ -480,7 +484,7 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False) -
     for resource in packet.resources():
         if not resource.is_external:
             continue
-        fields = _compare_external(resource, report, checksums)
+        fields = _compare_external(resource, report, checksums, store_digests)
         if fields is None:
             continue
         checked += 1
@@ -500,7 +504,7 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False) -
         report.add("info", "external.verified", f"{checked} external resource(s) resolved; compared {did}")
 
 
-def _compare_external(resource: Any, report: Report, checksums: bool) -> list[str] | None:
+def _compare_external(resource: Any, report: Report, checksums: bool, store_digests: bool = False) -> list[str] | None:
     """Check one external resource, returning the fields actually compared.
 
     None means the store could not be reached, which is already reported and leaves the resource
@@ -514,6 +518,8 @@ def _compare_external(resource: Any, report: Report, checksums: bool) -> list[st
         report.add("warning", "external.unreachable", f"{resource.resource_id}: {exc}")
         return None
     fields = []
+    if (declared := entry.get("members")) is not None:
+        fields.extend(_compare_members(resource, declared, found, report, store_digests))
     if (claimed := entry.get("size_bytes")) is not None:
         fields.append("size_bytes")
         if found.size_bytes != claimed:
@@ -548,13 +554,82 @@ def _compare_external(resource: Any, report: Report, checksums: bool) -> list[st
     return fields
 
 
+def _compare_members(resource: Any, declared: Any, found: Any, report: Report, store_digests: bool) -> list[str]:
+    """Check a declared member list against what the store holds (R51 §2.1).
+
+    This is what makes level 3a per-member rather than aggregate: `size_bytes` on the resource is
+    a total, so two members changing in opposite directions leave it correct. It is also what
+    enforces R51 §2.1's rule that a digested listing is the declared one -- where the declared
+    members and the store agree, R36 §2.2's canonical listing is the same either way, so `sha256`
+    and `members` cannot describe different things.
+    """
+    fields = ["members"]
+    held = {member.key: member for member in found.members}
+    claimed = {str(entry.get("key", "")): entry for entry in declared}
+    if missing := sorted(claimed.keys() - held.keys()):
+        report.add(
+            "error",
+            "external.members",
+            f"{resource.resource_id}: {len(missing)} declared member(s) the store does not hold",
+            [(key,) for key in missing[:20]],
+        )
+    if extra := sorted(held.keys() - claimed.keys()):
+        report.add(
+            "error",
+            "external.members",
+            f"{resource.resource_id}: the store holds {len(extra)} member(s) the manifest does not "
+            "declare, so a digest over the declared listing would not describe it",
+            [(key,) for key in extra[:20]],
+        )
+    if sized := sorted(
+        key
+        for key in claimed.keys() & held.keys()
+        if claimed[key].get("size_bytes") is not None and claimed[key]["size_bytes"] != held[key].size_bytes
+    ):
+        report.add(
+            "error",
+            "external.members",
+            f"{resource.resource_id}: {len(sized)} member(s) differ in size from the manifest",
+            [(key, claimed[key]["size_bytes"], held[key].size_bytes) for key in sized[:20]],
+        )
+    if not store_digests:
+        return fields
+    compared, skipped, changed = 0, [], []
+    for key in sorted(claimed.keys() & held.keys()):
+        recorded, offered = claimed[key].get("store_digest"), held[key].store_digest
+        if not isinstance(recorded, Mapping) or offered is None:
+            skipped.append(key)
+            continue
+        compared += 1
+        if str(recorded.get("algorithm")) != offered.algorithm or str(recorded.get("value")) != offered.value:
+            changed.append(key)
+    if changed:
+        report.add(
+            "error",
+            "external.store_digest",
+            f"{resource.resource_id}: {len(changed)} member(s) changed in place since recording",
+            [(key,) for key in changed[:20]],
+        )
+    if skipped:
+        report.add(
+            "warning",
+            "external.no_store_digest",
+            f"{resource.resource_id}: {len(skipped)} of {len(claimed)} member(s) not checked -- the "
+            "manifest recorded no store digest, or the store offers none (R51 §2.3)",
+            [(key,) for key in skipped[:20]],
+        )
+    if compared:
+        fields.append("store_digest")
+    return fields
+
+
 def _stored_codecs(uri: str, found: Any) -> set[str] | None:
     """Codecs a Zarr v2 array declares, or None where the metadata is not v2 or not readable.
 
     Read through the same store the listing came from, so an object store answers it the way a
     filesystem does.
     """
-    if not any(key == ".zarray" for key, _ in found.members):
+    if not any(member.key == ".zarray" for member in found.members):
         return None
     try:
         parsed = json.loads(read_member(uri, ".zarray"))
@@ -1027,6 +1102,7 @@ def validate(
     recheck: Collection[str] | None = None,
     external: bool = False,
     checksums: bool = False,
+    store_digests: bool = False,
 ) -> Report:
     """Validate a packet.
 
@@ -1071,6 +1147,12 @@ def validate(
     checksums : bool, default False
         With `external`, also recompute each `sha256`. Separate because it reads every byte,
         where the rest of that mode lists: a session's LFP is 6.8 GB over 2,496 objects.
+    store_digests : bool, default False
+        With `external`, also compare each member's recorded `store_digest` against what the
+        store reports now (R51 §2.3). This is the level between the other two: it costs the
+        listing already performed, and it answers "has anything changed in place" rather than
+        "are these the bytes". A member with nothing recorded, or a store offering nothing, is
+        not checked, and the report says how many were skipped.
 
     Returns
     -------
@@ -1094,7 +1176,7 @@ def validate(
         _check_embedded_registry(packet, embedded, report)
     _check_codec_declarations(packet, report, resolved=external)
     if external:
-        _resolve_external(packet, report, checksums)
+        _resolve_external(packet, report, checksums, store_digests)
     _check_packet_owned_arrays(packet, report)
     _check_materialization_provenance(packet, report)
     _check_time_origin(packet, report)

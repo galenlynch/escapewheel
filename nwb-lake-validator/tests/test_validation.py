@@ -764,3 +764,77 @@ def test_the_summary_names_what_it_compared(packet_root):
     report = validate(open_packet(_external(packet_root)), external=True)
     message = next(f for f in report.findings if f.check == "external.verified").message
     assert "1 codecs" in message and "1 size_bytes" in message
+
+
+def _with_members(root, *, mutate=None):
+    """Declare R51 §2.1 members for the external resource, as a writer at verify="members" would."""
+    from nwb_lake_validator.stores import listing
+
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    entry = next(r for r in manifest["resources"] if r.get("external"))
+    entry["members"] = [{"key": m.key, "size_bytes": m.size_bytes} for m in listing(entry["uri"]).members]
+    if mutate is not None:
+        mutate(entry)
+    (root / "nwb.packet.json").write_text(json.dumps(manifest))
+    return root
+
+
+def test_declared_members_are_checked_against_the_store(packet_root):
+    report = validate(open_packet(_with_members(_external(packet_root))), external=True)
+    assert report.passed
+    assert "1 members" in next(f for f in report.findings if f.check == "external.verified").message
+
+
+def test_a_member_the_store_does_not_hold_is_an_error(packet_root):
+    root = _with_members(_external(packet_root), mutate=lambda e: e["members"].append({"key": "9.9", "size_bytes": 1}))
+    report = validate(open_packet(root), external=True)
+    assert not report.passed
+    assert "external.members" in {f.check for f in report.findings}
+
+
+def test_a_member_size_that_disagrees_is_caught_where_the_total_would_not(packet_root):
+    """Two members changing in opposite directions leave `size_bytes` correct. R51 §2.1."""
+
+    def swap(entry):
+        entry["members"][0]["size_bytes"] += 10
+        entry["members"][1]["size_bytes"] -= 10
+
+    root = _with_members(_external(packet_root), mutate=swap)
+    report = validate(open_packet(root), external=True)
+    assert not report.passed, "the total still agrees, so only a per-member check sees this"
+    assert "external.members" in {f.check for f in report.findings}
+
+
+def test_store_digests_report_what_they_could_not_check(packet_root):
+    """A local filesystem offers no content hash, so every member is skipped, not passed."""
+    report = validate(open_packet(_with_members(_external(packet_root))), external=True, store_digests=True)
+    assert report.passed
+    assert "external.no_store_digest" in {f.check for f in report.findings}
+    assert "store_digest" not in next(f for f in report.findings if f.check == "external.verified").message
+
+
+def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypatch):
+    """Neither the size nor a recorded sha256 need change for this to fire."""
+    from nwb_lake_validator import validator as module
+    from nwb_lake_validator.stores import Listing, Member, StoreDigest, listing
+
+    def stamped(uri, **kwargs):
+        found = listing(uri, **kwargs)
+        return Listing(
+            tuple(Member(m.key, m.size_bytes, StoreDigest("md5", f"{index:032x}")) for index, m in enumerate(found.members)),
+            found.size_bytes,
+        )
+
+    root = _with_members(_external(packet_root))
+    monkeypatch.setattr(module, "listing", stamped)
+    passing = validate(open_packet(_with_members(root, mutate=lambda e: [
+        m.update(store_digest={"algorithm": "md5", "value": f"{i:032x}"}) for i, m in enumerate(e["members"])
+    ])), external=True, store_digests=True)
+    assert passing.passed
+    assert "1 store_digest" in next(f for f in passing.findings if f.check == "external.verified").message
+
+    changed = validate(open_packet(_with_members(root, mutate=lambda e: [
+        m.update(store_digest={"algorithm": "md5", "value": "f" * 32}) for m in e["members"]
+    ])), external=True, store_digests=True)
+    assert not changed.passed
+    assert "external.store_digest" in {f.check for f in changed.findings}
