@@ -130,7 +130,8 @@
       "required": [
         "name",
         "type",
-        "presence"
+        "presence",
+        "role"
       ],
       "additionalProperties": false,
       "properties": {
@@ -158,6 +159,16 @@
             "required",
             "nullable",
             "optional"
+          ]
+        },
+        "role": {
+          "description": "R48 \u00a72.1. What kind of thing the column holds, which decides what a consumer may do with it -- notably whether a 1-based client converts it at the boundary (R3 \u00a76). Closed: a consumer derives behaviour from it, so an unrecognised value would be unsafe.",
+          "enum": [
+            "data",
+            "identifier",
+            "coordinate",
+            "structural_index",
+            "sequence_position"
           ]
         },
         "description": {
