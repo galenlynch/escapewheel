@@ -32,6 +32,8 @@ STEPS = [
     ("R25 §2  + core.event_stream_observation_intervals", set(), {"core.event_stream_observation_intervals"}),
     ("R28 §2  + core.unit_electrodes",         set(), {"core.unit_electrodes"}),
     ("R28 §3  + core.unit_coordinates",        set(), {"core.unit_coordinates"}),
+    ("R38 §2.1 + core.clock_observation_intervals", set(), {"core.clock_observation_intervals"}),
+    ("R41 §2.3 + core.preferred_runs",         set(), {"core.preferred_runs"}),
     ("06      + analysis.spike_events",        set(), {"analysis.spike_events"}),
 ]
 
