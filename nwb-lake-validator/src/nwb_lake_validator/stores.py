@@ -12,9 +12,11 @@ and an external resource may change or vanish without the packet changing at all
 return what was true when they looked, which is what `verified_at` records beside them.
 
 This lives with the validator rather than the reader because **no read path uses it**. A table
-resolves to a local path or is refused; a Zarr array is handed its URI and its own library opens
-it; DuckDB reaches an object store through its own client. What is left needing a store client
-is R36's verification -- list a prefix, and hash its members -- which is this package's job.
+resolves to a local path or is handed to DuckDB as a URI; a Zarr array is handed its URI and its
+own library opens it. What needs a store client is R36's verification -- list a prefix, and hash
+its members -- and both users of it are on that side: this package checks what a manifest claims,
+and `nwb-lake-writer` establishes it in the first place through its `verify` setting. The writer
+depends on this package already, because `05`'s commit is validate-then-rename.
 
 A local path needs no library. Any other scheme goes through fsspec, which is not a dependency
 of this package -- the `remote` extra brings it, and a backend for the scheme is separate again

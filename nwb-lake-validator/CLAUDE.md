@@ -33,8 +33,9 @@ When behaviour here seems arbitrary, the reason is there.
 `stores.py` lives here rather than in the reader because **no read path uses it**: a table
 resolves to a local path or is refused, a Zarr array is handed its URI and `zarr` opens it with
 its own backend, and DuckDB reaches an object store through its own C++ client. What needs a
-store client is R36's verification -- list a prefix, hash its members -- which is this package's
-job. Hence the `remote` and `s3` extras are here.
+store client is R36's verification -- list a prefix, hash its members. Both users are on that
+side: this package checks what a manifest claims, and `nwb-lake-writer` establishes it through
+its `verify` setting, depending on this package already. Hence the `remote` and `s3` extras.
 
 The contract it needs is two operations, `list(prefix)` and a ranged `get(key)`, not a
 filesystem. Measured against a real bucket, every client lands within 26% of every other once
