@@ -15,6 +15,7 @@ from .clocks import NotAligned, anchors, declared_bound, mapped, stored_span
 from .dictionaries import as_dictionary, constant
 from .errors import NoTimeOrigin, ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
 from .manifest import Manifest, Resource
+from .observation import register_views
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity
 from .runs import check as _check_runs
@@ -350,7 +351,9 @@ class Packet:
         """Register every table resource as a view and return the connection.
 
         Views are named by flattening the dotted resource ID, so ``core.trials`` is queried
-        as ``core_trials``.
+        as ``core_trials``. `unit_observation` and `stream_observation` are registered
+        alongside where their inputs are present, resolving R38's inheritance so a rate has a
+        denominator without the caller writing the join.
 
         Parameters
         ----------
@@ -381,6 +384,9 @@ class Packet:
                 handle.register(con)
             except ResourceUnreadableError:
                 continue
+        # After the tables, because DuckDB binds a view at creation and one over a table this
+        # packet does not declare is refused rather than deferred.
+        register_views(con)
         return con
 
     def sql(self, query: str) -> pa.Table:

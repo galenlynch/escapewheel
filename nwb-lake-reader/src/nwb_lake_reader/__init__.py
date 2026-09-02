@@ -22,6 +22,7 @@ from .errors import (
     UnsupportedCodecError,
 )
 from .manifest import Manifest, Resource
+from .observation import clock_windows, observed_seconds, observed_ticks, rate, stream_windows, unit_windows
 from .packet import BASELINE_CODECS, STORED, Packet, Predicate, open_packet
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity, ambiguities, preferred_run
@@ -55,9 +56,15 @@ __all__ = [
     "aligned_spikes",
     "ambiguities",
     "assigned_spikes",
+    "clock_windows",
+    "observed_seconds",
+    "observed_ticks",
     "open_packet",
     "preferred_run",
     "quote",
+    "rate",
     "sql_name",
+    "stream_windows",
+    "unit_windows",
     "windows_disjoint",
 ]
