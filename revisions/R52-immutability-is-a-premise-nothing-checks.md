@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-02 |
+| **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R14 §2.3 (what immutability covers), R35 §2 (an untouched file's verdict), R15 §4 (what each validation level establishes) |
 | **Depends on** | R14 (external resources and immutability), R32 (amending a committed packet), R35 (bounded revalidation), R36 (verifying a prefix) |
 | **Profile** | `nwb-lake-portable-v0.1` |
@@ -97,8 +97,12 @@ packet, which is 0.60 s.
   neither direction — R14 §2.3.1's `verified_at` continues to apply to them and only to them.
 - **No change to R35's bound.** An untouched file's verdict is still determined; this adds the
   means to check the premise, not an obligation to.
-- **No opinion on granularity below a file.** A per-row-group digest would let a bound reach
-  inside a file, and nothing needs that: R32 amends by adding resources, not by rewriting part of
-  one.
+- **No granularity below a file.** A per-row-group digest would let a bound reach inside a file,
+  and nothing needs that: R32 amends by adding resources, not by rewriting part of one. Parquet
+  cannot be appended to either -- extending a table rewrites it -- so "which pages moved" is not
+  a question the format can be asked. Its own page CRC32 does not serve it: the values live in page
+  headers inline with the data rather than the footer, pyarrow exposes none, and a rewritten file
+  carries perfectly valid ones. Measured at 0.06% of bytes and no measurable time, it is a
+  corruption detector and not an identity check.
 - **No signature.** sha256 detects change, not tampering by someone who can also rewrite the
   manifest. That is a different problem and needs a different mechanism.
