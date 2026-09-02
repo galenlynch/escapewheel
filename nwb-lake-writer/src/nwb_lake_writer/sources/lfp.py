@@ -270,7 +270,7 @@ class LFPSource(Compensates):
                     # 0.130 s -- that spread is the probes starting at different moments, not
                     # the LFP starting late on any of them.
                     "origin_tick": 0,
-                    "step_ticks": step,
+                    "step_tick_num": step,
                     "step_tick_den": 1,
                 }
             )

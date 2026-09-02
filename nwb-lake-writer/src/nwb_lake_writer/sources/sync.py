@@ -594,7 +594,6 @@ class SyncSource:
             {
                 "session_id": self.session_id,
                 "clock_id": self.clock().clock_id,
-                "interval_index": 0,
                 "start_tick": min(start for start, _ in self._observed),
                 "stop_tick": max(stop for _, stop in self._observed),
             }

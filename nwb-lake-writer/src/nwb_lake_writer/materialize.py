@@ -385,7 +385,9 @@ def into(
                 "activity_type": "materialization",
                 # R44 §2.1: session-wide, so the session is the scope. Both stay null on a
                 # multi-session packet rather than naming one of several, because a writer that
-                # cannot determine a fact records nothing (R36 §2.4).
+                # cannot determine a fact records nothing (R36 §2.4). R49 §2.4: the pair is set
+                # together or not at all.
+                "scope_kind": "core.sessions" if session else None,
                 "scope": session,
                 "software_name": "nwb_lake_writer",
                 "software_version": __version__,

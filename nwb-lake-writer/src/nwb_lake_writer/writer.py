@@ -95,7 +95,7 @@ def _delta_columns(resource_id: str, out: pa.Schema) -> list[str]:
     the default on the one tick column that is unordered (`core.units.first_spike_tick`, 0.77x).
 
     The rule is monotonicity, not integer-ness, which is why it is not simply "every integer
-    column". `core.unit_electrodes.channel_ordinal` cycles 0..25 once per unit, and RLE over a
+    column". `core.unit_electrodes.channel_index` cycles 0..25 once per unit, and RLE over a
     26-entry dictionary beats delta there by 1.38x.
     """
     named = set(DELTA_COLUMNS.get(resource_id, ()))

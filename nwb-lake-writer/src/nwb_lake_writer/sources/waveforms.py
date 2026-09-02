@@ -7,7 +7,7 @@ What the source stores and what a packet should store differ in three ways, each
 near -- 26 of 384 here, fewer at a probe's edge -- and the NWB pads the rest with zeros so it
 need not record which contacts those were. 93.3% of the rectangle is padding. A packet records
 the support instead, in `core.unit_electrodes`, which R28 added for the link and whose
-`channel_ordinal` is the position along the array's channel axis. R20 §2's labelled form on
+`channel_index` is the position along the array's channel axis. R20 §2's labelled form on
 that axis is what ties the two together.
 
 **It is float64 over int16 samples.** Every value round-trips through float32 with zero error,
@@ -291,7 +291,7 @@ class WaveformSource:
         if clock_id is None:
             sample_axis |= {"origin_value": float(start), "step_value": 1.0, "coordinate_unit": "sample"}
         else:
-            sample_axis |= {"clock_id": clock_id, "origin_tick": start, "step_ticks": 1}
+            sample_axis |= {"clock_id": clock_id, "origin_tick": start, "step_tick_num": 1}
         return [
             {"array_asset_id": self.array_asset_id, "axis_index": 0, "dimension_name": "unit"},
             {
@@ -299,7 +299,7 @@ class WaveformSource:
                 "axis_index": 1,
                 "dimension_name": "channel",
                 "coordinate_resource": "core.unit_electrodes",
-                "coordinate_position_column": "channel_ordinal",
+                "coordinate_position_column": "channel_index",
             },
             sample_axis,
         ]
@@ -338,7 +338,7 @@ class WaveformSource:
                         "session_id": self.session_id,
                         **identity,
                         "electrode_id": electrode,
-                        "channel_ordinal": ordinal,
+                        "channel_index": ordinal,
                         "is_primary": int(channel) == int(built["extremum"][row]),
                     }
                 )

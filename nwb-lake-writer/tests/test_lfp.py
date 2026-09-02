@@ -89,7 +89,7 @@ def test_the_time_axis_is_ticks_on_the_probes_own_clock(nwb):
     """R20: three integers replace 7,983,750 float64 timestamps, and 24 is derived not assumed."""
     axis = _source(nwb).records(rates=RATES)["core.array_dimensions"][0]
     assert axis["clock_id"] == CLOCK
-    assert (axis["origin_tick"], axis["step_ticks"], axis["step_tick_den"]) == (0, 24, 1)
+    assert (axis["origin_tick"], axis["step_tick_num"], axis["step_tick_den"]) == (0, 24, 1)
 
 
 def test_the_step_comes_from_the_interval_not_the_values(nwb):
@@ -100,8 +100,8 @@ def test_the_step_comes_from_the_interval_not_the_values(nwb):
     # A different decimation must be read off the data rather than assumed.
     other = nwb.parent / "other.nwb"
     _series(other, step_hz=2500.0)
-    assert source.records(rates=RATES)["core.array_dimensions"][0]["step_ticks"] == 24
-    assert _source(other).records(rates=RATES)["core.array_dimensions"][0]["step_ticks"] == 12
+    assert source.records(rates=RATES)["core.array_dimensions"][0]["step_tick_num"] == 24
+    assert _source(other).records(rates=RATES)["core.array_dimensions"][0]["step_tick_num"] == 12
 
 
 def test_a_non_integer_decimation_is_refused(nwb):

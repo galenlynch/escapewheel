@@ -674,6 +674,7 @@ def _import_run(
         "session_id": recipe.session.get("session_id"),
         "activity_type": "import",
         # R44 §2.1: an import is session-wide, and a session-wide run names the session.
+        "scope_kind": "core.sessions",
         "scope": recipe.session.get("session_id"),
         "software_name": "nwb-lake-writer",
         "software_version": __version__,

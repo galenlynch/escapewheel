@@ -343,7 +343,7 @@ def test_a_sample_clock_declares_the_recording_it_counts(source):
     rows = source.observation_intervals()
     assert {r["clock_id"] for r in rows} == {c["clock_id"] for c in source.clocks()}
     for row in rows:
-        assert (row["interval_index"], row["start_tick"], row["stop_tick"]) == (0, 0, sorterfixture.N_SAMPLES[0] - 1)
+        assert (row["start_tick"], row["stop_tick"]) == (0, sorterfixture.N_SAMPLES[0] - 1)
 
 
 def test_the_window_contains_every_spike_on_its_clock(source):

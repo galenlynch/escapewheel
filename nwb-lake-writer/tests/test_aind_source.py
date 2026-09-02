@@ -172,7 +172,7 @@ def test_a_naive_instant_locates_nothing(harp):
 def test_every_stream_shares_the_declared_window(source, harp):
     rows = source.observation_intervals(harp, ["left_lick_time", "right_reward_delivery_time"])
     assert {(r["start_tick"], r["stop_tick"]) for r in rows} == {(361_751_236_188, 361_996_511_468)}
-    assert [r["interval_index"] for r in rows] == [0, 0]
+    assert [(r["start_tick"], r["stop_tick"]) for r in rows] == [(rows[0]["start_tick"], rows[0]["stop_tick"])] * 2
 
 
 def test_the_window_contains_the_events_it_declares(source, harp):

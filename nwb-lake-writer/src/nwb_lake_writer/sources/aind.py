@@ -308,7 +308,7 @@ class SessionSource(Compensates):
         if stop < start:
             raise SourceDefect(f"{self.path}: data_streams[{window.index}] ends before it starts")
         return [
-            {"event_stream_id": event_stream_id, "interval_index": 0, "start_tick": start, "stop_tick": stop}
+            {"event_stream_id": event_stream_id, "start_tick": start, "stop_tick": stop}
             for event_stream_id in event_stream_ids
         ]
 

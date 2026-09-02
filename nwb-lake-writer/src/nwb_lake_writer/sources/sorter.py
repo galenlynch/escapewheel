@@ -403,7 +403,9 @@ class SorterSource:
                     "session_id": self.session_id,
                     "activity_type": "spike_sorting",
                     # R44 §2.1. The probe is what a sorting is *about*, so two sortings of one
-                    # probe are alternatives and twelve probes sorted once each are not.
+                    # probe are alternatives and twelve probes sorted once each are not. R49 §2.2
+                    # names the kind as a resource ID, so a consumer resolves it from the registry.
+                    "scope_kind": "core.probes",
                     "scope": self._probe_id(stream),
                     "software_name": log.get("sorter_name") or "unknown",
                     "software_version": log.get("sorter_version"),
@@ -419,6 +421,7 @@ class SorterSource:
                     # The sorting rather than the probe: a curation is of one sorting, so
                     # choosing the sorting already narrows this, and scoping to the probe would
                     # restate that ambiguity instead of composing with it.
+                    "scope_kind": "core.sorting_runs",
                     "scope": self._sorting_run_id(stream),
                     "software_name": "spikeinterface",
                     "software_version": curation.get("format_version"),
@@ -504,7 +507,6 @@ class SorterSource:
                 {
                     "session_id": self.session_id,
                     "clock_id": self._clock_id(stream),
-                    "interval_index": 0,
                     "start_tick": 0,
                     "stop_tick": length - 1,
                 }
