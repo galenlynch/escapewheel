@@ -17,8 +17,16 @@ def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
     """Copy the fixture packet and give it a run log, optionally with preferences.
 
     `runs` is a list of ``(run_id, activity_type, scope)``; a scope of None is a run whose
-    subject the packet does not record, which is the state R44 §2.1 exists to remove.
+    subject the packet does not record, which is the state R44 §2.1 exists to remove. The kind
+    (R49 §2.1) is derived from the activity, since every scope in these fixtures is a probe or a
+    sorting run.
     """
+    kind_of = {
+        "spike_sorting": "core.probes",
+        "curation": "core.sorting_runs",
+        "pose_estimation": "core.devices",
+        "import": "core.sessions",
+    }
     root = tmp_path / name
     shutil.copytree(packet_root, root)
     manifest = json.loads((root / "nwb.packet.json").read_text())
@@ -28,6 +36,7 @@ def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
             "processing_run_id": pa.array([r[0] for r in runs]),
             "session_id": pa.array(["s001"] * len(runs)),
             "activity_type": pa.array([r[1] for r in runs]),
+            "scope_kind": pa.array([kind_of.get(r[1]) if r[2] else None for r in runs], type=pa.string()),
             "scope": pa.array([r[2] for r in runs], type=pa.string()),
             "status": pa.array(["succeeded"] * len(runs)),
         }
@@ -39,6 +48,7 @@ def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
             {
                 "session_id": pa.array(["s001"] * len(prefs)),
                 "activity_type": pa.array([p[0] for p in prefs]),
+                "scope_kind": pa.array([kind_of[p[0]] for p in prefs]),
                 "scope": pa.array([p[1] for p in prefs]),
                 "processing_run_id": pa.array([p[2] for p in prefs]),
             }
@@ -89,8 +99,8 @@ def test_a_preference_resolves_it(tmp_path, packet_root):
 
     assert ambiguities(packet) == ()
     assert check(packet) is None
-    assert preferred_run(packet, "spike_sorting", "probe_1") == "sort_b"
-    assert preferences(packet) == {("s001", "spike_sorting", "probe_1"): "sort_b"}
+    assert preferred_run(packet, "spike_sorting", "core.probes", "probe_1") == "sort_b"
+    assert preferences(packet) == {("s001", "spike_sorting", "core.probes", "probe_1"): "sort_b"}
 
 
 def test_a_preference_does_not_leak_across_scopes(tmp_path, packet_root):
@@ -135,7 +145,7 @@ def test_preferred_run_falls_back_to_the_only_run(tmp_path, packet_root):
     """Exactly one run needs no declaration to be the answer."""
     runs = [("sort_a", "spike_sorting", "probe_1")]
     packet = _with_runs(tmp_path, packet_root, "single", runs)
-    assert preferred_run(packet, "spike_sorting", "probe_1") == "sort_a"
+    assert preferred_run(packet, "spike_sorting", "core.probes", "probe_1") == "sort_a"
 
 
 def test_preferred_run_refuses_to_guess(tmp_path, packet_root):
@@ -143,7 +153,7 @@ def test_preferred_run_refuses_to_guess(tmp_path, packet_root):
     runs = [("sort_a", "spike_sorting", "probe_1"), ("sort_b", "spike_sorting", "probe_1")]
     packet = _with_runs(tmp_path, packet_root, "guess", runs)
     with pytest.raises(AmbiguousRun, match="none is preferred"):
-        preferred_run(packet, "spike_sorting", "probe_1")
+        preferred_run(packet, "spike_sorting", "core.probes", "probe_1")
 
 
 def test_preferred_run_rejects_an_unknown_purpose(tmp_path, packet_root):
@@ -151,7 +161,7 @@ def test_preferred_run_rejects_an_unknown_purpose(tmp_path, packet_root):
     runs = [("sort_a", "spike_sorting", "probe_1")]
     packet = _with_runs(tmp_path, packet_root, "unknown", runs)
     with pytest.raises(KeyError, match="no 'spike_sorting' run for scope 'probe_9'"):
-        preferred_run(packet, "spike_sorting", "probe_9")
+        preferred_run(packet, "spike_sorting", "core.probes", "probe_9")
 
 
 def test_units_refuses_an_unresolved_sorting(tmp_path, packet_root):

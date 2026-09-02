@@ -39,6 +39,7 @@ class Ambiguity:
 
     session_id: str | None
     activity_type: str
+    scope_kind: str | None
     scope: str | None
     run_ids: tuple[str, ...]
 
@@ -58,7 +59,7 @@ class Ambiguity:
         The run list is truncated because a re-sorted session has one ambiguity per probe and
         each names a dozen runs; the full list is on `run_ids` for a caller that wants it.
         """
-        about = self.scope if self.determinable else "an unrecorded scope"
+        about = f"{self.scope} in {self.scope_kind}" if self.determinable else "an unrecorded scope"
         listed = sorted(self.run_ids)
         shown = ", ".join(listed[:3]) + (f", +{len(listed) - 3} more" if len(listed) > 3 else "")
         return f"{self.activity_type} for {about}: {len(self.run_ids)} runs ({shown})"
@@ -80,7 +81,7 @@ def _rows(packet: Any, resource_id: str, columns: list[str]) -> list[dict[str, A
     return [{c: row.get(c) for c in columns} for row in rows]
 
 
-def preferences(packet: Any) -> dict[tuple[str | None, str, str], str]:
+def preferences(packet: Any) -> dict[tuple[str | None, str, str, str], str]:
     """Return the declared preferences, keyed by purpose (R41 §2.3).
 
     Parameters
@@ -91,12 +92,14 @@ def preferences(packet: Any) -> dict[tuple[str | None, str, str], str]:
     Returns
     -------
     dict
-        ``(session_id, activity_type, scope)`` to the preferred ``processing_run_id``. Empty
+        ``(session_id, activity_type, scope_kind, scope)`` to the preferred
+        ``processing_run_id``. Empty
         when the packet declares no preferences, which is most of them.
     """
-    rows = _rows(packet, PREFERENCES, ["session_id", "activity_type", "scope", "processing_run_id"])
+    columns = ["session_id", "activity_type", "scope_kind", "scope", "processing_run_id"]
+    rows = _rows(packet, PREFERENCES, columns)
     return {
-        (row["session_id"], row["activity_type"], row["scope"]): row["processing_run_id"]
+        (row["session_id"], row["activity_type"], row["scope_kind"], row["scope"]): row["processing_run_id"]
         for row in rows
         if row["processing_run_id"] is not None
     }
@@ -134,31 +137,31 @@ def ambiguities(packet: Any) -> tuple[Ambiguity, ...]:
     if cached is not None:
         return cached  # type: ignore[no-any-return]
 
-    rows = _rows(packet, RUNS, ["processing_run_id", "session_id", "activity_type", "scope"])
+    rows = _rows(packet, RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"])
     declared = preferences(packet) if rows else {}
 
-    grouped: dict[tuple[str | None, str, str | None], list[str]] = {}
+    grouped: dict[tuple[str | None, str, str | None, str | None], list[str]] = {}
     unscoped: dict[tuple[str | None, str], list[str]] = {}
     for row in rows:
         if row["activity_type"] is None or row["processing_run_id"] is None:
             continue
-        key = (row["session_id"], row["activity_type"], row["scope"])
+        key = (row["session_id"], row["activity_type"], row["scope_kind"], row["scope"])
         grouped.setdefault(key, []).append(row["processing_run_id"])
         if row["scope"] is None:
             unscoped.setdefault((row["session_id"], row["activity_type"]), []).append(row["processing_run_id"])
 
     found = []
-    for (session_id, activity_type, scope), run_ids in grouped.items():
+    for (session_id, activity_type, scope_kind, scope), run_ids in grouped.items():
         if scope is None:
             # Every unscoped run of an activity landed in one group by accident of them all
             # being keyed None, so the group size says nothing. What matters is whether the
             # activity has more than one run at all: if it does, the packet cannot say whether
             # they compete.
             if len(unscoped[(session_id, activity_type)]) > 1:
-                found.append(Ambiguity(session_id, activity_type, None, tuple(run_ids)))
+                found.append(Ambiguity(session_id, activity_type, None, None, tuple(run_ids)))
             continue
-        if len(run_ids) > 1 and (session_id, activity_type, scope) not in declared:
-            found.append(Ambiguity(session_id, activity_type, scope, tuple(run_ids)))
+        if len(run_ids) > 1 and (session_id, activity_type, scope_kind, scope) not in declared:
+            found.append(Ambiguity(session_id, activity_type, scope_kind, scope, tuple(run_ids)))
     out = tuple(sorted(found, key=lambda a: (a.activity_type, a.scope or "")))
     if hasattr(packet, "_ambiguity_cache"):
         packet._ambiguity_cache = out
@@ -168,6 +171,7 @@ def ambiguities(packet: Any) -> tuple[Ambiguity, ...]:
 def preferred_run(
     packet: Any,
     activity_type: str,
+    scope_kind: str,
     scope: str,
     *,
     session_id: str | None = None,
@@ -180,8 +184,11 @@ def preferred_run(
         The packet to read.
     activity_type : str
         Which kind of output, e.g. ``spike_sorting``. Open (R9 §6).
+    scope_kind : str
+        The resource whose primary key `scope` holds, as a dotted resource ID (R49 §2.2) --
+        ``core.probes``, ``core.sorting_runs``, ``core.sessions``.
     scope : str
-        What it is about: a probe ID, an array asset ID, or the session itself.
+        The primary-key value of the thing the run is about.
     session_id : str, optional
         Which session. Required only for a multi-session packet.
 
@@ -197,20 +204,21 @@ def preferred_run(
     KeyError
         If no run matches the purpose at all.
     """
-    rows = _rows(packet, RUNS, ["processing_run_id", "session_id", "activity_type", "scope"])
+    rows = _rows(packet, RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"])
     matching = [
         row
         for row in rows
         if row["activity_type"] == activity_type
+        and row["scope_kind"] == scope_kind
         and row["scope"] == scope
         and (session_id is None or row["session_id"] == session_id)
     ]
     if not matching:
-        raise KeyError(f"no {activity_type!r} run for scope {scope!r}")
+        raise KeyError(f"no {activity_type!r} run for scope {scope!r} in {scope_kind!r}")
 
     sessions = {row["session_id"] for row in matching}
     for candidate in sessions:
-        declared = preferences(packet).get((candidate, activity_type, scope))
+        declared = preferences(packet).get((candidate, activity_type, scope_kind, scope))
         if declared is not None:
             return declared
     if len(matching) == 1:
