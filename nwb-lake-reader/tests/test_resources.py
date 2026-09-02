@@ -259,3 +259,22 @@ def test_array_reports_an_undeclared_resource(array_packet):
     """Same failure as `table`, so the two behave alike where they can."""
     with pytest.raises(ResourceNotFoundError):
         open_packet(array_packet).array("core.not_declared")
+
+
+def test_a_store_uri_pyarrow_cannot_open_is_reported(packet_root):
+    """R14 §2.3: reachability is the reader's situation, so an unreachable store is a readable
+    error and not a traceback from inside pyarrow."""
+    import json
+
+    from nwb_lake_reader import open_packet
+    from nwb_lake_reader.errors import ResourceUnreadableError
+
+    manifest = json.loads((packet_root / "nwb.packet.json").read_text())
+    entry = next(r for r in manifest["resources"] if r["kind"] == "table")
+    entry["uri"] = "wat://nowhere/units.parquet"
+    entry["external"] = True
+    (packet_root / "nwb.packet.json").write_text(json.dumps(manifest))
+    resource = open_packet(packet_root).table_resource(entry["resource_id"])
+    assert not resource.is_local
+    with pytest.raises(ResourceUnreadableError, match="cannot reach"):
+        resource.schema()

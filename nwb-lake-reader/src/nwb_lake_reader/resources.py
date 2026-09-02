@@ -173,6 +173,32 @@ class TableResource:
         """
         return _resolve(self._resource, self._root)
 
+    def _store(self) -> tuple[Any, Any]:
+        """Where the bytes are, and the filesystem that reaches them.
+
+        Local resolves to a path and no filesystem, which is what every pyarrow entry point
+        already takes. A store URI goes through `pyarrow.fs`, which pyarrow ships -- reading a
+        remote table needs no dependency the read path did not already have.
+
+        **Credentials are the caller's, deliberately.** R14 §2.3 makes reachability a property
+        of the reader's situation rather than of the packet, so this takes whatever the
+        filesystem's own default chain finds and never configures one.
+
+        Raises
+        ------
+        ResourceUnreadableError
+            If the URI names a scheme pyarrow cannot open.
+        """
+        if self.is_local:
+            return self.path, None
+        from pyarrow.fs import FileSystem
+
+        try:
+            filesystem, path = FileSystem.from_uri(self._resource.uri)
+        except Exception as exc:
+            raise ResourceUnreadableError(f"{self.resource_id}: cannot reach {self._resource.uri}: {exc}") from exc
+        return path, filesystem
+
     def dictionary_columns(self) -> list[str]:
         """Columns the file stores dictionary-encoded, and so can return without decoding.
 
@@ -196,7 +222,8 @@ class TableResource:
         if self._resource.is_partitioned:
             return []
         try:
-            metadata = pq.ParquetFile(self.path).metadata
+            path, filesystem = self._store()
+            metadata = pq.ParquetFile(path, filesystem=filesystem).metadata
         except Exception:  # noqa: BLE001 - an unreadable file is reported by the caller
             return []
         if not metadata.num_row_groups:
@@ -239,12 +266,13 @@ class TableResource:
         """
         if self._resource.is_partitioned:
             return self.dataset(decode=decode).to_table(columns=columns)
+        path, filesystem = self._store()
         if decode:
-            return pq.read_table(self.path, columns=columns)
+            return pq.read_table(path, columns=columns, filesystem=filesystem)
         wanted = self.dictionary_columns()
         if columns is not None:
             wanted = [name for name in wanted if name in columns]
-        return pq.read_table(self.path, columns=columns, read_dictionary=wanted or None)
+        return pq.read_table(path, columns=columns, read_dictionary=wanted or None, filesystem=filesystem)
 
     def dataset(self, *, decode: bool = True) -> pads.Dataset:
         """Open the resource as a PyArrow dataset without reading it.
@@ -267,7 +295,9 @@ class TableResource:
         columns = [] if decode else self.dictionary_columns()
         options = pads.ParquetReadOptions(dictionary_columns=columns) if columns else None
         fmt = pads.ParquetFileFormat(read_options=options) if options else pads.ParquetFileFormat()
-        return pads.dataset(self.path, format=fmt, partitioning="hive")
+        path, filesystem = self._store()
+        opened: pads.Dataset = pads.dataset(path, format=fmt, partitioning="hive", filesystem=filesystem)
+        return opened
 
     def schema(self) -> pa.Schema:
         """Read the resource's Arrow schema without reading its data.
@@ -279,7 +309,8 @@ class TableResource:
         """
         if self._resource.is_partitioned:
             return self.dataset().schema
-        return pq.read_schema(self.path)
+        path, filesystem = self._store()
+        return pq.read_schema(path, filesystem=filesystem)
 
     @property
     def is_local(self) -> bool:
