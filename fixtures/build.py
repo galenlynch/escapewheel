@@ -84,7 +84,7 @@ def content() -> dict[str, list[dict]]:
         "core.unit_electrodes": [
             {"session_id": "s001", "unit_id": unit, "sorting_run_id": "sort_ks4_001",
              "curation_id": "curation_001", "electrode_id": f"elec_{e:03d}",
-             "channel_ordinal": k, "is_primary": f"elec_{e:03d}" == primary,
+             "channel_index": k, "is_primary": f"elec_{e:03d}" == primary,
              "amplitude": -80.0 + k}
             for unit, primary, contacts in (
                 ("unit_001", "elec_001", (0, 1, 2)),
@@ -135,10 +135,10 @@ def content() -> dict[str, list[dict]]:
              "clock_id": "behavior_s001", "device_id": "imec0",
              "processing_run_id": "run_import_001"}],
         "core.event_stream_observation_intervals": [
-            {"event_stream_id": "stim", "interval_index": 0, "start_tick": 0, "stop_tick": 12000},
-            {"event_stream_id": "reward", "interval_index": 0, "start_tick": 0, "stop_tick": 5000},
+            {"event_stream_id": "stim", "start_tick": 0, "stop_tick": 12000},
+            {"event_stream_id": "reward", "start_tick": 0, "stop_tick": 5000},
             # the sensor dropped out mid-session, which is why one window is not enough
-            {"event_stream_id": "reward", "interval_index": 1, "start_tick": 6000, "stop_tick": 12000}],
+            {"event_stream_id": "reward", "start_tick": 6000, "stop_tick": 12000}],
         "core.events": [
             {"session_id": "s001", "event_id": "ev_0001", "stream_id": "stim",
              "event_type": "stimulus_onset", "t_tick": 1200, "clock_id": "behavior_s001"},
@@ -187,7 +187,7 @@ def content() -> dict[str, list[dict]]:
                 ("unit_002", "bombcell", "non_soma", None, None))],
         "core.unit_observation_intervals": [
             {"session_id": "s001", "unit_id": u, "sorting_run_id": "sort_ks4_001",
-             "curation_id": "curation_001", "interval_index": i,
+             "curation_id": "curation_001",
              "start_tick": lo, "stop_tick": hi, "clock_id": "imec_ap_s001"}
             for u, windows in (("unit_001", [(0, 300_000)]),
                                ("unit_002", [(0, 120_000), (150_000, 300_000)]))
@@ -334,7 +334,7 @@ def variants():
         c["core.unit_electrodes"][2]["is_primary"] = True
     def gapped_ordinal(c):
         # A dense waveform axis indexed by this addresses a row that is not there (R20 2).
-        c["core.unit_electrodes"][2]["channel_ordinal"] = 7
+        c["core.unit_electrodes"][2]["channel_index"] = 7
     def undetected_default(c):
         # The designated electrode is not one the unit was detected on.
         c["core.units"][0]["default_electrode_id"] = "elec_003"
@@ -350,11 +350,14 @@ def variants():
         # One probe sorted twice with nothing saying which to read (R41 §2.4). Both runs carry
         # a scope, so the packet says enough to know they compete -- which is what separates
         # this from `unscoped_runs` below.
+        c["core.processing_runs"][0]["scope_kind"] = "core.sessions"
         c["core.processing_runs"][0]["scope"] = "s001"
         for suffix in ("a", "b"):
             c["core.processing_runs"].append(
                 {"processing_run_id": f"run_sort_{suffix}", "session_id": "s001",
-                 "activity_type": "spike_sorting", "scope": "probe_001",
+                 "activity_type": "spike_sorting",
+                 # R49 §2.1: the pair, so the only finding is the missing preference.
+                 "scope_kind": "core.probes", "scope": "probe0",
                  "software_name": "kilosort4", "software_version": "4.0.0",
                  "status": "succeeded", "started_at": START + timedelta(hours=6),
                  "ended_at": START + timedelta(hours=7)})

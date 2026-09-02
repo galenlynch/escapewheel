@@ -39,7 +39,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "unaligned_clock": ("error", "core.clocks.alignment_declared_for_conversion"),
     "wide_anchor_gap": ("warning", "core.clock_anchors.gap_within_bound"),
     "two_primaries": ("warning", "core.unit_electrodes.one_primary"),
-    "gapped_ordinal": ("error", "core.unit_electrodes.ordinal_contiguous"),
+    "gapped_ordinal": ("error", "core.unit_electrodes.channel_index_contiguous"),
     "undetected_default": ("error", "core.units.default_electrode_is_declared"),
     "undeclared_currency": ("info", "core.processing_runs.undeclared_currency"),
     "unscoped_runs": ("info", "core.processing_runs.scope_undeclared"),
