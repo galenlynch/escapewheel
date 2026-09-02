@@ -481,10 +481,13 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False, s
     checked = 0
     compared: Counter[str] = Counter()
     unchecksummed: list[str] = []
+    # Only read core.array_dimensions where an external array would use it.
+    external_arrays = [r for r in packet.resources(kind="dense_array_asset") if r.is_external]
+    extents = _declared_extents(packet) if external_arrays else {}
     for resource in packet.resources():
         if not resource.is_external:
             continue
-        fields = _compare_external(resource, report, checksums, store_digests)
+        fields = _compare_external(resource, report, checksums, store_digests, extents)
         if fields is None:
             continue
         checked += 1
@@ -504,7 +507,13 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False, s
         report.add("info", "external.verified", f"{checked} external resource(s) resolved; compared {did}")
 
 
-def _compare_external(resource: Any, report: Report, checksums: bool, store_digests: bool = False) -> list[str] | None:
+def _compare_external(
+    resource: Any,
+    report: Report,
+    checksums: bool,
+    store_digests: bool = False,
+    extents: Mapping[str, Any] | None = None,
+) -> list[str] | None:
     """Check one external resource, returning the fields actually compared.
 
     None means the store could not be reached, which is already reported and leaves the resource
@@ -529,6 +538,8 @@ def _compare_external(resource: Any, report: Report, checksums: bool, store_dige
                 f"{resource.resource_id}: {found.size_bytes:,} bytes over {len(found.members)} object(s), "
                 f"manifest claims {claimed:,}",
             )
+    if extents:
+        fields.extend(_compare_shape(resource, uri, found, extents, report))
     if (declared := set(resource.codecs)) and (stored := _stored_codecs(uri, found)) is not None:
         fields.append("codecs")
         if stored != declared:
@@ -623,22 +634,137 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
     return fields
 
 
-def _stored_codecs(uri: str, found: Any) -> set[str] | None:
-    """Codecs a Zarr v2 array declares, or None where the metadata is not v2 or not readable.
+def _stored_metadata(uri: str, found: Any) -> Mapping[str, Any] | None:
+    """Return the Zarr metadata document under a prefix, or None where there is not one.
 
     Read through the same store the listing came from, so an object store answers it the way a
-    filesystem does.
+    filesystem does. One request either way, and both callers share it.
     """
+    for key in (".zarray", "zarr.json"):
+        if any(member.key == key for member in found.members):
+            try:
+                parsed = json.loads(read_member(uri, key))
+            except (ValueError, StoreUnreachable):
+                return None
+            return parsed if isinstance(parsed, Mapping) else None
+    return None
+
+
+def _stored_codecs(uri: str, found: Any) -> set[str] | None:
+    """Codecs a Zarr v2 array declares, or None where the metadata is not v2 or not readable."""
     if not any(member.key == ".zarray" for member in found.members):
         return None
-    try:
-        parsed = json.loads(read_member(uri, ".zarray"))
-    except (ValueError, StoreUnreachable):
+    parsed = _stored_metadata(uri, found)
+    if parsed is None:
         return None
     names = {str(f["id"]) for f in parsed.get("filters") or []}
     if compressor := parsed.get("compressor"):
         names.add(str(compressor["id"]))
     return names
+
+
+def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:
+    """Per array asset, the axes `core.array_dimensions` names and the length each implies.
+
+    An axis whose coordinates are a rule -- R20's origin and step -- fixes spacing and not
+    extent, so its length is None and only its presence is checkable. An axis whose coordinates
+    are a table has one row per position, so that table's row count for the asset and axis *is*
+    the axis length. This is the shape a packet asserts without ever storing a shape (R3 §3.0:
+    the array declares its own, and the tables must not restate it).
+    """
+    # Read only what is there. A column the registry requires and a packet omits is the schema
+    # layer's finding to report; crashing here would replace that finding with a traceback.
+    try:
+        names = set(packet.table_resource("core.array_dimensions").schema().names)
+        wanted_columns: list[str] = [c for c in ("array_asset_id", "axis_index", "coordinate_resource") if c in names]
+        if not {"array_asset_id", "axis_index"} <= set(wanted_columns):
+            return {}
+        rows = packet.table("core.array_dimensions", columns=wanted_columns)
+    except PacketError:
+        return {}
+    coordinates_named = (
+        rows.column("coordinate_resource").to_pylist()
+        if "coordinate_resource" in wanted_columns
+        else [None] * rows.num_rows
+    )
+    extents: dict[str, dict[int, int | None]] = {}
+    wanted: dict[str, list[tuple[str, int]]] = {}
+    for asset, axis, coordinate in zip(
+        rows.column("array_asset_id").to_pylist(),
+        rows.column("axis_index").to_pylist(),
+        coordinates_named,
+        strict=True,
+    ):
+        if asset is None or axis is None:
+            continue
+        extents.setdefault(str(asset), {})[int(axis)] = None
+        if coordinate:
+            wanted.setdefault(str(coordinate), []).append((str(asset), int(axis)))
+    for resource_id, pairs in wanted.items():
+        # Only a coordinate table keyed by (array_asset_id, axis_index) has one row per position
+        # of one axis, which is what makes its row count that axis's length. `core.unit_electrodes`
+        # is a coordinate resource and is not keyed that way -- a unit's electrodes are a subset,
+        # not an enumeration of the axis -- so it says nothing about extent and is skipped.
+        try:
+            names = set(packet.table_resource(resource_id).schema().names)
+        except PacketError:
+            continue
+        if not {"array_asset_id", "axis_index"} <= names:
+            continue
+        coordinates = packet.table(resource_id, columns=["array_asset_id", "axis_index"])
+        counts: dict[tuple[str, int], int] = {}
+        for asset, axis in zip(
+            coordinates.column("array_asset_id").to_pylist(),
+            coordinates.column("axis_index").to_pylist(),
+            strict=True,
+        ):
+            if asset is not None and axis is not None:
+                counts[(str(asset), int(axis))] = counts.get((str(asset), int(axis)), 0) + 1
+        for pair in pairs:
+            if pair in counts:
+                extents[pair[0]][pair[1]] = counts[pair]
+    return extents
+
+
+def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, Any], report: Report) -> list[str]:
+    """Check an external array's stored shape against what the packet's tables assert (R3 §3.0).
+
+    This is the check that catches a change actually invalidating the packet. A re-generated
+    array with a different channel count leaves `core.array_channels` describing positions that
+    are not there; one at a different sample rate leaves `core.array_dimensions` wrong. Neither
+    changes what the packet claims about the array's *values*, which it claims nothing about --
+    which is why this and not a content digest is what an external array needs verified.
+
+    Free: the metadata document is read for codecs anyway, and both go through one request.
+    """
+    asset = resource.entry.get("array_asset_id")
+    if asset is None or not (declared := extents.get(str(asset))):
+        return []
+    metadata = _stored_metadata(uri, found)
+    if metadata is None or not isinstance(shape := metadata.get("shape"), list):
+        return []
+    if len(shape) != len(declared):
+        report.add(
+            "error",
+            "external.array_rank",
+            f"{resource.resource_id} is stored with rank {len(shape)} but core.array_dimensions "
+            f"gives axis_index {sorted(declared)} for {asset!r}; R3 §5 requires one row per stored axis",
+        )
+        return ["rank"]
+    offending = [
+        (axis, length, int(shape[axis]))
+        for axis, length in sorted(declared.items())
+        if length is not None and axis < len(shape) and int(shape[axis]) != length
+    ]
+    if offending:
+        report.add(
+            "error",
+            "external.array_shape",
+            f"{resource.resource_id}: {len(offending)} axis/axes are not the length the packet's "
+            "coordinate tables give them",
+            [(f"axis {axis}", f"{rows} rows", f"stored {stored}") for axis, rows, stored in offending],
+        )
+    return ["rank", "shape"] if any(length is not None for length in declared.values()) else ["rank"]
 
 
 def _check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> dict[str, Any]:

@@ -838,3 +838,72 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
     ])), external=True, store_digests=True)
     assert not changed.passed
     assert "external.store_digest" in {f.check for f in changed.findings}
+
+
+# -- R3 §3.0: an external array's shape against what the packet's tables assert ------------
+
+
+def test_an_external_arrays_rank_is_checked_against_the_dimensions(packet_root):
+    """The check `_check_one_array` does for a packet-owned array, for an external one."""
+    root = _add_array(packet_root, declared=["blosc"], external=True, axes=2)
+    report = validate(open_packet(root), external=True)
+    assert not report.passed
+    assert "external.array_rank" in {f.check for f in report.findings}
+
+
+def test_a_matching_rank_passes_and_is_counted(packet_root):
+    root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
+    report = validate(open_packet(root), external=True)
+    assert "external.array_rank" not in {f.check for f in report.findings}
+    assert "1 rank" in next(f for f in report.findings if f.check == "external.verified").message
+
+
+def test_an_axis_length_is_taken_from_its_coordinate_table(packet_root):
+    """An axis whose coordinates are a table has one row per position, so the row count is the
+    length. This is what catches a re-generated array with a different channel count."""
+    root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
+    _coordinate_table(root, rows=2)  # axis 1 is 2 long in _zarr_v3's [4, 2, 3]
+    assert validate(open_packet(root), external=True).passed
+
+    _coordinate_table(root, rows=5)
+    report = validate(open_packet(root), external=True)
+    assert not report.passed
+    assert "external.array_shape" in {f.check for f in report.findings}
+
+
+def test_a_coordinate_table_not_keyed_by_axis_says_nothing_about_length(packet_root):
+    """`core.unit_electrodes` is a coordinate resource whose rows are a subset of an axis, not
+    an enumeration of it, so counting them would invent a disagreement."""
+    root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
+    _coordinate_table(root, rows=5, keyed=False)
+    assert validate(open_packet(root), external=True).passed
+
+
+def _coordinate_table(root, *, rows, keyed=True):
+    """Point axis 1 at a coordinate table and give that table `rows` positions."""
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    dimensions = pq.read_table(root / "tables" / "core" / "array_dimensions.parquet").to_pydict()
+    dimensions["coordinate_resource"] = [None, "core.array_channels", None]
+    pq.write_table(pa.table(dimensions), root / "tables" / "core" / "array_dimensions.parquet")
+    columns = {"channel_label": pa.array([f"c{i}" for i in range(rows)])}
+    if keyed:
+        columns = {
+            "array_asset_id": pa.array(["wf"] * rows),
+            "axis_index": pa.array([1] * rows, type=pa.int64()),
+            **columns,
+        }
+    pq.write_table(pa.table(columns), root / "tables" / "core" / "array_channels.parquet")
+    if not any(r["resource_id"] == "core.array_channels" for r in manifest["resources"]):
+        manifest["resources"].append(
+            {
+                "resource_id": "core.array_channels",
+                "layer": "core",
+                "kind": "table",
+                "schema_id": "core.array_channels.v0.1",
+                "physical_profile": "parquet",
+                "uri": "tables/core/array_channels.parquet",
+                "canonical": True,
+                "validation_state": "passed",
+            }
+        )
+        (root / "nwb.packet.json").write_text(json.dumps(manifest))
