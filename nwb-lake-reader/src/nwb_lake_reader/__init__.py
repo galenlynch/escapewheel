@@ -11,7 +11,7 @@ from __future__ import annotations
 from importlib.metadata import version
 
 from .alignment import ClockMismatch, aligned_spikes, assigned_spikes, windows_disjoint
-from .clocks import BOUND, NotAligned, Unanchored, align
+from .clocks import BOUND, NotAligned, Unanchored, align, on_clock, origin, seconds
 from .errors import (
     AmbiguousRun,
     ManifestError,
@@ -70,11 +70,14 @@ __all__ = [
     "clock_windows",
     "observed_seconds",
     "observed_ticks",
+    "on_clock",
     "open_packet",
+    "origin",
     "preferred_run",
     "quote",
     "rate",
     "rate_of",
+    "seconds",
     "sql_name",
     "stream_windows",
     "support_of",

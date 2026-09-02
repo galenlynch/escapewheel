@@ -11,9 +11,9 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as pads
 
-from .clocks import NotAligned, anchors, declared_bound, mapped, stored_span
-from .dictionaries import as_dictionary, constant
-from .errors import NoTimeOrigin, ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
+from .clocks import NotAligned, anchors, on_clock, origin, seconds, stored_span
+from .dictionaries import as_dictionary
+from .errors import ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
 from .manifest import Manifest, Resource
 from .observation import attach_support, register_views, unit_windows
 from .resources import ArrayResource, TableResource
@@ -691,124 +691,21 @@ class Packet:
         NoTimeOrigin
             If the packet declares none.
         """
-        return self._origin(session_id)[0]
+        return origin(self, session_id)[0]
 
     def seconds(self, table: pa.Table, *, session_id: str | None = None) -> pa.Table:
         """Add a `t_second` column to a table whose ticks are on the reference clock.
 
-        R39 §2.3: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the
-        declared rational so nothing is lost to the rounded `tick_rate_hz`.
-
-        The tick stays. Seconds are derived and this does not pretend otherwise -- a caller
-        that needs to compare, join or bucket still has the exact integer beside the float.
-
-        Seconds may be negative. Data outside its own observation window is a real and
-        reported condition (R38 §2.5), and the origin is not clamped to hide it.
-
-        Raises
-        ------
-        NoTimeOrigin
-            If the packet declares no origin.
-        NotAligned
-            If the table's ticks are not on the reference clock, since seconds from any other
-            clock's ticks would be a different quantity wearing the same name.
+        Delegates to :func:`nwb_lake_reader.clocks.seconds`, where the docstring lives.
         """
-        origin, num, den = self._origin(session_id)
-        reference = self.reference_clock(session_id=session_id)
-        present = _clocks_in(_flat(table.column("clock_id"))) if table.num_rows else [reference]
-        if present != [reference]:
-            raise NotAligned(
-                f"seconds are defined on {reference!r} (R39 §2.3), but these ticks are on "
-                f"{present}; map them with on_clock first"
-            )
-        offset = pc.subtract(table.column("t_tick"), pa.scalar(origin, pa.int64()))
-        return table.append_column("t_second", pc.divide(pc.cast(offset, pa.float64()), float(num) / float(den)))
-
-    def _origin(self, session_id: str | None) -> tuple[int, int, int]:
-        """Return the origin and the reference clock's rational rate, read once per session."""
-        if session_id in self._origin_cache:
-            return self._origin_cache[session_id]
-        sessions = self.table("core.sessions")
-        if "t_zero_tick" not in sessions.column_names:
-            raise NoTimeOrigin("core.sessions carries no t_zero_tick, so seconds are undefined (R39 §2.3)")
-        declared = {
-            session: tick
-            for session, tick in zip(
-                sessions.column("session_id").to_pylist(), sessions.column("t_zero_tick").to_pylist(), strict=True
-            )
-            if tick is not None
-        }
-        if session_id is not None:
-            if session_id not in declared:
-                raise NoTimeOrigin(f"session {session_id!r} declares no t_zero_tick (R39 §2.3)")
-            origin = int(declared[session_id])
-        else:
-            found = sorted(set(declared.values()))
-            if not found:
-                raise NoTimeOrigin("no session declares a t_zero_tick, so seconds are undefined (R39 §2.3)")
-            if len(found) > 1:
-                raise NoTimeOrigin(f"sessions declare different origins {found}; name a session_id")
-            origin = int(found[0])
-        num, den = self._tick_rate(self.reference_clock(session_id=session_id))
-        self._origin_cache[session_id] = (origin, num, den)
-        return self._origin_cache[session_id]
-
-    def _tick_rate(self, clock_id: str) -> tuple[int, int]:
-        """Return a clock's rational tick rate, which R39 §2.3 prefers to `tick_rate_hz`."""
-        clocks = self.table("core.clocks")
-        names = clocks.column("clock_id").to_pylist()
-        if clock_id not in names:
-            raise NotAligned(f"core.clocks declares no {clock_id!r}, so its rate is unknown")
-        row = names.index(clock_id)
-        num = clocks.column("tick_rate_num")[row].as_py()
-        den = clocks.column("tick_rate_den")[row].as_py() if "tick_rate_den" in clocks.column_names else 1
-        if not num:
-            raise NotAligned(f"{clock_id!r} declares no tick_rate_num, so seconds cannot be derived")
-        return int(num), int(den or 1)
+        return seconds(self, table, session_id=session_id)
 
     def on_clock(self, table: pa.Table, clock: str | None = None, *, bound: float | None = None) -> pa.Table:
         """Return `table` with its ticks on one clock.
 
-        A row whose tick the anchors cannot place is **dropped**, which is what R27 §5.3
-        leaves undefined and what `analysis.spike_events` does with the same rows. Reading
-        `core` through this and reading the materialized table therefore agree -- which is
-        why the bound defaults to the one the packet's writer established and recorded
-        (R37 §3.3), not to R27 §5.3's. A reader mapping at a narrower bound than the writer
-        used drops rows the packet's own derived table kept, and the two disagree about
-        which spikes exist.
-
-        Parameters
-        ----------
-        table : pyarrow.Table
-            Any table carrying `t_tick` and `clock_id`.
-        clock : str, optional
-            The clock to map onto. Defaults to :meth:`reference_clock`.
-        bound : float, optional
-            How far from an anchor the mapping stays defined, in median anchor intervals.
-            Defaults to :func:`~nwb_lake_reader.clocks.declared_bound`.
-
-        Returns
-        -------
-        pyarrow.Table
-            The same columns, `t_tick` on `clock` and `clock_id` naming it, minus the rows
-            where the mapping is undefined.
+        Delegates to :func:`nwb_lake_reader.clocks.on_clock`, where the docstring lives.
         """
-        if table.num_rows == 0:
-            return table
-        columns = {name: _flat(table.column(name)) for name in ("t_tick", "clock_id")}
-        present = _clocks_in(columns["clock_id"])
-        target = clock or self._default_clock(present)
-        if present == [target]:
-            # Already there. Worth the check: it is the whole single-clock case, and it keeps
-            # a packet with no anchors readable.
-            return table
-        ticks, keep = mapped(
-            pa.record_batch(columns), target, self._anchors(), self._bound() if bound is None else bound
-        )
-        names = table.column_names
-        out = table.set_column(names.index("t_tick"), "t_tick", pa.array(ticks))
-        out = out.set_column(names.index("clock_id"), "clock_id", constant(target, table.num_rows))
-        return out.filter(pa.array(keep))
+        return on_clock(self, table, clock, bound=bound)
 
     def _unit_support(self, unit_id: str, sorting_run_id: str | None, curation_id: str | None) -> pa.Table:
         """Return one unit's observation windows, from the packet's resolved set (R38).
@@ -835,7 +732,7 @@ class Packet:
             target = clock or self.reference_clock()
         except NotAligned:
             return span
-        return stored_span(self._anchors(), target, span)
+        return stored_span(anchors(self), target, span)
 
     def _narrowed(self, table: pa.Table, span: tuple[int, int] | None) -> pa.Table:
         """Apply the caller's range exactly, now that every row is on one clock."""
@@ -843,37 +740,6 @@ class Packet:
             return table
         ticks = table.column("t_tick")
         return table.filter(pc.and_(pc.greater_equal(ticks, span[0]), pc.less_equal(ticks, span[1])))
-
-    def _default_clock(self, present: list[str]) -> str:
-        """Which clock to map onto when the caller named none.
-
-        The declared reference, or -- where a packet declares none -- the one clock the rows
-        are already on, since there is then nothing to reconcile and nothing to get wrong.
-        Rows spanning clocks with no reference declared are refused: that is exactly the case
-        where returning them as stored invites a comparison that means nothing.
-        """
-        try:
-            return self.reference_clock()
-        except NotAligned:
-            if len(present) == 1:
-                return present[0]
-            raise
-
-    def _bound(self) -> float:
-        """Return the bound the writer established, read once per packet."""
-        if self._bound_cache is None:
-            self._bound_cache = declared_bound(self)
-        return self._bound_cache
-
-    def _anchors(self) -> dict[str, Any]:
-        """`core.clock_anchors` per clock, read once per packet.
-
-        Cached because an accessor is called per unit: reading the anchor table for each of
-        6,781 units would cost more than the spikes do.
-        """
-        if self._anchor_cache is None:
-            self._anchor_cache = anchors(self)
-        return self._anchor_cache
 
     def _reference_columns(self, resource_id: str, parent: str) -> list[str]:
         """Return the columns by which one resource references another, per the registry.
@@ -921,20 +787,6 @@ class Packet:
                 continue
             return self.table(parent, columns=[reference["resource_columns"][at]]).column(0).unique()
         return self.table(resource_id, columns=[column]).column(0).unique()
-
-
-def _clocks_in(column: pa.Array) -> list[str]:
-    """Distinct clock IDs in a column, read from its dictionary where it has one."""
-    listed = column.dictionary if pa.types.is_dictionary(column.type) else pc.unique(column)
-    return sorted({v for v in listed.to_pylist() if v is not None})
-
-
-def _flat(column: Any) -> pa.Array:
-    """Return one Array from a column that may arrive in chunks."""
-    combined = column.combine_chunks() if isinstance(column, pa.ChunkedArray) else column
-    if isinstance(combined, pa.ChunkedArray):
-        return combined.chunk(0) if combined.num_chunks else combined.cast(combined.type).combine_chunks()
-    return combined
 
 
 def open_packet(path: str | Path, *, validate_manifest: bool = True) -> Packet:

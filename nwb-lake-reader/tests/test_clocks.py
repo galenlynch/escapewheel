@@ -6,6 +6,7 @@ import numpy as np
 import pyarrow as pa
 import pytest
 
+from nwb_lake_reader import open_packet
 from nwb_lake_reader.clocks import BOUND, Unanchored, align, declared_bound, extrapolation_error, rate
 
 AP, HARP = 30000, 31250
@@ -209,3 +210,40 @@ def test_the_widest_measured_bound_wins():
 def test_an_unreadable_record_is_no_record():
     """Free-form JSON someone else wrote must not be able to break a read path."""
     assert declared_bound(_Runs("not json", json.dumps({"alignment_bound": "nonsense"}))) == BOUND
+
+
+# -- the free function is the implementation; the method is a delegate --------------------
+
+
+def test_on_clock_is_the_same_whether_called_as_a_function_or_a_method(two_clock_packet):
+    """The delegate exists for discoverability and must not acquire behaviour of its own."""
+    from nwb_lake_reader.clocks import on_clock
+
+    packet = open_packet(two_clock_packet)
+    spikes = packet.table("core.spike_events")
+    assert on_clock(packet, spikes).to_pylist() == packet.on_clock(spikes).to_pylist()
+
+
+def test_seconds_is_the_same_whether_called_as_a_function_or_a_method(two_clock_packet):
+    """As above. Two surfaces over one implementation, never two implementations."""
+    from nwb_lake_reader.clocks import on_clock, seconds
+
+    packet = open_packet(two_clock_packet)
+    mapped_spikes = on_clock(packet, packet.table("core.spike_events"))
+    assert seconds(packet, mapped_spikes).to_pylist() == packet.seconds(mapped_spikes).to_pylist()
+
+
+def test_the_packet_carries_no_transformation_of_its_own(two_clock_packet):
+    """`Packet` is manifest, resolution, IO and registration. Anything that could be a free
+    function is one, so the delegates are one line each and there are few of them."""
+    import inspect
+
+    from nwb_lake_reader.packet import Packet
+
+    for name in ("on_clock", "seconds"):
+        body = [
+            line
+            for line in inspect.getsource(getattr(Packet, name)).splitlines()
+            if line.strip() and not line.strip().startswith(('"""', "#", "def ", "Delegates"))
+        ]
+        assert any(line.strip().startswith("return ") for line in body), name
