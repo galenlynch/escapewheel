@@ -54,6 +54,14 @@ the inner codec.
 **Not yet.** The external mode (R15 §4, level 3): nothing resolves an external URI or checks
 its `sha256`, `size_bytes`, or actual codecs. Needed for the LFP arrays.
 
+## Developer guidance
+
+**`CONTRIBUTING.md` is the canonical statement**, and its first section matters most: most new
+checks belong in `../registry/rules.json`, not in this package. Tier 1 is generated from
+structure and Tier 2 is authored as data; Python lands here only for what a query cannot see at
+all. Decide SQL-or-shim before writing (R12 §4) — a storage-layer check written as SQL reports
+success on a broken packet.
+
 ## Architecture
 
 ```
