@@ -109,6 +109,63 @@ ids = [r["id"] for r in authored_rules]
 check("rule ids are unique", sorted({i for i in ids if ids.count(i) > 1}))
 
 
+# R50 §5: a naming convention is a property of the registry, not of any packet's rows, so no SQL
+# rule can see it -- and one written anyway would pass silently (R12 §4). It is checked here.
+#
+# R48 is what makes this exact rather than heuristic. Before a column declared its `role`,
+# "identifier-shaped" had to be guessed from name and type, which is why R50's three misnamed
+# columns survived as long as they did. Seven of the nine tests below compare a name against a
+# *declaration* and consequently flag nothing; the two that remain compare it against a type,
+# and those are the two carrying every exception.
+
+#: SQL reserved words a column name must not be, unless declared below. Not exhaustive: it is
+#: the words that have actually collided, since the point is to notice a new one.
+RESERVED = {"offset", "order", "group", "select", "from", "where", "table", "column",
+            "index", "key", "all", "primary", "case", "when", "end", "values"}
+INTEGERS = {"int32", "int64"}
+
+#: Names that break a convention on purpose, each with the reason. An exception is declared, never
+#: inferred: a baseline absorbing whatever exists today would have absorbed `step_ticks` too.
+#: Removing a column here without renaming it fails the run, which is the point.
+NAMING_EXCEPTIONS = {
+    "core.array_assets.offset": "NWB-standard name; the reserved word is handled by unconditional quoting (R50 §4)",
+    "analysis.array_assets.offset": "as core.array_assets.offset",
+    "core.array_channels.offset": "as core.array_assets.offset, per channel (R19 §2)",
+    "core.units.n_spikes": "a count, not a plural duration -- the shape R50 §3 renamed step_ticks for",
+    "core.source_files.size_bytes": "a quantity in bytes, not a plural of `size_byte`",
+}
+
+NAMING = {
+    "an identifier is named _id": lambda n, t, role: not (
+        role == "identifier" and not n.endswith(("_id", "_label", "_name"))),
+    "an _id column is an identifier": lambda n, t, role: not (n.endswith("_id") and role != "identifier"),
+    "an _id column is a string": lambda n, t, role: not (n.endswith("_id") and t != "string"),
+    "a _tick column is a coordinate": lambda n, t, role: not (n.endswith("_tick") and role != "coordinate"),
+    "a coordinate is named _tick": lambda n, t, role: not (role == "coordinate" and not n.endswith("_tick")),
+    "an _index column is an index": lambda n, t, role: not (
+        n.endswith("_index") and role not in {"structural_index", "sequence_position"}),
+    "a structural index is named _index": lambda n, t, role: not (
+        role == "structural_index" and not n.endswith("_index")),
+    "no column is a reserved word": lambda n, t, role: n not in RESERVED,
+    # R50 §3: `step_ticks` read as a coordinate and was a duration. A plural integer is the shape
+    # that confusion takes, so it is flagged and a real count says so here.
+    "no integer column is plural": lambda n, t, role: not (n.endswith("s") and t in INTEGERS),
+}
+
+flagged = {}
+for label, holds in NAMING.items():
+    for tid, tbl in T.items():
+        for c in tbl["columns"]:
+            if not holds(c["name"], c["type"], c.get("role")):
+                flagged.setdefault(f"{tid}.{c['name']}", []).append(label)
+check("column names follow the conventions, or say why not",
+      sorted(f"{k}: {', '.join(v)}" for k, v in flagged.items() if k not in NAMING_EXCEPTIONS))
+check("every declared naming exception still exists and still breaks a convention",
+      sorted(k for k in NAMING_EXCEPTIONS if k not in flagged))
+print(f"      {len(NAMING)} conventions over {sum(len(t['columns']) for t in T.values())} columns, "
+      f"{len(NAMING_EXCEPTIONS)} declared exceptions")
+
+
 # R2 §9: the registry validates against its published meta-schema.
 try:
     import jsonschema
