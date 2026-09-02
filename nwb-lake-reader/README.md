@@ -72,6 +72,10 @@ uv sync
 
 ## Development
 
+**Changing this package?** Read [CONTRIBUTING.md](CONTRIBUTING.md) first — it carries the two
+rules that decide what belongs here and what shape it takes, and the process for a specification
+defect found while implementing.
+
 Please test your changes using the full linting and testing suite:
 
 ```bash

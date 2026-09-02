@@ -87,60 +87,26 @@ store's own metadata — without depending on Zarr at all.
 
 Errors derive from `PacketError` so callers can catch the family.
 
-### The shape of the API
+### The shape of the API, and what belongs in it
 
-**Free functions in three layers, with thin `Packet` delegates.** Settled 2026-09-01; the
-reasoning is below, and it is a decision rather than a preference.
+**`CONTRIBUTING.md` is the canonical statement.** Read it before adding a function, a module or
+a `Packet` method. The binding parts, in short:
 
-```
-kernels      align(ticks, anchor_t, anchor_p, *, bound)      raw arrays, no packet
-semantics    on_clock(packet, table), seconds(packet, table) (packet, table) -> table
-access       spike_times(packet, ...), unit_windows(packet)  (packet, ...) -> table
-```
-
-**Why free rather than methods: we do not own our data type.** polars, pandas and xarray can
-put transformations on the object because they own `DataFrame` and `Dataset`. Our currency is
-`pa.Table`, which is PyArrow's, and `pa.Table` has no `.pipe()`. So `table.on_clock()` and
-`table.pipe(on_clock)` are both unavailable, which is exactly why the older API had
-`packet.on_clock(table)` — a method on the *packet* operating on a *table*, owned by neither.
-Free functions are what is left once that is faced, not an ideology.
-
-A `Packet` delegate may exist for discoverability — one line, docstring on the function. New
-behaviour is written as a function first and delegated second, never the other way round.
-
-### What belongs in the reader
-
-> The reader owns a transformation when doing it yourself from the documented schema would be
-> **silently** wrong. Everything else is a query.
-
-Not "tedious", not "slow". Silently wrong — producing a plausible number with nothing to
-indicate it is not the right one. "Good units", "trials in condition X", "spikes in a window"
-all fail the test: a user writes those correctly unaided, and a wrong answer is visible.
-
-**The set is bounded, because the hazards are enumerable from the accepted revisions.** They
-are almost all about time:
-
-| hazard | revision | what the reader owns |
-|---|---|---|
-| a tick means nothing beside another clock's | R13, R27, R37 | `clocks.align`, `on_clock` |
-| seconds need a declared origin, not a guessed one | R39 | `seconds`, `t_zero` |
-| a count needs the span it was observed over | R38 | `unit_windows`, `rate` |
-| several runs may have produced the same thing | R41, R44 | `runs.ambiguities`, `preferred_run` |
-| ASOF and a range join differ where windows overlap | R43 | `aligned_spikes` |
-
-That table is the whole justification for the module list. **Nothing may be added to `Packet`
-that would pass this test as a function instead**, and nothing should be added to the package
-at all that fails it — `Packet` is manifest, resolution, IO and DuckDB registration.
-
-Two shapes recur and are worth copying:
-
-- **Refuse rather than choose.** Where the packet does not determine an answer, raise and name
-  the revision. `NoTimeOrigin`, `NotAligned`, `AmbiguousRun`, `StaleSupport` are all this.
-  A binding rule raises; something a *proposed* revision would catch warns instead, so a
-  non-binding revision cannot make a readable packet unreadable.
-- **The convenience accessor is guarded and the general one is not.** `units()` promises *the
-  units* and refuses when two sortings coexist; `table("core.units")` promises rows and
-  returns them. Keep that split — it is where the escape hatch lives.
+- **Free functions in three layers** — kernels over raw arrays, `(packet, table)` semantics,
+  `(packet, ...)` access — with thin one-line `Packet` delegates. The function is the
+  implementation and carries the docstring; the delegate carries no behaviour. The reason is
+  structural: our currency is `pa.Table`, which is PyArrow's and has no `.pipe()`, so the method
+  form was never available.
+- **`Packet` is manifest, resolution, IO and DuckDB registration.** Nothing may be added to it
+  that would work as a free function instead.
+- **The test for whether a transformation is ours at all:** the reader owns it when doing it
+  yourself from the documented schema would be *silently* wrong. Everything else is a query.
+  `CONTRIBUTING.md` carries the table of hazards that bounds the set, one row per revision.
+- **Refuse rather than choose**, naming the revision. An accepted revision's rule raises; one a
+  proposed revision would catch warns, so a non-binding revision cannot make a readable packet
+  unreadable.
+- **A semantic operation added to the SQL path is added to the PyArrow path too**, with a test
+  asserting the two agree. DuckDB is the optional `sql` extra by design.
 
 ### Design decisions carried from the specification
 
