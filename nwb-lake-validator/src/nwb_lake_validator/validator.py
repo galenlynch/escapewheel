@@ -27,9 +27,9 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from nwb_lake_reader import Packet, PacketError, ResourceUnreadableError, sql_name
-from nwb_lake_reader.stores import StoreUnreachable, digest, listing, read_member
 
 from .generate import adjacency_settles_uniqueness, concerns, generate
+from .stores import StoreUnreachable, digest, listing, read_member
 
 #: Registry column type -> the Arrow type a conforming writer must emit (R3 §2.1).
 ARROW_TYPES = {

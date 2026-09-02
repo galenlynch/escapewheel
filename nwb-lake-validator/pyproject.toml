@@ -24,6 +24,16 @@ dependencies = [
     "pyarrow>=25.0.1",
 ]
 
+[project.optional-dependencies]
+# Reaching an external resource is optional and belongs here rather than with the reader,
+# because no read path uses it: a table resolves to a local path, a Zarr array is opened by its
+# own library from its URI, and DuckDB reaches an object store through its own client. What
+# needs a store client is R36's verification -- list a prefix, hash its members -- which is
+# this package's job. A backend for the scheme is separate again.
+remote = ["fsspec>=2024.6"]
+# s3fs brings fsspec with it, so this extra alone reaches an s3:// resource.
+s3 = ["s3fs>=2024.6"]
+
 [project.entry-points."nwb_lake.commands"]
 # `07` names one CLI. nwb-lake-reader owns the console script and discovers this group, so
 # two packages never compete for the `nwb-lake` name under [project.scripts].

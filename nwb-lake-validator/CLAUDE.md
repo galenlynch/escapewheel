@@ -30,6 +30,16 @@ When behaviour here seems arbitrary, the reason is there.
 | `fixtures/` | The conformance corpus — 16 packets with expected findings as data. |
 | `nwb-lake-reader/` | The read path. This package's only runtime dependency of substance. |
 
+`stores.py` lives here rather than in the reader because **no read path uses it**: a table
+resolves to a local path or is refused, a Zarr array is handed its URI and `zarr` opens it with
+its own backend, and DuckDB reaches an object store through its own C++ client. What needs a
+store client is R36's verification -- list a prefix, hash its members -- which is this package's
+job. Hence the `remote` and `s3` extras are here.
+
+The contract it needs is two operations, `list(prefix)` and a ranged `get(key)`, not a
+filesystem. Measured against a real bucket, every client lands within 26% of every other once
+reads are concurrent, so the choice is dependency weight and scheme coverage rather than speed.
+
 `src/nwb_lake_validator/schemas/registry.schema.json` is a **vendored copy** from
 `registry/`. Re-copy it when the meta-schema changes there; it is not generated at build time.
 
