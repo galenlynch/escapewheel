@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from importlib.metadata import version
 
+from .alignment import ClockMismatch, aligned_spikes, assigned_spikes, windows_disjoint
 from .clocks import BOUND, NotAligned, Unanchored, align
 from .errors import (
     AmbiguousRun,
@@ -35,6 +36,7 @@ __all__ = [
     "Ambiguity",
     "AmbiguousRun",
     "ArrayResource",
+    "ClockMismatch",
     "Manifest",
     "ManifestError",
     "NoTimeOrigin",
@@ -50,9 +52,12 @@ __all__ = [
     "UnsupportedCodecError",
     "__version__",
     "align",
+    "aligned_spikes",
     "ambiguities",
+    "assigned_spikes",
     "open_packet",
     "preferred_run",
     "quote",
     "sql_name",
+    "windows_disjoint",
 ]
