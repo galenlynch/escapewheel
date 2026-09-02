@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-02 |
+| **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R38 §2.3, §4 (a clock's own interval); `02_core_logical_schemas.md` §`core.trials` (`stop_tick`); R25 §7 (the deferred question) |
 | **Depends on** | R18 (unit observation intervals), R24 (the `interval` template), R25 (event stream support), R38 (observation belongs to the clock), R39 (the session's time origin) |
 | **Profile** | `nwb-lake-portable-v0.1` |
