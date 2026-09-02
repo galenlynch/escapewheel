@@ -98,6 +98,15 @@ distinct values within a series -- which is what R19 added the column for.
   `2025-04-09T17:25:12+00:00` for a Pacific wall clock. The NWB gets it right. Identity comes
   from the JSONs, so the importer must not trust that offset.
 
+## Developer guidance
+
+**`CONTRIBUTING.md` is the canonical statement** of what belongs in this package and why. Read it
+before adding a source adapter, a compensation, or anything in a per-batch path. The rules with
+the sharpest failure modes: ownership is declared and checked before a byte is read; a
+compensation is declared with evidence into `../inventory/`, and so is a knowing pass-through;
+and never leave Arrow inside a per-batch path, which is what every performance defect here has
+been.
+
 ## Architecture
 
 ```
