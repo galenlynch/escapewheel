@@ -73,6 +73,9 @@ def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
             "sorting_run_id": "run",
             "curation_id": "cur",
             "coordinate_frame": "ccf",
+            # R58 §2.1: an exported file records where the probe was found, never where it was
+            # aimed, so an import can only assert `measured`.
+            "coordinate_basis": "measured",
             "x_um": 100.0,
             "y_um": 100.0,
             "z_um": 100.0,

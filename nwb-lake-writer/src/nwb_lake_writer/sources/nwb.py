@@ -427,7 +427,6 @@ class NWBSource(Compensates):
                     if "electrode_name" in columns
                     else None,
                     "local_channel_label": _clean(columns["channel_name"][index]),
-                    "brain_region": _clean(columns["location"][index]) if "location" in columns else None,
                     "impedance_ohm": _clean(columns["imp"][index]) if "imp" in columns else None,
                     "metadata": {k: v for k, v in metadata.items() if v is not None} or None,
                 }
@@ -456,12 +455,42 @@ class NWBSource(Compensates):
                     {
                         "electrode_id": electrode_id,
                         "coordinate_frame": frame,
+                        # An exported file records where the probe was found, never where it was
+                        # aimed: a targeting record does not reach NWB, so `planned` (R58 §2.1)
+                        # cannot be imported from one.
+                        "coordinate_basis": "measured",
+                        **self._annotation(columns, index, frame),
                         "x_um": values[0],
                         "y_um": values[1],
                         "z_um": values[2],
                     }
                 )
         return rows
+
+    #: Where an exporter puts the atlas structure id. The two spellings are the same fact from
+    #: two versions of one pipeline (R59 §1).
+    REGION_ID = ("brain_region_id", "ccf_id")
+    #: Where it puts the label. `location` is core NWB's; `ccf_acronym` is the AIND addition.
+    REGION_LABEL = ("ccf_acronym", "location")
+
+    def _annotation(self, columns: Mapping[str, Any], index: int, frame: str) -> dict[str, Any]:
+        """Return the atlas annotation for one coordinate row (R59 §2.1).
+
+        Only an atlas frame carries one: `coordinate_frame` names the atlas the structure id is
+        numbered by (R59 §2.2), and a probe-relative position is in no atlas.
+        """
+        if frame == "probe":
+            return {}
+        found: dict[str, Any] = {}
+        for name in self.REGION_ID:
+            if name in columns and (value := _clean(columns[name][index])) is not None:
+                found["region_id"] = int(value)
+                break
+        for name in self.REGION_LABEL:
+            if name in columns and (value := _clean(columns[name][index])) is not None:
+                found["region_label"] = str(value)
+                break
+        return found
 
     # -- units, which this file describes but does not date -----------------------------
 
@@ -567,6 +596,8 @@ class NWBSource(Compensates):
                     "session_id": self.session_id,
                     **identity,
                     "coordinate_frame": "ccf",
+                    "coordinate_basis": "measured",
+                    **self._annotation(columns, index, "ccf"),
                     "x_um": values[0],
                     "y_um": values[1],
                     "z_um": values[2],
