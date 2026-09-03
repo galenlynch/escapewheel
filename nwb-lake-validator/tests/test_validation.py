@@ -1059,3 +1059,80 @@ def test_an_unreadable_extension_registry_is_ignored_by_the_reader(packet_root):
     root = _extension(packet_root)
     (root / "extensions" / "task.json").write_text("{not json")
     assert open_packet(root).extensions() == {}
+
+
+def _discriminated(role="discriminator", **extra):
+    """A one-table registry whose `k_kind` discriminates `k` (R55 §2.3.2)."""
+    column = {"name": "k_kind", "type": "string", "presence": "nullable", "role": role, **extra}
+    return {
+        "tables": {
+            "core.runs": {
+                "columns": [
+                    {"name": "run_id", "type": "int32", "presence": "required", "role": "identifier"},
+                    column,
+                    {"name": "k", "type": "string", "presence": "nullable", "role": "data"},
+                ],
+                "primary_key": ["run_id"],
+                "references": [],
+                "rules": [],
+            }
+        }
+    }
+
+
+def test_a_discriminator_is_checked_for_being_a_resource_id():
+    """R55 §2.1. Nothing checked this: `scope_kind` could hold an empty string and no rule saw it."""
+    checks = generate(_discriminated(resolves="optional", discriminates="k"))
+    ids = {c.id for c in checks}
+    assert "core.runs.k_kind.is_a_resource_id" in ids
+
+
+def test_a_data_column_generates_no_discriminator_checks():
+    """The role is what turns it on, which is R55 §1.1's point: `data` said only 'may be read'."""
+    checks = generate(_discriminated(role="data"))
+    assert not [c for c in checks if "k_kind" in c.id]
+
+
+def test_resolves_decides_the_level_not_whether_the_check_exists():
+    """R55 §2.4. An optional kind naming nothing is a fact, and reported; R49 §2.5 passed it in silence."""
+    kinds = {"core.sessions": "session_id"}
+    optional = generate(_discriminated(resolves="optional", discriminates="k"), kinds=kinds)
+    required = generate(_discriminated(resolves="required", discriminates="k"), kinds=kinds)
+    levels = {c.id: c.level for c in optional + required}
+    assert levels["core.runs.k_kind.kind_declared"] in ("info", "error")
+    assert {c.level for c in optional if c.id.endswith("kind_declared")} == {"info"}
+    assert {c.level for c in required if c.id.endswith("kind_declared")} == {"error"}
+
+
+def test_a_shared_key_discriminator_generates_no_value_resolution():
+    """R55 §2.3.1: the named table's own reference carries that integrity, pointing the other way."""
+    checks = generate(_discriminated(resolves="required"), kinds={"core.sessions": "session_id"})
+    assert not [c for c in checks if c.id.endswith("k_kind.resolves")]
+
+
+def test_the_paired_value_comparison_is_cast_on_both_sides():
+    """R53 §2.1 made keys int32 while the paired value stayed a string (R55 §4).
+
+    Without the cast DuckDB coerces the string to an integer and *raises* on one that is not a
+    number, which turns a finding into a check that could not run.
+    """
+    checks = generate(
+        _discriminated(resolves="optional", discriminates="k"),
+        only={"core.runs"},
+        kinds={"core.runs": "run_id"},
+    )
+    sql = next(c.sql for c in checks if c.id == "core.runs.k_kind.resolves")
+    assert sql.count("CAST") == 2
+
+
+def test_a_kind_the_packet_does_not_declare_is_not_joined():
+    """Only a resource the packet carries can appear in the union; the rest are the declared-kind check."""
+    checks = generate(
+        _discriminated(resolves="optional", discriminates="k"),
+        only={"core.runs"},
+        kinds={"core.runs": "run_id", "ext.absent": "absent_id"},
+    )
+    sql = next(c.sql for c in checks if c.id == "core.runs.k_kind.resolves")
+    assert "ext_absent" not in sql
+    declared = next(c.sql for c in checks if c.id == "core.runs.k_kind.kind_declared")
+    assert "'ext.absent'" in declared

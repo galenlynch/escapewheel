@@ -89,6 +89,85 @@ def adjacency_settles_uniqueness(table: Mapping[str, Any]) -> bool:
     return all(column in key or determined.get(column, {object()}) <= set(key) for column in sort[: max(positions) + 1])
 
 
+#: A dotted resource ID: two lowercase snake_case names. R55 §2.1 makes this checkable without
+#: knowing which resources exist, which is what nothing did -- `scope_kind` could hold an empty
+#: string and no rule would see it.
+RESOURCE_ID = r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$"
+
+
+def _discriminator(
+    resource: str,
+    name: str,
+    table: Mapping[str, Any],
+    column: Mapping[str, Any],
+    kinds: Mapping[str, str] | None,
+    included: Collection[str],
+) -> list[Check]:
+    """Build the checks one discriminator column implies (R55 §2.4).
+
+    Three, and they fail for different reasons: the value is not a resource ID at all, it names a
+    resource the packet does not declare, or it names one that exists and holds no such row. Only
+    the second is what `resolves` governs -- R49's scope may legitimately name a rig the packet
+    does not hold, where R54's interval kind naming nothing leaves the row uninterpretable.
+    """
+    col = quote(column["name"])
+    checks = [
+        Check(
+            f"{resource}.{column['name']}.is_a_resource_id",
+            "error",
+            f"{column['name']} holds a value that is not a dotted resource ID",
+            f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL "
+            f"AND NOT regexp_matches({col}, '{RESOURCE_ID}')",
+            resource,
+        )
+    ]
+    if not kinds:
+        return checks
+
+    declared = ", ".join(f"'{k}'" for k in sorted(kinds))
+    checks.append(
+        Check(
+            f"{resource}.{column['name']}.kind_declared",
+            # R55 §2.2. Where an unresolvable kind is a fact rather than a defect it is still
+            # reported: R49 §2.5's union passed it in silence, which is what let an extension
+            # kind go unchecked without anything saying so.
+            "error" if column.get("resolves") == "required" else "info",
+            f"{column['name']} names a resource this packet does not declare",
+            f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({declared})",
+            resource,
+        )
+    )
+
+    # A paired value lives in the named table's key space (R55 §2.3), so it resolves value-to-key.
+    # A shared-key discriminator needs no such check: the reference R55 §2.3.1 requires of the
+    # named table already generates the anti-join, pointing the other way.
+    paired = column.get("discriminates")
+    if paired is None:
+        return checks
+    joinable = {k: key for k, key in kinds.items() if k in included}
+    if not joinable:
+        return checks
+    # CAST both sides: R53 §2.1 made a key int32 while `scope` stayed a string (R55 §4), so an
+    # uncast comparison makes DuckDB coerce the string and *raise* on a value that is not a
+    # number -- turning a finding into a check that could not run.
+    union = " UNION ALL ".join(
+        f"SELECT '{k}' AS kind, CAST({quote(key)} AS VARCHAR) AS id FROM {sql_name(k)}"
+        for k, key in sorted(joinable.items())
+    )
+    val = quote(paired)
+    return checks + [
+        Check(
+            f"{resource}.{column['name']}.resolves",
+            "error",
+            f"{paired} names no row of the resource {column['name']} declares",
+            f"WITH known AS ({union}) SELECT DISTINCT r.{col}, r.{val} FROM {name} r "
+            f"WHERE r.{col} IN (SELECT DISTINCT kind FROM known) AND NOT EXISTS "
+            f"(SELECT 1 FROM known k WHERE k.kind = r.{col} AND k.id = CAST(r.{val} AS VARCHAR))",
+            resource,
+        )
+    ]
+
+
 def generate(
     registry: Mapping[str, Any],
     *,
@@ -96,6 +175,7 @@ def generate(
     advisory: bool = False,
     aggregate: set[str] | None = None,
     resolvable: set[str] | None = None,
+    kinds: Mapping[str, str] | None = None,
 ) -> list[Check]:
     """Build every check a registry implies.
 
@@ -114,6 +194,11 @@ def generate(
         Resources a reference may resolve against, beyond this registry's own tables. An
         extension registry needs core's tables here, since it declares none of them and R17 §2
         lets it reference them.
+    kinds : Mapping, optional
+        Every resource a discriminator may name (R55 §2.1), mapped to its single primary-key
+        column. Supplied by the caller rather than read from this registry, because R55 §2.5
+        requires the resolution to reach the packet's *extension* kinds -- the case R49 §2.4
+        designed the mechanism for and whose hand-written union quietly matched no branch.
 
     Returns
     -------
@@ -157,6 +242,11 @@ def generate(
                         resource,
                     )
                 )
+
+        for column in table["columns"]:
+            if column.get("role") != "discriminator":
+                continue
+            checks.extend(_discriminator(resource, name, table, column, kinds, included))
 
         by_scan = adjacency_settles_uniqueness(table) and resource not in (aggregate or set())
         if (key := table.get("primary_key")) and not by_scan:

@@ -1313,11 +1313,13 @@ def _run_rules(
             for session in packet.manifest.sessions:
                 connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
 
-            checks = generate(registry, only=set(present), advisory=advisory, aggregate=unsound or set())
+            kinds = _declared_kinds(packet, registry)
+            checks = generate(registry, only=set(present), advisory=advisory,
+                              aggregate=unsound or set(), kinds=kinds)
             if recheck is not None:
                 checks = [check for check in checks if concerns(check, recheck)]
             _run_checks(connection, checks, report, None)
-            _check_extensions(packet, connection, registry, report, advisory)
+            _check_extensions(packet, connection, registry, report, advisory, kinds)
         finally:
             with contextlib.suppress(Exception):
                 connection.close()
@@ -1335,12 +1337,37 @@ def _run_checks(connection: Any, checks: Sequence[Any], report: Report, extensio
             report.add(check.level, check.id, check.message, rows, extension=extension)
 
 
+def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, str]:
+    """Every resource a discriminator may name, mapped to its single primary-key column.
+
+    Built from the packet's registry *and* the extension registries it carries, because R49 §2.4
+    lets a kind name an extension table and R55 §2.5 makes that the case the check must reach --
+    the one whose hand-written union over core matched no branch and passed in silence.
+
+    Only a single-column key can be resolved from a paired value, which holds one identifier
+    (R55 §2.3.1); a resource keyed by several is simply not namable that way.
+    """
+    tables = dict(registry["tables"])
+    # Core's absent tables get empty stand-ins in _layer4, so all of them can be joined. An
+    # extension's do not, so only what the packet carries can appear in the union.
+    carried = {resource.resource_id for resource in packet.resources(kind="table")}
+    for document in packet.extensions().values():
+        if isinstance(document.get("tables"), Mapping):
+            tables.update({n: t for n, t in document["tables"].items() if n in carried})
+    return {
+        name: spec["primary_key"][0]
+        for name, spec in tables.items()
+        if isinstance(spec.get("primary_key"), list) and len(spec["primary_key"]) == 1
+    }
+
+
 def _check_extensions(
     packet: Packet,
     connection: Any,
     registry: Mapping[str, Any],
     report: Report,
     advisory: bool,
+    kinds: Mapping[str, str] | None = None,
 ) -> None:
     """Validate each extension registry the packet carries (R17 §4).
 
@@ -1377,7 +1404,8 @@ def _check_extensions(
             )
         if not carried:
             continue
-        checks = generate(document, only=carried, advisory=advisory, resolvable=set(registry["tables"]))
+        checks = generate(document, only=carried, advisory=advisory,
+                          resolvable=set(registry["tables"]), kinds=kinds)
         _run_checks(connection, checks, report, extension_id)
         report.add(
             "info",

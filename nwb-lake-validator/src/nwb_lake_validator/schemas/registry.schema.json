@@ -166,14 +166,27 @@
           ]
         },
         "role": {
-          "description": "R48 \u00a72.1. What kind of thing the column holds, which decides what a consumer may do with it -- notably whether a 1-based client converts it at the boundary (R3 \u00a76). Closed: a consumer derives behaviour from it, so an unrecognised value would be unsafe.",
+          "description": "R48 \u00a72.1. What kind of thing the column holds, which decides what a consumer may do with it -- notably whether a 1-based client converts it at the boundary (R3 \u00a76). Closed: a consumer derives behaviour from it, so an unrecognised value would be unsafe. R55 \u00a72.1 adds `discriminator`: the column holds a dotted resource ID naming a table, which a consumer resolves to decide what the row means.",
           "enum": [
             "data",
             "identifier",
             "coordinate",
             "structural_index",
-            "sequence_position"
+            "sequence_position",
+            "discriminator"
           ]
+        },
+        "resolves": {
+          "description": "R55 \u00a72.2. Required on a discriminator, and only there. `required`: a value naming no declared resource leaves the row uninterpretable. `optional`: it is a fact -- the thing is not a packet resource.",
+          "enum": [
+            "required",
+            "optional"
+          ]
+        },
+        "discriminates": {
+          "description": "R55 \u00a72.3.2. On a paired-value discriminator, the column holding an identifier in the named table's key space. Absent where the discriminated row shares the named table's key.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
         },
         "description": {
           "type": "string"
