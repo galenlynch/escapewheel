@@ -9,6 +9,7 @@ reading one of their tables needs nothing installed.
 | `dynamic_foraging` | `trials`, `blocks` | 23 | the 10 trial columns measured to vary in a real session, plus its blocks |
 | `aind_unit_qc` | `metrics`, `waveform_metrics`, `synchrony` | 59 | 48 of the 74 columns the real NWB's `units` table carries |
 | `aind_opto` | `stimulations`, `emissions` | 18 | the 17 `laser_*` columns the real NWB's `trials` table carries |
+| `vr_foraging` | `sites`, `site_odors`, `sessions` | 38 | the `Site` and `SessionMetadata` pydantic models the packaging library writes its parquet from |
 
 ## Why these, and why they are not core
 
@@ -59,11 +60,60 @@ illumination, on the same `wavelength_nm`, `power_mw`, `duration_s`, `frequency_
 rather than two schemas of the same shape. Splitting them would be R3 §3.0's duplication with the
 intent encoded in a table name.
 
-## Not yet written
+## Deriving one from a pydantic model
 
-**`vr_foraging`.** `inventory/vr-foraging-packaging.md` describes it in detail — seven tables, a
-`Site` model of ~30 fields, eleven index columns, a half-open interval, and `odor_concentration`
-as a `list[float]` that R3 §2.1 forbids and R54 §2.6 says must be converted. But the description
-is prose, and no packet here has been built from that pipeline. Drafting a registry from a
-document rather than from data would invent the types, which is the one thing
-`nwb-lake extension` exists to avoid: point it at `sites.parquet` and it reads them.
+`vr_foraging` was drafted from `aind_behavior_vr_foraging_packaging.models`, where `Site` and
+`SessionMetadata` are ordinary `BaseModel`s and the table is literally
+`pd.DataFrame([s.model_dump() for s in sites])`. A model like that is a better draft source than a
+`DynamicTable`, because it carries three of the four things a registry column needs — type,
+optionality, and a description — and in this pipeline it carries the fourth as prose: **every unit
+in it lives in a description string**, `centimeter`, `second`, `percentage`, `milliliter`, `cm/s`.
+R56 is what gives them somewhere to go.
+
+What it does not carry is `role`. That is R48 §2.2's point and it is not a gap to be closed: a role
+is a decision, and one guessed from a name would look deliberate. So the derivation is a scaffold,
+not a compiler.
+
+Neither is it a licence to take the columns verbatim. The same test as above — R3 §3.0, does the
+duplication buy otherwise-unavailable access — removes seven of `Site`'s fields:
+
+| dropped | because |
+|---|---|
+| `start_time`, `stop_time` | the interval itself, which lives in core as ticks on a declared clock |
+| `site_index` | equals the site's identity; carried once, as `site_id` |
+| `has_reward` | `reward_onset_tick IS NOT NULL` |
+| `has_choice` | `choice_cue_tick IS NOT NULL` — the same predicate in the source, not merely a similar one |
+| `reward_delay_duration` | `reward_onset_tick - choice_cue_tick` |
+| `last_stop_duration` | `choice_cue_tick - last_stop_tick` |
+
+The four `Json[Any]` fields on `SessionMetadata` — `session`, `rig`, `task_logic`, `trainer_state`
+— are not dropped but *rehomed*: they are the rig and task configuration, which `03` places in
+`docs/` and `04` binds as sidecar documents. R3 §2.1 confines JSON to optional columns and these
+are required, so a column was never available to them.
+
+## A denormalization is kept only if it is checked
+
+Eight of `Site`'s ten remaining index columns are `groupby(...).cumcount()` over columns the table
+already has, so R3 §3.0 would strike them. They are kept on `core.units.n_spikes`' precedent — a
+validated denormalization, kept because it is what people filter by — and the validation is the
+condition: each of the eight carries a Tier 2 rule comparing it against the window function it came
+from. Keeping them cannot drift, and the eight rules were mechanical to write because the source
+computation is.
+
+`odor_concentration` is the `list[float]` R3 §2.1 forbids, and it is per **olfactometer channel**:
+the source builds `[0.0] * n_channels` and fills the channels an odor is on. So `site_odors` is
+dense, and its zeros are load-bearing — a missing row means a channel the rig does not have, not a
+channel that was off.
+
+One unit is deliberately absent. `reward_probability` is declared `percentage` on a field named
+*probability*, and which of 0–1 or 0–100 is stored has not been checked against data. A wrong
+`unit` is worse than none, so it carries none until a real session settles it.
+
+## Known gaps
+
+`registry/check.py` covers `logical_schemas.json` only, so nothing here is checked by the standing
+registry run — not the naming conventions, not the JSON Schema, not whether a rule's SQL parses.
+Under those conventions `aind_unit_qc` has four columns that would flag today
+(`num_spikes`, `rp_violations`, `num_negative_peaks`, `num_positive_peaks`: "no integer column is
+plural"). All four are the sorter's own names, which is the case the section above argues should
+win, so the fix is four declared exceptions rather than four renames.

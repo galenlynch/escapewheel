@@ -1,0 +1,501 @@
+{
+  "registry_version": "0.2.0",
+  "logical_standard_version": "0.1",
+  "extension_id": "vr_foraging",
+  "extends": "nwb-lake-logical-v0.1",
+  "tables": {
+    "vr_foraging.sites": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "site_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The site, and the interval it occupies in core. The source numbers sites from 0 within a session and uses that number as the site's identity, so no separate site_index is carried.",
+          "identity": "carried"
+        },
+        {
+          "name": "site_label",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "What kind of site this is, in the task's own words (RewardSite, InterSite, ...). Open."
+        },
+        {
+          "name": "patch_label",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "Patch type this site belongs to. Open."
+        },
+        {
+          "name": "start_position",
+          "type": "float64",
+          "presence": "required",
+          "role": "data",
+          "description": "Where the site begins along the virtual corridor.",
+          "unit": "cm"
+        },
+        {
+          "name": "length",
+          "type": "float64",
+          "presence": "required",
+          "role": "data",
+          "description": "How far the site extends.",
+          "unit": "cm"
+        },
+        {
+          "name": "friction",
+          "type": "float64",
+          "presence": "required",
+          "role": "data",
+          "description": "Friction in force over the site, carried forward from the last friction change.",
+          "unit": "%"
+        },
+        {
+          "name": "odor_onset_tick",
+          "type": "int64",
+          "presence": "nullable",
+          "role": "coordinate",
+          "description": "When odor reached the animal. Null where no odor was delivered.",
+          "clock_from": "core.trials.clock_id"
+        },
+        {
+          "name": "choice_cue_tick",
+          "type": "int64",
+          "presence": "nullable",
+          "role": "coordinate",
+          "description": "The choice (stop) cue. Null where no choice occurred, which is what makes it the has_choice the source carries separately.",
+          "clock_from": "core.trials.clock_id"
+        },
+        {
+          "name": "reward_onset_tick",
+          "type": "int64",
+          "presence": "nullable",
+          "role": "coordinate",
+          "description": "When water was delivered. Null where none was, which is the source's has_reward.",
+          "clock_from": "core.trials.clock_id"
+        },
+        {
+          "name": "last_stop_tick",
+          "type": "int64",
+          "presence": "nullable",
+          "role": "coordinate",
+          "description": "The last stop before the choice cue. The source calls this last_stop_time because NWB reserves stop_time for an interval's end; here the interval's end is in core and the name is free.",
+          "clock_from": "core.trials.clock_id"
+        },
+        {
+          "name": "reward_amount",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Water delivered.",
+          "unit": "mL"
+        },
+        {
+          "name": "reward_probability",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Reward probability at delivery. Null where the reward was not sampled. No unit is declared: the model says percentage for a field named probability, and which of 0-1 or 0-100 is stored has not been checked against data."
+        },
+        {
+          "name": "reward_available",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Water left in the patch at delivery. Null where the reward was not sampled.",
+          "unit": "mL"
+        },
+        {
+          "name": "has_forced_rewards",
+          "type": "bool",
+          "presence": "required",
+          "role": "data",
+          "description": "Whether the experimenter triggered a reward inside the site. The times are in the event stream; this says only that at least one is there."
+        },
+        {
+          "name": "has_waited_reward_delay",
+          "type": "bool",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Whether the animal held through the reward delay. Null where no choice occurred."
+        },
+        {
+          "name": "velocity_at_last_stop",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Velocity at the sample closest to last_stop_tick. Null where that is null.",
+          "unit": "cm/s"
+        },
+        {
+          "name": "patch_index",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Which patch of the session this site is in, from 0."
+        },
+        {
+          "name": "block_index",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Which block of the session this site is in, from 0."
+        },
+        {
+          "name": "site_index_in_patch",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Position among the sites of this patch, from 0."
+        },
+        {
+          "name": "site_index_in_block",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Position among the sites of this block, from 0."
+        },
+        {
+          "name": "site_index_by_type",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Position among the session's sites sharing this site_label, from 0."
+        },
+        {
+          "name": "site_index_in_patch_by_type",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Position among this patch's sites sharing this site_label, from 0."
+        },
+        {
+          "name": "site_index_in_block_by_type",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Position among this block's sites sharing this site_label, from 0."
+        },
+        {
+          "name": "patch_index_by_type",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Position among the session's patches sharing this patch_label, from 0."
+        },
+        {
+          "name": "patch_index_in_block",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Position among this block's patches, from 0."
+        },
+        {
+          "name": "patch_index_in_block_by_type",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "Position among this block's patches sharing this patch_label, from 0."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "site_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "site_id"
+          ],
+          "resource": "core.trials",
+          "resource_columns": [
+            "session_id",
+            "trial_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "site_id"
+      ],
+      "rules": [
+        {
+          "id": "vr_foraging.sites.site_index_in_patch_counts_what_it_says",
+          "level": "error",
+          "message": "site_index_in_patch does not match the order it claims to record",
+          "sql": "SELECT session_id, site_id, site_index_in_patch FROM (SELECT session_id, site_id, site_index_in_patch, ROW_NUMBER() OVER (PARTITION BY session_id, patch_index ORDER BY site_id) - 1 AS expected FROM vr_foraging_sites) WHERE site_index_in_patch <> expected"
+        },
+        {
+          "id": "vr_foraging.sites.site_index_in_block_counts_what_it_says",
+          "level": "error",
+          "message": "site_index_in_block does not match the order it claims to record",
+          "sql": "SELECT session_id, site_id, site_index_in_block FROM (SELECT session_id, site_id, site_index_in_block, ROW_NUMBER() OVER (PARTITION BY session_id, block_index ORDER BY site_id) - 1 AS expected FROM vr_foraging_sites) WHERE site_index_in_block <> expected"
+        },
+        {
+          "id": "vr_foraging.sites.site_index_by_type_counts_what_it_says",
+          "level": "error",
+          "message": "site_index_by_type does not match the order it claims to record",
+          "sql": "SELECT session_id, site_id, site_index_by_type FROM (SELECT session_id, site_id, site_index_by_type, ROW_NUMBER() OVER (PARTITION BY session_id, site_label ORDER BY site_id) - 1 AS expected FROM vr_foraging_sites) WHERE site_index_by_type <> expected"
+        },
+        {
+          "id": "vr_foraging.sites.site_index_in_patch_by_type_counts_what_it_says",
+          "level": "error",
+          "message": "site_index_in_patch_by_type does not match the order it claims to record",
+          "sql": "SELECT session_id, site_id, site_index_in_patch_by_type FROM (SELECT session_id, site_id, site_index_in_patch_by_type, ROW_NUMBER() OVER (PARTITION BY session_id, patch_index, site_label ORDER BY site_id) - 1 AS expected FROM vr_foraging_sites) WHERE site_index_in_patch_by_type <> expected"
+        },
+        {
+          "id": "vr_foraging.sites.site_index_in_block_by_type_counts_what_it_says",
+          "level": "error",
+          "message": "site_index_in_block_by_type does not match the order it claims to record",
+          "sql": "SELECT session_id, site_id, site_index_in_block_by_type FROM (SELECT session_id, site_id, site_index_in_block_by_type, ROW_NUMBER() OVER (PARTITION BY session_id, block_index, site_label ORDER BY site_id) - 1 AS expected FROM vr_foraging_sites) WHERE site_index_in_block_by_type <> expected"
+        },
+        {
+          "id": "vr_foraging.sites.patch_index_in_block_counts_what_it_says",
+          "level": "error",
+          "message": "patch_index_in_block does not match the order it claims to record",
+          "sql": "SELECT session_id, site_id, patch_index_in_block FROM (SELECT session_id, site_id, patch_index_in_block, DENSE_RANK() OVER (PARTITION BY session_id, block_index ORDER BY patch_index) - 1 AS expected FROM vr_foraging_sites) WHERE patch_index_in_block <> expected"
+        },
+        {
+          "id": "vr_foraging.sites.patch_index_by_type_counts_what_it_says",
+          "level": "error",
+          "message": "patch_index_by_type does not match the order it claims to record",
+          "sql": "SELECT session_id, site_id, patch_index_by_type FROM (SELECT session_id, site_id, patch_index_by_type, DENSE_RANK() OVER (PARTITION BY session_id, patch_label ORDER BY patch_index) - 1 AS expected FROM vr_foraging_sites) WHERE patch_index_by_type <> expected"
+        },
+        {
+          "id": "vr_foraging.sites.patch_index_in_block_by_type_counts_what_it_says",
+          "level": "error",
+          "message": "patch_index_in_block_by_type does not match the order it claims to record",
+          "sql": "SELECT session_id, site_id, patch_index_in_block_by_type FROM (SELECT session_id, site_id, patch_index_in_block_by_type, DENSE_RANK() OVER (PARTITION BY session_id, block_index, patch_label ORDER BY patch_index) - 1 AS expected FROM vr_foraging_sites) WHERE patch_index_in_block_by_type <> expected"
+        },
+        {
+          "id": "vr_foraging.sites.reward_follows_the_choice_cue",
+          "level": "error",
+          "message": "water was delivered before the choice cue, so the reward delay is negative",
+          "sql": "SELECT session_id, site_id, choice_cue_tick, reward_onset_tick FROM vr_foraging_sites WHERE choice_cue_tick IS NOT NULL AND reward_onset_tick IS NOT NULL AND reward_onset_tick < choice_cue_tick"
+        },
+        {
+          "id": "vr_foraging.sites.the_last_stop_precedes_the_cue",
+          "level": "error",
+          "message": "the last stop is recorded after the choice cue it is supposed to precede",
+          "sql": "SELECT session_id, site_id, last_stop_tick, choice_cue_tick FROM vr_foraging_sites WHERE last_stop_tick IS NOT NULL AND choice_cue_tick IS NOT NULL AND last_stop_tick > choice_cue_tick"
+        },
+        {
+          "id": "vr_foraging.sites.a_stop_is_needed_before_a_cue",
+          "level": "error",
+          "message": "a choice cue is recorded with no preceding stop, which the parse requires",
+          "sql": "SELECT session_id, site_id FROM vr_foraging_sites WHERE choice_cue_tick IS NOT NULL AND last_stop_tick IS NULL"
+        },
+        {
+          "id": "vr_foraging.sites.no_choice_means_nothing_was_sampled",
+          "level": "error",
+          "message": "a site with no choice carries values the source only fills in when one occurred",
+          "sql": "SELECT session_id, site_id FROM vr_foraging_sites WHERE choice_cue_tick IS NULL AND (reward_probability IS NOT NULL OR reward_available IS NOT NULL OR has_waited_reward_delay IS NOT NULL)"
+        },
+        {
+          "id": "vr_foraging.sites.a_velocity_needs_a_stop",
+          "level": "error",
+          "message": "a velocity at the last stop is recorded where there is no last stop to take it at",
+          "sql": "SELECT session_id, site_id FROM vr_foraging_sites WHERE velocity_at_last_stop IS NOT NULL AND last_stop_tick IS NULL"
+        },
+        {
+          "id": "vr_foraging.sites.a_patch_is_contiguous",
+          "level": "error",
+          "message": "a patch's sites are not consecutive, so patch_index does not describe the traversal",
+          "sql": "SELECT session_id, patch_index FROM (SELECT session_id, patch_index, MAX(site_id) - MIN(site_id) + 1 AS span, COUNT(*) AS n FROM vr_foraging_sites GROUP BY session_id, patch_index) WHERE span <> n"
+        },
+        {
+          "id": "vr_foraging.sites.a_block_is_contiguous",
+          "level": "error",
+          "message": "a block's sites are not consecutive, so block_index does not describe the traversal",
+          "sql": "SELECT session_id, block_index FROM (SELECT session_id, block_index, MAX(site_id) - MIN(site_id) + 1 AS span, COUNT(*) AS n FROM vr_foraging_sites GROUP BY session_id, block_index) WHERE span <> n"
+        },
+        {
+          "id": "vr_foraging.sites.a_patch_sits_in_one_block",
+          "level": "error",
+          "message": "a patch spans more than one block, which patch_index_in_block cannot express",
+          "sql": "SELECT session_id, patch_index FROM (SELECT session_id, patch_index, COUNT(DISTINCT block_index) AS blocks FROM vr_foraging_sites GROUP BY session_id, patch_index) WHERE blocks > 1"
+        },
+        {
+          "id": "vr_foraging.sites.a_patch_has_one_label",
+          "level": "error",
+          "message": "a patch carries more than one patch_label, so patch_index_by_type is undefined",
+          "sql": "SELECT session_id, patch_index FROM (SELECT session_id, patch_index, COUNT(DISTINCT patch_label) AS labels FROM vr_foraging_sites GROUP BY session_id, patch_index) WHERE labels > 1"
+        }
+      ]
+    },
+    "vr_foraging.site_odors": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "site_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The site these concentrations were set for.",
+          "identity": "carried"
+        },
+        {
+          "name": "odor_channel_index",
+          "type": "int32",
+          "presence": "required",
+          "role": "structural_index",
+          "description": "Which olfactometer channel, as an offset into the rig's channel list."
+        },
+        {
+          "name": "concentration",
+          "type": "float64",
+          "presence": "required",
+          "role": "data",
+          "description": "Concentration commanded on this channel. Zero where the channel was not used: the source emits one value per channel whether or not an odor is on it, so a missing row is a missing channel rather than a silent one.",
+          "unit": "%"
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "site_id",
+        "odor_channel_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "site_id"
+          ],
+          "resource": "vr_foraging.sites",
+          "resource_columns": [
+            "session_id",
+            "site_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "site_id",
+        "odor_channel_index"
+      ],
+      "rules": [
+        {
+          "id": "vr_foraging.site_odors.every_site_gets_every_channel",
+          "level": "error",
+          "message": "sites carry different numbers of odor channels, so the channel list is not the rig's",
+          "sql": "SELECT session_id, site_id, n FROM (SELECT session_id, site_id, COUNT(*) AS n FROM vr_foraging_site_odors GROUP BY session_id, site_id) t WHERE n <> (SELECT MAX(n) FROM (SELECT COUNT(*) AS n FROM vr_foraging_site_odors GROUP BY session_id, site_id))"
+        },
+        {
+          "id": "vr_foraging.site_odors.channels_are_a_dense_range",
+          "level": "error",
+          "message": "a site's odor channels are not 0..n-1, so the index does not address the rig's list",
+          "sql": "SELECT session_id, site_id FROM (SELECT session_id, site_id, MAX(odor_channel_index) AS hi, COUNT(*) AS n FROM vr_foraging_site_odors GROUP BY session_id, site_id) WHERE hi <> n - 1"
+        },
+        {
+          "id": "vr_foraging.site_odors.a_concentration_is_a_percentage",
+          "level": "error",
+          "message": "a concentration falls outside 0-100%",
+          "sql": "SELECT session_id, site_id, odor_channel_index, concentration FROM vr_foraging_site_odors WHERE concentration < 0 OR concentration > 100"
+        }
+      ]
+    },
+    "vr_foraging.sessions": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "dataset_version",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "Schema version the session's task logic declared."
+        },
+        {
+          "name": "data_contract_version",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "Version of the data-contract library that read the session."
+        },
+        {
+          "name": "packaging_version",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "Version of the packaging library that produced these tables."
+        },
+        {
+          "name": "curriculum_enabled",
+          "type": "bool",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Whether the subject was on-curriculum. Null where the session records no trainer state, which is not an error: curriculum tracking is optional."
+        },
+        {
+          "name": "curriculum_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Curriculum the trainer state named."
+        },
+        {
+          "name": "curriculum_stage_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Stage the trainer state named."
+        }
+      ],
+      "primary_key": [
+        "session_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id"
+      ],
+      "rules": [
+        {
+          "id": "vr_foraging.sessions.a_stage_needs_a_curriculum",
+          "level": "error",
+          "message": "a curriculum stage is named with no curriculum to place it in",
+          "sql": "SELECT session_id FROM vr_foraging_sessions WHERE curriculum_stage_name IS NOT NULL AND curriculum_name IS NULL"
+        },
+        {
+          "id": "vr_foraging.sessions.on_curriculum_means_a_curriculum",
+          "level": "error",
+          "message": "the session reports as on-curriculum but names no curriculum",
+          "sql": "SELECT session_id FROM vr_foraging_sessions WHERE curriculum_enabled AND curriculum_name IS NULL"
+        }
+      ]
+    }
+  }
+}
