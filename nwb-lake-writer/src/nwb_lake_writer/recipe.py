@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -181,6 +181,10 @@ class Recipe:
         Where it was read from.
     digest : str
         ``sha256`` of the file, so a run record can name exactly these parameters.
+    extensions : tuple of Path
+        Extension registries this packet carries (R17 §2). Each is a registry document in R2's
+        format, so a source may own one of its tables exactly as it owns a core table -- which is
+        what keeps declaring an extension from being harder than adding a column to core.
     registry : Path or None
         The registry to write against. Declared here rather than defaulted, because R2 §8 has
         the packet embed the registry it was written against -- so which one that is belongs in
@@ -195,6 +199,7 @@ class Recipe:
     packet_id: str
     out: Path
     registry: Path | None
+    extensions: tuple[Path, ...]
     description: str | None
     session: Mapping[str, Any]
     subject: Mapping[str, Any]
@@ -249,6 +254,7 @@ class Recipe:
             packet_id=str(packet["id"]),
             out=resolve(str(packet.get("out", packet["id"]))),
             registry=resolve(str(packet["registry"])) if packet.get("registry") else None,
+            extensions=tuple(resolve(str(e)) for e in packet.get("extensions", [])),
             description=packet.get("description"),
             session=document.get("session", {}),
             subject=document.get("subject", {}),
@@ -342,13 +348,17 @@ class Recipe:
                 claimed.setdefault(resource, []).append(source.kind)
         return claimed
 
-    def check(self, registry: Mapping[str, Any]) -> list[Problem]:
+    def check(self, registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()) -> list[Problem]:
         """Everything wrong with the recipe that is knowable without reading a source.
 
         Parameters
         ----------
         registry : Mapping
             A parsed registry document, supplying the table names and their references.
+        extensions : sequence of Mapping
+            Extension registries, whose tables a source may also own. An extension's references
+            resolve against core; core's never resolve against an extension, which R17 §2
+            requires by forbidding core to reference one at all.
 
         Returns
         -------
@@ -356,7 +366,9 @@ class Recipe:
             Empty when the recipe is sound. Errors first, then warnings, each sorted, so two
             runs of the same recipe report identically.
         """
-        tables = registry["tables"]
+        tables = dict(registry["tables"])
+        for document in extensions or ():
+            tables.update(document["tables"])
         owners, claimants = self.owners, self.claimants
         errors: list[str] = []
         warnings: list[str] = []

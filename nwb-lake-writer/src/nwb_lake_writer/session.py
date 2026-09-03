@@ -587,7 +587,15 @@ def build(
     context = Context(session_id=session_id)
     if recipe.session.get("reference_clock_id"):
         context.reference = _reference_clock(recipe, context)
-    writer = PacketWriter(registry, packet_id=recipe.packet_id, description=recipe.description)
+    writer = PacketWriter(
+        registry,
+        packet_id=recipe.packet_id,
+        description=recipe.description,
+        # R17 §2: the recipe names them, so a source may own an extension's table exactly as it
+        # owns a core one. Which is what keeps declaring an extension from being harder than
+        # adding a column to core -- the gradient that leaves NWB's own mechanism unused.
+        extensions=[json.loads(path.read_text()) for path in recipe.extensions],
+    )
 
     if recipe.subject:
         writer.add("core.subjects", [dict(recipe.subject)])

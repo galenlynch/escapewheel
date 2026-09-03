@@ -89,7 +89,7 @@ def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
 
 
 def test_an_unknown_resource_is_refused(registry):
-    with pytest.raises(KeyError, match="no table"):
+    with pytest.raises(KeyError, match="no registry defines a table"):
         PacketWriter(registry, packet_id="p").add("core.nonesuch", [])
 
 
@@ -274,7 +274,7 @@ def test_a_later_batch_may_not_introduce_a_column(tmp_path, registry, minimal):
 
 def test_an_unknown_resource_is_refused_on_the_batch_path_too(registry):
     writer = PacketWriter(registry, packet_id="s001")
-    with pytest.raises(KeyError, match="no table"):
+    with pytest.raises(KeyError, match="no registry defines a table"):
         writer.add_batches("core.not_a_table", [])
 
 

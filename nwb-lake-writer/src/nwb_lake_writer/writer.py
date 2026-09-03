@@ -63,6 +63,8 @@ MANIFEST = "nwb.packet.json"
 
 #: Where a packet embeds the registry it was written against (R2 §8).
 REGISTRY_PATH = "schemas/logical_schemas.json"
+#: Where an extension registry lives in a packet (R17 §2, `09` §6).
+EXTENSIONS_PATH = "extensions"
 
 #: `03`'s portable profile.
 PROFILE = "nwb-lake-portable-v0.1"
@@ -371,8 +373,30 @@ class PacketWriter:
     >>> report = writer.commit(Path("s001"))  # doctest: +SKIP
     """
 
-    def __init__(self, registry: Mapping[str, Any], *, packet_id: str, description: str | None = None) -> None:
+    def __init__(
+        self,
+        registry: Mapping[str, Any],
+        *,
+        packet_id: str,
+        description: str | None = None,
+        extensions: Sequence[Mapping[str, Any]] = (),
+    ) -> None:
         self._registry = registry
+        #: Extension registries this packet carries (R17 §2), by `extension_id`. An extension is a
+        #: registry document in R2's format, so everything below resolves a resource against core
+        #: and then these -- there is no second code path for an extension's tables.
+        self._extensions: dict[str, Mapping[str, Any]] = {}
+        for document in extensions:
+            extension_id = str(document["extension_id"])
+            for resource_id in document["tables"]:
+                if not resource_id.startswith(f"{extension_id}."):
+                    raise ValueError(
+                        f"{resource_id} is not namespaced by {extension_id!r}; R17 §2 requires it, "
+                        "and an extension MUST NOT define a table in core or analysis"
+                    )
+                if resource_id in registry["tables"]:
+                    raise ValueError(f"{resource_id} redefines a core table, which R17 §2 forbids")
+            self._extensions[extension_id] = document
         #: Assigns the integer every identifier holds (R53 §2.5). One per packet, shared by every
         #: adapter, because two sources numbering the same probe differently is a defect no
         #: foreign key can see: both values resolve, to different rows.
@@ -386,6 +410,28 @@ class PacketWriter:
         self._ordered: set[str] = set()
         self._staged_arrays: dict[str, StagedArray] = {}
         self._referenced_arrays: dict[str, ExternalArray] = {}
+
+    def spec(self, resource_id: str) -> Mapping[str, Any] | None:
+        """Return the registry entry for one resource, core or extension, or None if undefined.
+
+        One lookup for both, because R17 §3's claim is that an extension needs no second code
+        path: it is a registry document in R2's format, so a table of one is a table of the other.
+        """
+        if resource_id in self._registry["tables"]:
+            core: Mapping[str, Any] = self._registry["tables"][resource_id]
+            return core
+        for document in self._extensions.values():
+            if resource_id in document["tables"]:
+                spec: Mapping[str, Any] = document["tables"][resource_id]
+                return spec
+        return None
+
+    def extension_of(self, resource_id: str) -> str | None:
+        """Return which extension defines this resource, or None where core does."""
+        for extension_id, document in self._extensions.items():
+            if resource_id in document["tables"]:
+                return extension_id
+        return None
 
     def add(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> None:
         """Add records for one table.
@@ -405,8 +451,11 @@ class PacketWriter:
         KeyError
             If the registry does not define this resource.
         """
-        if resource_id not in self._registry["tables"]:
-            raise KeyError(f"the registry defines no table {resource_id}")
+        if self.spec(resource_id) is None:
+            raise KeyError(
+                f"no registry defines a table named {resource_id}; core and "
+                f"{len(self._extensions)} extension(s) were consulted"
+            )
         self._tables.setdefault(resource_id, []).extend(records)
 
     def add_batches(self, resource_id: str, batches: Iterable[pa.RecordBatch]) -> None:
@@ -439,13 +488,17 @@ class PacketWriter:
             If this resource already has records, or already has batches. One table comes
             from one path; interleaving them would make the sort order unenforceable.
         """
-        if resource_id not in self._registry["tables"]:
-            raise KeyError(f"the registry defines no table {resource_id}")
+        if self.spec(resource_id) is None:
+            raise KeyError(
+                f"no registry defines a table named {resource_id}; core and "
+                f"{len(self._extensions)} extension(s) were consulted"
+            )
         if resource_id in self._tables:
             raise ValueError(f"{resource_id} already has records; use one path per table")
         if resource_id in self._batches:
             raise ValueError(f"{resource_id} already has batches; concatenate before adding")
-        spec = self._registry["tables"][resource_id]
+        spec = self.spec(resource_id)
+        assert spec is not None
         self._batches[resource_id] = (number_batch(spec, b, self.keys) for b in batches)
 
     def derives(self, resource_id: str, sources: Sequence[str]) -> None:
@@ -468,8 +521,11 @@ class PacketWriter:
         KeyError
             If the registry does not define this resource.
         """
-        if resource_id not in self._registry["tables"]:
-            raise KeyError(f"the registry defines no table {resource_id}")
+        if self.spec(resource_id) is None:
+            raise KeyError(
+                f"no registry defines a table named {resource_id}; core and "
+                f"{len(self._extensions)} extension(s) were consulted"
+            )
         self._derived.setdefault(resource_id, []).extend(sources)
 
     def add_array(self, resource_id: str, array: StagedArray) -> None:
@@ -543,8 +599,11 @@ class PacketWriter:
         KeyError
             If the registry does not define this resource.
         """
-        if resource_id not in self._registry["tables"]:
-            raise KeyError(f"the registry defines no table {resource_id}")
+        if self.spec(resource_id) is None:
+            raise KeyError(
+                f"no registry defines a table named {resource_id}; core and "
+                f"{len(self._extensions)} extension(s) were consulted"
+            )
         self._runs[resource_id] = processing_run_id
 
     @property
@@ -619,7 +678,8 @@ class PacketWriter:
         for resource_id in self.resources:
             if only is not None and resource_id not in only:
                 continue
-            spec = self._registry["tables"][resource_id]
+            spec = self.spec(resource_id)
+            assert spec is not None
             namespace, name = resource_id.split(".", 1)
             relative = f"tables/{namespace}/{name}.parquet"
             path = staging / relative
@@ -641,9 +701,13 @@ class PacketWriter:
                 # materialises strings that Parquet stores as dictionary codes. It once split a
                 # 101 KB table three ways.
                 pq.write_table(table, path, **_options(resource_id, spec, table.schema))
+            extension_id = self.extension_of(resource_id)
             entry = {
                 "resource_id": resource_id,
-                "layer": namespace,
+                # R17 §4: an extension table's entry says so and names its owner, so a reader
+                # knows what it holds without parsing the extension's registry.
+                "layer": "extension" if extension_id else namespace,
+                **({"extension_id": extension_id} if extension_id else {}),
                 "kind": "table",
                 "schema_id": f"{resource_id}.v{_standard_version(self._registry)}",
                 "physical_profile": "parquet",
@@ -670,7 +734,7 @@ class PacketWriter:
         """
         pending: dict[str, set[str]] = {}
         for resource_id, rows in sorted(self._tables.items()):
-            spec = self._registry["tables"].get(resource_id)
+            spec = self.spec(resource_id)
             if spec is None:
                 continue
             target = {
@@ -714,6 +778,8 @@ class PacketWriter:
             "resources": [dict(e) for e in entries],
             "validation": validation,
         }
+        if inventory := self._extension_inventory():
+            manifest["extensions"] = inventory
         if self._description is not None:
             manifest["description"] = self._description
         return manifest
@@ -782,6 +848,7 @@ class PacketWriter:
         clock = time.perf_counter()
         (staging / "schemas").mkdir(parents=True, exist_ok=True)
         (staging / REGISTRY_PATH).write_text(json.dumps(self._registry, indent=2) + "\n")
+        self._install_extensions(staging)
 
         # 2. derive whatever the caller asked for from the staged packet, before anything is
         #    validated or promoted. `05` stages 8 and 9 put materialization inside the import
@@ -825,7 +892,7 @@ class PacketWriter:
         # 3. move into final paths
         for entry in entries:
             entry["validation_state"] = "passed"
-        for name in ("tables", "arrays", "schemas"):
+        for name in ("tables", "arrays", "schemas", EXTENSIONS_PATH):
             source = staging / name
             if source.exists():
                 shutil.move(str(source), str(root / name))
@@ -973,7 +1040,7 @@ class PacketWriter:
         standing = {e["resource_id"]: e for e in superseded["resources"]}
         for resource_id in [r for r in self._tables if r in PROVENANCE and r in standing]:
             existing = pq.read_table(root / standing[resource_id]["uri"]).to_pylist()
-            key = self._registry["tables"][resource_id]["primary_key"] or []
+            key = (self.spec(resource_id) or {}).get("primary_key") or []
             taken = {tuple(row.get(k) for k in key) for row in self._tables[resource_id]}
             collide = sorted(
                 str(tuple(r.get(k) for k in key)) for r in existing if tuple(r.get(k) for k in key) in taken
@@ -997,6 +1064,30 @@ class PacketWriter:
         for manifest in (superseded, amended):
             path = versions / f"nwb.packet.{manifest['packet_version']}.json"
             path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+    def _install_extensions(self, root: Path) -> None:
+        """Write each extension registry into the packet, beside the core one (R17 §5, `09` §6).
+
+        A packet embeds the registry it was written against so it stays self-describing; an
+        extension is a registry document, so it is embedded the same way and for the same reason.
+        Each carries its own `registry_version`, independent of core's.
+        """
+        if not self._extensions:
+            return
+        (root / EXTENSIONS_PATH).mkdir(parents=True, exist_ok=True)
+        for extension_id, document in self._extensions.items():
+            path = root / EXTENSIONS_PATH / f"{extension_id}.json"
+            path.write_text(json.dumps(document, indent=2) + "\n")
+
+    def _extension_inventory(self) -> dict[str, dict[str, str]]:
+        """Return what the manifest says about the extensions this packet carries."""
+        return {
+            extension_id: {
+                "version": str(document["registry_version"]),
+                "registry": f"{EXTENSIONS_PATH}/{extension_id}.json",
+            }
+            for extension_id, document in self._extensions.items()
+        }
 
     def _install_registry(self, root: Path) -> Callable[[], None]:
         """Put this writer's registry in the packet, retaining the superseded copy (R32 §4.1).

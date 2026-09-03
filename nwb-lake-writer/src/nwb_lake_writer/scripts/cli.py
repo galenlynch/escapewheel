@@ -151,10 +151,11 @@ def _import(args: argparse.Namespace) -> int:
         print("error: no registry; declare [packet].registry or pass --registry", file=sys.stderr)
         return 2
     registry = json.loads(Path(registry_path).read_text())
+    extensions = [json.loads(path.read_text()) for path in recipe.extensions]
     if args.sample:
         recipe = recipe.with_sample(args.sample)
 
-    problems = recipe.check(registry)
+    problems = recipe.check(registry, extensions)
     for problem in problems:
         print(f"  {problem}", file=sys.stderr)
     if any(p.level == "error" for p in problems):
