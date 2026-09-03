@@ -98,6 +98,26 @@ reverted on evidence.
    constrains validity, not write order — Parquet files are independent, and nothing stops
    `core.spike_events` being written before `core.units`.
 
+### From another distribution
+
+An adapter need not live here. Register one under the `nwb_lake.sources` entry-point group and a
+recipe may name its kind like any built-in:
+
+```toml
+[project.entry-points."nwb_lake.sources"]
+tasklog = "your_package.sources:TaskLogSource"
+```
+
+The callable takes `(root, *, session_id, **options)` and returns something with the same surface
+a built-in has — `offers()`, `records()`, `notes`. Built-in kinds are consulted **first**, so a
+plugin cannot shadow `sorter`, and a kind whose import fails is skipped with a warning rather than
+raised: one broken package must not make every other source unavailable.
+
+This is R17's problem one layer down. R17 makes an extension's *schema* data, so no code is needed
+to validate it; this is what keeps its *adapter* from being a patch to this package. Both exist
+for the same reason — declaring an extension has to be easier than adding a column to core, or it
+goes the way of NWB's multiple `TimeIntervals`, which the format permits and nobody uses.
+
 ## Writing is not committing
 
 Copying bytes is staging (`05`). Staged resources MUST NOT appear as committed canonical

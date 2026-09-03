@@ -6,6 +6,10 @@ exists because no single source carries a whole session -- see
 `inventory/nwb-zarr-776259-2025-04-09.md` §6.
 """
 
+import warnings
+from importlib.metadata import entry_points
+from typing import Any
+
 from .aind import AcquisitionStream, SessionSource
 from .lfp import LFPSource
 from .nwb import NWBSource, SourceDefect
@@ -13,7 +17,35 @@ from .sorter import SortedStream, SorterSource
 from .sync import SyncSource, SyncStream
 from .waveforms import WaveformSource
 
+#: Entry-point group a distribution registers a source adapter under. `07` names one CLI and the
+#: three packages share it through `nwb_lake.commands`; a source is the same problem one layer
+#: down -- an extension's table needs an adapter that knows a raw format this package never will.
+#:
+#: Registering one is what keeps declaring an extension from being harder than adding a column to
+#: core, which is the gradient that leaves NWB's own multiple-TimeIntervals mechanism unused.
+SOURCE_GROUP = "nwb_lake.sources"
+
+
+def discovered() -> dict[str, Any]:
+    """Source kinds registered by installed distributions, by the name they claim.
+
+    Each entry point loads to a callable taking `(root, **options)` and returning an adapter --
+    the same shape the built-in kinds have, because a registered source is not a lesser one.
+
+    A kind whose entry point fails to import is skipped with its reason, not raised: one broken
+    third-party package must not make every other source unavailable.
+    """
+    found: dict[str, Any] = {}
+    for entry in entry_points(group=SOURCE_GROUP):
+        try:
+            found[entry.name] = entry.load()
+        except Exception as exc:  # noqa: BLE001 - a broken plugin is one kind, not the whole build
+            warnings.warn(f"source kind {entry.name!r} could not be loaded: {exc}", stacklevel=2)
+    return found
+
+
 __all__ = [
+    "SOURCE_GROUP",
     "AcquisitionStream",
     "LFPSource",
     "NWBSource",
@@ -24,4 +56,5 @@ __all__ = [
     "SyncSource",
     "SyncStream",
     "WaveformSource",
+    "discovered",
 ]

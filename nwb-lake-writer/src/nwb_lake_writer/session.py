@@ -201,6 +201,12 @@ def order(recipe: Recipe) -> list[SourceSpec]:
     return ordered
 
 
+#: Source kinds this package implements. A distribution may register others under
+#: `nwb_lake_writer.sources.SOURCE_GROUP`; these are consulted first, so a plugin cannot shadow
+#: one and a recipe naming `sorter` always means this one.
+_KINDS = ("sorter", "sync", "nwb", "session", "waveforms", "lfp")
+
+
 def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
     """Construct one adapter, supplying whatever earlier sources produced for it."""
     from .sources import LFPSource, NWBSource, SorterSource, SyncSource, WaveformSource
@@ -237,7 +243,15 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         return WaveformSource(
             spec.root, session_id=context.session_id, units=context.units, electrodes=context.electrodes, **options
         )
-    raise RecipeError(f"unknown source kind {spec.kind!r}")
+    # A kind this package does not know may be registered by another distribution (R17's problem
+    # one layer down: an extension's table needs an adapter that knows a raw format core never
+    # will). Consulted after the built-ins, so a plugin cannot shadow one.
+    from .sources import discovered
+
+    if (build := discovered().get(spec.kind)) is not None:
+        return build(spec.root, session_id=context.session_id, **options)
+    known = ", ".join(sorted({*_KINDS, *discovered()}))
+    raise RecipeError(f"unknown source kind {spec.kind!r}; known kinds are {known}")
 
 
 def _reference_clock(recipe: Recipe, context: Context) -> Any:

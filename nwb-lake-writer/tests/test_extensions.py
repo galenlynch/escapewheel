@@ -109,3 +109,69 @@ def test_an_unnamespaced_table_is_refused(registry):
     stray = {**EXTENSION, "tables": {"elsewhere.trials": EXTENSION["tables"]["task.trials"]}}
     with pytest.raises(ValueError, match="not namespaced"):
         PacketWriter(registry, packet_id="s001", extensions=[stray])
+
+
+# -- a source adapter may come from another distribution ------------------------------------
+
+
+class _Registered:
+    """An adapter a third-party distribution might register, in the shape a built-in has."""
+
+    def __init__(self, root, *, session_id, **options):
+        self.root, self.session_id, self.options = root, session_id, options
+
+    def offers(self):
+        return {"task.trials": 2}
+
+
+def test_a_registered_source_kind_is_built(tmp_path, monkeypatch):
+    """R17's problem one layer down: an extension's table needs an adapter that knows a raw
+    format this package never will, and editing the writer to add one is the gradient that
+    leaves NWB's own mechanism unused."""
+    from nwb_lake_writer import session as session_module
+    from nwb_lake_writer.recipe import SourceSpec
+    from nwb_lake_writer.session import Context, _build_source
+
+    monkeypatch.setattr("nwb_lake_writer.sources.discovered", lambda: {"tasklog": _Registered})
+    spec = SourceSpec(kind="tasklog", root=tmp_path, owns=("task.trials",), options={"zone": "utc"})
+    built = _build_source(spec, None, Context(session_id="s001"))
+    assert isinstance(built, _Registered)
+    assert built.session_id == "s001" and built.options == {"zone": "utc"}
+    assert session_module is not None
+
+
+def test_a_builtin_kind_cannot_be_shadowed(tmp_path, monkeypatch):
+    """A recipe naming `sorter` always means this package's sorter."""
+    from nwb_lake_writer.session import _KINDS
+
+    monkeypatch.setattr("nwb_lake_writer.sources.discovered", lambda: {"sorter": _Registered})
+    assert "sorter" in _KINDS, "the built-ins are consulted first, so this never reaches discovered()"
+
+
+def test_an_unknown_kind_names_what_is_known(tmp_path, monkeypatch):
+    from nwb_lake_writer.recipe import SourceSpec
+    from nwb_lake_writer.session import Context, RecipeError, _build_source
+
+    monkeypatch.setattr("nwb_lake_writer.sources.discovered", lambda: {"tasklog": _Registered})
+    spec = SourceSpec(kind="nonesuch", root=tmp_path, owns=())
+    with pytest.raises(RecipeError, match="known kinds are .*tasklog"):
+        _build_source(spec, None, Context(session_id="s001"))
+
+
+def test_a_broken_plugin_is_skipped_not_raised(monkeypatch):
+    """One broken third-party package must not make every other source unavailable."""
+    import warnings as warnings_module
+
+    from nwb_lake_writer import sources
+
+    class _Bad:
+        name = "broken"
+
+        def load(self):
+            raise ImportError("no such module")
+
+    monkeypatch.setattr(sources, "entry_points", lambda group: [_Bad()])
+    with warnings_module.catch_warnings(record=True) as caught:
+        warnings_module.simplefilter("always")
+        assert sources.discovered() == {}
+    assert "broken" in str(caught[0].message)
