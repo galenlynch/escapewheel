@@ -212,6 +212,33 @@ def _verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def _prune(args: argparse.Namespace) -> int:
+    """Remove what a committed packet no longer names (R61 §2.1)."""
+    from ..prune import prune
+
+    plan = prune(
+        args.packet,
+        keep_versions=args.keep_versions,
+        keep_days=args.keep_days,
+        apply=args.apply,
+    )
+    mark = "removed" if plan.applied else "to remove"
+    for path in plan.orphans:
+        print(f"  orphan    {mark:9s} {path.relative_to(args.packet)}")
+    for path in plan.expired:
+        print(f"  manifest  {mark:9s} {path.relative_to(args.packet)}")
+    for path in plan.strays:
+        print(f"  stray     kept      {path.relative_to(args.packet)}")
+    for note in plan.notes:
+        print(f"  note      {note}")
+    verb = "removed" if plan.applied else "would remove"
+    kept = f", {len(plan.retained)} superseded manifest(s) retained" if plan.retained else ""
+    print(f"\n{verb} {len(plan)} file(s); {len(plan.strays)} stray kept{kept}")
+    if not plan.applied and len(plan):
+        print("nothing was removed; pass --apply")
+    return 0
+
+
 def _extension(args: argparse.Namespace) -> int:
     """Draft an extension registry from tables that already exist (R17 §2)."""
     from ..scaffold import draft
@@ -284,6 +311,31 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         "at publication rather than in a build (default: members)",
     )
     verifier.set_defaults(func=_verify)
+
+    pruner = subcommands.add_parser(
+        "prune", help="remove what a committed packet no longer names, reporting by default"
+    )
+    pruner.add_argument("packet", type=Path, help="packet root holding a committed manifest")
+    pruner.add_argument(
+        "--keep-versions",
+        type=int,
+        default=None,
+        metavar="N",
+        help="superseded manifests to retain, overriding the packet's declared retention "
+        "(default: what it declares, else 1)",
+    )
+    pruner.add_argument(
+        "--keep-days",
+        type=float,
+        default=None,
+        metavar="D",
+        help="also retain a superseded manifest younger than this; both floors must permit an "
+        "expiry (default: what the packet declares, else no age limit)",
+    )
+    pruner.add_argument(
+        "--apply", action="store_true", help="remove, rather than report what would be removed"
+    )
+    pruner.set_defaults(func=_prune)
 
     importer = subcommands.add_parser("import", help="build and commit a packet from a recipe")
     importer.add_argument("recipe", type=Path)
