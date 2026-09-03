@@ -1,6 +1,6 @@
 {
   "$schema": "https://nwb-lake.org/schemas/registry/0.1.0",
-  "registry_version": "0.2.0",
+  "registry_version": "0.1.0",
   "logical_standard_version": "0.1",
   "extension_id": "vr_foraging",
   "extends": "nwb-lake-logical-v0.1",
