@@ -84,6 +84,34 @@ name with extra steps — which is the observed fate of NWB's `TimeIntervals`, w
 its name and so two labs' optotagging tables are named differently and nothing generic finds
 either.
 
+### 2.3.1 The named resource must be joinable, and must say how
+
+Resolution is only mechanical if the two keys correspond, and nothing says they must.
+
+**For a shared key**, a resource a discriminator may name **MUST declare a reference to the
+discriminated table**. The reference already carries the column mapping — `columns` to
+`resource_columns` — so the join is explicit rather than inferred from names matching, and R46's
+generated anti-join enforces the integrity as a side effect. `dynamic_foraging.trials` already
+declares one; the rule is that it is not optional.
+
+This also fixes the direction. The reference runs extension → core, which R17 §2 permits and
+§2.6 explains, so the discriminator names downward while the integrity constraint points upward.
+
+**For a paired value**, the named resource's primary key **MUST** be a single column, because the
+paired column holds one value. R49 never said so, and the constraint is real: `scope_kind` may
+name `core.units`, whose key is `(session_id, unit_id, sorting_run_id, curation_id)`, and a
+`scope` of one value cannot hold it. R49 §2.5's generated `UNION ALL` takes one column per kind
+and so quietly assumes this; the assumption becomes a rule that `registry/check.py` enforces.
+
+Both are structural: they are decidable from the registry with no packet in hand, which is where
+this format puts a check it can make without data.
+
+Measured on the current registry: **14 of 35 tables have a single-column primary key**, so a
+paired-value discriminator can name those and not the other 21 — including `core.units`,
+`core.spike_events` and `core.array_channels`. That is a real limit on `scope`, and it is one
+`registry/check.py` can report rather than leave to be discovered by a rule that quietly matches
+no branch.
+
 ### 2.4 Tier 1 generates the resolution check
 
 Where `resolves` is `required`, a check is generated from the structure — an anti-join against the
