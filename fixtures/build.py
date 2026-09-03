@@ -32,6 +32,7 @@ def table(resource: str, rows: list[dict]) -> pa.Table:
     states (R2 §5).
     """
     spec = REGISTRY["tables"][resource]
+    rows = number(spec, [dict(r) for r in rows])
     arrays, fields = [], []
     for c in spec["columns"]:
         present = any(c["name"] in r for r in rows)
@@ -41,6 +42,89 @@ def table(resource: str, rows: list[dict]) -> pa.Table:
         arrays.append(pa.array([r.get(c["name"]) for r in rows], type=typ))
         fields.append(pa.field(c["name"], typ))
     return pa.table(arrays, schema=pa.schema(fields))
+
+
+#: R53 §2.1: an identifier is an integer. The fixture writes names and numbers them here, one
+#: map per column so every table agrees -- deliberately its own rather than the writer's, since
+#: a hand-built packet exercises the format without going through the writer at all.
+KEYS: dict[str, dict[str, int]] = {}
+
+
+def number(spec, rows):
+    """Replace an identifier's name with its number, and fill in the `*_name` that records it."""
+    exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
+    primary = set(spec.get("primary_key") or [])
+    declared = {c["name"] for c in spec["columns"]}
+    # A foreign key numbers in the map of the column it points at. `parent_clock_id` and
+    # `clock_id` are both clocks; numbering them apart makes the parent chain name a clock that
+    # does not exist, which is what R27 §3 requires to be well-founded.
+    target = {
+        column: referenced
+        for ref in spec.get("references", [])
+        for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
+    }
+    identifiers = [c for c in spec["columns"] if c.get("role") == "identifier"]
+    # Collect every name before assigning any: `parent_clock_id` and `clock_id` share a map, and
+    # whichever column the loop reached first would otherwise decide the numbering.
+    pending = {}
+    for column in identifiers:
+        if column.get("identity") != "assigned":
+            continue
+        kind = target.get(column["name"], column["name"])
+        pending.setdefault(kind, set()).update(
+            str(r[column["name"]]) for r in rows if r.get(column["name"]) is not None
+        )
+    for kind in sorted(pending):
+        within = KEYS.setdefault(kind, {})
+        for value in sorted(pending[kind]):
+            within.setdefault(value, len(within))
+
+    for column in identifiers:
+        name = column["name"]
+        assigned = column.get("identity") == "assigned"
+        within = KEYS.setdefault(target.get(name, name), {})
+        owns = assigned and name in primary and name not in exported
+        named = f"{name.removesuffix('_id')}_name" if owns else None
+        for row in rows:
+            if row.get(name) is None:
+                continue
+            value = str(row[name])
+            if named is not None and named in declared and row.get(named) is None:
+                row[named] = value
+            row[name] = within[value] if assigned else int(row[name])
+    return rows
+
+
+def preassign(tables: dict[str, list[dict]]) -> None:
+    """Number every name the packet uses, before any table is built.
+
+    Assigning as each table is built would let the order tables happen to be written in decide
+    the numbers: `core.sessions` names a `reference_clock_id` and is written before
+    `core.clocks`, so the clocks would be numbered by the session's mention of one of them.
+    R53 §2.5 wants two builds of the same sources to produce the same packet, and this is what
+    makes that hold across tables as well as within one.
+    """
+    pending: dict[str, set[str]] = {}
+    for resource, rows in sorted(tables.items()):
+        spec = REGISTRY["tables"].get(resource)
+        if spec is None:
+            continue
+        target = {
+            column: referenced
+            for ref in spec.get("references", [])
+            for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
+        }
+        for column in spec["columns"]:
+            if column.get("role") != "identifier" or column.get("identity") != "assigned":
+                continue
+            kind = target.get(column["name"], column["name"])
+            pending.setdefault(kind, set()).update(
+                str(r[column["name"]]) for r in rows if r.get(column["name"]) is not None
+            )
+    for kind in sorted(pending):
+        within = KEYS.setdefault(kind, {})
+        for value in sorted(pending[kind]):
+            within.setdefault(value, len(within))
 
 
 def spikes(unit, run, cur, clock, ticks):
@@ -87,14 +171,14 @@ def content() -> dict[str, list[dict]]:
              "channel_index": k, "is_primary": f"elec_{e:03d}" == primary,
              "amplitude": -80.0 + k}
             for unit, primary, contacts in (
-                ("unit_001", "elec_001", (0, 1, 2)),
-                ("unit_002", "elec_003", (2, 3)))
+                (1, "elec_001", (0, 1, 2)),
+                (2, "elec_003", (2, 3)))
             for k, e in enumerate(contacts)],
         "core.unit_coordinates": [
             {"session_id": "s001", "unit_id": unit, "sorting_run_id": "sort_ks4_001",
              "curation_id": "curation_001", "coordinate_frame": frame,
              "x_um": x, "y_um": y, "z_um": z}
-            for unit, depth in (("unit_001", 22.0), ("unit_002", 58.0))
+            for unit, depth in ((1, 22.0), (2, 58.0))
             for frame, x, y, z in (("probe", 8.0, depth, None),
                                    ("ccf", -1960.0, 8770.0 + depth, -5140.0))],
         "core.electrode_coordinates": [
@@ -104,26 +188,28 @@ def content() -> dict[str, list[dict]]:
             for frame, x, y, z in (
                 ("probe", 0.0 + (i % 2) * 16.0, 20.0 * (i // 2), None),
                 ("ccf", -1968.4 + i, 8768.5 + i, -5142.2 + i))],
+        # In name order, because R53 numbers a name to its rank and R10 §2 sorts by the key --
+        # so the file's order is the names' order, and the child now precedes its parent.
         "core.clocks": [
-            {"clock_id": "imec_ap_s001", "session_id": "s001",
-             "name": "Neuropixels AP sample clock", "tick_rate_hz": float(AP_HZ),
-             "origin": "sample 0 at acquisition start", "tick_zero_utc": START},
             {"clock_id": "behavior_s001", "session_id": "s001",
              "name": "behavior acquisition clock", "tick_rate_hz": float(BEH_HZ),
              "origin": "tick 0 at behavior start", "parent_clock_id": "imec_ap_s001",
              "transform_slope": float(AP_HZ / BEH_HZ), "transform_offset": 0.0,
-             "tick_zero_utc": START}],
+             "tick_zero_utc": START},
+            {"clock_id": "imec_ap_s001", "session_id": "s001",
+             "name": "Neuropixels AP sample clock", "tick_rate_hz": float(AP_HZ),
+             "origin": "sample 0 at acquisition start", "tick_zero_utc": START}],
         "core.trials": [
-            {"session_id": "s001", "trial_id": "trial_0001", "start_tick": 1000,
+            {"session_id": "s001", "trial_id": 1, "start_tick": 1000,
              "stop_tick": 5000, "clock_id": "behavior_s001", "condition_id": "A_high",
              "stimulus_id": "grating_45", "choice": "left", "rewarded": True},
-            {"session_id": "s001", "trial_id": "trial_0002", "start_tick": 6000,
+            {"session_id": "s001", "trial_id": 2, "start_tick": 6000,
              "stop_tick": 10000, "clock_id": "behavior_s001", "condition_id": "A_high",
              "stimulus_id": "grating_45", "choice": "right", "rewarded": False}],
         "core.trial_tags": [
-            {"session_id": "s001", "trial_id": "trial_0001", "tag": "hit"},
-            {"session_id": "s001", "trial_id": "trial_0002", "tag": "miss"},
-            {"session_id": "s001", "trial_id": "trial_0002", "tag": "review"}],
+            {"session_id": "s001", "trial_id": 1, "tag": "hit"},
+            {"session_id": "s001", "trial_id": 2, "tag": "miss"},
+            {"session_id": "s001", "trial_id": 2, "tag": "review"}],
         # Three streams: one hardware-detected, one with a processing run behind it, and
         # one emitting two event types -- which is why R23 4.1 keeps event_type on the row.
         "core.event_streams": [
@@ -161,14 +247,14 @@ def content() -> dict[str, list[dict]]:
              "curation_tool_version": "2.0.0",
              "created_at": START + timedelta(hours=4)}],
         "core.units": [
-            {"session_id": "s001", "unit_id": "unit_001", "probe_id": "probe0",
+            {"session_id": "s001", "unit_id": 1, "probe_id": "probe0",
              "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
              "local_unit_label": "17", "quality_label": "sua",
              "quality_label_source": "decoder",
              "default_electrode_id": "elec_001",
              "firing_rate_hz": len(u1) / (300_000 / AP_HZ),
              "n_spikes": len(u1), "first_spike_tick": u1[0], "last_spike_tick": u1[-1]},
-            {"session_id": "s001", "unit_id": "unit_002", "probe_id": "probe0",
+            {"session_id": "s001", "unit_id": 2, "probe_id": "probe0",
              "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
              "local_unit_label": "42", "quality_label": "mua",
              "quality_label_source": "decoder",
@@ -180,21 +266,21 @@ def content() -> dict[str, list[dict]]:
              "curation_id": "curation_001", "source": src, "label": lab,
              "normalized_label": norm, "confidence": conf}
             for u, src, lab, norm, conf in (
-                ("unit_001", "decoder", "sua", "sua", 0.94),
-                ("unit_001", "bombcell", "good", "sua", None),
-                ("unit_002", "decoder", "mua", "mua", 0.71),
+                (1, "decoder", "sua", "sua", 0.94),
+                (1, "bombcell", "good", "sua", None),
+                (2, "decoder", "mua", "mua", 0.71),
                 # non_soma has no honest projection, so it is null rather than forced (R22 3).
-                ("unit_002", "bombcell", "non_soma", None, None))],
+                (2, "bombcell", "non_soma", None, None))],
         "core.unit_observation_intervals": [
             {"session_id": "s001", "unit_id": u, "sorting_run_id": "sort_ks4_001",
              "curation_id": "curation_001",
              "start_tick": lo, "stop_tick": hi, "clock_id": "imec_ap_s001"}
-            for u, windows in (("unit_001", [(0, 300_000)]),
-                               ("unit_002", [(0, 120_000), (150_000, 300_000)]))
+            for u, windows in ((1, [(0, 300_000)]),
+                               (2, [(0, 120_000), (150_000, 300_000)]))
             for i, (lo, hi) in enumerate(windows)],
         "core.spike_events":
-            spikes("unit_001", "sort_ks4_001", "curation_001", "imec_ap_s001", u1) +
-            spikes("unit_002", "sort_ks4_001", "curation_001", "imec_ap_s001", u2),
+            spikes(1, "sort_ks4_001", "curation_001", "imec_ap_s001", u1) +
+            spikes(2, "sort_ks4_001", "curation_001", "imec_ap_s001", u2),
         "core.source_files": [
             {"source_file_id": "src_0001", "uri": "raw/s001_imec0_ap.bin",
              "format": "spikeglx_bin", "size_bytes": 1234567890,
@@ -228,6 +314,8 @@ def write_packet(out: Path, tables: dict[str, list[dict]], *, raw: dict = None,
     written in insertion order, for variants that must violate R10 §2."""
     if out.exists():
         shutil.rmtree(out)
+    KEYS.clear()
+    preassign(tables)
     (out / "tables" / "core").mkdir(parents=True)
     (out / "schemas").mkdir()
 
@@ -268,6 +356,11 @@ def write_packet(out: Path, tables: dict[str, list[dict]], *, raw: dict = None,
 
 
 # Each variant violates exactly one rule, so the corpus demonstrates that each check fires.
+def child(tables):
+    """The clock that declares a parent, which is what the alignment variants are about."""
+    return next(c for c in tables["core.clocks"] if c.get("parent_clock_id"))
+
+
 def variants():
     def dup_pk(c):
         c["core.trials"].append(dict(c["core.trials"][0]))
@@ -286,7 +379,9 @@ def variants():
     def missing_amplitude_unit(c):
         c["core.sorting_runs"][0]["amplitude_unit"] = None
     def half_transform(c):
-        c["core.clocks"][1]["transform_offset"] = None
+        # By name, not position: which row is which changed when the clocks were reordered into
+        # the name order R53 numbers them in, and an index silently picked the wrong clock.
+        child(c)["transform_offset"] = None
     def unsorted_spikes(c):
         s = c["core.spike_events"]
         s[3], s[4] = s[4], s[3]
@@ -294,13 +389,13 @@ def variants():
         # bombcell's `good` already projects to `sua` for unit_001; projecting the same
         # (source, label) pair to `mua` here is not a projection at all (R22 4).
         c["core.unit_quality_labels"].append(
-            {"session_id": "s001", "unit_id": "unit_003", "sorting_run_id": "sort_ks4_001",
+            {"session_id": "s001", "unit_id": 3, "sorting_run_id": "sort_ks4_001",
              "curation_id": "curation_001", "source": "bombcell", "label": "good",
              "normalized_label": "mua", "confidence": None})
     def spike_outside_window(c):
         # a spike in unit_002's declared drop-out, which its windows say was not observed
         c["core.spike_events"].append(
-            {"session_id": "s001", "unit_id": "unit_002", "sorting_run_id": "sort_ks4_001",
+            {"session_id": "s001", "unit_id": 2, "sorting_run_id": "sort_ks4_001",
              "curation_id": "curation_001", "t_tick": 129_000, "clock_id": "imec_ap_s001",
              "amplitude": -80.0})
         c["core.units"][1]["n_spikes"] += 1
@@ -325,8 +420,8 @@ def variants():
     def unaligned_clock(c):
         # Parentage known, alignment not measured -- legal under R13 4, a defect once the
         # session declares a reference (R27 4).
-        c["core.clocks"][1]["transform_slope"] = None
-        c["core.clocks"][1]["transform_offset"] = None
+        child(c)["transform_slope"] = None
+        child(c)["transform_offset"] = None
     # R28: the unit-to-electrode links must be usable.
     def two_primaries(c):
         # Two peak channels is not a peak, and the reader has no rule for choosing.
@@ -340,8 +435,8 @@ def variants():
         c["core.units"][0]["default_electrode_id"] = "elec_003"
     def wide_anchor_gap(c):
         # 1 kHz anchors with one 20x hole: inside the span, outside the bound (R27 5.3).
-        c["core.clocks"][1]["transform_slope"] = None
-        c["core.clocks"][1]["transform_offset"] = None
+        child(c)["transform_slope"] = None
+        child(c)["transform_offset"] = None
         c["core.clock_anchors"] = [
             {"clock_id": "behavior_s001", "anchor_index": i, "t_tick": t,
              "parent_tick": t * 30}
