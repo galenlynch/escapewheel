@@ -1,6 +1,7 @@
 """A packet carries an extension's table the same way it carries a core one (R17)."""
 
 import json
+from pathlib import Path
 
 import pytest
 from nwb_lake_reader import open_packet
@@ -175,3 +176,67 @@ def test_a_broken_plugin_is_skipped_not_raised(monkeypatch):
         warnings_module.simplefilter("always")
         assert sources.discovered() == {}
     assert "broken" in str(caught[0].message)
+
+
+# -- scaffolding a draft ---------------------------------------------------------------------
+
+
+def _sites(tmp_path):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    path = tmp_path / "sites.parquet"
+    pq.write_table(pa.table({
+        "session_id": pa.array(["s1", "s1"]),
+        "site_id": pa.array([0, 1], type=pa.int32()),
+        "start_tick": pa.array([0, 100], type=pa.int64()),
+        "odor_concentration": pa.array([0.5, None]),
+        "patch_index": pa.array([0, 0], type=pa.int32()),
+    }), path)
+    return path
+
+
+def test_a_draft_reads_what_the_data_shows(tmp_path):
+    from nwb_lake_writer.scaffold import draft
+
+    drafted = draft("vrf", {"sites": _sites(tmp_path)})
+    columns = {c["name"]: c for c in drafted.document["tables"]["vrf.sites"]["columns"]}
+    assert columns["site_id"]["type"] == "int32"
+    assert columns["start_tick"]["type"] == "int64"
+    # Presence is read off this data and only true of it, which is why it is reported.
+    assert columns["session_id"]["presence"] == "required"
+    assert columns["odor_concentration"]["presence"] == "nullable"
+
+
+def test_every_guess_is_reported(tmp_path):
+    """R48 §2.2 refuses a default because a forgotten classification would look deliberate, and a
+    generated file is exactly where a forgotten one hides."""
+    from nwb_lake_writer.scaffold import draft
+
+    drafted = draft("vrf", {"sites": _sites(tmp_path)})
+    reported = " ".join(drafted.decisions)
+    for column in ("session_id", "site_id", "start_tick", "odor_concentration", "patch_index"):
+        assert f"vrf.sites.{column}" in reported, column
+    assert "primary_key is null" in reported
+    assert "no references" in reported
+
+
+def test_a_draft_does_not_validate_until_finished(tmp_path):
+    """The draft is deliberately incomplete: R7 needs a key or an explicit null with a reason."""
+    import json
+
+    import jsonschema
+
+    from nwb_lake_writer.scaffold import draft
+
+    meta = json.loads(Path("../registry/registry.schema.json").read_text())
+    drafted = draft("vrf", {"sites": _sites(tmp_path)})
+    errors = list(jsonschema.Draft202012Validator(meta).iter_errors(drafted.document))
+    assert errors, "a draft that validated would be a draft nobody finishes"
+
+
+def test_the_namespace_is_the_extension_id(tmp_path):
+    from nwb_lake_writer.scaffold import draft
+
+    drafted = draft("vrf", {"sites": _sites(tmp_path), "patches": _sites(tmp_path)})
+    assert set(drafted.document["tables"]) == {"vrf.sites", "vrf.patches"}

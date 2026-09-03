@@ -211,6 +211,34 @@ def _verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def _extension(args: argparse.Namespace) -> int:
+    """Draft an extension registry from tables that already exist (R17 §2)."""
+    from ..scaffold import draft
+
+    tables = {}
+    for pair in args.table:
+        if "=" not in pair:
+            print(f"error: --table takes name=path, not {pair!r}", file=sys.stderr)
+            return 2
+        name, path = pair.split("=", 1)
+        if not Path(path).is_file():
+            print(f"error: {path} does not exist", file=sys.stderr)
+            return 2
+        tables[name] = Path(path)
+
+    drafted = draft(args.extension_id, tables)
+    written = drafted.write(args.out or Path(f"{args.extension_id}.json"))
+    print(f"drafted {written} — {len(drafted.document['tables'])} table(s)")
+    print(f"\n{len(drafted.decisions)} decision(s) this cannot make for you:")
+    for decision in drafted.decisions:
+        print(f"  {decision}")
+    print(
+        "\nThe draft does not validate until every role is chosen, which is deliberate: R48 §2.2 "
+        "\nrefuses a default because a forgotten classification would look like a decision."
+    )
+    return 0
+
+
 def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     """Add ``import``, ``inspect`` and ``init`` to the ``nwb-lake`` command.
 
@@ -230,6 +258,18 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     init.add_argument("--session-id", required=True)
     init.add_argument("--out", type=Path, help="write here rather than to stdout")
     init.set_defaults(func=_init)
+
+    extension = subcommands.add_parser("extension", help="draft an extension registry from tables that already exist")
+    extension.add_argument("extension_id", help="namespace every table is prefixed by (R17 §2)")
+    extension.add_argument(
+        "--table",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        help="a table and the parquet file whose schema it takes; repeatable",
+    )
+    extension.add_argument("--out", type=Path, default=None, help="where to write (default: <id>.json)")
+    extension.set_defaults(func=_extension)
 
     verifier = subcommands.add_parser(
         "verify", help="record what is true about a committed packet's external resources"

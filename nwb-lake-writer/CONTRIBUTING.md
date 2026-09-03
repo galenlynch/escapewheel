@@ -118,6 +118,31 @@ to validate it; this is what keeps its *adapter* from being a patch to this pack
 for the same reason — declaring an extension has to be easier than adding a column to core, or it
 goes the way of NWB's multiple `TimeIntervals`, which the format permits and nobody uses.
 
+## An extension declares; it never ships code on the read path
+
+The invariant, and the one NWB's own extensions break. An `ndx-` extension is a schema **plus a
+Python package**: reading a file needs the package installed, the package pins a library version,
+and an extension whose author moved on rots. That is why they are a misery, and it is a choice
+rather than a necessity.
+
+Here an extension is data the packet carries. `pkt.table("vrf.sites")` needs nothing installed —
+no package, no plugin, no registration — because the packet embeds the registry that describes it.
+A validator generates its checks from the same document with no per-extension code.
+
+The **only** code an extension may require is a source adapter, and only to *write*. That is the
+import boundary, where reading a raw format genuinely needs code, and it is never on the read
+path. If a capability ever seems to need extension code to *read*, that is the signal to declare
+it instead — which is what R56's `clock_from` did for tick conversion and R55's declared reference
+does for the join.
+
+### Drafting one
+
+`nwb-lake extension <id> --table name=path.parquet` reads what the data shows — column names,
+their types in R2 §4's vocabulary, and whether a column is ever null — and reports everything it
+cannot know. It writes **no role**, so the draft does not validate until a human supplies them:
+R48 §2.2 refuses a default because a forgotten classification looks deliberate, and a generated
+file is where a forgotten one hides best.
+
 ## Writing is not committing
 
 Copying bytes is staging (`05`). Staged resources MUST NOT appear as committed canonical
