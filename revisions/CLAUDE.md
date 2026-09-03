@@ -31,8 +31,13 @@ Brevity is never worth an implementer's question. Never cut:
 
 A revision that is short because it dropped a number is incomplete, not concise.
 
-Two failures particular to this directory:
+## Checks before proposing
 
+- **A claim about rows coexisting is a claim about the primary key.** Anything the text says can
+  exist together, be distinguished, or be chosen between — write the key out and check it admits
+  them. R49 §1 found a colliding key this way and R55 §2.3.1 a reference targeting a non-unique
+  set; R58 §2.3 asserted two registrations coexist under a key that admits one, and that survived
+  acceptance.
 - **A measurement stated twice.** Adding a section to one that already carries a number leaves the
   number in both. State it where the rule it supports lives.
 - **"What this does not do" listing the unassumed.** It lists only what a reader would otherwise
