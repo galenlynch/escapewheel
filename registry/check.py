@@ -8,6 +8,13 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REG = json.loads((HERE / "logical_schemas.json").read_text())
 T = REG["tables"]
+# R17 §2: an extension is a registry document in R2's format, so the invariants that hold of a
+# registry hold of it. They are checked here for the same reason core's are -- a naming
+# convention or an unparseable rule is a property of the document, which no packet's rows can
+# show and no SQL can see (R12 §4).
+EXT = {f.stem: json.loads(f.read_text()) for f in sorted((HERE / "extensions").glob("*.json"))}
+EXT_T = {n: t for doc in EXT.values() for n, t in doc["tables"].items()}
+ALL = T | EXT_T
 VOCAB = {"string", "int32", "int64", "float32", "float64", "bool", "date",
          "timestamp", "json_string"}
 
@@ -40,45 +47,77 @@ check("a since names a revision",
       [(n, v) for n, t in T.items()
        for v in [t.get("since"), *(c.get("since") for c in t["columns"])]
        if v is not None and not re.fullmatch(r"R\d+(?: §[\d.\-]+)?", v)])
-check("every table declares a primary key", [n for n, t in T.items() if t["primary_key"] is None])
-check("every column type is in R2 §4's vocabulary",
-      [(n, c["name"], c["type"]) for n, t in T.items() for c in t["columns"]
-       if c["type"] not in VOCAB])
-check("no required column is json_string",
-      [(n, c["name"]) for n, t in T.items() for c in t["columns"]
-       if c["type"] == "json_string" and c["presence"] != "optional"])
-check("no nested type spellings survived",
-      [(n, c["name"], c["type"]) for n, t in T.items() for c in t["columns"]
-       if any(k in c["type"] for k in ("list", "struct", "map"))])
+def structural(tables, universe, prefix=""):
+    """The invariants that hold of any registry document, core's or an extension's.
 
-cols = {n: {c["name"]: c for c in t["columns"]} for n, t in T.items()}
-check("primary key columns exist",
-      [(n, k) for n, t in T.items() for k in (t["primary_key"] or []) if k not in cols[n]])
-check("primary key columns are required",
-      [(n, k) for n, t in T.items() for k in (t["primary_key"] or [])
-       if k in cols[n] and cols[n][k]["presence"] != "required"])
-check("reference targets exist",
-      [(n, r["resource"]) for n, t in T.items() for r in t["references"] if r["resource"] not in T])
-check("reference source columns exist",
-      [(n, c) for n, t in T.items() for r in t["references"] for c in r["columns"]
-       if c not in cols[n]])
-check("reference target columns exist",
-      [(n, r["resource"], c) for n, t in T.items() for r in t["references"]
-       if r["resource"] in T for c in r["resource_columns"] if c not in cols[r["resource"]]])
-check("reference arity matches",
+    `universe` is what a reference may resolve against: core's own tables for core, and core's
+    plus the extension's own for an extension. R17 §2 makes the direction one-way and §4 declines
+    dependency resolution, so an extension reaching another extension's table is not a reference
+    a packet can be relied on to satisfy.
+    """
+    def c_(label, bad, fmt=str):
+        check(f"{prefix}{label}", bad, fmt)
+
+    cols = {n: {c["name"]: c for c in t["columns"]} for n, t in tables.items()}
+    ucols = {n: {c["name"]: c for c in t["columns"]} for n, t in universe.items()}
+    c_("every table declares a primary key", [n for n, t in tables.items() if t["primary_key"] is None])
+    c_("every column type is in R2 §4's vocabulary",
+       [(n, c["name"], c["type"]) for n, t in tables.items() for c in t["columns"]
+        if c["type"] not in VOCAB])
+    c_("no required column is json_string",
+       [(n, c["name"]) for n, t in tables.items() for c in t["columns"]
+        if c["type"] == "json_string" and c["presence"] != "optional"])
+    c_("no nested type spellings survived",
+       [(n, c["name"], c["type"]) for n, t in tables.items() for c in t["columns"]
+        if any(k in c["type"] for k in ("list", "struct", "map"))])
+    c_("primary key columns exist",
+       [(n, k) for n, t in tables.items() for k in (t["primary_key"] or []) if k not in cols[n]])
+    c_("primary key columns are required",
+       [(n, k) for n, t in tables.items() for k in (t["primary_key"] or [])
+        if k in cols[n] and cols[n][k]["presence"] != "required"])
+    c_("reference targets exist",
+       [(n, r["resource"]) for n, t in tables.items() for r in t["references"]
+        if r["resource"] not in universe])
+    c_("reference source columns exist",
+       [(n, c) for n, t in tables.items() for r in t["references"] for c in r["columns"]
+        if c not in cols[n]])
+    c_("reference target columns exist",
+       [(n, r["resource"], c) for n, t in tables.items() for r in t["references"]
+        if r["resource"] in universe for c in r["resource_columns"] if c not in ucols[r["resource"]]])
+    c_("reference arity matches",
+       [(n, r["resource"]) for n, t in tables.items() for r in t["references"]
+        if len(r["columns"]) != len(r["resource_columns"])])
+    # R48 §2.3. A structural index may also be a foreign-key component, so a client converting one
+    # side and not the other would break the join. Both sides sharing a role is what makes
+    # converting every structural_index column join-preserving by construction.
+    role = {(n, c["name"]): c["role"] for n, t in universe.items() for c in t["columns"]}
+    c_("a reference relates columns of the same role",
+       [(n, a, r["resource"], b) for n, t in tables.items() for r in t["references"]
+        for a, b in zip(r["columns"], r["resource_columns"])
+        if role.get((n, a)) != role.get((r["resource"], b))])
+    c_("source labels are strings",
+       [(n, c["name"], c["type"]) for n, t in tables.items() for c in t["columns"]
+        if c["name"].endswith("_label") and c["type"] != "string"])
+
+
+structural(T, T)
+for _id, _doc in EXT.items():
+    structural(_doc["tables"], T | _doc["tables"], prefix=f"{_id}: ")
+
+# R17 §2's MUST, stated rather than implied: core resolving against itself above cannot see a
+# reference *into* an extension, because such a target would simply be absent from core.
+check("core references no extension",
       [(n, r["resource"]) for n, t in T.items() for r in t["references"]
-       if len(r["columns"]) != len(r["resource_columns"])])
-# R48 §2.3. A structural index may also be a foreign-key component, so a client converting one
-# side and not the other would break the join. Both sides sharing a role is what makes converting
-# every structural_index column join-preserving by construction.
-_role = {(n, c["name"]): c["role"] for n, t in T.items() for c in t["columns"]}
-check("a reference relates columns of the same role",
-      [(n, a, r["resource"], b) for n, t in T.items() for r in t["references"]
-       for a, b in zip(r["columns"], r["resource_columns"])
-       if _role.get((n, a)) != _role.get((r["resource"], b))])
-check("source labels are strings",
-      [(n, c["name"], c["type"]) for n, t in T.items() for c in t["columns"]
-       if c["name"].endswith("_label") and c["type"] != "string"])
+       if r["resource"] in EXT_T])
+check("an extension's tables carry its own namespace",
+      [f"{_id}: {n}" for _id, _doc in EXT.items() for n in _doc["tables"]
+       if not n.startswith(f"{_doc.get('extension_id', _id)}.")])
+check("an extension's file name is its extension_id",
+      [f"{_id}: declares {_doc.get('extension_id')!r}" for _id, _doc in EXT.items()
+       if _doc.get("extension_id") != _id])
+check("every extension extends the logical standard",
+      [_id for _id, _doc in EXT.items() if _doc.get("extends") != "nwb-lake-logical-v0.1"])
+
 check("withdrawn tables absent",
       [n for n in ("core.unit_spike_chunks", "core.provenance_entities",
                    "core.provenance_activities", "core.provenance_edges") if n in T])
@@ -105,8 +144,11 @@ merged = {r["id"] for t_ in T.values() for r in t_["rules"]}
 authored = {r["id"] for r in authored_rules}
 check("every authored rule reached the registry", sorted(authored - merged))
 check("the registry carries no rule rules.json does not author", sorted(merged - authored))
-ids = [r["id"] for r in authored_rules]
-check("rule ids are unique", sorted({i for i in ids if ids.count(i) > 1}))
+ids = [r["id"] for r in authored_rules] + [r["id"] for t_ in EXT_T.values() for r in t_["rules"]]
+check("rule ids are unique across core and every extension",
+      sorted({i for i in ids if ids.count(i) > 1}))
+check("an extension's rule ids carry its table's name",
+      [r["id"] for n, t_ in EXT_T.items() for r in t_["rules"] if not r["id"].startswith(f"{n}.")])
 
 
 # R50 §5: a naming convention is a property of the registry, not of any packet's rows, so no SQL
@@ -133,6 +175,12 @@ NAMING_EXCEPTIONS = {
     "core.array_channels.offset": "as core.array_assets.offset, per channel (R19 §2)",
     "core.units.n_spikes": "a count, not a plural duration -- the shape R50 §3 renamed step_ticks for",
     "core.source_files.size_bytes": "a quantity in bytes, not a plural of `size_byte`",
+    # A metric's name is the vocabulary people search by, so renaming one makes the column match
+    # nothing anyone's code expects. Unlike `sync_spike_8`, none of these is a parameter glued on.
+    "aind_unit_qc.metrics.num_spikes": "the sorter's own metric name; a count, not a plural duration",
+    "aind_unit_qc.metrics.rp_violations": "the sorter's own metric name; a count of violations",
+    "aind_unit_qc.waveform_metrics.num_negative_peaks": "the sorter's own metric name; a count of peaks",
+    "aind_unit_qc.waveform_metrics.num_positive_peaks": "as num_negative_peaks",
 }
 
 NAMING = {
@@ -156,7 +204,7 @@ NAMING = {
 
 flagged = {}
 for label, holds in NAMING.items():
-    for tid, tbl in T.items():
+    for tid, tbl in ALL.items():
         for c in tbl["columns"]:
             if not holds(c["name"], c["type"], c.get("role")):
                 flagged.setdefault(f"{tid}.{c['name']}", []).append(label)
@@ -164,7 +212,8 @@ check("column names follow the conventions, or say why not",
       sorted(f"{k}: {', '.join(v)}" for k, v in flagged.items() if k not in NAMING_EXCEPTIONS))
 check("every declared naming exception still exists and still breaks a convention",
       sorted(k for k in NAMING_EXCEPTIONS if k not in flagged))
-print(f"      {len(NAMING)} conventions over {sum(len(t['columns']) for t in T.values())} columns, "
+print(f"      {len(NAMING)} conventions over {sum(len(t['columns']) for t in ALL.values())} columns "
+      f"in core and {len(EXT)} extensions, "
       f"{len(NAMING_EXCEPTIONS)} declared exceptions")
 
 
@@ -179,17 +228,17 @@ def _resolves(resource, spec, value):
             return f"{resource} has no column {value}"
         return None
     target, column = f"{parts[0]}.{parts[1]}", parts[2]
-    if target not in T:
+    if target not in ALL:
         return f"{value} names no resource"
     if not any(ref["resource"] == target for ref in spec["references"]):
         return f"{resource} declares no reference to {target}, so the hop is not one this table can make"
-    if column not in {c["name"] for c in T[target]["columns"]}:
+    if column not in {c["name"] for c in ALL[target]["columns"]}:
         return f"{target} has no column {column}"
     return None
 
 
 bad_context = []
-for _r, _t in T.items():
+for _r, _t in ALL.items():
     for _c in _t["columns"]:
         for _field in ("unit_from", "clock_from"):
             if _field in _c and (_why := _resolves(_r, _t, _c[_field])):
@@ -224,6 +273,10 @@ try:
     errs = list(jsonschema.Draft202012Validator(meta).iter_errors(REG))
     check("registry validates against its meta-schema",
           [f"{list(e.path)[:4]}: {e.message[:60]}" for e in errs])
+    validator = jsonschema.Draft202012Validator(meta)
+    check("every extension validates against the same meta-schema",
+          [f"{_id}: {list(e.path)[:4]} {e.message[:50]}"
+           for _id, _doc in EXT.items() for e in validator.iter_errors(_doc)])
     manifest = json.loads((HERE / "manifest.schema.json").read_text())
     jsonschema.Draft202012Validator.check_schema(manifest)
     check("manifest schema is valid JSON Schema", [])
@@ -238,23 +291,26 @@ DDL = {"string": "VARCHAR", "int32": "INTEGER", "int64": "BIGINT", "float32": "F
 try:
     import duckdb
     con = duckdb.connect()
-    for n, t_ in T.items():
+    for n, t_ in ALL.items():
         cols = ", ".join(f'"{c["name"]}" {DDL[c["type"]]}' for c in t_["columns"])
         con.sql(f"CREATE TABLE {n.replace('.', '_')} ({cols})")
     con.sql("CREATE TABLE manifest_sessions (session_id VARCHAR)")   # supplied by the shim
     broken = []
-    for n, t_ in T.items():
+    for n, t_ in ALL.items():
         for r in t_["rules"]:
             try:
                 con.sql(r["sql"]).fetchall()
             except Exception as e:
                 broken.append((r["id"], str(e).splitlines()[0][:70]))
     check("every Tier 2 rule is executable SQL", broken)
-    print(f"      {sum(len(t_['rules']) for t_ in T.values())} rules executed against "
-          f"{len(T)} empty tables")
+    print(f"      {sum(len(t_['rules']) for t_ in ALL.values())} rules executed against "
+          f"{len(ALL)} empty tables")
 except ImportError:
     print("skip  rule execution (duckdb not available)")
 
 print(f"\n{len(T)} tables, {sum(len(t['columns']) for t in T.values())} columns, "
       f"{sum(len(t['references']) for t in T.values())} references")
+print(f"{len(EXT)} extensions: {len(EXT_T)} tables, "
+      f"{sum(len(t['columns']) for t in EXT_T.values())} columns, "
+      f"{sum(len(t['references']) for t in EXT_T.values())} references")
 raise SystemExit(1 if fail else 0)
