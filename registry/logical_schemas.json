@@ -966,7 +966,8 @@
           "presence": "required",
           "role": "coordinate",
           "description": "The corresponding tick on parent_clock_id.",
-          "since": "R13 \u00a73"
+          "since": "R13 \u00a73",
+          "clock_from": "core.clocks.parent_clock_id"
         }
       ],
       "primary_key": [
@@ -1679,7 +1680,8 @@
           "presence": "required",
           "role": "coordinate",
           "description": "First observed tick, on the stream's clock.",
-          "since": "R25 \u00a72"
+          "since": "R25 \u00a72",
+          "clock_from": "core.event_streams.clock_id"
         },
         {
           "name": "stop_tick",
@@ -1687,7 +1689,8 @@
           "presence": "required",
           "role": "coordinate",
           "description": "Last observed tick, on the stream's clock.",
-          "since": "R25 \u00a72"
+          "since": "R25 \u00a72",
+          "clock_from": "core.event_streams.clock_id"
         }
       ],
       "primary_key": [
@@ -2779,7 +2782,8 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "Earliest observed tick, on `reference_clock_id`; the origin seconds count from.",
-          "since": "R39 \u00a72.2"
+          "since": "R39 \u00a72.2",
+          "clock_from": "reference_clock_id"
         }
       ],
       "primary_key": [
@@ -3131,7 +3135,8 @@
           "type": "float32",
           "presence": "nullable",
           "role": "data",
-          "description": "Spike amplitude if available."
+          "description": "Spike amplitude if available.",
+          "unit_from": "core.sorting_runs.amplitude_unit"
         },
         {
           "name": "metadata",
@@ -3180,6 +3185,15 @@
             "unit_id",
             "sorting_run_id",
             "curation_id"
+          ]
+        },
+        {
+          "columns": [
+            "sorting_run_id"
+          ],
+          "resource": "core.sorting_runs",
+          "resource_columns": [
+            "sorting_run_id"
           ]
         }
       ],
@@ -3988,7 +4002,8 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "Lowest t_tick for this unit.",
-          "since": "R5"
+          "since": "R5",
+          "clock_from": "core.sorting_runs.clock_id"
         },
         {
           "name": "last_spike_tick",
@@ -3996,7 +4011,8 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "Highest t_tick for this unit.",
-          "since": "R5"
+          "since": "R5",
+          "clock_from": "core.sorting_runs.clock_id"
         },
         {
           "name": "metadata",

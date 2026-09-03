@@ -168,6 +168,38 @@ print(f"      {len(NAMING)} conventions over {sum(len(t['columns']) for t in T.v
       f"{len(NAMING_EXCEPTIONS)} declared exceptions")
 
 
+# R56 §2.4: a declared unit or clock source must resolve. Structural -- decidable from the
+# registry with no packet in hand, which is where this format puts a check it can make without
+# data. The point is that a wrong `clock_from` converts ticks on the wrong clock silently.
+def _resolves(resource, spec, value):
+    """Whether a same-table column name or a one-hop `resource.column` resolves. Returns why not."""
+    parts = value.split(".")
+    if len(parts) == 1:
+        if value not in {c["name"] for c in spec["columns"]}:
+            return f"{resource} has no column {value}"
+        return None
+    target, column = f"{parts[0]}.{parts[1]}", parts[2]
+    if target not in T:
+        return f"{value} names no resource"
+    if not any(ref["resource"] == target for ref in spec["references"]):
+        return f"{resource} declares no reference to {target}, so the hop is not one this table can make"
+    if column not in {c["name"] for c in T[target]["columns"]}:
+        return f"{target} has no column {column}"
+    return None
+
+
+bad_context = []
+for _r, _t in T.items():
+    for _c in _t["columns"]:
+        for _field in ("unit_from", "clock_from"):
+            if _field in _c and (_why := _resolves(_r, _t, _c[_field])):
+                bad_context.append(f"{_r}.{_c['name']} {_field}: {_why}")
+        if "clock_from" in _c and _c.get("role") != "coordinate":
+            bad_context.append(f"{_r}.{_c['name']}: clock_from on a {_c.get('role')}, not a coordinate")
+        if "unit" in _c and "unit_from" in _c:
+            bad_context.append(f"{_r}.{_c['name']}: declares both unit and unit_from")
+check("a declared unit or clock source resolves", sorted(bad_context))
+
 # R2 §9: the registry validates against its published meta-schema.
 try:
     import jsonschema

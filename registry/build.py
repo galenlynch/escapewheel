@@ -186,6 +186,25 @@ def role_of(name: str) -> str:
             "The choice is data, identifier, coordinate, structural_index or sequence_position."
         ) from None
 
+#: R56. Where a coordinate's clock comes from, and where a value's unit does, for the columns
+#: convention does not settle. A coordinate beside a `clock_id` needs no entry -- R56 §2.2 makes
+#: that the default -- so these are exactly the cases that were prose.
+CONTEXT: dict[tuple[str, str], dict[str, str]] = {
+    # Two coordinates on two clocks in one table, distinguished only by a description until now.
+    ("core.clock_anchors", "parent_tick"): {"clock_from": "core.clocks.parent_clock_id"},
+    # The clock is named, and not `clock_id` (R39 §2).
+    ("core.sessions", "t_zero_tick"): {"clock_from": "reference_clock_id"},
+    # R38 §3 gave the sorting run a clock precisely so a unit's ticks have one.
+    ("core.units", "first_spike_tick"): {"clock_from": "core.sorting_runs.clock_id"},
+    ("core.units", "last_spike_tick"): {"clock_from": "core.sorting_runs.clock_id"},
+    # The stream's clock, reached through the stream (R25 §2).
+    ("core.event_stream_observation_intervals", "start_tick"): {"clock_from": "core.event_streams.clock_id"},
+    ("core.event_stream_observation_intervals", "stop_tick"): {"clock_from": "core.event_streams.clock_id"},
+    # R11 §2: the unit is a property of the sorting context, not of the spike.
+    ("core.spike_events", "amplitude"): {"unit_from": "core.sorting_runs.amplitude_unit"},
+}
+
+
 def col(name, typ, pres, desc, since=None, determined_by=None):
     role = role_of(name)
     if role == "identifier":
@@ -890,7 +909,12 @@ def build() -> dict:
             # as *owning* media_asset_id -- which only a dimension table should.
             ("core.media_frames", "media_asset_id", "core.media_assets", "media_asset_id"),
             ("analysis.array_assets", "session_id", "core.sessions", "session_id"),
-            ("analysis.array_assets", "clock_id", "core.clocks", "clock_id")]:
+            ("analysis.array_assets", "clock_id", "core.clocks", "clock_id"),
+            # Transitively implied by the composite reference into core.units, so the anti-join
+            # will never fire -- but R56 §2.3 resolves a unit through a reference the table
+            # *declares*, and core.spike_events.amplitude is in the unit its sorting run names
+            # (R11 §2). Declaring it is what makes that hop available.
+            ("core.spike_events", "sorting_run_id", "core.sorting_runs", "sorting_run_id")]:
         T(child).setdefault("references", []).append(
             {"columns": [column], "resource": parent, "resource_columns": [parent_column]})
 
@@ -913,6 +937,14 @@ def build() -> dict:
                         f"packet used for this {base.replace('_', ' ')}. The only bridge between two "
                         "packets that numbered it differently (R53 §2.5).")
             spec["columns"].insert(spec["columns"].index(column) + 1, entry)
+
+    # ---- R56 : a column declares its unit and its clock ---------------------------------
+    SINCE[0] = "R56 §2"
+    for (resource, column_name), context in CONTEXT.items():
+        column = next((c for c in tables[resource]["columns"] if c["name"] == column_name), None)
+        if column is None:
+            raise SystemExit(f"R56 declares context for {resource}.{column_name}, which does not exist")
+        column.update(context)
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
