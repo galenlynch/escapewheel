@@ -13,6 +13,14 @@ this specification lacks, since NWB has had two decades of contact with real rec
 | `units` | 55 | 12 |
 | `general/extracellular_ephys/electrodes` | 19 | ~7 |
 
+The electrodes table's 19, read from `colnames`: `location`, `group`, `group_name`,
+`channel_name`, `inter_sample_shift`, `gain_to_physical_unit`, `offset_to_physical_unit`,
+`physical_unit`, `rel_x`, `rel_y`, `brain_region_id`, `ccf_ml`, `ccf_ap`, `ccf_dv`, `x`, `y`, `z`,
+`imp`, `filtering`. Fifteen carry data; `x`, `y`, `z` and `imp` are NaN for all 3840 and
+`filtering` is empty. `ecephys_776259_2025-04-04` carries 20 instead, differing in the atlas
+annotation — `ccf_id`, `ccf_acronym`, `ccf_name`, `ccf_structure_id_path` where this session has
+`brain_region_id` alone — and adding `electrode_name` while dropping the three scaling columns.
+
 The remainder are `DynamicTable` columns added at runtime, conforming to nothing — not core,
 not an `ndx-` extension. **Most columns in the file are unvalidated.** That is the facility
 R17 answers with typed extension registries.
@@ -122,7 +130,8 @@ of time origins in this data not being self-evident.
 |---|---|
 | `obs_intervals` | **R18** — `core.unit_observation_intervals` |
 | Unvalidated dynamic columns | **R17** — extension registries |
-| Per-channel conversion | open — belongs on `core.array_channels` |
-| `inter_sample_shift` | open — no home; matters for cross-channel phase |
+| Per-channel conversion | **R19 §2** — `core.array_channels.conversion`, `offset`, `unit` |
+| `inter_sample_shift` | **R19 §2** — `core.array_channels.inter_sample_shift` |
+| Atlas structure id | **R59** — `region_id` on the coordinate row |
 | `Subject.age` | open — R4 §3.4 deferred it |
-| `filtering` | open, minor |
+| `filtering` | open, minor. Empty for all 3840 electrodes in this session |
