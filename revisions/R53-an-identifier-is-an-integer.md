@@ -1,0 +1,127 @@
+# R53 — An Identifier Is an Integer
+
+| | |
+|---|---|
+| **Status** | **Proposed** 2026-09-02 |
+| **Amends** | R2 §4 (the Arrow type vocabulary's use), R5 §5 and R8 §2 (what a label is, restated), R48 §2.1 (what `identifier` implies), `02` (every identifier column) |
+| **Depends on** | R2 (registry format), R32 (a committed packet is immutable), R46 (declared references), R48 (column roles) |
+| **Profile** | `nwb-lake-portable-v0.1` |
+
+MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
+
+## 1. Motivation
+
+All 110 identifier columns are strings, and 70 references join on them. The choice was never
+argued; it followed from the first fixture and nothing revisited it.
+
+**Storage was measured and used to settle a question it does not answer.** Five identity columns
+over 287,896,563 spikes are 8.1 MB, 1% of the table, because a sorted column run-length encodes
+to 0.06 bit/row. That is true, and it says nothing about what anyone does with the column.
+
+Measured on 20 M rows and 800 units, in DuckDB:
+
+| | string | int32 | |
+|---|---:|---:|---:|
+| join to `core.units` | 55 ms | 5 ms | **10.2x** |
+| filter 24 units | 33 ms | 2 ms | **13.8x** |
+| `GROUP BY` unit | 58 ms | 9 ms | **6.5x** |
+| `ORDER BY` unit, tick | 380 ms | 71 ms | **5.3x** |
+| parquet | 23.5 MB | 23.2 MB | −1.1% |
+
+Storage is a wash. Everything a reader does is five to fourteen times faster.
+
+### 1.1 The dictionary is the identifier, badly
+
+A string identity column is stored as integer codes plus a lookup — a dictionary. So the format
+already keys on integers; it just refuses to say so, and pays for the refusal at every boundary.
+
+Measured over 20 M rows and four identity columns, keeping the dictionary rather than decoding it
+is 0.32 GB against 3.42 GB and 0.08 s against 0.52 s — and then:
+
+| operation | decoded | dictionary |
+|---|---:|---:|
+| `is_in`, 24 units | 1.19 s | **16.81 s** |
+| `group_by` | 0.03 s | `ArrowNotImplementedError: Unifying differing dictionaries` |
+| `sort_indices` | 1.03 s | **unimplemented, unified or not** |
+
+`Table.unify_dictionaries` costs 0.01 s and fixes the first failure. Nothing fixes the second:
+Arrow cannot sort a dictionary column. So a reader either materialises ten times the memory or
+loses sorting — and the whole dilemma is an artifact of storing an integer under a string's type.
+
+An `int32` column has no dictionary to keep, decode, unify, or fail to sort.
+
+## 2. Decision
+
+### 2.1 An identifier column is `int32`
+
+Every column whose R48 role is `identifier` **MUST** be `int32`, except where §2.4 requires
+`int64`. This covers all 110 and the 70 references that join on them.
+
+`int32` gives 2,147,483,647 values against a real session's 6,781 units, 708 trials and 12
+sorting runs.
+
+### 2.2 Signed, not unsigned
+
+Deliberately, and not for range. Neither PostgreSQL nor Apache Iceberg nor the JVM has an
+unsigned integer type, and R2 §4's vocabulary has none either. Adding two types that three of the
+four systems this format expects to reach cannot express would buy one bit nothing needs.
+
+Tick columns stay signed `int64` and are unaffected: a tick is a **coordinate**, not an
+identifier (R45 §5).
+
+### 2.3 The name survives, in one place
+
+Replacing an identifier must not lose what it said. `experiment1.Neuropix-PXI-100.46110.u000`
+names a probe and an offset.
+
+A table with an `identifier` primary key **SHOULD** carry a nullable `*_name` string holding the
+identifier a source or an earlier packet used for that row. It lives in the **dimension** table —
+one row per unit, not one per spike — so it costs 6,781 strings rather than 287 million.
+
+This is not `local_*_label`. R5 §5 and R8 §2 make those the *source's own* name, string, and
+never an offset; that is unchanged and this revision does not touch them. A `*_name` is what this
+format called the row before it was a number, which is what makes a packet comparable to one
+built independently from the same source.
+
+### 2.4 Where `int64` is required
+
+An identifier **MUST** be `int64` where the number of distinct values may exceed `int32`. No core
+table is near it, and none is expected to be: `core.spike_events` has 287 M rows and no identifier
+of its own, because a spike is identified by the unit and tick it carries.
+
+An R17 extension declaring an identifier over more than 2^31 rows declares `int64` for it.
+
+### 2.5 Keys are assigned at commit and never move
+
+A writer assigns identifiers when it commits (`05`). R32 §3 forbids an amendment modifying
+anything it did not write, so an identifier is stable for the life of the packet: an amendment
+adding a sorting run assigns new numbers to its new units and leaves every existing one alone.
+
+**Identifiers are not stable across packets**, and this is the cost. Two packets built
+independently from one session may number the same unit differently. §2.3's `*_name` is what
+recovers the correspondence, through a join on the dimension table rather than on the fact table.
+
+## 3. What this does not do
+
+- **No change to `local_*_label`.** R5 §5 and R8 §2 stand: a source-provenance label is a string
+  and MUST NOT be used as an offset. This revision is about the packet's own identifiers, which
+  those sections never governed — a distinction the argument for strings had been eliding.
+- **No change to R48's roles.** An integer identifier is still `identifier`, not
+  `structural_index`. R48 §3 already established that the distinction is not derivable from type;
+  this makes that the only way to tell, which is what the role is for.
+- **No new types.** §2.2 declines unsigned; the vocabulary is unchanged.
+- **No UUIDs.** Parquet has a UUID logical type and pyarrow round-trips it, but a per-row UUID is
+  129 bit/row against a sorted identifier's 0.05 — 2,500x — because sixteen random bytes neither
+  dictionary-encode nor compress. UUIDs answer a coordination problem this format does not have:
+  a packet is written by one writer at one time.
+- **No change to the manifest.** Resource IDs stay dotted strings; they name schemas, not rows.
+
+## 4. Open
+
+- **Whether `*_name` should be MUST rather than SHOULD** for tables a consumer joins across
+  packets. It is the only bridge between two independently built packets, and a SHOULD that goes
+  unwritten makes them uncomparable with no finding to say so.
+- **What an importer does with an existing packet.** Every packet in existence keys on strings.
+  Reading both shapes needs a registry version test, and there is no migration story yet.
+- **Whether `analysis.*` tables need the same treatment on the same schedule.** They are
+  disposable by `06`, so they could follow rather than move together.
