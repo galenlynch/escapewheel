@@ -203,26 +203,43 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> No
     exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
     primary = set(spec.get("primary_key") or [])
     declared = {c["name"]: c for c in spec["columns"]}
-    for column in spec["columns"]:
-        if column.get("role") != "identifier":
+    # A foreign key is numbered in the map of the column it points at, not its own. Otherwise
+    # `parent_clock_id` and `clock_id` -- both clocks -- get separate numbering and the parent
+    # chain names a clock that does not exist, which R27 §3 requires to be well-founded. Same for
+    # `default_electrode_id` into electrodes and `supersedes_run_id` into runs.
+    target = {
+        column: referenced
+        for ref in spec.get("references", [])
+        for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
+    }
+    identifiers = [c for c in spec["columns"] if c.get("role") == "identifier"]
+    # Collect every name before assigning any, so the numbers do not depend on which column the
+    # loop reaches first: `parent_clock_id` and `clock_id` share a map, and whichever was seen
+    # first would otherwise decide the numbering.
+    pending: dict[str, set[str]] = {}
+    for column in identifiers:
+        if column.get("identity") != "assigned":
             continue
+        kind = target.get(column["name"], column["name"])
+        pending.setdefault(kind, set()).update(
+            str(r[column["name"]]) for r in rows if r.get(column["name"]) is not None
+        )
+    for kind in sorted(pending):
+        for known in sorted(pending[kind]):
+            keys.of(kind, known)
+
+    for column in identifiers:
         name = column["name"]
+        kind = target.get(name, name)
         assigned = column.get("identity") == "assigned"
         owns = assigned and name in primary and name not in exported
         named: str | None = f"{name.removesuffix('_id')}_name" if owns else None
-        if assigned:
-            # Number the names this call is about to use in name order, before touching a row.
-            # Assigning on first sight would make the numbers depend on the order an adapter
-            # happened to emit in, and R53 §2.5 wants two builds of the same sources to produce
-            # the same packet -- which is what lets a rebuild be compared to what it replaced.
-            for known in sorted({str(r[name]) for r in rows if r.get(name) is not None}):
-                keys.of(name, known)
         for row in rows:
             value = row.get(name)
             if value is None:
                 continue
             if assigned:
-                row[name] = keys.of(name, str(value))
+                row[name] = keys.of(kind, str(value))
                 if named is not None and named in declared and row.get(named) is None:
                     row[named] = str(value)
             else:
@@ -249,16 +266,23 @@ def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> p
     the table it streams is a fact table, which R53 §2.3.1 does not ask one of.
     """
     columns = dict(zip(batch.schema.names, batch.columns, strict=True))
+    target = {
+        column: referenced
+        for ref in spec.get("references", [])
+        for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
+    }
     changed = False
     for column in spec["columns"]:
         name = column["name"]
         if column.get("role") != "identifier" or name not in columns:
             continue
+        kind = target.get(name, name)
         values = columns[name]
         if pa.types.is_integer(values.type):
             continue
         if column.get("identity") == "assigned":
-            mapping = {v: keys.of(name, v) for v in set(values.to_pylist()) - {None}}
+            seen = [v for v in set(values.to_pylist()) if v is not None]
+            mapping = {v: keys.of(kind, str(v)) for v in sorted(seen)}
             columns[name] = pa.array([None if v is None else mapping[v] for v in values.to_pylist()])
         else:
             columns[name] = pa.array([None if v is None else int(v) for v in values.to_pylist()])

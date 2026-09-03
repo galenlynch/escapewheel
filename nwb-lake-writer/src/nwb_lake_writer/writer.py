@@ -615,6 +615,7 @@ class PacketWriter:
         entries = []
         if only is None:
             self._ordered = set()
+        self._preassign()
         for resource_id in self.resources:
             if only is not None and resource_id not in only:
                 continue
@@ -657,6 +658,36 @@ class PacketWriter:
                 entry["processing_run_id"] = run
             entries.append(entry)
         return entries
+
+    def _preassign(self) -> None:
+        """Assign a number to every name this packet uses, before any table is built (R53 §2.5).
+
+        Numbering as each table is staged would let the order tables happen to be written in
+        decide the numbers: `core.sessions` names a `reference_clock_id` and is staged before
+        `core.clocks`, so the clocks would be numbered by the session's mention of one of them.
+        Two builds of the same sources must produce the same packet, which is what lets a rebuild
+        be compared to what it replaced -- and that has to hold across tables, not only within one.
+        """
+        pending: dict[str, set[str]] = {}
+        for resource_id, rows in sorted(self._tables.items()):
+            spec = self._registry["tables"].get(resource_id)
+            if spec is None:
+                continue
+            target = {
+                column: referenced
+                for ref in spec.get("references", [])
+                for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
+            }
+            for column in spec["columns"]:
+                if column.get("role") != "identifier" or column.get("identity") != "assigned":
+                    continue
+                kind = target.get(column["name"], column["name"])
+                pending.setdefault(kind, set()).update(
+                    str(r[column["name"]]) for r in rows if r.get(column["name"]) is not None
+                )
+        for kind in sorted(pending):
+            for value in sorted(pending[kind]):
+                self.keys.of(kind, value)
 
     def _manifest(self, entries: Sequence[Mapping[str, Any]], report: Report | None) -> dict[str, Any]:
         """Build the manifest for these resources."""
