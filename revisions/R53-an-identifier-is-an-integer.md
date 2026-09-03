@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-02 |
+| **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R2 §4 (the Arrow type vocabulary's use), R5 §5 and R8 §2 (what a label is, restated), R48 §2.1 (what `identifier` implies), `02` (every identifier column) |
 | **Depends on** | R2 (registry format), R32 (a committed packet is immutable), R46 (declared references), R48 (column roles) |
 | **Profile** | `nwb-lake-portable-v0.1` |
@@ -91,6 +91,13 @@ of its own, because a spike is identified by the unit and tick it carries.
 
 An R17 extension declaring an identifier over more than 2^31 rows declares `int64` for it.
 
+### 2.4a The analysis layer moves with core
+
+`analysis.*` identifier columns change on the same schedule, not a later one. `06` makes an
+analysis resource disposable, which is an argument for rebuilding it cheaply rather than for
+letting it key differently: a packet whose `analysis.spike_events` joins on strings and whose
+`core.spike_events` joins on integers cannot be joined to itself.
+
 ### 2.5 Keys are assigned at commit and never move
 
 A writer assigns identifiers when it commits (`05`). R32 §3 forbids an amendment modifying
@@ -118,10 +125,22 @@ recovers the correspondence, through a join on the dimension table rather than o
 
 ## 4. Open
 
-- **Whether `*_name` should be MUST rather than SHOULD** for tables a consumer joins across
-  packets. It is the only bridge between two independently built packets, and a SHOULD that goes
-  unwritten makes them uncomparable with no finding to say so.
-- **What an importer does with an existing packet.** Every packet in existence keys on strings.
-  Reading both shapes needs a registry version test, and there is no migration story yet.
-- **Whether `analysis.*` tables need the same treatment on the same schedule.** They are
-  disposable by `06`, so they could follow rather than move together.
+- **What `registry/check.py`'s naming report should now say.** One of its nine conventions is
+  "an `_id` column is a string", which this inverts. It is the check that would have caught a
+  half-finished migration, so it has to move with the rest rather than after it.
+- **Whether a reader should refuse a string-keyed packet or read it.** §5 makes regeneration the
+  migration, so nothing needs to read both -- but a reader meeting an old packet should say which
+  shape it found rather than fail on a type it did not expect.
+
+## 5. Migration is regeneration
+
+A packet is **rebuilt**, not converted. Every packet in existence is reproducible from its
+sources through its recipe, which is recorded in `core.processing_runs.parameters` for exactly
+this kind of reason, so a conversion tool would be a second implementation of the writer that
+only ever runs once.
+
+A rebuilt packet is a **new packet**, not a new version of the old one. R32 versions a packet
+whose bytes are immutable and whose manifests are retained; changing the type of every identifier
+is not an amendment to that packet, it is a different packet built from the same sources.
+
+A reader tells the two apart by `registry_version`. Nothing is required to read both.
