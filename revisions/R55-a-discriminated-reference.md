@@ -225,7 +225,14 @@ which is the case where core is not standalone.
   discriminator and references the full key; a trial naming its block is then an ordinary
   extension-internal reference between two detail tables. Nothing in §2 treats the one-extension
   case specially, which is the point, but no packet yet carries it.
-- **Whether a discriminator should be `int32` too.** It holds a resource ID, and resource IDs are
-  dotted strings everywhere else in the format, including in the manifest. Keeping it a string is
-  consistent; the cost is that a discriminator in a fact table repeats a long string per row,
-  where R53 measured that an identity column's cost comes from exactly that.
+- ~~**Whether a discriminator should be `int32` too.**~~ **Settled 2026-09-03: it stays a string.**
+  R53's measurement does not transfer, because it was taken on an identity column that is joined,
+  grouped and sorted at high cardinality. Measured on the shape a discriminator has — 20 M rows
+  over six kinds — the string costs **0.013 bit/row** against an int32 surrogate's 0.008, the two
+  files differ by 0.05%, and the string is *faster*: 1.05x on filtering to one kind, **0.87x** on
+  `GROUP BY`, and **0.60x** against the integer plus the join needed to name the kind at all.
+
+  Parquet dictionary-encodes it either way, which is why. R53 §1.1's three pathologies are all
+  about *keeping* the dictionary in Arrow, and a discriminator meets none of them: it is filtered
+  against a constant rather than `is_in` over a large set, `unify_dictionaries` costs 0.01 s over
+  six values, and nothing sorts by kind.

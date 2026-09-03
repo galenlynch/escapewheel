@@ -108,10 +108,12 @@ on `(activity_type, scope)` — a plan and a measurement are not one activity.
 
 ## 4. Open
 
-- **Whether a coordinate should carry uncertainty.** Neither a planned position nor a measured one
-  is exact, and nothing here says how well either is known. Not added until the targeting pipeline
-  is shown to record something quantitative; if it records nothing, `planned` carries the
-  imprecision by itself and a column for it would never be filled.
+- ~~**Whether a coordinate should carry uncertainty.**~~ **Settled 2026-09-03: no column is
+  added.** Nothing measured records a quantitative uncertainty on either basis, so a column for it
+  would be present and empty in every packet — which R3 §3.0 refuses for the same reason it refuses
+  any duplication that buys nothing. `coordinate_basis` carries what is actually known: that a
+  `planned` position is an intent and a `measured` one is not. A pipeline that begins recording an
+  interval or a covariance can have a column then, argued from what it emits.
 - **Whether `coordinate_basis` is meaningful outside an atlas frame.** A probe-frame coordinate is
   the probe's own geometry, exact by construction and neither planned nor measured. It wants a
   third value, or a nullable column where the frame makes the question empty. Left until a packet
