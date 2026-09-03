@@ -17,6 +17,20 @@ to see what a table looks like now; read `02` plus the revisions to see why.
 | `registry.schema.json` | Meta-schema; the registry validates against it (R2 §9). |
 | `manifest.schema.json` | JSON Schema for `nwb.packet.json` (R2 §10). |
 
+The two schemas are hand-written here and **vendored** by the distributions that use them — a
+wheel cannot read a file from another repository. Those copies are *build artifacts*, written by
+`build.py` and compared by `check.py`, not files to maintain:
+
+```
+registry.schema.json  ──build.py──>  nwb-lake-validator/src/nwb_lake_validator/schemas/
+manifest.schema.json  ──build.py──>  nwb-lake-reader/src/nwb_lake_reader/schemas/
+```
+
+Edit the copy here, run `build.py`, and commit both repositories. A stale copy has broken every
+packet three times — R48, R53 and R56 — each time surfacing as a hundred findings about the data
+rather than one about the copy, which is why it is now a build output and a check rather than
+a thing to remember.
+
 ## Provenance of this file
 
 `logical_schemas.json` is **generated. Do not edit it.** It is built from two sources kept

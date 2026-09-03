@@ -200,6 +200,22 @@ for _r, _t in T.items():
             bad_context.append(f"{_r}.{_c['name']}: declares both unit and unit_from")
 check("a declared unit or clock source resolves", sorted(bad_context))
 
+# A vendored schema is a build artifact (see `build.py`'s VENDORED), so a copy that disagrees
+# means the build was not run. Checked here because this is what one runs after touching the
+# registry, and because a stale copy has three times been reported as a hundred findings about
+# the data rather than one about the copy.
+from build import VENDORED  # noqa: E402 - after the ledger, so a broken build fails first
+
+stale = []
+for _schema, _consumer in VENDORED.items():
+    if not _consumer.parent.is_dir():
+        continue
+    if not _consumer.exists():
+        stale.append(f"{_consumer.relative_to(HERE.parent)} is absent; run build.py")
+    elif _consumer.read_text() != (HERE / _schema).read_text():
+        stale.append(f"{_consumer.relative_to(HERE.parent)} differs from {_schema}; run build.py")
+check("every vendored schema matches its source", stale)
+
 # R2 §9: the registry validates against its published meta-schema.
 try:
     import jsonschema

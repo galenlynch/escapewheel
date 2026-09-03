@@ -20,6 +20,13 @@ from parse02 import parse
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "logical_schemas.json"
+
+#: Where each hand-written schema is vendored. A sibling distribution cannot read a file from
+#: another repository, so it carries a copy -- which makes the copy an output of this build.
+VENDORED = {
+    "registry.schema.json": HERE.parent / "nwb-lake-validator/src/nwb_lake_validator/schemas/registry.schema.json",
+    "manifest.schema.json": HERE.parent / "nwb-lake-reader/src/nwb_lake_reader/schemas/manifest.schema.json",
+}
 RULES = HERE / "rules.json"
 
 # 02's type spellings -> R2 §4 vocabulary. Nested spellings are removed by R3, not mapped.
@@ -994,3 +1001,19 @@ if __name__ == "__main__":
     import render
 
     print(f"wrote {render.main().name}")
+
+    # The two hand-written schemas are consumed by sibling distributions, which vendor them
+    # because a wheel cannot read a file from another repository. A vendored copy is therefore a
+    # *build artifact* and not a file to maintain: a stale one has broken every packet three
+    # times -- R48, R53 and R56 -- each time reported as a hundred findings about the data rather
+    # than one about the copy. Written here so the class of bug cannot recur, and compared by
+    # `check.py` so a build nobody ran is still caught.
+    for schema, consumer in VENDORED.items():
+        source = HERE / schema
+        if not consumer.parent.is_dir():
+            print(f"skip  {schema} -> {consumer} (sibling not present)")
+            continue
+        if consumer.exists() and consumer.read_text() == source.read_text():
+            continue
+        consumer.write_text(source.read_text())
+        print(f"wrote {consumer.relative_to(HERE.parent)}")
