@@ -126,6 +126,29 @@ nothing above says how it declares one. Implementation needs it mechanically —
 resolution differs between the two shapes — so a discriminator carries `discriminates`, naming the
 column that holds the value. Absent means the shared-key shape.
 
+### 2.3.3 What a paired value matches
+
+A paired value **MUST** be `string`, and it matches the named resource's key **or** that key's
+`*_name`, decided by R53 §2.3's `identity`:
+
+- the key is **`carried`** — the source's own number, stable across builds, so a value written
+  before the build can hold it and the join is on the key;
+- the key is **`assigned`** — a number this format chose at build time, so a value written before
+  the build *cannot* hold it, and the join is on the `*_name` R53 §2.3.1 requires the owner to
+  carry for exactly this purpose.
+
+That is derivable from the registry, so resolution stays mechanical and no writer has to renumber
+anything. It is also why the column is a string: one discriminator resolves against several kinds,
+mixing an assigned key's name with a carried key's number, so the union it joins mixes types by
+construction.
+
+A single-column key is necessary and not sufficient. An assigned identifier a table does not
+**own** — it is exported through a reference, so the name lives on the owner — leaves nothing a
+paired value could match, and the resource is simply not namable. Measured on the current
+registry: **14 of 35 core tables** have a single-column key and all 14 resolve by name;
+`vr_foraging.sessions` has one and is not namable, because its `session_id` belongs to
+`core.sessions`.
+
 `core.processing_runs.scope_kind` declares `discriminates: "scope"`. Inferring it from the name
 instead would be the guess R48 §3 measured as unsafe, and `registry/check.py` can only check a
 declaration: that the named column exists in the same table, and that `resolves` and
@@ -194,26 +217,25 @@ case coincide.
 
 ## 4. Open
 
-- **`core.processing_runs.scope`'s own type.** It holds an identifier and is declared `string`,
-  which was consistent while every identifier was a string. R53 §2.1 made them `int32`, so a
-  scope naming a probe now holds `"3"` as text. Either `scope` becomes `int32` — which R53 makes
-  uniform and which nothing prevents — or the inconsistency is deliberate and should say why.
-  This revision does not settle it, because it is R53's consequence rather than this one's.
-  `registry/check.py` reports it on every run rather than letting it fade.
+- ~~**`core.processing_runs.scope`'s own type.**~~ **Settled 2026-09-03 in §2.3.3.** It stays
+  `string`, and what it holds is the name rather than the number.
 
   Implementing §2.4 sharpened the question from *what type* to **who assigns the value**.
-  `session_id` and `probe_id` are `assigned` (R53 §2.3), so their values are chosen by the writer
-  at build time; `nwb_lake_writer.arrow.number` renumbers a foreign key through its target's map,
-  and does so for *declared references* only. A discriminated reference is by construction not a
-  declared reference — that is the whole mechanism — so `scope` is left holding whatever the
-  source said, and a hand-authored packet cannot produce a scope that resolves at all. Measured:
-  the conformance corpus's `undeclared_currency` carries `scope = "probe0"` against a `probe_id`
-  that is now an integer, and the generated check finds it.
+  `session_id` and `probe_id` are `assigned` (R53 §2.3), so a writer chooses their values at build
+  time; `nwb_lake_writer.arrow.number` renumbers a foreign key through its target's map, and does
+  so for *declared references* only. A discriminated reference is by construction not a declared
+  reference — that is the whole mechanism — so nothing renumbers `scope`, and a value written
+  before the build can never equal a number chosen during it. Measured: the corpus's
+  `undeclared_currency` carries `scope = "probe0"` against a `probe_id` that is now an integer,
+  and the generated check found it.
 
-  The fix is available and mechanical — `discriminates` names the column and the kind names the
-  map, so the writer has everything it needs to number a paired value through the target's
-  assignment — but doing it decides §4's first bullet by fiat, in favour of `scope` holding the
-  assigned number as text. That decision is left open rather than taken here.
+  Making the writer number it was the alternative, and it fails a test this format keeps passing:
+  a hand-authored packet could no longer write a scope at all, because the author cannot know the
+  assignment. Matching the `*_name` instead needs no writer change, keeps a scope readable in the
+  file it is stored in, and has no coverage gap — all 14 namable core resources carry one, which
+  is what R53 §2.3.1 put them there for. The cost is a string join rather than an integer one,
+  which is R53 §1's measurement pointing the other way; it does not bite, because a run table is
+  dozens of rows where that was measured on 286,896,563.
 - **Whether one extension declaring several kinds needs anything further.** It does not:
   `interval_kind` names a *resource*, and one extension has many, so `dynamic_foraging.trials`
   and `dynamic_foraging.blocks` are two kinds from one document. Each carries its own constant
