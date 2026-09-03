@@ -117,6 +117,14 @@ check("an extension's file name is its extension_id",
        if _doc.get("extension_id") != _id])
 check("every extension extends the logical standard",
       [_id for _id, _doc in EXT.items() if _doc.get("extends") != "nwb-lake-logical-v0.1"])
+# R57 §4: the check the key exists for. A meta-schema URI resolves to nothing over the network,
+# so what makes the declaration worth carrying is that it is verifiable offline against the
+# schema in hand -- a document drafted against an older format says so here rather than failing
+# later as findings about its tables.
+META_ID = json.loads((HERE / "registry.schema.json").read_text())["$id"]
+check("every registry document names this meta-schema",
+      [f"{_n}: {_d.get('$schema', 'declares none')}"
+       for _n, _d in {"logical_schemas": REG, **EXT}.items() if _d.get("$schema") != META_ID])
 
 check("withdrawn tables absent",
       [n for n in ("core.unit_spike_chunks", "core.provenance_entities",

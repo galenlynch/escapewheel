@@ -11,6 +11,10 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "$schema": {
+      "description": "The meta-schema this document conforms to (R57 \u00a72.1). Identity, not a fetch instruction -- a validator MUST NOT dereference it.",
+      "type": "string"
+    },
     "registry_version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"

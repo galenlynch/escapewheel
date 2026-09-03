@@ -979,7 +979,10 @@ def build() -> dict:
     # version can be ambiguous inside it. `PacketWriter._install_registry` refuses the
     # amendment that would create the ambiguity, so the bump happens when it is forced rather
     # than on a schedule.
-    return {"registry_version": "0.1.0",
+    # R57 §2.1: first, so what governs the document is visible without reading it. Read from
+    # the meta-schema rather than repeated, since a copy is what goes stale.
+    return {"$schema": json.loads((HERE / "registry.schema.json").read_text())["$id"],
+            "registry_version": "0.1.0",
             "semantic_standard_version": "nwb-lake-semantic-v0.1",
             "logical_standard_version": "nwb-lake-logical-v0.1",
             # Every revision whose decisions are applied above, so the registry says what it
