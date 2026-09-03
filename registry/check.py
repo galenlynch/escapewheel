@@ -95,6 +95,14 @@ def structural(tables, universe, prefix=""):
        [(n, a, r["resource"], b) for n, t in tables.items() for r in t["references"]
         for a, b in zip(r["columns"], r["resource_columns"])
         if role.get((n, a)) != role.get((r["resource"], b))])
+    # R53 §2.3 with R48 §2.3's reasoning: `number` resolves an assigned identifier through its
+    # target's map and coerces a carried one, so a reference across the two numbers each side
+    # differently and resolves to nothing. Decidable here, and invisible until a packet is built.
+    identity = {(n, c["name"]): c.get("identity") for n, t in universe.items() for c in t["columns"]}
+    c_("a reference relates columns of the same identity",
+       [(n, a, r["resource"], b) for n, t in tables.items() for r in t["references"]
+        for a, b in zip(r["columns"], r["resource_columns"])
+        if role.get((n, a)) == "identifier" and identity.get((n, a)) != identity.get((r["resource"], b))])
     c_("source labels are strings",
        [(n, c["name"], c["type"]) for n, t in tables.items() for c in t["columns"]
         if c["name"].endswith("_label") and c["type"] != "string"])

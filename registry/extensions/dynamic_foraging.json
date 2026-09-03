@@ -21,7 +21,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "The `core.trials` row this describes.",
-          "identity": "assigned"
+          "identity": "carried"
         },
         {
           "name": "block_id",
