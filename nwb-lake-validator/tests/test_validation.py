@@ -975,8 +975,8 @@ def _extension(root, *, tables=None, mutate=None):
         "tables": {
             "task.trials": {
                 "columns": [
-                    {"name": "session_id", "type": "string", "presence": "required", "role": "identifier"},
-                    {"name": "trial_id", "type": "string", "presence": "required", "role": "identifier"},
+                    {"name": "session_id", "type": "string", "presence": "required", "role": "identifier", "identity": "assigned"},
+                    {"name": "trial_id", "type": "string", "presence": "required", "role": "identifier", "identity": "assigned"},
                     {"name": "choice", "type": "string", "presence": "nullable", "role": "data",
                      "enum": ["left", "right"]},
                 ],

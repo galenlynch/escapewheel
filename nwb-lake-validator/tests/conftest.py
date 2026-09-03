@@ -35,8 +35,13 @@ def _col(name, type_, presence, **extra):
     role = ("coordinate" if name.endswith("_tick")
             else "identifier" if name.endswith("_id")
             else extra.pop("role", "data"))
-    return {"name": name, "type": type_, "presence": presence, "role": role,
-            "description": name, **extra}
+    entry = {"name": name, "type": type_, "presence": presence, "role": role,
+             "description": name, **extra}
+    if role == "identifier":
+        # R53 §2.3: required exactly where the role is identifier. `assigned` unless the fixture
+        # says otherwise, since a fixture invents its own ids rather than carrying anyone's.
+        entry.setdefault("identity", "assigned")
+    return entry
 
 
 def _registry():
