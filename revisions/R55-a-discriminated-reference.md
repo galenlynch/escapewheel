@@ -94,6 +94,19 @@ discriminated table**. The reference already carries the column mapping — `col
 generated anti-join enforces the integrity as a side effect. `dynamic_foraging.trials` already
 declares one; the rule is that it is not optional.
 
+**And it must cover the discriminated table's whole key.** R54 §2.2 puts the kind *in* the key —
+`(session_id, interval_kind, interval_id)` — so that each kind may carry its source's own
+numbering, and trial 0 and block 0 can both exist. A reference on `(session_id, interval_id)`
+alone therefore targets a set that is not unique: it identifies a row of *some* kind, which is not
+a foreign key at all, and the generated anti-join would pass while resolving to several rows.
+
+So a detail table carries the discriminator as a constant column and references all three. That
+restates in every row what the table's own identity implies, which looks wasteful and is not:
+`core.spike_events` already carries `sorting_run_id` and `curation_id` on every one of
+286,896,563 rows for the same reason, and R53 §1 measured the pair at **0.06 bit/row**, because a
+column holding one value run-length encodes to nothing. The cost is a rounding error and what it
+buys is a reference that identifies a row.
+
 This also fixes the direction. The reference runs extension → core, which R17 §2 permits and
 §2.6 explains, so the discriminator names downward while the integrity constraint points upward.
 
@@ -174,6 +187,12 @@ case coincide.
   scope naming a probe now holds `"3"` as text. Either `scope` becomes `int32` — which R53 makes
   uniform and which nothing prevents — or the inconsistency is deliberate and should say why.
   This revision does not settle it, because it is R53's consequence rather than this one's.
+- **Whether one extension declaring several kinds needs anything further.** It does not:
+  `interval_kind` names a *resource*, and one extension has many, so `dynamic_foraging.trials`
+  and `dynamic_foraging.blocks` are two kinds from one document. Each carries its own constant
+  discriminator and references the full key; a trial naming its block is then an ordinary
+  extension-internal reference between two detail tables. Nothing in §2 treats the one-extension
+  case specially, which is the point, but no packet yet carries it.
 - **Whether a discriminator should be `int32` too.** It holds a resource ID, and resource IDs are
   dotted strings everywhere else in the format, including in the manifest. Keeping it a string is
   consistent; the cost is that a discriminator in a fact table repeats a long string per row,
