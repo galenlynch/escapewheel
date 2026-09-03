@@ -652,7 +652,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "Electrode ID.",
-          "identity": "carried"
+          "identity": "assigned"
         },
         {
           "name": "channel_label",
@@ -1506,7 +1506,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Electrode ID.",
-          "identity": "carried",
+          "identity": "assigned",
           "since": "R19 \u00a73"
         },
         {
@@ -1570,7 +1570,15 @@
           "presence": "required",
           "role": "identifier",
           "description": "Stable electrode ID.",
-          "identity": "carried"
+          "identity": "assigned"
+        },
+        {
+          "name": "electrode_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "session_id",
@@ -3582,7 +3590,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "An electrode this unit was detected on.",
-          "identity": "carried",
+          "identity": "assigned",
           "since": "R28 \u00a72-4"
         },
         {
@@ -3957,7 +3965,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "Default electrode.",
-          "identity": "carried"
+          "identity": "assigned"
         },
         {
           "name": "firing_rate_hz",

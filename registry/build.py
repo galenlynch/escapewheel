@@ -129,8 +129,11 @@ IDENTITY: dict[str, str] = {
     # Carried -- the source's own, so two independent builds agree without being told to.
     "trial_id": "carried",            # NWB intervals/trials/id, int64, already 0..n
     "unit_id": "carried",             # numpysorting_info.json unit_ids, int64, strictly increasing
-    "electrode_id": "carried",        # the NWB electrodes table's own row id
-    "default_electrode_id": "carried",  # references electrode_id, so it inherits
+    # electrode_id looked carried and is not: `_electrode_ids` composes (group, channel)
+    # because no NWB column is unique on its own -- electrode_name repeats across the shanks of
+    # a quad-base probe, and channel_name is per-probe.
+    "electrode_id": "assigned",
+    "default_electrode_id": "assigned",  # references electrode_id, so it inherits
     # Assigned -- this format chose the number, and something must record what it stands for.
     "array_asset_id": "assigned",
     "clock_id": "assigned",

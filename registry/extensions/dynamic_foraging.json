@@ -8,17 +8,27 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "trial_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "The `core.trials` row this describes."
+          "description": "The `core.trials` row this describes.",
+          "identity": "assigned"
+        },
+        {
+          "name": "block_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "The block this trial falls in. A column rather than a containment join: the join is 2,240x slower at a million trials and needs an operation SQL does not have, and a declared reference gets an anti-join from Tier 1 for free."
         },
         {
           "name": "choice",
@@ -125,6 +135,17 @@
             "session_id",
             "trial_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id",
+            "block_id"
+          ],
+          "resource": "dynamic_foraging.blocks",
+          "resource_columns": [
+            "session_id",
+            "block_id"
+          ]
         }
       ],
       "sort": [
@@ -144,24 +165,34 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "block_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable block ID."
+          "description": "Stable block ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "block_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `block_id` stands for (R53 \u00a72.3.1)."
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Clock for start/stop ticks."
+          "description": "Clock for start/stop ticks.",
+          "identity": "assigned"
         },
         {
           "name": "start_tick",
@@ -232,6 +263,12 @@
           "level": "error",
           "message": "blocks overlap, so a trial inside both has no containing block",
           "sql": "SELECT a.session_id, a.block_id, b.block_id AS other FROM dynamic_foraging_blocks a JOIN dynamic_foraging_blocks b ON a.session_id = b.session_id AND a.block_id < b.block_id WHERE a.start_tick <= b.stop_tick AND b.start_tick <= a.stop_tick"
+        },
+        {
+          "id": "dynamic_foraging.blocks.contains_its_trials",
+          "level": "error",
+          "message": "a trial names a block whose interval does not contain it",
+          "sql": "SELECT t.session_id, t.trial_id, t.block_id FROM dynamic_foraging_trials t JOIN dynamic_foraging_blocks b ON t.session_id = b.session_id AND t.block_id = b.block_id JOIN core_trials c ON c.session_id = t.session_id AND c.trial_id = t.trial_id WHERE c.start_tick < b.start_tick OR c.stop_tick > b.stop_tick"
         }
       ]
     }
