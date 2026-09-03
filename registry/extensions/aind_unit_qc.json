@@ -1,0 +1,476 @@
+{
+  "registry_version": "0.1.0",
+  "logical_standard_version": "0.1",
+  "extension_id": "aind_unit_qc",
+  "extends": "nwb-lake-logical-v0.1",
+  "tables": {
+    "aind_unit_qc.metrics": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Session ID."
+        },
+        {
+          "name": "unit_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "carried",
+          "description": "The unit these metrics describe."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Sorting run, since unit identity is contextual."
+        },
+        {
+          "name": "curation_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Curation version."
+        },
+        {
+          "name": "amplitude_cutoff",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "amplitude_cv_median",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "amplitude_cv_range",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "amplitude_median",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "d_prime",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "drift_mad",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "drift_ptp",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "drift_std",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "firing_range",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "firing_rate",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "isi_violations_count",
+          "type": "int64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "isi_violations_ratio",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "isolation_distance",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "l_ratio",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "nn_hit_rate",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "nn_miss_rate",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "noise_cutoff",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "num_spikes",
+          "type": "int64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "presence_ratio",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "rp_contamination",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "rp_violations",
+          "type": "int64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "sd_ratio",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "silhouette",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "sliding_rp_violation",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "snr",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "sync_spike_2",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "sync_spike_4",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "sync_spike_8",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Quality metric, carried verbatim from the sorter's own output."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ],
+          "resource": "core.units",
+          "resource_columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id"
+      ],
+      "rules": []
+    },
+    "aind_unit_qc.waveform_metrics": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Session ID."
+        },
+        {
+          "name": "unit_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "carried",
+          "description": "The unit these metrics describe."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Sorting run, since unit identity is contextual."
+        },
+        {
+          "name": "curation_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Curation version."
+        },
+        {
+          "name": "exp_decay",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "main_peak_to_trough_ratio",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "main_to_next_extremum_duration",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "num_negative_peaks",
+          "type": "int64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "num_positive_peaks",
+          "type": "int64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "peak_after_to_trough_ratio",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "peak_after_width",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "peak_before_to_peak_after_ratio",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "peak_before_to_trough_ratio",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "peak_before_width",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "peak_half_width",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "peak_to_trough_duration",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "recovery_slope",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "repolarization_slope",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "spread",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "trough_half_width",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "trough_width",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "velocity_above",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "velocity_below",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        },
+        {
+          "name": "waveform_baseline_flatness",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Waveform metric, carried verbatim from the sorter's own output."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ],
+          "resource": "core.units",
+          "resource_columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id"
+      ],
+      "rules": []
+    }
+  }
+}
