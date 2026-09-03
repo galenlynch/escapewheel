@@ -1337,15 +1337,33 @@ def _run_checks(connection: Any, checks: Sequence[Any], report: Report, extensio
             report.add(check.level, check.id, check.message, rows, extension=extension)
 
 
+def _resolve_column(spec: Mapping[str, Any]) -> str | None:
+    """Return the column a paired value joins to, or None where the resource is not namable.
+
+    R55 §2.3.1 requires a single-column key, since a paired value holds one identifier. Which
+    column it *matches* then follows from R53 §2.3: an `assigned` key is a number this format
+    chose at build time, so a value written before the build cannot hold it and the join is on
+    the `*_name` the owner carries for exactly this purpose. A `carried` key is the source's own
+    number and is stable, so the join is on the key itself.
+    """
+    key = spec.get("primary_key")
+    if not isinstance(key, list) or len(key) != 1:
+        return None
+    column = next((c for c in spec["columns"] if c["name"] == key[0]), None)
+    if column is None:
+        return None
+    if column.get("identity") != "assigned":
+        return key[0]
+    named = f"{key[0].removesuffix('_id')}_name"
+    return named if any(c["name"] == named for c in spec["columns"]) else None
+
+
 def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, str]:
-    """Every resource a discriminator may name, mapped to its single primary-key column.
+    """Every resource a discriminator may name, mapped to the column a paired value joins to.
 
     Built from the packet's registry *and* the extension registries it carries, because R49 §2.4
     lets a kind name an extension table and R55 §2.5 makes that the case the check must reach --
     the one whose hand-written union over core matched no branch and passed in silence.
-
-    Only a single-column key can be resolved from a paired value, which holds one identifier
-    (R55 §2.3.1); a resource keyed by several is simply not namable that way.
     """
     tables = dict(registry["tables"])
     # Core's absent tables get empty stand-ins in _layer4, so all of them can be joined. An
@@ -1354,11 +1372,8 @@ def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, st
     for document in packet.extensions().values():
         if isinstance(document.get("tables"), Mapping):
             tables.update({n: t for n, t in document["tables"].items() if n in carried})
-    return {
-        name: spec["primary_key"][0]
-        for name, spec in tables.items()
-        if isinstance(spec.get("primary_key"), list) and len(spec["primary_key"]) == 1
-    }
+    resolved = ((name, _resolve_column(spec)) for name, spec in tables.items())
+    return {name: column for name, column in resolved if column is not None}
 
 
 def _check_extensions(

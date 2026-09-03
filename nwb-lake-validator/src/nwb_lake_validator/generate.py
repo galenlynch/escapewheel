@@ -147,9 +147,10 @@ def _discriminator(
     joinable = {k: key for k, key in kinds.items() if k in included}
     if not joinable:
         return checks
-    # CAST both sides: R53 §2.1 made a key int32 while `scope` stayed a string (R55 §4), so an
-    # uncast comparison makes DuckDB coerce the string and *raise* on a value that is not a
-    # number -- turning a finding into a check that could not run.
+    # CAST both sides. A paired value is a string, because one column resolves against several
+    # kinds and a carried key is a number where an assigned one's name is not -- so the union
+    # mixes types by construction. Uncast, DuckDB coerces the string and *raises* on one that is
+    # not a number, turning a finding into a check that could not run.
     union = " UNION ALL ".join(
         f"SELECT '{k}' AS kind, CAST({quote(key)} AS VARCHAR) AS id FROM {sql_name(k)}"
         for k, key in sorted(joinable.items())
@@ -195,8 +196,9 @@ def generate(
         extension registry needs core's tables here, since it declares none of them and R17 §2
         lets it reference them.
     kinds : Mapping, optional
-        Every resource a discriminator may name (R55 §2.1), mapped to its single primary-key
-        column. Supplied by the caller rather than read from this registry, because R55 §2.5
+        Every resource a discriminator may name (R55 §2.1), mapped to the column a paired value
+        joins to -- the `*_name` where the key is assigned, the key where it is carried (R55
+        §2.3.3). Supplied by the caller rather than read from this registry, because R55 §2.5
         requires the resolution to reach the packet's *extension* kinds -- the case R49 §2.4
         designed the mechanism for and whose hand-written union quietly matched no branch.
 
