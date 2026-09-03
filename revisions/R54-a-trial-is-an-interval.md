@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-03 |
+| **Status** | **Accepted** 2026-09-03 |
 | **Amends** | `02` (`core.trials`, `core.trial_tags`), R3 §3.0 (one of its child-table examples), R43 §3 (which sent a task's columns to an extension) |
 | **Depends on** | R17 (extension registries), R45 (a tick interval is closed), R49 (a kind names a resource), R53 (an identifier is an integer) |
 | **Profile** | `nwb-lake-portable-v0.1` |
