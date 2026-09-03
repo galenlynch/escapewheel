@@ -64,6 +64,13 @@ a column list cannot: `velocity_above` is finite for **807 of 4,559** units and 
 for 757, because the fit needs channels on that side of the peak; the three `drift_*` metrics for
 2,531. Every one is nullable, and the descriptions say so.
 
+A rule invented from the column names did not survive the data. `a_peak_is_counted` asserted that
+a waveform with a measured `peak_to_valley` has a peak of one sign or the other. **61 of 4,322
+units** contradict it, all with a `peak_to_valley` in the ordinary range: the span is measured
+extremum to extremum, and the peak *counters* apply a prominence threshold, so a low-prominence
+waveform has a width and no detected peak. The rule is struck. `snr` already says what it was
+reaching for, and better.
+
 ## The source's columns are evidence, not a schema
 
 Taking a `DynamicTable`'s columns verbatim reproduces its shape, and some of that shape is the

@@ -424,12 +424,6 @@
           "level": "error",
           "message": "a waveform width is zero or negative, which no waveform has",
           "sql": "SELECT session_id, unit_id FROM aind_unit_qc_waveform_metrics WHERE peak_to_valley <= 0 OR half_width <= 0"
-        },
-        {
-          "id": "aind_unit_qc.waveform_metrics.a_peak_is_counted",
-          "level": "error",
-          "message": "a waveform has no peak of either sign, so nothing was measured on it",
-          "sql": "SELECT session_id, unit_id FROM aind_unit_qc_waveform_metrics WHERE num_positive_peaks = 0 AND num_negative_peaks = 0 AND peak_to_valley IS NOT NULL"
         }
       ]
     },
