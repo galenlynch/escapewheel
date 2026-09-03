@@ -139,7 +139,9 @@ NAMING = {
     "an identifier is named _id": lambda n, t, role: not (
         role == "identifier" and not n.endswith(("_id", "_label", "_name"))),
     "an _id column is an identifier": lambda n, t, role: not (n.endswith("_id") and role != "identifier"),
-    "an _id column is a string": lambda n, t, role: not (n.endswith("_id") and t != "string"),
+    # R53 §2.1 inverted this: an identifier is an integer, and a string one is the defect.
+    "an _id column is an integer": lambda n, t, role: not (n.endswith("_id") and t not in INTEGERS),
+    "a _name column is a string": lambda n, t, role: not (n.endswith("_name") and t != "string"),
     "a _tick column is a coordinate": lambda n, t, role: not (n.endswith("_tick") and role != "coordinate"),
     "a coordinate is named _tick": lambda n, t, role: not (role == "coordinate" and not n.endswith("_tick")),
     "an _index column is an index": lambda n, t, role: not (

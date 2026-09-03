@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-35 tables, 292 columns, 70 references, 61 Tier 2 rules
+35 tables, 306 columns, 71 references, 61 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53
 ```
 
 ## Contents
@@ -27,14 +27,15 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `array_asset_id` | string | **required** | R20 §5 | Stable array asset ID. |
-| `session_id` | string | **required** | R20 §5 | Session ID. |
+| `array_asset_id` | int32 | **required** | R20 §5 | Stable array asset ID. |
+| `array_asset_name` | string | nullable | R53 §2.3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_id` | int32 | **required** | R20 §5 | Session ID. |
 | `semantic_type` | string | **required** | R20 §5 | Semantic type, e.g. ElectricalSeries. |
 | `name` | string | **required** | R20 §5 | Human-readable name. |
 | `kind` | string | **required** | R20 §5 | `raw`, `ap`, `lfp`, `waveform`, etc. |
 | `uri` | string | **required** | R20 §5 | URI/path to array store. |
 | `format` | string | **required** | R20 §5 | `zarr_v3` for portable profile. |
-| `clock_id` | string | nullable | R20 §5 | Clock for time axis. |
+| `clock_id` | int32 | nullable | R20 §5 | Clock for time axis. |
 | `sample_rate_hz` | float64 | nullable | R20 §5 | Sample rate if regularly sampled. |
 | `unit` | string | nullable | R20 §5 | Physical unit. |
 | `conversion` | float64 | nullable | R20 §5 | Multiply stored values by this before offset. |
@@ -55,19 +56,19 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `array_asset_id` | string | **required** | R20 §5 | Array asset ID. |
+| `array_asset_id` | int32 | **required** | R20 §5 | Array asset ID. |
 | `axis_index` | int64 | **required** | R20 §5 | 0-based axis position in stored order (R3 §5). |
 | `dimension_name` | string | **required** | R20 §5 | Axis name. |
 | `coordinate_position_column` | string | nullable | R20 §5 | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | R20 §5 | Resource whose rows are this axis's positions (labelled axis). |
-| `coordinate_array_asset_id` | string | nullable | R20 §5 | A 1-D array holding one value per position (irregular axis). |
+| `coordinate_array_asset_id` | int32 | nullable | R20 §5 | A 1-D array holding one value per position (irregular axis). |
 | `coordinate_unit` | string | nullable | R20 §5 | Unit of the numeric coordinate values. |
 | `step_value` | float64 | nullable | R20 §5 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §5 | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | R20 §5 | Ticks advanced per position (numerator). |
 | `step_tick_den` | int64 | nullable | R20 §5 | Denominator of the step, in ticks. Absent means 1. |
 | `origin_tick` | int64 | nullable | R20 §5 | Tick at position 0. |
-| `clock_id` | string | nullable | R20 §5 | Clock the ticks are counted on (regular tick axis). |
+| `clock_id` | int32 | nullable | R20 §5 | Clock the ticks are counted on (regular tick axis). |
 
 **Primary key** — `array_asset_id`, `axis_index`  
 **Sort** — `array_asset_id`, `axis_index`
@@ -81,12 +82,12 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** |  | Session ID. |
-| `unit_id` | string | **required** |  | Unit ID. |
-| `sorting_run_id` | string | **required** |  | Sorting run ID. |
-| `curation_id` | string | **required** |  | Curation ID. |
+| `session_id` | int32 | **required** |  | Session ID. |
+| `unit_id` | int32 | **required** |  | Unit ID. |
+| `sorting_run_id` | int32 | **required** |  | Sorting run ID. |
+| `curation_id` | int32 | **required** |  | Curation ID. |
 | `t_tick` | int64 | **required** |  | Spike tick on clock_id, mapped through core.clock_anchors. |
-| `clock_id` | string | **required** |  | The clock these ticks are on, normally the session's reference. |
+| `clock_id` | int32 | **required** |  | The clock these ticks are on, normally the session's reference. |
 | `time_bucket_tick` | int64 | **required** | R30 §3.1 | First tick of the bucket this spike falls in, on clock_id. |
 
 **Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `t_tick`  
@@ -108,14 +109,15 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `array_asset_id` | string | **required** |  | Stable array asset ID. |
-| `session_id` | string | **required** |  | Session ID. |
+| `array_asset_id` | int32 | **required** |  | Stable array asset ID. |
+| `array_asset_name` | string | nullable | R53 §2.3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_id` | int32 | **required** |  | Session ID. |
 | `semantic_type` | string | **required** | R8 §3-4 | Semantic type, e.g. ElectricalSeries. |
 | `name` | string | **required** |  | Human-readable name. |
 | `kind` | string | **required** | R8 §3-4 | `raw`, `ap`, `lfp`, `waveform`, etc. |
 | `uri` | string | **required** |  | URI/path to array store. |
 | `format` | string | **required** |  | `zarr_v3` for portable profile. |
-| `clock_id` | string | nullable |  | Clock for time axis. |
+| `clock_id` | int32 | nullable |  | Clock for time axis. |
 | `sample_rate_hz` | float64 | nullable |  | Sample rate if regularly sampled. |
 | `unit` | string | nullable |  | Physical unit. |
 | `conversion` | float64 | nullable |  | Multiply stored values by this before offset. |
@@ -139,10 +141,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `array_asset_id` | string | **required** |  | Array asset ID. |
+| `array_asset_id` | int32 | **required** |  | Array asset ID. |
 | `axis_index` | int64 | **required** | R3 §6.1 | Axis that channel_index indexes, in stored order. |
 | `channel_index` | int64 | **required** |  | Channel dimension index. |
-| `electrode_id` | string | nullable |  | Electrode ID. |
+| `electrode_id` | int32 | nullable |  | Electrode ID. |
 | `channel_label` | string | nullable |  | Human-readable channel label. |
 | `inter_sample_shift` | float64 | nullable | R19 §2 | Acquisition time offset within one sample period, in sample periods. |
 | `unit` | string | nullable | R19 §2 | Physical unit of the converted value. |
@@ -168,19 +170,19 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `array_asset_id` | string | **required** | R3 §3.1-3.3 | Array asset ID. |
+| `array_asset_id` | int32 | **required** | R3 §3.1-3.3 | Array asset ID. |
 | `axis_index` | int64 | **required** | R3 §3.1-3.3 | 0-based axis position in stored order (R3 §5). |
 | `dimension_name` | string | **required** | R3 §3.1-3.3 | Axis name. |
 | `coordinate_position_column` | string | nullable | R20 §2 | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | R20 §2 | Resource whose rows are this axis's positions (labelled axis). |
-| `coordinate_array_asset_id` | string | nullable | R20 §2 | A 1-D array holding one value per position (irregular axis). |
+| `coordinate_array_asset_id` | int32 | nullable | R20 §2 | A 1-D array holding one value per position (irregular axis). |
 | `coordinate_unit` | string | nullable | R20 §2 | Unit of the numeric coordinate values. |
 | `step_value` | float64 | nullable | R20 §2 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §2 | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | R20 §2 | Ticks advanced per position (numerator). |
 | `step_tick_den` | int64 | nullable | R33 §2 | Denominator of the step, in ticks. Absent means 1. |
 | `origin_tick` | int64 | nullable | R20 §2 | Tick at position 0. |
-| `clock_id` | string | nullable | R20 §2 | Clock the ticks are counted on (regular tick axis). |
+| `clock_id` | int32 | nullable | R20 §2 | Clock the ticks are counted on (regular tick axis). |
 
 **Primary key** — `array_asset_id`, `axis_index`  
 **Sort** — `array_asset_id`, `axis_index`
@@ -207,7 +209,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `clock_id` | string | **required** | R13 §3 | The clock being aligned. |
+| `clock_id` | int32 | **required** | R13 §3 | The clock being aligned. |
 | `anchor_index` | int64 | **required** | R13 §3 | 0-based position in this clock's anchor sequence. |
 | `t_tick` | int64 | **required** | R13 §3 | Tick on clock_id. |
 | `parent_tick` | int64 | **required** | R13 §3 | The corresponding tick on parent_clock_id. |
@@ -232,8 +234,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** | R38 §2.1 | Session ID. |
-| `clock_id` | string | **required** | R38 §2.1 | The clock that was observing. |
+| `session_id` | int32 | **required** | R38 §2.1 | Session ID. |
+| `clock_id` | int32 | **required** | R38 §2.1 | The clock that was observing. |
 | `start_tick` | int64 | **required** | R38 §2.1 | First tick observed, on `clock_id` itself. |
 | `stop_tick` | int64 | **required** | R38 §2.1 | Last tick observed, on `clock_id` itself. |
 
@@ -254,15 +256,16 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `clock_id` | string | **required** |  | Stable clock ID. |
-| `session_id` | string | **required** |  | Session ID. |
+| `clock_id` | int32 | **required** |  | Stable clock ID. |
+| `clock_name` | string | nullable | R53 §2.3.1 | What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_id` | int32 | **required** |  | Session ID. |
 | `name` | string | **required** |  | Human-readable clock name. |
 | `tick_rate_hz` | float64 | nullable |  | Tick rate as float, required unless exact tick rate provided. |
 | `tick_rate_num` | int64 | nullable |  | Exact rational numerator. |
 | `tick_rate_den` | int64 | nullable |  | Exact rational denominator. |
 | `origin` | string | **required** |  | Origin description. |
 | `tick_zero_utc` | timestamp | nullable | R6 §2 | Wall-clock instant of tick 0 on this clock. |
-| `parent_clock_id` | string | nullable |  | Parent/reference clock. |
+| `parent_clock_id` | int32 | nullable |  | Parent/reference clock. |
 | `transform_slope` | float64 | nullable | R3 §3.4 | Parent ticks per this clock's tick, as measured. |
 | `transform_offset` | float64 | nullable | R3 §3.4 | Parent-clock tick at this clock's tick 0. |
 | `transform_to_parent` | json_string | optional |  | Clock alignment transform. |
@@ -291,14 +294,15 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `curation_id` | string | **required** |  | Stable curation ID. |
-| `sorting_run_id` | string | **required** |  | Sorting run ID. |
-| `session_id` | string | **required** |  | Session ID. |
+| `curation_id` | int32 | **required** |  | Stable curation ID. |
+| `curation_name` | string | nullable | R53 §2.3.1 | What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `sorting_run_id` | int32 | **required** |  | Sorting run ID. |
+| `session_id` | int32 | **required** |  | Session ID. |
 | `curator` | string | nullable |  | Curator. |
 | `curation_tool` | string | nullable |  | Tool. |
 | `curation_tool_version` | string | nullable |  | Tool version. |
-| `processing_run_id` | string | nullable | R41 §2.1 | The run that produced this record, where provenance is recorded. |
-| `parent_curation_id` | string | nullable |  | Parent curation. |
+| `processing_run_id` | int32 | nullable | R41 §2.1 | The run that produced this record, where provenance is recorded. |
+| `parent_curation_id` | int32 | nullable |  | Parent curation. |
 | `created_at` | timestamp | nullable |  | Creation time. |
 | `notes` | string | nullable |  | Notes. |
 | `metadata` | json_string | optional |  | Additional metadata. |
@@ -317,8 +321,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `device_id` | string | **required** |  | Stable device ID. |
-| `session_id` | string | nullable |  | Session if device record is session-scoped. |
+| `device_id` | int32 | **required** |  | Stable device ID. |
+| `device_name` | string | nullable | R53 §2.3.1 | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_id` | int32 | nullable |  | Session if device record is session-scoped. |
 | `name` | string | **required** |  | Human-readable name. |
 | `manufacturer` | string | nullable |  | Manufacturer. |
 | `model` | string | nullable |  | Model. |
@@ -338,7 +343,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `electrode_id` | string | **required** | R19 §3 | Electrode ID. |
+| `electrode_id` | int32 | **required** | R19 §3 | Electrode ID. |
 | `coordinate_frame` | string | **required** | R19 §3 | The frame these coordinates are in. |
 | `x_um` | float64 | nullable | R19 §3 | X in micrometres, in that frame. |
 | `y_um` | float64 | nullable | R19 §3 | Y in micrometres. |
@@ -355,9 +360,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `electrode_id` | string | **required** |  | Stable electrode ID. |
-| `session_id` | string | **required** |  | Session ID. |
-| `probe_id` | string | nullable |  | Probe ID. |
+| `electrode_id` | int32 | **required** |  | Stable electrode ID. |
+| `session_id` | int32 | **required** |  | Session ID. |
+| `probe_id` | int32 | nullable |  | Probe ID. |
 | `local_electrode_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `local_channel_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `brain_region` | string | nullable |  | Region label. |
@@ -378,7 +383,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `event_stream_id` | string | **required** | R25 §2 | The stream being observed. |
+| `event_stream_id` | int32 | **required** | R25 §2 | The stream being observed. |
 | `start_tick` | int64 | **required** | R25 §2 | First observed tick, on the stream's clock. |
 | `stop_tick` | int64 | **required** | R25 §2 | Last observed tick, on the stream's clock. |
 
@@ -400,12 +405,13 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `event_stream_id` | string | **required** | R23 §2-3 | Stable ID. |
-| `session_id` | string | **required** | R23 §2-3 | Session ID. |
+| `event_stream_id` | int32 | **required** | R23 §2-3 | Stable ID. |
+| `event_stream_name` | string | nullable | R53 §2.3.1 | What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_id` | int32 | **required** | R23 §2-3 | Session ID. |
 | `name` | string | **required** | R23 §2-3 | Human-readable name, e.g. left_lick_sensor. |
-| `device_id` | string | nullable | R23 §2-3 | The device that produced it, where one is identified. |
-| `clock_id` | string | **required** | R23 §2-3 | The clock its events are timed on. |
-| `processing_run_id` | string | nullable | R23 §2-3 | The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 §4: the manifest records outputs per resource and cannot distinguish streams within one table. |
+| `device_id` | int32 | nullable | R23 §2-3 | The device that produced it, where one is identified. |
+| `clock_id` | int32 | **required** | R23 §2-3 | The clock its events are timed on. |
+| `processing_run_id` | int32 | nullable | R23 §2-3 | The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 §4: the manifest records outputs per resource and cannot distinguish streams within one table. |
 | `metadata` | json_string | optional | R23 §2-3 | Free-form metadata. |
 
 **Primary key** — `event_stream_id`  
@@ -426,12 +432,13 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** |  | Session ID. |
-| `event_id` | string | **required** |  | Stable event ID. |
-| `stream_id` | string | **required** | R23 §2-3 | The stream this event belongs to. |
+| `session_id` | int32 | **required** |  | Session ID. |
+| `event_id` | int32 | **required** |  | Stable event ID. |
+| `event_name` | string | nullable | R53 §2.3.1 | What `event_id` stands for: the identifier a source or an earlier packet used for this event. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `stream_id` | int32 | **required** | R23 §2-3 | The stream this event belongs to. |
 | `event_type` | string | **required** | R11 §3-4 | Event type. |
 | `t_tick` | int64 | **required** |  | Event tick. |
-| `clock_id` | string | **required** |  | Event clock. |
+| `clock_id` | int32 | **required** |  | Event clock. |
 | `payload` | json_string | optional |  | Event payload. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
@@ -453,13 +460,14 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `media_asset_id` | string | **required** |  | Stable media asset ID. |
-| `session_id` | string | **required** |  | Session ID. |
+| `media_asset_id` | int32 | **required** |  | Stable media asset ID. |
+| `media_asset_name` | string | nullable | R53 §2.3.1 | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_id` | int32 | **required** |  | Session ID. |
 | `semantic_type` | string | **required** | R8 §3-4 | e.g. BehaviorVideo. |
 | `name` | string | **required** |  | Name. |
 | `uri` | string | **required** |  | Media file URI. |
 | `format` | string | **required** |  | e.g. mp4. |
-| `clock_id` | string | nullable |  | Clock for frame timing. |
+| `clock_id` | int32 | nullable |  | Clock for frame timing. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `media_asset_id`  
@@ -474,10 +482,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `media_asset_id` | string | **required** |  | Media asset ID. |
+| `media_asset_id` | int32 | **required** |  | Media asset ID. |
 | `frame_index` | int64 | **required** |  | Frame index. |
 | `t_tick` | int64 | **required** |  | Frame time tick. |
-| `clock_id` | string | **required** |  | Clock ID. |
+| `clock_id` | int32 | **required** |  | Clock ID. |
 | `pts` | float64 | nullable |  | Media presentation timestamp if relevant. |
 | `dropped` | bool | nullable |  | Dropped-frame flag. |
 | `metadata` | json_string | optional |  | Additional metadata. |
@@ -488,6 +496,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **References**
 
 - `clock_id` → `core.clocks` (`clock_id`)
+- `media_asset_id` → `core.media_assets` (`media_asset_id`)
 
 ### `core.preferred_runs`
 
@@ -495,11 +504,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** | R41 §2.3 | Session ID. |
+| `session_id` | int32 | **required** | R41 §2.3 | Session ID. |
 | `activity_type` | string | **required** | R41 §2.3 | Which kind of output this preference is about. Open, as R9 §6 leaves it. |
 | `scope_kind` | string | **required** | R49 §2.1 | The resource whose primary key `scope` holds, as a dotted resource ID (R49 §2.2). Open. |
 | `scope` | string | **required** | R41 §2.3 | What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide. |
-| `processing_run_id` | string | **required** | R41 §2.3 | The preferred run. |
+| `processing_run_id` | int32 | **required** | R41 §2.3 | The preferred run. |
 | `chosen_at` | timestamp | nullable | R41 §2.3 | When the choice was made. |
 | `reason` | string | nullable | R41 §2.3 | Why, in one line. |
 
@@ -522,9 +531,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `probe_id` | string | **required** |  | Stable probe ID. |
-| `session_id` | string | **required** |  | Session ID. |
-| `device_id` | string | nullable |  | Associated device. |
+| `probe_id` | int32 | **required** |  | Stable probe ID. |
+| `probe_name` | string | nullable | R53 §2.3.1 | What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_id` | int32 | **required** |  | Session ID. |
+| `device_id` | int32 | nullable |  | Associated device. |
 | `name` | string | nullable |  | Probe name. |
 | `probe_type` | string | nullable |  | Probe type, e.g. Neuropixels 1.0. |
 | `manufacturer` | string | nullable |  | Manufacturer. |
@@ -547,8 +557,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `processing_run_id` | string | **required** | R9 | The run. |
-| `source_file_id` | string | **required** | R9 | A source file the run consumed. |
+| `processing_run_id` | int32 | **required** | R9 | The run. |
+| `source_file_id` | int32 | **required** | R9 | A source file the run consumed. |
 
 **Primary key** — `processing_run_id`, `source_file_id`  
 **Sort** — `processing_run_id`, `source_file_id`
@@ -562,12 +572,13 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `processing_run_id` | string | **required** |  | Stable processing run ID. |
-| `session_id` | string | nullable |  | Session ID if session-scoped. |
+| `processing_run_id` | int32 | **required** |  | Stable processing run ID. |
+| `processing_run_name` | string | nullable | R53 §2.3.1 | What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_id` | int32 | nullable |  | Session ID if session-scoped. |
 | `activity_type` | string | **required** | R8 §3-4 | import, validation, sorting, curation, materialization, etc. |
 | `scope` | string | nullable | R44 §2.1 | What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Open, as activity_type is. |
 | `scope_kind` | string | nullable | R49 §2.1 | The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. Open (R8 §4); a value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
-| `supersedes_run_id` | string | nullable | R50 §2 | The run this one replaces, if any. |
+| `supersedes_run_id` | int32 | nullable | R50 §2 | The run this one replaces, if any. |
 | `software_name` | string | nullable |  | Software name. |
 | `software_version` | string | nullable |  | Software version. |
 | `code_uri` | string | nullable |  | Code reference. |
@@ -602,7 +613,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** | R3 §3.1-3.3 | Session ID. |
+| `session_id` | int32 | **required** | R3 §3.1-3.3 | Session ID. |
 | `experimenter` | string | **required** | R3 §3.1-3.3 | One experimenter. |
 
 **Primary key** — `session_id`, `experimenter`  
@@ -616,15 +627,16 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** |  | Stable session ID. |
-| `subject_id` | string | **required** |  | Subject ID. |
+| `session_id` | int32 | **required** |  | Stable session ID. |
+| `session_name` | string | nullable | R53 §2.3.1 | What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `subject_id` | int32 | **required** |  | Subject ID. |
 | `session_start_time` | timestamp | **required** |  | Session start time if known; if unknown use explicit null only in non-strict test packets. |
 | `session_end_time` | timestamp | nullable | R25 §2 | When the session ended, UTC. Metadata, not derived from the tables (R25 5). |
-| `reference_clock_id` | string | nullable | R27 §2 | The clock this session's times are reported on by default (R27 2). |
+| `reference_clock_id` | int32 | nullable | R27 §2 | The clock this session's times are reported on by default (R27 2). |
 | `session_description` | string | nullable |  | Human-readable session description. |
 | `institution` | string | nullable |  | Institution/lab. |
 | `task_name` | string | nullable |  | Task/protocol name. |
-| `source_session_id` | string | nullable |  | Source-system session ID if different. |
+| `source_session_id` | int32 | nullable |  | Source-system session ID if different. |
 | `metadata` | json_string | optional |  | Additional session metadata. |
 | `t_zero_tick` | int64 | nullable | R39 §2.2 | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
 
@@ -638,7 +650,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 **Tier 2 rules** — 4
 
-- `core.sessions.manifest_sessions_match` — error: the manifest sessions list disagrees with core.sessions
+- `core.sessions.manifest_sessions_match` — error: the manifest's session inventory and core.sessions disagree; the manifest names a session by its session_name, since an assigned session_id means nothing outside the packet that assigned it (R53 §2.3.1)
 - `core.sessions.session_interval_valid` — error: session_end_time precedes session_start_time
 - `core.sessions.reference_clock_declared` — error: a session declaring more than one clock names no reference clock (R27 2)
 - `core.sessions.every_clock_reaches_the_reference` — error: a clock does not reach the session's reference clock, so it cannot be converted to it
@@ -647,16 +659,17 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `sorting_run_id` | string | **required** |  | Stable sorting run ID. |
-| `session_id` | string | **required** |  | Session ID. |
-| `probe_id` | string | nullable |  | Probe ID. |
-| `clock_id` | string | **required** | R38 §2.2 | Clock the run's spike ticks are counted on. |
+| `sorting_run_id` | int32 | **required** |  | Stable sorting run ID. |
+| `sorting_run_name` | string | nullable | R53 §2.3.1 | What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_id` | int32 | **required** |  | Session ID. |
+| `probe_id` | int32 | nullable |  | Probe ID. |
+| `clock_id` | int32 | **required** | R38 §2.2 | Clock the run's spike ticks are counted on. |
 | `sorter_name` | string | nullable |  | Sorter name. |
 | `sorter_version` | string | nullable |  | Sorter version. |
-| `processing_run_id` | string | nullable | R41 §2.1 | The run that produced this record, where provenance is recorded. |
+| `processing_run_id` | int32 | nullable | R41 §2.1 | The run that produced this record, where provenance is recorded. |
 | `amplitude_unit` | string | nullable | R11 §2 | Unit of core.spike_events.amplitude for this run, e.g. uV, adc. |
 | `parameters` | json_string | optional |  | Sorter parameters. |
-| `input_array_asset_id` | string | nullable |  | Input array asset. |
+| `input_array_asset_id` | int32 | nullable |  | Input array asset. |
 | `started_at` | timestamp | nullable |  | Start time. |
 | `ended_at` | timestamp | nullable |  | End time. |
 | `metadata` | json_string | optional |  | Additional metadata. |
@@ -680,7 +693,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `source_file_id` | string | **required** |  | Stable source file ID. |
+| `source_file_id` | int32 | **required** |  | Stable source file ID. |
+| `source_file_name` | string | nullable | R53 §2.3.1 | What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `uri` | string | **required** |  | Source URI/path. |
 | `format` | string | nullable |  | Source format. |
 | `sha256` | string | nullable |  | Checksum. |
@@ -695,12 +709,12 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** |  | Session ID. |
-| `unit_id` | string | **required** |  | Unit ID. |
-| `sorting_run_id` | string | **required** |  | Sorting run ID. |
-| `curation_id` | string | **required** |  | Curation ID. |
+| `session_id` | int32 | **required** |  | Session ID. |
+| `unit_id` | int32 | **required** |  | Unit ID. |
+| `sorting_run_id` | int32 | **required** |  | Sorting run ID. |
+| `curation_id` | int32 | **required** |  | Curation ID. |
 | `t_tick` | int64 | **required** |  | Spike tick. |
-| `clock_id` | string | **required** |  | Clock ID. |
+| `clock_id` | int32 | **required** |  | Clock ID. |
 | `amplitude` | float32 | nullable |  | Spike amplitude if available. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
@@ -722,7 +736,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `subject_id` | string | **required** |  | Stable subject ID. |
+| `subject_id` | int32 | **required** |  | Stable subject ID. |
+| `subject_name` | string | nullable | R53 §2.3.1 | What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `species` | string | nullable |  | Species. |
 | `strain` | string | nullable |  | Strain/background. |
 | `sex` | string | nullable |  | Sex if recorded. |
@@ -739,8 +754,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** | R3 §3.1-3.3 | Session ID. |
-| `trial_id` | string | **required** | R3 §3.1-3.3 | Trial ID. |
+| `session_id` | int32 | **required** | R3 §3.1-3.3 | Session ID. |
+| `trial_id` | int32 | **required** | R3 §3.1-3.3 | Trial ID. |
 | `tag` | string | **required** | R3 §3.1-3.3 | Tag value. |
 
 **Primary key** — `session_id`, `trial_id`, `tag`  
@@ -754,13 +769,13 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** |  | Session ID. |
-| `trial_id` | string | **required** |  | Stable trial ID. |
+| `session_id` | int32 | **required** |  | Session ID. |
+| `trial_id` | int32 | **required** |  | Stable trial ID. |
 | `start_tick` | int64 | **required** | R45 §2.4 | First tick of the trial, inclusive, on `clock_id`. |
 | `stop_tick` | int64 | **required** | R45 §2.4 | Last tick of the trial, inclusive, on `clock_id`. |
-| `clock_id` | string | **required** |  | Clock for start/stop ticks. |
-| `condition_id` | string | nullable |  | Experimental condition. |
-| `stimulus_id` | string | nullable |  | Stimulus ID. |
+| `clock_id` | int32 | **required** |  | Clock for start/stop ticks. |
+| `condition_id` | int32 | nullable |  | Experimental condition. |
+| `stimulus_id` | int32 | nullable |  | Stimulus ID. |
 | `choice` | string | nullable |  | Choice label. |
 | `rewarded` | bool | nullable |  | Reward outcome. |
 | `metadata` | json_string | optional |  | Additional trial metadata. |
@@ -783,10 +798,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** | R28 §2-4 | Session ID. |
-| `unit_id` | string | **required** | R28 §2-4 | Unit ID. |
-| `sorting_run_id` | string | **required** | R28 §2-4 | Sorting run ID. |
-| `curation_id` | string | **required** | R28 §2-4 | Curation ID. |
+| `session_id` | int32 | **required** | R28 §2-4 | Session ID. |
+| `unit_id` | int32 | **required** | R28 §2-4 | Unit ID. |
+| `sorting_run_id` | int32 | **required** | R28 §2-4 | Sorting run ID. |
+| `curation_id` | int32 | **required** | R28 §2-4 | Curation ID. |
 | `coordinate_frame` | string | **required** | R28 §2-4 | The frame these coordinates are in. Open, as R19 §3 left it. |
 | `x_um` | float64 | nullable | R28 §2-4 | X in micrometres, in that frame. |
 | `y_um` | float64 | nullable | R28 §2-4 | Y in micrometres. |
@@ -805,11 +820,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** | R28 §2-4 | Session ID. |
-| `unit_id` | string | **required** | R28 §2-4 | Unit ID. |
-| `sorting_run_id` | string | **required** | R28 §2-4 | Sorting run ID. |
-| `curation_id` | string | **required** | R28 §2-4 | Curation ID. |
-| `electrode_id` | string | **required** | R28 §2-4 | An electrode this unit was detected on. |
+| `session_id` | int32 | **required** | R28 §2-4 | Session ID. |
+| `unit_id` | int32 | **required** | R28 §2-4 | Unit ID. |
+| `sorting_run_id` | int32 | **required** | R28 §2-4 | Sorting run ID. |
+| `curation_id` | int32 | **required** | R28 §2-4 | Curation ID. |
+| `electrode_id` | int32 | **required** | R28 §2-4 | An electrode this unit was detected on. |
 | `channel_index` | int64 | nullable | R50 §2 | 0-based position of this electrode in the unit's channel list, where a dense array axis is indexed by it (R20 §2). Nothing joins on it. |
 | `is_primary` | bool | nullable | R28 §2-4 | Whether this is the unit's peak electrode. |
 
@@ -832,13 +847,13 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** | R18 §2 | Session ID. |
-| `unit_id` | string | **required** | R18 §2 | Unit ID. |
-| `sorting_run_id` | string | **required** | R18 §2 | Sorting run ID. |
-| `curation_id` | string | **required** | R18 §2 | Curation ID. |
+| `session_id` | int32 | **required** | R18 §2 | Session ID. |
+| `unit_id` | int32 | **required** | R18 §2 | Unit ID. |
+| `sorting_run_id` | int32 | **required** | R18 §2 | Sorting run ID. |
+| `curation_id` | int32 | **required** | R18 §2 | Curation ID. |
 | `start_tick` | int64 | **required** | R18 §2 | First tick, inclusive. |
 | `stop_tick` | int64 | **required** | R18 §2 | Last tick, inclusive. |
-| `clock_id` | string | **required** | R18 §2 | Clock for the interval bounds. |
+| `clock_id` | int32 | **required** | R18 §2 | Clock for the interval bounds. |
 
 **Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `start_tick`  
 **Sort** — the primary key (R10 §2)
@@ -859,10 +874,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** | R16 §2-3 | Session ID. |
-| `unit_id` | string | **required** | R16 §2-3 | Unit ID. |
-| `sorting_run_id` | string | **required** | R16 §2-3 | Sorting run ID. |
-| `curation_id` | string | **required** | R16 §2-3 | Curation ID. |
+| `session_id` | int32 | **required** | R16 §2-3 | Session ID. |
+| `unit_id` | int32 | **required** | R16 §2-3 | Unit ID. |
+| `sorting_run_id` | int32 | **required** | R16 §2-3 | Sorting run ID. |
+| `curation_id` | int32 | **required** | R16 §2-3 | Curation ID. |
 | `source` | string | **required** | R16 §2-3 | What produced the label, e.g. kilosort, decoder, bombcell. |
 | `label` | string | **required** | R16 §2-3 | The source's own label, verbatim. |
 | `normalized_label` | string | nullable | R16 §2-3 | Declared projection onto the closed set. Null where the source's label does not project. |
@@ -883,15 +898,15 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `session_id` | string | **required** |  | Session ID. |
-| `unit_id` | string | **required** |  | Stable unit ID. |
-| `probe_id` | string | nullable |  | Probe ID. |
-| `sorting_run_id` | string | **required** |  | Sorting run ID. |
-| `curation_id` | string | **required** |  | Curation ID. |
+| `session_id` | int32 | **required** |  | Session ID. |
+| `unit_id` | int32 | **required** |  | Stable unit ID. |
+| `probe_id` | int32 | nullable |  | Probe ID. |
+| `sorting_run_id` | int32 | **required** |  | Sorting run ID. |
+| `curation_id` | int32 | **required** |  | Curation ID. |
 | `local_unit_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `quality_label` | string | nullable | R11 §3-4 | Quality label. |
 | `quality_label_source` | string | nullable | R16 §2-3 | Which core.unit_quality_labels source the designated label came from. |
-| `default_electrode_id` | string | nullable |  | Default electrode. |
+| `default_electrode_id` | int32 | nullable |  | Default electrode. |
 | `firing_rate_hz` | float64 | nullable |  | Firing rate if known. |
 | `n_spikes` | int64 | nullable | R5 | Total spikes for this unit in this context. |
 | `first_spike_tick` | int64 | nullable | R5 | Lowest t_tick for this unit. |

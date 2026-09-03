@@ -151,8 +151,8 @@
       {
         "id": "core.sessions.manifest_sessions_match",
         "level": "error",
-        "message": "the manifest sessions list disagrees with core.sessions",
-        "sql": "SELECT session_id FROM core_sessions WHERE session_id NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_id FROM core_sessions)"
+        "message": "the manifest's session inventory and core.sessions disagree; the manifest names a session by its session_name, since an assigned session_id means nothing outside the packet that assigned it (R53 \u00a72.3.1)",
+        "sql": "SELECT session_name FROM core_sessions WHERE session_name NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_name FROM core_sessions)"
       },
       {
         "id": "core.sessions.session_interval_valid",

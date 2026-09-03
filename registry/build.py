@@ -121,6 +121,58 @@ for _role, _names in {
     ROLES.update(dict.fromkeys(_names, _role))
 
 
+
+#: R53 §2.3. Whether an identifier is the source's own value or a number this format chose.
+#: Not derivable: the sorter supplies `unit_ids` as int64 and the writer replaced them with
+#: composed strings, so what decides this is whether the value survives the write.
+IDENTITY: dict[str, str] = {
+    # Carried -- the source's own, so two independent builds agree without being told to.
+    "trial_id": "carried",            # NWB intervals/trials/id, int64, already 0..n
+    "unit_id": "carried",             # numpysorting_info.json unit_ids, int64, strictly increasing
+    "electrode_id": "carried",        # the NWB electrodes table's own row id
+    "default_electrode_id": "carried",  # references electrode_id, so it inherits
+    # Assigned -- this format chose the number, and something must record what it stands for.
+    "array_asset_id": "assigned",
+    "clock_id": "assigned",
+    "condition_id": "assigned",
+    "coordinate_array_asset_id": "assigned",
+    "curation_id": "assigned",
+    "device_id": "assigned",
+    "event_id": "assigned",
+    "event_stream_id": "assigned",
+    "input_array_asset_id": "assigned",
+    "media_asset_id": "assigned",
+    "parent_clock_id": "assigned",
+    "parent_curation_id": "assigned",
+    "probe_id": "assigned",
+    "processing_run_id": "assigned",
+    "reference_clock_id": "assigned",
+    "session_id": "assigned",
+    "sorting_run_id": "assigned",
+    "source_file_id": "assigned",
+    "source_session_id": "assigned",
+    "stimulus_id": "assigned",
+    "stream_id": "assigned",
+    "subject_id": "assigned",
+    "supersedes_run_id": "assigned",
+    # Withdrawn columns still pass through `col` on their way to being struck, so they need a
+    # value; none reaches the built registry.
+    "activity_id": "assigned", "entity_id": "assigned", "source_entity_id": "assigned",
+    "target_entity_id": "assigned", "resource_id": "assigned",
+}
+
+
+def identity_of(name: str) -> str:
+    """Return whether an identifier was carried or assigned, refusing an unclassified one."""
+    try:
+        return IDENTITY[name]
+    except KeyError:
+        raise SystemExit(
+            f"identifier {name!r} declares no identity; add it to IDENTITY (R53 §2.3). "
+            "The choice is carried (the source's own value) or assigned (a number we chose)."
+        ) from None
+
+
 def role_of(name: str) -> str:
     """Return a column's role, refusing a column nobody has classified (R48 §2.2)."""
     try:
@@ -132,7 +184,14 @@ def role_of(name: str) -> str:
         ) from None
 
 def col(name, typ, pres, desc, since=None, determined_by=None):
-    entry = {"name": name, "type": typ, "presence": pres, "role": role_of(name), "description": desc}
+    role = role_of(name)
+    if role == "identifier":
+        # R53 §2.1. Declared at one point rather than at 110 call sites, so a new identifier
+        # cannot be added as a string by forgetting.
+        typ = "int64" if typ == "int64" else "int32"
+    entry = {"name": name, "type": typ, "presence": pres, "role": role, "description": desc}
+    if role == "identifier":
+        entry["identity"] = identity_of(name)
     if stamp := (since or SINCE[0]):
         entry["since"] = stamp
     if determined_by is not None:
@@ -823,10 +882,34 @@ def build() -> dict:
             ("core.media_assets", "session_id", "core.sessions", "session_id"),
             ("core.media_assets", "clock_id", "core.clocks", "clock_id"),
             ("core.media_frames", "clock_id", "core.clocks", "clock_id"),
+            # Missed by R46's own sweep: a frame names the asset it belongs to and nothing checked
+            # that the asset exists. Found by R53's ownership derivation, which reported this table
+            # as *owning* media_asset_id -- which only a dimension table should.
+            ("core.media_frames", "media_asset_id", "core.media_assets", "media_asset_id"),
             ("analysis.array_assets", "session_id", "core.sessions", "session_id"),
             ("analysis.array_assets", "clock_id", "core.clocks", "clock_id")]:
         T(child).setdefault("references", []).append(
             {"columns": [column], "resource": parent, "resource_columns": [parent_column]})
+
+    # ---- R53 §2.3.1 : an assigned identifier's owner carries its name --------------------
+    SINCE[0] = "R53 §2.3.1"
+    for resource, spec in tables.items():
+        exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
+        for column in list(spec["columns"]):
+            if column.get("identity") != "assigned" or column["name"] in exported:
+                continue
+            if column["name"] not in (spec.get("primary_key") or []):
+                continue
+            base = column["name"].removesuffix("_id")
+            # `data`, not `identifier`: within this packet it identifies nothing -- the int32
+            # does -- and nothing references it. R48 §2.1's role is about what a consumer may do
+            # with the column here, and what it may do with a name is read it.
+            ROLES[f"{base}_name"] = "data"
+            entry = col(f"{base}_name", "string", "nullable",
+                        f"What `{column['name']}` stands for: the identifier a source or an earlier "
+                        f"packet used for this {base.replace('_', ' ')}. The only bridge between two "
+                        "packets that numbered it differently (R53 §2.5).")
+            spec["columns"].insert(spec["columns"].index(column) + 1, entry)
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
@@ -860,8 +943,8 @@ def build() -> dict:
             # Every revision whose decisions are applied above, so the registry says what it
             # was derived from rather than leaving it to the block comments.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             # R42 is proposed and deliberately held (see the root CLAUDE.md), so it is not here.
-                             "revisions": [f"R{n}" for n in [*range(1, 42), *range(43, 51)]]},
+                             # R42 is withdrawn (see the root CLAUDE.md), so it is not here.
+                             "revisions": [f"R{n}" for n in [*range(1, 42), *range(43, 54)]]},
             "tables": dict(sorted(tables.items()))}
 
 

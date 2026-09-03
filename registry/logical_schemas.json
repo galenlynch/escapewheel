@@ -53,7 +53,10 @@
       "R47",
       "R48",
       "R49",
-      "R50"
+      "R50",
+      "R51",
+      "R52",
+      "R53"
     ]
   },
   "tables": {
@@ -61,18 +64,28 @@
       "columns": [
         {
           "name": "array_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Stable array asset ID.",
+          "identity": "assigned",
           "since": "R20 \u00a75"
         },
         {
-          "name": "session_id",
+          "name": "array_asset_name",
           "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
+        },
+        {
+          "name": "session_id",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R20 \u00a75"
         },
         {
@@ -119,10 +132,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "Clock for time axis.",
+          "identity": "assigned",
           "since": "R20 \u00a75"
         },
         {
@@ -199,10 +213,11 @@
       "columns": [
         {
           "name": "array_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Array asset ID.",
+          "identity": "assigned",
           "since": "R20 \u00a75"
         },
         {
@@ -239,10 +254,11 @@
         },
         {
           "name": "coordinate_array_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "A 1-D array holding one value per position (irregular axis).",
+          "identity": "assigned",
           "since": "R20 \u00a75"
         },
         {
@@ -295,10 +311,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "Clock the ticks are counted on (regular tick axis).",
+          "identity": "assigned",
           "since": "R20 \u00a75"
         }
       ],
@@ -337,31 +354,35 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "unit_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Unit ID."
+          "description": "Unit ID.",
+          "identity": "carried"
         },
         {
           "name": "sorting_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Sorting run ID."
+          "description": "Sorting run ID.",
+          "identity": "assigned"
         },
         {
           "name": "curation_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Curation ID."
+          "description": "Curation ID.",
+          "identity": "assigned"
         },
         {
           "name": "t_tick",
@@ -372,10 +393,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "The clock these ticks are on, normally the session's reference.",
+          "identity": "assigned",
           "determined_by": [
             "session_id"
           ]
@@ -453,17 +475,27 @@
       "columns": [
         {
           "name": "array_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable array asset ID."
+          "description": "Stable array asset ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "array_asset_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "semantic_type",
@@ -506,10 +538,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Clock for time axis."
+          "description": "Clock for time axis.",
+          "identity": "assigned"
         },
         {
           "name": "sample_rate_hz",
@@ -592,10 +625,11 @@
       "columns": [
         {
           "name": "array_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Array asset ID."
+          "description": "Array asset ID.",
+          "identity": "assigned"
         },
         {
           "name": "axis_index",
@@ -614,10 +648,11 @@
         },
         {
           "name": "electrode_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Electrode ID."
+          "description": "Electrode ID.",
+          "identity": "carried"
         },
         {
           "name": "channel_label",
@@ -709,10 +744,11 @@
       "columns": [
         {
           "name": "array_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Array asset ID.",
+          "identity": "assigned",
           "since": "R3 \u00a73.1-3.3"
         },
         {
@@ -749,10 +785,11 @@
         },
         {
           "name": "coordinate_array_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "A 1-D array holding one value per position (irregular axis).",
+          "identity": "assigned",
           "since": "R20 \u00a72"
         },
         {
@@ -805,10 +842,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "Clock the ticks are counted on (regular tick axis).",
+          "identity": "assigned",
           "since": "R20 \u00a72"
         }
       ],
@@ -899,10 +937,11 @@
       "columns": [
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "The clock being aligned.",
+          "identity": "assigned",
           "since": "R13 \u00a73"
         },
         {
@@ -978,18 +1017,20 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R38 \u00a72.1"
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "The clock that was observing.",
+          "identity": "assigned",
           "since": "R38 \u00a72.1"
         },
         {
@@ -1055,17 +1096,27 @@
       "columns": [
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable clock ID."
+          "description": "Stable clock ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "clock_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "name",
@@ -1112,10 +1163,11 @@
         },
         {
           "name": "parent_clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Parent/reference clock."
+          "description": "Parent/reference clock.",
+          "identity": "assigned"
         },
         {
           "name": "transform_slope",
@@ -1229,24 +1281,35 @@
       "columns": [
         {
           "name": "curation_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable curation ID."
+          "description": "Stable curation ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "curation_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "sorting_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Sorting run ID."
+          "description": "Sorting run ID.",
+          "identity": "assigned"
         },
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "curator",
@@ -1271,18 +1334,20 @@
         },
         {
           "name": "processing_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "The run that produced this record, where provenance is recorded.",
+          "identity": "assigned",
           "since": "R41 \u00a72.1"
         },
         {
           "name": "parent_curation_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Parent curation."
+          "description": "Parent curation.",
+          "identity": "assigned"
         },
         {
           "name": "created_at",
@@ -1356,17 +1421,27 @@
       "columns": [
         {
           "name": "device_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable device ID."
+          "description": "Stable device ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "device_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Session if device record is session-scoped."
+          "description": "Session if device record is session-scoped.",
+          "identity": "assigned"
         },
         {
           "name": "name",
@@ -1427,10 +1502,11 @@
       "columns": [
         {
           "name": "electrode_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Electrode ID.",
+          "identity": "carried",
           "since": "R19 \u00a73"
         },
         {
@@ -1490,24 +1566,27 @@
       "columns": [
         {
           "name": "electrode_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable electrode ID."
+          "description": "Stable electrode ID.",
+          "identity": "carried"
         },
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "probe_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Probe ID."
+          "description": "Probe ID.",
+          "identity": "assigned"
         },
         {
           "name": "local_electrode_label",
@@ -1579,10 +1658,11 @@
       "columns": [
         {
           "name": "event_stream_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "The stream being observed.",
+          "identity": "assigned",
           "since": "R25 \u00a72"
         },
         {
@@ -1638,18 +1718,28 @@
       "columns": [
         {
           "name": "event_stream_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Stable ID.",
+          "identity": "assigned",
           "since": "R23 \u00a72-3"
         },
         {
-          "name": "session_id",
+          "name": "event_stream_name",
           "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
+        },
+        {
+          "name": "session_id",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R23 \u00a72-3"
         },
         {
@@ -1662,26 +1752,29 @@
         },
         {
           "name": "device_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "The device that produced it, where one is identified.",
+          "identity": "assigned",
           "since": "R23 \u00a72-3"
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "The clock its events are timed on.",
+          "identity": "assigned",
           "since": "R23 \u00a72-3"
         },
         {
           "name": "processing_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 \u00a74: the manifest records outputs per resource and cannot distinguish streams within one table.",
+          "identity": "assigned",
           "since": "R23 \u00a72-3"
         },
         {
@@ -1750,24 +1843,35 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "event_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable event ID."
+          "description": "Stable event ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "event_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `event_id` stands for: the identifier a source or an earlier packet used for this event. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "stream_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "The stream this event belongs to.",
+          "identity": "assigned",
           "since": "R23 \u00a72-3"
         },
         {
@@ -1796,10 +1900,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Event clock."
+          "description": "Event clock.",
+          "identity": "assigned"
         },
         {
           "name": "payload",
@@ -1874,17 +1979,27 @@
       "columns": [
         {
           "name": "media_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable media asset ID."
+          "description": "Stable media asset ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "media_asset_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "semantic_type",
@@ -1918,10 +2033,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Clock for frame timing."
+          "description": "Clock for frame timing.",
+          "identity": "assigned"
         },
         {
           "name": "metadata",
@@ -1961,10 +2077,11 @@
       "columns": [
         {
           "name": "media_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Media asset ID."
+          "description": "Media asset ID.",
+          "identity": "assigned"
         },
         {
           "name": "frame_index",
@@ -1982,10 +2099,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Clock ID."
+          "description": "Clock ID.",
+          "identity": "assigned"
         },
         {
           "name": "pts",
@@ -2022,6 +2140,15 @@
           "resource_columns": [
             "clock_id"
           ]
+        },
+        {
+          "columns": [
+            "media_asset_id"
+          ],
+          "resource": "core.media_assets",
+          "resource_columns": [
+            "media_asset_id"
+          ]
         }
       ],
       "sort": [
@@ -2034,10 +2161,11 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R41 \u00a72.3"
         },
         {
@@ -2066,10 +2194,11 @@
         },
         {
           "name": "processing_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "The preferred run.",
+          "identity": "assigned",
           "since": "R41 \u00a72.3"
         },
         {
@@ -2148,24 +2277,35 @@
       "columns": [
         {
           "name": "probe_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable probe ID."
+          "description": "Stable probe ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "probe_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "device_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Associated device."
+          "description": "Associated device.",
+          "identity": "assigned"
         },
         {
           "name": "name",
@@ -2249,18 +2389,20 @@
       "columns": [
         {
           "name": "processing_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "The run.",
+          "identity": "assigned",
           "since": "R9"
         },
         {
           "name": "source_file_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "A source file the run consumed.",
+          "identity": "assigned",
           "since": "R9"
         }
       ],
@@ -2299,17 +2441,27 @@
       "columns": [
         {
           "name": "processing_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable processing run ID."
+          "description": "Stable processing run ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "processing_run_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Session ID if session-scoped."
+          "description": "Session ID if session-scoped.",
+          "identity": "assigned"
         },
         {
           "name": "activity_type",
@@ -2338,10 +2490,11 @@
         },
         {
           "name": "supersedes_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "The run this one replaces, if any.",
+          "identity": "assigned",
           "since": "R50 \u00a72"
         },
         {
@@ -2488,10 +2641,11 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R3 \u00a73.1-3.3"
         },
         {
@@ -2529,17 +2683,27 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable session ID."
+          "description": "Stable session ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "session_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "subject_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Subject ID."
+          "description": "Subject ID.",
+          "identity": "assigned"
         },
         {
           "name": "session_start_time",
@@ -2558,10 +2722,11 @@
         },
         {
           "name": "reference_clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "The clock this session's times are reported on by default (R27 2).",
+          "identity": "assigned",
           "since": "R27 \u00a72"
         },
         {
@@ -2587,10 +2752,11 @@
         },
         {
           "name": "source_session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Source-system session ID if different."
+          "description": "Source-system session ID if different.",
+          "identity": "assigned"
         },
         {
           "name": "metadata",
@@ -2638,8 +2804,8 @@
         {
           "id": "core.sessions.manifest_sessions_match",
           "level": "error",
-          "message": "the manifest sessions list disagrees with core.sessions",
-          "sql": "SELECT session_id FROM core_sessions WHERE session_id NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_id FROM core_sessions)"
+          "message": "the manifest's session inventory and core.sessions disagree; the manifest names a session by its session_name, since an assigned session_id means nothing outside the packet that assigned it (R53 \u00a72.3.1)",
+          "sql": "SELECT session_name FROM core_sessions WHERE session_name NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_name FROM core_sessions)"
         },
         {
           "id": "core.sessions.session_interval_valid",
@@ -2665,31 +2831,43 @@
       "columns": [
         {
           "name": "sorting_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable sorting run ID."
+          "description": "Stable sorting run ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "sorting_run_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "probe_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Probe ID."
+          "description": "Probe ID.",
+          "identity": "assigned"
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Clock the run's spike ticks are counted on.",
+          "identity": "assigned",
           "since": "R38 \u00a72.2"
         },
         {
@@ -2708,10 +2886,11 @@
         },
         {
           "name": "processing_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
           "description": "The run that produced this record, where provenance is recorded.",
+          "identity": "assigned",
           "since": "R41 \u00a72.1"
         },
         {
@@ -2732,10 +2911,11 @@
         },
         {
           "name": "input_array_asset_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Input array asset."
+          "description": "Input array asset.",
+          "identity": "assigned"
         },
         {
           "name": "started_at",
@@ -2825,10 +3005,19 @@
       "columns": [
         {
           "name": "source_file_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable source file ID."
+          "description": "Stable source file ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "source_file_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "uri",
@@ -2884,31 +3073,35 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "unit_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Unit ID."
+          "description": "Unit ID.",
+          "identity": "carried"
         },
         {
           "name": "sorting_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Sorting run ID."
+          "description": "Sorting run ID.",
+          "identity": "assigned"
         },
         {
           "name": "curation_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Curation ID."
+          "description": "Curation ID.",
+          "identity": "assigned"
         },
         {
           "name": "t_tick",
@@ -2919,10 +3112,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Clock ID."
+          "description": "Clock ID.",
+          "identity": "assigned"
         },
         {
           "name": "amplitude",
@@ -3007,10 +3201,19 @@
       "columns": [
         {
           "name": "subject_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable subject ID."
+          "description": "Stable subject ID.",
+          "identity": "assigned"
+        },
+        {
+          "name": "subject_name",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
+          "since": "R53 \u00a72.3.1"
         },
         {
           "name": "species",
@@ -3068,18 +3271,20 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R3 \u00a73.1-3.3"
         },
         {
           "name": "trial_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Trial ID.",
+          "identity": "carried",
           "since": "R3 \u00a73.1-3.3"
         },
         {
@@ -3121,17 +3326,19 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "trial_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable trial ID."
+          "description": "Stable trial ID.",
+          "identity": "carried"
         },
         {
           "name": "start_tick",
@@ -3151,24 +3358,27 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Clock for start/stop ticks."
+          "description": "Clock for start/stop ticks.",
+          "identity": "assigned"
         },
         {
           "name": "condition_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Experimental condition."
+          "description": "Experimental condition.",
+          "identity": "assigned"
         },
         {
           "name": "stimulus_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Stimulus ID."
+          "description": "Stimulus ID.",
+          "identity": "assigned"
         },
         {
           "name": "choice",
@@ -3233,34 +3443,38 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R28 \u00a72-4"
         },
         {
           "name": "unit_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Unit ID.",
+          "identity": "carried",
           "since": "R28 \u00a72-4"
         },
         {
           "name": "sorting_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Sorting run ID.",
+          "identity": "assigned",
           "since": "R28 \u00a72-4"
         },
         {
           "name": "curation_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Curation ID.",
+          "identity": "assigned",
           "since": "R28 \u00a72-4"
         },
         {
@@ -3328,42 +3542,47 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R28 \u00a72-4"
         },
         {
           "name": "unit_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Unit ID.",
+          "identity": "carried",
           "since": "R28 \u00a72-4"
         },
         {
           "name": "sorting_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Sorting run ID.",
+          "identity": "assigned",
           "since": "R28 \u00a72-4"
         },
         {
           "name": "curation_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Curation ID.",
+          "identity": "assigned",
           "since": "R28 \u00a72-4"
         },
         {
           "name": "electrode_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "An electrode this unit was detected on.",
+          "identity": "carried",
           "since": "R28 \u00a72-4"
         },
         {
@@ -3437,34 +3656,38 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R18 \u00a72"
         },
         {
           "name": "unit_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Unit ID.",
+          "identity": "carried",
           "since": "R18 \u00a72"
         },
         {
           "name": "sorting_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Sorting run ID.",
+          "identity": "assigned",
           "since": "R18 \u00a72"
         },
         {
           "name": "curation_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Curation ID.",
+          "identity": "assigned",
           "since": "R18 \u00a72"
         },
         {
@@ -3485,10 +3708,11 @@
         },
         {
           "name": "clock_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Clock for the interval bounds.",
+          "identity": "assigned",
           "since": "R18 \u00a72"
         }
       ],
@@ -3546,34 +3770,38 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
           "since": "R16 \u00a72-3"
         },
         {
           "name": "unit_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Unit ID.",
+          "identity": "carried",
           "since": "R16 \u00a72-3"
         },
         {
           "name": "sorting_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Sorting run ID.",
+          "identity": "assigned",
           "since": "R16 \u00a72-3"
         },
         {
           "name": "curation_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Curation ID.",
+          "identity": "assigned",
           "since": "R16 \u00a72-3"
         },
         {
@@ -3655,38 +3883,43 @@
       "columns": [
         {
           "name": "session_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Session ID."
+          "description": "Session ID.",
+          "identity": "assigned"
         },
         {
           "name": "unit_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Stable unit ID."
+          "description": "Stable unit ID.",
+          "identity": "carried"
         },
         {
           "name": "probe_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Probe ID."
+          "description": "Probe ID.",
+          "identity": "assigned"
         },
         {
           "name": "sorting_run_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Sorting run ID."
+          "description": "Sorting run ID.",
+          "identity": "assigned"
         },
         {
           "name": "curation_id",
-          "type": "string",
+          "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "description": "Curation ID."
+          "description": "Curation ID.",
+          "identity": "assigned"
         },
         {
           "name": "local_unit_label",
@@ -3720,10 +3953,11 @@
         },
         {
           "name": "default_electrode_id",
-          "type": "string",
+          "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "Default electrode."
+          "description": "Default electrode.",
+          "identity": "carried"
         },
         {
           "name": "firing_rate_hz",

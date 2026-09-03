@@ -208,6 +208,13 @@
             "type": "string",
             "pattern": "^[a-z][a-z0-9_]*$"
           }
+        },
+        "identity": {
+          "description": "R53 \u00a72.3. Whether an identifier's value is the source's own (`carried`) or a number this format chose (`assigned`). Not derivable -- a source may supply an integer that the writer replaces -- and it decides whether the table owes a `*_name`. Required where role is identifier, meaningless otherwise.",
+          "enum": [
+            "carried",
+            "assigned"
+          ]
         }
       },
       "not": {
@@ -215,7 +222,33 @@
           "enum",
           "vocabulary"
         ]
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "const": "identifier"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "required": [
+              "identity"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "identity"
+              ]
+            }
+          }
+        }
+      ]
     },
     "reference": {
       "type": "object",
