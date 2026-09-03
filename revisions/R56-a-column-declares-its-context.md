@@ -124,3 +124,16 @@ columns whose declared units differ.
   only through `sorting_run_id` — one hop, so §2.3 covers it, but the row's identity is the
   four-part unit key and the reference to use is not the only one. Worth checking that the
   declared reference is unambiguous before relying on it.
+- **One hop was nearly not enough.** `core.spike_events.amplitude` is in the unit its sorting run
+  names (R11 §2), and `core.spike_events` reached `core.sorting_runs` only *through* `core.units`
+  — two hops. Rather than widen §2.3, the direct reference was declared: the column is in the
+  table already, and §2.3 resolves through a reference the table **declares**, so declaring it is
+  what makes the hop available. A second case needing two hops would be evidence §2.3 is drawn
+  too tight.
+
+  That anti-join is **not** dead weight, though it is transitively implied while
+  `core.spike_events → core.units → core.sorting_runs` both stand. The implication is contingent
+  rather than a theorem: it survives only while both references are declared, it says nothing
+  where `core.units` is absent from the packet or external and unreachable (R14 §2.3, under which
+  *"its rules cannot run at all"*), and R35 §5 bounds an amendment to the rules **naming** a
+  written resource — which the direct check does and the chain does not.
