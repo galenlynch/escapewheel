@@ -51,7 +51,7 @@ BATCH_ROWS = 1 << 17
 #: best of 10/60/300 on a 5,364 s session with 7,291 units. Not normative (R30 §3.3).
 BUCKET_SECONDS = 300
 
-#: How the identity columns are held. A dictionary is an encoding, not a type -- Parquet writes
+#: How a string column is held in flight. A dictionary is an encoding, not a type -- Parquet writes
 #: BYTE_ARRAY/String either way -- so this changes what the pipeline carries, not what it emits.
 DICT = pa.dictionary(pa.int32(), pa.string())
 
@@ -117,7 +117,7 @@ class _Buckets:
 
     Parquet, although a spill is written once, read once and deleted, and its encoding
     therefore has no reader to benefit. The encoding is not for a reader here, it is for the
-    disk: four of these seven columns are string identifiers, and dictionary-encoding them puts
+    disk: dictionary-encoding a column that repeats a handful of values puts
     a million rows in 2.7 MB where Arrow IPC needs 195 MB. Writing a batch costs 0.100 s
     against IPC's 0.053 s, and over a full session that trade is worth taking on anything but
     the fastest storage -- uncompressed IPC spills 56 GB and takes 321.8 s where this takes

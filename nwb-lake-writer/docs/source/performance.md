@@ -24,25 +24,23 @@ and its comprehension ran 131,072 times.
 Not every `to_pylist()` qualifies. `_tick_rate` calls one on `core.clocks`, thirteen rows, and
 `arrow._plain` normalises single metadata values. The test is whether the call runs per batch.
 
-## Storing a string identifier is cheap; converting one is not
+## Storing a low-cardinality string is cheap; converting one is not
 
-Parquet dictionary-encodes them. All five identity columns of `core.spike_events` are 9.45 MB
-of 681 MB — 1.4% — and `unit_id` costs 0.0068 bytes a spike. A surrogate integer would not be
-smaller. This is also why `materialize.py` spills to Parquet despite a spill having no reader
-to benefit: an Arrow IPC spill took 321.8 s against 76.6 s.
+Parquet dictionary-encodes it, so the column costs a hundredth of a bit a row: measured on
+20 M rows over six values, a kind column is 0.013 bit/row against an int32 surrogate's 0.008,
+and the two files differ by 0.05%. This is also why `materialize.py` spills to Parquet despite
+a spill having no reader to benefit: an Arrow IPC spill took 321.8 s against 76.6 s.
 
-What costs is converting between representations, and the default path used to do it four
-times: Parquet decode, encode to spill, decode on read-back, encode to the table. Reading 40
-row groups of the five identity columns:
+What costs is converting between representations, and a path that does it four times — Parquet
+decode, encode to spill, decode on read-back, encode to the table. Measured on 40 row groups of
+five such columns:
 
 | | time | Arrow held |
 |---|---|---|
 | decoded to strings | 1.05 s | 9.13 GB |
 | held as codes | 0.15 s | 1.27 GB |
 
-**Carry the codes end to end.** `analysis.spike_events` now converts zero times: the identity
-columns leave `core.spike_events` as `dictionary<int32, string>` and reach the finished table
-still as codes.
+**Carry the codes end to end**, wherever a string column survives into a materialization.
 
 ## Dictionaries in pyarrow
 

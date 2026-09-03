@@ -188,10 +188,11 @@ Python objects inside a loop that runs once per batch. If a line converts a colu
 `list` and its surrounding code runs per batch, it is wrong — `pc.unique`, `pc.equal`,
 `pc.is_in`, `Array.take` and `np.flatnonzero` cover nearly every case and release the GIL.
 
-Storing a string identifier is not the cause — Parquet dictionary-encodes them, and all five
-identity columns of `core.spike_events` are 1.4% of the file. **Converting one is.** Carry the
-codes: `read_dictionary=` on the way in, `store_schema=False` so the file still advertises the
-registry's type, and never a `pc.less` on a dictionary, which decodes both sides.
+Storing a low-cardinality string is not the cause — Parquet dictionary-encodes it, and a
+column holding a handful of values costs a hundredth of a bit a row. **Converting one is.**
+Carry the codes: `read_dictionary=` on the way in, `store_schema=False` so the file still
+advertises the registry's type, and never a `pc.less` on a dictionary, which decodes both
+sides.
 
 `docs/source/performance.md` carries the measurements, the dictionary rules, the layout
 decisions and what they cost — read it before changing an encoding, a row-group size or the
