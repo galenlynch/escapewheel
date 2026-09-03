@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** |
+| **Status** | **Accepted** 2026-09-03 |
 | **Amends** | R19 §3 (`core.electrode_coordinates`), R28 §3 (`core.unit_coordinates`), R41 §2 (what currency covers) |
 | **Forces** | R59 (an atlas annotation attaches to a coordinate, so it needs a basis to attach to) |
 | **Depends on** | R8 (open vocabularies), R19 (coordinate frames), R28 (unit coordinates), R41 (currency), R44 (a run declares its scope) |
