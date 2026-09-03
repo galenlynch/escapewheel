@@ -138,6 +138,22 @@ that are **constant across every trial**, because that session varied no opto at
 What core needs an interval for is to locate it in time. What was done during it is what the kind
 names.
 
+### 2.4a A kind must name a resource the packet declares
+
+`interval_kind` naming a resource the packet does not carry is an **error**, not a silence.
+
+This is what keeps the discriminator from decaying into a free-form name, which is the failure
+mode §1.2 describes: NWB's mechanism works and goes unused partly because a `TimeIntervals` *is*
+its name, so two labs' optotagging tables are named differently and nothing generic finds either.
+A kind that resolves to nothing is a name again.
+
+The check is an anti-join against the manifest's declared resources, which the validator already
+has for `scope_kind` (R49 §2.2), so it costs one more generated rule and no new machinery.
+
+A packet **MAY** declare an interval whose kind is a resource it does not itself carry only where
+that resource is external and declared as such -- the same standing R14 §2.3 gives any external
+resource, and reported the same way.
+
 ### 2.5 `metadata` stays, and stays empty
 
 `core.intervals.metadata` remains an optional `json_string`, which is what R3 §2.1 confines a JSON
@@ -171,7 +187,28 @@ currently states. R45 was written without a half-open source in view.
 - **No change to R45.** §2.6 records the obligation R45 leaves an importer; it does not restate
   the closure.
 
-## 4. Open
+## 4. Precondition
+
+**This revision MUST NOT be accepted before a writer can emit an interval kind.** Today it cannot:
+`Recipe.problems` rejects any resource the core registry does not define, and `PacketWriter.add`
+raises `KeyError` for one, so declaring a kind is impossible through the recipe while adding a
+nullable column to core is a one-line registry edit.
+
+That gradient is steeper than the one §1.2 blames for NWB's unused mechanism, where
+`add_trial_column` at least has a competitor. A revision whose correct path is unimplementable
+does not merely wait — it teaches the wrong habit while people wait, and §2.4's refusal of
+stimulation parameters holds only while declaring an extension is easier than arguing for four
+columns in core.
+
+What has to exist first:
+
+1. A recipe may name an extension resource, and `PacketWriter` may write one.
+2. `nwb-lake init` scaffolds a registry document from a source's columns.
+   `inventory/vr-foraging-packaging.md:83` already records that the `Site` model *"converts
+   mechanically into an R17 extension registry document"*, which is that scaffolder's
+   specification.
+
+## 5. Open
 
 - **Whether `core.intervals` reads as including the observation tables.** §3 says it does not, and
   a name that has to be disambiguated in prose is a name doing less work than it should.
@@ -179,3 +216,9 @@ currently states. R45 was written without a half-open source in view.
 - **What an existing packet does.** R53 §5 makes migration regeneration and the same applies: the
   columns are struck rather than renamed, so an old packet is read through its own embedded
   registry or rebuilt.
+- **Whether the polymorphic query is wanted.** §2.1's case for a base table rests on it: align to
+  every interval in a session without knowing the paradigm. Nothing does that yet, and a
+  capability nobody consumes does not create its own demand -- which is why `core.trial_tags` was
+  never written. This should be **measured after a second paradigm is imported**, not assumed. If
+  nobody wants it, that is evidence for concrete tables per extension and `core.intervals` should
+  not exist at all.
