@@ -226,6 +226,12 @@
           "level": "error",
           "message": "stop_tick precedes start_tick",
           "sql": "SELECT session_id, block_id, start_tick, stop_tick FROM dynamic_foraging_blocks WHERE stop_tick < start_tick"
+        },
+        {
+          "id": "dynamic_foraging.blocks.no_overlap",
+          "level": "error",
+          "message": "blocks overlap, so a trial inside both has no containing block",
+          "sql": "SELECT a.session_id, a.block_id, b.block_id AS other FROM dynamic_foraging_blocks a JOIN dynamic_foraging_blocks b ON a.session_id = b.session_id AND a.block_id < b.block_id WHERE a.start_tick <= b.stop_tick AND b.start_tick <= a.stop_tick"
         }
       ]
     }
