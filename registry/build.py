@@ -84,6 +84,8 @@ WITHDRAWN = {
     "chunk_index": "sequence_position", "t_min_tick": "coordinate", "t_max_tick": "coordinate",
     # R3 §3.3: the array declares its own dtype.
     "dtype": "data",
+    # R59 §2.1: an atlas annotation states a fact about a position, so it moves to the coordinate.
+    "brain_region": "data",
 }
 
 ROLES: dict[str, str] = dict.fromkeys(TRANSIENT, "data") | WITHDRAWN
@@ -92,7 +94,8 @@ for _role, _names in {
         "array_asset_id", "clock_id", "condition_id", "coordinate_array_asset_id", "curation_id",
         "default_electrode_id", "device_id", "electrode_id", "event_id", "event_stream_id",
         "input_array_asset_id", "media_asset_id", "parent_clock_id", "parent_curation_id", "probe_id",
-        "processing_run_id", "reference_clock_id", "session_id", "sorting_run_id", "source_file_id",
+        "processing_run_id", "reference_clock_id", "region_id", "session_id", "sorting_run_id",
+        "source_file_id",
         "source_session_id", "stimulus_id", "stream_id", "subject_id", "supersedes_run_id", "trial_id",
         "unit_id",
     ),
@@ -112,9 +115,10 @@ for _role, _names in {
         "scope_kind",
     ),
     "data": (
-        "activity_type", "amplitude", "amplitude_unit", "brain_region", "channel_label", "choice",
+        "activity_type", "amplitude", "amplitude_unit", "channel_label", "choice",
         "chosen_at", "code_uri", "confidence", "conversion", "coordinate_frame",
-        "coordinate_position_column", "coordinate_resource", "coordinate_unit", "created_at",
+        "coordinate_basis", "coordinate_position_column", "coordinate_resource", "coordinate_unit",
+        "created_at", "region_label",
         "curation_tool", "curation_tool_version", "curator", "date_of_birth", "dimension_name", "dropped",
         "ended_at", "event_type", "experimenter", "firing_rate_hz", "format", "genotype", "impedance_ohm",
         "insertion_name", "institution", "inter_sample_shift", "is_primary", "kind", "label",
@@ -145,6 +149,7 @@ IDENTITY: dict[str, str] = {
     # because no NWB column is unique on its own -- electrode_name repeats across the shanks of
     # a quad-base probe, and channel_name is per-probe.
     "electrode_id": "assigned",
+    "region_id": "carried",           # the atlas's structure number, which coordinate_frame names
     "default_electrode_id": "assigned",  # references electrode_id, so it inherits
     # Assigned -- this format chose the number, and something must record what it stands for.
     "array_asset_id": "assigned",
@@ -535,13 +540,32 @@ def build() -> dict:
         "columns": [col("electrode_id", "string", "required", "Electrode ID."),
                     dict(col("coordinate_frame", "string", "required",
                              "The frame these coordinates are in."), vocabulary="open"),
+                    dict(col("coordinate_basis", "string", "required",
+                             "What the coordinate asserts: `planned` where the probe was meant to "
+                             "go, `measured` where it was. A consumer that does not recognise a "
+                             "basis MUST NOT treat it as measured (R58 §2.2).",
+                             since="R58 §2.1"), vocabulary="open"),
+                    col("region_id", "int32", "nullable",
+                        "The atlas structure this position falls in, numbered by the atlas that "
+                        "`coordinate_frame` names.", since="R59 §2.1"),
+                    dict(col("region_label", "string", "nullable",
+                             "That structure's short name, so a consumer without the atlas can "
+                             "read the annotation.", since="R59 §2.1"), vocabulary="open"),
+                    col("processing_run_id", "int32", "nullable",
+                        "The run that produced this coordinate.", since="R58 §2.3"),
                     col("x_um", "float64", "nullable", "X in micrometres, in that frame."),
                     col("y_um", "float64", "nullable", "Y in micrometres."),
                     col("z_um", "float64", "nullable", "Z in micrometres.")],
-        "primary_key": ["electrode_id", "coordinate_frame"],
+        "primary_key": ["electrode_id", "coordinate_frame", "coordinate_basis"],
         "references": [{"columns": ["electrode_id"], "resource": "core.electrodes",
-                        "resource_columns": ["electrode_id"]}],
+                        "resource_columns": ["electrode_id"]},
+                       {"columns": ["processing_run_id"], "resource": "core.processing_runs",
+                        "resource_columns": ["processing_run_id"]}],
         "sort": None, "rules": [], "since": SINCE[0]}
+
+    # ---- R59 §2.1 : the atlas annotation belongs to the position, not the electrode ------------
+    SINCE[0] = "R59 §2.1"
+    drop_col("core.electrodes", "brain_region")
 
     # ---- R20 §2 : four coordinate forms per axis -------------------------------------------------
     SINCE[0] = "R20 §2"
@@ -751,11 +775,26 @@ def build() -> dict:
                     col("curation_id", "string", "required", "Curation ID."),
                     col("coordinate_frame", "string", "required",
                         "The frame these coordinates are in. Open, as R19 §3 left it."),
+                    dict(col("coordinate_basis", "string", "required",
+                             "What the coordinate asserts: `planned` where the probe was meant to "
+                             "go, `measured` where it was. A consumer that does not recognise a "
+                             "basis MUST NOT treat it as measured (R58 §2.2).",
+                             since="R58 §2.1"), vocabulary="open"),
+                    col("region_id", "int32", "nullable",
+                        "The atlas structure this position falls in, numbered by the atlas that "
+                        "`coordinate_frame` names.", since="R59 §2.1"),
+                    dict(col("region_label", "string", "nullable",
+                             "That structure's short name, so a consumer without the atlas can "
+                             "read the annotation.", since="R59 §2.1"), vocabulary="open"),
+                    col("processing_run_id", "int32", "nullable",
+                        "The run that produced this coordinate.", since="R58 §2.3"),
                     col("x_um", "float64", "nullable", "X in micrometres, in that frame."),
                     col("y_um", "float64", "nullable", "Y in micrometres."),
                     col("z_um", "float64", "nullable", "Z in micrometres.")],
-        "primary_key": [*unit_key, "coordinate_frame"],
-        "references": [unit_ref],
+        "primary_key": [*unit_key, "coordinate_frame", "coordinate_basis"],
+        "references": [unit_ref,
+                       {"columns": ["processing_run_id"], "resource": "core.processing_runs",
+                        "resource_columns": ["processing_run_id"]}],
         "sort": None, "rules": [], "since": SINCE[0]}
     # The one link between a dense array's channels and the electrodes they came from, which
     # until now nothing validated.
@@ -1017,7 +1056,9 @@ def build() -> dict:
             # was derived from rather than leaving it to the block comments.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
                              # R42 is withdrawn (see the root CLAUDE.md), so it is not here.
-                             "revisions": [f"R{n}" for n in [*range(1, 42), *range(43, 54)]]},
+                             # R42 and R54 are not accepted, so they are not here.
+                             "revisions": [f"R{n}" for n in [*range(1, 42), *range(43, 54),
+                                                             *range(55, 60)]]},
             "tables": dict(sorted(tables.items()))}
 
 

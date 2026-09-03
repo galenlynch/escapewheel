@@ -57,7 +57,12 @@
       "R50",
       "R51",
       "R52",
-      "R53"
+      "R53",
+      "R55",
+      "R56",
+      "R57",
+      "R58",
+      "R59"
     ]
   },
   "tables": {
@@ -1521,6 +1526,42 @@
           "vocabulary": "open"
         },
         {
+          "name": "coordinate_basis",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was. A consumer that does not recognise a basis MUST NOT treat it as measured (R58 \u00a72.2).",
+          "since": "R58 \u00a72.1",
+          "vocabulary": "open"
+        },
+        {
+          "name": "region_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names.",
+          "identity": "carried",
+          "since": "R59 \u00a72.1"
+        },
+        {
+          "name": "region_label",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "That structure's short name, so a consumer without the atlas can read the annotation.",
+          "since": "R59 \u00a72.1",
+          "vocabulary": "open"
+        },
+        {
+          "name": "processing_run_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The run that produced this coordinate.",
+          "identity": "assigned",
+          "since": "R58 \u00a72.3"
+        },
+        {
           "name": "x_um",
           "type": "float64",
           "presence": "nullable",
@@ -1547,7 +1588,8 @@
       ],
       "primary_key": [
         "electrode_id",
-        "coordinate_frame"
+        "coordinate_frame",
+        "coordinate_basis"
       ],
       "references": [
         {
@@ -1557,6 +1599,15 @@
           "resource": "core.electrodes",
           "resource_columns": [
             "electrode_id"
+          ]
+        },
+        {
+          "columns": [
+            "processing_run_id"
+          ],
+          "resource": "core.processing_runs",
+          "resource_columns": [
+            "processing_run_id"
           ]
         }
       ],
@@ -1613,13 +1664,6 @@
           "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
           "since": "R8 \u00a72"
-        },
-        {
-          "name": "brain_region",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Region label."
         },
         {
           "name": "impedance_ohm",
@@ -3501,6 +3545,42 @@
           "since": "R28 \u00a72-4"
         },
         {
+          "name": "coordinate_basis",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was. A consumer that does not recognise a basis MUST NOT treat it as measured (R58 \u00a72.2).",
+          "since": "R58 \u00a72.1",
+          "vocabulary": "open"
+        },
+        {
+          "name": "region_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names.",
+          "identity": "carried",
+          "since": "R59 \u00a72.1"
+        },
+        {
+          "name": "region_label",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "That structure's short name, so a consumer without the atlas can read the annotation.",
+          "since": "R59 \u00a72.1",
+          "vocabulary": "open"
+        },
+        {
+          "name": "processing_run_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The run that produced this coordinate.",
+          "identity": "assigned",
+          "since": "R58 \u00a72.3"
+        },
+        {
           "name": "x_um",
           "type": "float64",
           "presence": "nullable",
@@ -3530,7 +3610,8 @@
         "unit_id",
         "sorting_run_id",
         "curation_id",
-        "coordinate_frame"
+        "coordinate_frame",
+        "coordinate_basis"
       ],
       "references": [
         {
@@ -3546,6 +3627,15 @@
             "unit_id",
             "sorting_run_id",
             "curation_id"
+          ]
+        },
+        {
+          "columns": [
+            "processing_run_id"
+          ],
+          "resource": "core.processing_runs",
+          "resource_columns": [
+            "processing_run_id"
           ]
         }
       ],

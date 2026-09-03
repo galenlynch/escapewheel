@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-35 tables, 307 columns, 72 references, 59 Tier 2 rules
+35 tables, 314 columns, 74 references, 59 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R55, R56, R57, R58, R59
 ```
 
 ## Contents
@@ -345,16 +345,21 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `electrode_id` | int32 | **required** | R19 §3 | Electrode ID. |
 | `coordinate_frame` | string | **required** | R19 §3 | The frame these coordinates are in. |
+| `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was. A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
+| `region_id` | int32 | nullable | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
+| `region_label` | string | nullable | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
+| `processing_run_id` | int32 | nullable | R58 §2.3 | The run that produced this coordinate. |
 | `x_um` | float64 | nullable | R19 §3 | X in micrometres, in that frame. |
 | `y_um` | float64 | nullable | R19 §3 | Y in micrometres. |
 | `z_um` | float64 | nullable | R19 §3 | Z in micrometres. |
 
-**Primary key** — `electrode_id`, `coordinate_frame`  
+**Primary key** — `electrode_id`, `coordinate_frame`, `coordinate_basis`  
 **Sort** — the primary key (R10 §2)
 
 **References**
 
 - `electrode_id` → `core.electrodes` (`electrode_id`)
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
 ### `core.electrodes`
 
@@ -366,7 +371,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `probe_id` | int32 | nullable |  | Probe ID. |
 | `local_electrode_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `local_channel_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
-| `brain_region` | string | nullable |  | Region label. |
 | `impedance_ohm` | float64 | nullable |  | Impedance. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
@@ -803,16 +807,21 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `sorting_run_id` | int32 | **required** | R28 §2-4 | Sorting run ID. |
 | `curation_id` | int32 | **required** | R28 §2-4 | Curation ID. |
 | `coordinate_frame` | string | **required** | R28 §2-4 | The frame these coordinates are in. Open, as R19 §3 left it. |
+| `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was. A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
+| `region_id` | int32 | nullable | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
+| `region_label` | string | nullable | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
+| `processing_run_id` | int32 | nullable | R58 §2.3 | The run that produced this coordinate. |
 | `x_um` | float64 | nullable | R28 §2-4 | X in micrometres, in that frame. |
 | `y_um` | float64 | nullable | R28 §2-4 | Y in micrometres. |
 | `z_um` | float64 | nullable | R28 §2-4 | Z in micrometres. |
 
-**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `coordinate_frame`  
+**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `coordinate_frame`, `coordinate_basis`  
 **Sort** — the primary key (R10 §2)
 
 **References**
 
 - `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
 ### `core.unit_electrodes`
 
