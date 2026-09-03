@@ -4,6 +4,7 @@
 |---|---|
 | **Status** | **Proposed** |
 | **Amends** | R19 §3 (`core.electrode_coordinates`), R28 §3 (`core.unit_coordinates`), R41 §2 (what currency covers) |
+| **Forces** | R59 (an atlas annotation attaches to a coordinate, so it needs a basis to attach to) |
 | **Depends on** | R8 (open vocabularies), R19 (coordinate frames), R28 (unit coordinates), R41 (currency), R44 (a run declares its scope) |
 | **Profile** | `nwb-lake-portable-v0.1` |
 
@@ -19,14 +20,13 @@ recording which. The two differ by however far the probe missed.
 
 ### 1.1 What the source actually carries
 
-Measured on the ecephys session in `inventory/nwb-zarr-776259-2025-04-09.md`, over 4608 electrodes:
+Measured on two AIND ecephys sessions:
 
-| column | state |
-|---|---|
-| `ccf_ap`, `ccf_dv`, `ccf_ml` | present for 4224; one probe's 384 unregistered |
-| `ccf_acronym` | 72 distinct, one of them empty |
-| `rel_x`, `rel_y` | present, probe frame |
-| `x`, `y`, `z` | NaN for all 4608 — the frame NWB itself specifies |
+| column | `776259_2025-04-09`, 4608 electrodes | `786867_2025-09-25`, 3840 electrodes |
+|---|---|---|
+| `ccf_ap`, `ccf_dv`, `ccf_ml` | 4224 present; one probe's 384 unregistered | 3840 present |
+| `rel_x`, `rel_y` | present, probe frame | 0–782 µm × 0–2865 µm |
+| `x`, `y`, `z` | NaN for all 4608 | NaN for all 3840 |
 
 One CCF estimate per electrode, with no field naming its kind. The 384 unregistered contacts make
 the gap concrete: that probe has a plan and no measurement, and the packet represents it exactly as
@@ -45,13 +45,6 @@ missed.
 Spelling the two as `ccf_planned` and `ccf_registered` is the other obvious move. It costs no
 schema change, and it folds what space a coordinate is in and what kind of claim it makes into one
 string a consumer must parse — the conflation R49 removed from `scope` and R55 named.
-
-### 1.3 The ambiguity already ships
-
-`core.electrodes.brain_region` is one string with no qualifier, answering either "the structure you
-targeted" or "the structure histology found the contact in". In the session above it holds
-`ccf_acronym`, derived from the registered coordinates. A targeting record names a planned
-structure too, and writing it here would overwrite.
 
 ## 2. Decision
 
@@ -104,19 +97,9 @@ R41 §2 is amended to say so: currency relates runs answering the same question,
 distinguishing questions is not a currency axis. R44 §2 already implies this by keying a preference
 on `(activity_type, scope)` — a plan and a measurement are not one activity.
 
-### 2.4 A structure label belongs to a position
-
-`core.electrodes.brain_region` is struck. A structure label states which atlas region a coordinate
-falls in, so it moves to the coordinate row as `core.electrode_coordinates.region_label`, nullable
-and open.
-
-On `core.electrodes` it is R3 §3.0 duplication that answers one of the two questions without
-recording which. On the coordinate row a planned structure and a measured one are both expressible,
-each attached to the coordinate that justifies it.
-
 ## 3. What this does not change
 
-- **No new table.** Two columns added and one struck.
+- **No new table.** One column added to each of two tables.
 - **No change to `coordinate_frame`.** R19 §3's frames are orthogonal to a basis.
 - **No requirement to carry both bases.** Most packets will carry one.
 - **No stored coordinate changes value.** Where histology produced a row, it becomes `measured`,
