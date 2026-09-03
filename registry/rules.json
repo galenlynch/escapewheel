@@ -139,12 +139,6 @@
         "level": "error",
         "message": "a run declares one half of its scope; the pair is what carries the meaning (R49 \u00a72.4)",
         "sql": "SELECT processing_run_id, scope_kind, scope FROM core_processing_runs WHERE (scope IS NULL) <> (scope_kind IS NULL)"
-      },
-      {
-        "id": "core.processing_runs.scope_resolves",
-        "level": "error",
-        "message": "a scope names a resource of its declared kind that does not exist (R49 \u00a72.5)",
-        "sql": "WITH known AS (SELECT 'core.sessions' AS kind, session_id AS id FROM core_sessions UNION ALL SELECT 'core.probes', probe_id FROM core_probes UNION ALL SELECT 'core.array_assets', array_asset_id FROM core_array_assets UNION ALL SELECT 'core.devices', device_id FROM core_devices UNION ALL SELECT 'core.event_streams', event_stream_id FROM core_event_streams UNION ALL SELECT 'core.electrodes', electrode_id FROM core_electrodes) SELECT processing_run_id, scope_kind, scope FROM core_processing_runs r WHERE r.scope_kind IN (SELECT DISTINCT kind FROM known) AND NOT EXISTS (SELECT 1 FROM known k WHERE k.kind = r.scope_kind AND k.id = r.scope)"
       }
     ],
     "core.sessions": [
@@ -400,12 +394,6 @@
         "level": "warning",
         "message": "the preferred run is superseded by another run",
         "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes_run_id = p.processing_run_id)"
-      },
-      {
-        "id": "core.preferred_runs.scope_resolves",
-        "level": "error",
-        "message": "a scope names a resource of its declared kind that does not exist (R49 \u00a72.5)",
-        "sql": "WITH known AS (SELECT 'core.sessions' AS kind, session_id AS id FROM core_sessions UNION ALL SELECT 'core.probes', probe_id FROM core_probes UNION ALL SELECT 'core.array_assets', array_asset_id FROM core_array_assets UNION ALL SELECT 'core.devices', device_id FROM core_devices UNION ALL SELECT 'core.event_streams', event_stream_id FROM core_event_streams UNION ALL SELECT 'core.electrodes', electrode_id FROM core_electrodes) SELECT session_id, activity_type, scope_kind, scope FROM core_preferred_runs r WHERE r.scope_kind IN (SELECT DISTINCT kind FROM known) AND NOT EXISTS (SELECT 1 FROM known k WHERE k.kind = r.scope_kind AND k.id = r.scope)"
       }
     ]
   }

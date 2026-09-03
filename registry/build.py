@@ -106,6 +106,11 @@ for _role, _names in {
     "sequence_position": (
         "anchor_index",
     ),
+    # R55 §2.1. A column a consumer resolves to a table, which `data` said nothing about -- so
+    # nothing checked that `scope_kind` held a resource ID at all.
+    "discriminator": (
+        "scope_kind",
+    ),
     "data": (
         "activity_type", "amplitude", "amplitude_unit", "brain_region", "channel_label", "choice",
         "chosen_at", "code_uri", "confidence", "conversion", "coordinate_frame",
@@ -116,7 +121,7 @@ for _role, _names in {
         "local_channel_label", "local_electrode_label", "local_unit_label", "manufacturer", "metadata",
         "model", "modified_at", "n_spikes", "name", "normalized_label", "notes", "offset", "origin",
         "origin_value", "parameters", "payload", "probe_type", "pts", "quality_label",
-        "quality_label_source", "reason", "rewarded", "sample_rate_hz", "scope", "scope_kind",
+        "quality_label_source", "reason", "rewarded", "sample_rate_hz", "scope",
         "semantic_type", "serial_number", "session_description", "session_end_time", "session_start_time",
         "sex", "sha256", "size_bytes", "software_name", "software_version", "sorter_name", "sorter_version",
         "source", "species", "started_at", "status", "step_tick_den", "step_tick_num", "step_value",
@@ -172,6 +177,27 @@ IDENTITY: dict[str, str] = {
 }
 
 
+#: R55 §2.2, §2.3.2. What a discriminator declares: whether an unresolvable value is a defect or
+#: a fact, and which column holds the paired value where the shape is paired rather than shared-key.
+#: Required and with no default, for R48 §2.2's reason.
+DISCRIMINATOR: dict[str, dict[str, str]] = {
+    # R49 §2.2: a run may be about a rig or a camera the packet does not hold, so a kind naming
+    # nothing is what the packet has to say, not a finding against it.
+    "scope_kind": {"resolves": "optional", "discriminates": "scope"},
+}
+
+
+def discriminator_of(name: str) -> dict[str, str]:
+    """Return a discriminator's declarations, refusing one nobody has classified."""
+    try:
+        return DISCRIMINATOR[name]
+    except KeyError:
+        raise SystemExit(
+            f"column {name!r} is a discriminator and declares no `resolves`; add it to "
+            "DISCRIMINATOR (R55 §2.2). The choice is required or optional."
+        ) from None
+
+
 def identity_of(name: str) -> str:
     """Return whether an identifier was carried or assigned, refusing an unclassified one."""
     try:
@@ -221,6 +247,8 @@ def col(name, typ, pres, desc, since=None, determined_by=None):
     entry = {"name": name, "type": typ, "presence": pres, "role": role, "description": desc}
     if role == "identifier":
         entry["identity"] = identity_of(name)
+    if role == "discriminator":
+        entry.update(discriminator_of(name))
     if stamp := (since or SINCE[0]):
         entry["since"] = stamp
     if determined_by is not None:

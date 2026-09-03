@@ -208,6 +208,13 @@ NAMING = {
     # R50 §3: `step_ticks` read as a coordinate and was a duration. A plural integer is the shape
     # that confusion takes, so it is flagged and a real count says so here.
     "no integer column is plural": lambda n, t, role: not (n.endswith("s") and t in INTEGERS),
+    # R55 §2.1. A discriminator holds a dotted resource ID, so it is a string by construction,
+    # and the `_kind` suffix is what R49 chose for the first one.
+    "a _kind column is a discriminator": lambda n, t, role: not (
+        n.endswith("_kind") and role != "discriminator"),
+    "a discriminator is named _kind": lambda n, t, role: not (
+        role == "discriminator" and not n.endswith("_kind")),
+    "a discriminator is a string": lambda n, t, role: not (role == "discriminator" and t != "string"),
 }
 
 flagged = {}
@@ -224,6 +231,49 @@ print(f"      {len(NAMING)} conventions over {sum(len(t['columns']) for t in ALL
       f"in core and {len(EXT)} extensions, "
       f"{len(NAMING_EXCEPTIONS)} declared exceptions")
 
+
+# R55 §2.2, §2.3.2. What a discriminator declares, checked where the meta-schema cannot: the
+# enum constrains the value but not that a discriminator has one, and `resolves` on anything else
+# is a declaration that decides nothing.
+_disc = []
+for _r, _t in ALL.items():
+    _names = {_c["name"] for _c in _t["columns"]}
+    for _c in _t["columns"]:
+        _is = _c.get("role") == "discriminator"
+        if _is and "resolves" not in _c:
+            _disc.append(f"{_r}.{_c['name']}: a discriminator declares no resolves")
+        for _field in ("resolves", "discriminates"):
+            if _field in _c and not _is:
+                _disc.append(f"{_r}.{_c['name']}: {_field} on a {_c.get('role')}, not a discriminator")
+        # A paired value lives in the named table's key space, so it is an identifier here too.
+        if (_paired := _c.get("discriminates")) is not None:
+            if _paired not in _names:
+                _disc.append(f"{_r}.{_c['name']}: discriminates {_paired}, which is not a column here")
+check("a discriminator declares what it resolves to", sorted(_disc))
+
+# R55 §4's open question, reported rather than failed. A paired value holds an identifier in the
+# named table's key space, and R53 §2.1 made those int32 -- but `scope` stayed a string declared
+# `data`, so a scope naming a probe holds "3" as text. R55 declines to settle it, since it is
+# R53's consequence; what is not acceptable is for it to stop being visible.
+_untyped = [f"{_r}.{_c['discriminates']} is the paired value of {_c['name']} and is declared "
+            f"{next(x for x in _t['columns'] if x['name'] == _c['discriminates'])['role']}/"
+            f"{next(x for x in _t['columns'] if x['name'] == _c['discriminates'])['type']}, "
+            f"not an identifier (R55 §4)"
+            for _r, _t in ALL.items() for _c in _t["columns"]
+            if _c.get("discriminates") and any(
+                x["name"] == _c["discriminates"] and x.get("role") != "identifier" for x in _t["columns"])]
+for _line in sorted(_untyped):
+    print(f"      open  {_line}")
+
+# R55 §2.3.1: a paired value holds one identifier, so it can only name a resource whose key is one
+# column. Reported rather than enforced -- the kind vocabulary is open (R49 §2.4), so what this can
+# say is which resources are namable at all, which is otherwise found by a check quietly matching
+# no branch.
+NAMABLE = {_r: _t["primary_key"][0] for _r, _t in ALL.items()
+           if _t.get("primary_key") and len(_t["primary_key"]) == 1}
+_core_namable = sum(1 for _r in NAMABLE if _r in T)
+print(f"      {_core_namable} of {len(T)} core resources have a single-column key "
+      f"({len(NAMABLE)} of {len(ALL)} with extensions), so a paired-value discriminator names those")
 
 # R56 §2.4: a declared unit or clock source must resolve. Structural -- decidable from the
 # registry with no packet in hand, which is where this format puts a check it can make without

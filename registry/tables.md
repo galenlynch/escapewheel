@@ -8,7 +8,7 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-35 tables, 307 columns, 72 references, 61 Tier 2 rules
+35 tables, 307 columns, 72 references, 59 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
 derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53
 ```
@@ -521,12 +521,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `session_id` → `core.sessions` (`session_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
-**Tier 2 rules** — 4
+**Tier 2 rules** — 3
 
 - `core.preferred_runs.activity_matches_run` — error: a preference names a run whose activity_type differs from the preference's
 - `core.preferred_runs.run_in_session` — error: a preference names a run belonging to another session
 - `core.preferred_runs.not_superseded` — warning: the preferred run is superseded by another run
-- `core.preferred_runs.scope_resolves` — error: a scope names a resource of its declared kind that does not exist (R49 §2.5)
 
 ### `core.probes`
 
@@ -597,7 +596,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `supersedes_run_id` → `core.processing_runs` (`processing_run_id`)
 - `session_id` → `core.sessions` (`session_id`)
 
-**Tier 2 rules** — 8
+**Tier 2 rules** — 7
 
 - `core.processing_runs.no_failed_runs` — error: a failed run is recorded in a committed packet
 - `core.processing_runs.materialization_records_software` — error: a materialization run does not record the software that produced it
@@ -606,7 +605,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.processing_runs.undeclared_currency` — info *(advisory, R26)*: several runs share an activity and scope and none is preferred, so a consumer cannot choose between them
 - `core.processing_runs.scope_undeclared` — info *(advisory, R26)*: an activity has several runs and at least one records no scope, so whether they compete cannot be determined
 - `core.processing_runs.scope_pair_complete` — error: a run declares one half of its scope; the pair is what carries the meaning (R49 §2.4)
-- `core.processing_runs.scope_resolves` — error: a scope names a resource of its declared kind that does not exist (R49 §2.5)
 
 ### `core.session_experimenters`
 
