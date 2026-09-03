@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-03 |
+| **Status** | **Accepted** 2026-09-03 |
 | **Amends** | R48 §2.1 (the closed role vocabulary), R49 §2.2 and §2.5 (`scope_kind` and what checks it), R17 §2 (the reason core may not reference an extension) |
 | **Depends on** | R17 (extension registries), R48 (column roles), R49 (a scope names what kind of thing it is), R53 (an identifier is an integer) |
 | **Profile** | `nwb-lake-portable-v0.1` |
@@ -119,6 +119,18 @@ and so quietly assumes this; the assumption becomes a rule that `registry/check.
 Both are structural: they are decidable from the registry with no packet in hand, which is where
 this format puts a check it can make without data.
 
+### 2.3.2 A paired-value discriminator names its paired column
+
+§3 says which shape a site uses is *"visible from whether it declares a paired column"*, and
+nothing above says how it declares one. Implementation needs it mechanically — the generated
+resolution differs between the two shapes — so a discriminator carries `discriminates`, naming the
+column that holds the value. Absent means the shared-key shape.
+
+`core.processing_runs.scope_kind` declares `discriminates: "scope"`. Inferring it from the name
+instead would be the guess R48 §3 measured as unsafe, and `registry/check.py` can only check a
+declaration: that the named column exists in the same table, and that `resolves` and
+`discriminates` appear on a discriminator and nowhere else.
+
 Measured on the current registry: **14 of 35 tables have a single-column primary key**, so a
 paired-value discriminator can name those and not the other 21 — including `core.units`,
 `core.spike_events` and `core.array_channels`. That is a real limit on `scope`, and it is one
@@ -187,6 +199,21 @@ case coincide.
   scope naming a probe now holds `"3"` as text. Either `scope` becomes `int32` — which R53 makes
   uniform and which nothing prevents — or the inconsistency is deliberate and should say why.
   This revision does not settle it, because it is R53's consequence rather than this one's.
+  `registry/check.py` reports it on every run rather than letting it fade.
+
+  Implementing §2.4 sharpened the question from *what type* to **who assigns the value**.
+  `session_id` and `probe_id` are `assigned` (R53 §2.3), so their values are chosen by the writer
+  at build time; `nwb_lake_writer.arrow.number` renumbers a foreign key through its target's map,
+  and does so for *declared references* only. A discriminated reference is by construction not a
+  declared reference — that is the whole mechanism — so `scope` is left holding whatever the
+  source said, and a hand-authored packet cannot produce a scope that resolves at all. Measured:
+  the conformance corpus's `undeclared_currency` carries `scope = "probe0"` against a `probe_id`
+  that is now an integer, and the generated check finds it.
+
+  The fix is available and mechanical — `discriminates` names the column and the kind names the
+  map, so the writer has everything it needs to number a paired value through the target's
+  assignment — but doing it decides §4's first bullet by fiat, in favour of `scope` holding the
+  assigned number as text. That decision is left open rather than taken here.
 - **Whether one extension declaring several kinds needs anything further.** It does not:
   `interval_kind` names a *resource*, and one extension has many, so `dynamic_foraging.trials`
   and `dynamic_foraging.blocks` are two kinds from one document. Each carries its own constant
