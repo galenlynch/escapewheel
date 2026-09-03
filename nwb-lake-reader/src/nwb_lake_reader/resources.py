@@ -253,11 +253,32 @@ class TableResource:
             downstream already handles. Pass False to keep the columns as
             `dictionary<string, int32>`, the form the file stores.
 
-            That is worth reaching for only when reading a whole identity column, which is
-            the one case where decoding dominates: `unit_id` over 287 M spikes is 0.23 s and
-            1.15 GB kept against 2.29 s and 12.75 GB decoded, and the decoded read needs
-            13.6 GB of memory to complete at all. Filtered reads never approach it, so the
-            default stays the predictable one rather than the fast one.
+            That is worth reaching for only when reading a whole identity column **to keep**,
+            which is the one case where decoding dominates: `unit_id` over 287 M spikes is
+            0.23 s and 1.15 GB kept against 2.29 s and 12.75 GB decoded, and the decoded read
+            needs 13.6 GB of memory to complete at all.
+
+            **The saving is given back, with interest, by the second operation.** Measured on
+            20 M rows and the four identity columns -- 0.32 GB kept against 3.42 GB decoded,
+            which is the whole win -- and then:
+
+            ==================  =============  ==========
+            operation           plain string   dictionary
+            ==================  =============  ==========
+            equal + filter          0.06 s        0.16 s
+            is_in, 24 units         1.19 s       16.81 s
+            group_by                0.03 s       unifies first, then 0.01 s
+            sort_indices            1.03 s       **not implemented**
+            ==================  =============  ==========
+
+            `Table.unify_dictionaries` costs 0.01 s and fixes `group_by`, whose failure is
+            `ArrowNotImplementedError: Unifying differing dictionaries` -- a row group carries
+            its own dictionary, so concatenated batches disagree. Sorting a dictionary column
+            is unimplemented in Arrow whether unified or not, so there is no mitigation.
+
+            Hence the default is the predictable one rather than the fast one: a caller who
+            takes the fast one is one `is_in` away from paying fourteen times over, and one
+            sort away from an exception.
 
         Returns
         -------
@@ -280,12 +301,15 @@ class TableResource:
         Parameters
         ----------
         decode : bool, default True
-            The opposite default to :meth:`to_arrow`, and measured rather than assumed. A
-            filtered scan returns few rows, so the strings it decodes are cheap -- but the
-            dictionaries are per row group, and reconciling 1,891 of them costs far more than
-            the decoding it saves: 1.3 s against 0.037 s selecting 24 units, and 1.7 s against
-            0.033 s selecting one. A whole-file read is the reverse, which is why `to_arrow`
-            defaults the other way.
+            Measured rather than assumed, and for a different reason than :meth:`to_arrow`'s
+            same default. A filtered scan returns few rows, so the strings it decodes are
+            cheap -- but the dictionaries are per row group, and reconciling 1,891 of them
+            costs far more than the decoding it saves: 1.3 s against 0.037 s selecting 24
+            units, and 1.7 s against 0.033 s selecting one.
+
+            So both default to decoding, by two separate arguments: here because keeping the
+            dictionary costs more than it saves outright, and in `to_arrow` because the saving
+            is real but is given back by whatever the caller does next.
 
         Returns
         -------
