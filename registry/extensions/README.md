@@ -6,7 +6,7 @@ reading one of their tables needs nothing installed.
 
 | | tables | columns | drawn from |
 |---|---|---|---|
-| `dynamic_foraging` | `trials`, `blocks` | 23 | the 10 trial columns measured to vary in a real session, plus its blocks |
+| `dynamic_foraging` | `trials`, `blocks`, `sessions` | 60 | the 67 trial columns of two real sessions, split by which of them vary |
 | `aind_unit_qc` | `metrics`, `waveform_metrics`, `synchrony` | 59 | 48 of the 74 columns the real NWB's `units` table carries |
 | `aind_opto` | `stimulations`, `emissions` | 18 | the 17 `laser_*` columns the real NWB's `trials` table carries |
 | `vr_foraging` | `sites`, `site_odors`, `sessions` | 38 | the `Site` and `SessionMetadata` pydantic models the packaging library writes its parquet from |
@@ -32,6 +32,26 @@ nothing.
 
 That is exactly what an extension is for, and it is why R43 §3, R16 §5, R9 §2 and `09` §2.3 all
 send their columns here.
+
+## What varies is what belongs on the row
+
+`dynamic_foraging`'s three tables come from one measurement. Its NWB `trials` table has 67
+columns, and `ecephys_776259_2025-04-04` and `ecephys_786867_2025-09-25` carry the same 67 names
+exactly — so the shape is the task's rather than one session's. Over 786867's 450 trials:
+
+```
+18 vary      49 are constant on every trial
+```
+
+The 18 are the trial's own facts and stay on `dynamic_foraging.trials`, joined by the few that
+vary by nature and happened not to here — `delay_duration` is fixed only because that session's
+`delay_beta` is zero. The 49 are the task's configuration repeated 450 times, and become
+`dynamic_foraging.sessions`: the beta/min/max families the delays and blocks are drawn from, the
+valve calibrations, the reward sizes, and the six `auto_train_*` columns recording what the
+trainer was doing.
+
+The 17 `laser_*` columns are in that constant set too, at `None` and NaN throughout, because
+neither session ran opto. They belong to `aind_opto` either way.
 
 ## The source's columns are evidence, not a schema
 
