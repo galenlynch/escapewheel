@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-03 |
+| **Status** | **Accepted** 2026-09-03 |
 | **Amends** | R2 §5 (what a column declares), R48 §2.1 (what a `coordinate` role implies) |
 | **Depends on** | R2 (registry format), R13 (clock alignment), R17 (extension registries), R48 (column roles) |
 | **Profile** | `nwb-lake-portable-v0.1` |
