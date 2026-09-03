@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** |
+| **Status** | **Accepted** 2026-09-03 |
 | **Supersedes** | R32 §4 (what a packet retains), R32 §6 (cleanup as a separate operation) |
 | **Depends on** | R14 §2.3 (packet-owned bytes are immutable), R32 (amending a committed packet), R35 (revalidation is bounded by immutability) |
 | **Profile** | `nwb-lake-portable-v0.1` |
