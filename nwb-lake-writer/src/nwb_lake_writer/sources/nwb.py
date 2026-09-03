@@ -675,7 +675,7 @@ class NWBSource(Compensates):
                         "event_type": kind,
                         "t_tick": int(tick),
                         "clock_id": self.clock.clock_id,
-                        "payload": {"trial_id": f"{self.prefix}trial_{int(identifiers[index]):04d}"},
+                        "payload": {"trial_id": int(identifiers[index])},
                     }
                 )
         return rows
@@ -707,7 +707,9 @@ class NWBSource(Compensates):
         for index in range(len(start)):
             row: dict[str, Any] = {
                 "session_id": self.session_id,
-                "trial_id": f"{self.prefix}trial_{int(identifiers[index]):04d}",
+                # Carried (R53 §2.3): intervals/trials/id is already int64 and already 0..n,
+                # so the writer passes it through rather than composing a string from it.
+                "trial_id": int(identifiers[index]),
                 "start_tick": int(start[index]),
                 "stop_tick": int(stop[index]),
                 "clock_id": self.clock.clock_id,

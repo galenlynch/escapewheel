@@ -37,7 +37,8 @@ from nwb_lake_reader import Manifest, Packet, open_packet
 from nwb_lake_validator import Report, validate, verify_order
 from nwb_lake_validator.generate import adjacency_settles_uniqueness
 
-from .arrow import build, schema, sort_key
+from .arrow import build, number_batch, schema, sort_key
+from .keys import Keys
 
 
 def _standard_version(registry: Mapping[str, Any]) -> str:
@@ -372,6 +373,10 @@ class PacketWriter:
 
     def __init__(self, registry: Mapping[str, Any], *, packet_id: str, description: str | None = None) -> None:
         self._registry = registry
+        #: Assigns the integer every identifier holds (R53 §2.5). One per packet, shared by every
+        #: adapter, because two sources numbering the same probe differently is a defect no
+        #: foreign key can see: both values resolve, to different rows.
+        self.keys = Keys()
         self._packet_id = packet_id
         self._description = description
         self._tables: dict[str, list[Mapping[str, Any]]] = {}
@@ -440,7 +445,8 @@ class PacketWriter:
             raise ValueError(f"{resource_id} already has records; use one path per table")
         if resource_id in self._batches:
             raise ValueError(f"{resource_id} already has batches; concatenate before adding")
-        self._batches[resource_id] = batches
+        spec = self._registry["tables"][resource_id]
+        self._batches[resource_id] = (number_batch(spec, b, self.keys) for b in batches)
 
     def derives(self, resource_id: str, sources: Sequence[str]) -> None:
         """Record which resources one was derived from (`06`).
@@ -622,7 +628,7 @@ class PacketWriter:
                 if sort_key(spec):
                     self._ordered.add(resource_id)
             else:
-                table = build(spec, self._tables[resource_id])
+                table = build(spec, self._tables[resource_id], self.keys)
                 # No `row_group_size`: pyarrow's default is min(rows, 2**20), which puts each
                 # of these tables in one row group, and that is the right answer — they are
                 # smaller than a single object-storage fetch and are read whole, so splitting

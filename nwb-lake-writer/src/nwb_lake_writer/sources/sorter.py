@@ -257,6 +257,11 @@ class SorterSource:
 
     # -- identity ---------------------------------------------------------------------
 
+    # These compose a *name*. `arrow.build` maps it to the integer the column holds (R53 §2.1),
+    # against one `Keys` shared by every adapter -- because the recipe exists precisely because
+    # four sources can each produce `core.probes`, and two of them numbering the same probe
+    # differently is a defect no foreign key could see: both values resolve, to different rows.
+
     def _clock_id(self, stream: SortedStream) -> str:
         return f"{self.prefix}{stream.key}.samples"
 
@@ -269,14 +274,19 @@ class SorterSource:
     def _probe_id(self, stream: SortedStream) -> str:
         return f"{self.prefix}{stream.device}"
 
-    def _unit_id(self, stream: SortedStream, label: int, width: int) -> str:
-        """Compose a unit id that is unique across streams and sorts numerically.
+    def _unit_id(self, stream: SortedStream, label: int, width: int) -> int:
+        """Return the sorter's own unit label, which R53 §2.3 calls a **carried** identifier.
 
-        Zero-padded because `core.spike_events` orders by this column as a string; unpadded,
-        `u10` would sort between `u1` and `u2` and the stored order would not match the
-        source's.
+        `numpysorting_info.json` supplies `unit_ids` as int64 and strictly increasing, so this
+        passes it through rather than composing anything. What it replaces was a composed and
+        zero-padded string -- padded only so that ordering `core.spike_events` by it as text
+        matched the source's numeric order, which an integer does by construction.
+
+        Uniqueness across streams is not this column's job and never was: unit identity is
+        `(session_id, unit_id, sorting_run_id, curation_id)`, never `unit_id` alone. `width` is
+        accepted and unused so the call sites need not all change at once.
         """
-        return f"{self.prefix}{stream.key}.u{label:0{width}d}"
+        return int(label)
 
     # -- tables -----------------------------------------------------------------------
 
@@ -769,7 +779,10 @@ class SorterSource:
             # on a million-row slice builds a million Python strings per batch; `take` stays
             # in C++ and is 18x faster, which over a quarter of a billion spikes is the
             # difference between 15 seconds and one.
-            unit_values = pa.array([self._unit_id(stream, int(label), width) for label in ids], type=pa.string())
+            # int32 since R53 §2.1: unit_id is carried, so this is the sorter's own label. The
+            # `take` below stays in C++ either way, and an integer array is a quarter the width
+            # of the strings it replaces.
+            unit_values = pa.array([self._unit_id(stream, int(label), width) for label in ids], type=pa.int32())
             run, curation = self._sorting_run_id(stream), self._curation_id(stream)
             clock = self._clock_id(stream)
             for start in range(0, order.size, batch_rows):

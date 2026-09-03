@@ -58,7 +58,7 @@ def _units(nwb, *, refuses=True):
     else:
         nwbfixture.array(units / "spike_times", np.array([0.1, 0.2, 0.3]))
     nwbfixture.array(units / "spike_times_index", np.array([3], dtype=np.int64))
-    return {("probeA", "7"): {"unit_id": "u1", "sorting_run_id": "run", "curation_id": "cur"}}
+    return {("probeA", "7"): {"unit_id": 1, "sorting_run_id": "run", "curation_id": "cur"}}
 
 
 def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
@@ -69,7 +69,7 @@ def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
     assert source.unit_coordinates() == [
         {
             "session_id": SESSION,
-            "unit_id": "u1",
+            "unit_id": 1,
             "sorting_run_id": "run",
             "curation_id": "cur",
             "coordinate_frame": "ccf",

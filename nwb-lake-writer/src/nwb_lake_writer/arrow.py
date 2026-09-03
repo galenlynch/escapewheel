@@ -182,7 +182,93 @@ def sort_key(spec: Mapping[str, Any]) -> list[str] | None:
     return list(keys) if keys else (list(spec["primary_key"]) if spec.get("primary_key") else None)
 
 
-def build(spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]]) -> pa.Table:
+class CarriedNotAnInteger(ValueError):
+    """A carried identifier arrived as something other than the source's own number."""
+
+
+def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> None:
+    """Turn identifier values into the integers R53 §2.1 requires, in place.
+
+    Done here rather than in each adapter because the invariant is cross-adapter: the recipe
+    exists because four sources can each produce `core.probes`, and two of them numbering the
+    same probe differently is a defect no foreign key could see -- both values resolve, to
+    different rows. One `Keys` shared by one `build` cannot get that wrong.
+
+    An **assigned** identifier's incoming value is its *name*, which `Keys` maps to a number and
+    remembers. A **carried** one is already the source's own number and is only coerced. Where
+    the table owns an assigned identifier -- it is in the primary key and is not exported through
+    a reference -- the matching `*_name` is filled in with the name that was mapped, which is
+    what R53 §2.3.1 requires and what nothing else could supply by the time the row is written.
+    """
+    exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
+    primary = set(spec.get("primary_key") or [])
+    declared = {c["name"]: c for c in spec["columns"]}
+    for column in spec["columns"]:
+        if column.get("role") != "identifier":
+            continue
+        name = column["name"]
+        assigned = column.get("identity") == "assigned"
+        owns = assigned and name in primary and name not in exported
+        named: str | None = f"{name.removesuffix('_id')}_name" if owns else None
+        if assigned:
+            # Number the names this call is about to use in name order, before touching a row.
+            # Assigning on first sight would make the numbers depend on the order an adapter
+            # happened to emit in, and R53 §2.5 wants two builds of the same sources to produce
+            # the same packet -- which is what lets a rebuild be compared to what it replaced.
+            for known in sorted({str(r[name]) for r in rows if r.get(name) is not None}):
+                keys.of(name, known)
+        for row in rows:
+            value = row.get(name)
+            if value is None:
+                continue
+            if assigned:
+                row[name] = keys.of(name, str(value))
+                if named is not None and named in declared and row.get(named) is None:
+                    row[named] = str(value)
+            else:
+                try:
+                    row[name] = int(value)
+                except (TypeError, ValueError):
+                    raise CarriedNotAnInteger(
+                        f"{name} is a carried identifier (R53 §2.3), so it holds the source's own "
+                        f"number -- but this row carries {value!r}. Either the source supplies an "
+                        f"integer and the adapter is composing a string from it, or the column is "
+                        f"assigned rather than carried and the registry says otherwise."
+                    ) from None
+
+
+def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> pa.RecordBatch:
+    """Return a streamed batch with its identifier columns numbered, as `number` does for records.
+
+    The streaming path exists so a 287 M-row table never becomes Python objects, so this maps
+    through the batch's *distinct* values rather than per row -- on `core.spike_events` three of
+    the four identity columns hold one value for the whole batch, and the fourth is already the
+    sorter's own integer.
+
+    A batch cannot supply a `*_name`: it has no room for a column the caller did not yield, and
+    the table it streams is a fact table, which R53 §2.3.1 does not ask one of.
+    """
+    columns = dict(zip(batch.schema.names, batch.columns, strict=True))
+    changed = False
+    for column in spec["columns"]:
+        name = column["name"]
+        if column.get("role") != "identifier" or name not in columns:
+            continue
+        values = columns[name]
+        if pa.types.is_integer(values.type):
+            continue
+        if column.get("identity") == "assigned":
+            mapping = {v: keys.of(name, v) for v in set(values.to_pylist()) - {None}}
+            columns[name] = pa.array([None if v is None else mapping[v] for v in values.to_pylist()])
+        else:
+            columns[name] = pa.array([None if v is None else int(v) for v in values.to_pylist()])
+        changed = True
+    if not changed:
+        return batch
+    return pa.RecordBatch.from_arrays(list(columns.values()), names=list(columns))
+
+
+def build(spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]], keys: Any = None) -> pa.Table:
     """Build a sorted Arrow table for one resource.
 
     Parameters
@@ -191,6 +277,9 @@ def build(spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]]) -> pa.T
         The registry's entry for this table.
     records : sequence of Mapping
         The rows, in any order.
+    keys : Keys, optional
+        Assigns the integers identifier columns hold (R53). Absent, identifiers are left as
+        given -- which only a caller building a table with no identifier in it can want.
 
     Returns
     -------
@@ -202,10 +291,14 @@ def build(spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]]) -> pa.T
     NaiveTimestamp
         If a wall-clock value carries no UTC offset.
     """
-    rows = list(records)
-    if keys := sort_key(spec):
+    rows = [dict(r) for r in records]
+    if keys is not None:
+        # Before the sort, not after: R10 §2 orders by the primary key, and the key is the
+        # number. Sorting the names would order `unit_10` between `unit_1` and `unit_2`.
+        number(spec, rows, keys)
+    if order := sort_key(spec):
         # None sorts first and consistently; a nullable sort column is legal.
-        rows.sort(key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in keys))
+        rows.sort(key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in order))
 
     present = {name for row in rows for name in row}
     out = schema(spec, present)

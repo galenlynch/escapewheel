@@ -9,6 +9,13 @@ from tests import sorterfixture
 
 SESSION = "ecephys_837772_2026-06-27_14-08-21"
 SHANK1 = "experiment1.Neuropix-PXI-100.50720-1"
+SHANK2 = "experiment1.Neuropix-PXI-100.50720-2"
+
+
+def keyed(rows, label, run=SHANK1):
+    """Rows for one unit. R53 §2.3 makes unit_id the sorter's own label, which is unique
+    within a stream and not across, so the run is part of naming a unit."""
+    return [r for r in rows if r["unit_id"] == label and r["sorting_run_id"] == run]
 
 
 @pytest.fixture
@@ -74,22 +81,29 @@ def test_quad_base_shanks_are_separate_probes(source):
 
 def test_unit_index_is_resolved_through_unit_ids(source):
     """`unit_ids` has a gap, so offset 3 is unit 5. Storing the offset would be wrong here."""
-    labels = [u["local_unit_label"] for u in rows_of(source, "core.units") if SHANK1 in u["unit_id"]]
+    labels = [u["local_unit_label"] for u in rows_of(source, "core.units") if u["sorting_run_id"] == SHANK1]
     assert labels == ["0", "1", "2", "5", "12", "40"]
 
 
-def test_a_unit_id_is_stream_qualified(source):
-    """A Kilosort id is unique within a stream and not across them."""
-    ids = {u["unit_id"] for u in rows_of(source, "core.units")}
-    assert f"{SHANK1}.u05" in ids
-    assert "experiment1.Neuropix-PXI-100.50720-2.u05" in ids
-    assert len(ids) == 12
+def test_a_unit_id_is_the_sorters_own_label(source):
+    """R53 §2.3: unit_id is carried, so it is the Kilosort id and nothing is composed from it.
+
+    It is not unique across streams and does not need to be -- unit identity is
+    `(session_id, unit_id, sorting_run_id, curation_id)`, never `unit_id` alone -- which is why
+    the two streams below share every label and the packet is still well keyed."""
+    by_run = {}
+    for unit in rows_of(source, "core.units"):
+        by_run.setdefault(unit["sorting_run_id"], set()).add(unit["unit_id"])
+    assert len(by_run) == 2, "two streams"
+    assert all(labels == set(sorterfixture.UNIT_IDS) for labels in by_run.values())
+    assert all(isinstance(label, int) for labels in by_run.values() for label in labels)
 
 
-def test_unit_ids_are_padded_so_string_order_matches_numeric(source):
-    """`core.spike_events` sorts by this column as a string; unpadded, u12 would precede u5."""
-    ids = sorted(u["unit_id"] for u in rows_of(source, "core.units") if SHANK1 in u["unit_id"])
-    assert [i.rsplit(".u", 1)[1] for i in ids] == ["00", "01", "02", "05", "12", "40"]
+def test_unit_ids_need_no_padding_to_sort_numerically(source):
+    """What this replaces zero-padded, so that ordering `core.spike_events` by the column as
+    text matched the source's numeric order. An integer does that by construction."""
+    ids = sorted({u["unit_id"] for u in rows_of(source, "core.units")})
+    assert ids == sorted(sorterfixture.UNIT_IDS) == [0, 1, 2, 5, 12, 40]
 
 
 def test_unit_ids_out_of_order_are_a_defect(tmp_path):
@@ -105,10 +119,9 @@ def test_unit_ids_out_of_order_are_a_defect(tmp_path):
 
 def test_the_spike_summary_is_computed_not_copied(source):
     """`n_spikes` and the tick bounds are the validated denormalization the spec asks for."""
-    units = {u["unit_id"]: u for u in rows_of(source, "core.units")}
-    first = units[f"{SHANK1}.u00"]
+    first = keyed(rows_of(source, "core.units"), 0)[0]
     assert (first["n_spikes"], first["first_spike_tick"], first["last_spike_tick"]) == (3, 10, 41)
-    gapped = units[f"{SHANK1}.u05"]
+    gapped = keyed(rows_of(source, "core.units"), 5)[0]
     assert (gapped["n_spikes"], gapped["first_spike_tick"], gapped["last_spike_tick"]) == (2, 11, 26)
 
 
@@ -123,7 +136,9 @@ def test_a_unit_with_no_spikes_gets_null_bounds(tmp_path):
 
 
 def test_every_source_gets_a_row(source):
-    labels = [q for q in rows_of(source, "core.unit_quality_labels") if q["unit_id"] == f"{SHANK1}.u00"]
+    labels = [
+        q for q in rows_of(source, "core.unit_quality_labels") if q["unit_id"] == 0 and q["sorting_run_id"] == SHANK1
+    ]
     assert {q["source"] for q in labels} == {"kilosort", "bombcell", "decoder", "unitrefine"}
 
 
@@ -132,7 +147,7 @@ def test_non_soma_projects_to_null_not_noise(source):
     row = next(
         q
         for q in rows_of(source, "core.unit_quality_labels")
-        if q["unit_id"] == f"{SHANK1}.u02" and q["source"] == "bombcell"
+        if q["unit_id"] == 2 and q["sorting_run_id"] == SHANK1 and q["source"] == "bombcell"
     )
     assert (row["label"], row["normalized_label"]) == ("non_soma", None)
 
@@ -144,14 +159,18 @@ def test_the_source_label_survives_verbatim(source):
 
 
 def test_confidence_travels_where_the_source_reports_one(source):
-    labels = {q["source"]: q for q in rows_of(source, "core.unit_quality_labels") if q["unit_id"] == f"{SHANK1}.u00"}
+    labels = {
+        q["source"]: q
+        for q in rows_of(source, "core.unit_quality_labels")
+        if q["unit_id"] == 0 and q["sorting_run_id"] == SHANK1
+    }
     assert labels["decoder"]["confidence"] == pytest.approx(0.5)
     assert labels["kilosort"]["confidence"] is None
 
 
 def test_the_designated_label_comes_from_the_decoder(source):
     """R11 §3 closed the column to sua/mua/noise, which is what the decoder emits natively."""
-    unit = next(u for u in rows_of(source, "core.units") if u["unit_id"] == f"{SHANK1}.u00")
+    unit = next(u for u in rows_of(source, "core.units") if u["unit_id"] == 0 and u["sorting_run_id"] == SHANK1)
     assert (unit["quality_label"], unit["quality_label_source"]) == ("sua", "decoder")
 
 
@@ -219,9 +238,9 @@ def test_batches_come_out_in_the_registry_sort_order(source):
 def test_a_spike_carries_the_resolved_unit_id(source):
     """The source's unit_index 3 is unit 5; a spike must not be filed under u03."""
     first = next(source.spike_batches(batch_rows=1000)).to_pydict()
-    ticks = {u: t for u, t in zip(first["unit_id"], first["t_tick"], strict=True) if u.endswith("u05")}
-    assert set(ticks) == {f"{SHANK1}.u05"}
-    assert sorted(t for u, t in zip(first["unit_id"], first["t_tick"], strict=True) if u.endswith("u05")) == [11, 26]
+    ticks = {u: t for u, t in zip(first["unit_id"], first["t_tick"], strict=True) if u == 5}
+    assert set(ticks) == {5}
+    assert sorted(t for u, t in zip(first["unit_id"], first["t_tick"], strict=True) if u == 5) == [11, 26]
 
 
 def test_every_spike_survives_the_sort(source):
@@ -276,14 +295,14 @@ def test_a_manual_label_is_projected_like_any_other(source):
     row = next(
         q
         for q in rows_of(source, "core.unit_quality_labels")
-        if q["source"] == "manual" and q["unit_id"] == f"{SHANK1}.u01"
+        if q["source"] == "manual" and q["unit_id"] == 1 and q["sorting_run_id"] == SHANK1
     )
     assert (row["label"], row["normalized_label"]) == ("noise", "noise")
 
 
 def test_only_labelled_units_get_a_manual_row(source):
     manual = [q for q in rows_of(source, "core.unit_quality_labels") if q["source"] == "manual"]
-    assert {q["unit_id"] for q in manual} == {f"{SHANK1}.u01", "experiment1.Neuropix-PXI-100.50720-2.u01"}
+    assert {q["unit_id"] for q in manual} == {1}
 
 
 def test_a_removal_with_no_label_is_reported(tmp_path):

@@ -57,7 +57,10 @@ def test_tables_are_written_in_the_registry_order(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     _write(root, registry, {**minimal, "core.subjects": out_of_order + minimal["core.subjects"]})
     written = open_packet(root).table("core.subjects")
-    assert written.column("subject_id").to_pylist() == ["m001", "m002", "m003", "m004"]
+    # R53 §2.1: the key is the number. Numbers are assigned in name order, so a packet does not
+    # depend on the order an adapter emitted in, and the names come back in the order they name.
+    assert written.column("subject_id").to_pylist() == [0, 1, 2, 3]
+    assert written.column("subject_name").to_pylist() == ["m001", "m002", "m003", "m004"]
 
 
 def test_a_packet_without_sessions_is_refused(tmp_path, registry):
@@ -198,9 +201,7 @@ def _add_spike_context(writer):
         [{"sorting_run_id": "sort_1", "session_id": "s001", "clock_id": "harp_s001", "amplitude_unit": "uV"}],
     )  # R11 2: spikes carry amplitudes
     writer.add("core.curation_versions", [{"curation_id": "cur_1", "sorting_run_id": "sort_1", "session_id": "s001"}])
-    writer.add(
-        "core.units", [{"session_id": "s001", "unit_id": "u1", "sorting_run_id": "sort_1", "curation_id": "cur_1"}]
-    )
+    writer.add("core.units", [{"session_id": "s001", "unit_id": 1, "sorting_run_id": "sort_1", "curation_id": "cur_1"}])
 
 
 def test_batches_reach_the_packet(tmp_path, registry, minimal):
@@ -208,7 +209,7 @@ def test_batches_reach_the_packet(tmp_path, registry, minimal):
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
-    writer.add_batches("core.spike_events", (_spike_batch(500, "u1", t) for t in (0, 500, 1000)))
+    writer.add_batches("core.spike_events", (_spike_batch(500, 1, t) for t in (0, 500, 1000)))
     writer.commit(tmp_path / "pkt")
     table = pq.read_table(tmp_path / "pkt" / "tables" / "core" / "spike_events.parquet")
     assert table.num_rows == 1500
@@ -222,7 +223,7 @@ def test_a_generator_is_consumed_lazily(tmp_path, registry):
     def batches():
         for t in (0, 100):
             seen.append(t)
-            yield _spike_batch(100, "u1", t)
+            yield _spike_batch(100, 1, t)
 
     writer = PacketWriter(registry, packet_id="s001")
     writer.add_batches("core.spike_events", batches())
@@ -246,8 +247,8 @@ def test_a_later_batch_may_omit_a_declared_column(tmp_path, registry, minimal):
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
-    wide = _spike_batch(10, "u1", 0)
-    narrow = _spike_batch(10, "u1", 10).drop_columns(["amplitude"])
+    wide = _spike_batch(10, 1, 0)
+    narrow = _spike_batch(10, 1, 10).drop_columns(["amplitude"])
     writer.add_batches("core.spike_events", iter([wide, narrow]))
     writer.commit(tmp_path / "pkt")
     table = pq.read_table(tmp_path / "pkt" / "tables" / "core" / "spike_events.parquet")
@@ -260,8 +261,8 @@ def test_a_later_batch_may_not_introduce_a_column(tmp_path, registry, minimal):
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
-    plain = _spike_batch(10, "u1", 0)
-    later = _spike_batch(10, "u1", 10)  # continues the order, so the schema is what fails
+    plain = _spike_batch(10, 1, 0)
+    later = _spike_batch(10, 1, 10)  # continues the order, so the schema is what fails
     extra = pa.record_batch(
         [*later.columns, pa.array(['{"a":1}'] * 10)],
         names=[*later.schema.names, "metadata"],
@@ -630,11 +631,13 @@ def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
     spec = registry["tables"]["core.spike_events"]
     batch = pa.record_batch(
         {
-            "session_id": pa.repeat(pa.scalar("s001", pa.string()), rows),
-            "unit_id": pa.repeat(pa.scalar("unit_0001", pa.string()), rows),
-            "sorting_run_id": pa.repeat(pa.scalar("sort_001", pa.string()), rows),
-            "curation_id": pa.repeat(pa.scalar("cur_001", pa.string()), rows),
-            "clock_id": pa.repeat(pa.scalar("harp_s001", pa.string()), rows),
+            # int32 since R53 §2.1. `_write_stream` is below `add_batches`, which is where a
+            # streamed batch's identifiers are numbered, so this builds them already numbered.
+            "session_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
+            "unit_id": pa.repeat(pa.scalar(1, pa.int32()), rows),
+            "sorting_run_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
+            "curation_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
+            "clock_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
             "t_tick": pa.array(range(rows), type=pa.int64()),
         }
     )
@@ -664,7 +667,7 @@ def test_an_out_of_order_stream_is_refused_while_staging(tmp_path, registry, min
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
-    writer.add_batches("core.spike_events", iter([_spike_batch(10, "u1", 10), _spike_batch(10, "u1", 0)]))
+    writer.add_batches("core.spike_events", iter([_spike_batch(10, 1, 10), _spike_batch(10, 1, 0)]))
     with pytest.raises(OrderViolation, match="sorts before"):
         writer.commit(tmp_path / "pkt")
 
@@ -676,7 +679,7 @@ def test_a_duplicate_across_batches_is_refused_while_staging(tmp_path, registry,
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
-    writer.add_batches("core.spike_events", iter([_spike_batch(10, "u1", 0), _spike_batch(1, "u1", 9)]))
+    writer.add_batches("core.spike_events", iter([_spike_batch(10, 1, 0), _spike_batch(1, 1, 9)]))
     with pytest.raises(OrderViolation, match="repeats"):
         writer.commit(tmp_path / "pkt")
 
@@ -699,7 +702,10 @@ def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, regist
     writer.commit(root, materialize=[derive])
 
     runs = pq.read_table(root / "tables" / "core" / "processing_runs.parquet")
-    assert sorted(runs.column("processing_run_id").to_pylist()) == ["run_derived", "run_import"]
+    # R53: the key is a number and the name is what it stands for. Both runs are present, and
+    # the materializer's run is numbered by the same Keys the staged rows used.
+    assert sorted(runs.column("processing_run_name").to_pylist()) == ["run_derived", "run_import"]
+    assert sorted(runs.column("processing_run_id").to_pylist()) == [0, 1]
     entries = [e for e in json.loads((root / "nwb.packet.json").read_text())["resources"]]
     assert [e["resource_id"] for e in entries].count("core.processing_runs") == 1, "duplicated entry"
 
