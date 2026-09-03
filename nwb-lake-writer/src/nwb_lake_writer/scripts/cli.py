@@ -20,9 +20,12 @@ from pathlib import Path
 from typing import Any
 
 from ..extensions import load as load_extension
-from ..recipe import Recipe
+from ..recipe import RECIPE_SUPPLIES, Recipe
 from ..session import build, materializers
 from ..writer import CommitRefused
+
+#: What the recipe declares rather than reading from a source, spelled for a draft's comment.
+SUPPLIES_NOTE = "the recipe supplies core.sessions, core.subjects and core.processing_runs"
 
 #: Source kinds ``init`` can inspect, and the adapter each names.
 KINDS = ("sorter", "sync", "nwb", "waveforms", "lfp")
@@ -33,9 +36,23 @@ KINDS = ("sorter", "sync", "nwb", "waveforms", "lfp")
 #: support. A draft says what it chose and what it passed over, rather than choosing silently.
 PREFERRED = {
     "core.probes": "nwb",
-    "core.clocks": "sync",
     "core.unit_electrodes": "waveforms",
 }
+
+#: Resources several sources each supply *part* of, which `owns` refuses and `contributes`
+#: is for. `core.clocks` is the case recipe.py documents: sync declares the rig clock the
+#: anchors are against and the sorter declares one per probe stream, and neither is wrong.
+SHARED = frozenset({"core.clocks", "core.processing_runs"})
+
+#: Options an adapter requires that no inspection can supply, drafted so the recipe builds.
+#: `_build_source` pops these; without them a build dies on a KeyError rather than a finding.
+REQUIRED = {
+    "nwb": (("zone", '"America/Los_Angeles"', "the rig's zone, which resolves a naive stamp"),),
+}
+
+#: Values a draft guesses because nothing it read says. Marked, the way a contested resource
+#: is: a draft that guesses silently is worse than one that says where to look.
+GUESSED = "  # GUESS: nothing inspected says this; check it"
 
 
 def _open(kind: str, root: Path, session_id: str) -> Any:
@@ -88,31 +105,65 @@ def _init(args: argparse.Namespace) -> int:
     contested = {r: sorted(k for k in offers if r in offers[k]) for r in {r for o in offers.values() for r in o}}
     lines = [
         "# Drafted by `nwb-lake init` from what each source reported holding.",
-        "# Review the ownership below: a contested resource is noted where it was passed over.",
+        "# Review the ownership below: a contested resource is noted where it was passed over,",
+        "# and every line marked GUESS is one nothing inspected could settle.",
         "",
         "[packet]",
         f'id = "{args.session_id}"',
-        f'out = "{args.session_id}"',
+        f'out = "{args.session_id}"{GUESSED}',
         'registry = "registry/logical_schemas.json"',
         "",
         "[session]",
         f'session_id = "{args.session_id}"',
-        'reference_clock_id = "harp"',
+        f'reference_clock_id = "harp"{GUESSED}',
+        f"# session_start_time, session_end_time and subject_id belong here too: {SUPPLIES_NOTE}",
+        "# session.json carries them, and stamps a Pacific wall clock as UTC -- localize first.",
+        "",
+        "[subject]",
+        f'subject_id = "{args.session_id.split("_")[1] if "_" in args.session_id else args.session_id}"'
+        + GUESSED,
+        "# date_of_birth, sex and genotype belong here, from subject.json",
+        "",
+        "# Every clock a source names must be declared, including the reference above.",
+        "[[clock]]",
+        f'clock_id = "harp"{GUESSED}',
+        f'name = "harp"{GUESSED}',
+        f"tick_rate_num = 31250{GUESSED}",
+        f'origin = "harp_counter"{GUESSED}',
         "",
     ]
     for kind, root in (p.split("=", 1) for p in args.source):
-        owned = [r for r, kinds in sorted(contested.items()) if r in offers[kind] and _wins(kind, kinds)]
-        passed = [r for r, kinds in sorted(contested.items()) if r in offers[kind] and not _wins(kind, kinds)]
-        lines += ["[[source]]", f'kind = "{kind}"', f'root = "{root}"', "owns = ["]
+        # The recipe supplies these itself, so handing one to a source is a conflict the
+        # checker then reports (recipe.RECIPE_SUPPLIES).
+        # SHARED wins over RECIPE_SUPPLIES: the recipe writes one core.processing_runs row for
+        # its own import and the sorter writes one per sorting, so both belong and neither owns.
+        supplies = frozenset(RECIPE_SUPPLIES) - SHARED
+        mine = {r for r in offers[kind] if r not in supplies}
+        owned = [r for r, kinds in sorted(contested.items()) if r in mine and r not in SHARED and _wins(kind, kinds)]
+        shared = [r for r in sorted(mine & SHARED)]
+        passed = [
+            r for r, kinds in sorted(contested.items())
+            if r in mine and r not in SHARED and not _wins(kind, kinds)
+        ]
+        lines += ["[[source]]", f'kind = "{kind}"', f'root = "{root}"']
+        lines += [f'contributes = [{", ".join(chr(34) + r + chr(34) for r in shared)}]'] if shared else []
+        lines += ["owns = ["]
         lines += [f'  "{r}",' for r in owned]
         lines += ["]"]
+        for option, value, why in REQUIRED.get(kind, ()):
+            lines += [f"# {why}", f"{option} = {value}{GUESSED}"]
         lines += [f"# also offers {r}, owned here by {PREFERRED.get(r, 'another source')}" for r in passed]
+        lines += [
+            f"# supplies {r}, which the recipe declares itself"
+            for r in sorted(set(offers[kind]) & supplies)
+        ]
         lines += [*HINTS.get(kind, ()), ""]
 
     text = "\n".join(lines)
     if args.out is None:
         print(text)
     else:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(text)
         print(f"drafted {args.out}")
     return 0

@@ -147,3 +147,30 @@ def test_a_dependency_cycle_is_refused(tmp_path, monkeypatch):
     body = '\n[[source]]\nkind = "nwb"\nroot = "."\nowns = []\n\n[[source]]\nkind = "sorter"\nroot = "."\nowns = []\n'
     with pytest.raises(RecipeError, match="depend on each other"):
         order(Recipe.load(write(tmp_path, body)))
+
+
+def test_a_required_option_is_reported_not_crashed_on(tmp_path):
+    """`_build_source` pops `zone` for the nwb kind, so a recipe without one used to die there
+    with a KeyError after --check had called the recipe sound."""
+    from nwb_lake_writer.recipe import REQUIRED_OPTIONS, Recipe
+
+    path = tmp_path / "recipe.toml"
+    path.write_text(
+        '[packet]\nid = "s"\n\n[session]\nsession_id = "s"\n\n'
+        '[[source]]\nkind = "nwb"\nroot = "."\nowns = ["core.trials"]\n'
+    )
+    problems = Recipe.load(path).check({"tables": {"core.trials": {"columns": [], "references": []}}})
+    assert "zone" in REQUIRED_OPTIONS["nwb"]
+    assert any("requires 'zone'" in str(p) for p in problems)
+
+
+def test_an_option_that_is_set_is_not_reported(tmp_path):
+    from nwb_lake_writer.recipe import Recipe
+
+    path = tmp_path / "recipe.toml"
+    path.write_text(
+        '[packet]\nid = "s"\n\n[session]\nsession_id = "s"\n\n'
+        '[[source]]\nkind = "nwb"\nroot = "."\nzone = "UTC"\nowns = ["core.trials"]\n'
+    )
+    problems = Recipe.load(path).check({"tables": {"core.trials": {"columns": [], "references": []}}})
+    assert not [p for p in problems if "zone" in str(p)]

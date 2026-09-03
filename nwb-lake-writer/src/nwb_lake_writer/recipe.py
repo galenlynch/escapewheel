@@ -37,6 +37,14 @@ SAMPLED = frozenset({"sorter"})
 
 RECIPE_SUPPLIES = ("core.sessions", "core.subjects", "core.processing_runs")
 
+#: Options an adapter requires that a recipe must carry, because no inspection supplies them.
+#: `session.py`'s `_build_source` pops these; a recipe missing one dies there on a KeyError
+#: rather than being reported here, which is what `--check` exists to prevent.
+REQUIRED_OPTIONS = {
+    "nwb": ("zone",),
+    "session": ("zone",),
+}
+
 #: Keys a `[[source]]` entry uses for itself; everything else is passed to the adapter.
 _SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes"})
 
@@ -389,6 +397,7 @@ class Recipe:
 
         errors.extend(self._dangling_references(tables, claimants, warnings))
         errors.extend(self._clock_problems())
+        errors.extend(self._option_problems())
 
         return [Problem("error", m) for m in sorted(set(errors))] + [
             Problem("warning", m) for m in sorted(set(warnings))
@@ -422,6 +431,15 @@ class Recipe:
                     warnings.append(f"{resource}.{columns} references {target}, which no source owns")
         return problems
 
+    def _option_problems(self) -> list[str]:
+        """Options a source kind requires and this recipe does not carry."""
+        return [
+            f"source {spec.kind} requires {option!r}, which this entry does not set"
+            for spec in self.sources
+            for option in REQUIRED_OPTIONS.get(spec.kind, ())
+            if option not in spec.options
+        ]
+
     def _clock_problems(self) -> list[str]:
         """Clock IDs that are declared twice, referenced but absent, or parented to nothing."""
         declared = [c.clock_id for c in self.clocks]
@@ -438,4 +456,4 @@ class Recipe:
         return problems
 
 
-__all__ = ["RECIPE_SUPPLIES", "ClockSpec", "MaterializeSpec", "Problem", "Recipe", "SourceSpec"]
+__all__ = ["RECIPE_SUPPLIES", "REQUIRED_OPTIONS", "ClockSpec", "MaterializeSpec", "Problem", "Recipe", "SourceSpec"]

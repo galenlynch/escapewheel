@@ -393,38 +393,59 @@ class SyncSource:
     def _deduplicate(self, keep: list[SyncStream]) -> list[SyncStream]:
         """Drop a stream that is another one recorded twice.
 
-        Two record nodes can subscribe to the same physical device. Measured on a real rig:
-        both nodes' NI-DAQ carry the same 126,636 TTL events with identical states and
-        identical sample numbers, differing only in the HARP seconds each node's alignment
-        produced -- at most 70 µs, about two ticks. They are one clock, and emitting both
-        would put two clocks on one device and leave a reader to pick.
+        Two record nodes can subscribe to the same physical device. They are one clock, and
+        emitting both would put two clocks on one device and leave a reader to pick.
 
-        The lowest-numbered node is kept. The disagreement is reported rather than discarded:
-        it measures how well the alignment is determined, which nothing else in the packet
-        says. Two streams sharing a name whose events differ are a different matter and are
+        **Sameness is agreement on the samples both saw, not identical arrays.** Two nodes
+        rarely start on the same event: measured on a real rig, one node's NI-DAQ carries
+        81,818 TTL events and the other 81,817, differing only in a line-5 edge the second node
+        began too late to see. Every shared sample number agrees on state, and the two
+        alignments differ by 292 us. Requiring equal arrays would call that two devices.
+
+        The stream that saw the most is kept, so no anchor is discarded, with the lowest node
+        breaking a tie. What differed is reported rather than dropped: it measures how well the
+        alignment is determined, which nothing else in the packet says.
+
+        Two streams disagreeing on a sample both recorded are a different matter and are
         refused, because then the name really is ambiguous.
         """
+
+        def events(stream: SyncStream) -> tuple[Any, Any]:
+            return np.load(stream.path / "states.npy"), np.load(stream.path / "sample_numbers.npy")
+
         out = []
         for name, group in sorted(_by_key(keep).items()):
             if len(group) == 1:
                 out.append(group[0])
                 continue
-            ordered = sorted(group, key=lambda st: st.node)
+            ordered = sorted(group, key=lambda st: (-np.load(st.path / "sample_numbers.npy").size, st.node))
             first, *rest = ordered
-            base = (np.load(first.path / "states.npy"), np.load(first.path / "sample_numbers.npy"))
+            base_states, base_samples = events(first)
             for other in rest:
-                same = (np.load(other.path / "states.npy"), np.load(other.path / "sample_numbers.npy"))
-                if not all(a.shape == b.shape and np.array_equal(a, b) for a, b in zip(base, same, strict=True)):
+                other_states, other_samples = events(other)
+                shared = np.intersect1d(base_samples, other_samples)
+                here, there = np.isin(base_samples, shared), np.isin(other_samples, shared)
+                if not np.array_equal(base_states[here], other_states[there]):
                     raise SourceDefect(
-                        f"{name} names two streams whose events differ -- {first.node}/{first.stream} "
-                        f"and {other.node}/{other.stream}. The key omits the record node, so one "
-                        "would silently take the other's anchors; give them distinct names."
+                        f"{name} names two streams that disagree on samples both recorded -- "
+                        f"{first.node}/{first.stream} and {other.node}/{other.stream}. The key omits "
+                        "the record node, so one would silently take the other's anchors; give them "
+                        "distinct names."
                     )
-                drift = np.abs(np.load(first.path / "timestamps.npy") - np.load(other.path / "timestamps.npy")).max()
+                drift = np.abs(
+                    np.load(first.path / "timestamps.npy")[here] - np.load(other.path / "timestamps.npy")[there]
+                ).max()
+                missed = base_samples.size - shared.size, other_samples.size - shared.size
+                unseen = (
+                    f"; node {first.node} saw {missed[0]} the other did not and node {other.node} "
+                    f"saw {missed[1]}"
+                    if any(missed)
+                    else ""
+                )
                 self.notes.append(
-                    f"{name}: node {other.node} records the same {base[0].size:,} events as node "
+                    f"{name}: node {other.node} records the same {shared.size:,} events as node "
                     f"{first.node}; kept {first.node}. The two alignments disagree by up to "
-                    f"{drift * 1e6:.1f} us"
+                    f"{drift * 1e6:.1f} us{unseen}"
                 )
             out.append(first)
         return out
