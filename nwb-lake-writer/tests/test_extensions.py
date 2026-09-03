@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import pyarrow as pa
 import pytest
 from nwb_lake_reader import open_packet
 from nwb_lake_validator import validate
@@ -322,3 +323,137 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
     assert set(packet.extensions()) == {"vr_foraging", "opto_tagging", "unit_qc"}
     assert packet.table("vr_foraging.sites").num_rows == 2
     assert packet.table("unit_qc.metrics").num_rows == 2
+
+
+# -- an extension that is entirely data ------------------------------------------------------
+
+
+def _vrf_registry():
+    return {
+        "registry_version": "0.1.0",
+        "logical_standard_version": "0.1",
+        "extension_id": "vrf",
+        "extends": "nwb-lake-logical-v0.1",
+        "tables": {
+            "vrf.sites": {
+                "columns": [
+                    {
+                        "name": "session_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                    },
+                    {
+                        "name": "site_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "carried",
+                    },
+                    {"name": "odor", "type": "string", "presence": "nullable", "role": "data"},
+                ],
+                "primary_key": ["session_id", "site_id"],
+                "references": [
+                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
+                ],
+                "sort": ["session_id", "site_id"],
+                "rules": [],
+            }
+        },
+    }
+
+
+def _export(root, *, rows=2):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    root.mkdir(parents=True, exist_ok=True)
+    pq.write_table(
+        pa.table(
+            {
+                "session_id": pa.array(["s001"] * rows),
+                "site_id": pa.array(list(range(rows)), type=pa.int32()),
+                "odor": pa.array(["a", "b"][:rows]),
+            }
+        ),
+        root / "sites.parquet",
+    )
+    return root
+
+
+def test_a_file_source_needs_no_python_of_ours(tmp_path, registry, minimal):
+    """The whole point: a registry document and some Parquet, nothing installed, nothing to rot."""
+    from nwb_lake_writer.sources import TablesSource
+
+    export = _export(tmp_path / "export")
+    source = TablesSource(export, session_id="s001", tables={"vrf.sites": "sites.parquet"})
+    assert source.offers() == {"vrf.sites": 2}
+
+    writer = PacketWriter(registry, packet_id="s001", extensions=[_vrf_registry()])
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    for resource_id, batches in source.batches().items():
+        writer.add_batches(resource_id, batches)
+    root = tmp_path / "p"
+    assert writer.commit(root).passed
+
+    # The file carried a name; the packet holds the number the writer assigned (R53 §2.5).
+    table = open_packet(root).table("vrf.sites")
+    assert table.schema.field("session_id").type == pa.int32()
+    assert table.column("site_id").to_pylist() == [0, 1]
+
+
+def test_a_command_runs_first_and_is_not_a_shell(tmp_path):
+    """`uv run …`, `python -m …` and `/opt/venv/bin/python …` are all just commands, so isolating
+    an adapter's dependencies is the recipe author's choice and not a tool we require."""
+    import sys
+
+    from nwb_lake_writer.sources import TablesSource
+
+    root = tmp_path / "raw"
+    root.mkdir()
+    script = root / "export.py"
+    script.write_text(
+        "import pyarrow as pa, pyarrow.parquet as pq\n"
+        "pq.write_table(pa.table({'session_id': pa.array(['s001']),"
+        " 'site_id': pa.array([0], type=pa.int32()), 'odor': pa.array(['a'])}), 'sites.parquet')\n"
+    )
+    source = TablesSource(
+        root, session_id="s001", tables={"vrf.sites": "sites.parquet"}, command=f"{sys.executable} export.py"
+    )
+    assert source.offers() == {"vrf.sites": 1}
+    assert any("export.py" in note for note in source.notes)
+
+
+def test_a_failing_command_is_a_source_defect(tmp_path):
+    import sys
+
+    from nwb_lake_writer.sources import TablesSource
+    from nwb_lake_writer.sources.nwb import SourceDefect
+
+    root = tmp_path / "raw"
+    root.mkdir()
+    source = TablesSource(
+        root,
+        session_id="s001",
+        tables={"vrf.sites": "sites.parquet"},
+        command=f"{sys.executable} -c 'raise SystemExit(3)'",
+    )
+    with pytest.raises(SourceDefect, match="failed"):
+        source.offers()
+
+
+def test_a_command_that_does_not_produce_what_it_claimed_says_so(tmp_path):
+    import sys
+
+    from nwb_lake_writer.sources import TablesSource
+    from nwb_lake_writer.sources.nwb import SourceDefect
+
+    root = tmp_path / "raw"
+    root.mkdir()
+    source = TablesSource(
+        root, session_id="s001", tables={"vrf.sites": "sites.parquet"}, command=f"{sys.executable} -c 'pass'"
+    )
+    with pytest.raises(SourceDefect, match="no file at the declared path after running"):
+        source.offers()

@@ -205,17 +205,21 @@ def order(recipe: Recipe) -> list[SourceSpec]:
 #: Source kinds this package implements. A distribution may register others under
 #: `nwb_lake_writer.sources.SOURCE_GROUP`; these are consulted first, so a plugin cannot shadow
 #: one and a recipe naming `sorter` always means this one.
-_KINDS = ("sorter", "sync", "nwb", "session", "waveforms", "lfp")
+_KINDS = ("sorter", "sync", "nwb", "session", "waveforms", "lfp", "tables")
 
 
 def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
     """Construct one adapter, supplying whatever earlier sources produced for it."""
-    from .sources import LFPSource, NWBSource, SorterSource, SyncSource, WaveformSource
+    from .sources import LFPSource, NWBSource, SorterSource, SyncSource, TablesSource, WaveformSource
     from .sources.store import store_for
 
     options = dict(spec.options)
     if spec.kind in _SHARED_SOURCES:
         options["store"] = store_for(spec.root, context.stores)
+    if spec.kind == "tables":
+        # The least coupled source: files that already exist, optionally produced by a command
+        # first. An extension supplied this way needs no Python of ours at all.
+        return TablesSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "sorter":
         return SorterSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "sync":
@@ -484,6 +488,27 @@ def _first_spike_tick(context: Context, by_clock: Mapping[str, Any], bound: floa
     return min(earliest)
 
 
+def _add_batches(writer: PacketWriter, spec: SourceSpec, source: Any, counts: dict[str, int]) -> None:
+    """Stream whatever a source streams, rather than holding it as Python mappings.
+
+    `core.spike_events` is the case that forced the streaming path -- 10^8 rows, and a dict per
+    row is two orders of magnitude more memory than the Parquet file it becomes. Any source may
+    use it for any resource it claims, because an extension's table may be as large as a core
+    one and nothing about the reason was ever specific to spikes.
+    """
+    if "core.spike_events" in spec.claims and hasattr(source, "spike_batches"):
+        writer.add_batches("core.spike_events", source.spike_batches(batch_rows=BATCH_ROWS))
+        counts["core.spike_events"] = source.spike_count
+    streamed = getattr(source, "batches", None)
+    if streamed is None:
+        return
+    offered = source.offers()
+    for resource_id, batches in streamed().items():
+        if resource_id in spec.claims:
+            writer.add_batches(resource_id, batches)
+            counts[resource_id] = offered.get(resource_id, 0)
+
+
 def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[dict[str, Any]]]:
     """Return a source's records, with the arguments its kind needs to produce them."""
     got: dict[str, list[dict[str, Any]]]
@@ -625,9 +650,7 @@ def build(
 
         _add_records(writer, spec, source, context, counts)
 
-        if "core.spike_events" in spec.claims:
-            writer.add_batches("core.spike_events", source.spike_batches(batch_rows=BATCH_ROWS))
-            counts["core.spike_events"] = source.spike_count
+        _add_batches(writer, spec, source, counts)
         if spec.kind == "waveforms" and spec.options.get("array_asset_id", "waveform_mean"):
             _stage_array(writer, spec, source, say)
         if spec.kind == "lfp":

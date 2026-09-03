@@ -135,6 +135,42 @@ path. If a capability ever seems to need extension code to *read*, that is the s
 it instead — which is what R56's `clock_from` did for tick conversion and R55's declared reference
 does for the join.
 
+### Emit files. Register code only if you must.
+
+The least coupled way to supply a resource, and what an extension should reach for:
+
+```toml
+[packet]
+extensions = ["vrf.json"]        # a document beside the recipe — no package at all
+
+[[source]]
+kind = "tables"
+root = "/data/…/export"
+owns = ["vrf.sites"]
+tables = { "vrf.sites" = "sites.parquet" }
+# optional, where the raw source needs converting first:
+command = "python -m aind_vr_foraging.export"
+```
+
+**An extension supplied this way needs no Python of ours, and ships none.** A registry document
+and some Parquet: nothing to install, so nothing to rot. That is the same failure `ndx-`
+extensions demonstrate on the read path, avoided one step earlier.
+
+`command` is an argument list run in `root` — **not a shell**, and with no opinion about how the
+environment is arranged. `uv run export.py`, `python -m package.export` and
+`/opt/venv/bin/python -m package.export` are all just commands, so isolating an adapter's
+dependencies is your choice rather than a tool this package makes you adopt. A non-zero exit is a
+`SourceDefect`, and so is a command that returns 0 without producing what it claimed.
+
+Rows arrive as **names, not numbers**: R53 §2.5 assigns identifiers packet-wide before staging, so
+a process outside this one cannot know them and does not need to. Write `session_id` as
+`"ecephys_776259"`; the writer turns it into an `int32`.
+
+Reach for an in-process adapter only when you need `Context` — the memoised `SourceStore` so two
+readers of the same bytes cannot disagree, or the electrode and clock maps another source built.
+That is real, and it is why the built-in adapters are in-process. It is also a shared interpreter
+and shared pins, which is the thing to avoid where you can.
+
 ### Shipping one from another distribution
 
 Two entry points, both **write-time only**:

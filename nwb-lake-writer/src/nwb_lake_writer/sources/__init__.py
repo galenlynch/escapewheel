@@ -15,6 +15,7 @@ from .lfp import LFPSource
 from .nwb import NWBSource, SourceDefect
 from .sorter import SortedStream, SorterSource
 from .sync import SyncSource, SyncStream
+from .tables import TablesSource
 from .waveforms import WaveformSource
 
 #: Entry-point group a distribution registers a source adapter under. `07` names one CLI and the
@@ -55,6 +56,7 @@ __all__ = [
     "SourceDefect",
     "SyncSource",
     "SyncStream",
+    "TablesSource",
     "WaveformSource",
     "discovered",
 ]
