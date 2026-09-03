@@ -7,7 +7,7 @@ reading one of their tables needs nothing installed.
 | | tables | columns | drawn from |
 |---|---|---|---|
 | `dynamic_foraging` | `trials`, `blocks`, `sessions` | 60 | the 67 trial columns of two real sessions, split by which of them vary |
-| `aind_unit_qc` | `metrics`, `waveform_metrics`, `synchrony` | 59 | 48 of the 74 columns the real NWB's `units` table carries |
+| `aind_unit_qc` | `metrics`, `waveform_metrics`, `synchrony` | 47 | the 32 quality columns of a real NWB's 55, measured |
 | `aind_opto` | `stimulations`, `emissions` | 18 | the 17 `laser_*` columns the real NWB's `trials` table carries |
 | `vr_foraging` | `sites`, `site_odors`, `sessions` | 38 | the `Site` and `SessionMetadata` pydantic models the packaging library writes its parquet from |
 
@@ -52,6 +52,17 @@ trainer was doing.
 
 The 17 `laser_*` columns are in that constant set too, at `None` and NaN throughout, because
 neither session ran opto. They belong to `aind_opto` either way.
+
+`aind_unit_qc` was drafted the same way, from `ecephys_786867_2025-09-25`'s 4,559 units and 55
+columns. Twenty-three of the 55 are core's under other names — `spike_times`, `waveform_mean`,
+`estimated_x/y/z` (R28's `core.unit_coordinates`), `decoder_label` (R16's quality labels),
+`extremum_channel_index` (R28's `default_electrode_id`) — and what remains is the quality
+pipeline's own vocabulary.
+
+Measuring rather than reading names also says how sparse a column is, which a schema drafted from
+a column list cannot: `velocity_above` is finite for **807 of 4,559** units and `velocity_below`
+for 757, because the fit needs channels on that side of the peak; the three `drift_*` metrics for
+2,531. Every one is nullable, and the descriptions say so.
 
 ## The source's columns are evidence, not a schema
 

@@ -193,7 +193,6 @@ NAMING_EXCEPTIONS = {
     "core.source_files.size_bytes": "a quantity in bytes, not a plural of `size_byte`",
     # A metric's name is the vocabulary people search by, so renaming one makes the column match
     # nothing anyone's code expects. Unlike `sync_spike_8`, none of these is a parameter glued on.
-    "aind_unit_qc.metrics.num_spikes": "the sorter's own metric name; a count, not a plural duration",
     "aind_unit_qc.metrics.rp_violations": "the sorter's own metric name; a count of violations",
     "aind_unit_qc.waveform_metrics.num_negative_peaks": "the sorter's own metric name; a count of peaks",
     "aind_unit_qc.waveform_metrics.num_positive_peaks": "as num_negative_peaks",
