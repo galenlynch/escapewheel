@@ -181,7 +181,13 @@ def _version() -> str:
     return __version__
 
 
-def _registry_meta_schema() -> dict[str, Any]:
+def registry_meta_schema() -> dict[str, Any]:
+    """R2 §9's published meta-schema, as this distribution vendors it.
+
+    Public because R57 §2.1 makes its `$id` something a writer has to state: a document declares
+    which meta-schema governs it, and the writer that emits the declaration must not keep its own
+    copy of the URI.
+    """
     text = importlib_resources.files("nwb_lake_validator").joinpath("schemas/registry.schema.json").read_text()
     parsed: dict[str, Any] = json.loads(text)
     return parsed
@@ -189,7 +195,7 @@ def _registry_meta_schema() -> dict[str, Any]:
 
 def _check_embedded_registry(packet: Packet, embedded: Mapping[str, Any], report: Report) -> None:
     """Layer 1: the registry the packet carries (R2 §8, §9)."""
-    for error in jsonschema.Draft202012Validator(_registry_meta_schema()).iter_errors(embedded):
+    for error in jsonschema.Draft202012Validator(registry_meta_schema()).iter_errors(embedded):
         report.add("error", "registry.schema", f"{'/'.join(str(p) for p in error.path)}: {error.message}")
     declared = packet.manifest.registry_version
     if embedded.get("registry_version") != declared:
@@ -1492,4 +1498,4 @@ def validate(
     return report
 
 
-__all__ = ["ARROW_TYPES", "Finding", "Report", "sql_name", "validate"]
+__all__ = ["ARROW_TYPES", "Finding", "Report", "registry_meta_schema", "sql_name", "validate"]
