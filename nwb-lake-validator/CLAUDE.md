@@ -81,12 +81,15 @@ validator   four layers over a packet, returning a Report
 Finding     one failure: level, check id, message, and the rows that caused it
 ```
 
-### The ordering scan reads identifiers as codes
+### The ordering scan reads strings as codes
 
-`_check_ordering` compares four string columns over a table the size of `core.spike_events`,
-so how they are held decides its cost. It reads them with `read_dictionary` and `_ranked`
-compares the *rank* of each dictionary value as int32 — never the codes, which are unordered,
-and never the dictionary itself, which `pc.less` decodes on both sides every call. `_breaks`
+`_check_ordering` compares a table's sort columns row by row, so how they are held decides its
+cost wherever one is a string: `core.events` sorts on `event_type`, `core.trial_tags` on `tag`,
+`core.session_experimenters` on `experimenter`. It reads them with `read_dictionary` and
+`_ranked` compares the *rank* of each dictionary value as int32 — never the codes, which are
+unordered, and never the dictionary itself, which `pc.less` decodes on both sides every call.
+A column that is not dictionary-encoded passes through `_ranked` untouched, which is every
+identifier (R53 §2.1). `_breaks`
 makes one pass where `_descents` and `_repeats` each made their own: a descent needs a
 column's `less` mask and a duplicate needs its `same` mask, and one comparison yields both.
 
