@@ -11,16 +11,11 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-A probe's position is known twice, and the two are not the same fact.
-
-Before the animal is perfused, an electrode's CCF position is where the experimenter **meant** the
-probe to be: a target picked from an atlas, reached through a manipulator, imprecise and about
-intent. After histology it is where the probe **was**: measured, registered, and localised to the
-same atlas. Both are in CCF. `core.electrode_coordinates` is keyed
-`(electrode_id, coordinate_frame)`, so the two collide on the key and a packet can hold one.
-
-Which one it holds, it does not say. A consumer reading a CCF coordinate cannot tell whether it is
-looking at a plan or a measurement, and the two differ by however far the probe missed.
+An electrode's CCF position is known twice. Before perfusion it is a target picked from an atlas
+and reached through a manipulator: intent, imprecise. After histology it is a measurement,
+registered to the same atlas. `core.electrode_coordinates` is keyed
+`(electrode_id, coordinate_frame)`, so the two collide, and a packet holds one of them without
+recording which. The two differ by however far the probe missed.
 
 ### 1.1 What the source actually carries
 
@@ -31,33 +26,32 @@ Measured on the ecephys session in `inventory/nwb-zarr-776259-2025-04-09.md`, ov
 | `ccf_ap`, `ccf_dv`, `ccf_ml` | present for 4224; one probe's 384 unregistered |
 | `ccf_acronym` | 72 distinct, one of them empty |
 | `rel_x`, `rel_y` | present, probe frame |
-| `x`, `y`, `z` | **NaN for all 4608** — the frame NWB itself specifies |
+| `x`, `y`, `z` | NaN for all 4608 — the frame NWB itself specifies |
 
-One CCF estimate per electrode and no field naming what kind it is. The 384 unregistered contacts
-are the case that makes the gap concrete: that probe has a plan and no measurement, and the packet
-represents it identically to a probe with neither.
+One CCF estimate per electrode, with no field naming its kind. The 384 unregistered contacts make
+the gap concrete: that probe has a plan and no measurement, and the packet represents it exactly as
+it represents a probe with neither.
 
 ### 1.2 Currency is the wrong axis
 
-The obvious move is R41 — key the choice on the producing run, let `core.preferred_runs` say that
-histology wins. It is wrong, and wrong in the case that matters most.
+R41 offers the obvious move: key the choice on the producing run and let `core.preferred_runs`
+declare that histology wins.
 
-R41 is about **alternatives**: three sortings of one probe, where a consumer wants one and MUST NOT
-silently choose. A plan and a measurement are not alternatives. They are different facts, and the
-difference between them is itself a result — targeting error is `measured - planned`. A model in
-which histology supersedes the plan destroys the quantity precisely when the probe missed, which is
-when someone wants it.
+R41 governs alternatives — three sortings of one probe, where a consumer wants one and MUST NOT
+silently choose. A plan and a measurement are both wanted, and their difference is the targeting
+error. Superseding the plan therefore discards a result, and discards it exactly when the probe
+missed.
 
-Nor is it a frame distinction. Spelling the two as `ccf_planned` and `ccf_registered` works and
-costs no schema change, but folds *what space* and *what kind of claim* into one string a consumer
-must parse — the conflation R49 removed from `scope` and R55 named.
+Spelling the two as `ccf_planned` and `ccf_registered` is the other obvious move. It costs no
+schema change, and it folds what space a coordinate is in and what kind of claim it makes into one
+string a consumer must parse — the conflation R49 removed from `scope` and R55 named.
 
 ### 1.3 The ambiguity already ships
 
-`core.electrodes.brain_region` is one string with no qualifier. It answers either "the structure
-you targeted" or "the structure histology found the contact in", and a packet cannot say which. In
-the session above it is `ccf_acronym`, derived from the registered coordinates — but a targeting
-record has a planned structure too, and there is nowhere to put it that does not overwrite.
+`core.electrodes.brain_region` is one string with no qualifier, answering either "the structure you
+targeted" or "the structure histology found the contact in". In the session above it holds
+`ccf_acronym`, derived from the registered coordinates. A targeting record names a planned
+structure too, and writing it here would overwrite.
 
 ## 2. Decision
 
@@ -79,68 +73,66 @@ core.unit_coordinates        (session_id, unit_id, sorting_run_id, curation_id,
                               coordinate_frame, coordinate_basis)
 ```
 
-Both rows persist. Neither supersedes the other, ever. Targeting error is a self-join on
+Both rows persist, and neither supersedes the other. Targeting error is a self-join on
 `(electrode_id, coordinate_frame)`.
 
-`coordinate_frame` continues to say **what space**; `coordinate_basis` says **what the number is a
-claim about**. A packet carrying only one basis is conforming: a session before histology has
-`planned` alone, and that is the honest state rather than a gap.
+`coordinate_frame` says what space a coordinate is in; `coordinate_basis` says what claim it makes.
+A packet carrying one basis is conforming — a session before histology has `planned` alone.
 
 ### 2.2 The vocabulary is open, and an unrecognised basis is not ground truth
 
-`coordinate_basis` is **open** (R8 §4): a rig may establish a position in ways this specification
-has not seen, and a validator **MUST NOT** reject a value outside the two above.
+A rig may establish a position in ways this specification has not seen, so `coordinate_basis` is
+open (R8 §4) and a validator **MUST NOT** reject a value outside the two above.
 
-Openness alone would be unsafe here, so it carries a rule the other open vocabularies do not need.
-A consumer that does not recognise a basis **MUST NOT** treat the coordinate as `measured`. Reading
-an unknown basis as ground truth is the exact failure this column exists to prevent, and it is the
-failure a permissive default produces.
+Openness alone would be unsafe, so the column carries a rule the other open vocabularies do not
+need: a consumer that does not recognise a basis **MUST NOT** treat the coordinate as `measured`.
+A permissive default would read an unknown basis as ground truth, which is the failure this column
+exists to prevent.
 
 ### 2.3 Currency applies within a basis, not across bases
 
-Two histology registrations of one probe — a different alignment tool, a re-run against better
-slices — genuinely are alternatives, and R41 is exactly right for them. So both tables gain a
-nullable `processing_run_id`, with R46's reference to `core.processing_runs`, and R41's machinery
-applies unchanged **within** one `(frame, basis)`.
+Two histology registrations of one probe, from a different alignment tool or a re-run against
+better slices, are alternatives, and R41 governs them. Both tables therefore gain a nullable
+`processing_run_id` with R46's reference to `core.processing_runs`, and R41 applies unchanged
+within one `(frame, basis)`.
 
-- `coordinate_basis` separates different **questions**. Never superseded.
-- `processing_run_id` separates different **answers to one question**. R41 §2.4 governs, and
+- `coordinate_basis` separates different questions, and is never superseded.
+- `processing_run_id` separates different answers to one question, where R41 §2.4 governs and
   `core.preferred_runs` records the choice.
 
-R41 §2 is amended to say so: currency is a relation between runs answering the same question, and a
-column distinguishing questions is not a currency axis. That is what R44 §2 already implies by
-keying a preference on `(activity_type, scope)` — a plan and a measurement are not one activity.
+R41 §2 is amended to say so: currency relates runs answering the same question, so a column
+distinguishing questions is not a currency axis. R44 §2 already implies this by keying a preference
+on `(activity_type, scope)` — a plan and a measurement are not one activity.
 
 ### 2.4 A structure label belongs to a position
 
-`core.electrodes.brain_region` is struck. A structure label is a fact about a position — which
-atlas, which coordinate — so it moves to the coordinate row as
-`core.electrode_coordinates.region_label`, nullable, open, alongside the coordinate it describes.
+`core.electrodes.brain_region` is struck. A structure label states which atlas region a coordinate
+falls in, so it moves to the coordinate row as `core.electrode_coordinates.region_label`, nullable
+and open.
 
-Keeping it on `core.electrodes` is R3 §3.0 duplication that can answer only one of the two
-questions, and which one it answers is not recorded. Moving it makes a planned structure and a
-measured structure both expressible, and each attached to the coordinate that justifies it.
+On `core.electrodes` it is R3 §3.0 duplication that answers one of the two questions without
+recording which. On the coordinate row a planned structure and a measured one are both expressible,
+each attached to the coordinate that justifies it.
 
 ## 3. What this does not change
 
-- **No new table.** Two columns and a struck one.
-- **No change to `coordinate_frame`.** R19 §3's frames are unaffected; this is orthogonal to them.
+- **No new table.** Two columns added and one struck.
+- **No change to `coordinate_frame`.** R19 §3's frames are orthogonal to a basis.
 - **No requirement to carry both bases.** Most packets will carry one.
-- **No stored coordinate changes value.** A packet built today carries `measured` where histology
-  produced it, which is what R19 §3's rows have always meant in practice.
+- **No stored coordinate changes value.** Where histology produced a row, it becomes `measured`,
+  which is what R19 §3's rows have meant in practice.
 
 ## 4. Open
 
-- **Whether a coordinate should carry uncertainty.** A planned position is imprecise and a measured
-  one is not exact either, and nothing here can say how well either is known. Deliberately not
-  added: it must first be established that the targeting pipeline records anything quantitative.
-  If it does not, `planned` carries the imprecision by itself and columns for it would never be
-  filled.
+- **Whether a coordinate should carry uncertainty.** Neither a planned position nor a measured one
+  is exact, and nothing here says how well either is known. Not added until the targeting pipeline
+  is shown to record something quantitative; if it records nothing, `planned` carries the
+  imprecision by itself and a column for it would never be filled.
 - **Whether `coordinate_basis` is meaningful outside an atlas frame.** A probe-frame coordinate is
-  the probe's own geometry, exact by construction and neither planned nor measured. It needs a
-  third value, or the column needs to be nullable where the frame makes the question empty. Left
-  until a packet carries a frame where this bites.
-- **Whether a unit's basis is its own or inherited.** R28 §3 gives a unit a position in several
-  frames, computed from its electrodes. A unit computed from `planned` electrode positions is
-  `planned`, which suggests inheritance rather than an independent declaration — but nothing
-  forbids a writer from asserting otherwise, and no packet yet carries `core.unit_coordinates`.
+  the probe's own geometry, exact by construction and neither planned nor measured. It wants a
+  third value, or a nullable column where the frame makes the question empty. Left until a packet
+  carries such a frame.
+- **Whether a unit's basis is its own or inherited.** R28 §3 computes a unit's position from its
+  electrodes, so a unit computed from `planned` electrodes is `planned`. That argues for
+  inheritance rather than an independent declaration, but nothing forbids a writer from asserting
+  otherwise and no packet yet carries `core.unit_coordinates`.
