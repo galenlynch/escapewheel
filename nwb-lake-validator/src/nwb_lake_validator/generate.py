@@ -95,6 +95,7 @@ def generate(
     only: set[str] | None = None,
     advisory: bool = False,
     aggregate: set[str] | None = None,
+    resolvable: set[str] | None = None,
 ) -> list[Check]:
     """Build every check a registry implies.
 
@@ -109,6 +110,10 @@ def generate(
         Restrict to these resources. Checks referring to a resource outside the set are
         still generated if their own table is inside it; a packet need not carry every
         table, and a foreign key into an absent one cannot be evaluated.
+    resolvable : set of str, optional
+        Resources a reference may resolve against, beyond this registry's own tables. An
+        extension registry needs core's tables here, since it declares none of them and R17 §2
+        lets it reference them.
 
     Returns
     -------
@@ -118,6 +123,10 @@ def generate(
     checks: list[Check] = []
     tables: Mapping[str, Any] = registry["tables"]
     included = set(tables) if only is None else set(only)
+    # What a reference may point at, which is not the same as what gets checks. An extension
+    # declares its own tables and references core's (R17 §2), so without this its foreign keys
+    # generate nothing and an orphan validates clean -- the gap R46 closed for core.
+    reachable = included if resolvable is None else set(resolvable) | included
 
     for resource, table in tables.items():
         if resource not in included:
@@ -163,7 +172,7 @@ def generate(
             )
 
         for ref in table.get("references", []):
-            if ref["resource"] not in included:
+            if ref["resource"] not in reachable:
                 continue
             parent = sql_name(ref["resource"])
             on = " AND ".join(f"c.{quote(a)} = p.{quote(b)}" for a, b in zip(ref["columns"], ref["resource_columns"]))

@@ -60,12 +60,18 @@ class Finding:
         What went wrong.
     rows : tuple
         Offending rows, truncated. For SQL checks these are the query's result.
+    extension : str or None
+        The extension whose table this is about, or None for core. R17 §4 requires the two be
+        reported separately: a finding against an extension's table is not a finding against the
+        packet's **core** conformance, because a core validator is not required to hold that
+        extension's schema at all.
     """
 
     level: str
     check: str
     message: str
     rows: tuple[tuple[str, ...], ...] = ()
+    extension: str | None = None
 
 
 @dataclass
@@ -86,7 +92,7 @@ class Report:
 
     @property
     def errors(self) -> int:
-        """How many error-level findings were produced."""
+        """How many error-level findings were produced, core and extensions together."""
         return sum(f.level == "error" for f in self.findings)
 
     @property
@@ -96,14 +102,35 @@ class Report:
 
     @property
     def passed(self) -> bool:
-        """Whether the packet is valid. Warnings do not make a packet invalid.
+        """Whether the packet is valid **as core**. Warnings do not make a packet invalid.
 
         Advisory rules cannot be ``error`` (R26 §3), so this is invariant under the
         ``advisory`` flag: asking for more to read never changes the verdict.
-        """
-        return self.errors == 0
 
-    def add(self, level: str, check: str, message: str, rows: Sequence[Sequence[Any]] = ()) -> None:
+        An extension's findings are excluded (R17 §4). A packet stays core-conformant carrying
+        extension registries a validator cannot parse, so one it *can* parse must not be able to
+        change the core verdict either -- otherwise holding the schema would make a packet fail
+        that passes without it.
+        """
+        return sum(f.level == "error" and f.extension is None for f in self.findings) == 0
+
+    def extension_passed(self, extension: str) -> bool:
+        """Whether one extension's tables validated."""
+        return sum(f.level == "error" and f.extension == extension for f in self.findings) == 0
+
+    @property
+    def extensions(self) -> tuple[str, ...]:
+        """Extensions this report says anything about."""
+        return tuple(dict.fromkeys(f.extension for f in self.findings if f.extension is not None))
+
+    def add(
+        self,
+        level: str,
+        check: str,
+        message: str,
+        rows: Sequence[Sequence[Any]] = (),
+        extension: str | None = None,
+    ) -> None:
         """Record a finding.
 
         Parameters
@@ -118,7 +145,7 @@ class Report:
             Offending rows; only the first five are kept.
         """
         self.findings.append(
-            Finding(level, check, message, tuple(tuple(str(v) for v in row) for row in list(rows)[:5]))
+            Finding(level, check, message, tuple(tuple(str(v) for v in row) for row in list(rows)[:5]), extension)
         )
 
     def to_dict(self, packet_id: str) -> dict[str, Any]:
@@ -1283,17 +1310,75 @@ def _run_rules(
             checks = generate(registry, only=set(present), advisory=advisory, aggregate=unsound or set())
             if recheck is not None:
                 checks = [check for check in checks if concerns(check, recheck)]
-            for check in checks:
-                try:
-                    rows = _offending(connection, check.sql)
-                except Exception as exc:  # noqa: BLE001 - an engine error is a finding, not a crash
-                    report.add("error", check.id, f"check could not run: {str(exc).splitlines()[0][:90]}")
-                    continue
-                if rows:
-                    report.add(check.level, check.id, check.message, rows)
+            _run_checks(connection, checks, report, None)
+            _check_extensions(packet, connection, registry, report, advisory)
         finally:
             with contextlib.suppress(Exception):
                 connection.close()
+
+
+def _run_checks(connection: Any, checks: Sequence[Any], report: Report, extension: str | None) -> None:
+    """Run generated checks and record what they returned."""
+    for check in checks:
+        try:
+            rows = _offending(connection, check.sql)
+        except Exception as exc:  # noqa: BLE001 - an engine error is a finding, not a crash
+            report.add("error", check.id, f"check could not run: {str(exc).splitlines()[0][:90]}", extension=extension)
+            continue
+        if rows:
+            report.add(check.level, check.id, check.message, rows, extension=extension)
+
+
+def _check_extensions(
+    packet: Packet,
+    connection: Any,
+    registry: Mapping[str, Any],
+    report: Report,
+    advisory: bool,
+) -> None:
+    """Validate each extension registry the packet carries (R17 §4).
+
+    R17 §3's claim is that nothing here is per-extension: the same `generate` produces an
+    extension's Tier 1 checks from its structure and carries its Tier 2 rules, because an
+    extension registry *is* a registry document. What this function adds is which tables its
+    references may resolve against -- core's, since R17 §2 lets an extension reference them and
+    forbids the reverse -- and the layer its findings are filed under.
+
+    Findings are recorded against the extension, so they cannot change the packet's core verdict.
+    A core validator is not required to hold an extension's schema at all (`09` §6), so holding
+    one must not be able to fail a packet that passes without it.
+    """
+    for extension_id, document in packet.extensions().items():
+        if not isinstance(document.get("tables"), Mapping):
+            report.add(
+                "error",
+                "extension.unusable",
+                f"{extension_id}: the declared registry has no tables",
+                extension=extension_id,
+            )
+            continue
+        declared = set(document["tables"])
+        # What the *packet* declares, not what the core registry knows: an extension's tables are
+        # by definition absent from core's, and `present` is built from core's.
+        carried = declared & {r.resource_id for r in packet.resources(kind="table")}
+        if absent := sorted(declared - carried):
+            report.add(
+                "info",
+                "extension.table_absent",
+                f"{extension_id}: declares {len(absent)} table(s) this packet does not carry",
+                [(name,) for name in absent],
+                extension=extension_id,
+            )
+        if not carried:
+            continue
+        checks = generate(document, only=carried, advisory=advisory, resolvable=set(registry["tables"]))
+        _run_checks(connection, checks, report, extension_id)
+        report.add(
+            "info",
+            "extension.validated",
+            f"{extension_id}: {len(checks)} check(s) over {len(carried)} table(s)",
+            extension=extension_id,
+        )
 
 
 def _offending(connection: Any, sql: str) -> list[tuple[Any, ...]]:

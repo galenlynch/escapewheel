@@ -960,3 +960,102 @@ def test_a_packet_recording_no_owned_digest_says_so(packet_root):
     report = validate(open_packet(packet_root), checksums=True)
     assert report.passed
     assert "owned.no_checksum" in {f.check for f in report.findings}
+
+
+# -- R17: an extension is a registry, validated by the same machinery ----------------------
+
+
+def _extension(root, *, tables=None, mutate=None):
+    """Give the packet an extension registry and a table conforming to it."""
+    document = {
+        "registry_version": "0.1.0",
+        "logical_standard_version": "0.1",
+        "extension_id": "task",
+        "extends": "nwb-lake-logical-v0.1",
+        "tables": {
+            "task.trials": {
+                "columns": [
+                    {"name": "session_id", "type": "string", "presence": "required", "role": "identifier"},
+                    {"name": "trial_id", "type": "string", "presence": "required", "role": "identifier"},
+                    {"name": "choice", "type": "string", "presence": "nullable", "role": "data",
+                     "enum": ["left", "right"]},
+                ],
+                "primary_key": ["session_id", "trial_id"],
+                "references": [{"columns": ["session_id", "trial_id"], "resource": "core.trials",
+                                "resource_columns": ["session_id", "trial_id"]}],
+                "sort": ["session_id", "trial_id"],
+                "rules": [],
+            }
+        },
+    }
+    trials = pq.read_table(root / "tables" / "core" / "trials.parquet")
+    rows = {
+        "session_id": trials["session_id"].to_pylist(),
+        "trial_id": trials["trial_id"].to_pylist(),
+        "choice": ["left"] * trials.num_rows,
+    }
+    if mutate is not None:
+        mutate(rows)
+    (root / "tables" / "task").mkdir(parents=True, exist_ok=True)
+    pq.write_table(pa.table(rows), root / "tables" / "task" / "trials.parquet")
+    (root / "extensions").mkdir(exist_ok=True)
+    (root / "extensions" / "task.json").write_text(json.dumps(document))
+
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    manifest["extensions"] = {"task": {"version": "0.1.0", "registry": "extensions/task.json"}}
+    manifest["resources"].append({
+        "resource_id": "task.trials", "layer": "extension", "extension_id": "task", "kind": "table",
+        "schema_id": "task.trials.v0.1", "physical_profile": "parquet",
+        "uri": "tables/task/trials.parquet", "canonical": True, "validation_state": "passed",
+    })
+    (root / "nwb.packet.json").write_text(json.dumps(manifest))
+    return root
+
+
+def test_an_extension_is_validated_by_the_same_machinery(packet_root):
+    """R17 §3: nothing per-extension. `generate` produces its checks from its structure."""
+    report = validate(open_packet(_extension(packet_root)))
+    assert report.passed
+    assert "extension.validated" in {f.check for f in report.findings}
+
+
+def test_an_extensions_closed_vocabulary_is_enforced(packet_root):
+    root = _extension(packet_root, mutate=lambda r: r["choice"].__setitem__(0, "sideways"))
+    report = validate(open_packet(root))
+    assert "task.trials.choice.in_vocabulary" in {f.check for f in report.findings}
+
+
+def test_an_extension_reference_into_core_resolves(packet_root):
+    """R17 §2 lets an extension reference core. Without the cross-registry link the anti-join is
+    never generated and an orphan validates clean -- the gap R46 closed for core."""
+    root = _extension(packet_root, mutate=lambda r: r["trial_id"].__setitem__(0, "no_such_trial"))
+    report = validate(open_packet(root))
+    assert any(f.check.endswith("_resolves") and f.extension == "task" for f in report.findings)
+
+
+def test_an_extension_finding_does_not_fail_core(packet_root):
+    """R17 §4. A core validator need not hold the schema at all, so holding it must not be able
+    to fail a packet that passes without it."""
+    root = _extension(packet_root, mutate=lambda r: r["choice"].__setitem__(0, "sideways"))
+    report = validate(open_packet(root))
+    assert report.passed, "core conformance is unchanged"
+    assert not report.extension_passed("task")
+    assert report.extensions == ("task",)
+
+
+def test_an_extension_the_packet_does_not_carry_is_reported_not_run(packet_root):
+    root = _extension(packet_root)
+    (root / "tables" / "task" / "trials.parquet").unlink()
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    manifest["resources"] = [r for r in manifest["resources"] if r["resource_id"] != "task.trials"]
+    (root / "nwb.packet.json").write_text(json.dumps(manifest))
+    report = validate(open_packet(root))
+    assert "extension.table_absent" in {f.check for f in report.findings}
+
+
+def test_an_unreadable_extension_registry_is_ignored_by_the_reader(packet_root):
+    """`09` §6 makes checking declared files the validator's job; a reader must not refuse core
+    over an extension it cannot parse."""
+    root = _extension(packet_root)
+    (root / "extensions" / "task.json").write_text("{not json")
+    assert open_packet(root).extensions() == {}
