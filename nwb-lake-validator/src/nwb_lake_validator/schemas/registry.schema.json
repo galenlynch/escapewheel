@@ -215,6 +215,21 @@
             "carried",
             "assigned"
           ]
+        },
+        "unit": {
+          "description": "R56 \u00a72.1. The unit this column's values are in, where it does not vary. Open, as `core.sorting_runs.amplitude_unit` already is (R11 \u00a72).",
+          "type": "string",
+          "minLength": 1
+        },
+        "unit_from": {
+          "description": "R56 \u00a72.1. The column carrying this column's unit, where it varies per row. Either a column of this table, or `resource.column` resolved through a reference this table declares -- one hop (R56 \u00a72.3).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)?$"
+        },
+        "clock_from": {
+          "description": "R56 \u00a72.2. The column holding the `clock_id` these ticks are on. Absent, the clock is the table's own `clock_id` where it has one. Coordinates only.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)?$"
         }
       },
       "not": {
@@ -246,6 +261,31 @@
                 "identity"
               ]
             }
+          }
+        },
+        {
+          "not": {
+            "required": [
+              "unit",
+              "unit_from"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "clock_from"
+            ]
+          },
+          "then": {
+            "properties": {
+              "role": {
+                "const": "coordinate"
+              }
+            },
+            "required": [
+              "role"
+            ]
           }
         }
       ]
