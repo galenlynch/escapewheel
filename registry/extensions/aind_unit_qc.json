@@ -1,5 +1,5 @@
 {
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "logical_standard_version": "0.1",
   "extension_id": "aind_unit_qc",
   "extends": "nwb-lake-logical-v0.1",
@@ -208,27 +208,6 @@
         },
         {
           "name": "snr",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Quality metric, carried verbatim from the sorter's own output."
-        },
-        {
-          "name": "sync_spike_2",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Quality metric, carried verbatim from the sorter's own output."
-        },
-        {
-          "name": "sync_spike_4",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Quality metric, carried verbatim from the sorter's own output."
-        },
-        {
-          "name": "sync_spike_8",
           "type": "float64",
           "presence": "nullable",
           "role": "data",
@@ -469,6 +448,88 @@
         "unit_id",
         "sorting_run_id",
         "curation_id"
+      ],
+      "rules": []
+    },
+    "aind_unit_qc.synchrony": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Session ID."
+        },
+        {
+          "name": "unit_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "carried",
+          "description": "The unit these metrics describe."
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Sorting run, since unit identity is contextual."
+        },
+        {
+          "name": "curation_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Curation version."
+        },
+        {
+          "name": "synchrony_size",
+          "type": "int32",
+          "presence": "required",
+          "role": "sequence_position",
+          "description": "How many units spiked together, which the sorter takes as a parameter."
+        },
+        {
+          "name": "fraction",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Fraction of this unit's spikes occurring in a group of that size."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id",
+        "synchrony_size"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ],
+          "resource": "core.units",
+          "resource_columns": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id",
+        "synchrony_size"
       ],
       "rules": []
     }

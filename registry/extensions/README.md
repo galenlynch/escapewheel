@@ -7,8 +7,8 @@ reading one of their tables needs nothing installed.
 | | tables | columns | drawn from |
 |---|---|---|---|
 | `dynamic_foraging` | `trials`, `blocks` | 23 | the 10 trial columns measured to vary in a real session, plus its blocks |
-| `aind_unit_qc` | `metrics`, `waveform_metrics` | 56 | 48 of the 74 columns the real NWB's `units` table carries |
-| `aind_opto` | `stimulations` | 16 | the 17 `laser_*` columns the real NWB's `trials` table carries |
+| `aind_unit_qc` | `metrics`, `waveform_metrics`, `synchrony` | 59 | 48 of the 74 columns the real NWB's `units` table carries |
+| `aind_opto` | `stimulations`, `emissions` | 18 | the 17 `laser_*` columns the real NWB's `trials` table carries |
 
 ## Why these, and why they are not core
 
@@ -31,6 +31,25 @@ nothing.
 
 That is exactly what an extension is for, and it is why R43 §3, R16 §5, R9 §2 and `09` §2.3 all
 send their columns here.
+
+## The source's columns are evidence, not a schema
+
+Taking a `DynamicTable`'s columns verbatim reproduces its shape, and some of that shape is the
+thing an extension exists to fix. Two instances here, both the same:
+
+- **`laser_1_power`, `laser_2_power`** — a list smeared across columns, so a third laser needs a
+  schema change. R3 §3.0 refuses that for exactly this reason. A laser is a **device**, which core
+  already models, so `aind_opto.emissions` is a child table keyed by `device_id`. `wavelength_nm`
+  and `location` move there too: they are properties of the emitter, not of the epoch, and two
+  lasers may differ in both.
+- **`sync_spike_2`, `sync_spike_4`, `sync_spike_8`** — a metric parameterised by a number, with
+  the number in the name. The sorter computes it over a list of synchrony sizes, so a fourth size
+  needs a schema change. `aind_unit_qc.synchrony` is one row per size.
+
+The other metrics stay verbatim, and the difference is not squeamishness: `snr` and
+`presence_ratio` are the **vocabulary** people search by, and renaming them would make the table
+match nothing anyone's code expects. `sync_spike_8` is not a name — it is a name with a parameter
+glued on.
 
 ## Tagging and inactivation are one extension
 

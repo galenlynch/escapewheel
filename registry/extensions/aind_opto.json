@@ -1,5 +1,5 @@
 {
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "logical_standard_version": "0.1",
   "extension_id": "aind_opto",
   "extends": "nwb-lake-logical-v0.1",
@@ -28,37 +28,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What the light was for, in the rig's own words. Open: tagging and inactivation are the same measurement differently parameterised."
-        },
-        {
-          "name": "location",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Where the light was delivered, in the rig's own words."
-        },
-        {
-          "name": "wavelength_nm",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Wavelength.",
-          "unit": "nm"
-        },
-        {
-          "name": "power_1_mw",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Power on the first laser.",
-          "unit": "mW"
-        },
-        {
-          "name": "power_2_mw",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Power on the second laser.",
-          "unit": "mW"
         },
         {
           "name": "duration_s",
@@ -157,6 +126,90 @@
           "sql": "SELECT session_id, epoch_id FROM aind_opto_stimulations WHERE pulse_duration_s IS NOT NULL AND frequency_hz IS NULL"
         }
       ]
+    },
+    "aind_opto.emissions": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Session ID."
+        },
+        {
+          "name": "epoch_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "carried",
+          "description": "The interval this emission belongs to."
+        },
+        {
+          "name": "device_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "The emitter, which core already models."
+        },
+        {
+          "name": "power_mw",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Power delivered by this emitter.",
+          "unit": "mW"
+        },
+        {
+          "name": "wavelength_nm",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Wavelength of this emitter.",
+          "unit": "nm"
+        },
+        {
+          "name": "location",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Where this emitter delivered, in the rig's own words."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "epoch_id",
+        "device_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "epoch_id"
+          ],
+          "resource": "aind_opto.stimulations",
+          "resource_columns": [
+            "session_id",
+            "epoch_id"
+          ]
+        },
+        {
+          "columns": [
+            "device_id"
+          ],
+          "resource": "core.devices",
+          "resource_columns": [
+            "device_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "epoch_id",
+        "device_id"
+      ],
+      "rules": []
     }
   }
 }
