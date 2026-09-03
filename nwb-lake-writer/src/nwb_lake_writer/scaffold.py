@@ -25,6 +25,7 @@ from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+from nwb_lake_validator.validator import registry_meta_schema
 
 #: R2 §4's vocabulary, keyed by what pyarrow reports. A type outside this is a defect in the
 #: source rather than a gap here: R3 §2.1 bans nested types so a native reader stays viable.
@@ -134,6 +135,9 @@ def draft(extension_id: str, tables: dict[str, Path], *, logical_standard_versio
         decisions.append(f"{resource}: no references; an extension may reference core (R17 §2)")
     return Draft(
         {
+            # R57 §2.1. Taken from the meta-schema the validator vendors rather than written
+            # here, because a second copy of a URI is a second thing to go stale.
+            "$schema": registry_meta_schema()["$id"],
             "registry_version": "0.1.0",
             "logical_standard_version": logical_standard_version,
             "extension_id": extension_id,
