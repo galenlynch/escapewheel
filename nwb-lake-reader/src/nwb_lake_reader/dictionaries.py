@@ -1,46 +1,29 @@
-"""Working with dictionary-encoded columns.
+"""Working with columns that may be dictionary-encoded.
 
-A packet's identity columns -- `unit_id`, `clock_id`, `session_id` -- are dictionary-encoded
-in Parquet and stay that way in Arrow wherever it is affordable, because decoding one string
-per spike is what makes a 287 M-row table expensive. Everything here exists because that
-choice has consequences at every boundary: a dictionary column will not compare against a
-string scalar, `pc.equal` decodes before it compares, and concatenating string chunks past
-2 GB overflows the offset type. The helpers are small; the reason they are shared is that
-the reader, the writer and the validator all meet the same edges, and a second
-implementation of any of them would differ silently.
+Parquet stores a low-cardinality string column as codes into a dictionary held once per row
+group, so a reader meets one wherever such a column is read without decoding -- which the
+validator's ordering scan does deliberately, since `core.events`, `core.trial_tags` and
+`core.session_experimenters` all sort on a string. These helpers take the dictionary where
+there is one and the column itself where there is not, so a caller does not branch.
+
+Two operations remain unimplemented for a dictionary column whatever is done to it: Arrow
+cannot sort one, and `group_by` raises `Unifying differing dictionaries` across row groups
+until `Table.unify_dictionaries` reconciles them. Both fail loudly. Comparison, `is_in`,
+`unique` and filtering all work.
+
+The helpers are small; the reason they are shared is that the reader, the writer and the
+validator all meet the same edges, and a second implementation of any of them would differ
+silently.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 from numpy.typing import NDArray
-
-
-def as_dictionary(table: pa.Table, columns: Iterable[str]) -> pa.Table:
-    """Re-encode named string columns as dictionaries, leaving the rest alone.
-
-    Used to give one return type to two read strategies. A whole-file read gets its
-    dictionary from Parquet directly, which is the cheap direction; a filtered read is faster
-    decoded and then re-encoded here, because the rows a filter leaves are few. Measured on
-    572,551 rows: 0.041 s decoded, 0.019 s to re-encode, against 1.318 s asking the scanner
-    for dictionaries -- and 132.8 MB becomes 18.5 MB.
-    """
-    wanted = set(columns)
-    if not wanted:
-        return table
-    arrays, fields = [], []
-    for name in table.schema.names:
-        column = table.column(name)
-        if name in wanted and pa.types.is_string(column.type):
-            column = pc.dictionary_encode(column)
-        arrays.append(column)
-        fields.append(pa.field(name, column.type))
-    return pa.table(arrays, schema=pa.schema(fields))
 
 
 def constant(value: str, rows: int) -> pa.DictionaryArray[Any, Any]:
@@ -71,4 +54,4 @@ def where(column: Any, value: str) -> NDArray[np.int64]:
     return np.flatnonzero(pc.fill_null(matches, False).to_numpy(zero_copy_only=False))
 
 
-__all__ = ["as_dictionary", "constant", "values", "where"]
+__all__ = ["constant", "values", "where"]

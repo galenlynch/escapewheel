@@ -14,7 +14,6 @@ import pyarrow.compute as pc
 import pyarrow.dataset as pads
 
 from .clocks import NotAligned, anchors, on_clock, origin, seconds, stored_span
-from .dictionaries import as_dictionary
 from .errors import ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
 from .manifest import Manifest, Resource
 from .observation import attach_support, register_views, unit_windows
@@ -342,7 +341,6 @@ class Packet:
         resource_id: str,
         *,
         columns: list[str] | None = None,
-        decode: bool = True,
         **where: Predicate,
     ) -> pa.Table:
         """Read a table resource into memory, optionally narrowed.
@@ -360,16 +358,6 @@ class Packet:
             Dotted resource ID.
         columns : list of str, optional
             Read only these columns. Reading every column is the default.
-        decode : bool, default True
-            Return plain strings. Pass False to keep the columns the file dictionary-encoded
-            as `dictionary<string, int32>`, which reading a whole identity column wants:
-            `unit_id` over 287 M spikes is 0.23 s and 1.15 GB that way against 2.29 s and
-            12.75 GB decoded, and the decoded read needs 13.6 GB to finish. Filtered reads
-            never come close, so the default is the predictable type rather than the fast one.
-
-            Whichever is chosen applies to both access paths, so the schema does not depend on
-            whether a constraint was passed. Named like `columns`, this shadows a constraint
-            on a column of the same name.
         **where : str, int, float, bool, tuple, or None
             Column constraints. A scalar means equality, a two-item tuple means a closed
             range, and ``None`` leaves the column unconstrained.
@@ -386,16 +374,12 @@ class Packet:
         """
         handle = self.table_resource(resource_id)
         if not where:
-            # Projection is not a filter. Sending it through the dataset would decode every
-            # row and re-encode it, which on a whole identity column is 4.6 s against 0.3 s.
-            return handle.to_arrow(columns=columns, decode=decode)
-        # Read decoded, which is much the faster way to run a filter, then put the type back.
-        # The route differs between a whole read and a filtered one; the type returned does
-        # not, because a caller should not have to know which branch it took.
-        table = handle.dataset(decode=True).to_table(columns=columns, filter=self._predicate(where))
-        return table if decode else as_dictionary(table, handle.dictionary_columns())
+            # Projection is not a filter, so it goes straight to the Parquet reader rather
+            # than through a dataset scan that would touch every row.
+            return handle.to_arrow(columns=columns)
+        return handle.dataset().to_table(columns=columns, filter=self._predicate(where))
 
-    def scan(self, resource_id: str, *, decode: bool = True) -> pads.Dataset:
+    def scan(self, resource_id: str) -> pads.Dataset:
         """Open a resource lazily, without reading it.
 
         Use this for what constraints cannot express: streaming a resource too large to
@@ -412,7 +396,7 @@ class Packet:
         pyarrow.dataset.Dataset
             A lazy dataset over the resource.
         """
-        return self.table_resource(resource_id).dataset(decode=decode)
+        return self.table_resource(resource_id).dataset()
 
     def duckdb(self, *, connection: duckdb.DuckDBPyConnection | None = None) -> duckdb.DuckDBPyConnection:
         """Register every table resource as a view and return the connection.
@@ -620,9 +604,9 @@ class Packet:
         hundreds of millions, so resolving which units are wanted in the small table and
         pushing their keys into the large one is the shape this format is built for: the keys
         are compared against row-group statistics, and groups that cannot match are never
-        read. The alternative -- reading identity columns back out of the spike table to work
-        out which rows are wanted -- decodes one string per spike and costs orders of
-        magnitude more.
+        read. The alternative -- reading the identity columns back out of the spike table to
+        work out which rows are wanted -- scans hundreds of millions of rows to answer a
+        question thousands of rows already answer.
 
         Parameters
         ----------
@@ -693,9 +677,9 @@ class Packet:
         missing = [k for k in keys if k not in units.schema.names]
         if missing:
             raise ValueError(f"units is missing {missing}, which identify a unit in this packet")
-        # The values must match the type the scan produces. `units` comes back with its
-        # identity columns dictionary-encoded -- that is what makes reading them cheap -- and
-        # a dictionary array will not compare against a string column.
+        # The values must match the type the scan produces. A caller may hand in a table
+        # whose key columns are dictionary-encoded, and Arrow will not compare a dictionary
+        # array against a plain column, so take the dictionary's values instead.
         tests = []
         for key in keys:
             values = units.column(key).unique()

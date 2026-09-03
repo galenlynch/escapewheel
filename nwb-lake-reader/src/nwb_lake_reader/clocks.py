@@ -280,8 +280,8 @@ def mapped(batch: pa.RecordBatch, reference: str, anchors: Any, bound: float) ->
     keep = np.zeros(ticks.size, dtype=bool)
     # A batch spans at most two streams, since the table is sorted by sorting_run_id and each
     # stream is one run, so this loop runs once or twice. Its *body* must still stay in Arrow:
-    # asking for the column as Python strings to group it costs a string object per spike, and
-    # the comparison that follows is over a handful of distinct values either way.
+    # materialising the column as Python objects to group it costs one per spike, and the
+    # comparison that follows is over a handful of distinct values either way.
     for name in values(clocks):
         rows = where(clocks, name)
         if not rows.size:

@@ -30,10 +30,6 @@ if TYPE_CHECKING:  # pragma: no cover
     import polars as pl
 
 
-#: Arrow types a Parquet dictionary decodes to. Only these are worth asking back as
-#: dictionaries; a numeric column gains nothing and an index would cost more than the value.
-_DICTIONARY_TYPES = ("string", "large_string", "binary", "large_binary")
-
 #: Where a Zarr array keeps its metadata. v3 names it `zarr.json`; v2, which R21 §3 permits
 #: an external array to use, names it `.zarray`. Both are JSON.
 #:
@@ -199,48 +195,7 @@ class TableResource:
             raise ResourceUnreadableError(f"{self.resource_id}: cannot reach {self._resource.uri}: {exc}") from exc
         return path, filesystem
 
-    def dictionary_columns(self) -> list[str]:
-        """Columns the file stores dictionary-encoded, and so can return without decoding.
-
-        Parquet writes a low-cardinality column as small integer indices into a dictionary
-        held once per row group. Asking for the values decodes those indices back into one
-        string per row, which for an identity column repeated over every row of a large table
-        is the dominant cost of reading it: measured on 20 M spikes, the five identity columns
-        of `core.spike_events` are 0.40 GB read as dictionaries and 4.38 GB decoded, 0.08 s
-        against 0.67 s. On disk they are 9.4 MB for 287 M rows.
-
-        Only columns the writer actually dictionary-encoded are named. Requesting a dictionary
-        for a column stored some other way makes Arrow build one during the read, which for a
-        high-cardinality column costs more than the strings it replaces.
-
-        Returns
-        -------
-        list of str
-            Column names, in schema order. Empty when the resource is partitioned, since the
-            fragments need not agree on encoding.
-        """
-        if self._resource.is_partitioned:
-            return []
-        try:
-            path, filesystem = self._store()
-            metadata = pq.ParquetFile(path, filesystem=filesystem).metadata
-        except Exception:  # noqa: BLE001 - an unreadable file is reported by the caller
-            return []
-        if not metadata.num_row_groups:
-            return []
-        schema = metadata.schema.to_arrow_schema()
-        group = metadata.row_group(0)
-        named = []
-        for index in range(group.num_columns):
-            column = group.column(index)
-            name = column.path_in_schema
-            if name not in schema.names or str(schema.field(name).type) not in _DICTIONARY_TYPES:
-                continue
-            if "RLE_DICTIONARY" in column.encodings or "PLAIN_DICTIONARY" in column.encodings:
-                named.append(name)
-        return named
-
-    def to_arrow(self, *, columns: list[str] | None = None, decode: bool = True) -> pa.Table:
+    def to_arrow(self, *, columns: list[str] | None = None) -> pa.Table:
         """Read the resource into memory, in stored order.
 
         Parameters
@@ -248,79 +203,30 @@ class TableResource:
         columns : list of str, optional
             Read only these columns. Projection is not a filter: it goes straight to the
             Parquet reader, which never touches the column chunks left out.
-        decode : bool, default True
-            Return plain strings, which is what a caller expects and what everything
-            downstream already handles. Pass False to keep the columns as
-            `dictionary<string, int32>`, the form the file stores.
-
-            That is worth reaching for only when reading a whole identity column **to keep**,
-            which is the one case where decoding dominates: `unit_id` over 287 M spikes is
-            0.23 s and 1.15 GB kept against 2.29 s and 12.75 GB decoded, and the decoded read
-            needs 13.6 GB of memory to complete at all.
-
-            **The saving is given back, with interest, by the second operation.** Measured on
-            20 M rows and the four identity columns -- 0.32 GB kept against 3.42 GB decoded,
-            which is the whole win -- and then:
-
-            ==================  =============  ==========
-            operation           plain string   dictionary
-            ==================  =============  ==========
-            equal + filter          0.06 s        0.16 s
-            is_in, 24 units         1.19 s       16.81 s
-            group_by                0.03 s       unifies first, then 0.01 s
-            sort_indices            1.03 s       **not implemented**
-            ==================  =============  ==========
-
-            `Table.unify_dictionaries` costs 0.01 s and fixes `group_by`, whose failure is
-            `ArrowNotImplementedError: Unifying differing dictionaries` -- a row group carries
-            its own dictionary, so concatenated batches disagree. Sorting a dictionary column
-            is unimplemented in Arrow whether unified or not, so there is no mitigation.
-
-            Hence the default is the predictable one rather than the fast one: a caller who
-            takes the fast one is one `is_in` away from paying fourteen times over, and one
-            sort away from an exception.
 
         Returns
         -------
         pyarrow.Table
-            The table.
+            The table, with strings decoded. Parquet stores a low-cardinality column as codes
+            into a dictionary and this decodes them, which is what a caller expects and what
+            everything downstream handles.
         """
         if self._resource.is_partitioned:
-            return self.dataset(decode=decode).to_table(columns=columns)
+            return self.dataset().to_table(columns=columns)
         path, filesystem = self._store()
-        if decode:
-            return pq.read_table(path, columns=columns, filesystem=filesystem)
-        wanted = self.dictionary_columns()
-        if columns is not None:
-            wanted = [name for name in wanted if name in columns]
-        return pq.read_table(path, columns=columns, read_dictionary=wanted or None, filesystem=filesystem)
+        return pq.read_table(path, columns=columns, filesystem=filesystem)
 
-    def dataset(self, *, decode: bool = True) -> pads.Dataset:
+    def dataset(self) -> pads.Dataset:
         """Open the resource as a PyArrow dataset without reading it.
-
-        Parameters
-        ----------
-        decode : bool, default True
-            Measured rather than assumed, and for a different reason than :meth:`to_arrow`'s
-            same default. A filtered scan returns few rows, so the strings it decodes are
-            cheap -- but the dictionaries are per row group, and reconciling 1,891 of them
-            costs far more than the decoding it saves: 1.3 s against 0.037 s selecting 24
-            units, and 1.7 s against 0.033 s selecting one.
-
-            So both default to decoding, by two separate arguments: here because keeping the
-            dictionary costs more than it saves outright, and in `to_arrow` because the saving
-            is real but is given back by whatever the caller does next.
 
         Returns
         -------
         pyarrow.dataset.Dataset
             A lazy dataset, suitable for predicate pushdown over large resources.
         """
-        columns = [] if decode else self.dictionary_columns()
-        options = pads.ParquetReadOptions(dictionary_columns=columns) if columns else None
-        fmt = pads.ParquetFileFormat(read_options=options) if options else pads.ParquetFileFormat()
         path, filesystem = self._store()
-        opened: pads.Dataset = pads.dataset(path, format=fmt, partitioning="hive", filesystem=filesystem)
+        opened: pads.Dataset = pads.dataset(path, format=pads.ParquetFileFormat(),
+                                            partitioning="hive", filesystem=filesystem)
         return opened
 
     def schema(self) -> pa.Schema:
