@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** |
+| **Status** | **Accepted** 2026-09-03 |
 | **Amends** | `03` "Directory layout" (`03:75`), R2 §8 (versioning) |
 | **Depends on** | R3 §3.0 (duplication must buy otherwise-unavailable access) |
 | **Profile** | `nwb-lake-portable-v0.1` |
