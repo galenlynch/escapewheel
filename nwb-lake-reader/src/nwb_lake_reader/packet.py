@@ -256,6 +256,36 @@ class Packet:
         parsed: dict[str, Any] = json.loads(path.read_text())
         return parsed
 
+    def extensions(self) -> dict[str, dict[str, Any]]:
+        """Extension registries this packet declares and carries (R17 §2, `09` §6).
+
+        Each is a registry document in R2's format, namespaced by its `extension_id`. Reading a
+        packet never needs one -- core stays interpretable when no extension is present, which
+        R17 §2 requires by forbidding core to reference an extension.
+
+        A declared extension whose file is absent or unparseable is **left out**, not raised:
+        `09` §6 makes verifying that declared files exist the validator's job, and a reader that
+        refused the packet over it would make holding an extension a condition of reading core.
+
+        Returns
+        -------
+        dict
+            `extension_id` to parsed registry, for every one that loaded.
+        """
+        loaded: dict[str, dict[str, Any]] = {}
+        for extension_id, entry in (self.manifest.extensions or {}).items():
+            location = entry.get("registry") if isinstance(entry, Mapping) else None
+            if not location:
+                continue
+            path = self._root / str(location)
+            if not path.is_file():
+                continue
+            try:
+                loaded[extension_id] = json.loads(path.read_text())
+            except ValueError:
+                continue
+        return loaded
+
     # -- codec capability -------------------------------------------------------------
 
     def check_codecs(self, resource_id: str, supported: Iterable[str] = BASELINE_CODECS) -> None:

@@ -144,8 +144,26 @@
       }
     },
     "extensions": {
-      "description": "Namespaced extension metadata (09 \u00a76). A core validator verifies declared files exist and MUST NOT require their schemas.",
-      "type": "object"
+      "description": "Extension registries this packet carries (`09` \u00a76, R17). Each is a registry document in R2's format, namespaced by its extension_id. A core validator verifies the declared file exists and MUST NOT require its schema.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "registry"
+        ],
+        "properties": {
+          "version": {
+            "description": "The extension registry's own registry_version (R17 \u00a75).",
+            "type": "string"
+          },
+          "registry": {
+            "description": "Where the registry document lives, relative to the packet root.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "$defs": {

@@ -109,6 +109,9 @@ class Manifest:
         Every session the packet contains.
     required_codecs : tuple of str
         Zarr codecs a reader must support to open this packet's arrays.
+    extensions : Mapping
+        Extension registries the packet declares (`09` §6, R17 §2), by `extension_id`. Empty is
+        the common case and is conforming: core is interpretable without any.
     resources : tuple of Resource
         Every declared resource.
     entry : Mapping
@@ -120,6 +123,7 @@ class Manifest:
     registry_version: str
     sessions: tuple[str, ...]
     required_codecs: tuple[str, ...]
+    extensions: Mapping[str, Any]
     resources: tuple[Resource, ...]
     entry: Mapping[str, Any]
 
@@ -182,6 +186,7 @@ class Manifest:
             registry_version=str(entry.get("registry_version", "")),
             sessions=tuple(str(s) for s in entry.get("sessions", [])),
             required_codecs=tuple(str(c) for c in entry.get("required_codecs", [])),
+            extensions=dict(entry.get("extensions") or {}),
             resources=tuple(
                 Resource(
                     resource_id=str(r["resource_id"]),
