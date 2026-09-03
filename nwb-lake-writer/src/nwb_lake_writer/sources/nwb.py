@@ -115,6 +115,20 @@ def _clean(value: Any) -> Any:
     return value
 
 
+def _alike(a: Any, b: Any) -> bool:
+    """Whether two trial-column values are the same, with NaN equal to NaN.
+
+    A float column of all-NaN is constant, not varying: `nan != nan` would otherwise make every
+    absent parameter look like per-trial data and keep it on all 708 rows.
+    """
+    try:
+        if isinstance(a, float) and isinstance(b, float) and np.isnan(a) and np.isnan(b):
+            return True
+    except TypeError:
+        pass
+    return bool(a == b)
+
+
 class NWBSource(Compensates):
     """An NWB file, read as records against a declared clock and zone.
 
@@ -171,6 +185,8 @@ class NWBSource(Compensates):
         self.zone = zone
         self.prefix = prefix
         self.trial_metadata = trial_metadata
+        #: Unmapped trial columns found constant across the session, filled in by `trials`.
+        self._constants: dict[str, Any] = {}
         self.units = dict(units or {})
         Compensates.__init__(self)
         self.notes: list[str] = []
@@ -307,6 +323,10 @@ class NWBSource(Compensates):
             "timestamps_reference_time": reference,
             "file_create_date": _one(self._array("file_create_date")),
         }
+        # A task parameter constant across every trial belongs here, once, rather than on each
+        # of them. `trials` computes the split, so ask for it before reading what it found.
+        self.trials()
+        metadata.update({k: v for k, v in self._constants.items() if v is not None})
         return [
             {
                 "session_id": self.session_id,
@@ -681,6 +701,7 @@ class NWBSource(Compensates):
             for i in range(len(start))
         ]
         unmapped = [name for name in columns if name not in TRIAL_MAPPED and name != "id"]
+        varying = self._trial_parameters(columns, unmapped, len(start))
         conditions = self._conditions(columns, len(start))
         rows = []
         for index in range(len(start)):
@@ -696,10 +717,37 @@ class NWBSource(Compensates):
                 row["choice"] = CHOICE.get(float(columns["animal_response"][index]))
             if (condition := conditions[index]) is not None:
                 row["condition_id"] = condition
-            if self.trial_metadata and unmapped:
-                row["metadata"] = {name: columns[name][index] for name in unmapped}
+            if self.trial_metadata and varying:
+                row["metadata"] = {name: columns[name][index] for name in varying}
             rows.append(row)
         return rows
+
+    def _trial_parameters(self, columns: Mapping[str, NDArray[Any]], unmapped: list[str], n: int) -> list[str]:
+        """Split unmapped trial columns into what varies per trial and what does not.
+
+        A task parameter that never changes across a session is not trial data; recording it on
+        every trial restates one fact `n` times, which R3 §3.0 forbids for the same reason a
+        repeated value becomes a child table. Measured on a real session: 49 of 59 keys are
+        constant, so 34,692 of the 41,772 values stored were copies.
+
+        The constant ones are held for `sessions` to carry, and the varying names returned. This
+        is a split, not a judgement about which matter: a constant may be the most important
+        thing about the session, and it is still recorded once.
+        """
+        constant: dict[str, Any] = {}
+        varying: list[str] = []
+        for name in unmapped:
+            values = columns[name]
+            first = values[0] if n else None
+            # One trial is no evidence of constancy, so nothing moves: with nothing to
+            # compare against, calling a value a session parameter claims more than is known.
+            same = n > 1 and all(_alike(values[i], first) for i in range(1, n))
+            if same:
+                constant[name] = first
+            else:
+                varying.append(name)
+        self._constants = constant
+        return varying
 
     @staticmethod
     def _conditions(columns: Mapping[str, NDArray[Any]], n: int) -> list[str | None]:

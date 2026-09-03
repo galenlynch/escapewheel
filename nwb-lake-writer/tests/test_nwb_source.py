@@ -370,3 +370,44 @@ def test_a_trial_event_column_is_not_repeated_in_metadata(source):
     """It is in core.events now, so carrying it again would be the duplication R3 §3.0 bans."""
     metadata = next(t for t in source.trials()).get("metadata") or {}
     assert "goCue_start_time" not in metadata
+
+
+# -- R3 §3.0: a parameter constant across every trial is recorded once ----------------------
+
+
+def _split(source, columns, n):
+    """Ask the adapter which of these columns vary across `n` trials."""
+    varying = source._trial_parameters(columns, list(columns), n)
+    return varying, source._constants
+
+
+def test_a_constant_trial_column_moves_to_the_session(source):
+    columns = {
+        "laser_wavelength": np.array([473.0, 473.0, 473.0]),
+        "reward_probabilityL": np.array([0.4, 0.7, 0.4]),
+    }
+    varying, constant = _split(source, columns, 3)
+    assert varying == ["reward_probabilityL"]
+    assert constant == {"laser_wavelength": 473.0}
+
+
+def test_an_all_nan_column_is_constant_not_varying(source):
+    """`nan != nan` would make every absent parameter look like per-trial data."""
+    varying, constant = _split(source, {"unset": np.array([np.nan, np.nan])}, 2)
+    assert varying == []
+    assert "unset" in constant
+
+
+def test_one_trial_splits_nothing(source):
+    """One value is no evidence that a parameter never changes."""
+    varying, constant = _split(source, {"laser_wavelength": np.array([473.0])}, 1)
+    assert varying == ["laser_wavelength"]
+    assert constant == {}
+
+
+def test_the_session_carries_what_the_trials_no_longer_repeat(source):
+    """The two halves agree: nothing is dropped between them."""
+    session = source.sessions()[0]["metadata"]
+    trial = source.records()["core.trials"][0].get("metadata", {})
+    assert not (set(session) & set(trial)), "a key is on the session or on the trial, never both"
+    assert "auto_train_stage" in session or "auto_train_stage" in trial
