@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from ..extensions import load as load_extension
 from ..recipe import Recipe
 from ..session import build, materializers
 from ..writer import CommitRefused
@@ -151,7 +152,7 @@ def _import(args: argparse.Namespace) -> int:
         print("error: no registry; declare [packet].registry or pass --registry", file=sys.stderr)
         return 2
     registry = json.loads(Path(registry_path).read_text())
-    extensions = [json.loads(path.read_text()) for path in recipe.extensions]
+    extensions = [load_extension(named, base=recipe.path.parent) for named in recipe.extensions]
     if args.sample:
         recipe = recipe.with_sample(args.sample)
 

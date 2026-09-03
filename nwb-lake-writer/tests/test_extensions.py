@@ -186,13 +186,18 @@ def _sites(tmp_path):
     import pyarrow.parquet as pq
 
     path = tmp_path / "sites.parquet"
-    pq.write_table(pa.table({
-        "session_id": pa.array(["s1", "s1"]),
-        "site_id": pa.array([0, 1], type=pa.int32()),
-        "start_tick": pa.array([0, 100], type=pa.int64()),
-        "odor_concentration": pa.array([0.5, None]),
-        "patch_index": pa.array([0, 0], type=pa.int32()),
-    }), path)
+    pq.write_table(
+        pa.table(
+            {
+                "session_id": pa.array(["s1", "s1"]),
+                "site_id": pa.array([0, 1], type=pa.int32()),
+                "start_tick": pa.array([0, 100], type=pa.int64()),
+                "odor_concentration": pa.array([0.5, None]),
+                "patch_index": pa.array([0, 0], type=pa.int32()),
+            }
+        ),
+        path,
+    )
     return path
 
 
@@ -240,3 +245,80 @@ def test_the_namespace_is_the_extension_id(tmp_path):
 
     drafted = draft("vrf", {"sites": _sites(tmp_path), "patches": _sites(tmp_path)})
     assert set(drafted.document["tables"]) == {"vrf.sites", "vrf.patches"}
+
+
+# -- an extension may arrive from an installed distribution ---------------------------------
+
+
+def test_a_recipe_may_name_a_path_or_an_installed_id(tmp_path, monkeypatch):
+    """Two situations, two answers: a document being drafted is a file beside the recipe, and one
+    someone else maintains arrives in a distribution, which has no path a recipe could name."""
+    from nwb_lake_writer import extensions as ext
+
+    beside = tmp_path / "task.json"
+    beside.write_text(json.dumps(EXTENSION))
+    assert ext.load("task.json", base=tmp_path)["extension_id"] == "task"
+
+    monkeypatch.setattr(ext, "installed", lambda: {"vr_foraging": {"extension_id": "vr_foraging"}})
+    assert ext.load("vr_foraging")["extension_id"] == "vr_foraging"
+
+
+def test_an_unknown_extension_says_what_is_installed(monkeypatch):
+    from nwb_lake_writer import extensions as ext
+
+    monkeypatch.setattr(ext, "installed", lambda: {"opto_tagging": {}, "unit_qc": {}})
+    with pytest.raises(ext.ExtensionNotFound, match="opto_tagging, unit_qc"):
+        ext.load("nonesuch")
+
+
+def test_a_broken_extension_package_is_skipped(monkeypatch):
+    import warnings as warnings_module
+
+    from nwb_lake_writer import extensions as ext
+
+    class _Bad:
+        name = "rotten"
+
+        def load(self):
+            raise ImportError("its author moved on")
+
+    monkeypatch.setattr(ext, "entry_points", lambda group: [_Bad()])
+    with warnings_module.catch_warnings(record=True) as caught:
+        warnings_module.simplefilter("always")
+        assert ext.installed() == {}
+    assert "rotten" in str(caught[0].message)
+
+
+def test_three_extensions_at_once(tmp_path, registry, minimal):
+    """Nothing about carrying one is special-cased, so carrying three is carrying one thrice."""
+
+    def named(extension_id, table):
+        document = json.loads(json.dumps(EXTENSION))
+        document["extension_id"] = extension_id
+        document["tables"] = {f"{extension_id}.{table}": document["tables"]["task.trials"]}
+        return document
+
+    writer = PacketWriter(
+        registry,
+        packet_id="s001",
+        extensions=[
+            named("vr_foraging", "sites"),
+            named("opto_tagging", "pulses"),
+            named("unit_qc", "metrics"),
+        ],
+    )
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    writer.add("core.trials", TRIALS)
+    for extension_id, table in (("vr_foraging", "sites"), ("opto_tagging", "pulses"), ("unit_qc", "metrics")):
+        writer.add(
+            f"{extension_id}.{table}",
+            [{"session_id": t["session_id"], "trial_id": t["trial_id"], "choice": "left"} for t in TRIALS],
+        )
+    root = tmp_path / "s001"
+    assert writer.commit(root).passed
+
+    packet = open_packet(root)
+    assert set(packet.extensions()) == {"vr_foraging", "opto_tagging", "unit_qc"}
+    assert packet.table("vr_foraging.sites").num_rows == 2
+    assert packet.table("unit_qc.metrics").num_rows == 2

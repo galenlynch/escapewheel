@@ -36,11 +36,15 @@ arrays = ["zarr>=3"]
 remote = ["nwb-lake-validator[remote]"]
 s3 = ["nwb-lake-validator[s3]"]
 
-# A distribution registers a source adapter here, and `nwb-lake import` builds it like any
-# built-in. R17 makes an extension's *schema* data; this is what keeps the *adapter* from being a
-# patch to this package -- the gradient §4 of R54 blames for NWB's own mechanism going unused.
-# [project.entry-points."nwb_lake.sources"]
-# tasklog = "your_package.sources:TaskLogSource"
+# A third-party distribution ships an extension by registering two things. Both matter only
+# while a packet is being *built*: once built, the packet embeds the registry document, and
+# reading it needs nothing installed. That is the whole difference from an `ndx-` extension.
+#
+#   [project.entry-points."nwb_lake.extensions"]
+#   vr_foraging = "aind_vr_foraging:REGISTRY"        # the document, or a path to it
+#
+#   [project.entry-points."nwb_lake.sources"]
+#   vr_sites = "aind_vr_foraging.sources:SiteSource"  # only if a raw format needs parsing
 
 [project.entry-points."nwb_lake.commands"]
 # 07 names one CLI. nwb-lake-reader owns the console script and discovers this group.

@@ -35,6 +35,7 @@ import numpy as np
 from numpy.typing import NDArray
 from nwb_lake_reader.clocks import BOUND, align
 
+from .extensions import load as load_extension
 from .recipe import Recipe, SourceSpec
 from .sources.compensations import describe
 from .writer import PacketWriter, StagedArray
@@ -608,7 +609,7 @@ def build(
         # R17 §2: the recipe names them, so a source may own an extension's table exactly as it
         # owns a core one. Which is what keeps declaring an extension from being harder than
         # adding a column to core -- the gradient that leaves NWB's own mechanism unused.
-        extensions=[json.loads(path.read_text()) for path in recipe.extensions],
+        extensions=[load_extension(named, base=recipe.path.parent) for named in recipe.extensions],
     )
 
     if recipe.subject:

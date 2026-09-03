@@ -135,6 +135,37 @@ path. If a capability ever seems to need extension code to *read*, that is the s
 it instead — which is what R56's `clock_from` did for tick conversion and R55's declared reference
 does for the join.
 
+### Shipping one from another distribution
+
+Two entry points, both **write-time only**:
+
+```toml
+[project.entry-points."nwb_lake.extensions"]
+vr_foraging = "aind_vr_foraging:REGISTRY"          # the document, or a path to it
+
+[project.entry-points."nwb_lake.sources"]
+vr_sites = "aind_vr_foraging.sources:SiteSource"   # only if a raw format needs parsing
+```
+
+A recipe then names extensions by **id** where a distribution provides them, or by **path** where
+one is still being drafted, and several at once is the same as one:
+
+```toml
+[packet]
+extensions = ["vr_foraging", "opto_tagging", "unit_qc", "draft/my_task.json"]
+
+[[source]]
+kind = "vr_sites"
+root = "/data/…/behavior"
+owns = ["vr_foraging.sites", "vr_foraging.patches"]
+```
+
+Nothing about carrying one extension is special-cased, so carrying three is carrying one thrice.
+They cannot collide: R17 §2 namespaces every table by its `extension_id`, and the writer refuses a
+document that defines a table outside its own namespace or redefines a core one.
+
+Reading the resulting packet needs **none of those packages installed**.
+
 ### Drafting one
 
 `nwb-lake extension <id> --table name=path.parquet` reads what the data shows — column names,

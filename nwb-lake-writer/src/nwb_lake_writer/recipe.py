@@ -181,10 +181,12 @@ class Recipe:
         Where it was read from.
     digest : str
         ``sha256`` of the file, so a run record can name exactly these parameters.
-    extensions : tuple of Path
-        Extension registries this packet carries (R17 §2). Each is a registry document in R2's
-        format, so a source may own one of its tables exactly as it owns a core table -- which is
-        what keeps declaring an extension from being harder than adding a column to core.
+    extensions : tuple of str
+        Extension registries this packet carries (R17 §2), each named either by a **path** to a
+        document beside the recipe, or by the **id** an installed distribution registers under
+        `nwb_lake.extensions`. Kept as written rather than resolved here, because which one a
+        value is cannot be decided without looking at the filesystem and the installed
+        distributions -- see `extensions.load`.
     registry : Path or None
         The registry to write against. Declared here rather than defaulted, because R2 §8 has
         the packet embed the registry it was written against -- so which one that is belongs in
@@ -199,7 +201,7 @@ class Recipe:
     packet_id: str
     out: Path
     registry: Path | None
-    extensions: tuple[Path, ...]
+    extensions: tuple[str, ...]
     description: str | None
     session: Mapping[str, Any]
     subject: Mapping[str, Any]
@@ -254,7 +256,7 @@ class Recipe:
             packet_id=str(packet["id"]),
             out=resolve(str(packet.get("out", packet["id"]))),
             registry=resolve(str(packet["registry"])) if packet.get("registry") else None,
-            extensions=tuple(resolve(str(e)) for e in packet.get("extensions", [])),
+            extensions=tuple(str(e) for e in packet.get("extensions", [])),
             description=packet.get("description"),
             session=document.get("session", {}),
             subject=document.get("subject", {}),
