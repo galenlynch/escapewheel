@@ -160,8 +160,7 @@ def content() -> dict[str, list[dict]]:
                          "manufacturer": "imec", "target_region": "VISp"}],
         "core.electrodes": [
             {"electrode_id": f"elec_{i:03d}", "session_id": "s001", "probe_id": "probe0",
-             "local_electrode_label": str(i), "local_channel_label": f"AP{i}",
-             "brain_region": "VISp"} for i in range(4)],
+             "local_electrode_label": str(i), "local_channel_label": f"AP{i}"} for i in range(4)],
         # R28: a unit sits on several electrodes and somewhere, in more than one frame.
         # R28: a unit sits on several electrodes and somewhere, in more than one frame.
         # Each unit's set contains its own default_electrode_id, which R28 2.1 requires.
@@ -177,17 +176,20 @@ def content() -> dict[str, list[dict]]:
         "core.unit_coordinates": [
             {"session_id": "s001", "unit_id": unit, "sorting_run_id": "sort_ks4_001",
              "curation_id": "curation_001", "coordinate_frame": frame,
+             "coordinate_basis": "measured", "region_id": region, "region_label": label,
              "x_um": x, "y_um": y, "z_um": z}
             for unit, depth in ((1, 22.0), (2, 58.0))
-            for frame, x, y, z in (("probe", 8.0, depth, None),
-                                   ("ccf", -1960.0, 8770.0 + depth, -5140.0))],
+            for frame, x, y, z, region, label in (
+                ("probe", 8.0, depth, None, None, None),
+                ("ccf", -1960.0, 8770.0 + depth, -5140.0, 385, "VISp"))],
         "core.electrode_coordinates": [
             {"electrode_id": f"elec_{i:03d}", "coordinate_frame": frame,
+             "coordinate_basis": "measured", "region_id": region, "region_label": label,
              "x_um": x, "y_um": y, "z_um": z}
             for i in range(4)
-            for frame, x, y, z in (
-                ("probe", 0.0 + (i % 2) * 16.0, 20.0 * (i // 2), None),
-                ("ccf", -1968.4 + i, 8768.5 + i, -5142.2 + i))],
+            for frame, x, y, z, region, label in (
+                ("probe", 0.0 + (i % 2) * 16.0, 20.0 * (i // 2), None, None, None),
+                ("ccf", -1968.4 + i, 8768.5 + i, -5142.2 + i, 385, "VISp"))],
         # In name order, because R53 numbers a name to its rank and R10 §2 sorts by the key --
         # so the file's order is the names' order, and the child now precedes its parent.
         "core.clocks": [
@@ -332,8 +334,6 @@ def write_packet(out: Path, tables: dict[str, list[dict]], *, raw: dict = None,
 
     (out / "schemas" / "logical_schemas.json").write_text(
         json.dumps(REGISTRY, indent=2) + "\n")
-    (out / "schemas" / "semantic_version.txt").write_text(
-        REGISTRY["semantic_standard_version"] + "\n")
 
     sessions = sorted({r["session_id"] for r in tables["core.sessions"]})
     (out / "nwb.packet.json").write_text(json.dumps({
