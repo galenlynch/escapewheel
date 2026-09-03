@@ -696,18 +696,18 @@ class Packet:
             found = self._narrowed(self.on_clock(found, clock), t_tick)
         return self.seconds(found, session_id=session_id) if seconds else found
 
-    def reference_clock(self, *, session_id: str | None = None) -> str:
+    def reference_clock(self, *, session_id: Any | None = None) -> Any:
         """Return the clock this packet reports times on (R27 §2).
 
         Parameters
         ----------
-        session_id : str, optional
+        session_id : int, optional
             Which session's reference to return. Only needed where a multi-session packet's
             sessions disagree, which is refused rather than resolved by picking one.
 
         Returns
         -------
-        str
+        int
             The declared `clock_id`.
 
         Raises
@@ -726,18 +726,18 @@ class Packet:
             for session, clock in zip(
                 table.column("session_id").to_pylist(), table.column("reference_clock_id").to_pylist(), strict=True
             )
-            if clock
+            if clock is not None
         }
         if session_id is not None:
             if session_id not in declared:
                 raise NotAligned(f"session {session_id!r} declares no reference_clock_id (R27 §2)")
-            return str(declared[session_id])
+            return declared[session_id]
         named = sorted(set(declared.values()))
         if not named:
             raise NotAligned("no session declares a reference_clock_id (R27 §2)")
         if len(named) > 1:
             raise NotAligned(f"sessions declare different reference clocks {named}; name a session_id")
-        self._reference_cache = str(named[0])
+        self._reference_cache = named[0]
         return self._reference_cache
 
     def t_zero(self, *, session_id: str | None = None) -> int:

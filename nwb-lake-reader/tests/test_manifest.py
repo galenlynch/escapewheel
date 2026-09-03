@@ -4,13 +4,15 @@ import pytest
 
 from nwb_lake_reader import Manifest, ManifestError, open_packet
 
+from .conftest import SESSION_NAME
+
 
 def test_load_parses_declared_fields(packet_root):
     manifest = Manifest.load(packet_root)
     assert manifest.packet_id == "session_001"
     assert manifest.profile_id == "nwb-lake-portable-v0.1"
     assert manifest.registry_version == "0.1.0"
-    assert manifest.sessions == ("s001",)
+    assert manifest.sessions == (SESSION_NAME,)
     assert manifest.required_codecs == ()
     assert {r.resource_id for r in manifest.resources} == {
         "core.sessions",

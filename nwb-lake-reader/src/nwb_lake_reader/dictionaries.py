@@ -26,9 +26,10 @@ import pyarrow.compute as pc
 from numpy.typing import NDArray
 
 
-def constant(value: str, rows: int) -> pa.DictionaryArray[Any, Any]:
-    """Return one repeated string as codes into a one-entry dictionary."""
-    return pa.DictionaryArray.from_arrays(pa.array([0] * rows, type=pa.int32()), pa.array([value]))
+def constant(value: Any, rows: int, type_: pa.DataType | None = None) -> pa.DictionaryArray[Any, Any]:
+    """Return one repeated value as codes into a one-entry dictionary."""
+    return pa.DictionaryArray.from_arrays(pa.array([0] * rows, type=pa.int32()),
+                                          pa.array([value], type=type_))
 
 
 def values(column: Any) -> list[str]:
@@ -42,15 +43,20 @@ def values(column: Any) -> list[str]:
     return [v for v in listed.to_pylist() if v is not None]
 
 
-def where(column: Any, value: str) -> NDArray[np.int64]:
-    """Offsets where a string column equals `value`, comparing codes where it is a dictionary."""
+def where(column: Any, value: Any) -> NDArray[np.int64]:
+    """Offsets where a column equals `value`, comparing codes where it is a dictionary.
+
+    The scalar takes the column's own type. Pinning it to one makes the helper work for the
+    columns that happened to have it and raise for the rest, which is the failure R53 §2.1
+    produced by turning every identifier into an integer.
+    """
     if pa.types.is_dictionary(column.type):
         code = column.dictionary.index(value).as_py()
         if code is None or code < 0:
             return np.empty(0, dtype=np.int64)
         matches = pc.equal(column.indices, pa.scalar(code, column.indices.type))
     else:
-        matches = pc.equal(column, pa.scalar(value, pa.string()))
+        matches = pc.equal(column, pa.scalar(value, column.type))
     return np.flatnonzero(pc.fill_null(matches, False).to_numpy(zero_copy_only=False))
 
 

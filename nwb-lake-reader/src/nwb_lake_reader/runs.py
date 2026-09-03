@@ -223,7 +223,7 @@ def preferred_run(
             return declared
     if len(matching) == 1:
         # R41 §2.4: exactly one run is the preference by construction.
-        return str(matching[0]["processing_run_id"])
+        return matching[0]["processing_run_id"]
     raise AmbiguousRun(
         f"{len(matching)} runs produced {activity_type!r} for {scope!r} and none is preferred; "
         f"declare one in {PREFERENCES} (R41 §2.3)"

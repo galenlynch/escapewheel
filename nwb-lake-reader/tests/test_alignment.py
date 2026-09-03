@@ -22,7 +22,7 @@ from nwb_lake_reader.alignment import (
     windows_disjoint,
 )
 
-from .conftest import _resource
+from .conftest import CLOCK_BEHAVIOUR, CLOCK_PROBE, CURATION, SESSION, SORTING_RUN, UNITS, _resource
 
 CUES = [100, 200]
 SPIKES = [90, 100, 145, 190, 210]
@@ -43,22 +43,22 @@ def aligned_packet(tmp_path, packet_root):
 
     spikes = pa.table(
         {
-            "session_id": pa.array(["s001"] * len(SPIKES)),
-            "unit_id": pa.array(["unit_001"] * len(SPIKES)),
-            "sorting_run_id": pa.array(["sort_001"] * len(SPIKES)),
-            "curation_id": pa.array(["cur_001"] * len(SPIKES)),
+            "session_id": pa.array([SESSION] * len(SPIKES)),
+            "unit_id": pa.array([UNITS[0]] * len(SPIKES)),
+            "sorting_run_id": pa.array([SORTING_RUN] * len(SPIKES)),
+            "curation_id": pa.array([CURATION] * len(SPIKES)),
             "t_tick": pa.array(SPIKES, type=pa.int64()),
-            "clock_id": pa.array(["behavior_s001"] * len(SPIKES)),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR] * len(SPIKES)),
             "time_bucket_tick": pa.array([0] * len(SPIKES), type=pa.int64()),
         }
     )
     events = pa.table(
         {
-            "session_id": pa.array(["s001"] * len(CUES)),
+            "session_id": pa.array([SESSION] * len(CUES)),
             "event_id": pa.array([f"cue_{i}" for i in range(len(CUES))]),
             "event_type": pa.array(["cue"] * len(CUES)),
             "t_tick": pa.array(CUES, type=pa.int64()),
-            "clock_id": pa.array(["behavior_s001"] * len(CUES)),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR] * len(CUES)),
         }
     )
     manifest["resources"] = [r for r in manifest["resources"] if r["resource_id"] != "core.events"]
@@ -164,7 +164,7 @@ def test_events_on_another_clock_are_refused(aligned_packet):
     moved = events.set_column(
         events.schema.get_field_index("clock_id"),
         "clock_id",
-        pa.array(["imec_ap_s001"] * events.num_rows),
+        pa.array([CLOCK_PROBE] * events.num_rows),
     )
     pq.write_table(moved, path, compression="zstd")
     with pytest.raises(ClockMismatch, match="map one onto the other"):

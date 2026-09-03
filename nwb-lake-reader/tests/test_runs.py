@@ -10,7 +10,7 @@ from nwb_lake_reader import open_packet
 from nwb_lake_reader.errors import AmbiguousRun
 from nwb_lake_reader.runs import ambiguities, check, preferences, preferred_run
 
-from .conftest import _resource, _write
+from .conftest import SESSION, UNITS, _resource, _write
 
 
 def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
@@ -34,7 +34,7 @@ def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
     table = pa.table(
         {
             "processing_run_id": pa.array([r[0] for r in runs]),
-            "session_id": pa.array(["s001"] * len(runs)),
+            "session_id": pa.array([SESSION] * len(runs)),
             "activity_type": pa.array([r[1] for r in runs]),
             "scope_kind": pa.array([kind_of.get(r[1]) if r[2] else None for r in runs], type=pa.string()),
             "scope": pa.array([r[2] for r in runs], type=pa.string()),
@@ -46,7 +46,7 @@ def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
     if prefs:
         chosen = pa.table(
             {
-                "session_id": pa.array(["s001"] * len(prefs)),
+                "session_id": pa.array([SESSION] * len(prefs)),
                 "activity_type": pa.array([p[0] for p in prefs]),
                 "scope_kind": pa.array([kind_of[p[0]] for p in prefs]),
                 "scope": pa.array([p[1] for p in prefs]),
@@ -100,7 +100,7 @@ def test_a_preference_resolves_it(tmp_path, packet_root):
     assert ambiguities(packet) == ()
     assert check(packet) is None
     assert preferred_run(packet, "spike_sorting", "core.probes", "probe_1") == "sort_b"
-    assert preferences(packet) == {("s001", "spike_sorting", "core.probes", "probe_1"): "sort_b"}
+    assert preferences(packet) == {(SESSION, "spike_sorting", "core.probes", "probe_1"): "sort_b"}
 
 
 def test_a_preference_does_not_leak_across_scopes(tmp_path, packet_root):
@@ -177,7 +177,7 @@ def test_spike_times_refuses_an_unresolved_sorting(tmp_path, packet_root):
     runs = [("sort_a", "curation", "sort_1"), ("sort_b", "curation", "sort_1")]
     packet = _with_runs(tmp_path, packet_root, "spikes_refuse", runs)
     with pytest.raises(AmbiguousRun):
-        packet.spike_times("unit_001")
+        packet.spike_times(UNITS[0])
 
 
 def test_the_raw_table_read_is_the_escape_hatch(tmp_path, packet_root):

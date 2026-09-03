@@ -6,6 +6,23 @@ import pytest
 
 TS = pa.timestamp("us", tz="UTC")
 
+#: R53 §2.1 makes an identifier an integer. The values are distinct across kinds so a test that
+#: confuses two of them fails rather than passing by coincidence, and a carried one (R53 §2.3)
+#: is the number its source would really have supplied.
+SESSION = 1
+SUBJECT = 7
+CLOCK_BEHAVIOUR = 3
+CLOCK_PROBE = 4
+TRIALS = (0, 1)          # carried: an NWB trials table numbers its rows from 0
+UNITS = (11, 12, 13)     # carried: the sorter's own labels
+SORTING_RUN = 5
+CURATION = 6
+EVENTS = (20, 21, 22)
+
+#: The session's name, which is what the manifest lists and what a stable cross-packet
+#: reference uses (R53 §2.3.1).
+SESSION_NAME = "s001"
+
 
 def _write(root, name, table):
     path = root / "tables" / "core"
@@ -29,14 +46,22 @@ def _resource(resource_id, uri, **extra):
     return entry
 
 
+#: R53 §2.3, mirroring the registry's own map: an identifier is the source's own number or one
+#: this format chose, and only the second obliges its owner to carry a `*_name`.
+_CARRIED = {"trial_id", "unit_id"}
+
+
 def _col(name, type_, presence, **extra):
     # R48 §2.1: every column declares a role. Inferred here from the same two conventions the
     # registry's own map rests on, because a test fixture's columns are all ordinary shapes.
     role = ("coordinate" if name.endswith("_tick")
             else "identifier" if name.endswith("_id")
             else extra.pop("role", "data"))
-    return {"name": name, "type": type_, "presence": presence, "role": role,
-            "description": name, **extra}
+    column = {"name": name, "type": type_, "presence": presence, "role": role,
+              "description": name, **extra}
+    if role == "identifier":
+        column["identity"] = "carried" if name in _CARRIED else "assigned"
+    return column
 
 
 def _registry():
@@ -48,8 +73,9 @@ def _registry():
         "tables": {
             "core.sessions": {
                 "columns": [
-                    _col("session_id", "string", "required"),
-                    _col("subject_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
+                    _col("session_name", "string", "nullable"),
+                    _col("subject_id", "int32", "required"),
                     _col("session_start_time", "timestamp", "required"),
                 ],
                 "primary_key": ["session_id"],
@@ -61,7 +87,7 @@ def _registry():
                         "level": "error",
                         "message": "the manifest sessions list disagrees with core.sessions",
                         "sql": (
-                            "SELECT session_id FROM core_sessions WHERE session_id NOT IN "
+                            "SELECT session_name FROM core_sessions WHERE session_name NOT IN "
                             "(SELECT session_id FROM manifest_sessions)"
                         ),
                     }
@@ -69,11 +95,11 @@ def _registry():
             },
             "core.trials": {
                 "columns": [
-                    _col("session_id", "string", "required"),
-                    _col("trial_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
+                    _col("trial_id", "int32", "required"),
                     _col("start_tick", "int64", "required"),
                     _col("stop_tick", "int64", "required"),
-                    _col("clock_id", "string", "required"),
+                    _col("clock_id", "int32", "required"),
                 ],
                 "primary_key": ["session_id", "trial_id"],
                 "references": [
@@ -95,10 +121,10 @@ def _registry():
             },
             "core.units": {
                 "columns": [
-                    _col("session_id", "string", "required"),
-                    _col("unit_id", "string", "required"),
-                    _col("sorting_run_id", "string", "required"),
-                    _col("curation_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
+                    _col("unit_id", "int32", "required"),
+                    _col("sorting_run_id", "int32", "required"),
+                    _col("curation_id", "int32", "required"),
                     _col("quality_label", "string", "nullable", enum=["sua", "mua", "noise"]),
                 ],
                 "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
@@ -108,11 +134,11 @@ def _registry():
             },
             "core.events": {
                 "columns": [
-                    _col("session_id", "string", "required"),
-                    _col("event_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
+                    _col("event_id", "int32", "required"),
                     _col("event_type", "string", "required", vocabulary="open"),
                     _col("t_tick", "int64", "required"),
-                    _col("clock_id", "string", "required"),
+                    _col("clock_id", "int32", "required"),
                 ],
                 "primary_key": ["session_id", "event_id"],
                 "references": [],
@@ -121,12 +147,12 @@ def _registry():
             },
             "core.spike_events": {
                 "columns": [
-                    _col("session_id", "string", "required"),
-                    _col("unit_id", "string", "required"),
-                    _col("sorting_run_id", "string", "required"),
-                    _col("curation_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
+                    _col("unit_id", "int32", "required"),
+                    _col("sorting_run_id", "int32", "required"),
+                    _col("curation_id", "int32", "required"),
                     _col("t_tick", "int64", "required"),
-                    _col("clock_id", "string", "required"),
+                    _col("clock_id", "int32", "required"),
                 ],
                 "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick"],
                 "references": [
@@ -149,48 +175,50 @@ def packet_root(tmp_path):
     root = tmp_path / "session_001"
     root.mkdir()
 
+    i32 = pa.int32()
     sessions = pa.table(
         {
-            "session_id": pa.array(["s001"]),
-            "subject_id": pa.array(["m001"]),
+            "session_id": pa.array([SESSION], type=i32),
+            "session_name": pa.array([SESSION_NAME]),
+            "subject_id": pa.array([SUBJECT], type=i32),
             "session_start_time": pa.array([1_756_000_000_000_000], type=TS),
         }
     )
     trials = pa.table(
         {
-            "session_id": pa.array(["s001", "s001"]),
-            "trial_id": pa.array(["trial_0001", "trial_0002"]),
+            "session_id": pa.array([SESSION] * 2, type=i32),
+            "trial_id": pa.array(list(TRIALS), type=i32),
             "start_tick": pa.array([1000, 6000], type=pa.int64()),
             "stop_tick": pa.array([5000, 10000], type=pa.int64()),
-            "clock_id": pa.array(["behavior_s001"] * 2),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR] * 2, type=i32),
         }
     )
     units = pa.table(
         {
-            "session_id": pa.array(["s001", "s001"]),
-            "unit_id": pa.array(["unit_001", "unit_002"]),
-            "sorting_run_id": pa.array(["sort_001"] * 2),
-            "curation_id": pa.array(["cur_001"] * 2),
+            "session_id": pa.array([SESSION] * 2, type=i32),
+            "unit_id": pa.array(list(UNITS[:2]), type=i32),
+            "sorting_run_id": pa.array([SORTING_RUN] * 2, type=i32),
+            "curation_id": pa.array([CURATION] * 2, type=i32),
             "quality_label": pa.array(["sua", "mua"]),
         }
     )
     events = pa.table(
         {
-            "session_id": pa.array(["s001"] * 3),
-            "event_id": pa.array(["ev_1", "ev_2", "ev_3"]),
+            "session_id": pa.array([SESSION] * 3, type=i32),
+            "event_id": pa.array(list(EVENTS), type=i32),
             "event_type": pa.array(["stimulus_onset", "reward", "stimulus_onset"]),
             "t_tick": pa.array([1200, 4200, 6200], type=pa.int64()),
-            "clock_id": pa.array(["behavior_s001"] * 3),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR] * 3, type=i32),
         }
     )
     spike_events = pa.table(
         {
-            "session_id": pa.array(["s001"] * 5),
-            "unit_id": pa.array(["unit_001"] * 3 + ["unit_002"] * 2),
-            "sorting_run_id": pa.array(["sort_001"] * 5),
-            "curation_id": pa.array(["cur_001"] * 5),
+            "session_id": pa.array([SESSION] * 5, type=i32),
+            "unit_id": pa.array([UNITS[0]] * 3 + [UNITS[1]] * 2, type=i32),
+            "sorting_run_id": pa.array([SORTING_RUN] * 5, type=i32),
+            "curation_id": pa.array([CURATION] * 5, type=i32),
             "t_tick": pa.array([30000, 39000, 48000, 45000, 66000], type=pa.int64()),
-            "clock_id": pa.array(["imec_ap_s001"] * 5),
+            "clock_id": pa.array([CLOCK_PROBE] * 5, type=i32),
         }
     )
     resources = [
@@ -214,7 +242,7 @@ def packet_root(tmp_path):
                 "logical_standard_version": "nwb-lake-logical-v0.1",
                 "registry_version": "0.1.0",
                 "created_at": "2026-08-26T00:00:00Z",
-                "sessions": ["s001"],
+                "sessions": [SESSION_NAME],
                 "required_codecs": [],
                 "resources": resources,
                 "validation": {
@@ -244,12 +272,14 @@ def two_clock_packet(tmp_path, packet_root):
     manifest = json.loads((root / "nwb.packet.json").read_text())
     by_id = {r["resource_id"]: r for r in manifest["resources"]}
 
+    i32 = pa.int32()
     sessions = pa.table(
         {
-            "session_id": pa.array(["s001"]),
-            "subject_id": pa.array(["m001"]),
+            "session_id": pa.array([SESSION], type=i32),
+            "session_name": pa.array([SESSION_NAME]),
+            "subject_id": pa.array([SUBJECT], type=i32),
             "session_start_time": pa.array([1_756_000_000_000_000], type=pa.timestamp("us", tz="UTC")),
-            "reference_clock_id": pa.array(["harp"]),
+            "reference_clock_id": pa.array([CLOCK_BEHAVIOUR], type=i32),
             # Probe tick 0, which is where the probe clock's observation window begins and so
             # what R39 §2.1 makes the origin. It lands on a whole harp second by construction,
             # so a derived second is exact and a test can say what it should be.
@@ -258,18 +288,18 @@ def two_clock_packet(tmp_path, packet_root):
     )
     clocks = pa.table(
         {
-            "clock_id": pa.array(["harp", "probe"]),
-            "session_id": pa.array(["s001"] * 2),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR, CLOCK_PROBE], type=i32),
+            "session_id": pa.array([SESSION] * 2, type=i32),
             "tick_rate_num": pa.array([31_250, 30_000], type=pa.int64()),
             "tick_rate_den": pa.array([1, 1], type=pa.int64()),
-            "parent_clock_id": pa.array([None, "harp"]),
+            "parent_clock_id": pa.array([None, CLOCK_BEHAVIOUR], type=i32),
         }
     )
     # Probe tick 0 is harp tick 1,000,000, and the probe runs at 30 kHz against harp's 31,250.
     n = 8
     anchors = pa.table(
         {
-            "clock_id": pa.array(["probe"] * n),
+            "clock_id": pa.array([CLOCK_PROBE] * n, type=i32),
             "anchor_index": pa.array(list(range(n)), type=pa.int64()),
             "t_tick": pa.array([i * 30_000 for i in range(n)], type=pa.int64()),
             "parent_tick": pa.array([1_000_000 + i * 31_250 for i in range(n)], type=pa.int64()),
@@ -277,21 +307,21 @@ def two_clock_packet(tmp_path, packet_root):
     )
     spikes = pa.table(
         {
-            "session_id": pa.array(["s001"] * 3),
-            "unit_id": pa.array(["unit_001", "unit_001", "unit_003"]),
-            "sorting_run_id": pa.array(["sort_001"] * 3),
-            "curation_id": pa.array(["cur_001"] * 3),
+            "session_id": pa.array([SESSION] * 3, type=i32),
+            "unit_id": pa.array([UNITS[0], UNITS[0], UNITS[2]], type=i32),
+            "sorting_run_id": pa.array([SORTING_RUN] * 3, type=i32),
+            "curation_id": pa.array([CURATION] * 3, type=i32),
             "t_tick": pa.array([30_000, 60_000, 90_000], type=pa.int64()),
-            "clock_id": pa.array(["probe", "probe", "harp"]),
+            "clock_id": pa.array([CLOCK_PROBE, CLOCK_PROBE, CLOCK_BEHAVIOUR], type=i32),
         }
     )
     events = pa.table(
         {
-            "session_id": pa.array(["s001"]),
-            "event_id": pa.array(["ev_1"]),
+            "session_id": pa.array([SESSION], type=i32),
+            "event_id": pa.array([EVENTS[0]], type=i32),
             "event_type": pa.array(["go_cue"]),
             "t_tick": pa.array([1_200_000], type=pa.int64()),
-            "clock_id": pa.array(["harp"]),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR], type=i32),
         }
     )
     for resource_id, name, table in (

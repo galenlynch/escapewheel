@@ -2,7 +2,7 @@ import pyarrow as pa
 import pytest
 
 from nwb_lake_reader import STORED, NotAligned, NoTimeOrigin, open_packet
-from tests.conftest import _resource, _write
+from tests.conftest import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION, SORTING_RUN, UNITS, _resource, _write
 
 
 def test_trials_unfiltered(packet_root):
@@ -11,8 +11,8 @@ def test_trials_unfiltered(packet_root):
 
 def test_trials_filtered_by_session(packet_root):
     pkt = open_packet(packet_root)
-    assert pkt.trials(session_id="s001").num_rows == 2
-    assert pkt.trials(session_id="s999").num_rows == 0
+    assert pkt.trials(session_id=SESSION).num_rows == 2
+    assert pkt.trials(session_id=SESSION + 999).num_rows == 0
 
 
 def test_accessors_use_no_sql_engine(packet_root, monkeypatch):
@@ -58,16 +58,16 @@ def test_unrecognised_event_type_is_empty_not_an_error(packet_root):
 
 def test_spike_times_returns_ticks_with_their_clock(packet_root):
     """A tick has no meaning without the clock it was counted on."""
-    result = open_packet(packet_root).spike_times("unit_001")
+    result = open_packet(packet_root).spike_times(UNITS[0])
     assert result.column_names == ["t_tick", "clock_id"]
     assert result.to_pydict()["t_tick"] == [30000, 39000, 48000]
-    assert set(result.to_pydict()["clock_id"]) == {"imec_ap_s001"}
+    assert set(result.to_pydict()["clock_id"]) == {CLOCK_PROBE}
 
 
 def test_spike_times_narrowed_by_sorting_context(packet_root):
     pkt = open_packet(packet_root)
-    assert pkt.spike_times("unit_002", sorting_run_id="sort_001").num_rows == 2
-    assert pkt.spike_times("unit_002", sorting_run_id="other").num_rows == 0
+    assert pkt.spike_times(UNITS[1], sorting_run_id=SORTING_RUN).num_rows == 2
+    assert pkt.spike_times(UNITS[1], sorting_run_id=SORTING_RUN + 1).num_rows == 0
 
 
 def test_accessors_push_predicates_into_the_reader(packet_root, monkeypatch):
@@ -91,7 +91,7 @@ def test_accessors_push_predicates_into_the_reader(packet_root, monkeypatch):
 
     monkeypatch.setattr(pq, "read_table", refuse)
     assert open_packet(packet_root).units(quality_label="sua").num_rows == 1
-    assert open_packet(packet_root).spike_times("unit_001").num_rows == 3
+    assert open_packet(packet_root).spike_times(UNITS[0]).num_rows == 3
 
 
 def test_table_pushes_equality_constraints(packet_root):
@@ -133,7 +133,7 @@ def test_events_accepts_a_tick_range(packet_root):
 
 
 def test_spike_times_accepts_a_tick_range(packet_root):
-    result = open_packet(packet_root).spike_times("unit_001", t_tick=(30000, 39000))
+    result = open_packet(packet_root).spike_times(UNITS[0], t_tick=(30000, 39000))
     assert result.to_pydict()["t_tick"] == [30000, 39000]
 
 
@@ -154,22 +154,22 @@ def test_scan_is_lazy(packet_root):
 def test_spike_times_come_back_on_the_reference_clock(two_clock_packet):
     """A spike is counted on its probe; a caller comparing that to behaviour needs the map."""
     pkt = open_packet(two_clock_packet)
-    assert pkt.reference_clock() == "harp"
-    result = pkt.spike_times("unit_001")
-    assert set(result.to_pydict()["clock_id"]) == {"harp"}
+    assert pkt.reference_clock() == CLOCK_BEHAVIOUR
+    result = pkt.spike_times(UNITS[0])
+    assert set(result.to_pydict()["clock_id"]) == {CLOCK_BEHAVIOUR}
     assert result.to_pydict()["t_tick"] == [1_031_250, 1_062_500]
 
 
 def test_stored_ticks_take_saying_so(two_clock_packet):
     """The unsynchronized answer is still reachable -- it just cannot be reached by accident."""
-    result = open_packet(two_clock_packet).spike_times("unit_001", clock=STORED)
-    assert set(result.to_pydict()["clock_id"]) == {"probe"}
+    result = open_packet(two_clock_packet).spike_times(UNITS[0], clock=STORED)
+    assert set(result.to_pydict()["clock_id"]) == {CLOCK_PROBE}
     assert result.to_pydict()["t_tick"] == [30_000, 60_000]
 
 
 def test_events_come_back_on_the_reference_clock(two_clock_packet):
     result = open_packet(two_clock_packet).events(event_type="go_cue")
-    assert set(result.to_pydict()["clock_id"]) == {"harp"}
+    assert set(result.to_pydict()["clock_id"]) == {CLOCK_BEHAVIOUR}
 
 
 def test_a_packet_with_one_clock_needs_no_declaration(packet_root):
@@ -177,7 +177,7 @@ def test_a_packet_with_one_clock_needs_no_declaration(packet_root):
     pkt = open_packet(packet_root)
     with pytest.raises(NotAligned, match="reference_clock_id"):
         pkt.reference_clock()
-    assert set(pkt.spike_times("unit_001").to_pydict()["clock_id"]) == {"imec_ap_s001"}
+    assert set(pkt.spike_times(UNITS[0]).to_pydict()["clock_id"]) == {CLOCK_PROBE}
 
 
 def test_rows_spanning_clocks_with_no_reference_are_refused(two_clock_packet, monkeypatch):
@@ -185,7 +185,7 @@ def test_rows_spanning_clocks_with_no_reference_are_refused(two_clock_packet, mo
     pkt = open_packet(two_clock_packet)
     spanning = pkt.table("core.spike_events")
     monkeypatch.setattr(pkt, "reference_clock", _raise_unaligned)
-    assert sorted(set(spanning.to_pydict()["clock_id"])) == ["harp", "probe"]
+    assert sorted(set(spanning.to_pydict()["clock_id"])) == [CLOCK_BEHAVIOUR, CLOCK_PROBE]
     with pytest.raises(NotAligned):
         pkt.on_clock(spanning)
 
@@ -198,18 +198,18 @@ def test_a_tick_range_is_stated_on_the_clock_the_result_uses(two_clock_packet):
     """The range and the ticks it selects must be in one space, or the caller is comparing
     a reference tick against a probe tick without being told."""
     pkt = open_packet(two_clock_packet)
-    whole = pkt.spike_times("unit_001").to_pydict()["t_tick"]
+    whole = pkt.spike_times(UNITS[0]).to_pydict()["t_tick"]
     assert whole == [1_031_250, 1_062_500]
     # A range around the first spike, on the reference clock, must not select the second.
-    narrowed = pkt.spike_times("unit_001", t_tick=(1_031_000, 1_031_500)).to_pydict()["t_tick"]
+    narrowed = pkt.spike_times(UNITS[0], t_tick=(1_031_000, 1_031_500)).to_pydict()["t_tick"]
     assert narrowed == [1_031_250]
     # The same numbers read as stored probe ticks select nothing, and say so rather than
     # quietly returning the whole train.
-    assert pkt.spike_times("unit_001", t_tick=(1_031_000, 1_031_500), clock=STORED).num_rows == 0
+    assert pkt.spike_times(UNITS[0], t_tick=(1_031_000, 1_031_500), clock=STORED).num_rows == 0
 
 
 def test_a_stored_range_still_selects_stored_ticks(two_clock_packet):
-    result = open_packet(two_clock_packet).spike_times("unit_001", t_tick=(29_000, 31_000), clock=STORED)
+    result = open_packet(two_clock_packet).spike_times(UNITS[0], t_tick=(29_000, 31_000), clock=STORED)
     assert result.to_pydict()["t_tick"] == [30_000]
 
 
@@ -229,7 +229,7 @@ def test_the_origin_is_read_not_recomputed(two_clock_packet):
 
 def test_seconds_run_from_the_declared_origin(two_clock_packet):
     """A spike at probe tick 30,000 is harp tick 1,031,250, one harp second past the origin."""
-    found = open_packet(two_clock_packet).spike_times("unit_001", seconds=True)
+    found = open_packet(two_clock_packet).spike_times(UNITS[0], seconds=True)
     assert found.column("t_tick").to_pylist() == [1_031_250, 1_062_500]
     assert found.column("t_second").to_pylist() == [1.0, 2.0]
 
@@ -242,7 +242,7 @@ def test_seconds_are_derived_beside_the_tick_not_instead_of_it(two_clock_packet)
 
 def test_seconds_may_be_negative(two_clock_packet):
     """R39 §2.3: data outside its window is reported, not clamped away."""
-    before = pa.table({"t_tick": pa.array([968_750], type=pa.int64()), "clock_id": pa.array(["harp"])})
+    before = pa.table({"t_tick": pa.array([968_750], type=pa.int64()), "clock_id": pa.array([CLOCK_BEHAVIOUR])})
     assert open_packet(two_clock_packet).seconds(before).column("t_second").to_pylist() == [-1.0]
 
 
@@ -256,7 +256,7 @@ def test_seconds_refuse_ticks_that_are_not_on_the_reference(two_clock_packet):
     """Seconds from a probe tick would be a different quantity wearing the same name."""
     packet = open_packet(two_clock_packet)
     with pytest.raises(NotAligned):
-        packet.seconds(packet.spike_times("unit_001", clock=STORED))
+        packet.seconds(packet.spike_times(UNITS[0], clock=STORED))
 
 
 def test_mapping_uses_the_bound_the_writer_established(two_clock_packet, tmp_path):
@@ -274,7 +274,7 @@ def test_mapping_uses_the_bound_the_writer_established(two_clock_packet, tmp_pat
 
     # Two anchor intervals before the first anchor: outside R27 §5.3's default, inside the
     # bound this packet says its writer measured.
-    far = pa.table({"t_tick": pa.array([-60_000], type=pa.int64()), "clock_id": pa.array(["probe"])})
+    far = pa.table({"t_tick": pa.array([-60_000], type=pa.int64()), "clock_id": pa.array([CLOCK_PROBE])})
     packet = open_packet(root)
     assert packet.on_clock(far).num_rows == 1
     assert packet.on_clock(far, bound=1.0).num_rows == 0

@@ -2,6 +2,8 @@ import pytest
 
 from nwb_lake_reader import ResourceNotFoundError, ResourceUnreadableError, open_packet
 
+from .conftest import TRIALS
+
 
 def test_handle_reads_and_describes(packet_root):
     handle = open_packet(packet_root).table_resource("core.trials")
@@ -21,7 +23,7 @@ def test_dataset_is_lazy_and_filterable(packet_root):
     import pyarrow.dataset as pads
 
     dataset = open_packet(packet_root).table_resource("core.trials").dataset()
-    filtered = dataset.to_table(filter=pads.field("trial_id") == "trial_0002")
+    filtered = dataset.to_table(filter=pads.field("trial_id") == TRIALS[1])
     assert filtered.num_rows == 1
 
 

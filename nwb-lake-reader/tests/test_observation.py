@@ -29,9 +29,10 @@ from nwb_lake_reader.observation import (
     unit_windows,
 )
 
-from .conftest import _resource, _write
+from .conftest import CLOCK_BEHAVIOUR, CURATION, SESSION, SORTING_RUN, UNITS, _resource, _write
 
-CLOCK = "behavior_s001"
+CLOCK = CLOCK_BEHAVIOUR
+LICKS, CUES = 30, 31
 
 
 def _extend(root, manifest, **tables):
@@ -53,7 +54,7 @@ def observed_packet(tmp_path, packet_root):
         clocks=pa.table(
             {
                 "clock_id": pa.array([CLOCK]),
-                "session_id": pa.array(["s001"]),
+                "session_id": pa.array([SESSION]),
                 "tick_rate_hz": pa.array([1000.0]),
                 "tick_rate_num": pa.array([1000], type=pa.int64()),
                 "tick_rate_den": pa.array([1], type=pa.int64()),
@@ -61,14 +62,14 @@ def observed_packet(tmp_path, packet_root):
         ),
         sorting_runs=pa.table(
             {
-                "sorting_run_id": pa.array(["sort_001"]),
-                "session_id": pa.array(["s001"]),
+                "sorting_run_id": pa.array([SORTING_RUN]),
+                "session_id": pa.array([SESSION]),
                 "clock_id": pa.array([CLOCK]),
             }
         ),
         clock_observation_intervals=pa.table(
             {
-                "session_id": pa.array(["s001"]),
+                "session_id": pa.array([SESSION]),
                 "clock_id": pa.array([CLOCK]),
                 "interval_index": pa.array([0], type=pa.int64()),
                 "start_tick": pa.array([0], type=pa.int64()),
@@ -77,10 +78,10 @@ def observed_packet(tmp_path, packet_root):
         ),
         unit_observation_intervals=pa.table(
             {
-                "session_id": pa.array(["s001"]),
-                "unit_id": pa.array(["unit_002"]),
-                "sorting_run_id": pa.array(["sort_001"]),
-                "curation_id": pa.array(["cur_001"]),
+                "session_id": pa.array([SESSION]),
+                "unit_id": pa.array([UNITS[1]]),
+                "sorting_run_id": pa.array([SORTING_RUN]),
+                "curation_id": pa.array([CURATION]),
                 "interval_index": pa.array([0], type=pa.int64()),
                 "start_tick": pa.array([100], type=pa.int64()),
                 "stop_tick": pa.array([599], type=pa.int64()),
@@ -94,14 +95,14 @@ def observed_packet(tmp_path, packet_root):
 def test_a_unit_without_its_own_window_inherits_its_clocks(observed_packet):
     """R38 §2.2: the clock is where observation lives, and a unit reaches it via its run."""
     rows = {r["unit_id"]: r for r in unit_windows(observed_packet).to_pylist()}
-    assert rows["unit_001"]["source"] == INHERITED
-    assert (rows["unit_001"]["start_tick"], rows["unit_001"]["stop_tick"]) == (0, 999)
-    assert rows["unit_001"]["clock_id"] == CLOCK
+    assert rows[UNITS[0]]["source"] == INHERITED
+    assert (rows[UNITS[0]]["start_tick"], rows[UNITS[0]]["stop_tick"]) == (0, 999)
+    assert rows[UNITS[0]]["clock_id"] == CLOCK
 
 
 def test_a_refinement_replaces_the_inherited_window(observed_packet):
     """Not adds. Keeping both would widen the span the refinement narrowed."""
-    rows = [r for r in unit_windows(observed_packet).to_pylist() if r["unit_id"] == "unit_002"]
+    rows = [r for r in unit_windows(observed_packet).to_pylist() if r["unit_id"] == UNITS[1]]
     assert len(rows) == 1
     assert rows[0]["source"] == DECLARED
     assert (rows[0]["start_tick"], rows[0]["stop_tick"]) == (100, 599)
@@ -110,16 +111,16 @@ def test_a_refinement_replaces_the_inherited_window(observed_packet):
 def test_both_ends_are_observed(observed_packet):
     """R18 §2 and R38 §2.2 make the interval closed, so 0..999 is 1000 ticks and not 999."""
     rows = unit_windows(observed_packet)
-    first = rows.filter(pa.compute.equal(rows.column("unit_id"), "unit_001"))
+    first = rows.filter(pa.compute.equal(rows.column("unit_id"), UNITS[0]))
     assert observed_ticks(first) == 1000
-    second = rows.filter(pa.compute.equal(rows.column("unit_id"), "unit_002"))
+    second = rows.filter(pa.compute.equal(rows.column("unit_id"), UNITS[1]))
     assert observed_ticks(second) == 500
 
 
 def test_seconds_come_from_the_clocks_declared_rate(observed_packet):
     """A 1 kHz clock makes 1000 ticks one second, which is what a rate divides by."""
     rows = unit_windows(observed_packet)
-    first = rows.filter(pa.compute.equal(rows.column("unit_id"), "unit_001"))
+    first = rows.filter(pa.compute.equal(rows.column("unit_id"), UNITS[0]))
     assert observed_seconds(observed_packet, first) == pytest.approx(1.0)
     assert rate(3, observed_seconds(observed_packet, first)) == pytest.approx(3.0)
 
@@ -127,8 +128,8 @@ def test_seconds_come_from_the_clocks_declared_rate(observed_packet):
 def test_the_two_units_do_not_share_a_denominator(observed_packet):
     """The whole point: the same count over the two windows is two different rates."""
     rows = unit_windows(observed_packet)
-    one = rows.filter(pa.compute.equal(rows.column("unit_id"), "unit_001"))
-    two = rows.filter(pa.compute.equal(rows.column("unit_id"), "unit_002"))
+    one = rows.filter(pa.compute.equal(rows.column("unit_id"), UNITS[0]))
+    two = rows.filter(pa.compute.equal(rows.column("unit_id"), UNITS[1]))
     assert rate(10, observed_seconds(observed_packet, one)) == pytest.approx(10.0)
     assert rate(10, observed_seconds(observed_packet, two)) == pytest.approx(20.0)
 
@@ -199,18 +200,22 @@ def test_the_view_survives_a_packet_with_no_refinements(tmp_path, packet_root):
         clocks=pa.table(
             {
                 "clock_id": pa.array([CLOCK]),
-                "session_id": pa.array(["s001"]),
+                "session_id": pa.array([SESSION]),
                 "tick_rate_hz": pa.array([1000.0]),
                 "tick_rate_num": pa.array([1000], type=pa.int64()),
                 "tick_rate_den": pa.array([1], type=pa.int64()),
             }
         ),
         sorting_runs=pa.table(
-            {"sorting_run_id": pa.array(["sort_001"]), "session_id": pa.array(["s001"]), "clock_id": pa.array([CLOCK])}
+            {
+                "sorting_run_id": pa.array([SORTING_RUN]),
+                "session_id": pa.array([SESSION]),
+                "clock_id": pa.array([CLOCK]),
+            }
         ),
         clock_observation_intervals=pa.table(
             {
-                "session_id": pa.array(["s001"]),
+                "session_id": pa.array([SESSION]),
                 "clock_id": pa.array([CLOCK]),
                 "interval_index": pa.array([0], type=pa.int64()),
                 "start_tick": pa.array([0], type=pa.int64()),
@@ -241,15 +246,15 @@ def stream_packet(tmp_path, observed_packet):
         manifest,
         event_streams=pa.table(
             {
-                "event_stream_id": pa.array(["licks", "cues"]),
-                "session_id": pa.array(["s001", "s001"]),
+                "event_stream_id": pa.array([LICKS, CUES], type=pa.int32()),
+                "session_id": pa.array([SESSION, SESSION]),
                 "name": pa.array(["licks", "cues"]),
                 "clock_id": pa.array([CLOCK, CLOCK]),
             }
         ),
         event_stream_observation_intervals=pa.table(
             {
-                "event_stream_id": pa.array(["licks"]),
+                "event_stream_id": pa.array([LICKS], type=pa.int32()),
                 "interval_index": pa.array([0], type=pa.int64()),
                 "start_tick": pa.array([200], type=pa.int64()),
                 "stop_tick": pa.array([899], type=pa.int64()),
@@ -263,16 +268,16 @@ def stream_packet(tmp_path, observed_packet):
 def test_a_stream_refines_or_inherits_like_a_unit(stream_packet):
     """R38 §2.2 gives streams the same inheritance, which is why they share a resolution."""
     rows = {r["event_stream_id"]: r for r in stream_windows(stream_packet).to_pylist()}
-    assert rows["licks"]["source"] == DECLARED
-    assert (rows["licks"]["start_tick"], rows["licks"]["stop_tick"]) == (200, 899)
-    assert rows["cues"]["source"] == INHERITED
-    assert (rows["cues"]["start_tick"], rows["cues"]["stop_tick"]) == (0, 999)
+    assert rows[LICKS]["source"] == DECLARED
+    assert (rows[LICKS]["start_tick"], rows[LICKS]["stop_tick"]) == (200, 899)
+    assert rows[CUES]["source"] == INHERITED
+    assert (rows[CUES]["start_tick"], rows[CUES]["stop_tick"]) == (0, 999)
 
 
 def test_a_streams_denominator_is_its_own(stream_packet):
     """700 ticks against 1000, so the same count is not the same rate."""
     rows = stream_windows(stream_packet)
-    licks = rows.filter(pa.compute.equal(rows.column("event_stream_id"), "licks"))
+    licks = rows.filter(pa.compute.equal(rows.column("event_stream_id"), LICKS))
     assert observed_ticks(licks) == 700
     assert observed_seconds(stream_packet, licks) == pytest.approx(0.7)
 
@@ -291,7 +296,7 @@ def test_the_stream_view_agrees_with_the_function(stream_packet):
 
 def test_a_single_unit_read_carries_its_support(observed_packet):
     """So a rate needs no second lookup on the path where the answer is unambiguous."""
-    spikes = observed_packet.spike_times("unit_001")
+    spikes = observed_packet.spike_times(UNITS[0])
     carried = support_of(spikes)
     assert carried is not None
     assert carried.to_pylist() == [{"clock_id": CLOCK, "start_tick": 0, "stop_tick": 999}]
@@ -300,14 +305,14 @@ def test_a_single_unit_read_carries_its_support(observed_packet):
 
 def test_a_refined_unit_carries_its_own_window(observed_packet):
     """The attachment follows the resolution, so a refinement reaches the denominator."""
-    carried = support_of(observed_packet.spike_times("unit_002"))
+    carried = support_of(observed_packet.spike_times(UNITS[1]))
     assert carried.to_pylist() == [{"clock_id": CLOCK, "start_tick": 100, "stop_tick": 599}]
 
 
 def test_filtering_invalidates_the_support_loudly(observed_packet):
     """Arrow keeps metadata through a filter, so without the fingerprint this would silently
     divide by a window the remaining rows no longer span."""
-    spikes = observed_packet.spike_times("unit_001")
+    spikes = observed_packet.spike_times(UNITS[0])
     fewer = spikes.slice(0, 1)
     with pytest.raises(StaleSupport, match="read it again"):
         support_of(fewer)
@@ -317,14 +322,14 @@ def test_filtering_invalidates_the_support_loudly(observed_packet):
 
 def test_concatenation_is_caught_too(observed_packet):
     """The other direction: more rows over the same window would read as a doubled rate."""
-    spikes = observed_packet.spike_times("unit_001")
+    spikes = observed_packet.spike_times(UNITS[0])
     with pytest.raises(StaleSupport):
         support_of(pa.concat_tables([spikes, spikes]))
 
 
 def test_reordering_and_projection_stay_valid(observed_packet):
     """Neither changes which rows the support describes, so neither should be refused."""
-    spikes = observed_packet.spike_times("unit_001")
+    spikes = observed_packet.spike_times(UNITS[0])
     expected = rate_of(observed_packet, spikes)
     assert rate_of(observed_packet, spikes.sort_by("t_tick")) == pytest.approx(expected)
     assert rate_of(observed_packet, spikes.select(["t_tick"])) == pytest.approx(expected)
@@ -332,7 +337,7 @@ def test_reordering_and_projection_stay_valid(observed_packet):
 
 def test_a_range_narrowed_read_carries_no_support(observed_packet):
     """The span is the caller's choice, so the observation window is no denominator for it."""
-    narrowed = observed_packet.spike_times("unit_001", t_tick=(0, 100))
+    narrowed = observed_packet.spike_times(UNITS[0], t_tick=(0, 100))
     assert support_of(narrowed) is None
     with pytest.raises(LookupError, match="no support"):
         rate_of(observed_packet, narrowed)

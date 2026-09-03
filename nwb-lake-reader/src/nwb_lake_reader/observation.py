@@ -78,11 +78,18 @@ def _has(packet: Any, resource_id: str) -> bool:
 
 
 def _empty(names: tuple[str, ...]) -> pa.Table:
-    """Build an empty result with the right columns, so a caller need not branch on absence."""
-    fields = [
-        pa.field(n, pa.int64() if n.endswith("_tick") else pa.string())
-        for n in (*names, "clock_id", "start_tick", "stop_tick", "source")
-    ]
+    """Build an empty result with the right columns, so a caller need not branch on absence.
+
+    Types follow R48's roles as the registry assigns them: a `_tick` is a coordinate in int64,
+    an `_id` an identifier in int32 (R53 §2.1), and what remains is a label. Pinning them all to
+    one type makes the empty result unable to concatenate with a populated one.
+    """
+    def _type(name: str) -> pa.DataType:
+        if name.endswith("_tick"):
+            return pa.int64()
+        return pa.int32() if name.endswith("_id") else pa.string()
+
+    fields = [pa.field(n, _type(n)) for n in (*names, "clock_id", "start_tick", "stop_tick", "source")]
     return pa.table({f.name: pa.array([], type=f.type) for f in fields})
 
 
@@ -490,7 +497,9 @@ def support_of(table: pa.Table) -> pa.Table | None:
     rows = json.loads(metadata[SUPPORT_KEY])
     return pa.table(
         {
-            "clock_id": pa.array([r["clock_id"] for r in rows], type=pa.string()),
+            # No type pinned: a clock_id is an int32 identifier (R53 §2.1) and the support is
+            # rebuilt from what was recorded, so the column takes the values' own type.
+            "clock_id": pa.array([r["clock_id"] for r in rows]),
             "start_tick": pa.array([r["start_tick"] for r in rows], type=pa.int64()),
             "stop_tick": pa.array([r["stop_tick"] for r in rows], type=pa.int64()),
         }

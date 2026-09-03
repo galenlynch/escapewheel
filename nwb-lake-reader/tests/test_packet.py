@@ -7,6 +7,8 @@ from nwb_lake_reader import (
     open_packet,
 )
 
+from .conftest import SESSION_NAME, SUBJECT
+
 
 def test_success_criterion(packet_root):
     """07's Phase 1 success criterion, verbatim."""
@@ -65,7 +67,7 @@ def test_sql_across_resources(packet_root):
         "FROM core_trials t JOIN core_sessions s USING (session_id) "
         "GROUP BY s.subject_id"
     )
-    assert result.to_pydict() == {"subject_id": ["m001"], "n": [2]}
+    assert result.to_pydict() == {"subject_id": [SUBJECT], "n": [2]}
 
 
 def test_embedded_registry_is_exposed(packet_root):
@@ -130,6 +132,6 @@ def test_unopenable_is_empty_when_everything_reads(packet_root):
 
 def test_sessions_and_repr(packet_root):
     pkt = open_packet(packet_root)
-    assert pkt.sessions == ("s001",)
+    assert pkt.sessions == (SESSION_NAME,)
     assert "session_001" in repr(pkt)
     assert pkt.root == packet_root

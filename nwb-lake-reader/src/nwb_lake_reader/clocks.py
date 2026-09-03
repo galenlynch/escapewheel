@@ -41,7 +41,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 from numpy.typing import NDArray
 
-from .dictionaries import constant, values, where
+from .dictionaries import values, where
 from .errors import NoTimeOrigin
 
 #: How far from an anchor the mapping stays defined, as a multiple of the median anchor
@@ -261,18 +261,18 @@ def declared_bound(packet: Any) -> float:
     return widest
 
 
-def reference_clock(packet: Any) -> str:
+def reference_clock(packet: Any) -> Any:
     """Return the clock a session reports its times on (R27 §2)."""
     sessions = packet.table("core.sessions")
     declared = (
         sessions.column("reference_clock_id").to_pylist() if "reference_clock_id" in sessions.column_names else []
     )
-    if named := [d for d in declared if d]:
-        return str(named[0])
+    if named := [d for d in declared if d is not None]:
+        return named[0]
     raise NotAligned("the session declares no reference_clock_id (R27 §2), so there is nothing to map onto")
 
 
-def mapped(batch: pa.RecordBatch, reference: str, anchors: Any, bound: float) -> tuple[Any, Any]:
+def mapped(batch: pa.RecordBatch, reference: Any, anchors: Any, bound: float) -> tuple[Any, Any]:
     """Map one batch's ticks onto the reference clock, returning the ticks and what to keep."""
     ticks = np.asarray(batch.column("t_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
     clocks = batch.column("clock_id")
@@ -357,7 +357,7 @@ def _flat(column: Any) -> pa.Array:
     return combined
 
 
-def default_clock(packet: Any, present: list[str]) -> str:
+def default_clock(packet: Any, present: list[Any]) -> Any:
     """Return the clock to map onto when the caller named none.
 
     The declared reference, or -- where a packet declares none -- the one clock the rows are
@@ -366,14 +366,14 @@ def default_clock(packet: Any, present: list[str]) -> str:
     as stored invites a comparison that means nothing.
     """
     try:
-        return str(packet.reference_clock())
+        return packet.reference_clock()
     except NotAligned:
         if len(present) == 1:
             return present[0]
         raise
 
 
-def tick_rate(packet: Any, clock_id: str) -> tuple[int, int]:
+def tick_rate(packet: Any, clock_id: Any) -> tuple[int, int]:
     """Return a clock's rational tick rate, which R39 §2.3 prefers to `tick_rate_hz`."""
     clocks = packet.table("core.clocks")
     names = clocks.column("clock_id").to_pylist()
@@ -483,7 +483,11 @@ def on_clock(packet: Any, table: pa.Table, clock: str | None = None, *, bound: f
     ticks, keep = mapped(pa.record_batch(columns), target, anchors(packet), limit)
     names = table.column_names
     out = table.set_column(names.index("t_tick"), "t_tick", pa.array(ticks))
-    out = out.set_column(names.index("clock_id"), "clock_id", constant(target, table.num_rows))
+    # The replacement keeps the column's declared type. A dictionary would change it, and buys
+    # nothing on an integer, which is what every identifier is (R53 §2.1).
+    clock = table.column("clock_id")
+    out = out.set_column(names.index("clock_id"), "clock_id",
+                         pa.array([target] * table.num_rows, type=clock.type))
     return out.filter(pa.array(keep))
 
 
