@@ -1,0 +1,233 @@
+{
+  "registry_version": "0.1.0",
+  "logical_standard_version": "0.1",
+  "extension_id": "dynamic_foraging",
+  "extends": "nwb-lake-logical-v0.1",
+  "tables": {
+    "dynamic_foraging.trials": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID."
+        },
+        {
+          "name": "trial_id",
+          "type": "string",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The `core.trials` row this describes."
+        },
+        {
+          "name": "choice",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Which spout the animal chose, or `none` where it did not respond. Closed here and not in core: `none` is not a choice, and a foraging task's outcomes are not a two-alternative task's.",
+          "enum": [
+            "left",
+            "right",
+            "none"
+          ]
+        },
+        {
+          "name": "rewarded",
+          "type": "bool",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Whether the trial delivered reward."
+        },
+        {
+          "name": "iti_duration",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Inter-trial interval this trial drew, in seconds, from the task's exponential."
+        },
+        {
+          "name": "reward_probability_left",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Reward probability for the left spout, held constant within a block."
+        },
+        {
+          "name": "reward_probability_right",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Reward probability for the right spout, held constant within a block."
+        },
+        {
+          "name": "reward_random_number_left",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The draw compared against `reward_probability_left` to decide baiting."
+        },
+        {
+          "name": "reward_random_number_right",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The draw compared against `reward_probability_right`."
+        },
+        {
+          "name": "bait_left",
+          "type": "bool",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Whether the left spout was baited."
+        },
+        {
+          "name": "bait_right",
+          "type": "bool",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Whether the right spout was baited."
+        },
+        {
+          "name": "lickspout_position_x",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Lickspout x position, mm."
+        },
+        {
+          "name": "lickspout_position_y",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Lickspout y position, mm."
+        },
+        {
+          "name": "lickspout_position_z",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Lickspout z position, mm."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "trial_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "trial_id"
+          ],
+          "resource": "core.trials",
+          "resource_columns": [
+            "session_id",
+            "trial_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "trial_id"
+      ],
+      "rules": [
+        {
+          "id": "dynamic_foraging.trials.bait_needs_a_probability",
+          "level": "error",
+          "message": "a spout is baited but the trial records no reward probability for it",
+          "sql": "SELECT session_id, trial_id FROM dynamic_foraging_trials WHERE (bait_left AND reward_probability_left IS NULL) OR (bait_right AND reward_probability_right IS NULL)"
+        }
+      ]
+    },
+    "dynamic_foraging.blocks": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "string",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID."
+        },
+        {
+          "name": "block_id",
+          "type": "string",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Stable block ID."
+        },
+        {
+          "name": "clock_id",
+          "type": "string",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Clock for start/stop ticks."
+        },
+        {
+          "name": "start_tick",
+          "type": "int64",
+          "presence": "required",
+          "role": "coordinate",
+          "description": "First tick of the block, inclusive, on `clock_id` (R45 \u00a72)."
+        },
+        {
+          "name": "stop_tick",
+          "type": "int64",
+          "presence": "required",
+          "role": "coordinate",
+          "description": "Last tick of the block, inclusive, on `clock_id` (R45 \u00a72)."
+        },
+        {
+          "name": "reward_probability_left",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The left probability this block holds constant."
+        },
+        {
+          "name": "reward_probability_right",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The right probability this block holds constant."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "block_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "start_tick"
+      ],
+      "rules": [
+        {
+          "id": "dynamic_foraging.blocks.interval_valid",
+          "level": "error",
+          "message": "stop_tick precedes start_tick",
+          "sql": "SELECT session_id, block_id, start_tick, stop_tick FROM dynamic_foraging_blocks WHERE stop_tick < start_tick"
+        }
+      ]
+    }
+  }
+}
