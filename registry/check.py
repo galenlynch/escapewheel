@@ -251,19 +251,15 @@ for _r, _t in ALL.items():
                 _disc.append(f"{_r}.{_c['name']}: discriminates {_paired}, which is not a column here")
 check("a discriminator declares what it resolves to", sorted(_disc))
 
-# R55 §4's open question, reported rather than failed. A paired value holds an identifier in the
-# named table's key space, and R53 §2.1 made those int32 -- but `scope` stayed a string declared
-# `data`, so a scope naming a probe holds "3" as text. R55 declines to settle it, since it is
-# R53's consequence; what is not acceptable is for it to stop being visible.
-_untyped = [f"{_r}.{_c['discriminates']} is the paired value of {_c['name']} and is declared "
-            f"{next(x for x in _t['columns'] if x['name'] == _c['discriminates'])['role']}/"
-            f"{next(x for x in _t['columns'] if x['name'] == _c['discriminates'])['type']}, "
-            f"not an identifier (R55 §4)"
-            for _r, _t in ALL.items() for _c in _t["columns"]
-            if _c.get("discriminates") and any(
-                x["name"] == _c["discriminates"] and x.get("role") != "identifier" for x in _t["columns"])]
-for _line in sorted(_untyped):
-    print(f"      open  {_line}")
+# R55 §2.3.3. A paired value is a string, and not by accident: one column resolves against
+# several kinds, and an assigned key is matched by its `*_name` where a carried one is matched by
+# the number itself, so the union it joins mixes types by construction.
+check("a paired value is a string",
+      sorted(f"{_r}.{_c['discriminates']} is declared "
+             f"{next(x for x in _t['columns'] if x['name'] == _c['discriminates'])['type']}"
+             for _r, _t in ALL.items() for _c in _t["columns"]
+             if _c.get("discriminates") and any(
+                 x["name"] == _c["discriminates"] and x["type"] != "string" for x in _t["columns"])))
 
 # R55 §2.3.1: a paired value holds one identifier, so it can only name a resource whose key is one
 # column. Reported rather than enforced -- the kind vocabulary is open (R49 §2.4), so what this can
@@ -271,9 +267,23 @@ for _line in sorted(_untyped):
 # no branch.
 NAMABLE = {_r: _t["primary_key"][0] for _r, _t in ALL.items()
            if _t.get("primary_key") and len(_t["primary_key"]) == 1}
-_core_namable = sum(1 for _r in NAMABLE if _r in T)
-print(f"      {_core_namable} of {len(T)} core resources have a single-column key "
-      f"({len(NAMABLE)} of {len(ALL)} with extensions), so a paired-value discriminator names those")
+# R55 §2.3.3: which column a paired value matches follows from the key's identity, so the split
+# is a property of the registry and is reported rather than rediscovered per consumer.
+_by_name = {_r for _r, _k in NAMABLE.items()
+            if next(c for c in ALL[_r]["columns"] if c["name"] == _k).get("identity") == "assigned"
+            and any(c["name"] == _k.removesuffix("_id") + "_name" for c in ALL[_r]["columns"])}
+_core = {_r for _r in NAMABLE if _r in T}
+print(f"      {len(_core)} of {len(T)} core resources have a single-column key "
+      f"({len(NAMABLE)} of {len(ALL)} with extensions); "
+      f"{len(_by_name & _core)} of those resolve by name, {len(_core - _by_name)} by key")
+# A single-column key is necessary and not sufficient. An assigned identifier a table does not
+# *own* -- it is exported through a reference, so R53 §2.3.1 puts the name on the owner -- has no
+# column a value written before the build could match, so the resource is simply not namable.
+# vr_foraging.sessions is the instance: its session_id belongs to core.sessions.
+_unnamable = sorted(_r for _r, _k in NAMABLE.items() if _r not in _by_name
+                    and next(c for c in ALL[_r]["columns"] if c["name"] == _k).get("identity") == "assigned")
+for _r in _unnamable:
+    print(f"      note  {_r} has a single-column key but no name to match, so a scope cannot name it")
 
 # R56 §2.4: a declared unit or clock source must resolve. Structural -- decidable from the
 # registry with no packet in hand, which is where this format puts a check it can make without
