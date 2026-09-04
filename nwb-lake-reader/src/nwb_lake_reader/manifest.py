@@ -40,7 +40,7 @@ class Resource:
     Attributes
     ----------
     resource_id : str
-        Dotted resource ID, e.g. ``core.trials``.
+        Dotted resource ID, e.g. ``core.intervals``.
     layer : str
         ``core``, ``analysis``, or ``docs``.
     kind : str

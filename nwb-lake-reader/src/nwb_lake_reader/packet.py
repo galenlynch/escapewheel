@@ -401,8 +401,8 @@ class Packet:
     def duckdb(self, *, connection: duckdb.DuckDBPyConnection | None = None) -> duckdb.DuckDBPyConnection:
         """Register every table resource as a view and return the connection.
 
-        Views are named by flattening the dotted resource ID, so ``core.trials`` is queried
-        as ``core_trials``. `unit_observation` and `stream_observation` are registered
+        Views are named by flattening the dotted resource ID, so ``core.intervals`` is queried
+        as ``core_intervals``. `unit_observation` and `stream_observation` are registered
         alongside where their inputs are present, resolving R38's inheritance so a rate has a
         denominator without the caller writing the join.
 

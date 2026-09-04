@@ -10,18 +10,18 @@ from __future__ import annotations
 def sql_name(resource_id: str) -> str:
     """Convert a resource ID to its SQL identifier.
 
-    Resource IDs are dotted (``core.trials``); SQL identifiers are not, so dots become
+    Resource IDs are dotted (``core.intervals``); SQL identifiers are not, so dots become
     underscores. This is the convention the specification's own examples use.
 
     Parameters
     ----------
     resource_id : str
-        Dotted resource ID, e.g. ``core.trials``.
+        Dotted resource ID, e.g. ``core.intervals``.
 
     Returns
     -------
     str
-        The SQL identifier, e.g. ``core_trials``.
+        The SQL identifier, e.g. ``core_intervals``.
     """
     return resource_id.replace(".", "_")
 
