@@ -39,6 +39,16 @@ check("table set matches R9 §2 ledger", expected ^ set(T))
 # R29 §6. A 02 table whose columns a revision amended carries `since` on those columns and
 # not on itself, which is right -- so the checkable claims are the format and that every
 # revision the build stamps is one the registry says it derived from.
+# The inverse, and the one that was actually missing: a revision may be accepted, implemented,
+# and left out of the list. R54, R65 and R66 all were, for several revisions each, because the
+# list was hand-maintained and only the stamped direction was checked.
+_accepted = {f"R{re.match(r'R(\d+)', q.name).group(1)}" for q in (HERE.parent / "revisions").glob("R*.md")
+             if "**Accepted**" in q.read_text()[:400]}
+_listed = set(REG.get("derived_from", {}).get("revisions", []))
+check("every accepted revision is declared in derived_from",
+      sorted(_accepted - _listed, key=lambda r: int(r[1:])))
+check("derived_from declares no revision that is not accepted",
+      sorted(_listed - _accepted, key=lambda r: int(r[1:])))
 check("every stamped revision is declared in derived_from",
       sorted({v.split(" ")[0] for n, t in T.items()
               for v in [t.get("since"), *(c.get("since") for c in t["columns"])] if v}

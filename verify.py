@@ -35,13 +35,14 @@ TOOLS = ROOT / "nwb-lake-writer"
 #: Each stage: what it is, where it runs, and what to run. A stage fails on a non-zero exit.
 STAGES: list[tuple[str, Path, list[str]]] = [
     ("registry: generate", ROOT / "registry", [sys.executable, "build.py"]),
+    ("root: the documents' counts are current", ROOT, [sys.executable, "facts.py"]),
     ("registry: structural checks", ROOT / "registry",
      ["uv", "run", "--project", str(TOOLS), "python", "check.py"]),
     # A ratchet: the backlog of undisposed clauses may shrink and must not grow. Adding a
     # revision fails this until someone records where each of its clauses went, which is the
     # property two independent audits of the compiled spec found missing.
     ("spec: every revision clause has a disposition", ROOT / "nwb_lake_poc_docs_v0.2",
-     [sys.executable, "ledger.py", "--summary", "--max-undisposed", "137"]),
+     [sys.executable, "ledger.py", "--summary"]),
     ("spec: the single-file rendering is current", ROOT / "nwb_lake_poc_docs_v0.2",
      [sys.executable, "combine.py", "--check"]),
     ("prototype: write packets", ROOT / "prototype/registry-codegen",
@@ -60,7 +61,8 @@ SUITES = ("nwb-lake-reader", "nwb-lake-validator", "nwb-lake-writer")
 
 #: Directories whose tracked content must be unchanged once the generators have run. Only the
 #: ones holding generated output; an unrelated edit elsewhere is not this tool's business.
-GENERATED = ("registry", "prototype", "fixtures")
+GENERATED = ("registry", "prototype", "fixtures", "nwb_lake_poc_docs_v0.2",
+             "CLAUDE.md", "STATUS.md", "TODO.md")
 
 
 def run(cwd: Path, argv: list[str]) -> tuple[bool, str]:

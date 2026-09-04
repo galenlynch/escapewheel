@@ -8,13 +8,21 @@ settled item lives in the revision it produced and in git history, not here.
 Last checked 2026-09-04, by `python verify.py` — which is the way to check it, rather than by
 reading this block. Everything below is what that command reports.
 
-**R1–R41 and R43–R70 accepted and implemented. R42 withdrawn. Nothing is proposed.**
-Registry: 34 tables, 315 columns, 76 references, 66 Tier 2 rules, 21 invariants in `check.py`.
-Tests: 152 reader, 380 writer, 93 validator, 26 conformance packets, 12 verification stages. All
-green.
+<!-- BEGIN facts: revisions -->
+R1–R41 and R43–R70 accepted. R42 withdrawn. R71–R76 proposed and not binding.
+<!-- END facts: revisions -->
+<!-- BEGIN facts: registry -->
+34 tables, 315 columns, 76 references, 66 Tier 2 rules (4 advisory)
+<!-- END facts: registry -->
+<!-- BEGIN facts: corpus -->
+26 conformance packets
+<!-- END facts: corpus -->
 
-**Four extension registries** in `registry/extensions/`: `dynamic_foraging` (3 tables),
-`aind_unit_qc` (3), `aind_opto` (2), `vr_foraging` (3). Each drawn from columns measured in a real
+<!-- BEGIN facts: extensions -->
+4 extension registries: aind_opto, aind_unit_qc, dynamic_foraging, vr_foraging
+<!-- END facts: extensions -->
+
+Each drawn from columns measured in a real
 session rather than invented — see `registry/extensions/README.md`. The conformance corpus carries
 one, because R54 §2.4a leaves a packet holding intervals no way not to.
 

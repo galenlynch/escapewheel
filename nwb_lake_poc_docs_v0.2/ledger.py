@@ -71,14 +71,13 @@ def main() -> int:
     """Report every clause with no disposition, and every disposition naming no clause."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--summary", action="store_true", help="counts only")
-    # A ratchet, not a gate. 137 clauses are undisposed today and clearing them is real work;
-    # what must not happen is the number growing, which is what adding a revision does until
-    # someone says where its clauses went. CI passes the current count and fails on 138.
-    parser.add_argument("--max-undisposed", type=int, default=0,
-                        help="tolerate this many undisposed clauses; more is a failure")
     args = parser.parse_args()
 
     binding, ledger = clauses(), recorded()
+    # The ratchet's high-water mark lives beside the data it describes, not as a number in
+    # another file that someone has to remember to lower. Falling below it rewrites it, so
+    # disposing a clause shows up as a diff and `verify.py`'s clean-tree stage sees it.
+    baseline = tomllib.loads(LEDGER.read_text()).get("baseline", {}).get("undisposed", 0) if LEDGER.exists() else 0
     undisposed = {k: v for k, v in binding.items() if k not in ledger}
     # A disposition for a clause that no longer exists is as wrong as a missing one: the revision
     # was edited, or the clause was renumbered, and the ledger now vouches for nothing.
@@ -102,12 +101,17 @@ def main() -> int:
         for key, value in sorted(bad.items()):
             print(f"    BAD         {key:<12} disposition {value!r} is not one of {sorted(DISPOSITIONS)}")
 
-    over = max(0, len(undisposed) - args.max_undisposed)
+    over = max(0, len(undisposed) - baseline)
     failures = over + len(stale) + len(bad)
+    if len(undisposed) < baseline:
+        text = LEDGER.read_text()
+        LEDGER.write_text(re.sub(r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text))
+        print(f"\nratchet lowered: {baseline} -> {len(undisposed)}; commit applied.toml")
+        return 0
     if not failures:
-        print(f"\nok — {len(undisposed)} undisposed, within the {args.max_undisposed} allowed")
+        print(f"\nok — {len(undisposed)} undisposed, at the recorded high-water mark")
     else:
-        print(f"\n{failures} clause(s) need a disposition")
+        print(f"\n{failures} clause(s) need a disposition; the mark is {baseline}")
     return 1 if failures else 0
 
 

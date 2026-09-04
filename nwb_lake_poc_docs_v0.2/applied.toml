@@ -1,3 +1,7 @@
+# The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
+[baseline]
+undisposed = 137
+
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
 
@@ -217,3 +221,4 @@ where = "01_semantic_standard.md §3.18"
 [clause."R70 §2.3"]
 disposition = "implementation"
 note = "an obligation on a writer or validator, walked in the 2026-09-04 compliance pass"
+
