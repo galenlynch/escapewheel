@@ -60,6 +60,14 @@ validation surface consists of.
 
 ## Prototype limits
 
+**Pinned to R2's era, deliberately.** `registry.json` here is its own document, not a subset of
+`registry/logical_schemas.json`, and it predates the revisions that changed what a core table
+looks like: identifiers are strings (R53 made them `int32`), no column declares a `role` (R48),
+and the table it demonstrates on is `core.trials`, which R54 replaced with `core.intervals` keyed
+by a discriminator. Renaming it would produce a `core.intervals` that is wrong in three other
+ways. What this prototype demonstrates is R2's chain — registry as data, generator, SQL — and
+that chain is unchanged; the counts and table names below are the ones R2 was argued against.
+
 - Three of the 24 tables; no `rules` beyond one example.
 - No manifest handling, no JSON Schema, no Zarr array checks, no checksums.
 - Type checking compares against pyarrow type strings, which is a stand-in for a
