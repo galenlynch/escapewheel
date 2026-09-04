@@ -2,7 +2,7 @@
 
 ## Status of this document
 
-This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41 and R43–R65 applied; R42 was withdrawn and is not applied.
+This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41, R43–R66, R68 and R69 applied. R42 was withdrawn; R67 is proposed and is not applied.
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
 

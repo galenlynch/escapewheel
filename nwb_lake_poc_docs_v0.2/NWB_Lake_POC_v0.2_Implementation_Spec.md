@@ -10,7 +10,7 @@ part number here as it does there.
 
 ## Status of this document
 
-This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41 and R43–R65 applied; R42 was withdrawn and is not applied.
+This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41, R43–R66, R68 and R69 applied. R42 was withdrawn; R67 is proposed and is not applied.
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
 
@@ -488,6 +488,17 @@ An array asset SHOULD name the device that produced it, where the writer knows w
 ### 3.18 Media asset
 
 An image or video stored in an ordinary container, with frame timing carried in tables.
+
+- MUST have a stable media asset ID, a URI, and a format.
+- SHOULD carry a frame table where synchronization matters.
+
+A frame row is indexed by **presentation order**: row *n* describes the frame the asset presents nth, counting from 0 (R69 §2.1). A writer MUST NOT number frames in the order the container stores them, which differs wherever a codec reorders — a stream with bidirectional frames displaces one by several positions, and the resulting misattribution of time is monotonic and therefore invisible.
+
+The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing gets no row and no reserved index (R69 §2.2); what went missing is recorded in the columns that carry timing, not as a gap in the numbering.
+
+A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim (R68 §2.1, §2.2). A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets or use it to measure elapsed time (R68 §2.5); what it locates is the frame inside the file.
+
+The time base is not carried in core. The container declares it, and a consumer holding a presentation timestamp holds the file it indexes into (R68 §2.4).
 
 ### 3.19 Source file
 
