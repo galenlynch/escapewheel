@@ -342,7 +342,9 @@ A unit is declared on the column, not left to the column's name (R56 §2).
 
 ### 2.6 Currency
 
-Where several derived results of the same kind and scope coexist, a consumer MUST NOT silently choose between them. A preference is declared, keyed on the producing run (R41 §2), and a run declares the scope it is about (R44 §2). A run declaring no scope is undeterminable, which a consumer MUST report separately from ambiguous.
+Where several derived results of the same kind and scope coexist, a consumer MUST NOT silently choose between them: it refuses, or reports the ambiguity (R44 §2.2). A preference is declared, keyed on the producing run (R41 §2.3), and a consumer selecting derived data for an activity SHOULD use the preferred run where one is declared for the matching scope (R41 §2.4) — a declared preference a consumer ignores is a preference for nobody.
+
+A run declares the scope it is about (R44 §2.1). A run declaring none is **undeterminable**, which a consumer MUST report separately from ambiguous, and the state is contagious: where more than one run exists for an `activity_type` and **any** of them declares no scope, a consumer MUST NOT conclude the group is unambiguous (R44 §2.3). The unscoped run may or may not be about the same thing as the others, and nothing in the packet says which.
 
 Where a run supersedes another, the chain MUST be well-founded: a run MUST NOT supersede itself, directly or transitively (R41 §2.2).
 
@@ -1412,6 +1414,8 @@ Declared per table as SQL returning offending rows, or as an expanded template (
 ### 5.3 The shim
 
 Physical order, file presence, Parquet types, Zarr rank and codecs, and checksums MUST be checked outside SQL (R12 §4). A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
+
+A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key (R31 §5).
 
 ### 5.4 Extensions
 

@@ -112,6 +112,8 @@ Declared per table as SQL returning offending rows, or as an expanded template (
 
 Physical order, file presence, Parquet types, Zarr rank and codecs, and checksums MUST be checked outside SQL (R12 §4). A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
 
+A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key (R31 §5).
+
 ### 5.4 Extensions
 
 Each extension registry present is validated on the same terms as core, and its verdict is reported separately (R17 §4). A core failure MUST NOT be attributed to an extension, and an extension failure MUST NOT invalidate core.

@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 130
+undisposed = 114
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -793,4 +793,69 @@ disposition = "rationale"
 note = "no schema change; the vocabulary was already open"
 
 [clause."R64 §2.3"]
+disposition = "rationale"
+
+[clause."R9 §2"]
+disposition = "registry"
+note = "core.source_files, core.processing_runs, core.processing_run_inputs; the graph withdrawn"
+
+[clause."R9 §5"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.4"
+
+[clause."R9 §6"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.3"
+note = "covered by the general open-vocabulary rule; activity_type declares no enum"
+
+[clause."R31 §2"]
+disposition = "applied"
+where = "04_packet_catalog.md §3"
+
+[clause."R31 §4"]
+disposition = "rationale"
+note = "reconciles R9's SHOULD with 06's MUST; both stand and the spec states each"
+
+[clause."R31 §5"]
+disposition = "applied"
+where = "05_validation_and_import.md §5.3"
+note = "restored 2026-09-04; a manifest-to-table claim is the shim's, not a foreign key"
+
+[clause."R31 §6"]
+disposition = "rationale"
+
+[clause."R41 §2.1"]
+disposition = "registry"
+note = "processing_run_id on core.sorting_runs and core.curation_versions"
+
+[clause."R41 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.20"
+
+[clause."R41 §2.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.4"
+
+[clause."R41 §2.4"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.4"
+note = "restored 2026-09-04; the positive half -- use the preference -- was absent"
+
+[clause."R41 §2.5"]
+disposition = "rationale"
+note = "currency is not a version; R32 versions the bundle"
+
+[clause."R44 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.4"
+
+[clause."R44 §2.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.4"
+note = "restored 2026-09-04; one unscoped run makes the whole group undeterminable"
+
+[clause."R44 §2.4"]
+disposition = "rationale"
+
+[clause."R44 §5"]
 disposition = "rationale"
