@@ -6,18 +6,18 @@ from nwb_lake_reader.scripts.cli import main
 def test_ls_lists_resources(packet_root, capsys):
     assert main(["ls", str(packet_root)]) == 0
     out = capsys.readouterr().out
-    assert "core.trials" in out and "core.sessions" in out
+    assert "core.intervals" in out and "core.sessions" in out
     assert "sessions: s001" in out
 
 
 def test_ls_marks_missing_resources(packet_root, capsys):
-    (packet_root / "tables" / "core" / "trials.parquet").unlink()
+    (packet_root / "tables" / "core" / "intervals.parquet").unlink()
     assert main(["ls", str(packet_root)]) == 0
     assert "missing" in capsys.readouterr().out
 
 
 def test_sql_runs_a_query(packet_root, capsys):
-    assert main(["sql", str(packet_root), "SELECT COUNT(*) AS n FROM core_trials"]) == 0
+    assert main(["sql", str(packet_root), "SELECT COUNT(*) AS n FROM core_intervals"]) == 0
     assert "2" in capsys.readouterr().out
 
 

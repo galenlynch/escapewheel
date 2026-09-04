@@ -16,7 +16,7 @@ def test_load_parses_declared_fields(packet_root):
     assert manifest.required_codecs == ()
     assert {r.resource_id for r in manifest.resources} == {
         "core.sessions",
-        "core.trials",
+        "core.intervals",
         "core.units",
         "core.events",
         "core.spike_events",

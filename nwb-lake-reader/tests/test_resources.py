@@ -6,24 +6,24 @@ from .conftest import TRIALS
 
 
 def test_handle_reads_and_describes(packet_root):
-    handle = open_packet(packet_root).table_resource("core.trials")
-    assert handle.resource_id == "core.trials"
-    assert handle.sql_name == "core_trials"
+    handle = open_packet(packet_root).table_resource("core.intervals")
+    assert handle.resource_id == "core.intervals"
+    assert handle.sql_name == "core_intervals"
     assert handle.to_arrow().num_rows == 2
-    assert "core.trials" in repr(handle)
+    assert "core.intervals" in repr(handle)
 
 
 def test_schema_without_reading_data(packet_root):
-    schema = open_packet(packet_root).table_resource("core.trials").schema()
-    assert schema.names == ["session_id", "trial_id", "start_tick", "stop_tick", "clock_id"]
+    schema = open_packet(packet_root).table_resource("core.intervals").schema()
+    assert schema.names == ["session_id", "interval_kind", "interval_id", "start_tick", "stop_tick", "clock_id"]
     assert str(schema.field("start_tick").type) == "int64"
 
 
 def test_dataset_is_lazy_and_filterable(packet_root):
     import pyarrow.dataset as pads
 
-    dataset = open_packet(packet_root).table_resource("core.trials").dataset()
-    filtered = dataset.to_table(filter=pads.field("trial_id") == TRIALS[1])
+    dataset = open_packet(packet_root).table_resource("core.intervals").dataset()
+    filtered = dataset.to_table(filter=pads.field("interval_id") == TRIALS[1])
     assert filtered.num_rows == 1
 
 
@@ -31,22 +31,22 @@ def test_register_returns_the_view_name(packet_root):
     import duckdb
 
     con = duckdb.connect()
-    name = open_packet(packet_root).table_resource("core.trials").register(con)
-    assert name == "core_trials"
-    assert con.sql("SELECT COUNT(*) FROM core_trials").fetchone() == (2,)
+    name = open_packet(packet_root).table_resource("core.intervals").register(con)
+    assert name == "core_intervals"
+    assert con.sql("SELECT COUNT(*) FROM core_intervals").fetchone() == (2,)
 
 
 def test_register_accepts_an_explicit_name(packet_root):
     import duckdb
 
     con = duckdb.connect()
-    open_packet(packet_root).table_resource("core.trials").register(con, name="t")
+    open_packet(packet_root).table_resource("core.intervals").register(con, name="t")
     assert con.sql("SELECT COUNT(*) FROM t").fetchone() == (2,)
 
 
 def test_missing_file_raises_on_access_not_construction(packet_root):
-    handle = open_packet(packet_root).table_resource("core.trials")
-    (packet_root / "tables" / "core" / "trials.parquet").unlink()
+    handle = open_packet(packet_root).table_resource("core.intervals")
+    (packet_root / "tables" / "core" / "intervals.parquet").unlink()
     with pytest.raises(ResourceUnreadableError):
         _ = handle.path
 
@@ -58,7 +58,7 @@ def test_reads_return_plain_strings(packet_root):
     """A read decodes. Parquet stores a low-cardinality column as codes into a dictionary,
     and a caller gets the values, so nothing downstream has to know how the file was written.
     """
-    table = open_packet(packet_root).table("core.trials")
+    table = open_packet(packet_root).table("core.intervals")
     assert all(str(table.schema.field(n).type) == "string" for n in handle_strings(table))
 
 
@@ -70,9 +70,9 @@ def test_the_schema_does_not_depend_on_whether_you_filtered(packet_root):
     because a constraint was passed.
     """
     packet = open_packet(packet_root)
-    whole = packet.table("core.trials")
-    first = whole.column("trial_id").to_pylist()[0]
-    filtered = packet.table("core.trials", trial_id=first)
+    whole = packet.table("core.intervals")
+    first = whole.column("interval_id").to_pylist()[0]
+    filtered = packet.table("core.intervals", interval_id=first)
     assert whole.schema.types == filtered.schema.types
     assert filtered.num_rows == 1
 
@@ -82,19 +82,19 @@ def test_results_from_both_paths_concatenate(packet_root):
     import pyarrow as pa
 
     packet = open_packet(packet_root)
-    whole = packet.table("core.trials")
-    first = whole.column("trial_id").to_pylist()[0]
-    filtered = packet.table("core.trials", trial_id=first)
+    whole = packet.table("core.intervals")
+    first = whole.column("interval_id").to_pylist()[0]
+    filtered = packet.table("core.intervals", interval_id=first)
     assert pa.concat_tables([whole, filtered]).num_rows == whole.num_rows + 1
 
 
 def test_a_pushed_predicate_still_matches(packet_root):
     """A filter compares against the values, so a dictionary-encoded column pushes down."""
-    every = open_packet(packet_root).table("core.trials")
-    first = every.column("trial_id").to_pylist()[0]
-    picked = open_packet(packet_root).table("core.trials", trial_id=first)
+    every = open_packet(packet_root).table("core.intervals")
+    first = every.column("interval_id").to_pylist()[0]
+    picked = open_packet(packet_root).table("core.intervals", interval_id=first)
     assert picked.num_rows == 1
-    assert picked.column("trial_id").to_pylist() == [first]
+    assert picked.column("interval_id").to_pylist() == [first]
 
 
 def handle_strings(table):

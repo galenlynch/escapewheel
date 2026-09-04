@@ -490,22 +490,25 @@ class Packet:
             expression = term if expression is None else expression & term
         return expression
 
-    def trials(self, *, session_id: str | None = None, condition_id: str | None = None) -> pa.Table:
-        """Read ``core.trials``, optionally filtered.
+    def intervals(self, *, session_id: str | None = None, interval_kind: str | None = None) -> pa.Table:
+        """Read ``core.intervals``, optionally filtered (R54 §2.1).
+
+        Filtering by kind prunes rather than scans: the kind is the second key column, so each
+        kind is a contiguous run in the file's order.
 
         Parameters
         ----------
         session_id : str, optional
             Keep only this session.
-        condition_id : str, optional
-            Keep only this experimental condition.
+        interval_kind : str, optional
+            Keep only intervals of this kind, named as a dotted resource ID.
 
         Returns
         -------
         pyarrow.Table
-            Matching trials.
+            Matching intervals.
         """
-        return self.table("core.trials", session_id=session_id, condition_id=condition_id)
+        return self.table("core.intervals", session_id=session_id, interval_kind=interval_kind)
 
     def units(self, *, session_id: str | None = None, quality_label: str | None = None) -> pa.Table:
         """Read ``core.units``, optionally filtered.

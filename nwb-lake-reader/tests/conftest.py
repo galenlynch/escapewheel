@@ -48,7 +48,7 @@ def _resource(resource_id, uri, **extra):
 
 #: R53 §2.3, mirroring the registry's own map: an identifier is the source's own number or one
 #: this format chose, and only the second obliges its owner to carry a `*_name`.
-_CARRIED = {"trial_id", "unit_id"}
+_CARRIED = {"interval_id", "unit_id"}
 
 
 def _col(name, type_, presence, **extra):
@@ -93,15 +93,17 @@ def _registry():
                     }
                 ],
             },
-            "core.trials": {
+            "core.intervals": {
                 "columns": [
                     _col("session_id", "int32", "required"),
-                    _col("trial_id", "int32", "required"),
+                    dict(_col("interval_kind", "string", "required"),
+                         role="discriminator", resolves="required"),
+                    _col("interval_id", "int32", "required"),
                     _col("start_tick", "int64", "required"),
                     _col("stop_tick", "int64", "required"),
                     _col("clock_id", "int32", "required"),
                 ],
-                "primary_key": ["session_id", "trial_id"],
+                "primary_key": ["session_id", "interval_kind", "interval_id"],
                 "references": [
                     {
                         "columns": ["session_id"],
@@ -109,13 +111,13 @@ def _registry():
                         "resource_columns": ["session_id"],
                     }
                 ],
-                "sort": ["session_id", "trial_id"],
+                "sort": ["session_id", "interval_kind", "interval_id"],
                 "rules": [
                     {
-                        "id": "core.trials.interval_valid",
+                        "id": "core.intervals.interval_valid",
                         "level": "error",
                         "message": "stop_tick precedes start_tick",
-                        "sql": "SELECT session_id, trial_id FROM core_trials WHERE stop_tick < start_tick",
+                        "sql": "SELECT session_id, interval_id FROM core_intervals WHERE stop_tick < start_tick",
                     }
                 ],
             },
@@ -187,7 +189,8 @@ def packet_root(tmp_path):
     trials = pa.table(
         {
             "session_id": pa.array([SESSION] * 2, type=i32),
-            "trial_id": pa.array(list(TRIALS), type=i32),
+            "interval_kind": pa.array(["task.trials"] * 2),
+            "interval_id": pa.array(list(TRIALS), type=i32),
             "start_tick": pa.array([1000, 6000], type=pa.int64()),
             "stop_tick": pa.array([5000, 10000], type=pa.int64()),
             "clock_id": pa.array([CLOCK_BEHAVIOUR] * 2, type=i32),
@@ -223,7 +226,7 @@ def packet_root(tmp_path):
     )
     resources = [
         _resource("core.sessions", _write(root, "sessions", sessions)),
-        _resource("core.trials", _write(root, "trials", trials)),
+        _resource("core.intervals", _write(root, "intervals", trials)),
         _resource("core.units", _write(root, "units", units)),
         _resource("core.events", _write(root, "events", events)),
         _resource("core.spike_events", _write(root, "spike_events", spike_events)),

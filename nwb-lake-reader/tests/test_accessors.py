@@ -6,13 +6,13 @@ from tests.conftest import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION, SORTING_RUN, U
 
 
 def test_trials_unfiltered(packet_root):
-    assert open_packet(packet_root).trials().num_rows == 2
+    assert open_packet(packet_root).intervals().num_rows == 2
 
 
 def test_trials_filtered_by_session(packet_root):
     pkt = open_packet(packet_root)
-    assert pkt.trials(session_id=SESSION).num_rows == 2
-    assert pkt.trials(session_id=SESSION + 999).num_rows == 0
+    assert pkt.intervals(session_id=SESSION).num_rows == 2
+    assert pkt.intervals(session_id=SESSION + 999).num_rows == 0
 
 
 def test_accessors_use_no_sql_engine(packet_root, monkeypatch):
@@ -33,7 +33,7 @@ def test_accessors_use_no_sql_engine(packet_root, monkeypatch):
 
     monkeypatch.setattr(builtins, "__import__", refuse_duckdb)
     pkt = open_packet(packet_root)
-    assert pkt.trials().num_rows == 2
+    assert pkt.intervals().num_rows == 2
     assert pkt.table("core.sessions").num_rows == 1
 
 
