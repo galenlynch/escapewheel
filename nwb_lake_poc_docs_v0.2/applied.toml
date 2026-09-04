@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 78
+undisposed = 70
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -1004,3 +1004,33 @@ where = "05_validation_and_import.md §4"
 [clause."R54 §4"]
 disposition = "rationale"
 note = "the preconditions R54 required before acceptance; all met"
+
+[clause."R30 §2"]
+disposition = "applied"
+where = "06_analysis_layer.md §4"
+
+[clause."R30 §4"]
+disposition = "applied"
+where = "06_analysis_layer.md §4"
+note = "restored 2026-09-04; the MUST survived only as its consequence"
+
+[clause."R43 §2"]
+disposition = "applied"
+where = "06_analysis_layer.md §5"
+
+[clause."R43 §2.1"]
+disposition = "rationale"
+note = "the measurement: a table per (event, window) pair"
+
+[clause."R43 §2.2"]
+disposition = "rationale"
+
+[clause."R43 §2.3"]
+disposition = "rationale"
+
+[clause."R43 §4"]
+disposition = "rationale"
+note = "the ASOF-join measurements behind withdrawing the tables"
+
+[clause."R43 §8"]
+disposition = "rationale"

@@ -40,7 +40,9 @@ Core keeps each spike on the clock of the probe that measured it, sorted unit-ma
 | `clock_id` | the reference clock |
 | `time_bucket_tick` | the bucket this row lies in |
 
-A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data and is therefore recorded in the producing run's parameters, as is the count of spikes the alignment could not place — a derived table one row short otherwise looks exactly like a complete one (R31 §3, R40 §2.3).
+A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data and is therefore recorded in the producing run's parameters.
+
+**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted rather than given an extrapolated value (R30 §4), so this table MAY hold fewer rows than core's. The count omitted MUST be recorded in the producing run's parameters, even when it is zero (R40 §2.3): a derived table one row short otherwise looks exactly like a complete one.
 
 Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
 
