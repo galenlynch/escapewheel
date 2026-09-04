@@ -309,6 +309,15 @@ class SyncSource:
         Streams skipped, and why.
     """
 
+    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
+    #: therefore needs the data.
+    PRODUCES = frozenset({
+        "core.clock_anchors",
+        "core.clock_observation_intervals",
+        "core.clocks",
+    })
+
     def __init__(
         self,
         root: str | Path,

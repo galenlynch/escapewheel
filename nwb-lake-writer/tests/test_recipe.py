@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from nwb_lake_writer.recipe import Recipe
+from nwb_lake_writer.recipe import RECIPE_SUPPLIES, Recipe
 from nwb_lake_writer.session import CONSUMES, RecipeError, _note_unclaimed, order
 
 BASE = """
@@ -218,3 +218,71 @@ def test_what_the_recipe_itself_supplies_is_not_noted(tmp_path):
     # RECIPE_SUPPLIES: the recipe writes these, so a source producing them loses to it by design.
     _note_unclaimed(recipe, recipe.sources[0], source, {"core.processing_runs": 2, "core.subjects": 1})
     assert source.notes == []
+
+
+# -- R63: a recipe declares what it narrows ------------------------------------------------
+
+
+def test_a_source_that_declares_no_owns_takes_what_it_produces(tmp_path, registry):
+    """Silence means the whole of PRODUCES, not nothing (R63 §2.2)."""
+    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'))
+    owns = set(recipe.sources[0].owns)
+    assert "core.units" in owns and "core.unit_quality_labels" in owns and "core.spike_events" in owns
+    # RECIPE_SUPPLIES is not an adapter's to claim (R63 §3).
+    assert not owns & set(RECIPE_SUPPLIES)
+
+
+def test_an_explicit_owns_still_narrows(tmp_path, registry):
+    body = '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'
+    assert Recipe.load(write(tmp_path, body)).sources[0].owns == ("core.units",)
+
+
+def test_an_empty_owns_narrows_to_nothing(tmp_path, registry):
+    """An explicit empty list is a decision; silence is not, so the two cannot be conflated."""
+    body = '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = []\n'
+    assert Recipe.load(write(tmp_path, body)).sources[0].owns == ()
+
+
+def test_a_defaulted_source_does_not_take_what_another_explicitly_owns(tmp_path, registry):
+    body = (
+        '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
+        '\n[[source]]\nkind = "nwb"\nroot = "n"\nowns = ["core.probes"]\nzone = "UTC"\n'
+    )
+    recipe = Recipe.load(write(tmp_path, body))
+    sorter = next(s for s in recipe.sources if s.kind == "sorter")
+    assert "core.probes" not in sorter.owns
+
+
+def test_a_preference_settles_a_resource_two_adapters_produce(tmp_path, registry):
+    """Both produce core.probes; PREFERRED gives it to the NWB, so neither owns it twice."""
+    body = '\n[[source]]\nkind = "sorter"\nroot = "s"\n\n[[source]]\nkind = "nwb"\nroot = "n"\nzone = "UTC"\n'
+    recipe = Recipe.load(write(tmp_path, body))
+    owners = {s.kind: set(s.owns) for s in recipe.sources}
+    assert "core.probes" in owners["nwb"] and "core.probes" not in owners["sorter"]
+    assert not [p for p in recipe.check(registry) if p.level == "error"]
+
+
+def test_a_shared_resource_is_contributed_not_owned(tmp_path, registry):
+    """core.clocks has two legitimate suppliers, so a default contributes rather than owns."""
+    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'))
+    spec = recipe.sources[0]
+    assert "core.clocks" in spec.contributes and "core.clocks" not in spec.owns
+
+
+def test_a_resource_no_source_claims_is_a_warning(tmp_path, registry):
+    body = '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'
+    said = levels(Recipe.load(write(tmp_path, body)).check(registry))
+    assert any("core.unit_quality_labels" in m for m in said.get("warning", []))
+    # Narrowing this far also dangles required foreign keys, which is a separate finding and
+    # the reason the unclaimed report is a warning rather than one more error.
+    assert any("core.curation_versions" in m for m in said.get("error", []))
+
+
+def test_what_a_source_produces_is_what_it_can_emit():
+    """R63 §4: a PRODUCES that drifts from the code reintroduces the defect one level up."""
+    from nwb_lake_writer.sources import ADAPTERS
+
+    for kind, adapter in ADAPTERS.items():
+        declared = set(getattr(adapter, "PRODUCES", ()))
+        assert declared or kind == "tables", f"{kind} declares no PRODUCES (R63 §2.1)"
+        assert all(r.count(".") == 1 for r in declared), f"{kind} declares a malformed resource ID"

@@ -37,6 +37,36 @@ SAMPLED = frozenset({"sorter"})
 
 RECIPE_SUPPLIES = ("core.sessions", "core.subjects", "core.processing_runs")
 
+#: Where a resource goes when more than one adapter can produce it (R63 §2.2). The winner is the
+#: source that knows most about it: the NWB knows a probe's type and manufacturer where the sorter
+#: knows only the stream, and the waveform source is the only one that can see a unit's channel
+#: support. Held here rather than in the scaffolder, so a draft and a build resolve alike.
+PREFERRED = {
+    "core.probes": "nwb",
+    "core.unit_electrodes": "waveforms",
+    "core.clocks": "sync",
+    "core.array_assets": "nwb",
+    "core.array_dimensions": "nwb",
+}
+
+#: Resources several sources each supply *part* of, which `owns` refuses and `contributes` is for.
+#: A defaulted source contributes to these rather than owning them.
+SHARED = frozenset({"core.clocks", "core.array_assets", "core.array_dimensions"})
+
+
+def produces(kind: str) -> frozenset[str]:
+    """Return what an adapter of this kind can supply (R63 §2.1).
+
+    Imported here rather than at module load: `Recipe` is meant to be parseable without the
+    adapters, and this is the one thing it needs from them. The adapters cost 0.16 s to import
+    and open nothing, so a check that consults them still reports before any I/O.
+    """
+    from . import sources
+
+    adapter = sources.ADAPTERS.get(kind)
+    return frozenset(getattr(adapter, "PRODUCES", ()) if adapter is not None else ())
+
+
 #: Options an adapter requires that a recipe must carry, because no inspection supplies them.
 #: `session.py`'s `_build_source` pops these; a recipe missing one dies there on a KeyError
 #: rather than being reported here, which is what `--check` exists to prevent.
@@ -147,11 +177,46 @@ class SourceSpec:
     owns: tuple[str, ...]
     contributes: tuple[str, ...] = ()
     options: Mapping[str, Any] = field(default_factory=dict)
+    #: R63 §2.2: whether the recipe stated `owns`. Silence means the whole of `PRODUCES`, so it
+    #: must be distinguishable from an explicit empty list, which narrows to nothing.
+    narrowed: bool = True
 
     @property
     def claims(self) -> tuple[str, ...]:
         """Every resource this source supplies, however it claims it."""
         return (*self.owns, *self.contributes)
+
+
+def _resolve_ownership(sources: tuple[SourceSpec, ...]) -> tuple[SourceSpec, ...]:
+    """Fill in `owns` for entries that declared none (R63 §2.2).
+
+    Silence means the whole of that adapter's `PRODUCES`, less what an explicitly narrowed source
+    already owns, less what the recipe itself writes, and less what a preference gives to another
+    kind this recipe lists. A shared resource becomes a `contributes` rather than an `owns`,
+    because several sources each supply part of it.
+
+    Where two defaulted sources are left owning one resource, both keep it and `check` refuses the
+    recipe naming both -- a silent winner is what `owns` was introduced to prevent.
+    """
+    narrowed = {resource for spec in sources if spec.narrowed for resource in spec.owns}
+    supplies, kinds = frozenset(RECIPE_SUPPLIES), {spec.kind for spec in sources}
+    resolved = []
+    for spec in sources:
+        if spec.narrowed:
+            resolved.append(spec)
+            continue
+        owns, contributes = [], list(spec.contributes)
+        for resource in sorted(produces(spec.kind) - narrowed - supplies):
+            if resource in SHARED:
+                if resource not in contributes:
+                    contributes.append(resource)
+                continue
+            preferred = PREFERRED.get(resource)
+            if preferred is not None and preferred != spec.kind and preferred in kinds:
+                continue
+            owns.append(resource)
+        resolved.append(replace(spec, owns=tuple(owns), contributes=tuple(contributes)))
+    return tuple(resolved)
 
 
 @dataclass(frozen=True)
@@ -269,15 +334,18 @@ class Recipe:
             session=document.get("session", {}),
             subject=document.get("subject", {}),
             clocks=tuple(ClockSpec(**c) for c in document.get("clock", [])),
-            sources=tuple(
-                SourceSpec(
-                    kind=str(s["kind"]),
-                    root=resolve(str(s.get("root", "."))),
-                    owns=tuple(s.get("owns", ())),
-                    contributes=tuple(s.get("contributes", ())),
-                    options={k: v for k, v in s.items() if k not in _SOURCE_KEYS},
+            sources=_resolve_ownership(
+                tuple(
+                    SourceSpec(
+                        kind=str(s["kind"]),
+                        root=resolve(str(s.get("root", "."))),
+                        owns=tuple(s.get("owns", ())),
+                        contributes=tuple(s.get("contributes", ())),
+                        options={k: v for k, v in s.items() if k not in _SOURCE_KEYS},
+                        narrowed="owns" in s,
+                    )
+                    for s in document.get("source", [])
                 )
-                for s in document.get("source", [])
             ),
             materialize=tuple(
                 MaterializeSpec(
@@ -395,6 +463,7 @@ class Recipe:
                 others = sorted(set(claimants[resource]) - set(kinds))
                 errors.append(f"{resource} is owned by {kinds[0]} but also supplied by {', '.join(others)}")
 
+        warnings.extend(self._unclaimed())
         errors.extend(self._dangling_references(tables, claimants, warnings))
         errors.extend(self._clock_problems())
         errors.extend(self._option_problems())
@@ -430,6 +499,21 @@ class Recipe:
                 else:
                     warnings.append(f"{resource}.{columns} references {target}, which no source owns")
         return problems
+
+    def _unclaimed(self) -> list[str]:
+        """Resources a listed source can produce that nothing in this recipe claims (R63 §2.3).
+
+        A warning and not an error: narrowing is legitimate, and only the recipe's author knows
+        whether this one was meant. It is the first of the three ways a recipe loses a resource,
+        moved from the middle of a build to before a byte is read.
+        """
+        claimed = {resource for spec in self.sources for resource in spec.claims}
+        claimed.update(RECIPE_SUPPLIES)
+        return [
+            f"{spec.kind} can produce {resource}, which no source in this recipe claims"
+            for spec in self.sources
+            for resource in sorted(produces(spec.kind) - claimed)
+        ]
 
     def _option_problems(self) -> list[str]:
         """Options a source kind requires and this recipe does not carry."""

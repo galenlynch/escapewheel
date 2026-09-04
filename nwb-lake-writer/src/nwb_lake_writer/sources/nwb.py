@@ -167,6 +167,27 @@ class NWBSource(Compensates):
     >>> source.into(writer)  # doctest: +SKIP
     """
 
+    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
+    #: therefore needs the data.
+    PRODUCES = frozenset({
+        "core.array_assets",
+        "core.array_dimensions",
+        "core.clock_anchors",
+        "core.clocks",
+        "core.devices",
+        "core.electrode_coordinates",
+        "core.electrodes",
+        "core.event_streams",
+        "core.events",
+        "core.intervals",
+        "core.probes",
+        "core.sessions",
+        "core.subjects",
+        "core.unit_coordinates",
+        "core.unit_electrodes",
+    })
+
     def __init__(
         self,
         root: str | Path,

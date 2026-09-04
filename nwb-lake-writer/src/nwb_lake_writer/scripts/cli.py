@@ -21,7 +21,7 @@ from typing import Any
 
 from .. import compare
 from ..extensions import load as load_extension
-from ..recipe import RECIPE_SUPPLIES, Recipe
+from ..recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe
 from ..session import build, materializers
 from ..writer import CommitRefused
 
@@ -30,20 +30,6 @@ SUPPLIES_NOTE = "the recipe supplies core.sessions, core.subjects and core.proce
 
 #: Source kinds ``init`` can inspect, and the adapter each names.
 KINDS = ("sorter", "sync", "nwb", "waveforms", "lfp")
-
-#: Where a resource goes when more than one source offers it. The winner is the source that
-#: knows most about it: the NWB knows a probe's type and manufacturer where the sorter knows
-#: only the stream, and the waveform source is the only one that can see a unit's channel
-#: support. A draft says what it chose and what it passed over, rather than choosing silently.
-PREFERRED = {
-    "core.probes": "nwb",
-    "core.unit_electrodes": "waveforms",
-}
-
-#: Resources several sources each supply *part* of, which `owns` refuses and `contributes`
-#: is for. `core.clocks` is the case recipe.py documents: sync declares the rig clock the
-#: anchors are against and the sorter declares one per probe stream, and neither is wrong.
-SHARED = frozenset({"core.clocks", "core.processing_runs"})
 
 #: Options an adapter requires that no inspection can supply, drafted so the recipe builds.
 #: `_build_source` pops these; without them a build dies on a KeyError rather than a finding.

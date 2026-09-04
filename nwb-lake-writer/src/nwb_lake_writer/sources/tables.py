@@ -54,6 +54,10 @@ class TablesSource:
         as large as a core one, and R2 §7's own reason for the streaming path applies here.
     """
 
+    #: R63 §2.1's exception: empty, because what this source supplies is named by the recipe
+    #: entry and is not a property of the adapter at all.
+    PRODUCES: frozenset[str] = frozenset()
+
     def __init__(
         self,
         root: str | Path,

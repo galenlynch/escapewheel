@@ -103,6 +103,14 @@ class SessionSource(Compensates):
     >>> source.observation_intervals(harp, ["left_lick_time"])  # doctest: +SKIP
     """
 
+    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
+    #: therefore needs the data.
+    PRODUCES = frozenset({
+        "core.clocks",
+        "core.event_stream_observation_intervals",
+    })
+
     def __init__(self, root: str | Path, *, zone: ZoneInfo, session_id: str | None = None) -> None:
         if not isinstance(zone, ZoneInfo):
             raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")

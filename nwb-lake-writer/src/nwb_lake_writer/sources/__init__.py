@@ -26,6 +26,19 @@ from .waveforms import WaveformSource
 #: core, which is the gradient that leaves NWB's own multiple-TimeIntervals mechanism unused.
 SOURCE_GROUP = "nwb_lake.sources"
 
+#: The built-in kinds a recipe may name, by the name it names them. `session.build` maps a kind to
+#: a constructed adapter; this maps it to the class, which is what R63 §2.1's `PRODUCES` hangs on
+#: and what a recipe check reads with nothing open.
+ADAPTERS: dict[str, Any] = {
+    "session": SessionSource,
+    "sorter": SorterSource,
+    "sync": SyncSource,
+    "nwb": NWBSource,
+    "waveforms": WaveformSource,
+    "lfp": LFPSource,
+    "tables": TablesSource,
+}
+
 
 def discovered() -> dict[str, Any]:
     """Source kinds registered by installed distributions, by the name they claim.
@@ -46,6 +59,7 @@ def discovered() -> dict[str, Any]:
 
 
 __all__ = [
+    "ADAPTERS",
     "SOURCE_GROUP",
     "AcquisitionStream",
     "LFPSource",
