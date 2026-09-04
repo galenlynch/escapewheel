@@ -235,8 +235,23 @@ def _import(args: argparse.Namespace) -> int:
         print(f"warning: {len(dropped)} resource(s) in {where} are not in this build:", file=sys.stderr)
         for resource_id in dropped:
             print(f"  lost  {resource_id}", file=sys.stderr)
-    print(f"committed {out} — {report.errors} error(s), {report.warnings} warning(s)")
+    _say_verdict(out, report)
     return 0
+
+
+def _say_verdict(out: Path, report: Any) -> None:
+    """Report core's verdict and the extensions' apart, as R17 §4 keeps them.
+
+    A packet stays core-conformant carrying an extension whose rules a validator cannot run, so
+    one total conflates two verdicts and reads as a packet that committed despite an error.
+    """
+    failed = [f for f in report.findings if f.level == "error" and f.extension is not None]
+    line = f"committed {out} — {report.errors - len(failed)} core error(s), {report.warnings} warning(s)"
+    if failed:
+        line += f"; {len(failed)} extension error(s), which do not change the core verdict"
+    print(line)
+    for finding in failed:
+        print(f"  {finding.extension}: {finding.check}: {finding.message}", file=sys.stderr)
 
 
 def _verify(args: argparse.Namespace) -> int:
