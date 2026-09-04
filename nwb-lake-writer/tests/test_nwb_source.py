@@ -34,6 +34,12 @@ def source(nwb, harp):
     return NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND)
 
 
+@pytest.fixture
+def carrying(nwb, harp):
+    """A source asked to carry unmapped trial columns, which R54 §2.5 makes an opt-in."""
+    return NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND, trial_metadata=True)
+
+
 def only(rows, **match):
     found = [r for r in rows if all(r[k] == v for k, v in match.items())]
     assert len(found) == 1, f"{len(found)} rows match {match}"
@@ -271,15 +277,16 @@ def test_a_task_column_is_not_a_core_column(source):
     assert not {"choice", "rewarded", "condition_id", "stimulus_id"} & set(trial)
 
 
-def test_unmapped_trial_columns_travel_as_metadata(source):
-    carried = source.records()["core.intervals"][0]["metadata"]
+def test_unmapped_trial_columns_travel_as_metadata(carrying):
+    carried = carrying.records()["core.intervals"][0]["metadata"]
     assert carried["reward_probabilityL"] == 0.4
     assert "start_time" not in carried  # mapped columns are not duplicated
 
 
-def test_trial_metadata_can_be_declined(nwb, harp):
-    records = NWBSource(nwb, clock=harp, zone=PACIFIC, trial_metadata=False, interval_kind=KIND).records()
-    assert "metadata" not in records["core.intervals"][0]
+def test_trial_metadata_is_off_unless_asked(source, carrying):
+    """R54 §2.5: filling it routinely puts the extension's typed columns back into JSON."""
+    assert "metadata" not in source.records()["core.intervals"][0]
+    assert "metadata" in carrying.records()["core.intervals"][0]
 
 
 def test_a_trial_without_an_interval_is_a_defect_not_a_dropped_row(tmp_path, harp):
@@ -320,7 +327,10 @@ TASK_EXTENSION = {
 }
 
 
-def test_the_records_commit_as_a_valid_packet(source, registry, tmp_path):
+def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
+    # Carrying, because the assertions below are about how metadata survives the round trip --
+    # verbatim, with NumPy's scalars coerced to JSON's. R54 §2.5 makes that an opt-in.
+    source = carrying
     writer = PacketWriter(registry, packet_id=SESSION, extensions=[TASK_EXTENSION])
     counted = source.into(writer)
     writer.add("task.trials", [{"session_id": SESSION, "interval_kind": KIND,
@@ -426,9 +436,9 @@ def test_one_trial_splits_nothing(source):
     assert constant == {}
 
 
-def test_the_session_carries_what_the_trials_no_longer_repeat(source):
+def test_the_session_carries_what_the_trials_no_longer_repeat(source, carrying):
     """The two halves agree: nothing is dropped between them."""
     session = source.sessions()[0]["metadata"]
-    trial = source.records()["core.intervals"][0].get("metadata", {})
+    trial = carrying.records()["core.intervals"][0].get("metadata", {})
     assert not (set(session) & set(trial)), "a key is on the session or on the trial, never both"
     assert "auto_train_stage" in session or "auto_train_stage" in trial

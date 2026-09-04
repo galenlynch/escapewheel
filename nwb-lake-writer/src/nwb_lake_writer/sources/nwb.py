@@ -164,10 +164,12 @@ class NWBSource(Compensates):
     prefix : str, optional
         Prepended to every generated ID. A single-session packet needs none; merging
         sessions into one packet needs the IDs disambiguated.
-    trial_metadata : bool, default True
-        Carry every unmapped trial column into `core.trials.metadata` as JSON. This file has
-        67 trial columns and `02` defines 5 of them; the rest are dynamic-foraging task
-        parameters with no core home until an extension registry (R17) gives them one.
+    trial_metadata : bool, default False
+        Carry every unmapped trial column into `core.intervals.metadata` as JSON. **Off**, per
+        R54 §2.5: a writer SHOULD NOT fill that column routinely, because doing so puts a task's
+        varying parameters back into a JSON string that no rule can see and every row must parse
+        — which is what an R17 extension's typed columns exist to replace. Turn it on only for a
+        session whose task has no extension, and then as a stopgap.
 
     Attributes
     ----------
@@ -213,7 +215,7 @@ class NWBSource(Compensates):
         zone: ZoneInfo,
         session_id: str | None = None,
         prefix: str = "",
-        trial_metadata: bool = True,
+        trial_metadata: bool = False,
         units: Mapping[tuple[str, str], Mapping[str, str]] | None = None,
         signals: Sequence[str] = (),
         interval_kind: str | None = None,
@@ -1023,6 +1025,8 @@ class NWBSource(Compensates):
                 "stop_tick": int(stop[index]),
                 "clock_id": self.clock.clock_id,
             }
+            # R54 §2.5: off unless a recipe asks. The keys that vary are the ones an extension
+            # declares as typed columns, so filling this duplicates them as unqueryable JSON.
             if self.trial_metadata and varying:
                 row["metadata"] = {name: columns[name][index] for name in varying}
             rows.append(row)
