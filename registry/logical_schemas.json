@@ -151,6 +151,15 @@
           "since": "R20 \u00a75"
         },
         {
+          "name": "device_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The device that produced this array.",
+          "identity": "assigned",
+          "since": "R20 \u00a75"
+        },
+        {
           "name": "sample_rate_hz",
           "type": "float64",
           "presence": "nullable",
@@ -197,6 +206,15 @@
         "array_asset_id"
       ],
       "references": [
+        {
+          "columns": [
+            "device_id"
+          ],
+          "resource": "core.devices",
+          "resource_columns": [
+            "device_id"
+          ]
+        },
         {
           "columns": [
             "session_id"
@@ -560,6 +578,15 @@
           "identity": "assigned"
         },
         {
+          "name": "device_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The device that produced this array.",
+          "identity": "assigned",
+          "since": "R65 \u00a72.1"
+        },
+        {
           "name": "sample_rate_hz",
           "type": "float64",
           "presence": "nullable",
@@ -601,6 +628,15 @@
         "array_asset_id"
       ],
       "references": [
+        {
+          "columns": [
+            "device_id"
+          ],
+          "resource": "core.devices",
+          "resource_columns": [
+            "device_id"
+          ]
+        },
         {
           "columns": [
             "session_id"

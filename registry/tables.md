@@ -8,7 +8,7 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-34 tables, 308 columns, 73 references, 59 Tier 2 rules
+34 tables, 310 columns, 75 references, 59 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
 derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64
 ```
@@ -36,6 +36,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `uri` | string | **required** | R20 §5 | URI/path to array store. |
 | `format` | string | **required** | R20 §5 | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable | R20 §5 | Clock for time axis. |
+| `device_id` | int32 | nullable | R20 §5 | The device that produced this array. |
 | `sample_rate_hz` | float64 | nullable | R20 §5 | Sample rate if regularly sampled. |
 | `unit` | string | nullable | R20 §5 | Physical unit. |
 | `conversion` | float64 | nullable | R20 §5 | Multiply stored values by this before offset. |
@@ -47,6 +48,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 **References**
 
+- `device_id` → `core.devices` (`device_id`)
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
@@ -118,6 +120,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `uri` | string | **required** |  | URI/path to array store. |
 | `format` | string | **required** |  | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable |  | Clock for time axis. |
+| `device_id` | int32 | nullable | R65 §2.1 | The device that produced this array. |
 | `sample_rate_hz` | float64 | nullable |  | Sample rate if regularly sampled. |
 | `unit` | string | nullable |  | Physical unit. |
 | `conversion` | float64 | nullable |  | Multiply stored values by this before offset. |
@@ -129,6 +132,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 **References**
 
+- `device_id` → `core.devices` (`device_id`)
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 

@@ -838,6 +838,19 @@ def build() -> dict:
         {"columns": ["electrode_id"], "resource": "core.electrodes",
          "resource_columns": ["electrode_id"]})
 
+    # ---- R65 §2.1 : an array names the instrument that made it -----------------------------------
+    # core.probes has named its device since 02; an array asset was the only acquired thing in core
+    # that could not. Nullable, because a derived array has no instrument and a referenced one may
+    # come from a producer the packet cannot attribute. Placed before the R20 §5 mirror, so the
+    # analysis copy gains it too -- its reference stays pointing at core.devices, which is right:
+    # there is no analysis.devices and R17 §2 lets a layer reference core's tables.
+    SINCE[0] = "R65 §2.1"
+    add_col("core.array_assets",
+            col("device_id", "int32", "nullable", "The device that produced this array."),
+            after="clock_id")
+    T("core.array_assets")["references"].append(
+        {"columns": ["device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
+
     # ---- R20 §5 : analysis arrays are described by analysis tables -------------------------------
     SINCE[0] = "R20 §5"
     import copy
