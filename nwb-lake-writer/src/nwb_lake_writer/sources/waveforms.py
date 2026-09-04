@@ -70,11 +70,13 @@ class WaveformSource:
     #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
-    PRODUCES = frozenset({
-        "core.array_assets",
-        "core.array_dimensions",
-        "core.unit_electrodes",
-    })
+    PRODUCES = frozenset(
+        {
+            "core.array_assets",
+            "core.array_dimensions",
+            "core.unit_electrodes",
+        }
+    )
 
     def __init__(
         self,

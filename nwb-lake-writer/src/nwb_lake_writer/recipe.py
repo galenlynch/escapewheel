@@ -51,7 +51,7 @@ PREFERRED = {
 
 #: Resources several sources each supply *part* of, which `owns` refuses and `contributes` is for.
 #: A defaulted source contributes to these rather than owning them.
-SHARED = frozenset({"core.clocks", "core.array_assets", "core.array_dimensions"})
+SHARED = frozenset({"core.clocks", "core.array_assets", "core.array_dimensions", "core.devices"})
 
 
 def produces(kind: str) -> frozenset[str]:

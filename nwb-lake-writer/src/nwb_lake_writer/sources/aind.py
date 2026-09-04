@@ -106,10 +106,12 @@ class SessionSource(Compensates):
     #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
-    PRODUCES = frozenset({
-        "core.clocks",
-        "core.event_stream_observation_intervals",
-    })
+    PRODUCES = frozenset(
+        {
+            "core.clocks",
+            "core.event_stream_observation_intervals",
+        }
+    )
 
     def __init__(self, root: str | Path, *, zone: ZoneInfo, session_id: str | None = None) -> None:
         if not isinstance(zone, ZoneInfo):

@@ -312,11 +312,13 @@ class SyncSource:
     #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
-    PRODUCES = frozenset({
-        "core.clock_anchors",
-        "core.clock_observation_intervals",
-        "core.clocks",
-    })
+    PRODUCES = frozenset(
+        {
+            "core.clock_anchors",
+            "core.clock_observation_intervals",
+            "core.clocks",
+        }
+    )
 
     def __init__(
         self,
@@ -446,8 +448,7 @@ class SyncSource:
                 ).max()
                 missed = base_samples.size - shared.size, other_samples.size - shared.size
                 unseen = (
-                    f"; node {first.node} saw {missed[0]} the other did not and node {other.node} "
-                    f"saw {missed[1]}"
+                    f"; node {first.node} saw {missed[0]} the other did not and node {other.node} saw {missed[1]}"
                     if any(missed)
                     else ""
                 )

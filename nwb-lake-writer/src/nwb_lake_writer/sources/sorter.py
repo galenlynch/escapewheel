@@ -187,17 +187,19 @@ class SorterSource:
     #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
-    PRODUCES = frozenset({
-        "core.clock_observation_intervals",
-        "core.clocks",
-        "core.curation_versions",
-        "core.probes",
-        "core.processing_runs",
-        "core.sorting_runs",
-        "core.spike_events",
-        "core.unit_quality_labels",
-        "core.units",
-    })
+    PRODUCES = frozenset(
+        {
+            "core.clock_observation_intervals",
+            "core.clocks",
+            "core.curation_versions",
+            "core.probes",
+            "core.processing_runs",
+            "core.sorting_runs",
+            "core.spike_events",
+            "core.unit_quality_labels",
+            "core.units",
+        }
+    )
 
     def __init__(
         self,

@@ -11,6 +11,7 @@ from importlib.metadata import entry_points
 from typing import Any
 
 from .aind import AcquisitionStream, SessionSource
+from .harp import HarpSource
 from .lfp import LFPSource
 from .nwb import NWBSource, SourceDefect
 from .sorter import SortedStream, SorterSource
@@ -31,6 +32,7 @@ SOURCE_GROUP = "nwb_lake.sources"
 #: and what a recipe check reads with nothing open.
 ADAPTERS: dict[str, Any] = {
     "session": SessionSource,
+    "harp": HarpSource,
     "sorter": SorterSource,
     "sync": SyncSource,
     "nwb": NWBSource,
@@ -62,6 +64,7 @@ __all__ = [
     "ADAPTERS",
     "SOURCE_GROUP",
     "AcquisitionStream",
+    "HarpSource",
     "LFPSource",
     "NWBSource",
     "SessionSource",

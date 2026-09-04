@@ -214,7 +214,15 @@ _KINDS = ("sorter", "sync", "nwb", "session", "waveforms", "lfp", "tables")
 
 def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
     """Construct one adapter, supplying whatever earlier sources produced for it."""
-    from .sources import LFPSource, NWBSource, SorterSource, SyncSource, TablesSource, WaveformSource
+    from .sources import (
+        HarpSource,
+        LFPSource,
+        NWBSource,
+        SorterSource,
+        SyncSource,
+        TablesSource,
+        WaveformSource,
+    )
     from .sources.store import store_for
 
     options = dict(spec.options)
@@ -224,6 +232,8 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         # The least coupled source: files that already exist, optionally produced by a command
         # first. An extension supplied this way needs no Python of ours at all.
         return TablesSource(spec.root, session_id=context.session_id, **options)
+    if spec.kind == "harp":
+        return HarpSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "sorter":
         return SorterSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "sync":

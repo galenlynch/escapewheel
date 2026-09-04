@@ -94,11 +94,13 @@ class LFPSource(Compensates):
     #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
-    PRODUCES = frozenset({
-        "core.array_assets",
-        "core.array_channels",
-        "core.array_dimensions",
-    })
+    PRODUCES = frozenset(
+        {
+            "core.array_assets",
+            "core.array_channels",
+            "core.array_dimensions",
+        }
+    )
 
     def __init__(
         self,

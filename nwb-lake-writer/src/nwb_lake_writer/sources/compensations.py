@@ -61,6 +61,19 @@ COMPENSATIONS: dict[str, Compensation] = {
         "whole-second stamp plus the sub-second wait for the first of thousands of units",
         evidence="inventory/nwb-zarr-776259-2025-04-09.md §3.1, §3.3",
     ),
+    "nwb.signal_device_declared": Compensation(
+        defect="an instrument acquired by a separate workflow contributes its data and none of "
+        "its metadata: the stream lands in the packet while no metadata document mentions it at "
+        "all -- measured on ecephys_786867, zero occurrences across rig.json, metadata.nd.json, "
+        "processing.json, quality_control.json and the behaviour JSON. The one statement that "
+        "reaches the importer is the signal's own description, 'imported from HARP "
+        "SniffDetector__32.bin', which is prose no join can reach",
+        action="the instrument named in that description is used as the array's device link. The "
+        "device row itself is read from the instrument's own schema where the recipe names that "
+        "source, so nothing is invented here; without it the link dangles and the validator says "
+        "so, which is the honest outcome for a packet missing a source",
+        evidence="inventory/upstream-defects.md §signal-device-in-a-description",
+    ),
     "nwb.stored_offset_kept": Compensation(
         defect="the NWB stamps -07:53 on a date of birth, the Local Mean Time of the Pacific "
         "coast and the signature of localising a date without a database",

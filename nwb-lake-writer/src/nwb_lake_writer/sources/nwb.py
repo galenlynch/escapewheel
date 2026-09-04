@@ -65,6 +65,12 @@ ABSENT = {"", "None", "none", "nan", "NaN"}
 #: probe into an NWB `Device` description. The model itself contains hyphens.
 DEVICE_DESCRIPTION = re.compile(r"^Model:\s*(?P<model>.+?)\s*-\s*Serial number:\s*(?P<serial>.+?)\s*$")
 
+#: The instrument behind an acquired signal, named in the signal's description because
+#: `general/devices` lists probes alone -- "imported from HARP SniffDetector__32.bin". A signal
+#: acquired by a separate workflow has no rig metadata in this packet's sources at all, so this
+#: sentence is the only statement of what made the array that reaches the importer.
+SIGNAL_DEVICE = re.compile(r"\bfrom\s+(?P<bus>HARP)\s+(?P<device>[A-Za-z0-9]+?)__(?P<register>\d+)\b")
+
 #: `animal_response` in AIND's dynamic-foraging trials, per the column's own description.
 
 #: Trial columns that are *events*, and the type each becomes. A task writes these into the
@@ -170,23 +176,25 @@ class NWBSource(Compensates):
     #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
-    PRODUCES = frozenset({
-        "core.array_assets",
-        "core.array_dimensions",
-        "core.clock_anchors",
-        "core.clocks",
-        "core.devices",
-        "core.electrode_coordinates",
-        "core.electrodes",
-        "core.event_streams",
-        "core.events",
-        "core.intervals",
-        "core.probes",
-        "core.sessions",
-        "core.subjects",
-        "core.unit_coordinates",
-        "core.unit_electrodes",
-    })
+    PRODUCES = frozenset(
+        {
+            "core.array_assets",
+            "core.array_dimensions",
+            "core.clock_anchors",
+            "core.clocks",
+            "core.devices",
+            "core.electrode_coordinates",
+            "core.electrodes",
+            "core.event_streams",
+            "core.events",
+            "core.intervals",
+            "core.probes",
+            "core.sessions",
+            "core.subjects",
+            "core.unit_coordinates",
+            "core.unit_electrodes",
+        }
+    )
 
     def __init__(
         self,
@@ -475,6 +483,18 @@ class NWBSource(Compensates):
             )
         return rows
 
+    def _signal_device_id(self, name: str) -> str | None:
+        """Return the device a signal's description names, or None where it names none.
+
+        R65 §2.1 asks a writer to record which instrument produced an array. This file names it
+        in prose and nowhere else -- `general/devices` lists probes alone -- so the sentence is
+        parsed rather than ignored. The device *row* comes from the instrument's own schema
+        (`sources.harp`), which is the only place its version is stated; this is the join.
+        """
+        self.compensate("nwb.signal_device_declared")
+        matched = SIGNAL_DEVICE.search(str(self._attrs(f"acquisition/{name}").get("description", "")))
+        return self.prefix + matched["device"] if matched else None
+
     def electrode_coordinates(self) -> list[dict[str, Any]]:
         """`core.electrode_coordinates`, one row per electrode per populated frame.
 
@@ -719,6 +739,9 @@ class NWBSource(Compensates):
                 {
                     "session_id": self.session_id,
                     "array_asset_id": f"{self.prefix}{name}",
+                    # R65 §2.1: which instrument made this array. Read from the same description
+                    # `_signal_devices` declares the device from, so the two cannot disagree.
+                    "device_id": self._signal_device_id(name),
                     "semantic_type": "signal",
                     "name": str(attrs.get("description") or name),
                     "kind": "dense_array_asset",
