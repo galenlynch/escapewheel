@@ -10,7 +10,7 @@ part number here as it does there.
 
 ## Status of this document
 
-This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41, R43–R66 and R68–R70 applied. R42 was withdrawn; R67 is proposed and is not applied.
+This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41 and R43–R70 applied. R42 was withdrawn.
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
 
@@ -367,8 +367,11 @@ A physical instrument used during acquisition.
 - MUST have an identifier.
 - SHOULD declare manufacturer, model, and serial number where its source states them.
 - SHOULD declare the **hardware revision** and **firmware version** it was running (R66 §2.1).
+- SHOULD name the device it was **attached to**, where a source states it (R67 §2.1).
 
 A serial number identifies the object; its firmware determines what the object does. Two sessions can record the same make, model and serial and need interpreting differently, so a version is not an identifier's decoration but a separate fact.
+
+A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT create a second device row for one instrument (R67 §2.2). Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor (R67 §2.3, §2.4).
 
 Both versions are recorded **verbatim** as the source stated them, and MUST NOT be normalised, padded, or parsed into components. Neither is ordered: a consumer MAY compare two version strings for equality and MUST NOT compare them for precedence, because different manufacturers' schemes share none.
 
