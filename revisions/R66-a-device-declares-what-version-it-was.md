@@ -73,10 +73,9 @@ for the same two words, so adopting them costs no translation and matches the `*
 convention `core.sorting_runs.sorter_version` and `core.processing_runs.software_version` already
 follow.
 
-They are also, in the AIND rig this session used, **declared and null on all four Harp devices** —
-which is why this revision argues from the Open Ephys measurement rather than from that schema.
-A field a producer models and never fills is not evidence that anyone needs it; a field two
-producers fill with differing values is.
+The AIND rig JSON declares both on all four of its Harp devices and leaves them **null**, which is
+why neither §1.1 nor §1.2 argues from it. A field a producer models and never fills is not evidence
+that anyone needs it; two producers filling it with differing values is.
 
 ### 1.4 Why not `metadata`
 
@@ -84,8 +83,8 @@ producers fill with differing values is.
 rarely queried.
 
 That test is met and passed. A firmware version changes how a signal must be interpreted while
-every other column stays identical — this session's sniff detector dispatches on an interval set
-by a firmware register, so its clock rate is a firmware fact — and `09` §3 puts anything needed to
+every other column stays identical — §1.2's sensor dispatches on an interval set by a register its
+own schema documents, so its sampling rate is a firmware fact — and `09` §3 puts anything needed to
 *interpret* a recording in core. A value inside a JSON string is also unavailable to a rule: no
 Tier 2 check can compare firmware across the probes of one session while it lives there.
 
