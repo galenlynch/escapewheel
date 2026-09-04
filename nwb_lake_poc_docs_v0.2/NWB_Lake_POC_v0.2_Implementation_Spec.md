@@ -392,6 +392,8 @@ A physical instrument used during acquisition.
 
 A serial number identifies the object; its firmware determines what the object does. Two sessions can record the same make, model and serial and need interpreting differently, so a version is not an identifier's decoration but a separate fact.
 
+A consumer MAY walk from a probe to the hardware that acquired it, and MAY group probes by any element of the chain they share (R67 §2.4) — which is the question the chain exists to answer. It MUST NOT infer attachment from a device's name: a name is unconstrained by this standard, and the reference is the statement.
+
 A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT create a second device row for one instrument (R67 §2.2). Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor (R67 §2.3, §2.4).
 
 Both versions are recorded **verbatim** as the source stated them, and MUST NOT be normalised, padded, or parsed into components. Neither is ordered: a consumer MAY compare two version strings for equality and MUST NOT compare them for precedence, because different manufacturers' schemes share none.
@@ -546,6 +548,8 @@ A frame row is indexed by **presentation order**: row *n* describes the frame th
 The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing gets no row and no reserved index (R69 §2.2); what went missing is recorded in the columns that carry timing, not as a gap in the numbering.
 
 A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim (R68 §2.1, §2.2). A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets or use it to measure elapsed time (R68 §2.5); what it locates is the frame inside the file.
+
+A consumer MAY pass a presentation timestamp verbatim to a container library to seek the frame a row describes, which is the exact route and assumes nothing about ordering (R68 §2.5).
 
 The asset declares the **rate** those timestamps count at, as an exact rational (R70 §2.1) — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have.
 

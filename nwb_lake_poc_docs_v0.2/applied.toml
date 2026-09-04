@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 58
+undisposed = 0
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -1082,4 +1082,230 @@ disposition = "applied"
 where = "02_core_logical_schemas.md §9.2"
 
 [clause."R57 §2.3"]
+disposition = "rationale"
+
+[clause."R1 §4"]
+disposition = "applied"
+where = "04_packet_catalog.md §3"
+
+[clause."R1 §5"]
+disposition = "rationale"
+note = "multi-session as a graceful extension; the fixture is single-session"
+
+[clause."R1 §6"]
+disposition = "rationale"
+
+[clause."R4 §2"]
+disposition = "rationale"
+
+[clause."R4 §3.2"]
+disposition = "registry"
+note = "columns 09 named and 02 never defined, struck"
+
+[clause."R4 §3.3"]
+disposition = "registry"
+note = "core.processing_runs.created_at"
+
+[clause."R4 §4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+
+[clause."R5 §2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.14"
+
+[clause."R5 §3"]
+disposition = "registry"
+note = "core.unit_spike_chunks withdrawn"
+
+[clause."R5 §4"]
+disposition = "registry"
+note = "core.units summary columns"
+
+[clause."R8 §2"]
+disposition = "registry"
+note = "local_*_label columns become string"
+
+[clause."R8 §3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.3"
+
+[clause."R8 §4"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.3"
+
+[clause."R10 §6"]
+disposition = "registry"
+note = "the sort field on each table"
+
+[clause."R11 §2"]
+disposition = "registry"
+note = "amplitude_unit on core.sorting_runs"
+
+[clause."R11 §3"]
+disposition = "registry"
+note = "core.units.quality_label closed"
+
+[clause."R11 §4"]
+disposition = "registry"
+note = "core.events.event_type open with reserved values"
+
+[clause."R11 §5"]
+disposition = "registry"
+note = "the dangling exception struck"
+
+[clause."R15 §4"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.3"
+note = "the levels, as R36 §2.3's finer 1/2/3a/3b/3c"
+
+[clause."R15 §5"]
+disposition = "rationale"
+
+[clause."R16 §3"]
+disposition = "registry"
+note = "core.units.quality_label as the designated label"
+
+[clause."R16 §5"]
+disposition = "rationale"
+
+[clause."R21 §6"]
+disposition = "rationale"
+
+[clause."R22 §2"]
+disposition = "rationale"
+
+[clause."R22 §3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.3"
+
+[clause."R22 §4"]
+disposition = "applied"
+where = "05_validation_and_import.md §5.2"
+note = "the projection is a function, checked as a Tier 2 rule"
+
+[clause."R23 §5"]
+disposition = "rationale"
+note = "why a per-row run link is a justified exception to R9"
+
+[clause."R28 §2.1"]
+disposition = "registry"
+note = "default_electrode_id stays"
+
+[clause."R29 §6"]
+disposition = "registry"
+note = "the meta-schema permits since on tables and columns"
+
+[clause."R34 §2"]
+disposition = "registry"
+note = "amplitude leaves core.unit_electrodes"
+
+[clause."R46 §2.2"]
+disposition = "registry"
+note = "three columns named for a key rather than after it"
+
+[clause."R46 §2.4"]
+disposition = "registry"
+note = "three columns reference nothing, correctly"
+
+[clause."R50 §2.1"]
+disposition = "registry"
+note = "channel_ordinal becomes channel_index"
+
+[clause."R50 §2.2"]
+disposition = "registry"
+note = "supersedes becomes supersedes_run_id"
+
+[clause."R50 §2.3"]
+disposition = "registry"
+note = "step_ticks becomes step_tick_num"
+
+[clause."R50 §2.4"]
+disposition = "rationale"
+note = "offset is not renamed"
+
+[clause."R56 §2.3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.4"
+
+[clause."R56 §2.4"]
+disposition = "implementation"
+note = "registry/check.py decides it with no packet in hand"
+
+[clause."R56 §2.5"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.4"
+
+[clause."R56 §4"]
+disposition = "rationale"
+
+[clause."R62 §2.1"]
+disposition = "registry"
+note = "schemas/semantic_version.txt struck"
+
+[clause."R62 §2.2"]
+disposition = "applied"
+where = "04_packet_catalog.md §3"
+
+[clause."R63 §2.1"]
+disposition = "implementation"
+note = "each adapter's static PRODUCES"
+
+[clause."R63 §2.2"]
+disposition = "implementation"
+note = "owns becomes optional in the recipe"
+
+[clause."R63 §2.4"]
+disposition = "rationale"
+
+[clause."R65 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.17"
+
+[clause."R65 §2.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.17"
+
+[clause."R65 §2.4"]
+disposition = "rationale"
+
+[clause."R66 §2.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.5"
+
+[clause."R67 §2.4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.5"
+note = "restored 2026-09-04; what the chain is for was absent"
+
+[clause."R67 §3"]
+disposition = "rationale"
+
+[clause."R68 §2.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+
+[clause."R68 §2.4"]
+disposition = "superseded"
+by = "R70"
+note = "R70 §2.4 reverses it; the base is carried in core"
+
+[clause."R68 §2.5"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+note = "restored 2026-09-04; seeking by pts was absent"
+
+[clause."R68 §4"]
+disposition = "rationale"
+note = "migration is regeneration"
+
+[clause."R69 §2.4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+
+[clause."R70 §2.4"]
+disposition = "rationale"
+note = "records that R68 §2.4 is reversed"
+
+[clause."R71 §3"]
 disposition = "rationale"
