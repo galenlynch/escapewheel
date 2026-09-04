@@ -147,7 +147,7 @@ Core MAY name an extension's resource through a discriminator. It MUST NOT refer
 
 ### 8.4 Unit and clock
 
-A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit_from` naming a column that carries it. A `coordinate` column MUST declare `clock_from` where the clock is not that row's `clock_id` (R56 §2).
+A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit_from` naming a column that carries it (R77 §2.2). A `coordinate` column MUST declare `clock_from` where the clock its ticks are on is not the one that row's `clock_id` names, and MUST declare it where the table has no `clock_id` at all (R77 §2.1). Measured across the registry, 6 of 20 coordinates declare one and the other 14 resolve to their own row's clock; none has neither.
 
 `clock_from` names a column of the same table or a one-hop `resource.column`. A consumer resolves it rather than guessing, because converting on the wrong clock fails silently.
 
@@ -187,7 +187,7 @@ A scorer's own `label` is open, because aggregating over scorers is incompatible
 
 ### 9.4 Provenance of a declaration
 
-A column SHOULD carry `since`, naming the revision that introduced or last changed it (R29 §2), so that the generated schema reference answers both what a table is and why.
+A table and a column SHOULD each carry `since`, naming the revision that introduced or last changed it (R77 §2.3). The registry stamps both: 15 tables and 172 columns carry one.
 
 A column whose role is declared SHOULD NOT restate its base in its description (R48 §2.5). The role carries it, and prose repeating it is a second statement that can disagree with the first.
 

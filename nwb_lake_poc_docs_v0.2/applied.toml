@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 227
+undisposed = 226
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -377,3 +377,28 @@ note = "restored 2026-09-04; only the second of the two re-run conditions had su
 disposition = "applied"
 where = "02_core_logical_schemas.md §9.2"
 note = "restored 2026-09-04; the info finding for an unheld meta-schema was absent"
+
+[clause."R77 §2.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.4"
+
+[clause."R77 §2.2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.4"
+
+[clause."R77 §2.3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.4"
+
+[clause."R29 §2"]
+disposition = "superseded"
+by = "R77"
+note = "MAY raised to SHOULD and the table half restored"
+
+[clause."R56 §2.1"]
+disposition = "superseded"
+by = "R77"
+
+[clause."R56 §2.2"]
+disposition = "superseded"
+by = "R77"
