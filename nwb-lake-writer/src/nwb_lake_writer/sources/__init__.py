@@ -18,6 +18,7 @@ from .openephys import OpenEphysSource
 from .sorter import SortedStream, SorterSource
 from .sync import SyncSource, SyncStream
 from .tables import TablesSource
+from .video import VideoSource
 from .waveforms import WaveformSource
 
 #: Entry-point group a distribution registers a source adapter under. `07` names one CLI and the
@@ -41,6 +42,7 @@ ADAPTERS: dict[str, Any] = {
     "waveforms": WaveformSource,
     "lfp": LFPSource,
     "tables": TablesSource,
+    "video": VideoSource,
 }
 
 
@@ -77,6 +79,7 @@ __all__ = [
     "SyncSource",
     "SyncStream",
     "TablesSource",
+    "VideoSource",
     "WaveformSource",
     "discovered",
 ]

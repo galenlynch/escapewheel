@@ -222,6 +222,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         SorterSource,
         SyncSource,
         TablesSource,
+        VideoSource,
         WaveformSource,
     )
     from .sources.store import store_for
@@ -237,6 +238,15 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         return HarpSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "openephys":
         return OpenEphysSource(spec.root, session_id=context.session_id, **options)
+    if spec.kind == "video":
+        clock = context.reference or _reference_clock(recipe, context)
+        return VideoSource(
+            spec.root,
+            session_id=context.session_id,
+            clock_id=clock.clock_id,
+            tick_rate=clock.tick_rate_num,
+            **options,
+        )
     if spec.kind == "sorter":
         return SorterSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "sync":
@@ -696,6 +706,12 @@ def build(
             for resource_id, array in source.external_arrays().items():
                 writer.reference_array(resource_id, array)
                 say(f"  referenced {resource_id} ({array.physical_profile}, {', '.join(array.codecs) or 'no codec'})")
+        # Any adapter may reference media, not only this kind: a source says so by defining
+        # `external_media`, and what kind it happens to be is not the question (R14 §2.3).
+        for resource_id, media in getattr(source, "external_media", dict)().items():
+            writer.reference_media(resource_id, media)
+            size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
+            say(f"  referenced {resource_id} ({media.format}{size})")
 
         for note in getattr(source, "notes", []):
             say(f"  note: {note}")

@@ -321,6 +321,28 @@ class ExternalArray:
     members: tuple[dict[str, Any], ...] | None = None
 
 
+@dataclass(frozen=True)
+class ExternalMedia:
+    """An image or video the packet references rather than owns (R14 §2.3).
+
+    The same bargain `ExternalArray` makes, for the same reason: three behaviour cameras of one
+    session are 10 GB as MP4 and 80 GB as the AVI they were encoded from, so a packet that copied
+    them would be mostly video. What the packet owns instead is the timing -- one row per frame
+    in `core.media_frames`, on a declared clock -- which is what makes the video addressable and
+    is the part no player can supply.
+
+    `sha256`, `size_bytes` and `verified_at` record what was true when someone looked (R14
+    §2.3.1), not a promise about now.
+    """
+
+    media_asset_id: str
+    uri: str
+    format: str
+    sha256: str | None = None
+    size_bytes: int | None = None
+    verified_at: str | None = None
+
+
 def _digest(path: Path) -> str:
     """R52 §2.1: what the packet says its own bytes are.
 
@@ -410,6 +432,7 @@ class PacketWriter:
         self._ordered: set[str] = set()
         self._staged_arrays: dict[str, StagedArray] = {}
         self._referenced_arrays: dict[str, ExternalArray] = {}
+        self._referenced_media: dict[str, ExternalMedia] = {}
 
     def spec(self, resource_id: str) -> Mapping[str, Any] | None:
         """Return the registry entry for one resource, core or extension, or None if undefined.
@@ -579,6 +602,30 @@ class PacketWriter:
             raise ValueError(f"{resource_id}: {array.uri!r} is not absolute, so it cannot resolve without the packet")
         self._referenced_arrays[resource_id] = array
 
+    def reference_media(self, resource_id: str, media: ExternalMedia) -> None:
+        """Record a media asset the packet references rather than owns (R14 §2.3).
+
+        No bytes are copied and none are read, exactly as `reference_array`: what this records is
+        a claim about a URI, checked only in a mode that asks for it.
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID.
+        media : ExternalMedia
+            The URI, its container format, and whatever was verified.
+
+        Raises
+        ------
+        ValueError
+            If this resource already has media, or if the URI is not absolute.
+        """
+        if resource_id in self._referenced_media:
+            raise ValueError(f"{resource_id} already has media")
+        if "://" not in media.uri:
+            raise ValueError(f"{resource_id}: {media.uri!r} is not absolute, so it cannot resolve without the packet")
+        self._referenced_media[resource_id] = media
+
     def produced_by(self, resource_id: str, processing_run_id: str) -> None:
         """Name the run that produced a resource (R31 §2).
 
@@ -639,6 +686,27 @@ class PacketWriter:
                     "sha256": _digest(path),
                 }
             )
+        return entries
+
+    def _reference_media(self) -> list[dict[str, Any]]:
+        """Return a manifest entry per referenced media asset. Copies nothing and reads nothing."""
+        entries = []
+        for resource_id, media in self._referenced_media.items():
+            entry = {
+                "resource_id": resource_id,
+                "layer": resource_id.split(".", 1)[0],
+                "kind": "media_asset",
+                "physical_profile": media.format,
+                "uri": media.uri,
+                "media_asset_id": media.media_asset_id,
+                "canonical": True,
+                "validation_state": "not_run",
+                "external": True,
+            }
+            for name in ("sha256", "size_bytes", "verified_at"):
+                if (value := getattr(media, name)) is not None:
+                    entry[name] = value
+            entries.append(entry)
         return entries
 
     def _reference_arrays(self) -> list[dict[str, Any]]:
@@ -847,7 +915,12 @@ class PacketWriter:
 
         # 1. staged resources, plus the registry they were written against
         clock = time.perf_counter()
-        entries = [*self._stage(staging), *self._stage_arrays(staging), *self._reference_arrays()]
+        entries = [
+            *self._stage(staging),
+            *self._stage_arrays(staging),
+            *self._reference_arrays(),
+            *self._reference_media(),
+        ]
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
         clock = time.perf_counter()
         (staging / "schemas").mkdir(parents=True, exist_ok=True)
@@ -1149,6 +1222,7 @@ __all__ = [
     "PROVENANCE",
     "REGISTRY_PATH",
     "CommitRefused",
+    "ExternalMedia",
     "NotCommitted",
     "PacketWriter",
 ]
