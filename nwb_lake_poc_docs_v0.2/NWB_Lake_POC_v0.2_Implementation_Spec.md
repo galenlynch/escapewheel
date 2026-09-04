@@ -1065,17 +1065,35 @@ Where an amendment installs a different registry, the packet retains the superse
 
 ### 9.4 Scope of revalidation
 
-An amendment re-establishes physical order only for what it writes. A check MUST be re-run when it
-is **attached to** a resource the amendment writes, **or when its query names one**; a check meeting
-neither condition MAY be skipped (R35 §2). The second test is syntactic — a generated check refers
-to a resource by its flattened name — so a rule that names a resource added later is caught without
-the registry having to declare that it might.
+An amendment MUST validate the whole packet, not only what it added (R32 §5). What R35 bounds is
+the *work*, not the verdict: the resources an amendment did not write are immutable, so their
+verdict is determined rather than assumed, and re-establishing it costs nothing.
+
+An amendment MUST establish the physical order of the resources it writes, and MUST NOT be required
+to re-establish it for any other packet-owned resource (R35 §4).
+
+A check MUST be re-run when it is **attached to** a resource the amendment writes, **or when its
+query names one**; a check meeting neither condition MAY be skipped (R35 §2). The second test is
+syntactic — a generated check refers to a resource by its flattened name — so a rule that names a
+resource added later is caught without the registry having to declare that it might.
+
+The test **MUST be over-inclusive where it is uncertain** (R35 §5). Matching a resource name inside
+a string literal or a comment re-runs a check that did not need it, which costs time; failing to
+match one costs correctness. An implementation that cannot show an input is immutable MUST run the
+check (R35 §6): skipping a check whose inputs *could* have changed stays forbidden, which is what
+R32 §5 was protecting.
 
 ### 9.5 Cleanup
 
 Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second (R61 §2.1). Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
 
-A **stray** — a file no manifest ever named — MUST NOT be removed. The operation reports by default and acts only when asked.
+A **stray** — a file no manifest ever named — MUST NOT be removed (R61 §2.1). A packet may carry
+files this specification does not govern, and cleanup that deletes the ungoverned is a data-loss
+bug wearing an operation's name. The operation reports by default and acts only when asked.
+
+An amendment **MUST NOT** delete anything as part of amending (R32 §6). A file that no manifest
+version names any longer MAY be deleted, but by cleanup, as a separate operation — which is what
+keeps an amendment's failure from having removed something.
 
 A packet MAY declare its own retention, and a writer SHOULD emit one (R61 §2.2): how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 

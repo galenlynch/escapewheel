@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 193
+undisposed = 183
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -537,3 +537,44 @@ note = "states that the digest covers what R14 §2.3 already scopes"
 [clause."R52 §2.4"]
 disposition = "applied"
 where = "03_portable_physical_profile.md §9.4"
+
+[clause."R32 §5"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.4"
+note = "restored 2026-09-04; the whole-packet baseline R35 bounds was absent"
+
+[clause."R32 §6"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.5"
+note = "restored 2026-09-04; an amendment deletes nothing"
+
+[clause."R32 §7"]
+disposition = "rationale"
+
+[clause."R35 §4"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.4"
+
+[clause."R35 §5"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.4"
+note = "restored 2026-09-04; the over-inclusive requirement was absent"
+
+[clause."R35 §6"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.4"
+note = "restored 2026-09-04; the fallback when immutability cannot be shown was absent"
+
+[clause."R35 §7"]
+disposition = "rationale"
+
+[clause."R61 §2.1"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.5"
+
+[clause."R61 §2.3"]
+disposition = "rationale"
+
+[clause."R61 §3"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.6"
