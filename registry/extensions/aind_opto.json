@@ -1,0 +1,216 @@
+{
+  "$schema": "https://nwb-lake.org/schemas/registry/0.1.0",
+  "registry_version": "0.1.0",
+  "logical_standard_version": "0.1",
+  "extension_id": "aind_opto",
+  "extends": "nwb-lake-logical-v0.1",
+  "tables": {
+    "aind_opto.stimulations": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Session ID."
+        },
+        {
+          "name": "epoch_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "carried",
+          "description": "The interval this describes, in core."
+        },
+        {
+          "name": "protocol",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What the light was for, in the rig's own words. Open: tagging and inactivation are the same measurement differently parameterised."
+        },
+        {
+          "name": "duration_s",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "How long the light was on.",
+          "unit": "s"
+        },
+        {
+          "name": "pulse_duration_s",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "One pulse, where the protocol pulses.",
+          "unit": "s"
+        },
+        {
+          "name": "frequency_hz",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Pulse frequency, where the protocol pulses.",
+          "unit": "Hz"
+        },
+        {
+          "name": "ramping_down_s",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Ramp-down time, where the protocol ramps.",
+          "unit": "s"
+        },
+        {
+          "name": "start_offset_s",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Onset relative to the interval's start.",
+          "unit": "s"
+        },
+        {
+          "name": "end_offset_s",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Offset relative to the interval's end.",
+          "unit": "s"
+        },
+        {
+          "name": "condition",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The rig's own condition label. Open."
+        },
+        {
+          "name": "condition_probability",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "How often this condition was drawn."
+        },
+        {
+          "name": "on_probability",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "How often the light was on at all."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "epoch_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "epoch_id"
+      ],
+      "rules": [
+        {
+          "id": "aind_opto.stimulations.pulsing_needs_a_frequency",
+          "level": "error",
+          "message": "a pulse duration is recorded with no frequency, so the train is undefined",
+          "sql": "SELECT session_id, epoch_id FROM aind_opto_stimulations WHERE pulse_duration_s IS NOT NULL AND frequency_hz IS NULL"
+        }
+      ]
+    },
+    "aind_opto.emissions": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "Session ID."
+        },
+        {
+          "name": "epoch_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "carried",
+          "description": "The interval this emission belongs to."
+        },
+        {
+          "name": "device_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "identity": "assigned",
+          "description": "The emitter, which core already models."
+        },
+        {
+          "name": "power_mw",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Power delivered by this emitter.",
+          "unit": "mW"
+        },
+        {
+          "name": "wavelength_nm",
+          "type": "float64",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Wavelength of this emitter.",
+          "unit": "nm"
+        },
+        {
+          "name": "location",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Where this emitter delivered, in the rig's own words."
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "epoch_id",
+        "device_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "epoch_id"
+          ],
+          "resource": "aind_opto.stimulations",
+          "resource_columns": [
+            "session_id",
+            "epoch_id"
+          ]
+        },
+        {
+          "columns": [
+            "device_id"
+          ],
+          "resource": "core.devices",
+          "resource_columns": [
+            "device_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "epoch_id",
+        "device_id"
+      ],
+      "rules": []
+    }
+  }
+}
