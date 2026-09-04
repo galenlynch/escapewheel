@@ -92,6 +92,16 @@ The animal or preparation recorded from.
 
 A physical instrument used during acquisition.
 
+- MUST have an identifier.
+- SHOULD declare manufacturer, model, and serial number where its source states them.
+- SHOULD declare the **hardware revision** and **firmware version** it was running (R66 §2.1).
+
+A serial number identifies the object; its firmware determines what the object does. Two sessions can record the same make, model and serial and need interpreting differently, so a version is not an identifier's decoration but a separate fact.
+
+Both versions are recorded **verbatim** as the source stated them, and MUST NOT be normalised, padded, or parsed into components. Neither is ordered: a consumer MAY compare two version strings for equality and MUST NOT compare them for precedence, because different manufacturers' schemes share none.
+
+Each element of an acquisition chain that reports its own versions is its own device. A value the source gives as unknown is recorded as the source gave it, which is distinct from a source that said nothing.
+
 ### 3.6 Probe
 
 A device that carries electrodes.

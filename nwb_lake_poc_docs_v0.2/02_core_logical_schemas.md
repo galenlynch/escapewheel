@@ -208,7 +208,7 @@ The core layer comprises the following resources. Column definitions are in the 
 
 | resource | contents |
 |---|---|
-| `core.devices` | instruments used |
+| `core.devices` | instruments used, each with the hardware revision and firmware version it ran |
 | `core.probes` | devices carrying electrodes |
 | `core.electrodes` | recording contacts |
 | `core.electrode_coordinates` | a contact's position per frame and basis |
