@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 207
+undisposed = 193
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -477,3 +477,63 @@ where = "03_portable_physical_profile.md §6.1"
 disposition = "applied"
 where = "03_portable_physical_profile.md §6.1"
 note = "restored 2026-09-04; the prohibition and the reader's version check were absent"
+
+[clause."R14 §2.2"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.4"
+
+[clause."R14 §2.3.2"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.3"
+
+[clause."R14 §2.4"]
+disposition = "rationale"
+note = "transcoding is left to the writer; states no obligation"
+
+[clause."R26 §3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §10.2"
+
+[clause."R26 §4"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §10.2"
+note = "restored 2026-09-04; the guarantee was present only as an explanation"
+
+[clause."R36 §2.1"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.4"
+note = "size_bytes as the sum of member sizes, restored with R36 §2.2"
+
+[clause."R36 §2.3"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.3"
+
+[clause."R51 §2.1"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.4"
+note = "restored 2026-09-04; the members-equal-the-digested-listing rule was absent"
+
+[clause."R51 §2.2"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.4"
+
+[clause."R51 §2.3"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.4"
+note = "restored 2026-09-04; the third verification level was absent"
+
+[clause."R51 §2.4"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.4"
+note = "restored 2026-09-04; a store-digest pass must not be called a checksum verification"
+
+[clause."R51 §4"]
+disposition = "rationale"
+
+[clause."R52 §2.2"]
+disposition = "rationale"
+note = "states that the digest covers what R14 §2.3 already scopes"
+
+[clause."R52 §2.4"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.4"

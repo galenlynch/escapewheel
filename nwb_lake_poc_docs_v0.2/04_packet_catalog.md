@@ -108,7 +108,11 @@ Such a resource MAY additionally declare a `members` array recording what was se
 
 A member array is a record, not a resolution rule: a reader hands the prefix to the array library and does not enumerate it.
 
-A store digest answers whether anything changed in place. It does not verify a recorded `sha256`, is absent for multipart uploads, and is unstable across a copy. A verification pass MUST report what it skipped for these reasons.
+Where `members` accompanies R36 §2.2's `sha256`, the listing digested MUST be the declared one, so the enumeration and the digest cannot disagree (R51 §2.1).
+
+A validator asked to verify content **without reading** compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading (R51 §2.3). A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped.
+
+A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A verification pass MUST report what it skipped for these reasons, and a store-digest pass **MUST NOT** be reported as a checksum verification (R51 §2.4): it establishes something weaker and store-specific, so it gets its own finding.
 
 ## 6. Codecs
 

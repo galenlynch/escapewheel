@@ -207,7 +207,8 @@ The execution contract is the whole protocol: **a check's query returns offendin
 
 A rule declares a level of `error`, `warning`, or `info`. A rule MAY be `advisory`, in which case
 it is off by default and MUST NOT be `error`, so that enabling it cannot change whether a packet
-previously passed (R26 §2). A validator MUST expose the choice, and a report MUST state whether
+previously passed. Stated as the guarantee it is: **running with advisory rules enabled MUST NOT
+change whether a packet passed** (R26 §4). A validator MUST expose the choice, and a report MUST state whether
 advisory rules were run: two reports over one packet may legitimately differ, and one that does
 not say which mode produced it cannot be compared with the other.
 
