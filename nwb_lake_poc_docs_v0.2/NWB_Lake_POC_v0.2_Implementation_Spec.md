@@ -326,6 +326,8 @@ A tick is a coordinate, not a label and not a quantity (R45 §3). A writer MUST 
 
 ### 2.3 Observation
 
+A session's extent is stated as **wall-clock time**, not as a tick range (R25 §4). A hull over every clock's ticks would need those ticks converted to one clock, and alignment may be anchor-based — outside the first and last anchor the mapping is undefined, which is exactly where a hull reaches. A session therefore declares when it started and MAY declare when it ended, both as instants.
+
 A clock is observing during declared intervals, in that clock's own ticks (R38 §2). Anything timed by a clock inherits that clock's window and MAY refine it, but MUST NOT assert a window derived from its own timestamps.
 
 An interval is **closed**: `start_tick` and `stop_tick` both name observed ticks, so an interval covers `stop - start + 1` ticks and a one-tick interval has `start == stop` (R45 §2).
@@ -501,6 +503,10 @@ A sorted or curated spiking entity.
 - MAY sit on several electrodes, and MAY have a position in one or more frames.
 
 A unit is not a neuron. It is what a sorting produced.
+
+### 3.13.1 A rate needs a denominator
+
+A firing rate is a count over a duration, so the duration MUST be knowable. Where a unit declares observation intervals, the rate is its spike count over the total of those intervals; where it declares none, it is the count over the recording's extent (R18 §4). A packet SHOULD state which denominator it used, because the two differ for any unit that drifted out and back.
 
 ### 3.14 Spike event
 

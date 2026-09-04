@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 96
+undisposed = 78
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -931,3 +931,76 @@ note = "restored 2026-09-04; the denominator's positivity and lowest terms were 
 
 [clause."R33 §5"]
 disposition = "rationale"
+
+[clause."R18 §4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.13.1"
+note = "restored 2026-09-04; a rate's denominator was stated nowhere"
+
+[clause."R18 §5"]
+disposition = "rationale"
+
+[clause."R24 §2"]
+disposition = "rationale"
+
+[clause."R24 §3.1"]
+disposition = "implementation"
+note = "the interval template, expanded by registry/build.py; never inferred from column names"
+
+[clause."R24 §5"]
+disposition = "superseded"
+by = "R45"
+note = "R45 §2.1 decides the closure R24 §5 recorded as undecided"
+
+[clause."R25 §2.1"]
+disposition = "registry"
+note = "core.event_stream_observation_intervals carries no clock_id"
+
+[clause."R25 §4"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.2"
+note = "restored 2026-09-04; a session's extent is wall clock, not a tick hull"
+
+[clause."R47 §2.1"]
+disposition = "registry"
+note = "interval_index struck from every interval table"
+
+[clause."R47 §2.2"]
+disposition = "registry"
+note = "the key becomes the partition plus start_tick"
+
+[clause."R47 §2.3"]
+disposition = "implementation"
+note = "the interval template's index argument becomes optional in build.py"
+
+[clause."R47 §2.4"]
+disposition = "registry"
+note = "core.clock_anchors keeps anchor_index"
+
+[clause."R54 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.10"
+
+[clause."R54 §2.2"]
+disposition = "registry"
+note = "interval_kind is part of the primary key"
+
+[clause."R54 §2.3"]
+disposition = "registry"
+note = "five columns struck and core.trial_tags withdrawn"
+
+[clause."R54 §2.4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.10"
+
+[clause."R54 §2.5"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §6"
+
+[clause."R54 §2.6"]
+disposition = "applied"
+where = "05_validation_and_import.md §4"
+
+[clause."R54 §4"]
+disposition = "rationale"
+note = "the preconditions R54 required before acceptance; all met"
