@@ -371,7 +371,7 @@
           "id": "dynamic_foraging.blocks.contains_its_trials",
           "level": "error",
           "message": "a trial names a block whose interval does not contain it",
-          "sql": "SELECT t.session_id, t.trial_id FROM dynamic_foraging_trials t JOIN dynamic_foraging_blocks b ON b.session_id = t.session_id AND b.block_id = t.block_id JOIN core_trials c ON c.session_id = t.session_id AND c.trial_id = t.trial_id WHERE c.start_tick < b.start_tick OR c.stop_tick > b.stop_tick"
+          "sql": "SELECT t.session_id, t.trial_id FROM dynamic_foraging_trials t JOIN dynamic_foraging_blocks b ON b.session_id = t.session_id AND b.block_id = t.block_id JOIN core_intervals c ON c.session_id = t.session_id AND c.interval_kind = t.interval_kind AND c.interval_id = t.trial_id WHERE c.start_tick < b.start_tick OR c.stop_tick > b.stop_tick"
         }
       ]
     },
