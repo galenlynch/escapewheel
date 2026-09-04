@@ -14,6 +14,7 @@ from .aind import AcquisitionStream, SessionSource
 from .harp import HarpSource
 from .lfp import LFPSource
 from .nwb import NWBSource, SourceDefect
+from .openephys import OpenEphysSource
 from .sorter import SortedStream, SorterSource
 from .sync import SyncSource, SyncStream
 from .tables import TablesSource
@@ -33,6 +34,7 @@ SOURCE_GROUP = "nwb_lake.sources"
 ADAPTERS: dict[str, Any] = {
     "session": SessionSource,
     "harp": HarpSource,
+    "openephys": OpenEphysSource,
     "sorter": SorterSource,
     "sync": SyncSource,
     "nwb": NWBSource,
@@ -67,6 +69,7 @@ __all__ = [
     "HarpSource",
     "LFPSource",
     "NWBSource",
+    "OpenEphysSource",
     "SessionSource",
     "SortedStream",
     "SorterSource",

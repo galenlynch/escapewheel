@@ -218,6 +218,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         HarpSource,
         LFPSource,
         NWBSource,
+        OpenEphysSource,
         SorterSource,
         SyncSource,
         TablesSource,
@@ -234,6 +235,8 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         return TablesSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "harp":
         return HarpSource(spec.root, session_id=context.session_id, **options)
+    if spec.kind == "openephys":
+        return OpenEphysSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "sorter":
         return SorterSource(spec.root, session_id=context.session_id, **options)
     if spec.kind == "sync":

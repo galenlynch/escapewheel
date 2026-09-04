@@ -63,7 +63,14 @@ ABSENT = {"", "None", "none", "nan", "NaN"}
 
 #: ``Model: <model> - Serial number: <serial>``, which is how `aind-data-schema` renders a
 #: probe into an NWB `Device` description. The model itself contains hyphens.
-DEVICE_DESCRIPTION = re.compile(r"^Model:\s*(?P<model>.+?)\s*-\s*Serial number:\s*(?P<serial>.+?)\s*$")
+#: The NWB packs a device's model, serial and description into one string. The serial is bounded
+#: explicitly rather than by end-of-line: a lazy `.+?` anchored to `$` still swallows the
+#: description after it, which put "20403319544 - Description: duplicate of PRB2_1_2_0640_0" in a
+#: serial number column on every probe of a real session.
+DEVICE_DESCRIPTION = re.compile(
+    r"^Model:\s*(?P<model>.*?)\s*-\s*Serial number:\s*(?P<serial>[^\s-]+)"
+    r"(?:\s*-\s*Description:\s*(?P<description>.*?))?\s*$"
+)
 
 #: The instrument behind an acquired signal, named in the signal's description because
 #: `general/devices` lists probes alone -- "imported from HARP SniffDetector__32.bin". A signal
@@ -401,9 +408,9 @@ class NWBSource(Compensates):
                     "session_id": self.session_id,
                     "name": name,
                     "manufacturer": _clean(described.get("manufacturer")),
-                    "model": parsed["model"] if parsed else None,
+                    "model": (parsed["model"] or None) if parsed else None,
                     "serial_number": parsed["serial"] if parsed else None,
-                    "metadata": {"description": description} if description else None,
+                    "metadata": _described(parsed, description),
                 }
             )
         return rows
@@ -1040,6 +1047,17 @@ class NWBSource(Compensates):
     def offers(self) -> dict[str, int]:
         """Which resources this source supplies from its root, and how many rows (`05` §1)."""
         return {resource: len(rows) for resource, rows in self.records().items()}
+
+
+def _described(parsed: Any, raw: str) -> dict[str, str] | None:
+    """Return what a device's description says beyond its model and serial, or nothing.
+
+    The raw string is kept only where it did not parse: carrying both a parsed description and
+    the sentence it came from would store one fact twice (R3 §3.0).
+    """
+    if parsed is None:
+        return {"description": raw} if raw else None
+    return {"description": parsed["description"]} if parsed["description"] else None
 
 
 def _offset(delta: Any) -> str:

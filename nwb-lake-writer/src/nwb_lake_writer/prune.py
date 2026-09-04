@@ -98,9 +98,7 @@ def _names(manifest: Mapping[str, Any], *, installed: Any) -> set[str]:
     }
     version = manifest.get("registry_version")
     named.add(REGISTRY_PATH if version == installed else f"schemas/logical_schemas.{version}.json")
-    named.update(
-        entry["registry"] for entry in (manifest.get("extensions") or {}).values() if entry.get("registry")
-    )
+    named.update(entry["registry"] for entry in (manifest.get("extensions") or {}).values() if entry.get("registry"))
     return named
 
 
