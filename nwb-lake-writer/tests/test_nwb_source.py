@@ -13,6 +13,8 @@ from nwb_lake_writer.clock import HARP_TICK_RATE_HZ
 from nwb_lake_writer.sources import NWBSource, SourceDefect
 from tests import nwbfixture
 
+KIND = "task.trials"
+TRIAL_EVENT_TYPES = {"go_cue", "reward_outcome"}
 PACIFIC = ZoneInfo("America/Los_Angeles")
 SESSION = "mini_2025-04-09"
 
@@ -29,7 +31,7 @@ def nwb(tmp_path):
 
 @pytest.fixture
 def source(nwb, harp):
-    return NWBSource(nwb, clock=harp, zone=PACIFIC)
+    return NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND)
 
 
 def only(rows, **match):
@@ -65,7 +67,7 @@ def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
     """`units/spike_times` is 287 M values against 6,781 rows, and no builder can use it as
     one: it is written here in an encoding that refuses, so reading it would leave a note."""
     units = _units(nwb)
-    source = NWBSource(nwb, clock=harp, zone=PACIFIC, units=units)
+    source = NWBSource(nwb, clock=harp, zone=PACIFIC, units=units, interval_kind=KIND)
     assert source.unit_coordinates() == [
         {
             "session_id": SESSION,
@@ -87,7 +89,7 @@ def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
 def test_the_index_beside_a_ragged_column_is_still_read(nwb, harp):
     """It is one value per row, which is what makes the column beside it ragged."""
     units = _units(nwb, refuses=False)
-    source = NWBSource(nwb, clock=harp, zone=PACIFIC, units=units)
+    source = NWBSource(nwb, clock=harp, zone=PACIFIC, units=units, interval_kind=KIND)
     columns = source._table("units")
     assert "spike_times" not in columns
     assert columns["spike_times_index"].tolist() == [3]
@@ -105,7 +107,7 @@ def test_it_reads_the_tables_the_nwb_is_the_authority_for(source):
         "core.electrode_coordinates": 3,  # both electrodes in the probe frame, one in CCF
         "core.event_streams": 4,
         "core.events": 4,
-        "core.trials": 1,
+        "core.intervals": 1,
     }
 
 
@@ -117,7 +119,7 @@ def test_it_emits_no_units_or_spikes(source):
 
 def test_the_asset_directory_is_accepted_as_well_as_the_nwb(tmp_path, harp):
     nwbfixture.build(tmp_path)
-    assert NWBSource(tmp_path, clock=harp, zone=PACIFIC).session_id == SESSION
+    assert NWBSource(tmp_path, clock=harp, zone=PACIFIC, interval_kind=KIND).session_id == SESSION
 
 
 # -- time ----------------------------------------------------------------------------
@@ -128,7 +130,7 @@ def test_seconds_become_ticks_on_the_declared_clock(source):
     acquisition = [e["t_tick"] for e in events if e["event_type"].endswith("lick")]
     assert acquisition == [31250, 62500]
     # The trial columns land on the same clock: 1.2 s and 1.5 s at 31,250 Hz.
-    assert {e["event_type"]: e["t_tick"] for e in events if "trial" in str(e.get("payload"))} == {
+    assert {e["event_type"]: e["t_tick"] for e in events if e["event_type"] in TRIAL_EVENT_TYPES} == {
         "go_cue": 37500,
         "reward_outcome": 46875,
     }
@@ -142,17 +144,17 @@ def test_a_clock_the_times_are_not_on_is_refused(tmp_path, harp):
     ticks -- and there a rate one hertz out is refused.
     """
     nwb = nwbfixture.build(tmp_path, seconds=(0.000032, 0.000064))
-    ticks = [e["t_tick"] for e in NWBSource(nwb, clock=harp, zone=PACIFIC).records()["core.events"]]
+    ticks = [e["t_tick"] for e in NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND).records()["core.events"]]
     assert ticks[:2] == [1, 2]
     wrong = Clock("c", session_id=SESSION, name="c", tick_rate_num=31251, origin="e")
     with pytest.raises(OffGrid):
-        NWBSource(nwb, clock=wrong, zone=PACIFIC).records()
+        NWBSource(nwb, clock=wrong, zone=PACIFIC, interval_kind=KIND).records()
 
 
 def test_a_clock_from_another_session_is_refused(nwb):
     stray = Clock("c", session_id="other", name="c", tick_rate_num=HARP_TICK_RATE_HZ, origin="e")
     with pytest.raises(ValueError, match="belongs to session"):
-        NWBSource(nwb, clock=stray, zone=PACIFIC)
+        NWBSource(nwb, clock=stray, zone=PACIFIC, interval_kind=KIND)
 
 
 def test_the_session_start_is_converted_to_utc(source):
@@ -162,7 +164,7 @@ def test_the_session_start_is_converted_to_utc(source):
 
 def test_a_fixed_offset_is_not_a_zone(nwb, harp):
     with pytest.raises(TypeError, match="IANA zone"):
-        NWBSource(nwb, clock=harp, zone=timezone.utc)
+        NWBSource(nwb, clock=harp, zone=timezone.utc, interval_kind=KIND)
 
 
 def test_a_stored_offset_that_disagrees_with_the_zone_is_reported(source):
@@ -173,7 +175,7 @@ def test_a_stored_offset_that_disagrees_with_the_zone_is_reported(source):
 
 def test_a_naive_wall_clock_is_read_in_the_declared_zone(tmp_path, harp):
     nwb = nwbfixture.build(tmp_path, session_offset="")
-    source = NWBSource(nwb, clock=harp, zone=PACIFIC)
+    source = NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND)
     assert source.records()["core.sessions"][0]["session_start_time"].utcoffset().total_seconds() == -7 * 3600
     assert any("no offset stored" in note for note in source.notes)
 
@@ -219,7 +221,7 @@ def test_electrode_ids_are_composed_because_no_single_column_is_unique(source):
 
 
 def test_a_prefix_disambiguates_ids_for_a_multi_session_packet(nwb, harp):
-    records = NWBSource(nwb, clock=harp, zone=PACIFIC, prefix="A_").records()
+    records = NWBSource(nwb, clock=harp, zone=PACIFIC, prefix="A_", interval_kind=KIND).records()
     assert records["core.electrodes"][0]["electrode_id"].startswith("A_probeA.")
     assert records["core.probes"][0]["probe_id"] == "A_probeA"
 
@@ -257,35 +259,73 @@ def test_an_unregistered_electrode_gets_no_ccf_row(source):
 # -- trials --------------------------------------------------------------------------
 
 
-def test_a_trial_carries_its_interval_choice_and_reward(source):
-    trial = source.records()["core.trials"][0]
+def test_an_interval_carries_its_bounds_and_names_its_kind(source):
+    trial = source.records()["core.intervals"][0]
     assert (trial["start_tick"], trial["stop_tick"]) == (31250, 62500)
-    assert (trial["choice"], trial["rewarded"]) == ("right", True)
+    assert trial["interval_kind"] == KIND
+
+
+def test_a_task_column_is_not_a_core_column(source):
+    """R54 §2.3 struck them: a task's shape is the extension's, not the format's."""
+    trial = source.records()["core.intervals"][0]
+    assert not {"choice", "rewarded", "condition_id", "stimulus_id"} & set(trial)
 
 
 def test_unmapped_trial_columns_travel_as_metadata(source):
-    carried = source.records()["core.trials"][0]["metadata"]
+    carried = source.records()["core.intervals"][0]["metadata"]
     assert carried["reward_probabilityL"] == 0.4
     assert "start_time" not in carried  # mapped columns are not duplicated
 
 
 def test_trial_metadata_can_be_declined(nwb, harp):
-    records = NWBSource(nwb, clock=harp, zone=PACIFIC, trial_metadata=False).records()
-    assert "metadata" not in records["core.trials"][0]
+    records = NWBSource(nwb, clock=harp, zone=PACIFIC, trial_metadata=False, interval_kind=KIND).records()
+    assert "metadata" not in records["core.intervals"][0]
 
 
 def test_a_trial_without_an_interval_is_a_defect_not_a_dropped_row(tmp_path, harp):
     nwb = nwbfixture.build(tmp_path, trial_stop=np.nan)
     with pytest.raises(SourceDefect, match="stop_time"):
-        NWBSource(nwb, clock=harp, zone=PACIFIC).records()
+        NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND).records()
 
 
 # -- end to end ----------------------------------------------------------------------
 
 
+#: The minimum an interval kind needs to resolve: R54 §2.1 makes `interval_kind` resolve
+#: `required`, so a packet carrying intervals and no table saying what they were is refused.
+#: One table, one column, and the reference R55 §2.3.1 requires of a named resource.
+TASK_EXTENSION = {
+    "registry_version": "0.1.0",
+    "logical_standard_version": "0.1",
+    "extension_id": "task",
+    "extends": "nwb-lake-logical-v0.1",
+    "tables": {
+        "task.trials": {
+            "columns": [
+                {"name": "session_id", "type": "int32", "presence": "required",
+                 "role": "identifier", "identity": "assigned"},
+                {"name": "interval_kind", "type": "string", "presence": "required",
+                 "role": "discriminator", "resolves": "required"},
+                {"name": "interval_id", "type": "int32", "presence": "required",
+                 "role": "identifier", "identity": "carried"},
+            ],
+            "primary_key": ["session_id", "interval_id"],
+            "references": [{"columns": ["session_id", "interval_kind", "interval_id"],
+                            "resource": "core.intervals",
+                            "resource_columns": ["session_id", "interval_kind", "interval_id"]}],
+            "sort": ["session_id", "interval_id"],
+            "rules": [],
+        }
+    },
+}
+
+
 def test_the_records_commit_as_a_valid_packet(source, registry, tmp_path):
-    writer = PacketWriter(registry, packet_id=SESSION)
+    writer = PacketWriter(registry, packet_id=SESSION, extensions=[TASK_EXTENSION])
     counted = source.into(writer)
+    writer.add("task.trials", [{"session_id": SESSION, "interval_kind": KIND,
+                                "interval_id": t["interval_id"]}
+                               for t in source.records()["core.intervals"]])
     report = writer.commit(tmp_path / "packet")
     assert report.passed, [f.check for f in report.findings]
     assert counted["core.electrodes"] == 2
@@ -293,7 +333,7 @@ def test_the_records_commit_as_a_valid_packet(source, registry, tmp_path):
     packet = open_packet(tmp_path / "packet")
     assert list(packet.sessions) == [SESSION]
     assert packet.table("core.events").column("t_tick").to_pylist() == [31250, 37500, 46875, 62500]
-    carried = json.loads(packet.table("core.trials").column("metadata").to_pylist()[0])
+    carried = json.loads(packet.table("core.intervals").column("metadata").to_pylist()[0])
     assert carried["auto_train_stage"] == "None"  # metadata is verbatim, not normalized
     # NumPy's integers and booleans are not Python's, and JSON knows only Python's.
     assert carried["laser_on_trial"] == 0
@@ -318,10 +358,10 @@ def test_trial_timing_columns_become_events(source):
     assert {"go_cue", "reward_outcome"} <= kinds
 
 
-def test_a_trial_event_names_its_trial(source):
-    """The payload is what lets `analysis.trials_wide` denormalise it back (`06`)."""
+def test_a_trial_event_does_not_name_its_interval(source):
+    """R11 §5 struck the column; carrying it as JSON would keep the letter and lose the point."""
     go = next(e for e in source.events() if e["event_type"] == "go_cue")
-    assert go["payload"]["trial_id"] == next(t["trial_id"] for t in source.trials())
+    assert "payload" not in go or "trial_id" not in (go.get("payload") or {})
     assert go["stream_id"] in {s["event_stream_id"] for s in source.event_streams()}
 
 
@@ -343,35 +383,13 @@ def test_a_trial_that_never_reached_the_moment_emits_no_event(tmp_path, harp):
 
 def test_a_condition_is_named_where_the_task_varies_one(source):
     """A foraging session has no stimulus; what it varies is the reward probability pair."""
-    assert {t.get("condition_id") for t in source.trials()} == {None}, "one trial cannot vary"
+    assert {t.get("condition_id") for t in source.intervals()} == {None}, "one trial cannot vary"
 
-
-def test_a_varying_reward_probability_pair_names_the_condition(tmp_path, harp):
-    root = nwbfixture.build(tmp_path)
-    trials = root / "intervals/trials"
-    for name, values in {
-        "id": np.array([0, 1, 2], dtype=np.int64),
-        "start_time": np.array([1.0, 3.0, 5.0]),
-        "stop_time": np.array([2.0, 4.0, 6.0]),
-        "reward_probabilityL": np.array([0.7, 0.7, 0.1]),
-        "reward_probabilityR": np.array([0.1, 0.1, 0.7]),
-        "animal_response": np.array([1.0, 1.0, 0.0]),
-        "rewarded_historyL": np.array([False, True, False]),
-        "rewarded_historyR": np.array([True, False, False]),
-        "goCue_start_time": np.array([1.2, 3.2, 5.2]),
-        "reward_outcome_time": np.array([1.5, 3.5, 5.5]),
-        "laser_on_trial": np.array([0, 0, 0], dtype=np.int64),
-        "auto_train_engaged": np.array([False, False, False]),
-    }.items():
-        nwbfixture.array(trials / name, values)
-    nwbfixture.text(trials / "auto_train_stage", ["None", "None", "None"])
-    source = NWBSource(root, clock=harp, zone=PACIFIC, session_id=SESSION, units={})
-    assert [t["condition_id"] for t in source.trials()] == ["p0.7_0.1", "p0.7_0.1", "p0.1_0.7"]
 
 
 def test_a_trial_event_column_is_not_repeated_in_metadata(source):
     """It is in core.events now, so carrying it again would be the duplication R3 §3.0 bans."""
-    metadata = next(t for t in source.trials()).get("metadata") or {}
+    metadata = next(t for t in source.intervals()).get("metadata") or {}
     assert "goCue_start_time" not in metadata
 
 
@@ -411,6 +429,6 @@ def test_one_trial_splits_nothing(source):
 def test_the_session_carries_what_the_trials_no_longer_repeat(source):
     """The two halves agree: nothing is dropped between them."""
     session = source.sessions()[0]["metadata"]
-    trial = source.records()["core.trials"][0].get("metadata", {})
+    trial = source.records()["core.intervals"][0].get("metadata", {})
     assert not (set(session) & set(trial)), "a key is on the session or on the trial, never both"
     assert "auto_train_stage" in session or "auto_train_stage" in trial

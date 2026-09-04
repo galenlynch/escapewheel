@@ -26,6 +26,13 @@ EXTENSION = {
                     "identity": "assigned",
                 },
                 {
+                    "name": "interval_kind",
+                    "type": "string",
+                    "presence": "required",
+                    "role": "discriminator",
+                    "resolves": "required",
+                },
+                {
                     "name": "trial_id",
                     "type": "int32",
                     "presence": "required",
@@ -37,9 +44,9 @@ EXTENSION = {
             "primary_key": ["session_id", "trial_id"],
             "references": [
                 {
-                    "columns": ["session_id", "trial_id"],
-                    "resource": "core.trials",
-                    "resource_columns": ["session_id", "trial_id"],
+                    "columns": ["session_id", "interval_kind", "trial_id"],
+                    "resource": "core.intervals",
+                    "resource_columns": ["session_id", "interval_kind", "interval_id"],
                 }
             ],
             "sort": ["session_id", "trial_id"],
@@ -50,8 +57,8 @@ EXTENSION = {
 
 
 TRIALS = [
-    {"session_id": "s001", "trial_id": 0, "clock_id": "harp_s001", "start_tick": 0, "stop_tick": 99},
-    {"session_id": "s001", "trial_id": 1, "clock_id": "harp_s001", "start_tick": 200, "stop_tick": 299},
+    {"session_id": "s001", "interval_kind": "task.trials", "interval_id": 0, "clock_id": "harp_s001", "start_tick": 0, "stop_tick": 99},
+    {"session_id": "s001", "interval_kind": "task.trials", "interval_id": 1, "clock_id": "harp_s001", "start_tick": 200, "stop_tick": 299},
 ]
 
 
@@ -59,9 +66,9 @@ def _commit(root, registry, minimal, *, choice="left"):
     writer = PacketWriter(registry, packet_id=root.name, extensions=[EXTENSION])
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
-    writer.add("core.trials", TRIALS)
+    writer.add("core.intervals", TRIALS)
     writer.add(
-        "task.trials", [{"session_id": t["session_id"], "trial_id": t["trial_id"], "choice": choice} for t in TRIALS]
+        "task.trials", [{"session_id": t["session_id"], "interval_kind": "task.trials", "trial_id": t["interval_id"], "choice": choice} for t in TRIALS]
     )
     return writer.commit(root)
 
@@ -102,7 +109,7 @@ def test_the_extension_is_validated_and_reported_apart(tmp_path, registry, minim
 
 
 def test_a_core_table_cannot_be_redefined(registry):
-    stray = {**EXTENSION, "tables": {"core.trials": EXTENSION["tables"]["task.trials"]}}
+    stray = {**EXTENSION, "tables": {"core.intervals": EXTENSION["tables"]["task.trials"]}}
     with pytest.raises(ValueError, match="not namespaced"):
         PacketWriter(registry, packet_id="s001", extensions=[stray])
 
@@ -310,11 +317,25 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
     )
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
-    writer.add("core.trials", TRIALS)
-    for extension_id, table in (("vr_foraging", "sites"), ("opto_tagging", "pulses"), ("unit_qc", "metrics")):
+    kinds = (("vr_foraging", "sites"), ("opto_tagging", "pulses"), ("unit_qc", "metrics"))
+    # Each kind numbers its own intervals, which is what putting the kind in the key buys
+    # (R54 §2.2): site 0 and pulse 0 are different rows of `core.intervals`.
+    writer.add(
+        "core.intervals",
+        [{**t, "interval_kind": f"{e}.{table}"} for e, table in kinds for t in TRIALS],
+    )
+    for extension_id, table in kinds:
         writer.add(
             f"{extension_id}.{table}",
-            [{"session_id": t["session_id"], "trial_id": t["trial_id"], "choice": "left"} for t in TRIALS],
+            [
+                {
+                    "session_id": t["session_id"],
+                    "interval_kind": f"{extension_id}.{table}",
+                    "trial_id": t["interval_id"],
+                    "choice": "left",
+                }
+                for t in TRIALS
+            ],
         )
     root = tmp_path / "s001"
     assert writer.commit(root).passed

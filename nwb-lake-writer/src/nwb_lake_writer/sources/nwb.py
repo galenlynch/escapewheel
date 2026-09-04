@@ -66,7 +66,6 @@ ABSENT = {"", "None", "none", "nan", "NaN"}
 DEVICE_DESCRIPTION = re.compile(r"^Model:\s*(?P<model>.+?)\s*-\s*Serial number:\s*(?P<serial>.+?)\s*$")
 
 #: `animal_response` in AIND's dynamic-foraging trials, per the column's own description.
-CHOICE = {0.0: "left", 1.0: "right", 2.0: "none"}
 
 #: Trial columns that are *events*, and the type each becomes. A task writes these into the
 #: trials table because they happen once a trial, but a moment on a clock is an event whatever
@@ -78,7 +77,10 @@ TRIAL_EVENTS = {
     "delay_start_time": "delay_start",
 }
 
-#: Trial columns this adapter maps into `core.trials`; the rest go to its metadata verbatim.
+#: Trial columns this adapter accounts for; the rest go to `core.intervals.metadata` verbatim.
+#: `animal_response` and the reward histories stay named here although R54 §2.3 struck their core
+#: columns: they belong to the task's extension, and naming them is what keeps them out of core
+#: metadata rather than swept in as unmapped.
 TRIAL_MAPPED = frozenset(
     {"start_time", "stop_time", "animal_response", "rewarded_historyL", "rewarded_historyR", *TRIAL_EVENTS}
 )
@@ -176,12 +178,18 @@ class NWBSource(Compensates):
         trial_metadata: bool = True,
         units: Mapping[tuple[str, str], Mapping[str, str]] | None = None,
         signals: Sequence[str] = (),
+        interval_kind: str | None = None,
         emit_clock: bool = True,
         store: Any = None,
     ) -> None:
         if not isinstance(zone, ZoneInfo):
             raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
         self.root = _resolve(Path(root))
+        # R54 §2.1: an interval declares the resource that says what it was, and this adapter
+        # cannot know it -- an exported trials table is the task's, and which task it is is a
+        # fact about the session rather than about the file. The recipe names it, which is the
+        # precondition R54 §4 required before the revision could be implemented at all.
+        self.interval_kind = interval_kind
         self.store = store if store is not None else SourceStore(self.root)
         self.clock = clock
         self.zone = zone
@@ -337,8 +345,8 @@ class NWBSource(Compensates):
             "file_create_date": _one(self._array("file_create_date")),
         }
         # A task parameter constant across every trial belongs here, once, rather than on each
-        # of them. `trials` computes the split, so ask for it before reading what it found.
-        self.trials()
+        # of them. `intervals` computes the split, so ask for it before reading what it found.
+        self.intervals()
         metadata.update({k: v for k, v in self._constants.items() if v is not None})
         return [
             {
@@ -863,13 +871,23 @@ class NWBSource(Compensates):
                         "event_type": kind,
                         "t_tick": int(tick),
                         "clock_id": self.clock.clock_id,
-                        "payload": {"trial_id": int(identifiers[index])},
+                        # No payload naming the interval. R11 §5 struck `core.events.trial_id`,
+                        # and carrying the same reference as JSON keeps the letter of that while
+                        # defeating it: untyped, unjoinable, and invisible to every check. R54 §3
+                        # settles what replaces it -- an event belongs to whatever intervals
+                        # contain it, which may be none or several, and containment is a query
+                        # against `core.intervals` rather than a column.
                     }
                 )
         return rows
 
-    def trials(self) -> list[dict[str, Any]]:
-        """`core.trials`, one row per trial."""
+    def intervals(self) -> list[dict[str, Any]]:
+        """`core.intervals`, one row per trial (R54 §2.1)."""
+        if self.interval_kind is None:
+            raise SourceDefect(
+                "core.intervals needs an interval_kind naming the resource that specialises these "
+                "intervals (R54 §2.1); set it on the nwb source"
+            )
         columns = self._table("intervals/trials")
         if not columns:
             return []
@@ -883,30 +901,20 @@ class NWBSource(Compensates):
         start = self.clock.ticks(columns["start_time"])
         stop = self.clock.ticks(columns["stop_time"])
         identifiers = columns.get("id", np.arange(len(start)))
-        rewarded = [
-            bool(columns.get("rewarded_historyL", np.zeros(len(start), bool))[i])
-            or bool(columns.get("rewarded_historyR", np.zeros(len(start), bool))[i])
-            for i in range(len(start))
-        ]
         unmapped = [name for name in columns if name not in TRIAL_MAPPED and name != "id"]
         varying = self._trial_parameters(columns, unmapped, len(start))
-        conditions = self._conditions(columns, len(start))
         rows = []
         for index in range(len(start)):
             row: dict[str, Any] = {
                 "session_id": self.session_id,
                 # Carried (R53 §2.3): intervals/trials/id is already int64 and already 0..n,
                 # so the writer passes it through rather than composing a string from it.
-                "trial_id": int(identifiers[index]),
+                "interval_kind": self.interval_kind,
+                "interval_id": int(identifiers[index]),
                 "start_tick": int(start[index]),
                 "stop_tick": int(stop[index]),
                 "clock_id": self.clock.clock_id,
-                "rewarded": rewarded[index],
             }
-            if "animal_response" in columns:
-                row["choice"] = CHOICE.get(float(columns["animal_response"][index]))
-            if (condition := conditions[index]) is not None:
-                row["condition_id"] = condition
             if self.trial_metadata and varying:
                 row["metadata"] = {name: columns[name][index] for name in varying}
             rows.append(row)
@@ -939,26 +947,6 @@ class NWBSource(Compensates):
         self._constants = constant
         return varying
 
-    @staticmethod
-    def _conditions(columns: Mapping[str, NDArray[Any]], n: int) -> list[str | None]:
-        """Name each trial's condition, where the task varies one.
-
-        A foraging session has no stimulus and no condition column; what it varies is the pair
-        of reward probabilities, held constant within a block and changed between them. That
-        pair *is* the condition, and naming it is what lets `core.trials.condition_id` be
-        anything but null -- 8 distinct pairs over 10 blocks on the session this was measured
-        against. A task that varies nothing leaves the column null, which is honest.
-        """
-        left, right = columns.get("reward_probabilityL"), columns.get("reward_probabilityR")
-        if left is None or right is None:
-            return [None] * n
-        pairs = [(float(left[i]), float(right[i])) for i in range(n)]
-        if len({p for p in pairs if not (np.isnan(p[0]) or np.isnan(p[1]))}) < 2:
-            return [None] * n  # constant is not a condition
-        return [None if np.isnan(a) or np.isnan(b) else f"p{a:g}_{b:g}" for a, b in pairs]
-
-    # -- assembly ---------------------------------------------------------------------
-
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter produces, keyed by resource ID.
 
@@ -979,7 +967,7 @@ class NWBSource(Compensates):
             "core.unit_coordinates": self.unit_coordinates(),
             "core.event_streams": self.event_streams(),
             "core.events": self.events(),
-            "core.trials": self.trials(),
+            "core.intervals": self.intervals(),
             "core.clock_anchors": self.signal_anchors(),
             "core.array_assets": self.array_assets(),
             "core.array_dimensions": self.array_dimensions(),
@@ -1028,4 +1016,4 @@ def _resolve(root: Path) -> Path:
     raise SourceDefect(f"{root} is not an NWB-Zarr directory and holds {len(candidates)} of them")
 
 
-__all__ = ["ABSENT", "CHOICE", "NWBSource", "SourceDefect"]
+__all__ = ["ABSENT", "NWBSource", "SourceDefect"]
