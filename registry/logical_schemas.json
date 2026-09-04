@@ -1523,6 +1523,22 @@
           "description": "Model."
         },
         {
+          "name": "firmware_version",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The firmware the instrument was running, verbatim as its source stated it.",
+          "since": "R66 \u00a72.1"
+        },
+        {
+          "name": "hardware_version",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The instrument's hardware revision, verbatim as its source stated it.",
+          "since": "R66 \u00a72.1"
+        },
+        {
           "name": "serial_number",
           "type": "string",
           "presence": "nullable",

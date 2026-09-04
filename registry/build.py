@@ -120,7 +120,8 @@ for _role, _names in {
         "coordinate_basis", "coordinate_position_column", "coordinate_resource", "coordinate_unit",
         "created_at", "region_label",
         "curation_tool", "curation_tool_version", "curator", "date_of_birth", "dimension_name", "dropped",
-        "ended_at", "event_type", "experimenter", "firing_rate_hz", "format", "genotype", "impedance_ohm",
+        "ended_at", "event_type", "experimenter", "firing_rate_hz", "firmware_version", "format",
+        "genotype", "hardware_version", "impedance_ohm",
         "insertion_name", "institution", "inter_sample_shift", "is_primary", "kind", "label",
         "local_channel_label", "local_electrode_label", "local_unit_label", "manufacturer", "metadata",
         "model", "modified_at", "n_spikes", "name", "normalized_label", "notes", "offset", "origin",
@@ -837,6 +838,17 @@ def build() -> dict:
     T("core.array_channels")["references"].append(
         {"columns": ["electrode_id"], "resource": "core.electrodes",
          "resource_columns": ["electrode_id"]})
+
+    # ---- R66 §2.1 : a device declares what version it was -----------------------------------------
+    # A serial number identifies the object; its firmware determines what the object does. Strings
+    # rather than numbers, and unordered: `3.0196`, `2.1` and `UNKNOWN` are all real values from one
+    # session, and two manufacturers' schemes share no precedence a consumer could rely on.
+    SINCE[0] = "R66 §2.1"
+    for name, description in (
+        ("hardware_version", "The instrument's hardware revision, verbatim as its source stated it."),
+        ("firmware_version", "The firmware the instrument was running, verbatim as its source stated it."),
+    ):
+        add_col("core.devices", col(name, "string", "nullable", description), after="model")
 
     # ---- R65 §2.1 : an array names the instrument that made it -----------------------------------
     # core.probes has named its device since 02; an array asset was the only acquired thing in core
