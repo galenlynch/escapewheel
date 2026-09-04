@@ -37,6 +37,13 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     ("registry: generate", ROOT / "registry", [sys.executable, "build.py"]),
     ("registry: structural checks", ROOT / "registry",
      ["uv", "run", "--project", str(TOOLS), "python", "check.py"]),
+    # A ratchet: the backlog of undisposed clauses may shrink and must not grow. Adding a
+    # revision fails this until someone records where each of its clauses went, which is the
+    # property two independent audits of the compiled spec found missing.
+    ("spec: every revision clause has a disposition", ROOT / "nwb_lake_poc_docs_v0.2",
+     [sys.executable, "ledger.py", "--summary", "--max-undisposed", "137"]),
+    ("spec: the single-file rendering is current", ROOT / "nwb_lake_poc_docs_v0.2",
+     [sys.executable, "combine.py", "--check"]),
     ("prototype: write packets", ROOT / "prototype/registry-codegen",
      ["uv", "run", "--project", str(TOOLS), "python", "fixture.py"]),
     ("prototype: conforming packet is clean", ROOT / "prototype/registry-codegen",

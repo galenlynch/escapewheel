@@ -1,0 +1,219 @@
+# Where each accepted normative clause went. Generated once, maintained by hand.
+# `python ledger.py` fails while any binding clause has no entry here.
+
+[clause."R5 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R6 §2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+note = "restored 2026-09-04; was dropped"
+
+[clause."R19 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R20 §2.3"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R20 §2.4"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R29 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R33 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R36 §2.2"]
+disposition = "superseded"
+by = "R73"
+note = "Part 04 §5.4 says a prefix digest is undefined, reversing it; R73 restores R36"
+
+[clause."R36 §2.4"]
+disposition = "implementation"
+note = "an obligation on a writer or validator, walked in the 2026-09-04 compliance pass"
+
+[clause."R38 §2.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.2"
+
+[clause."R39 §2.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.1"
+
+[clause."R40 §2.3"]
+disposition = "implementation"
+note = "an obligation on a writer or validator, walked in the 2026-09-04 compliance pass"
+
+[clause."R44 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R45 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.3"
+
+[clause."R45 §2.5"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+note = "restored 2026-09-04 with R6"
+
+[clause."R46 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R46 §2.3"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R48 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R48 §2.2"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R48 §2.5"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R49 §2.2"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R52 §2.1"]
+disposition = "superseded"
+by = "R73"
+note = "compiled as MUST where R52 §2.1 says SHOULD; R73 carries the repair"
+
+[clause."R52 §2.3"]
+disposition = "implementation"
+note = "an obligation on a writer or validator, walked in the 2026-09-04 compliance pass"
+
+[clause."R53 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R53 §2.3.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R53 §2.4"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §5.3"
+note = "restored 2026-09-04; was dropped"
+
+[clause."R55 §2.5"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.3"
+note = "restored 2026-09-04; was dropped"
+
+[clause."R58 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.8"
+
+[clause."R59 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R59 §2.2"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R60 §2.1"]
+disposition = "registry"
+where = "registry/logical_schemas.json"
+note = "a column, key or reference the registry declares"
+
+[clause."R61 §2.2"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.3"
+note = "restored 2026-09-04; the default survived, the declaration did not"
+
+[clause."R63 §2.3"]
+disposition = "implementation"
+note = "an obligation on a writer or validator, walked in the 2026-09-04 compliance pass"
+
+[clause."R64 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.8"
+
+[clause."R65 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.17"
+
+[clause."R66 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.5"
+
+[clause."R66 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.5"
+
+[clause."R67 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.5"
+
+[clause."R67 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.5"
+
+[clause."R67 §2.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.5"
+
+[clause."R68 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+
+[clause."R68 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+
+[clause."R69 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+
+[clause."R69 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+
+[clause."R69 §2.3"]
+disposition = "implementation"
+note = "an obligation on a writer or validator, walked in the 2026-09-04 compliance pass"
+
+[clause."R70 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+
+[clause."R70 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+
+[clause."R70 §2.3"]
+disposition = "implementation"
+note = "an obligation on a writer or validator, walked in the 2026-09-04 compliance pass"
