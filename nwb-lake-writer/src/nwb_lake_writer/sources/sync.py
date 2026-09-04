@@ -1,0 +1,663 @@
+"""Read an Open Ephys events tree into clock anchors.
+
+The sorter gives every probe an exact tick and no way to compare two of them. This is the
+other half: the shared sync pulse each stream records, paired with the HARP time
+`aind-ephys-rig-qc` wrote onto it, which is what `core.clock_anchors` is.
+
+Which streams have anchors
+--------------------------
+
+A record node's directory lists every stream it saw, but only the ones it *owns* were
+aligned. The unowned entries are stubs carrying acquisition-local seconds with nothing
+marking them as unaligned -- no `original_timestamps.npy` beside them, which is the archive
+rig-qc writes when it replaces a timestamp array. On one real session each of two nodes owned
+six streams and carried seven local-only stubs of the other's, and the owned set matched the
+sorter's output exactly.
+
+So ownership is detected, not assumed: a stream with the archive has HARP time, and one
+without is skipped and reported. Taking a stub at face value would put a probe's sync pulses
+17.7 million seconds from where they belong.
+
+Which sample counter
+--------------------
+
+Three arrays in one TTL directory count time, and only one of them is the sorter's.
+
+```text
+sample_numbers.npy        raw hardware counter, absolute across the acquisition
+local_timestamps.npy      recording-relative seconds, already drift-corrected
+original_timestamps.npy   acquisition-relative seconds, before HARP alignment
+timestamps.npy            HARP seconds, after it
+```
+
+`spikes.npy`'s `sample_index` indexes the preprocessed recording, which is built from raw
+samples with no correction, so it corresponds to **`sample_numbers`** and to neither of the
+seconds arrays. Measured: `sample_numbers - local_timestamps * rate` takes 895 distinct
+values across one stream's pulses, because the drift correction is in the seconds and not in
+the counter. Using a timestamp array here would bake that correction in twice.
+
+What remains is the recording's first raw sample, which lives in
+`continuous/<stream>/sample_numbers.npy` and is read from element 0 -- memory-mapped, so the
+1.3 GB the file weighs is never touched.
+"""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+from numpy.typing import NDArray
+
+from ..clock import HARP_TICK_RATE_HZ, Clock
+from .nwb import SourceDefect
+
+#: rig-qc archives the pre-alignment array under this name when it rewrites `timestamps.npy`.
+#: Its presence is the only signal that a stream was aligned; its absence, that the stream is
+#: a stub whose seconds are acquisition-local.
+ARCHIVE = "original_timestamps.npy"
+
+#: `Record Node 109` in the clipped tree's directory name.
+NODE = re.compile(r"^Record Node (?P<node>\d+)$")
+
+#: What a record node writes beside its data: when it started, and where each stream's
+#: counter stood at that moment.
+SYNC_MESSAGES = "sync_messages.txt"
+
+#: `Software Time (milliseconds since midnight Jan 1st 1970 UTC): 1744244712090`.
+SOFTWARE_TIME = re.compile(r"Software Time \(milliseconds since midnight Jan 1st 1970 UTC\):\s*(\d+)")
+
+#: `Start Time for Neuropix-PXI (100) - 46110 @ 30000 Hz: 103017730`.
+START_TIME = re.compile(
+    r"Start Time for (?P<processor>.+?) \((?P<id>\d+)\) - (?P<stream>\S+) @ \S+ Hz:\s*(?P<sample>\d+)"
+)
+
+
+@dataclass(frozen=True)
+class RecordingStart:
+    """What one record node says about when it began.
+
+    `started` is a real UTC instant, to the millisecond, written by the node itself. Nothing
+    else in an ecephys asset carries one: `settings.xml` stamps the same moment to the second
+    in the machine's local zone, and the aind-data-schema documents round it further. That is
+    what makes this the only non-circular way to locate a free-running counter's tick zero --
+    every other route pairs a wall clock with a datum, and a datum is the thing being placed.
+
+    `samples` is each stream's counter at that moment, which is the value a raw sample number
+    must be made relative to. The node lists every stream it *saw*, not only the ones it owns.
+    """
+
+    node: str
+    started: datetime
+    samples: dict[str, int]
+
+
+def read_sync_messages(path: Path, node: str) -> RecordingStart | None:
+    """Parse a record node's `sync_messages.txt`, or None where it has none."""
+    if not path.is_file():
+        return None
+    text = path.read_text()
+    stamp = SOFTWARE_TIME.search(text)
+    if not stamp:
+        return None
+    return RecordingStart(
+        node=node,
+        started=datetime.fromtimestamp(int(stamp.group(1)) / 1000, tz=timezone.utc),
+        samples={
+            f"{m['processor'].replace(' ', '')}-{m['id']}.{m['stream']}": int(m["sample"])
+            for m in START_TIME.finditer(text)
+        },
+    )
+
+
+#: How many neighbours a terminal anchor is predicted from in R37 §3.2's test, and how many
+#: interior anchors the same prediction is repeated at to get the distribution it is judged
+#: against. Thirty neighbours is what R37 §3.1 measured a local rate over; six hundred
+#: positions is enough for a stable 99th percentile and costs a millisecond.
+NEIGHBOURS, INTERIOR = 30, 600
+
+#: A phase discontinuity in the reference alignment larger than this is reported, in seconds.
+#:
+#: Measured on `ecephys_776259_2025-04-09`: an anchor interval's parent advance departs from the
+#: clock's own median ratio by at most 160 µs across 76,622 intervals, while two known upstream
+#: discontinuities cost 672-832 µs each. 400 µs sits between them with about twice the margin
+#: either way. It is well below R40's 3 ms alignment tolerance, so a packet can carry a reported
+#: discontinuity and still align within bound -- reporting is not refusing.
+DISCONTINUITY = 4e-4
+
+#: Which percentile of a clock's own interior residuals a terminal anchor must stay inside.
+#: Stated on the clock's spread rather than as a fixed tolerance because anchor quality is a
+#: property of a rig and a session, not of the format (R37 §3.2).
+SUSPECT_PERCENTILE = 99.0
+
+
+def phase_discontinuities(
+    ticks: NDArray[np.int64], parents: NDArray[np.int64], rate: float, limit: float = DISCONTINUITY
+) -> list[dict[str, Any]]:
+    """Find places where the parent clock's phase steps against this clock's own rate.
+
+    An anchor interval should advance the parent by the interval's own length times the clock
+    ratio. Where it does not, the parent's phase moved -- and because R13's map is exact at
+    every anchor, the map faithfully carries that step rather than smoothing it away. Nothing
+    downstream can see it, so the writer says so.
+
+    Consecutive offending intervals are one event: a step arrives as a ramp over the two
+    intervals either side of a discarded upstream anchor rather than as a jump.
+
+    Parameters
+    ----------
+    ticks, parents : numpy.ndarray of int64
+        The anchor pairs, strictly increasing.
+    rate : float
+        The parent clock's rate in hertz, to report sizes as durations.
+    limit : float
+        The smallest discontinuity worth reporting, in seconds.
+
+    Returns
+    -------
+    list of dict
+        One entry per event: where it is on both clocks, and how far the parent moved.
+    """
+    if ticks.size < 3:
+        return []
+    step, parent_step = np.diff(ticks).astype(np.float64), np.diff(parents).astype(np.float64)
+    ratio = float(np.median(parent_step / step))
+    residual = parent_step - step * ratio
+    offending = np.flatnonzero(np.abs(residual) > limit * rate)
+    if not offending.size:
+        return []
+    events = np.split(offending, np.flatnonzero(np.diff(offending) > 1) + 1)
+    return [
+        {
+            "t_tick": int(ticks[group[0]]),
+            "parent_tick": int(parents[group[0]]),
+            "seconds": round(float(residual[group].sum()) / rate, 9),
+            "anchor_intervals": int(group.size),
+        }
+        for group in events
+    ]
+
+
+def _predict(at: int, ticks: NDArray[np.int64], parents: NDArray[np.int64], frm: int) -> float:
+    """R37 §3.1's estimator: the fitted rate, applied from the anchor at index `frm`."""
+    centre_t, centre_p = float(ticks.mean()), float(parents.mean())
+    dt = ticks.astype(np.float64) - centre_t
+    slope = float(dt @ (parents.astype(np.float64) - centre_p) / (dt @ dt))
+    return float(parents[frm]) + slope * float(at - ticks[frm])
+
+
+def suspect_terminals(
+    ticks: NDArray[np.int64],
+    parents: NDArray[np.int64],
+    *,
+    neighbours: int = NEIGHBOURS,
+    interior: int = INTERIOR,
+) -> tuple[bool, bool, dict[str, float]]:
+    """Apply R37 §3.2's test to a clock's first and last anchor.
+
+    Each terminal anchor is predicted from the `neighbours` anchors on its inward side and
+    the residual compared against the same one-sided residual taken at `interior` interior
+    positions. A terminal anchor outside that distribution's 99th percentile is one the
+    writer has reason to believe is misplaced, and R37 §3.2 says such an anchor is not
+    written.
+
+    The interior positions are the control that makes the test mean anything: they run the
+    identical estimator where nothing is suspected, so a large residual at the end is
+    attributable to the anchor rather than to the estimator being poorly conditioned there.
+
+    Returns
+    -------
+    tuple
+        Whether to drop the first anchor, whether to drop the last, and the residuals in
+        parent ticks -- `first`, `last` and the `threshold` they were judged against.
+    """
+    room = neighbours + 2
+    if ticks.size < room + 2:
+        return False, False, {}
+    control = np.abs(
+        [
+            _predict(ticks[i], ticks[i + 1 : i + 1 + neighbours], parents[i + 1 : i + 1 + neighbours], 0) - parents[i]
+            for i in range(1, min(interior, ticks.size - room))
+        ]
+    )
+    threshold = float(np.percentile(control, SUSPECT_PERCENTILE))
+    first = float(parents[0] - _predict(ticks[0], ticks[1 : 1 + neighbours], parents[1 : 1 + neighbours], 0))
+    last = float(parents[-1] - _predict(ticks[-1], ticks[-1 - neighbours : -1], parents[-1 - neighbours : -1], -1))
+    return (
+        abs(first) > threshold,
+        abs(last) > threshold,
+        {"first": round(first, 1), "last": round(last, 1), "threshold": round(threshold, 1)},
+    )
+
+
+@dataclass(frozen=True)
+class SyncStream:
+    """One stream's TTL events, with the parts needed to anchor it.
+
+    Attributes
+    ----------
+    path : Path
+        The ``TTL`` directory.
+    node, experiment, recording, stream : str
+        Where it sits in the clipped tree.
+    aligned : bool
+        Whether rig-qc rewrote its timestamps, detected by the archive beside them.
+    """
+
+    path: Path
+    node: str
+    experiment: str
+    recording: str
+    stream: str
+    aligned: bool
+
+    @property
+    def key(self) -> str:
+        """The stream key a sorted folder uses for the same data.
+
+        Deliberately without the record node, because that is what a sorted folder name
+        reduces to. Unambiguous for probes -- their names are unique across nodes -- and
+        ambiguous for the NI-DAQ, of which a two-node rig has one per node. Use `uid` where
+        the value is an identity rather than a correspondence.
+        """
+        return f"{self.experiment}.{self.stream}"
+
+    @property
+    def uid(self) -> str:
+        """A stream id that stays unique when two nodes carry the same stream name."""
+        return f"{self.experiment}.{self.node}.{self.stream}"
+
+
+def _by_key(streams: list[SyncStream]) -> dict[str, list[SyncStream]]:
+    """Group streams by the key a sorted folder would use, to spot an ambiguous one."""
+    grouped: dict[str, list[SyncStream]] = {}
+    for stream in streams:
+        grouped.setdefault(stream.key, []).append(stream)
+    return grouped
+
+
+class SyncSource:
+    """An Open Ephys ``ecephys_clipped`` tree, read as clock anchors.
+
+    Parameters
+    ----------
+    root : str or Path
+        The clipped tree, or a directory containing one.
+    session_id : str
+        The session these anchors belong to.
+    experiment : str, optional
+        Restrict to one experiment. Each restarts its sample counter, so anchors from two of
+        them are not comparable.
+    recording : str, default "recording1"
+        Which recording within the experiment.
+    sync_line : int, default 1
+        The TTL line carrying the shared pulse. Line 5 on this rig is the HARP heartbeat
+        UART, which only the NI-DAQ decodes and which is not a bare edge.
+    first_samples : Mapping, optional
+        Stream key -> the recording's first raw sample. Read from
+        ``continuous/<stream>/sample_numbers.npy`` when absent here and present on disk.
+    prefix : str, optional
+        Prepended to every generated ID.
+
+    Attributes
+    ----------
+    notes : list of str
+        Streams skipped, and why.
+    """
+
+    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
+    #: therefore needs the data.
+    PRODUCES = frozenset(
+        {
+            "core.clock_anchors",
+            "core.clock_observation_intervals",
+            "core.clocks",
+        }
+    )
+
+    def __init__(
+        self,
+        root: str | Path,
+        *,
+        session_id: str,
+        experiment: str = "experiment1",
+        recording: str = "recording1",
+        sync_line: int = 1,
+        first_samples: Mapping[str, int] | None = None,
+        prefix: str = "",
+    ) -> None:
+        self.root = _resolve(Path(root))
+        self.session_id = session_id
+        self.experiment = experiment
+        self.recording = recording
+        self.sync_line = sync_line
+        self.first_samples = dict(first_samples or {})
+        self.prefix = prefix
+        self.notes: list[str] = []
+        #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters.
+        self.withheld: dict[str, dict[str, Any]] = {}
+        #: Clock ID to phase steps found in the parent's alignment, for the run's parameters.
+        #: Reported, never corrected: whether a step also moved the devices timestamped on the
+        #: parent is not knowable from the packet, and subtracting it would be wrong if it did.
+        self.discontinuities: dict[str, list[dict[str, Any]]] = {}
+        self._observed: list[tuple[int, int]] = []
+        self._pulses: dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]] = {}
+        self._aligned: list[SyncStream] | None = None
+        self._starts: dict[str, RecordingStart | None] = {}
+        self._unanchored: set[str] = set()
+
+    # -- discovery ----------------------------------------------------------------------
+
+    def streams(self) -> list[SyncStream]:
+        """Every TTL directory in the chosen experiment, aligned or not."""
+        found = []
+        for node in sorted(self.root.iterdir()):
+            matched = NODE.match(node.name)
+            if not matched or not node.is_dir():
+                continue
+            events = node / self.experiment / self.recording / "events"
+            if not events.is_dir():
+                continue
+            for stream in sorted(events.iterdir()):
+                ttl = stream / "TTL"
+                if (ttl / "states.npy").is_file():
+                    found.append(
+                        SyncStream(
+                            path=ttl,
+                            node=matched.group("node"),
+                            experiment=self.experiment,
+                            recording=self.recording,
+                            stream=stream.name,
+                            aligned=(ttl / ARCHIVE).is_file(),
+                        )
+                    )
+        if not found:
+            raise SourceDefect(f"{self.root} holds no TTL events for {self.experiment}/{self.recording}")
+        return found
+
+    def aligned(self) -> list[SyncStream]:
+        """Return the streams a node owns, which are the ones carrying HARP time.
+
+        Memoized: a build asks for the anchors more than once, and a note repeated per ask
+        reads as a repeated defect rather than as one seen twice.
+        """
+        if self._aligned is not None:
+            return self._aligned
+        every = self.streams()
+        keep = [s for s in every if s.aligned]
+        for skipped in (s for s in every if not s.aligned):
+            self.notes.append(
+                f"{skipped.node}/{skipped.stream}: no {ARCHIVE}, so its timestamps are "
+                "acquisition-local rather than HARP; skipped"
+            )
+        if not keep:
+            raise SourceDefect(f"{self.root}: no stream in {self.experiment} carries HARP-aligned timestamps")
+
+        self._aligned = self._deduplicate(keep)
+        return self._aligned
+
+    def _deduplicate(self, keep: list[SyncStream]) -> list[SyncStream]:
+        """Drop a stream that is another one recorded twice.
+
+        Two record nodes can subscribe to the same physical device. They are one clock, and
+        emitting both would put two clocks on one device and leave a reader to pick.
+
+        **Sameness is agreement on the samples both saw, not identical arrays.** Two nodes
+        rarely start on the same event: measured on a real rig, one node's NI-DAQ carries
+        81,818 TTL events and the other 81,817, differing only in a line-5 edge the second node
+        began too late to see. Every shared sample number agrees on state, and the two
+        alignments differ by 292 us. Requiring equal arrays would call that two devices.
+
+        The stream that saw the most is kept, so no anchor is discarded, with the lowest node
+        breaking a tie. What differed is reported rather than dropped: it measures how well the
+        alignment is determined, which nothing else in the packet says.
+
+        Two streams disagreeing on a sample both recorded are a different matter and are
+        refused, because then the name really is ambiguous.
+        """
+
+        def events(stream: SyncStream) -> tuple[Any, Any]:
+            return np.load(stream.path / "states.npy"), np.load(stream.path / "sample_numbers.npy")
+
+        out = []
+        for name, group in sorted(_by_key(keep).items()):
+            if len(group) == 1:
+                out.append(group[0])
+                continue
+            ordered = sorted(group, key=lambda st: (-np.load(st.path / "sample_numbers.npy").size, st.node))
+            first, *rest = ordered
+            base_states, base_samples = events(first)
+            for other in rest:
+                other_states, other_samples = events(other)
+                shared = np.intersect1d(base_samples, other_samples)
+                here, there = np.isin(base_samples, shared), np.isin(other_samples, shared)
+                if not np.array_equal(base_states[here], other_states[there]):
+                    raise SourceDefect(
+                        f"{name} names two streams that disagree on samples both recorded -- "
+                        f"{first.node}/{first.stream} and {other.node}/{other.stream}. The key omits "
+                        "the record node, so one would silently take the other's anchors; give them "
+                        "distinct names."
+                    )
+                drift = np.abs(
+                    np.load(first.path / "timestamps.npy")[here] - np.load(other.path / "timestamps.npy")[there]
+                ).max()
+                missed = base_samples.size - shared.size, other_samples.size - shared.size
+                unseen = (
+                    f"; node {first.node} saw {missed[0]} the other did not and node {other.node} saw {missed[1]}"
+                    if any(missed)
+                    else ""
+                )
+                self.notes.append(
+                    f"{name}: node {other.node} records the same {shared.size:,} events as node "
+                    f"{first.node}; kept {first.node}. The two alignments disagree by up to "
+                    f"{drift * 1e6:.1f} us{unseen}"
+                )
+            out.append(first)
+        return out
+
+    def started(self, stream: SyncStream) -> RecordingStart | None:
+        """Return what the record node behind a stream says about when it began, memoized."""
+        if stream.node not in self._starts:
+            recording = stream.path.parent.parent.parent
+            self._starts[stream.node] = read_sync_messages(recording / SYNC_MESSAGES, stream.node)
+            if self._starts[stream.node] is None:
+                self.notes.append(f"{stream.node}: no {SYNC_MESSAGES}; the node's start instant is unknown")
+        return self._starts[stream.node]
+
+    def _first_sample(self, stream: SyncStream) -> int:
+        """Find the recording's first raw sample.
+
+        Three sources, in the order of how directly each says it. A supplied value wins because
+        a caller that states one has a reason. Then the record node's own `sync_messages.txt`,
+        which is where a supplied value comes from anyway. Only then the 1.3 GB counter array
+        beside the data, read at element 0 through a memory map -- correct, but it requires the
+        continuous data to be present, and a packet built from events and a sorting has no
+        reason to hold it.
+        """
+        for candidate in (stream.uid, stream.key):
+            if candidate in self.first_samples:
+                return self.first_samples[candidate]
+        if (start := self.started(stream)) is not None and stream.stream in start.samples:
+            return start.samples[stream.stream]
+        continuous = stream.path.parent.parent.parent / "continuous" / stream.stream / "sample_numbers.npy"
+        if not continuous.is_file():
+            raise SourceDefect(
+                f"{stream.key}: no first sample supplied, no {SYNC_MESSAGES}, and {continuous} is "
+                "absent, so a raw counter cannot be made recording-relative"
+            )
+        return int(np.load(continuous, mmap_mode="r")[0])
+
+    def _rises(self, stream: SyncStream) -> tuple[NDArray[np.int64], NDArray[np.float64]]:
+        """Rising edges of the sync line: raw sample numbers and their HARP seconds."""
+        states = np.load(stream.path / "states.npy")
+        rising = states == self.sync_line
+        if not rising.any():
+            raise SourceDefect(f"{stream.key}: no rising edge on line {self.sync_line}")
+        return (
+            np.load(stream.path / "sample_numbers.npy")[rising].astype(np.int64),
+            np.load(stream.path / "timestamps.npy")[rising].astype(np.float64),
+        )
+
+    # -- tables -------------------------------------------------------------------------
+
+    def clock(self, *, clock_id: str = "harp", name: str = "HARP rig clock") -> Clock:
+        """Build the reference clock every stream's anchors point at.
+
+        No `tick_zero_utc`: HARP free-runs from device power-on and nothing in an events tree
+        records when that was. `SessionSource.epoch` derives it where a packet needs one.
+        """
+        return Clock(
+            clock_id=f"{self.prefix}{clock_id}",
+            session_id=self.session_id,
+            name=name,
+            tick_rate_num=HARP_TICK_RATE_HZ,
+            origin="HARP device power-on; tick 0 is not the session start",
+        )
+
+    def anchors(self, *, clock_id_for: Any = None, parent_clock_id: str = "harp") -> list[dict[str, Any]]:
+        """`core.clock_anchors`, one row per sync pulse per aligned stream.
+
+        Parameters
+        ----------
+        clock_id_for : callable, optional
+            Maps a :class:`SyncStream` to the clock id its ticks are on, or to None for a
+            stream the packet declares no clock for -- the NI-DAQ records the sync pulse and
+            carries no ticks of its own, so it is anchored to nothing. Defaults to the
+            convention `SorterSource` writes, so the two adapters meet without either
+            knowing about the other.
+        parent_clock_id : str, default "harp"
+            The clock `parent_tick` is on.
+
+        Returns
+        -------
+        list of dict
+            Sorted by `(clock_id, anchor_index)`, as R13 §3 requires.
+        """
+        name_of = clock_id_for or (lambda s: f"{self.prefix}{s.key}.samples")
+        rows = []
+        for stream in self.aligned():
+            clock = name_of(stream)
+            if clock is None:
+                if stream.key not in self._unanchored:
+                    self._unanchored.add(stream.key)
+                    self.notes.append(f"{stream.key}: no clock declared for it; anchored to nothing")
+                continue
+            ticks, parents = self.pulses(stream, clock)
+            rows += [
+                {
+                    "clock_id": clock,
+                    "anchor_index": index,
+                    "t_tick": int(tick),
+                    "parent_tick": int(parent),
+                }
+                for index, (tick, parent) in enumerate(zip(ticks, parents, strict=True))
+            ]
+        del parent_clock_id  # named for the caller's benefit; the parent lives on core.clocks
+        return rows
+
+    def pulses(self, stream: SyncStream, clock: str) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+        """One stream's usable sync pulses as `(ticks, parent ticks)`, memoized.
+
+        Memoized because reading a stream's pulses is where R37 §3.2's test runs and where the
+        observed span is recorded, and both must happen exactly once however many times a
+        caller asks for the anchors. Keyed on the clock name, since that is what the caller
+        varies -- a stream anchored to nothing never reaches here.
+        """
+        if clock in self._pulses:
+            return self._pulses[clock]
+        first = self._first_sample(stream)
+        samples, seconds = self._rises(stream)
+        ticks = samples - first
+        parents = np.rint(seconds * HARP_TICK_RATE_HZ).astype(np.int64)
+        if not ((np.diff(ticks) > 0).all() and (np.diff(parents) > 0).all()):
+            raise SourceDefect(
+                f"{stream.key}: sync pulses do not increase on both clocks, so interpolation "
+                "between them is undefined (R13 §3). A counter that reset mid-recording is two "
+                "clocks, not one (R27 §6)"
+            )
+        # The window HARP was observed over is the whole pulse train, recorded before the test
+        # below removes anchors: withholding one is a statement about how well its parent tick
+        # is placed, not about whether the rig was running then.
+        self._observed.append((int(parents[0]), int(parents[-1])))
+        drop_first, drop_last, residuals = suspect_terminals(ticks, parents)
+        if drop_first or drop_last:
+            kept = slice(1 if drop_first else None, -1 if drop_last else None)
+            ticks, parents = ticks[kept], parents[kept]
+            withheld = ["first"] * drop_first + ["last"] * drop_last
+            self.withheld[clock] = {"anchors": withheld, **residuals}
+            self.notes.append(
+                f"{stream.key}: withheld the {' and '.join(withheld)} anchor; residual "
+                f"{residuals['first']:.0f}/{residuals['last']:.0f} parent ticks against a "
+                f"{residuals['threshold']:.0f}-tick interior threshold (R37 §3.2)"
+            )
+        self.notes.append(
+            f"{stream.key}: {ticks.size} anchors, ticks {int(ticks[0])}..{int(ticks[-1])}, "
+            f"parent {int(parents[0])}..{int(parents[-1])}"
+        )
+        if stepped := phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ):
+            self.discontinuities[clock] = stepped
+            self.notes.append(
+                f"{stream.key}: {len(stepped)} phase discontinuit"
+                f"{'y' if len(stepped) == 1 else 'ies'} in the reference alignment, "
+                + ", ".join(f"{e['seconds'] * 1e3:+.2f} ms at tick {e['t_tick']}" for e in stepped)
+            )
+        self._pulses[clock] = (ticks, parents)
+        return ticks, parents
+
+    def observation_intervals(self) -> list[dict[str, Any]]:
+        """`core.clock_observation_intervals` for the reference clock (R38 §2.1).
+
+        The window is the span of the sync train, which is HARP-native and so needs no
+        conversion: every pulse carries a HARP time, and their extent is the interval over
+        which this session has HARP time at all. Outside it the reference clock is not
+        unobserved so much as unwitnessed, and either way nothing in the packet is on it.
+
+        :meth:`anchors` must have run, since the span is what it saw.
+        """
+        if not self._observed:
+            return []
+        return [
+            {
+                "session_id": self.session_id,
+                "clock_id": self.clock().clock_id,
+                "start_tick": min(start for start, _ in self._observed),
+                "stop_tick": max(stop for _, stop in self._observed),
+            }
+        ]
+
+    def records(self, *, clock_id_for: Any = None) -> dict[str, list[dict[str, Any]]]:
+        """Every table this adapter builds as records, keyed by resource ID."""
+        built = {
+            "core.clocks": [self.clock().record()],
+            "core.clock_anchors": self.anchors(clock_id_for=clock_id_for),
+            "core.clock_observation_intervals": self.observation_intervals(),
+        }
+        return {resource: rows for resource, rows in built.items() if rows}
+
+    def offers(self) -> dict[str, int]:
+        """Which resources this source supplies from its root, and how many rows (`05` §1)."""
+        return {resource: len(rows) for resource, rows in self.records().items()}
+
+    def into(self, writer: Any, *, clock_id_for: Any = None) -> dict[str, int]:
+        """Add the reference clock and every anchor to a `PacketWriter`."""
+        counted = {}
+        for resource, rows in self.records(clock_id_for=clock_id_for).items():
+            writer.add(resource, rows)
+            counted[resource] = len(rows)
+        return counted
+
+
+def _resolve(root: Path) -> Path:
+    """Accept the clipped tree, an asset holding one, or a directory of record nodes."""
+    for candidate in (root, root / "ecephys" / "ecephys_clipped", root / "ecephys_clipped", root / "events"):
+        if candidate.is_dir() and any(NODE.match(child.name) for child in candidate.iterdir() if child.is_dir()):
+            return candidate
+    raise SourceDefect(f"{root} holds no Record Node directories")
+
+
+__all__ = ["ARCHIVE", "SyncSource", "SyncStream"]
