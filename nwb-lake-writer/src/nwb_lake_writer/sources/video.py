@@ -34,8 +34,9 @@ Each camera writes a CSV beside its video, one line per frame and three columns:
 
 `pts` carries none of the three. It is the frame's presentation timestamp in the **container**,
 an integer of the container's own time base (R68 §2.2), which is what locates a row in the file a
-consumer opens; the asset records that base, so `pts * num / den` is seconds of video where
-`t_tick` is the same frame on the rig clock.
+consumer opens. The asset declares the rate those timestamps count at (R70 §2.1), so
+`pts * pts_rate_den / pts_rate_num` is seconds of video without opening it, where `t_tick` is the
+same frame on the rig clock.
 
 Frames are numbered in presentation order (R69 §2.1), which is why the container index is sorted
 before it is read: packets arrive in decode order, and this stream displaces one by up to three
@@ -164,27 +165,24 @@ class VideoSource(Compensates):
                     "name": video.stem,
                     "uri": self._uri(video),
                     "format": SUFFIX.lstrip("."),
+                    **(self._pts_rate(video) if timing else {}),
                     "clock_id": self.clock_id if timing else None,
-                    "metadata": self._pts_metadata(video) if timing else None,
                 }
             )
         return rows
 
-    def _pts_metadata(self, video: Path) -> dict[str, Any]:
-        """Return what a consumer needs to read this asset's `pts` column as time.
+    def _pts_rate(self, video: Path) -> dict[str, int]:
+        """Return what a consumer needs to read this asset's `pts` column as time (R70 §2.1).
 
-        A container's timestamps are integers of its own time base, so the base is the only thing
-        that turns one into seconds, and it is a property of the file rather than of the format --
-        two cameras writing MP4 need not share it. Rational, for the reason R33 gives: a base of
-        1/16000 has no exact decimal, and a rounded one accumulates over 2.5 M frames.
+        A container states a *time base* -- seconds per timestamp -- and core carries the
+        reciprocal, so `core.media_assets` agrees with `core.clocks` about what a rational rate
+        looks like. The inversion happens here, once, which is the boundary R70 §2.1 puts it at.
+
+        Rational rather than a float, for the reason R33 gives: 1/90000 has no exact decimal and a
+        rounded one accumulates over the millions of frames a session holds.
         """
-        base = _ffprobe(video, "stream=time_base")
-        num, _, den = base.strip().partition("/")
-        return {
-            "pts_source": "container",
-            "pts_time_base_num": int(num),
-            "pts_time_base_den": int(den or 1),
-        }
+        num, _, den = _ffprobe(video, "stream=time_base").strip().partition("/")
+        return {"pts_rate_num": int(den or 1), "pts_rate_den": int(num)}
 
     def _presentation(self, video: Path) -> np.ndarray:
         """Presentation timestamps of the frames the video actually holds, in container units.
