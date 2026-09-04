@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-03 |
+| **Status** | **Accepted** 2026-09-03 |
 | **Amends** | `05` §3 (what a recipe declares), R2 §7 (what is checkable before I/O) |
 | **Depends on** | R17 (an extension's tables are owned like core's), R53 (identifiers are assigned packet-wide) |
 | **Profile** | `nwb-lake-portable-v0.1` |
