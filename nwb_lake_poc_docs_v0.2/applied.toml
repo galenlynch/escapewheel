@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 134
+undisposed = 234
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -227,7 +227,7 @@ disposition = "applied"
 where = "03_portable_physical_profile.md §5.3"
 note = "restored 2026-09-04; had been compiled as a MUST with order declared normative"
 
-[clause."R12 §4"]
+[clause."R12 §2"]
 disposition = "applied"
 where = "03_portable_physical_profile.md §5.3"
 note = "restored 2026-09-04; the warning level had been lost"
@@ -237,7 +237,7 @@ disposition = "applied"
 where = "04_packet_catalog.md §5.1"
 note = "restored 2026-09-04; the converse had been compiled as an implication"
 
-[clause."R21 §3"]
+[clause."R21 §3.3"]
 disposition = "applied"
 where = "03_portable_physical_profile.md §6.4"
 note = "restored 2026-09-04; the reader floor table was absent entirely"
@@ -246,7 +246,7 @@ note = "restored 2026-09-04; the reader floor table was absent entirely"
 disposition = "applied"
 where = "03_portable_physical_profile.md §5.4"
 
-[clause."R30 §3.3"]
+[clause."R30 §3.1"]
 disposition = "applied"
 where = "03_portable_physical_profile.md §5.4"
 

@@ -51,12 +51,27 @@ def clauses() -> dict[str, str]:
         text = path.read_text()
         if "**Accepted**" not in text[:400]:
             continue
-        subsections = list(re.finditer(r"^### (2\.[\d.]*\d)\s+(.+)$", text, re.MULTILINE))
-        for match in subsections:
-            found[f"R{number} §{match.group(1)}"] = match.group(2).strip()
-        # A revision whose Decision has no subsections states it at the section level.
-        if not subsections and (whole := re.search(r"^## (2)\.\s+(.+)$", text, re.MULTILINE)):
-            found[f"R{number} §{whole.group(1)}"] = whole.group(2).strip()
+        # Every section from 2 onward, at either depth. Section 1 is Motivation by convention;
+        # after that the numbering is not consistent -- R32 states its rules in §2, §3 and §4,
+        # R30's order is §3.2, R21's codec floor is §3 -- so position cannot say what binds.
+        # A subsection supersedes its parent: `### 2.1` is disposed, `## 2.` then is not.
+        matches = [m for m in re.finditer(r"^#{2,3} (\d+(?:\.[\d.]*\d)?)\.?\s+(.+)$", text, re.MULTILINE)
+                   if int(m.group(1).split(".")[0]) >= 2]
+        parents = {m.group(1).split(".")[0] for m in matches if "." in m.group(1)}
+        for index, match in enumerate(matches):
+            section = match.group(1)
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+            body = text[match.end():end]
+            # A parent is enumerated only for its own body, the text before its first
+            # subsection. R32 §4 states the manifest's carry-forward there and then subdivides;
+            # skipping every parent lost it.
+            if section in parents and not re.search(r"\b(MUST|SHOULD)\b", body):
+                continue
+            # A Decision subsection always counts: `R68 §2.1` says `pts` *becomes* `int64` and
+            # binds completely without an RFC 2119 keyword. Anywhere else -- and the numbering
+            # is not consistent, R32 decides in §2, §3 and §4 -- a keyword is what marks it.
+            if section.startswith("2") or re.search(r"\b(MUST|SHOULD)\b", body):
+                found[f"R{number} §{section}"] = match.group(2).strip()
     return found
 
 

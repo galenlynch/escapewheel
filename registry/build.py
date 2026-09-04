@@ -80,7 +80,7 @@ SINCE = _Since([None])
 #: a key, a sort order, a withdrawal, or a decision about the format rather than about a table.
 #: R42 is withdrawn and so is not here.
 UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34, 35, 36, 37, 40,
-             43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69)
+             43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69, 71, 72, 74, 75, 76)
 
 
 #: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a
