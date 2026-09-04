@@ -86,8 +86,9 @@ DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     "core.units": ("n_spikes",),
     # Contiguous 0..n-1 within one asset, and 2.5 M distinct values per camera: the worst case
     # for a dictionary, whose entries then outnumber nothing and cost 1.54 B/row where delta
-    # costs 0.01.
-    "core.media_frames": ("frame_index",),
+    # costs 0.01. `pts` is the same shape once R68 §2.1 makes it an integer -- a frame timeline
+    # advancing by a constant step -- and takes the column from 1.50 B/row to 0.006.
+    "core.media_frames": ("frame_index", "pts"),
 }
 
 

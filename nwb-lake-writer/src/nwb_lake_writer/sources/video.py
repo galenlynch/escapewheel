@@ -33,8 +33,13 @@ Each camera writes a CSV beside its video, one line per frame and three columns:
 - the **camera's own clock** in nanoseconds, which is what the repair was checked against.
 
 `pts` carries none of the three. It is the frame's presentation timestamp in the **container**,
-which is what locates a row in the file a consumer opens; the asset records the container's time
-base, so `pts * num / den` is seconds of video where `t_tick` is the same frame on the rig clock.
+an integer of the container's own time base (R68 §2.2), which is what locates a row in the file a
+consumer opens; the asset records that base, so `pts * num / den` is seconds of video where
+`t_tick` is the same frame on the rig clock.
+
+Frames are numbered in presentation order (R69 §2.1), which is why the container index is sorted
+before it is read: packets arrive in decode order, and this stream displaces one by up to three
+positions from where it is shown.
 """
 
 from __future__ import annotations
@@ -252,7 +257,7 @@ class VideoSource(Compensates):
                     "frame_index": pa.array(np.arange(start, stop, dtype=np.int64)),
                     "t_tick": pa.array(ticks[start:stop]),
                     "clock_id": pa.array([self.clock_id] * (stop - start)),
-                    "pts": pa.array(pts[start:stop].astype(np.float64)),
+                    "pts": pa.array(pts[start:stop]),
                     "dropped": pa.array(gap[start:stop]),
                 }
             )
