@@ -5,15 +5,35 @@ settled item lives in the revision it produced and in git history, not here.
 
 ## State of the world
 
-**R1–R41, R43–R53 and R56 accepted and implemented. R42 withdrawn. R54 and R55 proposed.**
-Registry: 35 tables, 307 columns, 72 references, 26 invariants. Tests: 156 reader, **345** writer,
-87 validator, 26 conformance packets. All green.
+Last checked 2026-09-04, by `python verify.py` — which is the way to check it, rather than by
+reading this block. Everything below is what that command reports.
 
-**Three extension registries** in `registry/extensions/`: `dynamic_foraging` (2 tables, 17 checks),
-`aind_unit_qc` (3, 16), `aind_opto` (2, 9). Each drawn from columns measured in the real session
-rather than invented — see `registry/extensions/README.md`.
+**R1–R41 and R43–R70 accepted and implemented. R42 withdrawn. Nothing is proposed.**
+Registry: 34 tables, 315 columns, 76 references, 66 Tier 2 rules, 21 invariants in `check.py`.
+Tests: 152 reader, 380 writer, 93 validator, 26 conformance packets, 12 verification stages. All
+green.
 
-**Phases 0–6 complete.** `nwb-lake verify` closes R36 §2.4. Phase 7 (Iceberg) untouched.
+**Four extension registries** in `registry/extensions/`: `dynamic_foraging` (3 tables),
+`aind_unit_qc` (3), `aind_opto` (2), `vr_foraging` (3). Each drawn from columns measured in a real
+session rather than invented — see `registry/extensions/README.md`. The conformance corpus carries
+one, because R54 §2.4a leaves a packet holding intervals no way not to.
+
+**Phases 0–6 complete.** `nwb-lake verify` closes R36 §2.4 and `nwb-lake prune` closes R61 §3.
+Phase 7 (Iceberg) untouched.
+
+**This is one repository.** It was ten until 2026-09-04; each history was preserved through the
+join, so `git log -- revisions/` and `git blame` reach back through it.
+
+### What stands between here and a production trial
+
+1. **Package a second session.** Every adapter has been developed and validated against exactly
+   one, `ecephys_786867`. R59 already measured that `ecephys_776259` emits `ccf_id`/`ccf_acronym`
+   where 786867 emits `brain_region_id`, so this is where the next defects are.
+2. **Decide what `registry_version` is for.** Held at `0.1.0` while the schema moves; two packets
+   claiming one version with incompatible schemas is what the field exists to prevent. Free to
+   settle now, expensive once anyone outside holds a packet.
+3. **Run the compliance scan against the implementation.** The equivalent against the spec found
+   ten missing rules; nothing has run it against the registry, writer and validator.
 
 ---
 

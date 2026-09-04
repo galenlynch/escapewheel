@@ -3,7 +3,8 @@
 Tracking document for NWB-Lake POC v0.1. Records what exists, what passes validation, and
 which phase is in progress. Design decisions live in `revisions/`, not here.
 
-Last updated 2026-09-01.
+Last updated 2026-09-04. The counts here are checked by `python verify.py`; where this file and
+that command disagree, the command is right.
 
 ## Phase status
 
@@ -11,30 +12,32 @@ Phases are `07_reference_api_and_implementation_plan.md`'s plan of record.
 
 | Phase | State | Notes |
 |---|---|---|
-| — Specification | **complete** | R1–R41 and R43–R53 accepted; R42 withdrawn. 35 tables (R28 §6, R30, R38 §2.1). |
-| — Registry content | **complete** | 35 tables, 292 columns, 70 references, 61 Tier 2 rules (4 advisory). Version held at 0.1.0 while unreleased; bumped only when an amendment forces it. |
-| 0 Spec fixtures | **complete** | Single-session packet plus a 23-variant corpus; `fixtures/`. |
+| — Specification | **complete** | R1–R41 and R43–R70 accepted; R42 withdrawn. 34 tables. `nwb_lake_poc_docs_v0.2/` compiles the frozen spec plus every accepted revision. |
+| — Registry content | **complete** | 34 tables, 315 columns, 76 references, 66 Tier 2 rules (4 advisory). Version held at 0.1.0 while unreleased; bumped only when an amendment forces it, which is the last open decision before a release. |
+| 0 Spec fixtures | **complete** | Single-session packet plus a 25-variant corpus carrying one extension; `fixtures/`. |
 | 1 Manifest and table reader | **complete** | `nwb-lake-reader`; 156 tests, mypy strict. Ticks come back on the packet's reference clock by default, and `seconds=True` derives R39 §2.3's seconds from the declared origin or refuses. `TableResource` and `ArrayResource`, each with its heavy dependency behind an extra. |
 | 2 Validator | **complete** | `nwb-lake-validator`, its own package since 2026-08-27; 87 tests. Corpus passes through it. R15 §4 level 2 checks packet-owned arrays against their own Zarr metadata; level 3 runs under `external=True`, reachable as `validate --external` and `--checksums`, and reports the fields it compared rather than asserting a resource was checked. R35 §5 bounds an amendment's rules to what it writes. |
 | 3 NWB source importer | **complete** | Four adapters: `NWBSource` (tables the NWB is authority for, plus R28's unit-electrode and CCF links), `SessionSource` (`tick_zero_utc`, observation intervals), `SorterSource` (units, spikes, per-stream clocks), `SyncSource` (anchors), plus `WaveformSource`. The session recipe and `nwb-lake inspect` / `init` / `import` replace the ad-hoc scripts: 776259 commits clean from `session.toml` in 2.5 min, and the recipe lands in `core.processing_runs.parameters`, closing `05` Stage 3. |
 | 4 Analysis materializations | **complete** | `analysis.spike_events` (R30) materialised and amended into both packets. The success criterion is met — PSTH measured three ways, 2026-09-01, all bin-identical. The other six `06` names are **not** oversights: `spikes_by_trial`, `trials_wide` and `unit_condition_rates` were measured and declined by R43; `good_units` was already a view; `binned_spikes` and the spectrogram are Phase 5. |
 | 5 Dense arrays | **complete** | `core.waveform_mean`, a sparse int16 template array, `(6781, 26, 150)` in 26 MB, packet-owned Zarr v3. Layout measured in `conformance/zarr-probe/waveforms.py`: the chunk is the unit of the question, the shard the unit of the object, and the compressor goes *inside* the shard. **LFP is referenced, not copied** (R14 §2.3, R21 §3.2): twelve Zarr v2 arrays, 6.8 GB the packet points at, with R20's regular-tick axis replacing 767 MB of timestamps with three integers per series and `core.array_channels` carrying R19's per-channel `inter_sample_shift`. Both success criteria are met: `pkt.array("core.waveform_mean")` opens it, and the structural agreement is validated — rank against `core.array_dimensions`, codecs against the store, `zarr_format`, transpose ban. `07`'s "dtype/shape" wording is superseded, since R3 §3.3 struck both columns. Media assets are not Phase 5 scope: `07` never names them. |
-| 6 Release and version discipline | not started | |
+| 6 Release and version discipline | **partial** | `nwb-lake verify` records what is true about external resources (R36 §2.4); `nwb-lake prune` removes what a committed packet no longer names (R61 §3). What remains is the `registry_version` decision. |
 | 7 Iceberg experiment | not started | Explicitly last; MUST NOT be required earlier. |
 
 ## What exists
 
-| Path | Contents | Repo |
-|---|---|---|
-| `nwb_lake_poc_docs/` | Frozen specification. Not edited. | own |
-| `revisions/` | R1–R41 and R43–R53 accepted; all implemented. R42 withdrawn. | own |
-| `conformance/` | Probe suites producing the evidence revisions cite. | own |
-| `prototype/registry-codegen/` | R2's chain working end to end, 3 tables. | own |
-| `fixtures/` | Phase 0 packets and the conformance corpus. | own |
-| `nwb-lake-reader/` | Phase 1: the reader. Owns the `nwb-lake` console script. | own |
-| `nwb-lake-validator/` | Phase 2: the validator. Adds `nwb-lake validate`. | own |
-| `nwb-lake-writer/` | Phase 3: writer, clock, NWB and JSON adapters. Adds `nwb-lake import`. | own |
-| `registry/` | Registry, meta-schema, manifest schema, and the derivation. | own |
+One repository since 2026-09-04; the `Repo` column is gone with the split that needed it.
+
+| Path | Contents |
+|---|---|
+| `nwb_lake_poc_docs/` | Frozen specification. Not edited. |
+| `revisions/` | R1–R41 and R43–R53 accepted; all implemented. R42 withdrawn. |
+| `conformance/` | Probe suites producing the evidence revisions cite. |
+| `prototype/registry-codegen/` | R2's chain working end to end, 3 tables. |
+| `fixtures/` | Phase 0 packets and the conformance corpus. |
+| `nwb-lake-reader/` | Phase 1: the reader. Owns the `nwb-lake` console script. |
+| `nwb-lake-validator/` | Phase 2: the validator. Adds `nwb-lake validate`. |
+| `nwb-lake-writer/` | Phase 3: writer, clock, NWB and JSON adapters. Adds `nwb-lake import`. |
+| `registry/` | Registry, meta-schema, manifest schema, and the derivation. |
 
 Root holds `CLAUDE.md` and this file, and is not tracked.
 

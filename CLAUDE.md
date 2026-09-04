@@ -4,14 +4,21 @@ This file provides guidance to coding agents when working with code in this mono
 
 ## Project status
 
-Greenfield. This is a monorepo whose purpose is to build an implementation of the proof-of-principle
-specified in `nwb_lake_poc_docs/`. No source code, build system, or tests exist yet; the repository is
-currently the specification, the revision documents in `revisions/`, and whatever tracking documents
-have been added at root.
+A monorepo implementing the proof-of-principle specified in `nwb_lake_poc_docs/`. **Phases 0-6 of
+`07`'s plan are complete**; Phase 7 (Iceberg) is untouched and explicitly last. Three distributions
+(reader, validator, writer) sharing one `nwb-lake` CLI, a generated schema registry, a 26-packet
+conformance corpus, and 625 tests.
 
-Version control is per-subfolder, not a single repository at root: `nwb_lake_poc_docs/` and
-`revisions/` are each their own git repo. Commit within the relevant subfolder; the root
-directory itself is not tracked.
+`python verify.py` runs every generator and every check in 25 s and is the way to learn the state
+of this repository; `TODO.md` and `STATUS.md` say the same things in prose and go stale between
+runs.
+
+Version control is **one repository at the root**, since 2026-09-04. It was ten — one per
+subfolder — and they were coupled by relative paths git could not see, so a change spanning four
+of them could not be one commit, bisected, or reverted. Every history was preserved through the
+join, so `git log -- revisions/` and `git blame` reach back through it.
+
+Commit from the root. Stage only the files a change touched, as always.
 
 The spec — **NWB-Lake POC v0.1** — defines an ecephys data-lake format over Parquet, Zarr v3, and a
 JSON manifest, with no runtime dependency on NWB/HDMF/PyNWB. PyNWB is allowed only as an
