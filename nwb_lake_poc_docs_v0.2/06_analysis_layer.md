@@ -1,0 +1,69 @@
+# Part 06 — Analysis Layer
+
+Informative, except §2 and §5, which are normative.
+
+## 1. Scope
+
+This part describes the optional `analysis` layer: derived products computed from core, kept because a query cannot answer the same question at acceptable cost.
+
+## 2. Rules
+
+Normative.
+
+An analysis resource MUST declare lineage to the core resources it derives from (04 §7).
+
+An analysis resource is disposable. A consumer MAY delete and recompute any of them without loss.
+
+An analysis resource MUST NOT be the only place a fact exists. Anything a consumer needs that is not recomputable from core belongs in core.
+
+## 3. What justifies materializing
+
+A derived product earns its place by **layout**, not by arithmetic. Where the computation is cheap against data already held, a view is the correct answer and a materialized copy is a maintenance liability.
+
+Measured on a real session, the arithmetic of aligning spikes to an event and a window costs 0.13 to 1.72 s against trains already in memory, while a materialized copy of four alignments comes to 100.6% of the spike table itself (R43 §2). A wide trial table is 708 rows in 7.5 ms.
+
+The test is therefore: does materializing change the *shape* of access, or only pre-compute a cheap step?
+
+## 4. `analysis.spike_events`
+
+Core keeps each spike on the clock of the probe that measured it, sorted unit-major. That layout answers "this unit's spikes" well and "every unit's spikes in this window" not at all, because a window across many clocks means nothing.
+
+`analysis.spike_events` is core's spikes mapped onto the reference clock and bucketed by time, sorted by unit within each bucket, so that a time filter and a unit filter both prune (R30 §2).
+
+| column | purpose |
+|---|---|
+| `session_id`, `unit_id`, `sorting_run_id`, `curation_id` | unit identity |
+| `t_tick` | the spike, on the reference clock |
+| `clock_id` | the reference clock |
+| `time_bucket_tick` | the bucket this row lies in |
+
+A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data and is therefore recorded in the producing run's parameters, as is the count of spikes the alignment could not place — a derived table one row short otherwise looks exactly like a complete one (R31 §3, R40 §2.3).
+
+Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
+
+## 5. Provenance of a materialization
+
+Normative.
+
+A materialization MUST record a `core.processing_runs` row and MUST name it from the resource's catalog entry (R31 §2). The run's parameters MUST carry any transform parameter that cannot be recovered from the output.
+
+## 6. Withdrawn resources
+
+Four resources proposed in v0.1 are withdrawn (R43 §2). They were specified before anything measured them:
+
+| resource | disposition |
+|---|---|
+| `analysis.spikes_by_trial` | withdrawn; a table per (event, window) pair, and the alignment is cheap |
+| `analysis.trials_wide` | withdrawn; 708 rows in 7.5 ms as a view |
+| `analysis.unit_condition_rates` | withdrawn; its columns are a task's shape, not a format's |
+| `analysis.good_units` | withdrawn; a filter, not a table |
+
+The columns those tables carried — `condition_id`, `stimulus_id`, `block_id` — describe a particular task rather than the format, and belong in an extension (Part 09).
+
+## 7. Views versus materialized products
+
+Prefer a view where the query prunes and the result is small. Prefer a materialized product where the physical layout of core cannot serve the access pattern at all, which in practice means a different sort order or a different clock.
+
+## 8. Promotion into core
+
+An analysis resource becomes canonical only through an explicit revision of this specification. Promotion is a schema decision, not an operational one.
