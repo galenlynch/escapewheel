@@ -44,9 +44,17 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:  # pragma: no cover
     from .writer import StagedArray
 
-#: R3 §7.2's baseline, which every conforming reader supports, plus the two R3 permits beyond
-#: it. A codec outside this set is refused here rather than written and discovered later.
-CODECS = {"none", "gzip", "zstd", "blosc", "sharding_indexed"}
+#: R3 §7.2's reader floor: what every conforming reader MUST support. It is a *reader*
+#: obligation and not a writer restriction -- R14 §2.2 generalized the declaration to an open
+#: one, so "a writer MAY use any Zarr codec; the manifest MUST name it; a reader MUST check
+#: before opening an array and fail naming what it lacks." Refusing a codec here would enforce
+#: against a writer a floor written for readers, and `nwb_lake_reader.Packet.unopenable` is
+#: where the check belongs.
+FLOOR = {"none", "gzip", "zstd"}
+
+#: Array-to-array codecs, which run before the bytes codec rather than after it. `delta` is one:
+#: it rewrites values as differences, so it must see them as values.
+FILTERS = {"delta"}
 
 
 #: Round-trip latency and single-stream bandwidth of the store a packet will be read from.
@@ -161,8 +169,14 @@ def declared_codecs(spec: StagedArray) -> tuple[str, ...]:
     return ("sharding_indexed", *inner) if spec.shard is not None else inner
 
 
-def _codec(name: str) -> Any:
-    """Build one bytes-to-bytes codec by the name a manifest declares (R15 §2)."""
+def _codec(name: str, *, differenced: bool = False) -> Any:
+    """Build one bytes-to-bytes codec by the name a manifest declares (R15 §2).
+
+    `differenced` says a delta filter runs first, which decides blosc's shuffle. Bit shuffle
+    wins where the high bits go constant, and differencing a smooth signal is what makes them
+    constant -- so on real waveforms in R3 §5's layout it is 0.92 MB against byte shuffle's
+    0.96 undifferenced, and 0.86 against 0.95 differenced.
+    """
     from zarr.codecs import BloscCodec, GzipCodec, ZstdCodec
 
     if name == "zstd":
@@ -170,11 +184,19 @@ def _codec(name: str) -> Any:
     if name == "gzip":
         return GzipCodec()
     if name == "blosc":
-        # zstd inside blosc with byte shuffle: 11.4% smaller than plain zstd on real
-        # waveforms, matching the 11% R3 §7.3 measured on synthetic ephys. Bit shuffle wins
-        # only at coarse quantisation, where the high bits go constant; it loses here.
-        return BloscCodec(cname="zstd", shuffle="shuffle")
+        # zstd inside blosc: 11.4% smaller than plain zstd on real waveforms, matching the 11%
+        # R3 §7.3 measured on synthetic ephys.
+        return BloscCodec(cname="zstd", shuffle="bitshuffle" if differenced else "shuffle")
     raise ValueError(f"{name} is not a bytes codec this writer emits")
+
+
+def _filter(name: str, dtype: Any) -> Any:
+    """Build one array-to-array codec, which sees values rather than bytes."""
+    from numcodecs.zarr3 import Delta
+
+    if name == "delta":
+        return Delta(dtype=str(dtype))
+    raise ValueError(f"{name} is not an array codec this writer emits")
 
 
 def write_zarr(path: Path, spec: StagedArray) -> int:
@@ -201,16 +223,19 @@ def write_zarr(path: Path, spec: StagedArray) -> int:
     import zarr
     from zarr.codecs import BytesCodec, ShardingCodec
 
-    unknown = sorted(set(spec.codecs) - CODECS)
-    if unknown:
-        raise ValueError(f"{unknown} are not permitted by R3 §7.2; allowed: {sorted(CODECS)}")
-
-    inner = [_codec(name) for name in spec.codecs if name not in {"none", "sharding_indexed"}]
-    pipeline: list[Any] = [BytesCodec(), *inner]
+    filters = [_filter(name, spec.values.dtype) for name in spec.codecs if name in FILTERS]
+    inner = [
+        _codec(name, differenced=bool(filters))
+        for name in spec.codecs
+        if name not in {"none", "sharding_indexed", *FILTERS}
+    ]
+    # A filter runs on values, so it sits before the bytes codec -- inside the shard where
+    # there is one, and in zarr's own `filters` argument where there is not.
+    pipeline: list[Any] = [*filters, BytesCodec(), *inner]
 
     if spec.shard is None:
-        serializer, grid = pipeline[0], spec.chunks
-        compressors: Any = pipeline[1:] or None
+        serializer, grid = BytesCodec(), spec.chunks
+        compressors: Any = inner or None
     else:
         misfit = [
             (axis, shard, chunk)
@@ -229,6 +254,7 @@ def write_zarr(path: Path, spec: StagedArray) -> int:
         chunks=grid,
         serializer=serializer,
         compressors=compressors,
+        filters=filters if spec.shard is None else None,
         fill_value=spec.fill_value,
     )
     array[:] = spec.values
@@ -237,9 +263,10 @@ def write_zarr(path: Path, spec: StagedArray) -> int:
 
 __all__ = [
     "BAND",
-    "CODECS",
     "DEFAULT_BANDWIDTH_BPS",
     "DEFAULT_LATENCY_S",
+    "FILTERS",
+    "FLOOR",
     "MINIMUM_OBJECT_BYTES",
     "TRANSFER_SHARE",
     "declared_codecs",

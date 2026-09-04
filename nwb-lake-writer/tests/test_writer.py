@@ -566,19 +566,26 @@ def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal
         writer.commit(root)
 
 
-def test_a_codec_outside_the_floor_is_refused(tmp_path, registry, minimal):
+def test_a_codec_outside_the_floor_is_written_and_declared(tmp_path):
+    """R14 §2.2: a writer MAY use any Zarr codec so long as the manifest names it.
+
+    The floor is a reader obligation -- `Packet.unopenable` is where a reader finds out it
+    cannot open an array -- so refusing here would enforce against a writer a rule written for
+    readers, and would make R14's own LFP case unwritable.
+    """
+    from nwb_lake_writer.arrays import declared_codecs
     from nwb_lake_writer.writer import StagedArray
 
-    root = tmp_path / "s001"
-    writer = PacketWriter(registry, packet_id=root.name)
-    for resource_id, records in minimal.items():
-        writer.add(resource_id, records)
-    writer.add_array(
-        "core.waveform_means", StagedArray(values=_waveforms(), array_asset_id="wf", chunks=(1, 4, 10), codecs=("lz4",))
-    )
-    with pytest.raises(ValueError, match="not permitted by R3"):
-        writer.commit(root)
+    spec = StagedArray(values=_waveforms(), array_asset_id="wf", chunks=(1, 4, 10), codecs=("delta", "zstd"))
+    assert declared_codecs(spec) == ("delta", "zstd")
 
+    from nwb_lake_writer.arrays import write_zarr
+
+    written = write_zarr(tmp_path / "wf.zarr", spec)
+    assert written > 0
+    import zarr
+
+    assert (zarr.open(tmp_path / "wf.zarr", mode="r")[:] == spec.values).all()
 
 def test_shard_size_follows_the_bandwidth_delay_product():
     """The rule is `S = share/(1-share) * latency * bandwidth`, not a constant.

@@ -42,7 +42,7 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -175,6 +175,7 @@ class NWBSource(Compensates):
         prefix: str = "",
         trial_metadata: bool = True,
         units: Mapping[tuple[str, str], Mapping[str, str]] | None = None,
+        signals: Sequence[str] = (),
         store: Any = None,
     ) -> None:
         if not isinstance(zone, ZoneInfo):
@@ -185,6 +186,13 @@ class NWBSource(Compensates):
         self.zone = zone
         self.prefix = prefix
         self.trial_metadata = trial_metadata
+        #: Acquisition streams that are signals rather than events, named by the recipe. A
+        #: continuously sampled quantity is an array with a time axis, not one row per sample
+        #: carrying its value in JSON -- which R3 §2.1 confines to optional columns and which
+        #: costs 5.9 M rows for one 400 Hz thermistor. Declared rather than inferred: whether a
+        #: stream is a signal is a fact about the instrument, not about how many distinct
+        #: values one session happened to record.
+        self.signals = tuple(signals)
         #: Unmapped trial columns found constant across the session, filled in by `trials`.
         self._constants: dict[str, Any] = {}
         self.units = dict(units or {})
@@ -611,13 +619,117 @@ class NWBSource(Compensates):
         if not acquisition.is_dir():
             return
         for name in self.store.members("acquisition"):
-            if not self.store.is_array(f"acquisition/{name}/timestamps"):
+            if name in self.signals or not self.store.is_array(f"acquisition/{name}/timestamps"):
                 continue
             yield (
                 name,
                 self.store.array(f"acquisition/{name}/timestamps"),
                 self._array(f"acquisition/{name}/data"),
             )
+
+    def _signal(self, name: str) -> tuple[NDArray[np.int64], NDArray[Any]]:
+        """One signal's ticks and values, with non-finite timestamps dropped as events are."""
+        seconds = self.store.array(f"acquisition/{name}/timestamps")
+        ticks, finite = self._ticks(seconds, f"acquisition/{name}")
+        values = self._array(f"acquisition/{name}/data")
+        return ticks, values[finite] if values.size == seconds.size else values
+
+    def staged_arrays(self) -> list[Any]:
+        """Return the signal arrays and their coordinate arrays, for `add_array`.
+
+        Two per signal. The values are the measurement; the ticks are its axis, which R20 §2.3
+        requires as an array because the axis is not regular -- a HARP device dispatching at
+        400 Hz on a 31,250 Hz counter lands on 78 or 79 ticks depending on the phase, so no
+        step describes it and R33's rational form would cost 30 ms over a session.
+        """
+        from ..writer import StagedArray
+
+        staged = []
+        for name in self.signals:
+            ticks, values = self._signal(name)
+            width = min(len(values), 1 << 20)
+            # Measured on this thermistor's 5,881,692 samples. Delta suits both: the signal is
+            # smooth at 400 Hz and the ticks are monotonic with a near-constant step, so the
+            # axis costs 0.49 MB of 47.1 (96x) and the values 3.55 MB of 11.8. R14 §2.2 permits
+            # any codec so long as the manifest names it, which `declared_codecs` does.
+            staged.append(
+                StagedArray(
+                    values=values,
+                    array_asset_id=f"{self.prefix}{name}",
+                    chunks=(width,),
+                    codecs=("delta", "blosc"),
+                )
+            )
+            staged.append(
+                StagedArray(
+                    values=ticks,
+                    array_asset_id=f"{self.prefix}{name}_ticks",
+                    chunks=(width,),
+                    codecs=("delta", "blosc"),
+                )
+            )
+        return staged
+
+    def array_assets(self) -> list[dict[str, Any]]:
+        """`core.array_assets`, two rows per signal: the values and their tick coordinates."""
+        rows = []
+        for name in self.signals:
+            ticks, _ = self._signal(name)
+            attrs = self._attrs(f"acquisition/{name}")
+            span = int(ticks[-1] - ticks[0]) if len(ticks) > 1 else 0
+            rate = (len(ticks) - 1) * self.clock.tick_rate_num / span if span else None
+            rows.append(
+                {
+                    "session_id": self.session_id,
+                    "array_asset_id": f"{self.prefix}{name}",
+                    "semantic_type": "signal",
+                    "name": str(attrs.get("description") or name),
+                    "kind": "dense_array_asset",
+                    "uri": f"arrays/core/{name}.zarr",
+                    "format": "zarr_v3",
+                    "clock_id": self.clock.clock_id,
+                    "sample_rate_hz": round(rate, 6) if rate else None,
+                    "unit": str(self._attrs(f"acquisition/{name}/data").get("unit") or "") or None,
+                }
+            )
+            rows.append(
+                {
+                    "session_id": self.session_id,
+                    "array_asset_id": f"{self.prefix}{name}_ticks",
+                    "semantic_type": "coordinate",
+                    "name": f"{name} sample ticks",
+                    "kind": "dense_array_asset",
+                    "uri": f"arrays/core/{name}_ticks.zarr",
+                    "format": "zarr_v3",
+                    "clock_id": self.clock.clock_id,
+                }
+            )
+        return rows
+
+    def array_dimensions(self) -> list[dict[str, Any]]:
+        """`core.array_dimensions`, one axis per array (R20 §2.3)."""
+        rows = []
+        for name in self.signals:
+            rows.append(
+                {
+                    "array_asset_id": f"{self.prefix}{name}",
+                    "axis_index": 0,
+                    "dimension_name": "time",
+                    "coordinate_array_asset_id": f"{self.prefix}{name}_ticks",
+                    "clock_id": self.clock.clock_id,
+                }
+            )
+            rows.append(
+                {
+                    "array_asset_id": f"{self.prefix}{name}_ticks",
+                    "axis_index": 0,
+                    "dimension_name": "time",
+                    "clock_id": self.clock.clock_id,
+                    "origin_tick": 0,
+                    "step_tick_num": 1,
+                }
+            )
+        return rows
 
     def event_streams(self) -> list[dict[str, Any]]:
         """`core.event_streams`, one row per acquisition TimeSeries.

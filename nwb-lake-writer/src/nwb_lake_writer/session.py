@@ -659,6 +659,14 @@ def build(
         _add_batches(writer, spec, source, counts)
         if spec.kind == "waveforms" and spec.options.get("array_asset_id", "waveform_mean"):
             _stage_array(writer, spec, source, say)
+        # Any adapter may stage arrays, not only the waveform one. A source that has them says
+        # so by defining `staged_arrays`; the kind it happens to be is not the question.
+        for staged in getattr(source, "staged_arrays", lambda: ())():
+            say(
+                f"  array {staged.array_asset_id} {staged.values.shape} {staged.values.dtype}, "
+                f"{staged.values.nbytes / 1e6:.1f} MB raw"
+            )
+            writer.add_array(f"core.{staged.array_asset_id}", staged)
         if spec.kind == "lfp":
             for resource_id, array in source.external_arrays().items():
                 writer.reference_array(resource_id, array)
