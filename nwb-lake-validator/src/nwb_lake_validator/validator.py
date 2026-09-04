@@ -1362,7 +1362,7 @@ def _resolve_column(spec: Mapping[str, Any]) -> str | None:
     return named if any(c["name"] == named for c in spec["columns"]) else None
 
 
-def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, str]:
+def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, str | None]:
     """Every resource a discriminator may name, mapped to the column a paired value joins to.
 
     Built from the packet's registry *and* the extension registries it carries, because R49 §2.4
@@ -1376,8 +1376,11 @@ def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, st
     for document in packet.extensions().values():
         if isinstance(document.get("tables"), Mapping):
             tables.update({n: t for n, t in document["tables"].items() if n in carried})
-    resolved = ((name, _resolve_column(spec)) for name, spec in tables.items())
-    return {name: column for name, column in resolved if column is not None}
+    # Every declarable resource, whether or not a *paired* value could name it. R55 §2.3.3's
+    # single-column-key rule governs the paired shape alone; R54's shared-key discriminator
+    # names tables whose key is composite by construction, and dropping them here made a
+    # correctly declared `interval_kind` read as naming nothing.
+    return {name: _resolve_column(spec) for name, spec in tables.items()}
 
 
 def _check_extensions(
@@ -1386,7 +1389,7 @@ def _check_extensions(
     registry: Mapping[str, Any],
     report: Report,
     advisory: bool,
-    kinds: Mapping[str, str] | None = None,
+    kinds: Mapping[str, str | None] | None = None,
 ) -> None:
     """Validate each extension registry the packet carries (R17 §4).
 

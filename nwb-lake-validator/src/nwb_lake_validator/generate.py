@@ -100,7 +100,7 @@ def _discriminator(
     name: str,
     table: Mapping[str, Any],
     column: Mapping[str, Any],
-    kinds: Mapping[str, str] | None,
+    kinds: Mapping[str, str | None] | None,
     included: Collection[str],
 ) -> list[Check]:
     """Build the checks one discriminator column implies (R55 §2.4).
@@ -116,8 +116,7 @@ def _discriminator(
             f"{resource}.{column['name']}.is_a_resource_id",
             "error",
             f"{column['name']} holds a value that is not a dotted resource ID",
-            f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL "
-            f"AND NOT regexp_matches({col}, '{RESOURCE_ID}')",
+            f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND NOT regexp_matches({col}, '{RESOURCE_ID}')",
             resource,
         )
     ]
@@ -144,7 +143,9 @@ def _discriminator(
     paired = column.get("discriminates")
     if paired is None:
         return checks
-    joinable = {k: key for k, key in kinds.items() if k in included}
+    # Only a resource a paired value can actually name: one with a single-column key, which is
+    # what `_resolve_column` returns a column for (R55 §2.3.3).
+    joinable = {k: key for k, key in kinds.items() if k in included and key is not None}
     if not joinable:
         return checks
     # CAST both sides. A paired value is a string, because one column resolves against several
@@ -176,7 +177,7 @@ def generate(
     advisory: bool = False,
     aggregate: set[str] | None = None,
     resolvable: set[str] | None = None,
-    kinds: Mapping[str, str] | None = None,
+    kinds: Mapping[str, str | None] | None = None,
 ) -> list[Check]:
     """Build every check a registry implies.
 
