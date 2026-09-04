@@ -229,7 +229,7 @@ def _check_materialization_provenance(packet: Packet, report: Report) -> None:
     if not named:
         return
     try:
-        runs = packet.table("core.processing_runs", columns=["processing_run_id"])
+        runs = packet.table("core.processing_runs")
     except PacketError:
         report.add(
             "error",
@@ -237,7 +237,12 @@ def _check_materialization_provenance(packet: Packet, report: Report) -> None:
             f"{len(named)} resource(s) name a processing run but the packet carries no core.processing_runs",
         )
         return
-    for missing in sorted(named - set(runs.column("processing_run_id").to_pylist())):
+    # A manifest names a run and the table numbers it (R53 §2), so the join is across the
+    # `*_name` column. Both are accepted: a packet built before R53 has names in both places.
+    known = set(runs.column("processing_run_id").to_pylist())
+    if "processing_run_name" in runs.column_names:
+        known |= {n for n in runs.column("processing_run_name").to_pylist() if n is not None}
+    for missing in sorted(named - known):
         report.add(
             "error",
             "provenance.unknown_processing_run",
@@ -1314,8 +1319,7 @@ def _run_rules(
                 connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
 
             kinds = _declared_kinds(packet, registry)
-            checks = generate(registry, only=set(present), advisory=advisory,
-                              aggregate=unsound or set(), kinds=kinds)
+            checks = generate(registry, only=set(present), advisory=advisory, aggregate=unsound or set(), kinds=kinds)
             if recheck is not None:
                 checks = [check for check in checks if concerns(check, recheck)]
             _run_checks(connection, checks, report, None)
@@ -1419,8 +1423,7 @@ def _check_extensions(
             )
         if not carried:
             continue
-        checks = generate(document, only=carried, advisory=advisory,
-                          resolvable=set(registry["tables"]), kinds=kinds)
+        checks = generate(document, only=carried, advisory=advisory, resolvable=set(registry["tables"]), kinds=kinds)
         _run_checks(connection, checks, report, extension_id)
         report.add(
             "info",
