@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .. import compare
 from ..extensions import load as load_extension
 from ..recipe import RECIPE_SUPPLIES, Recipe
 from ..session import build, materializers
@@ -120,8 +121,7 @@ def _init(args: argparse.Namespace) -> int:
         "# session.json carries them, and stamps a Pacific wall clock as UTC -- localize first.",
         "",
         "[subject]",
-        f'subject_id = "{args.session_id.split("_")[1] if "_" in args.session_id else args.session_id}"'
-        + GUESSED,
+        f'subject_id = "{args.session_id.split("_")[1] if "_" in args.session_id else args.session_id}"' + GUESSED,
         "# date_of_birth, sex and genotype belong here, from subject.json",
         "",
         "# Every clock a source names must be declared, including the reference above.",
@@ -142,21 +142,17 @@ def _init(args: argparse.Namespace) -> int:
         owned = [r for r, kinds in sorted(contested.items()) if r in mine and r not in SHARED and _wins(kind, kinds)]
         shared = [r for r in sorted(mine & SHARED)]
         passed = [
-            r for r, kinds in sorted(contested.items())
-            if r in mine and r not in SHARED and not _wins(kind, kinds)
+            r for r, kinds in sorted(contested.items()) if r in mine and r not in SHARED and not _wins(kind, kinds)
         ]
         lines += ["[[source]]", f'kind = "{kind}"', f'root = "{root}"']
-        lines += [f'contributes = [{", ".join(chr(34) + r + chr(34) for r in shared)}]'] if shared else []
+        lines += [f"contributes = [{', '.join(chr(34) + r + chr(34) for r in shared)}]"] if shared else []
         lines += ["owns = ["]
         lines += [f'  "{r}",' for r in owned]
         lines += ["]"]
         for option, value, why in REQUIRED.get(kind, ()):
             lines += [f"# {why}", f"{option} = {value}{GUESSED}"]
         lines += [f"# also offers {r}, owned here by {PREFERRED.get(r, 'another source')}" for r in passed]
-        lines += [
-            f"# supplies {r}, which the recipe declares itself"
-            for r in sorted(set(offers[kind]) & supplies)
-        ]
+        lines += [f"# supplies {r}, which the recipe declares itself" for r in sorted(set(offers[kind]) & supplies)]
         lines += [*HINTS.get(kind, ()), ""]
 
     text = "\n".join(lines)
@@ -238,6 +234,9 @@ def _import(args: argparse.Namespace) -> int:
     if budget and "memory_limit" not in limits:
         limits["memory_limit"] = budget
     out = args.out or recipe.out
+    # Read before the commit writes over it: a rebuild's reference is the packet it replaces,
+    # and after `commit` there is nothing left to compare against.
+    reference = compare.resources(args.compare or out)
     try:
         report = writer.commit(out, limits=limits or None, say=say, materialize=derive)
     except CommitRefused as exc:
@@ -245,6 +244,11 @@ def _import(args: argparse.Namespace) -> int:
             print(f"  {finding.level:8s} {finding.check}: {finding.message}", file=sys.stderr)
         print(f"refused: {exc.report.errors} error(s); staging left at {exc.staging}", file=sys.stderr)
         return 1
+    if dropped := compare.lost(reference, compare.resources(out)):
+        where = "the packet it replaces" if not args.compare else str(args.compare)
+        print(f"warning: {len(dropped)} resource(s) in {where} are not in this build:", file=sys.stderr)
+        for resource_id in dropped:
+            print(f"  lost  {resource_id}", file=sys.stderr)
     print(f"committed {out} — {report.errors} error(s), {report.warnings} warning(s)")
     return 0
 
@@ -383,14 +387,18 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         help="also retain a superseded manifest younger than this; both floors must permit an "
         "expiry (default: what the packet declares, else no age limit)",
     )
-    pruner.add_argument(
-        "--apply", action="store_true", help="remove, rather than report what would be removed"
-    )
+    pruner.add_argument("--apply", action="store_true", help="remove, rather than report what would be removed")
     pruner.set_defaults(func=_prune)
 
     importer = subcommands.add_parser("import", help="build and commit a packet from a recipe")
     importer.add_argument("recipe", type=Path)
     importer.add_argument("--out", type=Path, help="packet root, overriding [packet].out")
+    importer.add_argument(
+        "--compare",
+        type=Path,
+        default=None,
+        help="a packet to compare the result against; defaults to the one being replaced",
+    )
     importer.add_argument("--registry", type=Path, help="registry, overriding [packet].registry")
     importer.add_argument("--check", action="store_true", help="check the recipe and stop")
     importer.add_argument(

@@ -719,6 +719,10 @@ class PacketWriter:
             if lineage := self._derived.get(resource_id):
                 entry["derived_from"] = lineage
             if run := self._runs.get(resource_id):
+                # The name, not the assigned number: a manifest identifies by name throughout
+                # -- `packet_id`, `sessions`, every `resource_id` -- because it is read before
+                # any table and a number resolves against nothing. R53 §2's `*_name` columns
+                # are the bridge, and R31 §5's check crosses it.
                 entry["processing_run_id"] = run
             entries.append(entry)
         return entries
