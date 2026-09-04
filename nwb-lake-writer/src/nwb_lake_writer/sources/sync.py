@@ -339,7 +339,8 @@ class SyncSource:
         self.first_samples = dict(first_samples or {})
         self.prefix = prefix
         self.notes: list[str] = []
-        #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters.
+        #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters. Every
+#: clock aligned appears here, dropping nothing included (R40 §2.3).
         self.withheld: dict[str, dict[str, Any]] = {}
         #: Clock ID to phase steps found in the parent's alignment, for the run's parameters.
         #: Reported, never corrected: whether a step also moved the devices timestamped on the
@@ -585,11 +586,14 @@ class SyncSource:
         # is placed, not about whether the rig was running then.
         self._observed.append((int(parents[0]), int(parents[-1])))
         drop_first, drop_last, residuals = suspect_terminals(ticks, parents)
+        withheld = ["first"] * drop_first + ["last"] * drop_last
+        # Recorded for every clock, including the ones that dropped nothing (R40 §2.3): a count
+        # of zero is the evidence that the bound was sufficient, and a packet that says nothing
+        # is indistinguishable from one that never looked.
+        self.withheld[clock] = {"anchors": withheld, "n_withheld": len(withheld), **residuals}
         if drop_first or drop_last:
             kept = slice(1 if drop_first else None, -1 if drop_last else None)
             ticks, parents = ticks[kept], parents[kept]
-            withheld = ["first"] * drop_first + ["last"] * drop_last
-            self.withheld[clock] = {"anchors": withheld, **residuals}
             self.notes.append(
                 f"{stream.key}: withheld the {' and '.join(withheld)} anchor; residual "
                 f"{residuals['first']:.0f}/{residuals['last']:.0f} parent ticks against a "

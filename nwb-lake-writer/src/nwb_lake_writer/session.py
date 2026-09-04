@@ -886,9 +886,11 @@ def _alignment_parameters(context: Context | None) -> dict[str, Any]:
     if context is None:
         return {}
     sync = context.sources.get("sync")
-    withheld = getattr(sync, "withheld", {})
+    withheld = getattr(sync, "withheld", None)
     recorded = {}
-    if withheld:
+    # Recorded whenever a sync source ran, whether or not it withheld anything (R40 §2.3). An
+    # absent key and a recorded zero say different things, and only one of them is checkable.
+    if withheld is not None:
         recorded["withheld_anchors"] = withheld
     if stepped := getattr(sync, "discontinuities", {}):
         # Reported so a consumer can see them, never corrected -- see SyncSource.discontinuities.
