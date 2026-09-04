@@ -44,6 +44,8 @@ import math
 import re
 from collections.abc import Iterator, Mapping, Sequence
 from datetime import datetime
+from functools import cached_property
+from os.path import commonprefix
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -216,6 +218,7 @@ class NWBSource(Compensates):
         signals: Sequence[str] = (),
         interval_kind: str | None = None,
         emit_clock: bool = True,
+        attachments: str | Path | None = None,
         store: Any = None,
     ) -> None:
         if not isinstance(zone, ZoneInfo):
@@ -231,6 +234,11 @@ class NWBSource(Compensates):
         self.zone = zone
         self.prefix = prefix
         self.trial_metadata = trial_metadata
+        #: Where the acquisition records which headstage each probe was in (R67 §2.1). The NWB
+        #: does not say, and the file that does joins on `custom_probe_name`, which is the name
+        #: the NWB gives its Device -- so this reads one extra file for one column rather than
+        #: needing a source to write into another source's rows.
+        self.attachments = Path(attachments) if attachments else None
         #: Acquisition streams that are signals rather than events, named by the recipe. A
         #: continuously sampled quantity is an array with a time axis, not one row per sample
         #: carrying its value in JSON -- which R3 §2.1 confines to optional columns and which
@@ -395,25 +403,74 @@ class NWBSource(Compensates):
             }
         ]
 
-    def devices(self) -> list[dict[str, Any]]:
-        """`core.devices`, one row per NWB Device."""
-        rows = []
+    def _attachment(self) -> dict[str, str]:
+        """Which headstage each probe was in, by the acquisition's name for it, or nothing."""
+        if self.attachments is None:
+            return {}
+        from .openephys import OpenEphysSource
+
+        return OpenEphysSource(self.attachments, session_id=self.session_id).attachments()
+
+    @cached_property
+    def _devices(self) -> list[dict[str, Any]]:
+        """`core.devices`, one row per physical instrument (R67 §2.2).
+
+        One row per *object*, not per NWB Device: a quad-base probe presents four Devices with
+        one serial number, and recording four rows asserts four probes where the session had
+        one. Identity is the serial the file states; the four remain four `core.probes` rows,
+        which is what a probe is (§2.2). The surviving row takes the common prefix of the names
+        it covers where there is one -- naming only, since the serial is what decided identity.
+        """
+        found: dict[str, dict[str, Any]] = {}
+        attached = self._attachment()
         for name in self.store.members("general/devices"):
             described = self._attrs(f"general/devices/{name}")
             description = str(described.get("description", ""))
             parsed = DEVICE_DESCRIPTION.match(description)
-            rows.append(
-                {
-                    "device_id": self.prefix + name,
-                    "session_id": self.session_id,
-                    "name": name,
-                    "manufacturer": _clean(described.get("manufacturer")),
-                    "model": (parsed["model"] or None) if parsed else None,
-                    "serial_number": parsed["serial"] if parsed else None,
-                    "metadata": _described(parsed, description),
-                }
-            )
+            serial = parsed["serial"] if parsed else None
+            row = {
+                "device_id": self.prefix + name,
+                "session_id": self.session_id,
+                "name": name,
+                "manufacturer": _clean(described.get("manufacturer")),
+                "model": (parsed["model"] or None) if parsed else None,
+                "serial_number": serial,
+                "parent_device_id": attached.get(name),
+                "metadata": _described(parsed, description),
+            }
+            # A device with no serial is its own object: nothing says two of them are one.
+            key = serial or f"\0{name}"
+            if (kept := found.get(key)) is None:
+                found[key] = row | {"covers": [name]}
+            else:
+                kept["covers"].append(name)
+        rows = []
+        for row in found.values():
+            covers = row.pop("covers")
+            if len(covers) > 1:
+                shared = commonprefix(covers).rstrip("-_ .") or covers[0]
+                row |= {"device_id": self.prefix + shared, "name": shared}
+                self.notes.append(
+                    f"devices: {', '.join(covers)} share serial {row['serial_number']}; "
+                    f"recorded as one device named {shared} (R67 §2.2)"
+                )
+            rows.append(row)
         return rows
+
+    def devices(self) -> list[dict[str, Any]]:
+        """`core.devices`, computed once: it reads the store and the attachment file."""
+        return self._devices
+
+    def _device_of(self) -> dict[str, dict[str, Any]]:
+        """Every NWB Device name mapped to the `core.devices` row that covers it."""
+        by_name = {}
+        for name in self.store.members("general/devices"):
+            described = self._attrs(f"general/devices/{name}")
+            parsed = DEVICE_DESCRIPTION.match(str(described.get("description", "")))
+            by_name[name] = parsed["serial"] if parsed else None
+        rows = {row["serial_number"]: row for row in self.devices() if row["serial_number"]}
+        named = {row["name"]: row for row in self.devices()}
+        return {name: rows.get(serial) or named.get(name) for name, serial in by_name.items()}
 
     def probes(self) -> list[dict[str, Any]]:
         """`core.probes`, one row per NWB ElectrodeGroup.
@@ -422,7 +479,7 @@ class NWBSource(Compensates):
         is the probe. This file has 15 Devices and 12 groups: four of the shanks of one
         quad-base probe each get a group, and three Devices recorded nothing.
         """
-        devices = {row["name"]: row for row in self.devices()}
+        devices = self._device_of()
         rows = []
         for name in self.store.members("general/extracellular_ephys"):
             if name == "electrodes":
