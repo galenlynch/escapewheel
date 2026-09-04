@@ -781,3 +781,40 @@ def test_a_referenced_codec_joins_required_codecs(tmp_path, registry, minimal):
     )
     writer.commit(root)
     assert json.loads((root / "nwb.packet.json").read_text())["required_codecs"] == ["blosc"]
+
+
+def test_no_catalog_names_a_resource_that_is_not_in_place(tmp_path, registry, minimal):
+    """R74 §2.1: a reader sees the previous catalog or the new one, never a partial one.
+
+    The invariant is about visibility, not about the mechanism: whatever primitive publishes the
+    catalog, every resource it names must already be at its final location. Checked by reading
+    the committed catalog and demanding every packet-owned URI resolve.
+    """
+    root = tmp_path / "packet"
+    writer = PacketWriter(registry, packet_id="p")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    writer.commit(root)
+
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    absent = [r["uri"] for r in manifest["resources"]
+              if not r.get("external") and not (root / r["uri"]).exists()]
+    assert not absent, f"the catalog names {absent}, which are not in place"
+
+
+def test_a_refused_commit_publishes_no_catalog(tmp_path, registry, minimal):
+    """R74 §2.1 again, from the other side: a failed commit leaves the previous state visible.
+
+    Here there is no previous state, so nothing at all may be published -- a catalog naming
+    resources that failed validation is the thing the ordering exists to prevent.
+    """
+    root = tmp_path / "packet"
+    writer = PacketWriter(registry, packet_id="p")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    # A clock that names a parent it does not have: refused by the generated foreign key.
+    writer.add("core.clocks", [{"clock_id": "orphan", "session_id": "s1", "name": "x",
+                                "origin": "sample 0", "parent_clock_id": "nowhere"}])
+    with pytest.raises(CommitRefused):
+        writer.commit(root)
+    assert not (root / "nwb.packet.json").exists()

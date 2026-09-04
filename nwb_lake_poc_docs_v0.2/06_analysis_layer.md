@@ -15,6 +15,10 @@ or extension (04 §7, R71 §2.3).
 
 An analysis resource is disposable. A consumer MAY delete and recompute any of them without loss.
 
+An analysis resource SHOULD be materialized only where doing so materially reduces repeated computational or I/O cost, gives an access layout core cannot, preserves the result of an expensive transformation, or provides a stable interface to an explicitly parameterised derivation (R78 §2.1). A cheap filter, projection, rename or small join SHOULD remain a view.
+
+Where the justification is an expensive transformation or a parameterised derivation, the producing run MUST record the transformation's parameters and not merely that it ran (R78 §2.2). A spectrogram whose window and overlap are unrecorded is not reproducible, and an irreproducible derived asset fails the disposability test below.
+
 An analysis resource MUST NOT be the only place a fact exists. Anything a consumer needs that is
 not recomputable from the canonical resources belongs among them (R71 §2.3); which canonical layer
 it belongs to is decided by Part 09 §3's test, not by this rule.

@@ -9,7 +9,7 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R77 accepted. R42 and R73 withdrawn. Nothing is proposed.
+R1–R41, R43–R72 and R74–R79 accepted. R42 and R73 withdrawn. Nothing is proposed.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 34 tables, 315 columns, 76 references, 66 Tier 2 rules (4 advisory)

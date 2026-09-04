@@ -1513,7 +1513,19 @@ A validator MUST NOT downgrade an error to make a packet pass. An advisory rule 
 
 Where an import replaces an existing packet, it SHOULD report every resource the prior catalog declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
 
-## 10. Minimum acceptance criteria
+## 10. Two conformance classes
+
+A report says which of two claims it is making (R79 §2.1).
+
+**Packet conformance** is a property of the bytes. It is evaluated on a packet regardless of how the packet was produced, and it is what `validate` reports. Provenance is SHOULD within it: a packet carrying none is conforming (R9 §5).
+
+**Importer conformance** is a property of a process. An importer conforms when it satisfies this part, which includes recording provenance for the import activity and the inputs it read. A packet is not judged by it.
+
+A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only an importer. Where it also checks importer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately (R79 §2.2), as it already does for core and extension verdicts.
+
+An analysis resource is where the two meet: `processing_run_id` is MUST for one (R31 §3), and that is a packet obligation rather than an importer's, because a derived resource naming no run is unreproducible whoever built it (R79 §2.3).
+
+## 11. Minimum acceptance criteria
 
 An importer conforms when it:
 
@@ -1557,6 +1569,10 @@ An analysis resource MUST declare lineage naming each canonical resource it deri
 or extension (04 §7, R71 §2.3).
 
 An analysis resource is disposable. A consumer MAY delete and recompute any of them without loss.
+
+An analysis resource SHOULD be materialized only where doing so materially reduces repeated computational or I/O cost, gives an access layout core cannot, preserves the result of an expensive transformation, or provides a stable interface to an explicitly parameterised derivation (R78 §2.1). A cheap filter, projection, rename or small join SHOULD remain a view.
+
+Where the justification is an expensive transformation or a parameterised derivation, the producing run MUST record the transformation's parameters and not merely that it ran (R78 §2.2). A spectrogram whose window and overlap are unrecorded is not reproducible, and an irreproducible derived asset fails the disposability test below.
 
 An analysis resource MUST NOT be the only place a fact exists. Anything a consumer needs that is
 not recomputable from the canonical resources belongs among them (R71 §2.3); which canonical layer

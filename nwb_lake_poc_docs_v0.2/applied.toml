@@ -1309,3 +1309,27 @@ note = "records that R68 §2.4 is reversed"
 
 [clause."R71 §3"]
 disposition = "rationale"
+
+[clause."R78 §2.1"]
+disposition = "applied"
+where = "06_analysis_layer.md §2"
+
+[clause."R78 §2.2"]
+disposition = "applied"
+where = "06_analysis_layer.md §2"
+
+[clause."R78 §2.3"]
+disposition = "rationale"
+note = "the four withdrawals stand; they failed the first two grounds"
+
+[clause."R79 §2.1"]
+disposition = "applied"
+where = "05_validation_and_import.md §10"
+
+[clause."R79 §2.2"]
+disposition = "applied"
+where = "05_validation_and_import.md §10"
+
+[clause."R79 §2.3"]
+disposition = "applied"
+where = "05_validation_and_import.md §10"
