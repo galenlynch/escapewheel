@@ -113,9 +113,11 @@ precision; `INT96` MUST NOT be used. Dates MUST be Parquet `DATE`, int32 days si
 
 ### 6.1 Version
 
-A packet-owned array MUST be Zarr v3. A referenced array MAY be Zarr v2, because a packet does not control how an external producer wrote it (R21 §3).
+A packet-owned array MUST be Zarr v3 (R21 §3.1). A referenced array MAY be Zarr v2, because a packet does not control how an external producer wrote it.
 
-Each array resource declares its own Zarr version in the catalog.
+Stated as the prohibition a validator can check: `physical_profile: "zarr_v2"` MUST NOT appear on a resource that is not `external: true` (R21 §3.2).
+
+Each array resource declares its own Zarr version in the catalog. A reader MUST check a resource's `physical_profile` together with its `codecs` before opening it, and MUST fail **for that resource**, naming whichever it lacks — the per-resource degradation R15 §2 requires applies to the version as much as to the codec, because a reader may support a codec in one Zarr version and not the other.
 
 ### 6.2 Axis order
 

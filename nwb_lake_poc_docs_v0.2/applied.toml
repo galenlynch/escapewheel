@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 226
+undisposed = 207
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -31,9 +31,9 @@ where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R29 §2.1"]
-disposition = "registry"
-where = "registry/logical_schemas.json"
-note = "a column, key or reference the registry declares"
+disposition = "superseded"
+by = "R77"
+note = "MAY raised to SHOULD and the table half restored"
 
 [clause."R33 §2.1"]
 disposition = "registry"
@@ -390,11 +390,6 @@ where = "02_core_logical_schemas.md §8.4"
 disposition = "applied"
 where = "02_core_logical_schemas.md §9.4"
 
-[clause."R29 §2"]
-disposition = "superseded"
-by = "R77"
-note = "MAY raised to SHOULD and the table half restored"
-
 [clause."R56 §2.1"]
 disposition = "superseded"
 by = "R77"
@@ -402,3 +397,83 @@ by = "R77"
 [clause."R56 §2.2"]
 disposition = "superseded"
 by = "R77"
+
+[clause."R77 §4"]
+disposition = "rationale"
+note = "an open question, binding nothing"
+
+[clause."R13 §3"]
+disposition = "registry"
+note = "declared: core.clock_anchors"
+
+[clause."R16 §2"]
+disposition = "registry"
+note = "declared: core.unit_quality_labels"
+
+[clause."R18 §2"]
+disposition = "registry"
+note = "declared: core.unit_observation_intervals"
+
+[clause."R23 §2"]
+disposition = "registry"
+note = "declared: core.event_streams"
+
+[clause."R23 §3"]
+disposition = "registry"
+note = "declared: core.event_streams, core.events"
+
+[clause."R25 §5"]
+disposition = "registry"
+note = "declared: core.sessions"
+
+[clause."R27 §2"]
+disposition = "registry"
+note = "declared: core.clocks.clock_id, core.sessions.reference_clock_id"
+
+[clause."R28 §2"]
+disposition = "registry"
+note = "declared: core.unit_electrodes"
+
+[clause."R3 §3.3"]
+disposition = "registry"
+note = "declared: core.array_assets, core.array_dimensions"
+
+[clause."R49 §2.3"]
+disposition = "registry"
+note = "declared: core.preferred_runs"
+
+[clause."R3 §7.2"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.4"
+note = "the baseline none/gzip/zstd; restored with R21 §3.3's table"
+
+[clause."R14 §2.1"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.4"
+note = "the reader floor, restored 2026-09-04 as R21 §3.3's per-version table"
+
+[clause."R14 §2.3.1"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §8"
+
+[clause."R15 §2"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.4"
+
+[clause."R15 §3"]
+disposition = "applied"
+where = "04_packet_catalog.md §3"
+note = "required_codecs as the union, for a whole-packet capability answer"
+
+[clause."R21 §2"]
+disposition = "rationale"
+note = "the measurement that the floor is version-dependent; §3.3 is the rule"
+
+[clause."R21 §3.1"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.1"
+
+[clause."R21 §3.2"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.1"
+note = "restored 2026-09-04; the prohibition and the reader's version check were absent"
