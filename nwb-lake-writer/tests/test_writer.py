@@ -576,8 +576,8 @@ def test_a_codec_outside_the_floor_is_written_and_declared(tmp_path):
     from nwb_lake_writer.arrays import declared_codecs
     from nwb_lake_writer.writer import StagedArray
 
-    spec = StagedArray(values=_waveforms(), array_asset_id="wf", chunks=(1, 4, 10), codecs=("delta", "zstd"))
-    assert declared_codecs(spec) == ("delta", "zstd")
+    spec = StagedArray(values=_waveforms(), array_asset_id="wf", chunks=(1, 4, 10), codecs=("numcodecs.delta", "zstd"))
+    assert declared_codecs(spec) == ("numcodecs.delta", "zstd")
 
     from nwb_lake_writer.arrays import write_zarr
 

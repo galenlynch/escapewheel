@@ -176,6 +176,7 @@ class NWBSource(Compensates):
         trial_metadata: bool = True,
         units: Mapping[tuple[str, str], Mapping[str, str]] | None = None,
         signals: Sequence[str] = (),
+        emit_clock: bool = True,
         store: Any = None,
     ) -> None:
         if not isinstance(zone, ZoneInfo):
@@ -193,6 +194,10 @@ class NWBSource(Compensates):
         #: stream is a signal is a fact about the instrument, not about how many distinct
         #: values one session happened to record.
         self.signals = tuple(signals)
+        self._signals: dict[str, tuple[NDArray[np.int64], NDArray[Any]]] = {}
+        #: Whether to emit the reference clock. False where the sync source declares it,
+        #: since both emitting it puts two rows under one clock_id.
+        self.emit_clock = emit_clock
         #: Unmapped trial columns found constant across the session, filled in by `trials`.
         self._constants: dict[str, Any] = {}
         self.units = dict(units or {})
@@ -628,11 +633,17 @@ class NWBSource(Compensates):
             )
 
     def _signal(self, name: str) -> tuple[NDArray[np.int64], NDArray[Any]]:
-        """One signal's ticks and values, with non-finite timestamps dropped as events are."""
-        seconds = self.store.array(f"acquisition/{name}/timestamps")
-        ticks, finite = self._ticks(seconds, f"acquisition/{name}")
-        values = self._array(f"acquisition/{name}/data")
-        return ticks, values[finite] if values.size == seconds.size else values
+        """Return one signal's ticks and values, non-finite timestamps dropped as events are.
+
+        Memoized: four callers need it -- the array, its asset row, its clock and its anchors --
+        and on a 400 Hz thermistor each read is 5.9 M elements twice over.
+        """
+        if name not in self._signals:
+            seconds = self.store.array(f"acquisition/{name}/timestamps")
+            ticks, finite = self._ticks(seconds, f"acquisition/{name}")
+            values = self._array(f"acquisition/{name}/data")
+            self._signals[name] = (ticks, values[finite] if values.size == seconds.size else values)
+        return self._signals[name]
 
     def staged_arrays(self) -> list[Any]:
         """Return the signal arrays and their coordinate arrays, for `add_array`.
@@ -647,25 +658,17 @@ class NWBSource(Compensates):
         staged = []
         for name in self.signals:
             ticks, values = self._signal(name)
-            width = min(len(values), 1 << 20)
-            # Measured on this thermistor's 5,881,692 samples. Delta suits both: the signal is
-            # smooth at 400 Hz and the ticks are monotonic with a near-constant step, so the
-            # axis costs 0.49 MB of 47.1 (96x) and the values 3.55 MB of 11.8. R14 §2.2 permits
-            # any codec so long as the manifest names it, which `declared_codecs` does.
+            del ticks  # the axis is a clock and its anchors, not an array (R20 §2.1)
+            # Measured on this thermistor's 5,881,692 samples: delta takes the signal from
+            # 11.8 MB to 3.47, because it is smooth at 400 Hz. R14 §2.2 permits any codec so
+            # long as the manifest names it, which `declared_codecs` does, and Zarr.jl carries
+            # delta -- R3 §1 targets Python and Julia.
             staged.append(
                 StagedArray(
                     values=values,
                     array_asset_id=f"{self.prefix}{name}",
-                    chunks=(width,),
-                    codecs=("delta", "blosc"),
-                )
-            )
-            staged.append(
-                StagedArray(
-                    values=ticks,
-                    array_asset_id=f"{self.prefix}{name}_ticks",
-                    chunks=(width,),
-                    codecs=("delta", "blosc"),
+                    chunks=(min(len(values), 1 << 20),),
+                    codecs=("numcodecs.delta", "blosc"),
                 )
             )
         return staged
@@ -687,47 +690,84 @@ class NWBSource(Compensates):
                     "kind": "dense_array_asset",
                     "uri": f"arrays/core/{name}.zarr",
                     "format": "zarr_v3",
-                    "clock_id": self.clock.clock_id,
+                    "clock_id": self._dispatch_clock_id(name),
                     "sample_rate_hz": round(rate, 6) if rate else None,
                     "unit": str(self._attrs(f"acquisition/{name}/data").get("unit") or "") or None,
                 }
             )
+        return rows
+
+    def _dispatch_clock_id(self, name: str) -> str:
+        """Return the clock a signal is regular on: the device's own dispatch counter."""
+        return f"{self.prefix}{name}.dispatch"
+
+    def array_dimensions(self) -> list[dict[str, Any]]:
+        """`core.array_dimensions`, one axis per signal, in R20 §2.1's regular form.
+
+        Tick `k` is sample `k`. That is not an approximation: a HARP device schedules its
+        dispatch on its own microsecond timer, accumulating rather than re-basing, so the
+        samples are evenly spaced on that counter. What is *not* even is the HARP timestamp
+        each message carries, because the timer and the timestamp count different oscillators
+        -- 2 ppm apart here, which over a session reaches 924 ticks. R20 §2.1 puts exactly
+        that difference in `core.clock_anchors` rather than in the axis.
+        """
+        return [
+            {
+                "array_asset_id": f"{self.prefix}{name}",
+                "axis_index": 0,
+                "dimension_name": "time",
+                "clock_id": self._dispatch_clock_id(name),
+                "origin_tick": 0,
+                "step_tick_num": 1,
+            }
+            for name in self.signals
+        ]
+
+    def signal_clocks(self) -> list[dict[str, Any]]:
+        """`core.clocks`, one per signal: the dispatch counter its samples are regular on."""
+        rows = []
+        for name in self.signals:
+            ticks, _ = self._signal(name)
+            span = int(ticks[-1] - ticks[0]) if len(ticks) > 1 else 0
+            rate = (len(ticks) - 1) * self.clock.tick_rate_num / span if span else None
             rows.append(
                 {
+                    "clock_id": self._dispatch_clock_id(name),
                     "session_id": self.session_id,
-                    "array_asset_id": f"{self.prefix}{name}_ticks",
-                    "semantic_type": "coordinate",
-                    "name": f"{name} sample ticks",
-                    "kind": "dense_array_asset",
-                    "uri": f"arrays/core/{name}_ticks.zarr",
-                    "format": "zarr_v3",
-                    "clock_id": self.clock.clock_id,
+                    "name": f"{name} dispatch counter",
+                    "tick_rate_hz": round(rate, 6) if rate else None,
+                    "tick_rate_num": round(rate) if rate else None,
+                    "tick_rate_den": 1 if rate else None,
+                    "origin": "the device's first dispatched sample; tick k is sample k",
+                    "parent_clock_id": self.clock.clock_id,
                 }
             )
         return rows
 
-    def array_dimensions(self) -> list[dict[str, Any]]:
-        """`core.array_dimensions`, one axis per array (R20 §2.3)."""
+    def signal_anchors(self, every: int = 10_000) -> list[dict[str, Any]]:
+        """`core.clock_anchors`, relating each dispatch counter to the reference clock.
+
+        Every sample carries its own HARP timestamp, so every anchor here is measured and none
+        is fitted. They are subsampled because they need only bound the interpolation error
+        R40 §2 governs: at the 2 ppm separating the two oscillators, anchors 25 s apart leave
+        far less than one tick between them, where the tolerance is 3 ms.
+        """
         rows = []
         for name in self.signals:
-            rows.append(
+            ticks, _ = self._signal(name)
+            if not len(ticks):
+                continue
+            positions = list(range(0, len(ticks), max(1, every)))
+            if positions[-1] != len(ticks) - 1:
+                positions.append(len(ticks) - 1)
+            rows.extend(
                 {
-                    "array_asset_id": f"{self.prefix}{name}",
-                    "axis_index": 0,
-                    "dimension_name": "time",
-                    "coordinate_array_asset_id": f"{self.prefix}{name}_ticks",
-                    "clock_id": self.clock.clock_id,
+                    "clock_id": self._dispatch_clock_id(name),
+                    "anchor_index": index,
+                    "t_tick": position,
+                    "parent_tick": int(ticks[position]),
                 }
-            )
-            rows.append(
-                {
-                    "array_asset_id": f"{self.prefix}{name}_ticks",
-                    "axis_index": 0,
-                    "dimension_name": "time",
-                    "clock_id": self.clock.clock_id,
-                    "origin_tick": 0,
-                    "step_tick_num": 1,
-                }
+                for index, position in enumerate(positions)
             )
         return rows
 
@@ -925,7 +965,7 @@ class NWBSource(Compensates):
         built = {
             "core.subjects": self.subjects(),
             "core.sessions": self.sessions(),
-            "core.clocks": [self.clock.record()],
+            "core.clocks": ([self.clock.record()] if self.emit_clock else []) + self.signal_clocks(),
             "core.devices": self.devices(),
             "core.probes": self.probes(),
             "core.electrodes": self.electrodes(),
@@ -935,6 +975,9 @@ class NWBSource(Compensates):
             "core.event_streams": self.event_streams(),
             "core.events": self.events(),
             "core.trials": self.trials(),
+            "core.clock_anchors": self.signal_anchors(),
+            "core.array_assets": self.array_assets(),
+            "core.array_dimensions": self.array_dimensions(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 

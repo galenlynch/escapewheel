@@ -52,9 +52,11 @@ if TYPE_CHECKING:  # pragma: no cover
 #: where the check belongs.
 FLOOR = {"none", "gzip", "zstd"}
 
-#: Array-to-array codecs, which run before the bytes codec rather than after it. `delta` is one:
-#: it rewrites values as differences, so it must see them as values.
-FILTERS = {"delta"}
+#: Array-to-array codecs, which run before the bytes codec rather than after it. Named as the
+#: store names them -- zarr registers numcodecs codecs under a `numcodecs.` prefix, and R15 §4
+#: compares the manifest against the store, so `delta` and `numcodecs.delta` are not the same
+#: claim.
+FILTERS = {"numcodecs.delta"}
 
 
 #: Round-trip latency and single-stream bandwidth of the store a packet will be read from.
@@ -194,7 +196,7 @@ def _filter(name: str, dtype: Any) -> Any:
     """Build one array-to-array codec, which sees values rather than bytes."""
     from numcodecs.zarr3 import Delta
 
-    if name == "delta":
+    if name == "numcodecs.delta":
         return Delta(dtype=str(dtype))
     raise ValueError(f"{name} is not an array codec this writer emits")
 
