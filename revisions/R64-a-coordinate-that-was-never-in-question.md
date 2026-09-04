@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-03 |
+| **Status** | **Accepted** 2026-09-03 |
 | **Amends** | R58 §2.1 (the basis vocabulary), R58 §4 (settles the second open question, corrects the third) |
 | **Depends on** | R8 (open vocabularies), R19 (coordinate frames), R58 (a coordinate declares its basis) |
 | **Profile** | `nwb-lake-portable-v0.1` |
