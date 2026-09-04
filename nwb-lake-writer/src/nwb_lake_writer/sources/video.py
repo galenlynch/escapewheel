@@ -30,11 +30,11 @@ Each camera writes a CSV beside its video, one line per frame and three columns:
 
 - the frame's time in **seconds on the rig clock**, which is what `t_tick` is derived from;
 - a **frame counter** that skips where frames were lost, which is what `dropped` is derived from;
-- the **camera's own clock** in nanoseconds, carried as `pts`.
+- the **camera's own clock** in nanoseconds, which is what the repair was checked against.
 
-The last two disagree by design and that is why both are kept: measured on this session the rig
-clock advances 1.952 ms a frame where the camera's advances 1.999 ms, so a consumer aligning by
-one gets a different answer than by the other, and only the rig clock relates a frame to a spike.
+`pts` carries none of the three. It is the frame's presentation timestamp in the **container**,
+which is what locates a row in the file a consumer opens; the asset records the container's time
+base, so `pts * num / den` is seconds of video where `t_tick` is the same frame on the rig clock.
 """
 
 from __future__ import annotations
@@ -160,10 +160,26 @@ class VideoSource(Compensates):
                     "uri": self._uri(video),
                     "format": SUFFIX.lstrip("."),
                     "clock_id": self.clock_id if timing else None,
-                    "metadata": {"pts_unit": "s", "pts_source": COLUMNS[2]} if timing else None,
+                    "metadata": self._pts_metadata(video) if timing else None,
                 }
             )
         return rows
+
+    def _pts_metadata(self, video: Path) -> dict[str, Any]:
+        """Return what a consumer needs to read this asset's `pts` column as time.
+
+        A container's timestamps are integers of its own time base, so the base is the only thing
+        that turns one into seconds, and it is a property of the file rather than of the format --
+        two cameras writing MP4 need not share it. Rational, for the reason R33 gives: a base of
+        1/16000 has no exact decimal, and a rounded one accumulates over 2.5 M frames.
+        """
+        base = _ffprobe(video, "stream=time_base")
+        num, _, den = base.strip().partition("/")
+        return {
+            "pts_source": "container",
+            "pts_time_base_num": int(num),
+            "pts_time_base_den": int(den or 1),
+        }
 
     def _presentation(self, video: Path) -> np.ndarray:
         """Presentation timestamps of the frames the video actually holds, in container units.
@@ -172,25 +188,7 @@ class VideoSource(Compensates):
         because packets arrive in decode order and B-frames reorder them; diffing decode order
         reports gaps that are not there.
         """
-        import subprocess
-
-        out = subprocess.run(
-            [
-                "ffprobe",
-                "-v",
-                "error",
-                "-select_streams",
-                "v:0",
-                "-show_entries",
-                "packet=pts",
-                "-of",
-                "csv=p=0",
-                str(video),
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout
+        out = _ffprobe(video, "packet=pts")
         values = np.fromiter((int(x) for x in out.replace(",", " ").split()), dtype=np.int64)
         values.sort()
         return values
@@ -288,6 +286,18 @@ class VideoSource(Compensates):
                 yield from self._frames(video)
 
         return {"core.media_frames": every()}
+
+
+def _ffprobe(video: Path, entries: str) -> str:
+    """Ask ffprobe for one set of entries about a video's first video stream."""
+    import subprocess
+
+    return subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", entries, "-of", "csv=p=0", str(video)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
 
 
 __all__ = ["BATCH_ROWS", "COLUMNS", "SUFFIX", "VideoSource"]
