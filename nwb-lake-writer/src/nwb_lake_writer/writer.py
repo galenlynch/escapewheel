@@ -84,6 +84,10 @@ PROFILE = "nwb-lake-portable-v0.1"
 DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     "core.clock_anchors": ("anchor_index",),
     "core.units": ("n_spikes",),
+    # Contiguous 0..n-1 within one asset, and 2.5 M distinct values per camera: the worst case
+    # for a dictionary, whose entries then outnumber nothing and cost 1.54 B/row where delta
+    # costs 0.01.
+    "core.media_frames": ("frame_index",),
 }
 
 

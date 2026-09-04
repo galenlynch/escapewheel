@@ -1,5 +1,22 @@
 """Behaviour videos, referenced rather than copied, with the timing the packet does own.
 
+**The timing in the source is wrong and is reconstructed here** (`video.zip_pairing_repaired`).
+The acquiring workflow joins the camera stream to the rig's timestamp stream with `rx:Zip`
+(`dynamic-foraging-task`, `src/workflows/foraging.bonsai:8112`), which pairs by position. The
+host drops frames in bursts, so every drop shifts the pairing by one and the recorded time falls
+behind real time by one trigger period per lost frame -- 93.4 s by the end of a measured session.
+
+What survives intact is the camera's own chunk data: `FrameID` counts exposures and skips where
+one was lost, and the hardware timestamp accounts for every gap. Since the cameras are triggered,
+exposure *k* is trigger *k*, so the frame's time is recovered exactly:
+
+    t_tick = t0 + (FrameID - FrameID_0) x trigger_period
+
+`t0` is the one pairing that is still correct -- nothing has dropped before the first frame -- and
+the trigger period is measured from the file itself. Checked against the camera's independent
+hardware clock, the reconstruction agrees to 35-85 ms over 85 minutes, against the 93 s error it
+replaces.
+
 Three cameras of one session are 10 GB as MP4 and 80 GB as the AVI they were encoded from, so a
 packet that copied them would be mostly video (R14 §2.3). What it owns instead is one row per
 frame on a declared clock, which is the part no player can supply: an MP4 knows its own
@@ -30,6 +47,7 @@ import numpy as np
 import pyarrow as pa
 
 from ..writer import ExternalMedia
+from .compensations import Compensates
 
 #: Rows per emitted batch. A camera writes ~2.5 M frames a session and three cameras 7.5 M, which
 #: is why the frame table streams rather than being held as records.
@@ -39,11 +57,15 @@ BATCH_ROWS = 500_000
 #: capture; the MP4 is what the portable profile names (`03` §2) and what a reader will open.
 SUFFIX = ".mp4"
 
-#: What the timing CSV's columns hold, in order.
+#: What the timing CSV's columns hold, in order. Written by `foraging.bonsai`'s CsvWriter as
+#: `Seconds,Value.ChunkData.FrameID,Value.ChunkData.Timestamp`.
 COLUMNS = ("rig_seconds", "frame_counter", "camera_nanoseconds")
 
+#: Ticks per second of the clock the CSV's first column is quantised to.
+HARP_TICKS = 31250
 
-class VideoSource:
+
+class VideoSource(Compensates):
     """`core.media_assets` and `core.media_frames` for the videos under `root`.
 
     Parameters
@@ -81,6 +103,7 @@ class VideoSource:
         self.tick_rate = int(tick_rate)
         self.uri_base = uri_base.rstrip("/") if uri_base else None
         self.batch_rows = batch_rows
+        super().__init__()
         self.notes: list[str] = []
 
     def videos(self) -> list[Path]:
@@ -115,12 +138,19 @@ class VideoSource:
         return found
 
     def media_assets(self) -> list[dict[str, Any]]:
-        """`core.media_assets`, one row per video."""
+        """`core.media_assets`, one row per video.
+
+        Declares the timing repair here rather than where it is applied: the frame table streams,
+        and a generator's compensations are collected before it has run. Declaring it in a path
+        the build actually walks is what keeps it in the packet's provenance.
+        """
         rows = []
         for video in self.videos():
             timing = self._timing(video)
             if timing is None:
                 self.notes.append(f"{video.name}: no timing CSV beside it; referenced without frames")
+            else:
+                self.compensate("video.zip_pairing_repaired")
             rows.append(
                 {
                     "media_asset_id": video.stem,
@@ -135,8 +165,38 @@ class VideoSource:
             )
         return rows
 
+    def _presentation(self, video: Path) -> np.ndarray:
+        """Presentation timestamps of the frames the video actually holds, in container units.
+
+        Read from the container index rather than by decoding -- 13 s for 2.5 M frames. Sorted,
+        because packets arrive in decode order and B-frames reorder them; diffing decode order
+        reports gaps that are not there.
+        """
+        import subprocess
+
+        out = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "packet=pts",
+                "-of",
+                "csv=p=0",
+                str(video),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+        values = np.fromiter((int(x) for x in out.replace(",", " ").split()), dtype=np.int64)
+        values.sort()
+        return values
+
     def _frames(self, video: Path) -> Iterator[pa.RecordBatch]:
-        """One batch at a time of a video's frame timing."""
+        """One batch at a time of a video's frames, timed by the reconstruction above."""
         from pyarrow import csv
 
         timing = self._timing(video)
@@ -148,14 +208,43 @@ class VideoSource:
             convert_options=csv.ConvertOptions(column_types=dict.fromkeys(COLUMNS, pa.float64())),
         )
         seconds = table.column(COLUMNS[0]).to_numpy(zero_copy_only=False)
-        counter = table.column(COLUMNS[1]).to_numpy(zero_copy_only=False)
-        camera = table.column(COLUMNS[2]).to_numpy(zero_copy_only=False)
-        # A counter that advances by more than one means frames were lost before this one. The
-        # first frame has nothing before it, so it is never marked.
-        dropped = np.empty(counter.size, dtype=bool)
-        dropped[0] = False
-        np.greater(np.diff(counter), 1, out=dropped[1:])
-        ticks = np.rint(seconds * self.tick_rate).astype(np.int64)
+        counter = table.column(COLUMNS[1]).to_numpy(zero_copy_only=False).astype(np.int64)
+
+        pts = self._presentation(video)
+        step = int(np.median(np.diff(pts))) if pts.size > 1 else 1
+        # Each surviving frame carries its original row in its own timestamp: the encoder kept
+        # the timeline and dropped pictures within it. That is what makes a transcode loss
+        # identifiable rather than a silent renumbering.
+        rows = (pts - pts[0]) // step
+        inside = rows < counter.size
+        if not inside.all():
+            self.notes.append(f"{video.name}: {int((~inside).sum())} frame(s) index past the timing file; dropped")
+            pts, rows = pts[inside], rows[inside]
+        if (missing := counter.size - rows.size) > 0:
+            self.notes.append(f"{video.name}: {missing} timed frame(s) absent from the video (transcode)")
+
+        # Every value in the first column is a real trigger timestamp; only the frame each was
+        # written beside is wrong. So the repair is a lookup rather than a fit: exposure k was
+        # triggered at the k-th recorded time. Frames past the last recorded trigger extrapolate
+        # at the period the file measures, which reproduces the recorded times to 0.5 ms where
+        # both exist.
+        triggers = np.rint(seconds * HARP_TICKS).astype(np.int64)
+        period = (triggers[-1] - triggers[0]) / (triggers.size - 1)
+        exposures = counter[rows] - counter[0]
+        ticks = np.empty(exposures.size, dtype=np.int64)
+        known = exposures < triggers.size
+        ticks[known] = triggers[exposures[known]]
+        if (beyond := ~known).any():
+            last = triggers.size - 1
+            ticks[beyond] = triggers[last] + np.rint((exposures[beyond] - last) * period).astype(np.int64)
+            self.notes.append(
+                f"{video.name}: {int(beyond.sum()):,} frame(s) past the last recorded trigger; "
+                f"extrapolated at {period:.5f} ticks"
+            )
+        # True where anything is missing immediately before this frame, from either cause.
+        gap = np.empty(ticks.size, dtype=bool)
+        gap[0] = False
+        np.greater(np.diff(exposures), 1, out=gap[1:])
 
         for start in range(0, ticks.size, self.batch_rows):
             stop = min(start + self.batch_rows, ticks.size)
@@ -165,8 +254,8 @@ class VideoSource:
                     "frame_index": pa.array(np.arange(start, stop, dtype=np.int64)),
                     "t_tick": pa.array(ticks[start:stop]),
                     "clock_id": pa.array([self.clock_id] * (stop - start)),
-                    "pts": pa.array(camera[start:stop] / 1e9),
-                    "dropped": pa.array(dropped[start:stop]),
+                    "pts": pa.array(pts[start:stop].astype(np.float64)),
+                    "dropped": pa.array(gap[start:stop]),
                 }
             )
 

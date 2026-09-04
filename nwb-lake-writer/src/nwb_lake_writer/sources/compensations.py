@@ -61,6 +61,18 @@ COMPENSATIONS: dict[str, Compensation] = {
         "whole-second stamp plus the sub-second wait for the first of thousands of units",
         evidence="inventory/nwb-zarr-776259-2025-04-09.md §3.1, §3.3",
     ),
+    "video.zip_pairing_repaired": Compensation(
+        defect="the acquiring workflow joins the camera stream to the rig's timestamp stream "
+        "with rx:Zip (dynamic-foraging-task, src/workflows/foraging.bonsai:8112), which pairs by "
+        "position. The host drops frames in bursts, so each drop shifts every later pairing by "
+        "one and the recorded time falls behind by one trigger period per lost frame -- measured "
+        "at 93.4 s over one 85-minute session, from 46,723 lost frames",
+        action="the time is reconstructed from the camera's own chunk data, which survived: "
+        "t_tick = t0 + (FrameID - FrameID_0) x trigger period, where t0 is the one pairing still "
+        "correct and the period is measured from the file. Checked against the camera's "
+        "independent hardware clock, the two agree to 35-85 ms over 85 minutes",
+        evidence="inventory/upstream-defects.md §video-zip-pairing",
+    ),
     "nwb.signal_device_declared": Compensation(
         defect="an instrument acquired by a separate workflow contributes its data and none of "
         "its metadata: the stream lands in the packet while no metadata document mentions it at "
