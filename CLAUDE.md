@@ -162,6 +162,13 @@ Version strings must stay consistent: `nwb-lake-portable-v0.1`, `nwb-lake-semant
 
 ## Verifying the whole monorepo
 
+`DEVELOPING.md` is the step-by-step account of how the registry, its schemas, the rules and the
+validators are produced and in what order — read it before changing any of them. The short version
+is that most of what looks like source in `registry/` is output: `logical_schemas.json` and
+`tables.md` are generated from the frozen `02` plus one `build.py` block per accepted revision plus
+`rules.json`, and Tier 1 checks are not stored at all but derived from the registry at validation
+time.
+
 `python verify.py` runs every generator and every check — the registry build, its
 structural checks, the prototype's chain, the 26-packet conformance corpus, and all three test
 suites — in 23 s, exiting non-zero on the first thing that is off. `--quick` skips the suites.
