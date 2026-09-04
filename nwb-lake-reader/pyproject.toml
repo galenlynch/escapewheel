@@ -1,0 +1,127 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nwb-lake-reader"
+description = "Tools to read NWB lakes"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+  { name = "Allen Institute for Neural Dynamics" },
+  { name = "Galen Lynch", email = "galen@galenlynch.com" },
+]
+classifiers = ["Programming Language :: Python :: 3"]
+readme = "README.md"
+version = "0.1.0"
+
+dependencies = [
+    "jsonschema>=4.26.0",
+    # Clock alignment is array arithmetic (`clocks.py`), so numpy is a direct dependency
+    # rather than one inherited from pyarrow, which no longer requires it.
+    "numpy>=1.26",
+    "pyarrow>=25.0.1",
+]
+
+[project.optional-dependencies]
+# A SQL engine is optional because a complete read path exists without one: the nested-type
+# ban (R3 2.1) exists to keep a native reader viable in languages that lack DuckDB. Validation
+# is SQL and lives in nwb-lake-validator, which depends on this extra.
+sql = ["duckdb>=1.5.5"]
+polars = ["polars>=1.0"]
+# Zarr is optional for the same reason: an array declares its shape, chunking and codecs in a
+# JSON document, so what an array *is* costs nothing, and only reading values needs a library.
+arrays = ["zarr>=3"]
+
+[project.urls]
+Repository = "https://github.com/AllenNeuralDynamics/nwb-lake-reader/"
+Issues = "https://github.com/AllenNeuralDynamics/nwb-lake-reader/issues"
+Changelog = "https://github.com/AllenNeuralDynamics/nwb-lake-reader/blob/main/CHANGELOG.md"
+
+[project.scripts]
+# 07 names the CLI `nwb-lake`; later packages extend it with their own subcommands
+# rather than claiming a different name.
+nwb-lake = "nwb_lake_reader.scripts.cli:main"
+
+[dependency-groups]
+types = [
+    "mypy",
+    "pyarrow-stubs>=20.0.0.20260819",
+    "types-jsonschema>=4.26.0.20260518",
+]
+dev = [{ include-group = "types" }, "codespell", "pytest", "pytest-cov", "ruff", "interrogate"]
+jupyter = [{ include-group = "dev" }, "ipykernel", "pip"]
+docs = [
+  { include-group = "dev" },
+  "sphinx>=5.0",
+  "sphinx-autodoc-typehints",
+  "sphinx-copybutton",
+  "myst-parser",
+  "furo",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nwb_lake_reader"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["scratch"]
+
+[tool.ruff.lint]
+extend-select = ["Q", "RUF100", "C90", "I", "F", "E", "W", "D", "UP", "ANN", "PYI"]
+extend-ignore = ["ANN401"]  # Skip self/cls type annotations
+per-file-ignores = { "tests/*.py" = ["ANN", "D"] }
+mccabe = { max-complexity = 14 }
+pydocstyle = { convention = "numpy" }
+
+[tool.codespell]
+skip = ".git,*.pdf,*.svg,./docs/build,uv.lock,scratch"
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --tb=short --cov=src --cov-report=term-missing --cov-fail-under=0"
+testpaths = ["tests"]
+
+[tool.interrogate]
+ignore-init-method = true
+ignore-magic = true
+ignore_module = true
+fail-under = 30
+exclude = [
+  "__init__.py",
+  "tests",
+  "docs",
+  "build",
+  "examples",
+  "site",
+  "scratch",
+  ".venv",
+]
+
+[tool.commitizen]
+version_provider = "pep621"
+update_changelog_on_bump = true
+tag_format = "v$version"
+major_version_zero = true
+
+
+[tool.mypy]
+files = ["src/nwb_lake_reader"]
+strict = true
+show_error_codes = true
+exclude = ["scratch"]
+
+[[tool.mypy.overrides]]
+module = "polars.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+
+[[tool.mypy.overrides]]
+# zarr is the `arrays` extra, absent on a table-only install.
+module = "zarr.*"
+ignore_missing_imports = true
