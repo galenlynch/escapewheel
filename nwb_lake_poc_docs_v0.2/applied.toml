@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 70
+undisposed = 58
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -1033,4 +1033,53 @@ disposition = "rationale"
 note = "the ASOF-join measurements behind withdrawing the tables"
 
 [clause."R43 §8"]
+disposition = "rationale"
+
+[clause."R2 §3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §2"
+note = "an ordered list of columns; ordering is why an array and not an object"
+
+[clause."R2 §5"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §6"
+note = "restored 2026-09-04 with the third presence state"
+
+[clause."R2 §6"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §2, §7; 03_portable_physical_profile.md §5.3"
+
+[clause."R2 §7.4"]
+disposition = "rationale"
+note = "why the rules are SQL rather than code"
+
+[clause."R2 §8"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.2"
+
+[clause."R2 §9"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.2"
+
+[clause."R7 §2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §2"
+
+[clause."R7 §3.1"]
+disposition = "registry"
+note = "the specific keys, including core.source_files keyed by id and not uri"
+
+[clause."R17 §2"]
+disposition = "applied"
+where = "09_metadata_and_extensions.md §2"
+
+[clause."R17 §4"]
+disposition = "applied"
+where = "05_validation_and_import.md §5.4"
+
+[clause."R57 §2.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.2"
+
+[clause."R57 §2.3"]
 disposition = "rationale"
