@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-04 |
+| **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `01` §3.17 (what an array asset holds), `02` (`core.array_assets`), R19 §2 (what the array tables carry) |
 | **Depends on** | R46 (references are declared), R53 (identifiers are assigned or carried) |
 | **Profile** | `nwb-lake-portable-v0.1` |
