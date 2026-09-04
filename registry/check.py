@@ -341,6 +341,14 @@ for _schema, _consumer in VENDORED.items():
         stale.append(f"{_consumer.relative_to(HERE.parent)} differs from {_schema}; run build.py")
 check("every vendored schema matches its source", stale)
 
+# The same argument one level up: a count restated in prose goes stale, and this one did --
+# 33 tables against 34, 51 rules against 61, and two rules revisions had removed.
+import render  # noqa: E402 - after the ledger, so a broken build fails first
+
+_readme = (HERE / "README.md").read_text()
+check("README's generated regions are current",
+      [] if render.fill(_readme, render.regions(REG)) == _readme else ["README.md is stale; run build.py"])
+
 # R2 §9: the registry validates against its published meta-schema.
 try:
     import jsonschema

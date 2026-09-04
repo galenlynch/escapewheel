@@ -10,6 +10,8 @@ disagree with it; this says what the two together produced.
 """
 
 import json
+import re
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -120,12 +122,66 @@ def render(registry: dict[str, Any]) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
-def main() -> Path:
-    """Write `tables.md` beside the registry."""
-    OUT.write_text(render(json.loads(REGISTRY.read_text())))
-    return OUT
+README = HERE / "README.md"
+
+#: Where the README's generated regions begin and end. A count stated in prose is a count that
+#: goes stale: the README claimed 33 tables and 51 rules against a registry holding 34 and 61,
+#: and listed two rules that revisions had since removed.
+REGION = re.compile(r"(<!-- BEGIN generated: (\w+) -->\n).*?(<!-- END generated: \2 -->)", re.DOTALL)
+
+
+def regions(registry: dict[str, Any]) -> dict[str, str]:
+    """Return the README's generated regions, keyed by name.
+
+    Only what the registry *declares*. How many Tier 1 checks that becomes is deliberately not
+    here: it turns on which tables the shim's ordering scan settles uniqueness for, which is the
+    validator's judgement (R12 §4), and a second implementation of it would be a number that
+    agrees until it does not.
+    """
+    tables = registry["tables"]
+    columns = [c for t in tables.values() for c in t["columns"]]
+    rules = [r for t in tables.values() for r in t["rules"]]
+    levels = Counter(r["level"] for r in rules)
+    declared = [
+        (sum(1 for c in columns if c["presence"] == "required"), "required column, not null"),
+        (sum(len(t["references"]) for t in tables.values()), "reference, resolves"),
+        (sum(1 for t in tables.values() if t["primary_key"]), "primary key, unique"),
+        (sum(1 for c in columns if c.get("enum")), "closed vocabulary, member of"),
+        (sum(1 for c in columns if c.get("role") == "discriminator"), "discriminator, resolvable"),
+    ]
+    by_table = sorted(((n, t) for n, t in tables.items() if t["rules"]),
+                      key=lambda kv: (-len(kv[1]["rules"]), kv[0]))
+    return {
+        "counts": (f"```\n{len(tables)} tables, {len(columns)} columns, "
+                   f"{sum(len(t['references']) for t in tables.values())} references, "
+                   f"{len(rules)} Tier 2 rules\n```"),
+        "structure": "```\n" + "\n".join(f"{n:<4}{label}" for n, label in declared) + "\n```",
+        "rules": (f"{len(rules)} rules over {len(by_table)} tables: {levels['error']} error, "
+                  f"{levels['warning']} warning, {levels['info']} info — the "
+                  f"{sum(1 for r in rules if r.get('advisory'))} at `info` being the advisory ones "
+                  f"(R26 §2), off unless asked for.\n\n"
+                  "| Table | Rules |\n|---|---:|\n"
+                  + "\n".join(f"| `{n}` | {len(t['rules'])} |" for n, t in by_table)),
+    }
+
+
+def fill(text: str, filled: dict[str, str]) -> str:
+    """Replace each generated region's body, leaving the prose around it untouched."""
+    named = {name for _, name, _ in REGION.findall(text)}
+    if named != set(filled):
+        raise SystemExit(f"README regions {sorted(named)} do not match what render.py fills "
+                         f"{sorted(filled)}")
+    return REGION.sub(lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", text)
+
+
+def main() -> tuple[Path, Path]:
+    """Write `tables.md` and refill the README's generated regions, beside the registry."""
+    registry = json.loads(REGISTRY.read_text())
+    OUT.write_text(render(registry))
+    README.write_text(fill(README.read_text(), regions(registry)))
+    return OUT, README
 
 
 if __name__ == "__main__":
-    path = main()
-    print(f"wrote {path.name}: {len(path.read_text().splitlines())} lines")
+    for path in main():
+        print(f"wrote {path.name}: {len(path.read_text().splitlines())} lines")

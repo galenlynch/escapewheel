@@ -1193,9 +1193,11 @@ if __name__ == "__main__":
           f"{sum(len(t['rules']) for t in reg['tables'].values())} rules merged from {RULES.name}")
 
     # Rendered here rather than by hand, so the readable form cannot drift from the content.
+    # The README's counts go the same way: it claimed 33 tables and 51 rules against a registry
+    # holding 34 and 61, and `check.py` now fails on a stale one.
     import render
 
-    print(f"wrote {render.main().name}")
+    print(f"wrote {', '.join(p.name for p in render.main())}")
 
     # The two hand-written schemas are consumed by sibling distributions, which vendor them
     # because a wheel cannot read a file from another repository. A vendored copy is therefore a

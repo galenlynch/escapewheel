@@ -4,9 +4,11 @@
 conforming table is, in the format [R2](../revisions/R2-schema-registry-format.md) defines.
 It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
+<!-- BEGIN generated: counts -->
 ```
-33 tables, 276 columns, 46 references, 51 Tier 2 rules
+34 tables, 312 columns, 75 references, 61 Tier 2 rules
 ```
+<!-- END generated: counts -->
 
 `tables.md` is the same content as markdown, rendered by `render.py` at build time. Read it
 to see what a table looks like now; read `02` plus the revisions to see why.
@@ -53,13 +55,17 @@ to a schema or to a rule.
 
 ```bash
 python3 build.py      # merges both sources, writes logical_schemas.json
-python3 check.py      # 20 invariants; exit 1 on any failure
+python3 check.py      # structural invariants; exit 1 on any failure
 ```
 
 `build.py` rejects a `rules.json` entry naming a table the registry does not define;
 `check.py` verifies the merge round-trips and that every rule executes as SQL against
 tables built from the registry, which is what catches a rule referencing a column that a
 revision has since removed.
+
+`render.py` writes `tables.md` and fills this file's generated regions. Every count below is
+one of those: a number stated in prose is a number that goes stale, which this file
+demonstrated by claiming 33 tables and 51 rules against a registry holding 34 and 61.
 
 ## What `check.py` verifies
 
@@ -77,55 +83,78 @@ revision has since removed.
 
 ## What it produces
 
-Fed to `prototype/registry-codegen/generate.py`, the registry yields **122 Tier 1 checks**
-with no per-table authoring:
+Tier 1 checks are generated from structure, with no per-table authoring. What the registry
+declares, and therefore what a generator has to work with:
 
+<!-- BEGIN generated: structure -->
 ```
-74  required column not null
-26  foreign key resolves
-22  primary key unique
+138 required column, not null
+75  reference, resolves
+34  primary key, unique
+3   closed vocabulary, member of
+3   discriminator, resolvable
 ```
+<!-- END generated: structure -->
 
-Twenty-six references include composite keys (`core.spike_events` → `core.units` on four
-columns) and conditional ones, where a `nullable` foreign key gets an `IS NOT NULL` guard so
-legitimately absent values do not report as violations.
+How many checks that becomes is the **validator's** answer, not this file's: a table whose sort
+begins with its primary key has its uniqueness settled by the shim's ordering scan instead, so
+the count is fewer than the keys (R12 §4). `nwb_lake_validator.generate` decides it, and
+restating the total here is what let this section claim 122 against a registry producing 236.
+
+A reference may be composite (`core.spike_events` → `core.units` on four columns) or
+conditional, where a `nullable` foreign key gets an `IS NOT NULL` guard so legitimately absent
+values do not report as violations. A discriminator yields two checks, not one: that the value
+is a dotted resource ID at all, and that it names a resource the packet declares (R55 §2.4).
 
 ## Tier 2 rules
 
-Twelve, inline in each table's `rules` array. R2 §13 left inline-versus-sibling open,
-to be decided when the content was generated; inline was chosen, so a table's whole
-contract is readable in one place.
+Authored in `rules.json` and merged inline into each table's `rules` array. R2 §13 left
+inline-versus-sibling open, to be decided when the content was generated; inline was chosen, so
+a table's whole contract is readable in one place.
 
-| Rule | Level | Source |
-|---|---|---|
-| `core.trials.interval_valid` | error | `02` |
-| `core.clocks.tick_rate_declared` | error | R4 §4 |
-| `core.clocks.tick_rate_positive` | error | `02` |
-| `core.clocks.transform_pair_complete` | error | R3 §3.4 |
-| `core.clocks.transform_requires_parent` | error | R3 §3.4 |
-| `core.clocks.tick_zero_plausible` | warning | R6 §3 |
-| `core.units.spike_summary_consistent` | error | R5 §4 |
-| `core.spike_events.ticks_sorted_within_unit` | warning | R5 §7 |
-| `core.spike_events.ticks_within_clock_span` | warning | R6 §3 |
-| `core.processing_runs.no_failed_runs` | error | R8 §3 |
-| `core.array_dimensions.axis_index_contiguous` | error | R3 §3.3 |
-| `core.sessions.manifest_sessions_match` | error | R1 §4 |
+<!-- BEGIN generated: rules -->
+61 rules over 21 tables: 50 error, 7 warning, 4 info — the 4 at `info` being the advisory ones (R26 §2), off unless asked for.
 
-The last requires the shim to register the manifest's `sessions` array as a
-`manifest_sessions` relation before running rules.
+| Table | Rules |
+|---|---:|
+| `core.clocks` | 8 |
+| `core.array_dimensions` | 7 |
+| `core.processing_runs` | 7 |
+| `core.units` | 5 |
+| `core.clock_anchors` | 4 |
+| `core.sessions` | 4 |
+| `core.preferred_runs` | 3 |
+| `analysis.spike_events` | 2 |
+| `core.array_assets` | 2 |
+| `core.clock_observation_intervals` | 2 |
+| `core.event_stream_observation_intervals` | 2 |
+| `core.events` | 2 |
+| `core.media_frames` | 2 |
+| `core.spike_events` | 2 |
+| `core.unit_electrodes` | 2 |
+| `core.unit_observation_intervals` | 2 |
+| `core.array_channels` | 1 |
+| `core.event_streams` | 1 |
+| `core.intervals` | 1 |
+| `core.sorting_runs` | 1 |
+| `core.unit_quality_labels` | 1 |
+<!-- END generated: rules -->
+
+`tables.md` lists them by id with the message each reports. `core.sessions` requires the shim to
+register the manifest's `sessions` array as a `manifest_sessions` relation before rules run,
+which is the one rule that reads something no table holds.
 
 ## Identifier quoting
 
 Emitted SQL quotes every column identifier. `core.array_assets.offset` is reserved in
 DuckDB, and each engine reserves a different set, so quoting is unconditional rather than
-conditional on a word list. `check.py` builds DDL from the registry and executes all 12
-rules against empty tables, which is what surfaced the collision.
+conditional on a word list. `check.py` builds DDL from the registry and executes every rule
+against empty tables, which is what surfaced the collision.
 
 ## Not yet present
 
-- **`sort` beyond `03`'s two tables.** Only `core.spike_events` and `core.events` have a
-  specified ordering; the rest are null rather than invented.
-- **Analysis-layer tables.** Excluded by R2 §12.
+- **`sort` on every table.** R10 §2 gives 21 of 34 an ordering, primary-key by default with
+  `03`'s two overrides; the rest are null rather than invented.
 - **Array and manifest checks** belonging to the shim rather than SQL: Zarr rank against
   `core.array_dimensions`, `channel_index` within its axis extent, checksums,
   `required_codecs` against reader capability.
