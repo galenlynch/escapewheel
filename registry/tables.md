@@ -345,7 +345,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `electrode_id` | int32 | **required** | R19 §3 | Electrode ID. |
 | `coordinate_frame` | string | **required** | R19 §3 | The frame these coordinates are in. |
-| `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was. A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
+| `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
 | `region_id` | int32 | nullable | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
 | `processing_run_id` | int32 | nullable | R58 §2.3 | The run that produced this coordinate. |
@@ -807,7 +807,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `sorting_run_id` | int32 | **required** | R28 §2-4 | Sorting run ID. |
 | `curation_id` | int32 | **required** | R28 §2-4 | Curation ID. |
 | `coordinate_frame` | string | **required** | R28 §2-4 | The frame these coordinates are in. Open, as R19 §3 left it. |
-| `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was. A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
+| `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
 | `region_id` | int32 | nullable | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
 | `processing_run_id` | int32 | nullable | R58 §2.3 | The run that produced this coordinate. |

@@ -542,8 +542,9 @@ def build() -> dict:
                              "The frame these coordinates are in."), vocabulary="open"),
                     dict(col("coordinate_basis", "string", "required",
                              "What the coordinate asserts: `planned` where the probe was meant to "
-                             "go, `measured` where it was. A consumer that does not recognise a "
-                             "basis MUST NOT treat it as measured (R58 §2.2).",
+                             "go, `measured` where it was, `nominal` where it is by construction "
+                             "and nothing aimed or observed it (R64 §2.1). A consumer that does "
+                             "not recognise a basis MUST NOT treat it as measured (R58 §2.2).",
                              since="R58 §2.1"), vocabulary="open"),
                     col("region_id", "int32", "nullable",
                         "The atlas structure this position falls in, numbered by the atlas that "
@@ -777,8 +778,9 @@ def build() -> dict:
                         "The frame these coordinates are in. Open, as R19 §3 left it."),
                     dict(col("coordinate_basis", "string", "required",
                              "What the coordinate asserts: `planned` where the probe was meant to "
-                             "go, `measured` where it was. A consumer that does not recognise a "
-                             "basis MUST NOT treat it as measured (R58 §2.2).",
+                             "go, `measured` where it was, `nominal` where it is by construction "
+                             "and nothing aimed or observed it (R64 §2.1). A consumer that does "
+                             "not recognise a basis MUST NOT treat it as measured (R58 §2.2).",
                              since="R58 §2.1"), vocabulary="open"),
                     col("region_id", "int32", "nullable",
                         "The atlas structure this position falls in, numbered by the atlas that "

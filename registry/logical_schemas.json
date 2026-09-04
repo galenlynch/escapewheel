@@ -1530,7 +1530,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was. A consumer that does not recognise a basis MUST NOT treat it as measured (R58 \u00a72.2).",
+          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 \u00a72.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 \u00a72.2).",
           "since": "R58 \u00a72.1",
           "vocabulary": "open"
         },
@@ -3549,7 +3549,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was. A consumer that does not recognise a basis MUST NOT treat it as measured (R58 \u00a72.2).",
+          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 \u00a72.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 \u00a72.2).",
           "since": "R58 \u00a72.1",
           "vocabulary": "open"
         },
