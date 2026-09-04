@@ -4,7 +4,7 @@ Demonstrates the chain [R2](../../revisions/R2-schema-registry-format.md) specif
 a registry document is data, a generator turns it into SQL, and that SQL is the validator.
 
 ```
-registry.json ──generate.py──> 17 SQL checks ──DuckDB──> findings
+registry.json ──generate.py──> 22 SQL checks ──DuckDB──> findings
    (data)          (~40 lines)                              (offending rows)
 ```
 
@@ -28,7 +28,7 @@ python3 generate.py                                            # print the emitt
 
 ## Where the checks come from
 
-Three tables produce 17 checks. Sixteen are generated from structure; one is hand-written.
+Three tables produce 22 checks. Twenty-one are generated from structure; one is hand-written.
 
 | Registry element | Emitted check |
 |---|---|
@@ -37,14 +37,15 @@ Three tables produce 17 checks. Sixteen are generated from structure; one is han
 | each `references` entry | `LEFT JOIN parent ... WHERE parent.key IS NULL` |
 | each `rules` entry | passed through unchanged (Tier 2) |
 
-At full scale this is roughly 230 generated against 7 hand-written (R2 §11).
+At full scale this is 236 generated against 64 hand-written.
 
 Two details are load-bearing rather than incidental:
 
 **Nullable foreign keys are guarded.** `generate.py` reads `presence` when building a
 reference check, so a `nullable` foreign key constrains only its non-null values. Without
-the guard every legitimately absent `probe_id` reports as a violation. Six of the 19
-foreign keys in `02` are conditional.
+the guard `core.clocks.parent_clock_id` reports every root clock as a violation — a clock
+with no parent is the ordinary case, not a defect. 24 of core's 68 references are
+conditional this way.
 
 **The result contract is the whole protocol.** A check's query returns offending rows;
 empty is a pass, non-empty is a failure and the rows are the finding (R2 §7.3). Nothing
@@ -60,19 +61,20 @@ validation surface consists of.
 
 ## Prototype limits
 
-**Pinned to R2's era, deliberately.** `registry.json` here is its own document, not a subset of
-`registry/logical_schemas.json`, and it predates the revisions that changed what a core table
-looks like: identifiers are strings (R53 made them `int32`), no column declares a `role` (R48),
-and the table it demonstrates on is `core.trials`, which R54 replaced with `core.intervals` keyed
-by a discriminator. Renaming it would produce a `core.intervals` that is wrong in three other
-ways. What this prototype demonstrates is R2's chain — registry as data, generator, SQL — and
-that chain is unchanged; the counts and table names below are the ones R2 was argued against.
+`registry.json` is its own document rather than a slice of `registry/logical_schemas.json`,
+and it is kept conforming: `registry/check.py` validates it against the meta-schema, because a
+demonstration that the format drives the tooling is worth nothing on input the format rejects.
+It went 16 errors out of conformance once, unnoticed, which is why the check exists.
 
-- Three of the 24 tables; no `rules` beyond one example.
+- Three of the 34 tables; no `rules` beyond one example.
+- **No discriminator checks.** `core.intervals.interval_kind` names an extension table (R54 §2.1)
+  that this packet does not carry, which R54 §2.4a makes an error and R55 §2.4's generated checks
+  would catch. `generate.py` implements not-null, uniqueness, references and Tier 2 pass-through;
+  the two discriminator checks are the clearest thing to add next.
 - No manifest handling, no JSON Schema, no Zarr array checks, no checksums.
 - Type checking compares against pyarrow type strings, which is a stand-in for a
   language-neutral comparison.
 - Python only. The Julia equivalent rewrites `generate.py` and reuses everything else;
   a shared conformance corpus is what would keep the two honest.
 - `registry.json` is hand-written here. The real content artifact is generated against
-  R2's format and covers all 24 tables.
+  R2's format and covers all 34 tables.

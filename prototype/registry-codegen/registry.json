@@ -1,45 +1,59 @@
 {
+  "$schema": "https://nwb-lake.org/schemas/registry/v0.1",
   "registry_version": "0.1.0",
+  "semantic_standard_version": "nwb-lake-semantic-v0.1",
+  "logical_standard_version": "nwb-lake-logical-v0.1",
   "tables": {
     "core.sessions": {
       "columns": [
-        {"name": "session_id",         "type": "string",    "presence": "required"},
-        {"name": "subject_id",         "type": "string",    "presence": "required"},
-        {"name": "session_start_time", "type": "timestamp", "presence": "nullable"}
+        {"name": "session_id",         "type": "int32",     "presence": "required", "role": "identifier", "identity": "assigned"},
+        {"name": "subject_id",         "type": "int32",     "presence": "required", "role": "identifier", "identity": "assigned"},
+        {"name": "session_start_time", "type": "timestamp", "presence": "required", "role": "data"},
+        {"name": "reference_clock_id", "type": "int32",     "presence": "nullable", "role": "identifier", "identity": "assigned"}
       ],
       "primary_key": ["session_id"],
-      "references": []
+      "sort": ["session_id"],
+      "references": [
+        {"columns": ["reference_clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]}
+      ],
+      "rules": []
     },
     "core.clocks": {
       "columns": [
-        {"name": "clock_id",     "type": "string",  "presence": "required"},
-        {"name": "session_id",   "type": "string",  "presence": "required"},
-        {"name": "tick_rate_hz", "type": "float64", "presence": "nullable"},
-        {"name": "origin",       "type": "string",  "presence": "required"}
+        {"name": "clock_id",        "type": "int32",   "presence": "required", "role": "identifier", "identity": "assigned"},
+        {"name": "session_id",      "type": "int32",   "presence": "required", "role": "identifier", "identity": "assigned"},
+        {"name": "name",            "type": "string",  "presence": "required", "role": "data"},
+        {"name": "tick_rate_hz",    "type": "float64", "presence": "nullable", "role": "data", "unit": "Hz"},
+        {"name": "origin",          "type": "string",  "presence": "required", "role": "data"},
+        {"name": "parent_clock_id", "type": "int32",   "presence": "nullable", "role": "identifier", "identity": "assigned"}
       ],
       "primary_key": ["clock_id"],
+      "sort": ["clock_id"],
       "references": [
-        {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
-      ]
-    },
-    "core.trials": {
-      "columns": [
-        {"name": "session_id",   "type": "string", "presence": "required"},
-        {"name": "trial_id",     "type": "string", "presence": "required"},
-        {"name": "start_tick",   "type": "int64",  "presence": "required"},
-        {"name": "stop_tick",    "type": "int64",  "presence": "required"},
-        {"name": "clock_id",     "type": "string", "presence": "required"},
-        {"name": "probe_id",     "type": "string", "presence": "nullable"}
+        {"columns": ["session_id"],      "resource": "core.sessions", "resource_columns": ["session_id"]},
+        {"columns": ["parent_clock_id"], "resource": "core.clocks",   "resource_columns": ["clock_id"]}
       ],
-      "primary_key": ["session_id", "trial_id"],
+      "rules": []
+    },
+    "core.intervals": {
+      "columns": [
+        {"name": "session_id",    "type": "int32",  "presence": "required", "role": "identifier",    "identity": "assigned"},
+        {"name": "interval_kind", "type": "string", "presence": "required", "role": "discriminator", "resolves": "required"},
+        {"name": "interval_id",   "type": "int32",  "presence": "required", "role": "identifier",    "identity": "carried"},
+        {"name": "start_tick",    "type": "int64",  "presence": "required", "role": "coordinate"},
+        {"name": "stop_tick",     "type": "int64",  "presence": "required", "role": "coordinate"},
+        {"name": "clock_id",      "type": "int32",  "presence": "required", "role": "identifier",    "identity": "assigned"}
+      ],
+      "primary_key": ["session_id", "interval_kind", "interval_id"],
+      "sort": ["session_id", "interval_kind", "interval_id"],
       "references": [
         {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
         {"columns": ["clock_id"],   "resource": "core.clocks",   "resource_columns": ["clock_id"]}
       ],
       "rules": [
-        {"id": "core.trials.interval_valid", "level": "error",
+        {"id": "core.intervals.interval_valid", "level": "error",
          "message": "stop_tick precedes start_tick",
-         "sql": "SELECT session_id, trial_id, start_tick, stop_tick FROM core_trials WHERE stop_tick < start_tick"}
+         "sql": "SELECT session_id, interval_kind, interval_id, start_tick, stop_tick FROM core_intervals WHERE stop_tick < start_tick"}
       ]
     }
   }
