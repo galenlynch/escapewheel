@@ -457,10 +457,18 @@ class NWBSource(Compensates):
         columns = self._table("general/extracellular_ephys/electrodes")
         if not columns:
             return []
-        frames = {"probe": ("rel_x", "rel_y", None), "ccf": CCF_AXES}
+        # The basis travels with the columns a value comes from rather than with the frame's
+        # name (R64 §1.3): `rel_x` is the shank's own layout and so is true by construction,
+        # where a CCF triple is what a registration found. `planned` cannot be imported from
+        # either -- an exported file records where a probe was, never where it was aimed, and
+        # a targeting record does not reach NWB.
+        frames = {
+            "probe": (("rel_x", "rel_y", None), "nominal"),
+            "ccf": (CCF_AXES, "measured"),
+        }
         rows = []
         for index, electrode_id in enumerate(self._electrode_ids(columns)):
-            for frame, axes in frames.items():
+            for frame, (axes, basis) in frames.items():
                 values = [_clean(columns[axis][index]) if axis and axis in columns else None for axis in axes]
                 if all(value is None for value in values):
                     continue
@@ -468,10 +476,7 @@ class NWBSource(Compensates):
                     {
                         "electrode_id": electrode_id,
                         "coordinate_frame": frame,
-                        # An exported file records where the probe was found, never where it was
-                        # aimed: a targeting record does not reach NWB, so `planned` (R58 §2.1)
-                        # cannot be imported from one.
-                        "coordinate_basis": "measured",
+                        "coordinate_basis": basis,
                         **self._annotation(columns, index, frame),
                         "x_um": values[0],
                         "y_um": values[1],
