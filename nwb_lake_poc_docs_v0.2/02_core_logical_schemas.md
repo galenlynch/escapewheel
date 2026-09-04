@@ -72,7 +72,7 @@ A writer SHOULD NOT fill a `json_string` column routinely. Doing so defeats that
 
 ### 5.3 Fixed representations
 
-Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC, and MUST NOT use INT96. Identifier columns MUST be `int32` (R53 §2.1).
+Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC, and MUST NOT use INT96. Identifier columns MUST be `int32` (R53 §2.1), except where the number of distinct values may exceed `int32`, where the column MUST be `int64` (R53 §2.4). No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
 
 ## 6. Presence
 
@@ -123,6 +123,8 @@ A `discriminator` column MUST hold a dotted resource identifier, and MUST declar
 Resolution takes one of two shapes, and a discriminator declares which by whether it names a paired column.
 
 **Shared key.** The discriminated row and the named resource share a key, so the join is on that key. A resource a shared-key discriminator may name MUST declare a reference back to the discriminated table, and that reference MUST cover the discriminated table's **whole key**. A reference on part of it targets a set that is not unique — it identifies a row of some kind, which is not a foreign key, and the generated anti-join passes while resolving to several rows.
+
+The checks a discriminator implies MUST be generated over **every resource the packet declares, extensions included** (R55 §2.5). Building them over core alone is the defect R55 was written for: an extension kind matched no branch and passed in silence, which is the one case the mechanism exists to cover.
 
 A detail table therefore carries the discriminator as a constant column, restating in every row what its own identity implies. A column holding one value costs almost nothing once encoded, and what it buys is a reference that identifies a row.
 

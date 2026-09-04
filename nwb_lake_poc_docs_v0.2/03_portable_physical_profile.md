@@ -67,7 +67,7 @@ A table MUST be a valid Parquet file. Compression SHOULD be Zstandard where avai
 
 A large table SHOULD use row groups sized for analytical scans; 100,000 to 1,000,000 rows is a starting point to be adjusted by profiling.
 
-An identifier column is `int32` (Part 02 §5.3) and MUST NOT be dictionary-encoded in a way that requires unification across row groups before it can be compared.
+An identifier column is `int32`, or `int64` where its range requires it (Part 02 §5.3) and MUST NOT be dictionary-encoded in a way that requires unification across row groups before it can be compared.
 
 ### 5.2 Partitioning
 
@@ -154,7 +154,7 @@ Cleanup is a separate operation and MUST proceed orphans first, superseded manif
 
 A **stray** — a file no manifest ever named — MUST NOT be removed. The operation reports by default and acts only when asked.
 
-Retention defaults to one kept version and no age limit, because a packet is archival where a table is operational.
+A packet MAY declare its own retention, and a writer SHOULD emit one (R61 §2.2): how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 
 ### 9.4 What a version is not
 

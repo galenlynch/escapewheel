@@ -604,7 +604,7 @@ A writer SHOULD NOT fill a `json_string` column routinely. Doing so defeats that
 
 ### 5.3 Fixed representations
 
-Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC, and MUST NOT use INT96. Identifier columns MUST be `int32` (R53 §2.1).
+Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC, and MUST NOT use INT96. Identifier columns MUST be `int32` (R53 §2.1), except where the number of distinct values may exceed `int32`, where the column MUST be `int64` (R53 §2.4). No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
 
 ## 6. Presence
 
@@ -655,6 +655,8 @@ A `discriminator` column MUST hold a dotted resource identifier, and MUST declar
 Resolution takes one of two shapes, and a discriminator declares which by whether it names a paired column.
 
 **Shared key.** The discriminated row and the named resource share a key, so the join is on that key. A resource a shared-key discriminator may name MUST declare a reference back to the discriminated table, and that reference MUST cover the discriminated table's **whole key**. A reference on part of it targets a set that is not unique — it identifies a row of some kind, which is not a foreign key, and the generated anti-join passes while resolving to several rows.
+
+The checks a discriminator implies MUST be generated over **every resource the packet declares, extensions included** (R55 §2.5). Building them over core alone is the defect R55 was written for: an extension kind matched no branch and passed in silence, which is the one case the mechanism exists to cover.
 
 A detail table therefore carries the discriminator as a constant column, restating in every row what its own identity implies. A column holding one value costs almost nothing once encoded, and what it buys is a reference that identifies a row.
 
@@ -886,7 +888,7 @@ A table MUST be a valid Parquet file. Compression SHOULD be Zstandard where avai
 
 A large table SHOULD use row groups sized for analytical scans; 100,000 to 1,000,000 rows is a starting point to be adjusted by profiling.
 
-An identifier column is `int32` (Part 02 §5.3) and MUST NOT be dictionary-encoded in a way that requires unification across row groups before it can be compared.
+An identifier column is `int32`, or `int64` where its range requires it (Part 02 §5.3) and MUST NOT be dictionary-encoded in a way that requires unification across row groups before it can be compared.
 
 ### 5.2 Partitioning
 
@@ -973,7 +975,7 @@ Cleanup is a separate operation and MUST proceed orphans first, superseded manif
 
 A **stray** — a file no manifest ever named — MUST NOT be removed. The operation reports by default and acts only when asked.
 
-Retention defaults to one kept version and no age limit, because a packet is archival where a table is operational.
+A packet MAY declare its own retention, and a writer SHOULD emit one (R61 §2.2): how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 
 ### 9.4 What a version is not
 
