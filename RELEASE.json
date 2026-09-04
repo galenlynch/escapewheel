@@ -1,0 +1,36 @@
+{
+  "standard": {
+    "semantic": "nwb-lake-semantic-v0.1",
+    "logical": "nwb-lake-logical-v0.1",
+    "profile": "nwb-lake-portable-v0.1",
+    "registry_version": "0.1.0"
+  },
+  "commit": "2a3a05ea10604e037016ae426054cab3955fa2db",
+  "clean": true,
+  "parts": {
+    "specification": {
+      "nwb_lake_poc_docs_v0.2/NWB_Lake_POC_v0.2_Implementation_Spec.md": "5e253932fb87620d027cf9b086bc39b1a782035b2fe17989524d75644dfcff7c"
+    },
+    "registry": {
+      "registry/logical_schemas.json": "a5674712141c70230199f631fa1bf2219ef6d6a02148d05885222dd2889ba04f",
+      "registry/tables.md": "c851e665d7054b89fbc0b67282c4733f95fbaf7aecdb2887748f85c083500734"
+    },
+    "schemas": {
+      "registry/registry.schema.json": "9529e53f2ca7fa0c0ebaad351555f648c54f18e7069bac1c32b76bceafad0899",
+      "registry/manifest.schema.json": "ab9acb88ef8775b7a5a38ce8a307c306b2fcb0bb8256ab6784b40d6590a115d7"
+    },
+    "extensions": {
+      "registry/extensions/aind_opto.json": "4451f7214ef8d6b86c31cfa2735776a48ee1d7573bfa53ea9f0cf64810da70f6",
+      "registry/extensions/aind_unit_qc.json": "78a08a1067a5866de99e21fefff4298476409dd564b55bfb81b18a00f3464f49",
+      "registry/extensions/dynamic_foraging.json": "7f283fc77e9bf0367263193e8fa9267a85267d973a81fa19c79ae65028666b49",
+      "registry/extensions/vr_foraging.json": "9d0d080c5d65901116e6e1bce22d37af9f5a94ad3a70b18336f7df91466ad208"
+    },
+    "conformance": {
+      "fixtures/build.py": "d73d1b527f83c98c885512d3caecc96b6218df0751baf0a42f9838bf44e6c60f",
+      "fixtures/corpus.py": "13021871d0e935aeec8e80e246ffc463cf1f8308364801efd9a62a8e8bd29523"
+    },
+    "provenance": {
+      "nwb_lake_poc_docs_v0.2/applied.toml": "f38f215b14658c5f0327c7b244089d95a8374d9067be2915393a6c71578de687"
+    }
+  }
+}
