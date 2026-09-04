@@ -1,0 +1,127 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nwb-lake-validator"
+description = "Tools to validate NWB lakes"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+  { name = "Allen Institute for Neural Dynamics" },
+  { name = "Galen Lynch", email = "galen@galenlynch.com" },
+]
+classifiers = ["Programming Language :: Python :: 3"]
+readme = "README.md"
+version = "0.1.0"
+
+# The reader is the read path; the `sql` extra brings DuckDB, which the rules need because
+# they are SQL. jsonschema validates the registry a packet embeds against R2's meta-schema.
+dependencies = [
+    "nwb-lake-reader[sql]",
+    "jsonschema>=4.26.0",
+    "numpy>=1.26",
+    "pyarrow>=25.0.1",
+]
+
+[project.optional-dependencies]
+# Reaching an external resource is optional and belongs here rather than with the reader,
+# because no read path uses it: a table resolves to a local path, a Zarr array is opened by its
+# own library from its URI, and DuckDB reaches an object store through its own client. What
+# needs a store client is R36's verification -- list a prefix, hash its members -- which is
+# this package's job. A backend for the scheme is separate again.
+remote = ["fsspec>=2024.6"]
+# s3fs brings fsspec with it, so this extra alone reaches an s3:// resource.
+s3 = ["s3fs>=2024.6"]
+
+[project.entry-points."nwb_lake.commands"]
+# `07` names one CLI. nwb-lake-reader owns the console script and discovers this group, so
+# two packages never compete for the `nwb-lake` name under [project.scripts].
+validate = "nwb_lake_validator.scripts.cli:register"
+
+[project.urls]
+Repository = "https://github.com/AllenNeuralDynamics/nwb-lake-validator/"
+Issues = "https://github.com/AllenNeuralDynamics/nwb-lake-validator/issues"
+Changelog = "https://github.com/AllenNeuralDynamics/nwb-lake-validator/blob/main/CHANGELOG.md"
+
+[project.scripts]
+# Add your CLI scripts here, e.g.:
+# my_command = "nwb_lake_validator.scripts.my_command:main"
+
+[dependency-groups]
+types = [
+    "mypy",
+    "pyarrow-stubs>=20.0.0.20260819",
+    "types-jsonschema>=4.26.0.20260518",
+]
+dev = [{ include-group = "types" }, "codespell", "pytest", "pytest-cov", "ruff", "interrogate"]
+jupyter = [{ include-group = "dev" }, "ipykernel", "pip"]
+docs = [
+  { include-group = "dev" },
+  "sphinx>=5.0",
+  "sphinx-autodoc-typehints",
+  "sphinx-copybutton",
+  "myst-parser",
+  "furo",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nwb_lake_validator"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["scratch"]
+
+[tool.ruff.lint]
+extend-select = ["Q", "RUF100", "C90", "I", "F", "E", "W", "D", "UP", "ANN", "PYI"]
+extend-ignore = ["ANN401"]  # Skip self/cls type annotations
+per-file-ignores = { "tests/*.py" = ["ANN", "D"] }
+mccabe = { max-complexity = 14 }
+pydocstyle = { convention = "numpy" }
+
+[tool.codespell]
+skip = ".git,*.pdf,*.svg,./docs/build,uv.lock,scratch"
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --tb=short --cov=src --cov-report=term-missing --cov-fail-under=0"
+testpaths = ["tests"]
+
+[tool.interrogate]
+ignore-init-method = true
+ignore-magic = true
+ignore_module = true
+fail-under = 30
+exclude = [
+  "__init__.py",
+  "tests",
+  "docs",
+  "build",
+  "examples",
+  "site",
+  "scratch",
+  ".venv",
+]
+
+[tool.commitizen]
+version_provider = "pep621"
+update_changelog_on_bump = true
+tag_format = "v$version"
+major_version_zero = true
+
+
+[tool.mypy]
+files = ["src/nwb_lake_validator"]
+strict = true
+show_error_codes = true
+exclude = ["scratch"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+
+[tool.uv.sources]
+# Sibling repo; nothing is published yet.
+nwb-lake-reader = { path = "../nwb-lake-reader", editable = true }
