@@ -48,6 +48,10 @@ _SHARED_SOURCES = frozenset({"nwb", "waveforms", "lfp"})
 
 CONSUMES: dict[str, tuple[str, ...]] = {
     "nwb": ("sorter",),
+    # `_clock_namer` reads the sorter's clocks to know which streams already have one, so the
+    # sorter must have run first. Without this the namer is None and `anchors` falls back to
+    # naming every aligned stream, including ones no source declared a clock for.
+    "sync": ("sorter",),
     "waveforms": ("sorter", "nwb"),
     # The probe clock an LFP axis advances on comes from the sorter; the electrode behind each
     # channel comes from the NWB.
@@ -537,10 +541,12 @@ def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[
 def _clock_namer(context: Context) -> Any:
     """Return the map from a sync stream to the clock its ticks are on, or None for neither.
 
-    Anchor only the streams the sorting made a clock for. The rig aligns more than it sorts --
-    the NI-DAQ carries the sync pulse and no ticks of its own -- and an anchor on a clock the
-    packet does not declare is a dangling reference. Every caller that asks the sync source
-    for anchors uses this, so the packet and the alignment behind it see the same set.
+    Anchor only the streams some source declared a clock for, because an anchor naming a clock
+    the packet does not carry is a dangling reference. The rig aligns more than it sorts: the
+    NI-DAQ has its own clock, running at its own rate, which `structure.oebin` records and no
+    adapter yet emits -- so its anchors are dropped here rather than dangling, and the alignment
+    for the stream carrying the sync pulse is lost with them. Every caller that asks the sync
+    source for anchors uses this, so the packet and the alignment behind it see the same set.
     """
     sorter = context.sources.get("sorter")
     if sorter is None:
