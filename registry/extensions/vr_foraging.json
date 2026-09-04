@@ -16,6 +16,15 @@
           "identity": "assigned"
         },
         {
+          "name": "interval_kind",
+          "type": "string",
+          "presence": "required",
+          "role": "discriminator",
+          "resolves": "required",
+          "description": "Always `vr_foraging.sites`. Restates in every row what this table's identity implies, so the reference to `core.intervals` covers its whole key (R55 \u00a72.3.1). A constant column run-length encodes to nothing.",
+          "since": "R54 \u00a72.1"
+        },
+        {
           "name": "site_id",
           "type": "int32",
           "presence": "required",
@@ -217,12 +226,14 @@
         {
           "columns": [
             "session_id",
+            "interval_kind",
             "site_id"
           ],
-          "resource": "core.trials",
+          "resource": "core.intervals",
           "resource_columns": [
             "session_id",
-            "trial_id"
+            "interval_kind",
+            "interval_id"
           ]
         }
       ],

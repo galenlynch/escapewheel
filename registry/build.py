@@ -96,7 +96,7 @@ for _role, _names in {
         "input_array_asset_id", "media_asset_id", "parent_clock_id", "parent_curation_id", "probe_id",
         "processing_run_id", "reference_clock_id", "region_id", "session_id", "sorting_run_id",
         "source_file_id",
-        "source_session_id", "stimulus_id", "stream_id", "subject_id", "supersedes_run_id", "trial_id",
+        "interval_id", "source_session_id", "stimulus_id", "stream_id", "subject_id", "supersedes_run_id", "trial_id",
         "unit_id",
     ),
     "coordinate": (
@@ -112,7 +112,7 @@ for _role, _names in {
     # R55 §2.1. A column a consumer resolves to a table, which `data` said nothing about -- so
     # nothing checked that `scope_kind` held a resource ID at all.
     "discriminator": (
-        "scope_kind",
+        "interval_kind", "scope_kind",
     ),
     "data": (
         "activity_type", "amplitude", "amplitude_unit", "channel_label", "choice",
@@ -143,6 +143,7 @@ for _role, _names in {
 #: composed strings, so what decides this is whether the value survives the write.
 IDENTITY: dict[str, str] = {
     # Carried -- the source's own, so two independent builds agree without being told to.
+    "interval_id": "carried",         # R54 §2.2: each kind keeps its source's own numbering
     "trial_id": "carried",            # NWB intervals/trials/id, int64, already 0..n
     "unit_id": "carried",             # numpysorting_info.json unit_ids, int64, strictly increasing
     # electrode_id looked carried and is not: `_electrode_ids` composes (group, channel)
@@ -189,6 +190,10 @@ DISCRIMINATOR: dict[str, dict[str, str]] = {
     # R49 §2.2: a run may be about a rig or a camera the packet does not hold, so a kind naming
     # nothing is what the packet has to say, not a finding against it.
     "scope_kind": {"resolves": "optional", "discriminates": "scope"},
+    # R54 §2.1: an interval whose kind names no resource is uninterpretable -- the row says a
+    # span exists and nothing says what it was. R55 §2.3's shared-key shape, so no
+    # `discriminates`: the detail table joins on the whole key rather than on a paired value.
+    "interval_kind": {"resolves": "required"},
 }
 
 
@@ -1050,6 +1055,34 @@ def build() -> dict:
         if column is None:
             raise SystemExit(f"R56 declares context for {resource}.{column_name}, which does not exist")
         column.update(context)
+
+    # ---- R54 §2 : a trial is one kind of interval ---------------------------------------------
+    # One base table holding many kinds, discriminated by the resource that specialises each. The
+    # kind is part of the key (R54 §2.2), so every kind keeps its source's own numbering and
+    # trial 0 and block 0 are different rows. R55 §2.3's shared-key shape: a detail table carries
+    # the kind as a constant column and references all three, so the join is declared rather than
+    # inferred and R46's generated anti-join enforces it.
+    SINCE[0] = "R54 §2.1"
+    rename("core.trials", "trial_id", "interval_id")
+    add_col("core.trials", col("interval_kind", "string", "required",
+                               "The resource that specialises this interval, as a dotted resource "
+                               "ID. Open (R8 §4); resolved as R55 §2.3's shared key."),
+            after="session_id")
+    # R54 §2.3: a task's shape is not the format's. `dynamic_foraging.trials` already carries
+    # `choice` and `rewarded` with a closed vocabulary core cannot declare -- `none` is not a
+    # choice -- and condition_id/stimulus_id were assigned identifiers nothing ever populated.
+    for struck in ("condition_id", "stimulus_id", "choice", "rewarded"):
+        drop_col("core.trials", struck)
+    T("core.trials")["primary_key"] = ["session_id", "interval_kind", "interval_id"]
+    # R54 §2.2: the kind is a key column, so it is a sort column too -- each kind is then a
+    # contiguous run and filtering to one prunes row groups. `rename` moves columns and not the
+    # sort, so a sort naming the old column would survive it and name nothing.
+    if T("core.trials").get("sort"):
+        T("core.trials")["sort"] = ["session_id", "interval_kind", "interval_id"]
+    tables["core.intervals"] = tables.pop("core.trials")
+    # R54 §2.3: the one place this format let meaning accrete without a schema, which R17 §3
+    # exists to refuse. An extension needing a multi-valued attribute declares a typed child.
+    del tables["core.trial_tags"]
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
