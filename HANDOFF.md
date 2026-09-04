@@ -82,6 +82,28 @@ compatibility. v0.2 §5.2 says so.
 What to do about it is a judgement about stability rather than a repair: when the schema settles,
 lift the hold and increment on the next breaking change. Nothing is wrong with the mechanism.
 
+### 2.6 Compliance scan against the implementation — first pass, 2026-09-04
+
+240 normative sentences across the 69 accepted revisions: 133 constrain a packet or schema, 42 a
+validator, 33 a reader, 32 a writer.
+
+**The mechanically checkable surface is clean.** Every table, column and rule the revisions name
+resolves against the registry, or is a struck or renamed artifact a revision names to say what it
+changed. Four names needed chasing and all four were correct: `core.intervals.parent_interval_id`
+was considered and rejected by R54 itself; `scope_resolves` was regenerated under R55's names and
+does reach extension kinds; `index_contiguous` went with the `interval_index` R47 struck; and
+`nwb_lake_writer.arrow.number` exists.
+
+**One writer obligation was not met, and is now fixed.** R40 §2.3 requires a withheld-anchor count
+per clock *including zero* — "a packet that drops nothing says so" — and both the per-clock entry
+and the parameters block were gated on the count being non-zero. A reader could not distinguish a
+clock that was checked and passed from one never checked. The packet now reports ten clocks where
+it reported four.
+
+**What this pass did not do:** walk all 240 sentences. It cleared the artifact layer exhaustively
+and sampled the behavioural layer — R10, R36 §2.4, R38, R39, R40 and R45 were checked against the
+code; the other 26 writer obligations, and the 42 validator and 33 reader ones, were not.
+
 ## 3. The packaging layer
 
 The specification describes packets. It does not describe how packets get made, which is most of the code. That layer is deliberately outside the spec: a conforming packet can be produced by any means.
@@ -141,14 +163,12 @@ Before a production trial, in this order:
    it will bite: R59 found `ecephys_776259` emits `ccf_id`, `ccf_acronym` and `ccf_name` where
    786867 emits `brain_region_id` — two exporters of one pipeline disagreeing about core's own
    column. Until a second session commits clean, "it works" means "it works on one file layout".
-2. **Decide what `registry_version` is for**, and write the revision. It reads `0.1.0` everywhere
-   and is pinned deliberately while the schema moves; two packets claiming one version with
-   incompatible schemas is the failure the field exists to prevent. Free to settle now, expensive
-   once anyone outside holds a packet. §2.5 has the reasoning. The only item here needing a
-   decision rather than work.
-3. **Run the compliance scan against the implementation.** The equivalent scan against the spec
-   found ten missing rules; nothing has run it against the registry, writer and validator, so §2
-   is what is known rather than what there is.
+2. **Finish the compliance scan.** A first pass ran 2026-09-04 and is recorded in §2.6. It cleared
+   the mechanically checkable surface and sampled the behavioural one; the rest of the 240
+   normative sentences have not been walked.
+
+`registry_version` is **not** on this list. §2.5 settles it: semantic versioning, held at `0.1.0`
+while the schema iterates. That is a decision already made, not an open question.
 
 Done since this document was written: R65 through R70 are accepted and implemented, the ten
 repositories became one with their histories preserved, and `python verify.py` runs every
