@@ -7,9 +7,14 @@ import pytest
 
 from nwb_lake_writer.materialize import NotAligned, spike_events
 
+from .conftest import REGISTRY
+
 AP, HARP = 30000, 31250
-REF = "harp"
-PROBE = "probe.samples"
+#: Identifiers are `int32` since R53, and so is what a materialised row carries. The strings
+#: these were let the materializer's dictionary path pass a test after the format had stopped
+#: producing anything it could encode.
+REF, PROBE = 0, 1
+SESSION, RUN, CURATION = 0, 0, 0
 
 
 class Handle:
@@ -24,16 +29,27 @@ class Fake:
         self.tmp_path = tmp_path
         self.root = tmp_path / "packet"
         self.root.mkdir(exist_ok=True)
-        self._clocks = pa.table({"clock_id": [REF, PROBE], "tick_rate_hz": [float(HARP), float(AP)]})
-        unit_of = unit_of or (lambda i: f"u{i % 2:02d}")
-        self._sessions = pa.table({"session_id": ["s1"], "reference_clock_id": [reference]})
-        self.sessions = ("s1",)
+        self._clocks = pa.table(
+            {
+                "clock_id": pa.array([REF, PROBE], type=pa.int32()),
+                "clock_name": ["harp", "probe.samples"],
+                "tick_rate_hz": [float(HARP), float(AP)],
+            }
+        )
+        unit_of = unit_of or (lambda i: i % 2)
+        self._sessions = pa.table(
+            {
+                "session_id": pa.array([SESSION], type=pa.int32()),
+                "reference_clock_id": pa.array([reference], type=pa.int32()),
+            }
+        )
+        self.sessions = (SESSION,)
         n = 8
         at = np.arange(n, dtype=np.int64) * AP + 1000
         ap = np.arange(n, dtype=np.int64) * HARP + 500_000_000
         self._anchors = pa.table(
             {
-                "clock_id": [PROBE] * n if anchors else [],
+                "clock_id": pa.array([PROBE] * n if anchors else [], type=pa.int32()),
                 "anchor_index": list(range(n)) if anchors else [],
                 "t_tick": at.tolist() if anchors else [],
                 "parent_tick": ap.tolist() if anchors else [],
@@ -43,17 +59,22 @@ class Fake:
         pq.write_table(
             pa.table(
                 {
-                    "session_id": ["s1"] * len(ticks),
-                    "unit_id": [unit_of(i) for i in range(len(ticks))],
-                    "sorting_run_id": ["run"] * len(ticks),
-                    "curation_id": ["cur"] * len(ticks),
+                    "session_id": pa.array([SESSION] * len(ticks), type=pa.int32()),
+                    "unit_id": pa.array([unit_of(i) for i in range(len(ticks))], type=pa.int32()),
+                    "sorting_run_id": pa.array([RUN] * len(ticks), type=pa.int32()),
+                    "curation_id": pa.array([CURATION] * len(ticks), type=pa.int32()),
                     "t_tick": pa.array(ticks, type=pa.int64()),
-                    "clock_id": clocks,
+                    "clock_id": pa.array(clocks, type=pa.int32()),
                 }
             ),
             path,
         )
         self._path = path
+
+    @property
+    def registry(self):
+        """The reference registry, which is where the derived table's types come from."""
+        return REGISTRY
 
     def table(self, rid):
         return {
@@ -112,7 +133,7 @@ def test_the_reference_comes_from_the_session(tmp_path):
 
 
 def test_an_explicit_reference_overrides_it(tmp_path):
-    out = rows(Fake(tmp_path, ticks=[1000], clocks=[PROBE], reference="other"), reference=REF)
+    out = rows(Fake(tmp_path, ticks=[1000], clocks=[PROBE], reference=99), reference="harp")
     assert out["clock_id"] == [REF]
 
 
@@ -170,7 +191,7 @@ def test_units_stay_grouped_inside_a_bucket(tmp_path):
         tmp_path,
         ticks=ordered,
         clocks=[PROBE] * len(ordered),
-        unit_of=lambda i: "u00" if i < half else "u01",
+        unit_of=lambda i: 0 if i < half else 1,
     )
     out = rows(packet, bucket_seconds=1)
     seen = list(zip(out["time_bucket_tick"], out["unit_id"], out["t_tick"], strict=True))
@@ -179,9 +200,9 @@ def test_units_stay_grouped_inside_a_bucket(tmp_path):
 
 def test_identity_columns_survive(tmp_path):
     out = rows(Fake(tmp_path, ticks=[1000, 1000 + AP], clocks=[PROBE] * 2))
-    assert out["unit_id"] == ["u00", "u01"]
-    assert out["sorting_run_id"] == ["run", "run"]
-    assert out["curation_id"] == ["cur", "cur"]
+    assert out["unit_id"] == [0, 1]
+    assert out["sorting_run_id"] == [RUN, RUN]
+    assert out["curation_id"] == [CURATION, CURATION]
 
 
 def test_a_batch_where_nothing_maps_yields_nothing(tmp_path):

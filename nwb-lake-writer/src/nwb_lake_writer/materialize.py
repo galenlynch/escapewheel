@@ -36,7 +36,8 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 from nwb_lake_reader.clocks import NotAligned, anchors, declared_bound, mapped, reference_clock
-from nwb_lake_reader.dictionaries import constant
+
+from .arrow import schema as arrow_schema
 
 #: Rows per batch, and therefore per row group and per unit of writer memory. Measured: 128 K
 #: costs 0.6% in bytes over 1 M once `t_tick` is not dictionary-encoded, and is what makes the
@@ -53,7 +54,6 @@ BUCKET_SECONDS = 300
 
 #: How a string column is held in flight. A dictionary is an encoding, not a type -- Parquet writes
 #: BYTE_ARRAY/String either way -- so this changes what the pipeline carries, not what it emits.
-DICT = pa.dictionary(pa.int32(), pa.string())
 
 
 def _tick_rate(packet: Any, clock_id: str) -> int:
@@ -73,6 +73,28 @@ def _tick_rate(packet: Any, clock_id: str) -> int:
         if (rate := column.get("tick_rate_hz", [])[i : i + 1]) and rate[0]:
             return round(float(rate[0]))
     raise NotAligned(f"{clock_id} declares no tick rate, so a bucket has no width in ticks")
+
+
+def _clock_id(packet: Any, reference: Any) -> Any:
+    """Resolve a clock a recipe named to the identifier this packet assigned it (R53 §2.5).
+
+    A recipe is written before any identifier exists, so it names a clock by name -- as its
+    own `[[clock]]` blocks and every `parent_clock_id` do. `reference_clock` returns an id
+    already, so only a recipe's spelling reaches here needing resolution, and an id passed
+    straight through keeps a caller that has one from having to look up its name to pass it.
+    """
+    if not isinstance(reference, str):
+        return reference
+    clocks = packet.table("core.clocks")
+    identifiers = clocks.column("clock_id").to_pylist()
+    if reference in identifiers:
+        # A packet whose identifiers are themselves names -- anything built before R53.
+        return reference
+    names = clocks.column("clock_name").to_pylist() if "clock_name" in clocks.column_names else []
+    for identifier, name in zip(identifiers, names, strict=True):
+        if name == reference:
+            return identifier
+    raise NotAligned(f"no clock is named {reference!r}, so there is nothing to map onto")
 
 
 def _bytes(budget: int | str) -> int:
@@ -262,26 +284,26 @@ def spike_events(
         If the session declares no reference clock, if a clock the spikes are on carries no
         anchors, or if the reference clock declares no tick rate.
     """
-    reference = reference or reference_clock(packet)
+    reference = _clock_id(packet, reference or reference_clock(packet))
     bound = declared_bound(packet) if bound is None else bound
     width = bucket_seconds * _tick_rate(packet, reference)
     dropped = [0] if dropped is None else dropped
     by_clock = anchors(packet)
     handle = packet.table_resource("core.spike_events")
     columns = ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick", "clock_id"]
-    coded = [n for n in columns if n != "t_tick"]
-    # The identifiers stay as dictionary codes from the core file to the finished table. They
-    # are what Parquet stores at both ends, so decoding them here would only be undone twice:
-    # 1.05 s and 9.13 GB of Arrow per 40 row groups decoded, against 0.15 s and 1.27 GB held.
-    out = pa.schema(
-        [pa.field(n, DICT) for n in columns[:4]]
-        + [pa.field("t_tick", pa.int64()), pa.field("clock_id", DICT), pa.field("time_bucket_tick", pa.int64())]
-    )
+    # Types come from the registry rather than being spelled here. They were dictionary-coded
+    # strings until R53 made every identifier an `int32`, and the machinery that avoided
+    # decoding them -- 9.13 GB of Arrow per 40 row groups -- has nothing left to avoid: four
+    # bytes a row is what the code alone used to cost.
+    registry = packet.registry
+    if registry is None:
+        raise NotAligned("the packet embeds no registry, so the derived table has no declared types")
+    out = arrow_schema(registry["tables"]["analysis.spike_events"], {*columns, "time_bucket_tick"})
 
     root = Path(scratch) if scratch else Path(tempfile.mkdtemp(prefix=".materialize-", dir=packet.root.parent))
     buckets = _Buckets(root, out, _bytes(memory_budget))
     try:
-        reader = pq.ParquetFile(handle.path, read_dictionary=coded)
+        reader = pq.ParquetFile(handle.path)
         for batch in reader.iter_batches(batch_size=BATCH_ROWS, columns=columns):
             parent, keep = mapped(batch, reference, by_clock, bound)
             # R40 §2.3: counted whether or not any are dropped. A recorded zero is the
@@ -302,10 +324,9 @@ def spike_events(
                     "sorting_run_id": batch.column("sorting_run_id").take(taken),
                     "curation_id": batch.column("curation_id").take(taken),
                     "t_tick": pa.array(ticks, type=pa.int64()),
-                    # One code repeated, not one string per spike: every row is on the
-                    # reference clock by construction, so the column is 4 bytes a row rather
-                    # than a pointer and a copy of the name.
-                    "clock_id": constant(reference, taken.size),
+                    # Every row is on the reference clock by construction, so this is one
+                    # value repeated rather than a column read from the source.
+                    "clock_id": pa.array(np.full(taken.size, reference, dtype=np.int32)),
                     "time_bucket_tick": pa.array(starts, type=pa.int64()),
                 },
                 schema=out,
