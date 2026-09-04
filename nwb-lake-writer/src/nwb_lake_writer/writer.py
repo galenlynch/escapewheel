@@ -200,7 +200,7 @@ def _as_held(out: pa.Schema, held: pa.Schema) -> pa.Schema:
     return pa.schema(fields)
 
 
-def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], path: Path, resource_id: str) -> None:
+def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], path: Path, resource_id: str) -> int:
     """Write batches to Parquet one row group at a time, casting each to the registry schema.
 
     The first batch fixes the schema, exactly as the first record does on the records path:
@@ -212,6 +212,9 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
     An empty stream writes nothing and leaves no file, matching the records path, where a
     resource with no rows is simply absent from the packet.
 
+    Returns the rows written, which is the only count of a streamed table anything holds: a
+    generator's length is not knowable before it has run.
+
     Each batch becomes exactly one row group, so the caller controls row-group boundaries as
     well as order. That is what lets `analysis.spike_events` keep every row group inside a
     single time bucket (R30 §3.2) — cutting at a fixed row count instead would let a group
@@ -220,6 +223,7 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
     """
     writer: pq.ParquetWriter | None = None
     out: pa.Schema | None = None
+    written = 0
     try:
         # Verified on the way in, not read back afterwards. The rows pass through here
         # already sorted by the source, so comparing them costs the comparison alone, where
@@ -251,9 +255,11 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
             # 2**20 rows and silently cuts a larger batch into several row groups, which would
             # break the boundary guarantee this docstring makes.
             writer.write_batch(pa.record_batch(columns, schema=out), row_group_size=batch.num_rows)
+            written += batch.num_rows
     finally:
         if writer is not None:
             writer.close()
+    return written
 
 
 #: Core tables an amendment may extend (R32 §3). Append-only by nature: a row records that
@@ -431,6 +437,11 @@ class PacketWriter:
         self._description = description
         self._tables: dict[str, list[Mapping[str, Any]]] = {}
         self._batches: dict[str, Iterable[pa.RecordBatch]] = {}
+        #: Rows each resource was written with, filled as `_stage` writes them. A streamed
+        #: table has no count until then, so anything reported earlier is the source's estimate.
+        self.rows_written: dict[str, int] = {}
+        #: Called with `say` once staging has run, for whatever only a written packet knows.
+        self._after_stage: list[Callable[[Callable[[str], None]], None]] = []
         self._derived: dict[str, list[str]] = {}
         self._runs: dict[str, str] = {}
         self._ordered: set[str] = set()
@@ -527,6 +538,22 @@ class PacketWriter:
         spec = self.spec(resource_id)
         assert spec is not None
         self._batches[resource_id] = (number_batch(spec, b, self.keys) for b in batches)
+
+    def after_staging(self, report: Callable[[Callable[[str], None]], None]) -> None:
+        """Register something to be reported once the packet has been written.
+
+        A streamed table's rows do not exist until `commit` consumes its generator, so anything
+        a source learns while producing them -- how many there were, what it had to work around
+        -- is not available at the point the source was run. Registering it here is what puts it
+        in the build log and, for a compensation, in the packet's provenance.
+
+        Parameters
+        ----------
+        report : callable
+            Called with the commit's `say` after the first staging pass, before anything is
+            derived. It may raise, which refuses the commit and leaves staging in place.
+        """
+        self._after_stage.append(report)
 
     def derives(self, resource_id: str, sources: Sequence[str]) -> None:
         """Record which resources one was derived from (`06`).
@@ -757,11 +784,12 @@ class PacketWriter:
             path = staging / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             if resource_id in self._batches:
-                _write_stream(spec, self._batches[resource_id], path, resource_id)
+                self.rows_written[resource_id] = _write_stream(spec, self._batches[resource_id], path, resource_id)
                 if sort_key(spec):
                     self._ordered.add(resource_id)
             else:
                 table = build(spec, self._tables[resource_id], self.keys)
+                self.rows_written[resource_id] = table.num_rows
                 # No `row_group_size`: pyarrow's default is min(rows, 2**20), which puts each
                 # of these tables in one row group, and that is the right answer — they are
                 # smaller than a single object-storage fetch and are read whole, so splitting
@@ -926,6 +954,8 @@ class PacketWriter:
             *self._reference_media(),
         ]
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
+        for report in self._after_stage:
+            report(say)
         clock = time.perf_counter()
         (staging / "schemas").mkdir(parents=True, exist_ok=True)
         (staging / REGISTRY_PATH).write_text(json.dumps(self._registry, indent=2) + "\n")

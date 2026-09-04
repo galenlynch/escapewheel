@@ -683,6 +683,8 @@ def build(
 
     counts: dict[str, int] = {}
     applied: list[str] = []
+    #: Notes each source had said by the time it was run, so a later one can be told apart.
+    drained: dict[str, int] = {}
     for spec in order(recipe):
         say(f"{spec.kind} -> {', '.join(spec.owns) or 'nothing it owns'}")
         source = _build_source(spec, recipe, context)
@@ -713,11 +715,8 @@ def build(
             size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
             say(f"  referenced {resource_id} ({media.format}{size})")
 
-        for note in getattr(source, "notes", []):
-            say(f"  note: {note}")
+        drained[spec.kind] = _say_notes(spec.kind, source, 0, say, strict)
         applied.extend(getattr(source, "compensations", []))
-        if strict and (refused := list(getattr(source, "notes", []))):
-            raise RecipeError(f"{spec.kind}: {len(refused)} note(s) under --strict; first is {refused[0]}")
 
     _declare_origin(context, say)
     for note in context.notes:
@@ -735,9 +734,31 @@ def build(
     writer.add("core.processing_runs", [_import_run(recipe, applied, context)])
     for entry in describe(applied):
         say(f"  compensated: {entry['id']}")
-    for resource, total in sorted(counts.items()):
-        say(f"  {resource:44s} {total:>12,}")
+
+    def written(say: Callable[[str], None]) -> None:
+        """Report what the packet holds, once holding it is what the counts describe.
+
+        A streamed table's rows are produced during the commit, so a source that streams learns
+        both its own count and whatever it had to work around only after `build` has returned.
+        Reporting here is what keeps the log a record of the packet rather than of the estimate.
+        """
+        for kind, source in context.sources.items():
+            drained[kind] = _say_notes(kind, source, drained.get(kind, 0), say, strict)
+        for resource in sorted(counts):
+            say(f"  {resource:44s} {writer.rows_written.get(resource, counts[resource]):>12,}")
+
+    writer.after_staging(written)
     return writer
+
+
+def _say_notes(kind: str, source: Any, seen: int, say: Callable[[str], None], strict: bool) -> int:
+    """Report a source's notes past the `seen` already reported, and return the new total."""
+    notes = list(getattr(source, "notes", []))
+    for note in notes[seen:]:
+        say(f"  note: {note}")
+    if strict and len(notes) > seen:
+        raise RecipeError(f"{kind}: {len(notes) - seen} note(s) under --strict; first is {notes[seen]}")
+    return len(notes)
 
 
 def _stage_array(writer: PacketWriter, spec: SourceSpec, source: Any, say: Callable[[str], None]) -> None:
