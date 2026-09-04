@@ -364,6 +364,13 @@ try:
     manifest = json.loads((HERE / "manifest.schema.json").read_text())
     jsonschema.Draft202012Validator.check_schema(manifest)
     check("manifest schema is valid JSON Schema", [])
+    # The prototype argues that the format drives the tooling, which is worth nothing if its
+    # own input is a document the format rejects. It drifted 16 errors out of conformance
+    # unnoticed -- 13 columns with no `role` after R48, two tables with no `rules`.
+    _proto = HERE.parent / "prototype/registry-codegen/registry.json"
+    check("the registry-codegen prototype's document validates against the meta-schema",
+          [f"{list(e.path)[:4]} {e.message[:60]}"
+           for e in validator.iter_errors(json.loads(_proto.read_text()))] if _proto.exists() else [])
 except ImportError:
     print("skip  schema validation (jsonschema not available)")
 
