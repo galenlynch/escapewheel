@@ -201,6 +201,8 @@ An array asset holds **any** sampled quantity, whatever instrument produced it. 
 
 `semantic_type` is open (R8 §4). A value this standard does not define is a label and carries no contract, which is the honest state of affairs for a quantity whose meaning lives in the device rather than in the format.
 
+An array asset SHOULD name the device that produced it, where the writer knows which one did (R65 §2.1). A consumer MAY then resolve any array to its instrument without knowing what kind of array it is, and MUST NOT infer an instrument from an asset's `semantic_type`, its name, or its URI: those are labels, and the device is a reference.
+
 ### 3.18 Media asset
 
 An image or video stored in an ordinary container, with frame timing carried in tables.

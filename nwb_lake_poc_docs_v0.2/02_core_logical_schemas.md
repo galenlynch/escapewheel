@@ -247,7 +247,7 @@ The core layer comprises the following resources. Column definitions are in the 
 
 | resource | contents |
 |---|---|
-| `core.array_assets` | dense arrays, owned or referenced |
+| `core.array_assets` | dense arrays, owned or referenced, each naming the device that made it |
 | `core.array_dimensions` | one row per axis, with its coordinates |
 | `core.array_channels` | per-channel scaling, shift, and electrode |
 | `core.media_assets` | images and video |

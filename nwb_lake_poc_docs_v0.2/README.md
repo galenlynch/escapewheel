@@ -2,7 +2,7 @@
 
 ## Status of this document
 
-This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41 and R43–R64 applied; R42 was withdrawn and is not applied.
+This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41 and R43–R65 applied; R42 was withdrawn and is not applied.
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
 
@@ -101,7 +101,9 @@ This document set is v0.2. The identifiers a packet records are unchanged by it,
 
 A packet MUST record the registry version it was written against, and SHOULD embed that registry so the packet is self-describing (R2 §8). A packet whose embedded registry disagrees with its recorded version is invalid.
 
-`registry_version` has not been incremented across amendments that changed column names, types, and membership. It therefore does not currently distinguish schemas that differ, and a consumer MUST NOT use it alone to decide compatibility. The embedded registry is authoritative.
+`registry_version` states **compatibility**, and follows semantic versioning: a removed, renamed or retyped column is a major change; an added nullable column is a minor one; a corrected description is a patch.
+
+It is **deliberately held at `0.1.0` while the schema iterates**, so amendments that would otherwise have incremented it — several of them major — have not. A consumer MUST therefore treat the embedded registry as authoritative and MUST NOT use `registry_version` alone to decide compatibility until the hold is lifted. Lifting it is a decision about the schema's stability, not a defect to be fixed.
 
 ## 6. Normative references
 
