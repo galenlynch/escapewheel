@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-04 |
+| **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `02` (`core.media_frames.pts`) |
 | **Depends on** | R45 (a coordinate is copied verbatim), R14 §2.3 (media is referenced) |
 | **Profile** | `nwb-lake-portable-v0.1` |
