@@ -34,6 +34,10 @@ STEPS = [
     ("R28 §3  + core.unit_coordinates",        set(), {"core.unit_coordinates"}),
     ("R38 §2.1 + core.clock_observation_intervals", set(), {"core.clock_observation_intervals"}),
     ("R41 §2.3 + core.preferred_runs",         set(), {"core.preferred_runs"}),
+    # R54 §2.3 withdraws the child table R3 §3.2 added: no packet ever populated it, and a
+    # trial tag is a task's vocabulary, which R43 §3 sends to an extension.
+    ("R54 §2.3 − core.trial_tags",             {"core.trial_tags"}, set()),
+    ("R54 §2.1 core.trials -> core.intervals", {"core.trials"}, {"core.intervals"}),
     ("06      + analysis.spike_events",        set(), {"analysis.spike_events"}),
 ]
 
