@@ -1,0 +1,9 @@
+# Tool caches, not content.
+.ruff_cache/
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+
+# Local agent settings, which are per-machine.
+.claude/settings.local.json

@@ -1,0 +1,400 @@
+# CLAUDE.md
+
+This file provides guidance to coding agents when working with code in this monorepo root.
+
+## Project status
+
+Greenfield. This is a monorepo whose purpose is to build an implementation of the proof-of-principle
+specified in `nwb_lake_poc_docs/`. No source code, build system, or tests exist yet; the repository is
+currently the specification, the revision documents in `revisions/`, and whatever tracking documents
+have been added at root.
+
+Version control is per-subfolder, not a single repository at root: `nwb_lake_poc_docs/` and
+`revisions/` are each their own git repo. Commit within the relevant subfolder; the root
+directory itself is not tracked.
+
+The spec — **NWB-Lake POC v0.1** — defines an ecephys data-lake format over Parquet, Zarr v3, and a
+JSON manifest, with no runtime dependency on NWB/HDMF/PyNWB. PyNWB is allowed only as an
+import-boundary adapter. `07_reference_api_and_implementation_plan.md` is the plan of record: Phase 0
+hand-built fixture packet → Phase 1 manifest + Parquet reader → Phase 2 validator → Phase 3 NWB
+importer → Phase 4 analysis materializations → Phase 5 dense arrays → Phase 6 release discipline →
+Phase 7 Iceberg experiment. It also prescribes the `nwb_lake/` package layout to create.
+
+## Document roles
+
+- `nwb_lake_poc_docs/` — **frozen.** The target specification. Do not edit these files, including to
+  fix errors found during implementation. They are the goal being built against.
+- `revisions/` — proposed and accepted changes to the spec. One file per revision, named
+  `R<N>-kebab-summary.md`, opening with a status table (`Status`, `Amends`, `Depends on`,
+  `Forces`/`Supersedes`). A revision names the documents and sections it amends and states the
+  replacement rule in RFC 2119 language. When an **accepted** revision and the frozen spec disagree,
+  implement the revision; a **proposed** one is not yet binding.
+- `conformance/` — mechanical probes producing the measured evidence revisions cite
+  (`zarr-probe/`, `parquet-probe/`, `spec-sweep/`). Re-run them before trusting a revision's
+  numbers against newer library versions.
+- `inventory/` — `05` Stage 1 source inventories: what a real dataset offers per core
+  resource, before anything is staged. Findings here become revisions.
+- `nwb-lake-reader/` — the reference reader (Phase 1). Opens a packet, resolves resources,
+  gives tabular access. Its own CLAUDE.md carries the conventions and the specification
+  decisions that constrain it.
+- `nwb-lake-validator/` — the reference validator (Phase 2). Depends on the reader. Split out
+  because its correctness is pinned to a *registry* version while the reader's API is not.
+- `nwb-lake-writer/` — the writer, the source adapters, and the session recipe that drives
+  them (Phase 3). Depends on the validator, because `05`'s commit is validate-then-rename.
+  A recipe is one TOML file declaring every source and which resources each owns; it is also
+  the provenance record, landing in `core.processing_runs.parameters`.
+
+The three share one CLI. `nwb-lake-reader` owns the `nwb-lake` console script; the others
+register subcommands under the `nwb_lake.commands` entry-point group, because two
+distributions declaring the same `[project.scripts]` name is a conflict in which the last
+installed wins silently.
+- `prototype/` — working demonstrations, not the reference implementation.
+  `registry-codegen/` shows R2's chain end to end: registry JSON, a ~40-line generator, and
+  DuckDB executing the emitted SQL against a deliberately broken packet.
+- Root-level tracking documents — implementation status against the spec: what is built, what
+  passes validation, which phase is in progress.
+
+Any spec defect, ambiguity, or change of direction discovered while implementing goes into a revision
+document, never into `nwb_lake_poc_docs/`.
+
+**R1–R41 and R43–R70 are accepted and therefore binding**: where they disagree with
+`nwb_lake_poc_docs/`, implement the revision.
+The spec summaries below reflect the accepted state. The registry covers 34 tables and 315 columns — see
+R9 §2, R25 §6, R28 §6 and R38 §2.1 for the ledger, and `conformance/spec-sweep/tables.py` to
+reproduce it.
+
+Revision numbers are reserved even where the document is not yet written:
+
+| | | |
+|---|---|---|
+| **R1** | [accepted](revisions/R1-single-session-primary.md) | Single-session packets primary, multi-session a graceful extension; adds a session inventory to the manifest. |
+| **R2** | [accepted](revisions/R2-schema-registry-format.md) | Schema registry **format** (content is a separate artifact): one JSON file, three-state presence, Arrow type vocabulary, Tier 1 rules generated from structure and Tier 2 as SQL returning offending rows, plus the manifest JSON Schema. |
+| **R3** | [accepted](revisions/R3-cross-language-physical-floor.md) | Cross-language physical floor: no nested Parquet types; repeated values become child tables (`core.trial_tags`, `core.array_dimensions`, `core.session_experimenters`); array axis order and index base pinned; Zarr codec floor. |
+| **R4** | [accepted](revisions/R4-schema-reconciliation.md) | Schema reconciliation: strikes five fields `09` names but `02` never defines, pins `date_of_birth`, records the conditional tick-rate requirement R2 must express. Sweep scripts in `conformance/spec-sweep/`. |
+| **R5** | [accepted](revisions/R5-flat-spike-representation.md) | Flat spike representation: `core.spike_events` canonical and sorted by unit, `core.unit_spike_chunks` withdrawn. Decided in R3 §4; also renames `local_*_index` to `*_label`. No open decisions. |
+| **R6** | [accepted](revisions/R6-clock-wall-clock-binding.md) | Optional `tick_zero_utc` on `core.clocks`, binding tick 0 to wall-clock time and making `05:131` enforceable. |
+| **R7** | [accepted](revisions/R7-table-uniqueness-rules.md) | Declares a primary key for the six `02` tables that had none, and requires every table to declare a key or explicitly `null`. |
+| **R8** | [accepted](revisions/R8-column-types-and-vocabularies.md) | `local_*_label` columns become `string`; `status` closed to three values; `kind` and `semantic_type` declared open rather than left as "etc." |
+| **R9** | [accepted](revisions/R9-provenance-simplification.md) | Withdraws the entity/activity/edge graph; provenance becomes `source_files`, `processing_runs`, and a link table, and is SHOULD rather than MUST. 24 tables → 22. |
+| **R10** | [accepted](revisions/R10-default-sort-order.md) | Sort every table by its primary key unless overridden; `03`'s two orderings are the overrides. |
+| **R11** | [accepted](revisions/R11-column-definitions.md) | `amplitude_unit` on `core.sorting_runs`; `quality_label` and `event_type` declared open; strikes the "non-strict test packets" clause and `core.events.trial_id`. |
+| **R12** | [accepted](revisions/R12-physical-order-is-not-a-sql-rule.md) | Physical ordering cannot be checked in SQL; moves it from Tier 1/Tier 2 to the shim. Found by the Phase 0 fixture. |
+| **R13** | [accepted](revisions/R13-anchor-point-clock-alignment.md) | Clock alignment is anchor-point, not linear; adds `core.clock_anchors`. From Phase 3 discovery. |
+| **R14** | [accepted](revisions/R14-codec-floor-and-external-resources.md) | `required_codecs` becomes an open declaration; defines the external-resource declaration `03` requires but never specified. Referencing is expected for large resources. |
+| **R15** | [accepted](revisions/R15-per-resource-codec-declaration.md) | Codecs are declared per resource, not per packet; a reader degrades per array. Forced by R14. |
+| **R16** | [accepted](revisions/R16-unit-quality-labels.md) | Unit quality is many attributed labels, not one; adds `core.unit_quality_labels`. |
+| **R17** | [accepted](revisions/R17-extension-registries.md) | An extension is a registry document in R2's format, namespaced. Unblocks the quality-metrics extension. |
+| **R18** | [accepted](revisions/R18-unit-observation-intervals.md) | Units drift in and out; adds `core.unit_observation_intervals` and gives `firing_rate_hz` a denominator. |
+| **R19** | [accepted](revisions/R19-per-channel-scaling-and-coordinate-frames.md) | Per-channel gain/offset and `inter_sample_shift` on `core.array_channels`; `core.electrode_coordinates` for multiple frames. |
+| **R20** | [accepted](revisions/R20-array-axis-coordinates.md) | Four coordinate forms per array axis; regular sampling costs three integers where xarray would store 1.5 GB. |
+| **R21** | [accepted](revisions/R21-zarr-version-per-resource.md) | External arrays may be `zarr_v2`; the codec floor is stated per version, because Zarr.jl reads gzip in v3 and not in v2. |
+| **R22** | [accepted](revisions/R22-open-quality-labels.md) | A source's `label` opens; a closed `normalized_label` carries the declared projection. Real curation emits `good` and `non_soma`. |
+| **R23** | [accepted](revisions/R23-event-streams.md) | `core.event_streams` — the context table events were the only core stream to lack. Points at a processing run rather than declaring acquired-vs-derived. |
+| **R24** | [accepted](revisions/R24-intervals-are-structure.md) | `rules.json` may name a template instead of writing SQL; `interval` is the first. Expands at build time, so the registry a packet embeds is unchanged. |
+| **R25** | [accepted](revisions/R25-event-stream-support.md) | Observation intervals for event streams; `session_end_time` as wall clock. A tick-domain session extent is rejected — R13 makes the conversion undefined. |
+| **R26** | [accepted](revisions/R26-advisory-rules.md) | A Tier 2 rule may be `advisory`: off by default, never `error`, so enabling it cannot change whether a packet passed. |
+| **R27** | [accepted](revisions/R27-clock-graph-integrity.md) | The clock graph must be usable: a session declares `reference_clock_id`, the parent chain must be well-founded, a counter that resets mid-session becomes two clocks, and R13's extrapolation ban is replaced by a bound of one median anchor interval at a globally fitted rate. |
+| **R28** | [accepted](revisions/R28-unit-electrodes-and-locations.md) | A unit sits on many electrodes and has a position in more than one frame; adds `core.unit_electrodes` and `core.unit_coordinates`, and gives `core.array_channels.electrode_id` the reference it lacked. |
+| **R29** | [accepted](revisions/R29-schema-provenance.md) | A registry column may carry `since`, naming the revision that set it, so the generated `registry/tables.md` answers both what a table is and why. |
+| **R30** | [accepted](revisions/R30-analysis-spike-events-purpose.md) | `analysis.spike_events` is spikes on the reference clock, bucketed by time and sorted by unit within each bucket so both a unit filter and a time filter prune. One table, not two. |
+| **R31** | [accepted](revisions/R31-materialization-provenance.md) | `06` requires a materialization activity record whose vehicle R9 withdrew; it maps onto `core.processing_runs` plus the manifest's `processing_run_id`, which already existed and nothing wrote. |
+| **R32** | [accepted](revisions/R32-amending-a-committed-packet.md) | Adding a resource to a committed packet: a new version that modifies no file, every manifest retained, whole-packet revalidation, cleanup a separate operation. |
+| **R33** | [accepted](revisions/R33-rational-axis-steps.md) | An axis step may be rational: `step_ticks` becomes a numerator and `step_tick_den` the denominator. A 30 ms PSTH bin is 937.5 ticks at 31,250 Hz, and `core.clocks` already carried a rational rate. |
+| **R34** | [accepted](revisions/R34-amplitude-is-not-structural.md) | `amplitude` leaves `core.unit_electrodes`: three quantities wore the name, and the one a source emits is per unit, not per electrode. Measured — no reduction of the template reproduces it. |
+| **R36** | [accepted](revisions/R36-verifying-an-external-resource.md) | What `sha256` and `size_bytes` mean for a resource that is a *prefix*: one LFP series is 208 objects, so neither was defined. Adds a digest over a canonical member listing, splits R15 §4's level 3 into list and read, and requires a writer that cannot reach a URI to record nothing. |
+| **R37** | [accepted](revisions/R37-bounding-alignment-by-error.md) | Clock alignment is bounded by error, not by distance. R27 §5.2's table does not reproduce — a globally fitted *line* costs 525 µs at p95, because its intercept carries the session's ±1.7 ms of real clock wander. Extrapolation is anchored at the terminal anchor; an anchor a writer cannot trust is not written. |
+| **R38** | [accepted](revisions/R38-observation-belongs-to-the-clock.md) | Observation intervals belong to the clock, not to the unit or the stream: 13 rows where R18 wanted 6,781. A unit or a stream refines its clock's window where something measured drift. Adds `core.sorting_runs.clock_id`, since a unit's clock was a string convention no rule could see. |
+| **R39** | [accepted](revisions/R39-the-sessions-time-origin.md) | A session's time origin is the earliest clock observation start on the reference clock, declared as `core.sessions.t_zero_tick`. What it replaces was circular: `session_start_time` through `tick_zero_utc` returns exactly the first spike. Seconds are defined from it, and a consumer without one must refuse rather than invent. |
+| **R40** | [accepted](revisions/R40-a-tolerance-that-gates-on-quality.md) | R37 §3.3's tolerance of one parent tick is *below* the estimator's own median, so it gated on noise — this session passed by 4%, and failing strands the first 1.7 s of every stream. It becomes 3 ms, judged at p95 rather than the median, and a dropped row must be counted even when the count is zero. |
+| **R41** | [accepted](revisions/R41-which-derived-thing-is-current.md) | Which of several coexisting alternatives to use. R32 gives snapshots and `parent_curation_id` gives lineage for curation alone; currency is absent, and a snapshot cannot express it because all three sortings are inside it. Keys the choice on the producing run, so it reaches an R17 extension's outputs — which first needs `core.sorting_runs` and `core.curation_versions` to name a run, as `core.event_streams` has since R23. |
+| **R42** | [withdrawn](revisions/R42-a-prefix-resource-declares-its-members.md) | **Not binding, and not going to be.** Proposed so a partitioned table could be carried safely: a prefix `uri` the manifest cannot pin would stop R32's retained manifests pinning content, and a `parquet_dataset` has no defined row order across files. Measured against S3 four ways — single file, declared members, globbed members, hive — and the read case is negative. DuckDB's single file wins every query cold and warm, while paying the first-touch cost the others do not, because `sorting_run_id` is the second sort column and one footer already prunes a run. pyarrow's member arms win only the queries that *cannot* prune, and that gain reproduces at the same ratio on local disk, so it is scan parallelism rather than skipped round trips. The write cost stands — a sorting rewrites 650 MB where partitioning writes one member — but no session has a second sorting. Most of the machinery existed to make partitioning safe rather than useful, so it falls with the motivation; the member array is rehomed to R51. |
+| **R43** | [accepted](revisions/R43-an-alignment-is-a-query.md) | Neither remaining Phase 4 table gets built. `analysis.spikes_by_trial` is a table per (event, window) pair — four alignments of one real analysis come to 100.6% of the spike table to save 2.7 s against arrays already in memory — and `analysis.trials_wide` is 708 rows in 7.5 ms, so both fall on the view side of `06`'s own test. `trials_wide`'s columns are a task's shape, not a format's, and move to an R17 extension. Strikes four of `06` §186's five materialized entries. |
+| **R44** | [accepted](revisions/R44-a-run-declares-its-scope.md) | R41 §2.4's ambiguity rule cannot be evaluated: it groups runs by activity, `core.preferred_runs` is keyed by activity **and scope**, and `core.processing_runs` has no scope column. Read literally it fires on R41's own demonstration packet — twelve probes sorted once each become twelve alternatives — so every packet adopting R41 §2.1 becomes unreadable. Adds `scope` to the run, and a third state: a run without one is undeterminable, not unambiguous. |
+| **R45** | [accepted](revisions/R45-a-tick-interval-is-closed.md) | R38 contradicts itself: §2.2 makes `stop_tick` the last tick observed, §2.3 and §4 make it the recording's length, which is one greater. Everything that had to choose chose closed — three column definitions, three `overlap_op` values, and the writer's `length - 1` — so it is one sentence written twice. States the closure once for every interval table, gives the length as `stop - start + 1`, settles `core.trials` (R25 §7's deferral) without adding an overlap test, and records that a tick is a **coordinate**, a third kind R3 §6's taxonomy does not cover. No column, no rule, no stored value changes. |
+| **R46** | [accepted](revisions/R46-the-references-the-registry-never-declared.md) | Sixteen foreign keys are undeclared, so Tier 1 generates no anti-join for them and a packet whose `core.sorting_runs.probe_id` names a probe that is not in `core.probes` validates clean. Not a format gap — `references` already carries composite, nullable and self-referencing keys; they were simply never written. R28 §2 fixed one instance. Zero orphans across every packet, so it fails nothing: 54 references → 70. |
+| **R47** | [accepted](revisions/R47-an-interval-is-keyed-by-when-it-starts.md) | `interval_index` is `0` in all 123 rows of every packet, is read by nothing, and its overlap rule orders by it — which is a correct overlap test only if index order is time order, a requirement nothing states and which `core.clock_anchors` states explicitly for its own index. Struck; the key becomes the partition plus `start_tick`, so the key, the physical order and the check agree on one column. `anchor_index` stays: 754,222 real values and a stated obligation. |
+| **R48** | [accepted](revisions/R48-a-column-declares-its-role.md) | R3 §6 makes 1-based clients "convert at the boundary", but nothing in a packet says which columns those are, so a Julia binding must hard-code the list against a document it cannot read. Adds a required, closed `role` per column — `data`, `identifier`, `coordinate`, `structural_index`, `sequence_position` — with no default, since a default would make a forgotten classification look deliberate. Not derivable from keys (20 and 19 exceptions), type (all 110 identifiers are strings, so are many non-identifiers) or name (`step_ticks` is a duration, `t_tick` a coordinate). Ten columns need a human decision; 283 follow from existing conventions. |
+| **R49** | [accepted](revisions/R49-a-scope-names-what-kind-of-thing-it-is.md) | `scope` holds an identifier whose table the packet never says, so a consumer must guess — unsound the moment a probe and a device share a name — a validator cannot check the referent, and the key collides across kinds. Adds `scope_kind`, holding the **resource ID** of the table `scope` keys into, so resolution is generic: read the kind, take that resource's primary key from the registry, resolve. Open, so an R17 extension can scope to its own tables. Free now: no packet carries a `scope`. |
+| **R50** | [accepted](revisions/R50-three-columns-are-renamed.md) | `channel_ordinal` → `channel_index` (R28 chose *ordinal* to say "not an identifier"; R48's role says it better, and an ordinal is a position where this is a 0-based offset); `supersedes` → `supersedes_run_id` (the only reference column not following `_id`, and a verb among nouns); `step_ticks` → `step_tick_num` (agrees with `step_tick_den` and `tick_rate_num`, and cannot be misread as a coordinate — R48 §3 measures that gap at one letter). `offset` is left alone: reserved word, but NWB-standard and already handled by unconditional quoting. |
+| **R51** | [accepted](revisions/R51-what-the-store-already-knows.md) | R36's digest reads every byte — 6.83 GB, 88 s against S3. The store already holds a per-object content hash and hands it over with the listing level 3a performs anyway. Adds an optional `members` array to an external prefix resource — a record of what was seen, not a resolution rule, since a reader hands such a prefix to Zarr and never enumerates it — with an optional `store_digest` per member and a third verification level between listing and reading. It cannot verify a recorded sha256 (different functions), is absent for multipart, and is unstable across a copy, so it answers "has anything changed in place", not "are these the bytes". Measured across a real packet rather than one array: **2,394 of 2,496 members are single-part**, because the largest array has 102 chunks uploaded multipart — so a pass that did not say what it skipped would report clean on an array where half the members were never looked at. Carries R42's member array since R42's withdrawal, scoped to external prefixes and without its MUST on packet-owned ones. |
+| **R52** | [accepted](revisions/R52-immutability-is-a-premise-nothing-checks.md) | R14 §2.3 makes a packet's own bytes immutable and R35 §2 spends that promise, deducing that an untouched file's verdict is *determined* — which is what keeps an amendment from re-reading 287 M rows. Nothing verified the premise: **0 of 26** packet-owned resources recorded a checksum, and `checksums=True` reached only external ones. The inverse of R36 and R51, which are opt-in because R14 §2.3.1 declines to promise anything about external bytes; this is the one case where a digest verifies what the packet actually claims. Cost is inverse too — **0.60 s** for the 1,209 MB a packet owns, warm and one file per resource, against 75 s for 6.83 GB of cold referenced LFP — so it is recorded by default at 0.5% of a build. Whole-file, not per-row-group: Parquet cannot be appended to, so "which pages moved" is not a question the format can be asked, and its own page CRC32 is a corruption detector a rewritten file passes. |
+| **R53** | [accepted](revisions/R53-an-identifier-is-an-integer.md) | All 110 identifier columns were strings and 70 references joined on them, and the choice was never argued — it followed from the first fixture. Storage had been measured (8.1 MB over 287 M spikes, 1% of the table) and used to settle a question it does not answer: measured on what a reader *does*, `int32` is **10.2x** on a join to `core.units`, **13.8x** on selecting 24 units, 6.5x on `GROUP BY` and 5.3x on `ORDER BY`, with parquet 1.1% smaller. The dictionary argument is the point rather than the defence — a string identity column already stores integer codes plus a lookup, and the price of not saying so is that keeping the dictionary is 16.81 s against 1.19 s on `is_in`, fails `GROUP BY` until unified, and cannot be sorted at all. Signed, because neither PostgreSQL nor Iceberg nor the JVM has an unsigned integer type. An identifier declares `carried` (the source's own — `trial_id` is the NWB's `id`, `unit_id` the sorter's label) or `assigned`, and an assigned one's owner carries a `*_name`: 96 assigned, 14 carried, 14 names. Migration is regeneration. |
+| **R58** | [accepted](revisions/R58-a-coordinate-says-what-it-claims.md) | An electrode's CCF position is known twice — a target picked from an atlas before insertion, a measurement after histology — and `core.electrode_coordinates` is keyed `(electrode_id, coordinate_frame)`, so the two collide and a packet holds one without recording which. R41 is the wrong instrument: currency arbitrates **alternatives**, where a consumer wants one, and a plan and a measurement are both wanted because their difference *is* the targeting error. Superseding the plan discards a result exactly when the probe missed. Adds `coordinate_basis` to the key, so the frame says what space and the basis says what claim; both rows persist. Open (R8 §4), with the rule the other open vocabularies do not need — an unrecognised basis **MUST NOT** be read as `measured`, which is the failure a permissive default produces. Currency still applies one level down: two histology registrations of one probe *are* alternatives, so both tables gain a nullable `processing_run_id`. Measured on two sessions: `ccf_*` present for 3840 of 3840 in one and 4224 of 4608 in the other, `x`/`y`/`z` NaN in both. |
+| **R59** | [accepted](revisions/R59-an-atlas-annotation-is-a-fact-about-a-position.md) | Core carries one string, `core.electrodes.brain_region`, where the source carries up to four columns. Measured: `ecephys_786867` emits `brain_region_id` as int64 with 56 distinct values populated for all 3840 electrodes, and `ecephys_776259` emits `ccf_id`, `ccf_acronym`, `ccf_name` and `ccf_structure_id_path` — two exporters of one pipeline disagreeing about core's own column. The structure id was unmodelled and populated, and it is the identifier that survives an atlas renaming the acronym does not; `location` and it hold 56 distinct values over the same rows, so the string column core had was hiding the integer one it lacked. An electrode is not in a region — a **position** is — so `region_id` (int32, carried) and `region_label` move to the coordinate row, where R58's basis separates the structure a probe was aimed at from the one it reached. `coordinate_frame` names the atlas, so no discriminator is added. `ccf_name` and `ccf_structure_id_path` are not carried: both are derivable from the id, and the ancestry path is a list in a delimited string that R3 §3.0 forbids by name. |
+| **R61** | [accepted](revisions/R61-retention-is-bounded-and-cleanup-is-an-operation.md) | R32 §4 retains every superseded manifest so cleanup can tell an orphan from a stray, and R32 §6 leaves cleanup to an operation that does not exist. Measured: `manifests/` is written by `writer.py` and `verify.py` and **read by nothing**, across 590 tests and 26 packets, and the CLI has no pruner. Retention is not the defect — Iceberg's `write.metadata.delete-after-commit.enabled` defaults to `false`, so it retains metadata unboundedly too; what it has is a pruner one property away, and Delta expires data files at 7 days against its log at 30, on separate clocks. So cleanup is specified: **orphans before superseded manifests**, since a manifest identifies its own version's orphans and expiring it first makes an orphan indistinguishable from a stray, permanently. A stray is never removed, and the operation reports by default. Retention is declared, defaulting to one kept version and no age limit, because a packet is archival where a table is operational. States the Iceberg reconciliation while it costs a paragraph: `packet_version` versions the **bundle**, an Iceberg snapshot versions a table's **rows**, and a rewrite of rows MUST NOT bump the packet. No per-table history is added — R32 §3 and R14 §2.3 permit no in-place mutation to version, so a correction is a rebuild, which re-reads no external resource. |
+| **R35** | [accepted](revisions/R35-revalidation-is-bounded-by-immutability.md) | An amendment re-establishes physical order only for what it writes, and re-runs only the rules naming an added resource. R32 §3 and R14 §2.3 make an untouched file's verdict determined, not assumed. |
+| **R55** | [accepted](revisions/R55-a-discriminated-reference.md) | R49's `scope_kind` and R54's `interval_kind` are the same mechanism with no name, and they decide the same question oppositely — an unresolvable scope is a **fact** (the run is about a rig the packet does not hold), an unresolvable interval kind is a **defect** (the row is uninterpretable). Nothing recorded that this was a choice. Adds `discriminator` as R48's sixth role, so a column that a consumer resolves to a *table* stops being declared `data`, which said only that it may be read — and so something finally checks that the value is a dotted resource ID at all, which nothing did: `scope_kind` could hold an empty string. Each discriminator declares `resolves` (`required`/`optional`), required and with no default, and a paired-value one declares `discriminates`, naming the column holding the value. The check R49 §2.5 wrote is regenerated rather than hand-written, because its `UNION ALL` was built over **core** and so the extension kinds R49 §2.4 explicitly permits matched no branch and passed unchecked — the one case the mechanism was designed for. A paired value holds one identifier, so it can only name a resource with a single-column key: **14 of 35** core tables, which check.py now reports rather than leaving to be found by a rule quietly matching nothing. Replaces R17 §2's reason core may not reference an extension — a packet embeds its extension registries, so "interpretable when no extension is present" was never the issue — with two that survive: separable verdicts (R17 §4) and independent versioning (R17 §5). A discriminator has neither problem, which is why it is the mechanism core is allowed: **it names without depending.** |
+| **R56** | [accepted](revisions/R56-a-column-declares-its-context.md) | R48 says a `coordinate` is a tick; it does not say **which clock**, and nothing says what unit a `data` column is in. Both are needed to use the value and both were prose. `core.clock_anchors` is the case that breaks in core today: `t_tick` and `parent_tick` are on different clocks, the difference recorded in a description, and `parent_clock_id` is not a column of that table at all. Adds `unit`, `unit_from` and `clock_from`, the last two naming a same-table column or a one-hop `resource.column`, so a consumer resolves rather than guesses. Structural — `registry/check.py` decides it with no packet in hand, because a wrong `clock_from` converts on the wrong clock silently. Independent evidence from a live pipeline: in the VR foraging packaging models **every** unit lives inside a `Field(description=...)`, centimeter, second, percentage, milliliter, cm/s, because there was nowhere else to put them. |
+| **R57** | [accepted](revisions/R57-a-registry-document-names-its-meta-schema.md) | A registry document does not say what it is. R17 §2 makes an extension one of the same format as core's, and nothing inside either records that; a packet embeds both, and its three version strings version the *content*, not the format it is written in. Adds an optional top-level `$schema` carrying R2 §9's published `$id`, first in the document. Identity, not a fetch instruction — a validator MUST NOT dereference it (R14 §2.2) and MUST NOT require it. The same shape as R49's `scope` and R15's per-resource codecs, one level up. Honest about its limit: nothing serves that URI, so the editor payoff needs a local mapping this revision does not standardise; what it delivers unconditionally is a claim `registry/check.py` verifies offline. `registry_version` does not bump — `build.py`'s policy bumps when an amendment forces it, and R48, R53 and R56 each changed columns without one. |
+| **R54** | [accepted](revisions/R54-a-trial-is-an-interval.md) | Intervals are declared, not assumed. `core.trials` is one table serving one task, and `03`'s sort, R45's closure rule and R47's key all had to name it specially; it becomes `core.intervals` with `interval_kind` in the key, so a block, an epoch and a trial are the same shape distinguished by a declared value rather than by three tables that would each need the same four rules. Strikes four columns `02` defined and nothing wrote, and withdraws `core.trial_tags` — R3 §3.0's child-table example that no packet ever populated, since a tag is a task's vocabulary and R43 §3 sent those to an extension. |
+| **R60** | [accepted](revisions/R60-a-coordinate-carries-provenance-not-currency.md) | R58 §2.3 cannot hold as written. It says two histology registrations of one probe are alternatives R41 arbitrates "within one `(frame, basis)`" — but R58 §2.1 keys the table on exactly `(electrode_id, coordinate_frame, coordinate_basis)`, so both registrations are `measured` in `ccf`, collide, and the second cannot be stored. Where the schema admits one row there is nothing to arbitrate. The nullable `processing_run_id` stays and is **provenance**: which run produced the row that is there, not a choice between rows that are not. |
+| **R62** | [accepted](revisions/R62-a-file-that-restates-the-manifest.md) | `schemas/semantic_version.txt` restates `semantic_standard_version`, which R2 §10's schema already requires the manifest to carry. 23 bytes inside a packet whose catalog is `nwb.packet.json`, so a consumer holding the file holds the manifest — duplication that buys no otherwise-unavailable access, which R3 §3.0 refuses. Nothing has written it and nothing has read it across every packet built. Struck. |
+| **R63** | [accepted](revisions/R63-a-recipe-declares-what-it-narrows.md) | `Recipe.check` refuses contradictions — a resource owned twice, an undefined resource, a dangling required key — and an omission contradicts nothing, so a recipe naming four of a source's five resources passes every test the tool applies. One packet lost four that way, including 19,061 quality labels that surfaced 90 s into a build as a rule failure reported against a different table. Adapters declare a static `PRODUCES`, `owns` becomes optional, and silence means the whole: a recipe states only what it **narrows**. `PREFERRED`/`SHARED` move from the scaffolder into the recipe layer so a draft and a build arbitrate alike. |
+| **R64** | [accepted](revisions/R64-a-coordinate-that-was-never-in-question.md) | R58's two bases both presuppose the position was in question, and a probe-frame contact's is not: it sits where the shank was manufactured, neither aimed at nor observed. R58 §4 deferred this "until a packet carries such a frame" — both packets on hand already did, and the importer resolved the required column by stamping `measured` on 3,840 probe-frame rows, the one value R58 §2.2 says a consumer must never assume. Adds `nominal`. No schema change: the vocabulary was already open, and R58 §2.2's consumer rule makes an unmodified reader downgrade an unrecognised basis rather than trust it — the first case to exercise why R8 §4 opens these at all. The basis is about the claim, not the frame: a unit position computed from a waveform is `measured` in the same `probe` frame where a contact is `nominal`. |
+| **R65** | [accepted](revisions/R65-an-array-names-the-instrument-that-made-it.md) | `core.array_assets` is the generic dense-array registry and says nothing about what made any of its rows; its only references are to sessions and clocks. An `ElectricalSeries` reaches a probe through its channels and a waveform template through its units, but both routes exist because something *else* in core happens to link them, and neither exists for an array that is neither channel-mapped nor per-unit — which is every acquired signal from an ordinary instrument. `core.probes` has named its device since `02`. Adds a nullable `device_id`, one column and one reference, no new table and no vocabulary: everything a signal is was already declared, four parts on the asset and the fifth on the device, with only the join between them missing. The larger point is what it lets `01` §3.17 say — an array asset holds **any** sampled quantity and the standard enumerates no instruments, so *which* signal an array holds is answered by the **device**, which is data, rather than by `semantic_type`, which is vocabulary. A rig fitting a respiration sensor, a heart-rate monitor or a thermistor produces a core-owned array and no clause of the specification mentions any of them. |
+| **R66** | [accepted](revisions/R66-a-device-declares-what-version-it-was.md) | `core.devices` says **which** instrument it is — name, manufacturer, model, serial — and never **what version of itself** it was. A serial identifies the object; its firmware determines what the object does, so two sessions can record the same make, model and serial and need interpreting differently with nothing in either packet to say so. Measured twice, independently: Open Ephys writes `bs_firmware_version` and `bsc_hardware_version` on twenty `NP_PROBE` elements, giving **two firmwares and two hardware revisions inside one session** because the probes hang off different basestations; and a Harp device writes its own `device.yml` beside its data declaring `firmwareVersion` and `hardwareTargets`, which on this session is the *only* statement of that instrument anywhere, the sensor having been acquired by a workflow that contributed its data and none of its metadata. The AIND rig JSON is the control: it declares both fields on four Harp devices and leaves them null, and a field a producer models and never fills is not evidence anyone needs it. Two nullable **string** columns — `3.0196`, `2.1` and `UNKNOWN` are all real values from one session and only a string holds all three — carried verbatim, unordered, and comparable for equality alone, since two manufacturers' schemes have no common precedence. |
+| **R67** | [accepted](revisions/R67-a-device-names-what-it-was-attached-to.md) | R66 made each element of an acquisition chain a device and left them unable to say they were connected, so the plainest question about a recording — **which headstage was this probe in?** — needed re-reading `settings.xml`, the file the packet exists to replace. Adds `parent_device_id`, `int32` nullable, self-referencing (R46 §2), with the chain required to be well-founded as R41 §2.2 requires of supersession and for the same reason. The second half is a **writer** defect the schema already forbade: `core.probes.device_id` has distinguished the recording entity from the physical object since `02`, and the importer keyed a device by the stream's name, so a quad-base probe became four `core.devices` rows sharing serial `23207205101` — asserting four probes where the session had one. Identity is the serial the source states; the four stay four `core.probes` rows. Measured on `ecephys_786867`: 24 device rows become 21, and every probe resolves probe → headstage → connect board → basestation. The join needs no serial matching — Open Ephys writes `custom_probe_name`, which *is* the name the NWB gives its Device — so the NWB adapter reads `settings.xml` for one column rather than one source writing into another's rows. A consumer MUST NOT infer attachment from a name: `headstage.slot3.port2` is a name this specification does not constrain, and the reference is the statement. |
+| **R68** | [accepted](revisions/R68-a-presentation-timestamp-is-an-integer.md) | `core.media_frames.pts` is `float64` and described only as a presentation timestamp — which names **two** quantities a container offers, its own integer value and that value in seconds, differing by the time base. The type argues for seconds and every source records the integer: ISOBMFF media times against a timescale, Matroska scaled ticks, libav's `int64_t`. R45's rule transfers unchanged — a coordinate is copied verbatim, and converting it on the way in is what makes it inexact, which at MPEG-TS's 1/90000 it is. The 53-bit mantissa is **not** the argument: it holds every integer below 2^53, 104 days at a nanosecond base. What is wrong is the kind, and the type is the only statement a packet makes about which quantity the column holds. Measured on 7,570,450 frames, `pts` is **96.9%** of the table as written — dictionary encoding is what a column declaring nothing else gets, and a monotonic ramp of 7.5 M values is its worst case — but that gap is the writer's and closes without a revision. What the type decides is the floor: `DELTA_BINARY_PACKED` is defined for `INT32`/`INT64` alone, so **6.3x** separates the best each type can reach. Rebuilt, `core.media_frames` goes 11.73 MB → **0.40 MB**. `pts` stays R48 role `data` and MUST NOT be a `coordinate`: R56 §2.2 would resolve it to the table's own `clock_id`, which is the clock `t_tick` is on and `pts` is not, converting it wrongly without being detectably wrong. A container's timeline is not a `core.clocks` row either — R27 §3 wants a well-founded graph and R38 wants observation intervals, and a file's internal addressing has neither. The time base stays out of core (R3 §3.0): the container declares it, and a consumer holding a `pts` holds the file. |
+| **R69** | [accepted](revisions/R69-a-frame-index-is-presentation-order.md) | R3 §6 pins a structural index's **base** and says nothing about its **sequence**, and a media asset is the one stored resource with more than one order. Measured on an h264 behaviour video (`has_b_frames=2`), storage order runs `pts` 32, 160, 96, 64 where display order runs 32, 64, 96, 128: a packet sits up to **three positions** from where it is shown, which at 500 Hz is **6 ms** of silently misattributed time, every row still carrying a plausible monotonic value. Which order a consumer gets follows from the library — PyAV's `container.decode()` reorders internally and gives presentation order, `container.demux()` gives storage order — and both are the obvious loop. Presentation order is what the nth frame means to a person, and what `t_tick` and `pts` already assumed. `frame_index` counts the frames the **asset holds**, not the exposures the capture produced: a host-dropped or transcode-lost frame gets no row and no reserved index, and the losses stay visible in the columns that record them. Settling it makes one rule writable — `pts` strictly increasing in `frame_index` within an asset — which returns 0 rows in 0.21 s over 7,570,450 frames and 2,347 of 5,000 against the same rows renumbered out of order. |
+| **R70** | [accepted](revisions/R70-an-asset-declares-the-rate-its-timestamps-count-at.md) | R68 §2.4 declined to carry a container's time base on R3 §3.0 grounds — the container declares it, so a consumer holding a `pts` holds the file. That premise fails for the case R14 §2.3 makes **expected**: media are referenced precisely because they are large, and a referenced resource is the one a packet may not reach. Every other external fact a packet needs, it copies — R36 §2.4 and R51 exist because a store may not answer. `pts` was also the only core column whose unit was neither declared nor derivable: 26 columns declare a `unit`, `unit_from` or `clock_from`, and this one can declare none, its unit varying per asset (so no literal) and being two integers (so no `unit_from`, which names one column). The base sat in `metadata`, where R66 §1.4's argument applies unchanged — a value inside a JSON string is invisible to a rule, so nothing could check that an asset whose frames carry `pts` said what those timestamps count. `core.media_assets` gains `pts_rate_num`/`pts_rate_den`, `int64` nullable: a **rate**, not a period, so `core.clocks.tick_rate_num` stays the only rational convention a consumer learns, and the container's `1/16000` is inverted once, in the adapter. Three rules follow — the pair is complete, it is declared wherever frames carry `pts`, and it is positive. Leaves R56 without a rational `unit_from`, recorded as its gap rather than papered over by naming one half.
+
+`NWB_Lake_POC_v0.1_Implementation_Spec.md` is generated: a concatenation of `README.md` and `00`–`09`
+delimited by `<!-- BEGIN <file> -->` / `<!-- END <file> -->`.
+
+MUST / SHOULD / MAY in the spec are RFC 2119 keywords and define the conformance surface.
+
+Version strings must stay consistent: `nwb-lake-portable-v0.1`, `nwb-lake-semantic-v0.1`,
+`nwb-lake-logical-v0.1`, and schema IDs such as `core.trials.v0.1`.
+
+## Verifying the whole monorepo
+
+`python conformance/verify.py` runs every generator and every check — the registry build, its
+structural checks, the prototype's chain, the 26-packet conformance corpus, and all three test
+suites — in 23 s, exiting non-zero on the first thing that is off. `--quick` skips the suites.
+
+Its load-bearing stage is the one nothing else can do: **regenerate, then demand a clean git
+tree.** Every generated file is committed, so re-running the generators must change nothing, and
+a diff means what is committed is not what the code produces. Three artifacts drifted for many
+revisions without that check — the corpus stopped building at R54, the prototype's registry left
+R2's format at R48, and the registry README's counts were wrong in five places at once.
+
+Run it before committing anything that touches the registry, a rule, a fixture, or a generator.
+
+## Running anything that touches a real packet
+
+**Run memory-heavy work in a capped cgroup.** This machine has 125 GB, so an unbounded job does
+not fail — it takes the machine down, and the first sign is the session dying. A cap turns a
+runaway into an exit 137 you can read:
+
+```bash
+systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 --quiet uv run pytest -q
+systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 --quiet python script.py
+```
+
+The exit code and output pass through, so it composes with `uv run` and with a pipeline. Beware
+that piping to `head`/`tail` masks the code — check `${PIPESTATUS[0]}`.
+
+Pick the cap from what the job should need, not from what is free. Something exceeding 8 GB
+against one session is a bug worth seeing, and a cap set at 100 GB reports it as a hung machine.
+
+**`/tmp` is tmpfs, so its pages are RAM and the cgroup cap does not hold them.** Scratch files and
+DuckDB spill go under `/mnt/Data`, or a capped job dies from its own temp files.
+
+**Read the spike table in batches.** `core.spike_events` is 286,896,563 rows and 650 MB
+compressed; `pq.read_table` on it needs many GB decoded, where `ParquetFile.iter_batches` needs a
+batch. The same goes for `to_table()` on a scan without a filter. DuckDB does the right thing on
+its own and is bounded separately — `validator.LIMITS` is `memory_limit 4GB, threads 4`, with
+`temp_directory` filled in beside the packet, because a memory limit without a spill directory
+bounds nothing.
+
+## Three-level vocabulary
+
+- **Semantic standard** (`01`) — concept meanings (Trial, Unit, Clock, ElectricalSeries).
+  Storage- and shape-agnostic.
+- **Logical standard** (`02`, `06`) — concepts as computable resources: tables, dense array assets,
+  media assets, views. Storage-agnostic, not shape-agnostic.
+- **Physical profile** (`03`) — storage. `nwb-lake-portable-v0.1` is Parquet + Zarr v3 + JSON and
+  MUST be readable without a server. An Iceberg profile is deferred and reuses the same logical
+  schemas.
+
+A **packet** is one concrete bundle under a declared profile. Its **packet catalog** is
+`nwb.packet.json` (`04`), which binds all resource kinds including Zarr arrays, media, and sidecar
+documents. An Iceberg catalog manages only tables and does not replace it.
+
+## Layers
+
+```
+core      canonical normalized facts; sole source of truth
+analysis  derived, denormalized, disposable; MUST declare lineage to core
+nwb       compatibility projection; deferred, not required for v0.1
+```
+
+An analysis resource becomes canonical only through an explicit schema revision (`06`).
+
+## Cross-document invariants
+
+- **Validation is importation** (`05`). Copying bytes is staging. Staged resources MUST NOT appear as
+  committed canonical resources in the manifest; commit writes a candidate manifest and renames it to
+  `nwb.packet.json` last.
+- **Time is integer ticks on a declared clock.** Every event, interval, spike time, dense time axis,
+  and media frame carries `clock_id` and an integer `*_tick`. Float seconds are derived only.
+- **Stable IDs, not paths.** No HDF5 object references, Zarr hierarchy paths, or file layout as
+  identity.
+- **Spikes are one flat table** (R5). `core.spike_events`, one row per spike, all primitives, sorted
+  `session_id, sorting_run_id, curation_id, unit_id, t_tick`, is the sole canonical representation.
+  `core.unit_spike_chunks` and the manifest's `canonical_representations` block are withdrawn.
+  `core.units` carries `n_spikes`/`first_spike_tick`/`last_spike_tick` as a validated denormalization.
+- **Unit identity is contextual**: `(session_id, unit_id, sorting_run_id, curation_id)`, never
+  `unit_id` alone. Packets with sorted units MUST carry `core.sorting_runs` and
+  `core.curation_versions`.
+- **Metadata minimalism** (`09`). Core requires only what is needed to identify, interpret, validate,
+  query, and reproduce. Richer metadata lives in namespaced extensions and sidecars. The core
+  validator MUST NOT require extension schemas, only that declared extension files exist. Import MUST
+  NOT fail on absent optional extension metadata.
+- **Metadata placement** (`03`): packet-level facts in the manifest, queryable scientific facts in
+  tables, human-readable context in `docs/`.
+- **Tables do not restate what the data declares** (R3 §3.0). Duplication must buy otherwise-
+  unavailable access — so `core.array_assets` has no `dtype` or `shape` (the Zarr array declares
+  them), but `core.array_dimensions` carries axis names, which Zarr.jl cannot see at all.
+- **Repeated values are child tables** (R3 §3.0), never lists, delimited strings, or JSON:
+  `core.trial_tags`, `core.array_dimensions`, `core.session_experimenters`.
+- **Array axes are stored order** (R3 §5), slowest-varying first, `transpose` codec forbidden.
+  Column-major bindings enumerate axes in reverse; clients adapt, the format does not.
+- **Clock alignment may be piecewise** (R13). A clock declares linear alignment
+  (`transform_slope`/`transform_offset`), anchor points (`core.clock_anchors`), or neither —
+  never both. Between anchors the map is linear interpolation. Beyond the terminal anchors it
+  is `parent(a) + rate * (t - a)` (R37 §3.1) — the globally fitted rate, applied from the
+  terminal anchor's own parent tick, never from a fit's intercept — and it stays defined only
+  while the estimator's **p95** error is within tolerance, 3 ms by default (R40 §2). The error
+  is flat in distance — 117 µs at two anchor intervals, 805 µs at a hundred and twenty — so the
+  tolerance gates on a clock's quality and not on how far it is asked to reach. A writer reaching
+  past one median anchor interval must measure it, and must record what it dropped even when
+  that is nothing (R40 §2.3). Real AIND data needs the anchor form.
+- **Observation belongs to the clock** (R38). `core.clock_observation_intervals` says when a
+  clock was observing, in that clock's own ticks, so every containment check is a same-clock
+  comparison. A unit or an event stream inherits its clock's window and may refine it, never
+  from its own timestamps. `core.sessions.t_zero_tick` (R39) is the earliest of those starts
+  on the reference clock, and is what seconds are defined from; a consumer without one MUST
+  refuse rather than invent an origin.
+- **Currency is not a version** (R41). R32 versions the whole packet; which of several
+  coexisting alternatives to read is a different axis, and a snapshot cannot express it because
+  all of them are inside it. A preference is keyed on the *producing run* — so it reaches an
+  R17 extension's outputs without the core registry knowing its tables — which is why
+  `core.sorting_runs` and `core.curation_versions` now name a `processing_run_id` as
+  `core.event_streams` has since R23. `core.preferred_runs` carries the choice, kept apart from
+  the run log because that log is never revised and a preference changes whenever someone
+  changes their mind. Where more than one run exists for the same `(activity_type, scope)` and
+  no preference is declared, a consumer MUST NOT silently choose.
+- **Scope is what makes that countable** (R44). A run declares what it is *about* —
+  `core.processing_runs.scope`, the same vocabulary `core.preferred_runs` is keyed by — so
+  twelve probes sorted once each are twelve purposes rather than twelve alternatives. Without
+  it R41 §2.4 groups by activity while the answer is filed under activity *and* scope, and the
+  rule fires on packets that have no ambiguity in them. A run that declares no scope is
+  **undeterminable**, which a consumer MUST report apart from ambiguous: the fix is to record
+  the scope, not to choose between the runs.
+- **A tick interval is closed, and a tick is a coordinate** (R45). `start_tick` and
+  `stop_tick` both name observed ticks, so an interval covers `stop - start + 1` and a
+  one-tick interval has `start == stop`. R38's prose describing a probe clock's `stop_tick`
+  as "the recording's length" is struck; it is the last sample's index, one less. `core.trials`
+  now states the same convention and still gets no overlap test, because trials need not
+  partition a session. A tick's zero is where `core.clocks.origin` says it is — for a sample
+  clock, tick 0 *is* sample 0 — and a writer MUST NOT re-base a source's sample index, which is
+  what keeps a tick exact. That makes a tick neither of R3 §6's two kinds: copied verbatim like
+  a source label, but used arithmetically, which a source label MUST NOT be.
+- **Referencing is expected for large resources** (R14). A resource the packet does not own
+  sets `external: true` with an absolute URI; `sha256` and `verified_at` record what was true
+  at validation, not a promise about now. Immutability covers packet-owned bytes only, and
+  structural validation MUST NOT reach the network. Externalizing a core *table* costs more
+  than an array: its rules cannot run at all when unreachable.
+- **Codecs are declared per resource** (R15), not per packet. A reader checks a resource's
+  own `codecs` before opening it and MUST NOT refuse the packet over a codec used only by
+  resources it does not open. `required_codecs` is the union, for a whole-packet capability
+  answer. Validation has three levels: manifest-internal always, packet-owned arrays always,
+  external resources only in a requested mode — so a codec declared for an external resource
+  is a claim, reported as `info` rather than silently unchecked.
+- **Provenance is light and optional** (R9). The entity/activity/edge graph is withdrawn; what
+  remains is `core.source_files` (inputs), `core.processing_runs` (what ran), and
+  `core.processing_run_inputs` (which files fed which run). Outputs are recorded at resource
+  granularity in the manifest, not per row. Tracing is SHOULD, not MUST — a packet carrying no
+  provenance is conforming. Where it is present, it is validated.
+
+## Schema conventions
+
+Column names are lowercase snake_case; `_id` for stable IDs, `_tick` for tick values, `_uri` or bare
+`uri` for URIs. **No nested Parquet types** (R3 §2.1): every column is a primitive from the
+Arrow-compatible set, and JSON strings are confined to optional columns, so a conforming reader
+satisfies every required column without a JSON parser. Prefer a present nullable column to an absent
+one. Tick columns are signed `int64`; wall-clock columns are `TIMESTAMP(MICROS, UTC)`, never INT96.
+
+Resource IDs are dotted (`core.trials`, `analysis.spikes_by_trial`); DuckDB registration flattens
+them to underscores, so SQL reads `FROM core_trials`.
+
+A writer SHOULD sort every table by its primary key (R10 §2). Two tables override that, both
+specified in `03`: `core.spike_events` by
+`session_id, sorting_run_id, curation_id, unit_id, t_tick` — measured as the best all-around
+layout (R3 §7.3), sort order mattering more for spike-table performance than table shape does —
+and `core.events` by `session_id, clock_id, t_tick, event_type`. Partition large tables by
+`session_id`; never by `unit_id`.
+
+Every table declares a primary key, or explicitly `null` with a reason (R7). Source-provenance
+labels — `local_electrode_label`, `local_channel_label`, `local_unit_label` — are `string`, not
+integers, and MUST NOT be used as offsets (R5 §5, R8 §2).
+
+Closed vocabularies, which a validator MUST reject values outside of: `status` is
+`succeeded`/`failed`/`partial` (R8 §3), and `core.units.quality_label` plus
+`core.unit_quality_labels.normalized_label` are `sua`/`mua`/`noise` (R11 §3, R22 §3). A
+source's own `label` is **open** — real curation emits `good` and `non_soma`, and aggregating
+over scorers is incompatible with one closed set (R22 §1).
+Everything else enumerated is explicitly open — `kind`, `semantic_type`, `activity_type`,
+`event_type`, `amplitude_unit` — and a validator MUST NOT reject unrecognized values from them
+(R8 §4, R9 §6, R11 §2, §4). Amplitude units live on `core.sorting_runs.amplitude_unit`, not on
+the spike, because the choice between µV and ADC counts is a property of the sorting context
+(R11 §2).
+
+## Validation
+
+Rules are data, not code (R2 §7). `registry/logical_schemas.json` carries every table's
+structure and its Tier 2 rules inline; checks are generated from it rather than written per
+table. The execution contract is the whole protocol: **a check's query returns offending
+rows — empty is a pass, non-empty is a failure and the rows are the finding**.
+
+- **Tier 1** is generated from structure: required-column non-null, primary-key uniqueness,
+  foreign-key anti-joins, closed-vocabulary membership, and the two a discriminator implies
+  (R55 §2.4). 236 checks over 34 tables, none hand-written — 138 not-null, 75 foreign-key,
+  14 uniqueness, 3 closed-vocabulary, 3 resource-ID format, 3 kind-declared. A nullable
+  foreign key gets an `IS NOT NULL` guard. Uniqueness is 14 rather
+  than 34 because where a table's sort begins with its primary key, duplicates must be adjacent and the shim's ordering
+  scan settles it — which on 287 M spikes replaced a `GROUP BY` that spilled 26 GB.
+- **Tier 2** is 62 hand-written SQL rules the structure cannot imply (66 with the four
+  advisory), carried in each table's `rules` array. 299 checks in all, 303 with advisory on.
+- **Every column declares a `role`** (R48) — `data`, `identifier`, `coordinate`,
+  `structural_index` or `sequence_position` — required, closed, and with no default, because a
+  default would make a forgotten classification look deliberate. It is what makes R3 §6's
+  "convert at the boundary" obligation derivable from a packet rather than hard-coded in each
+  1-based client. A reference always relates columns of the same role, which is what makes
+  converting every `structural_index` join-preserving by construction.
+
+A column's **name** is checked against the conventions by `registry/check.py`, not by a rule:
+naming is a property of the registry rather than of any packet's rows, so no SQL can see it.
+R48's `role` is what makes it exact — seven of the nine conventions compare a name against a
+declaration rather than guessing from type. Exceptions are declared with a reason and are
+checked to still be needed, so the list cannot go stale.
+
+**SQL for what the data says; the shim for how it is stored** (R12 §4). Values, keys,
+references, vocabularies, and cross-table agreement go in SQL. Physical order, file presence,
+Parquet types, Zarr rank and codecs, and checksums go in the shim — a query cannot see them,
+and a storage-layer check written as SQL fails silently rather than loudly. R12 exists because
+one did.
+
+Validation requires DuckDB, because the rules are SQL. Reading does not have to: a complete
+read path goes through PyArrow, so `nwb-lake-reader` makes DuckDB the optional `sql` extra
+and a packet can be read with it absent. That is also why validation is a separate
+distribution — the read path's dependency closure stays clean by construction, not by
+discipline. That is what R3 §2.1's ban on nested types exists to
+preserve — a native reader stays viable in a language without an embedded SQL engine, as
+Parquet2.jl is in Julia. `Packet.duckdb()` is a read path too and does need the extra; the
+point is that it is not the only one.
+
+Tier 2 rules are authored in `registry/rules.json` — as SQL, or as a template invocation
+that `build.py` expands (R24) — and merged into the generated
+`logical_schemas.json` at build time. Never edit the generated file.
+
+`fixtures/` holds the conformance corpus — one conforming packet and fourteen variants, each
+with its expected finding recorded as data. It runs against `nwb_lake_reader.validation`
+rather than reimplementing the checks. Run it after changing the registry, the generator, or
+any rule.
+
+- **An alignment is a query, not a table** (R43). `06`'s materialized list was written
+  before anything measured it; measured, four of its five entries are views. Aligning spikes
+  to an event and a window is 0.13-1.72 s against trains already held, and a materialized copy
+  is a table per `(event, window)` pair — four alignments of one real analysis come to 100.6%
+  of the spike table. `analysis.spikes_by_trial` is withdrawn. A wide trial table is 708 rows
+  in 7.5 ms, so `analysis.trials_wide` and `analysis.unit_condition_rates` are withdrawn too,
+  and their columns — `stimulus_id`, `condition_id`, `block_id` — are a task's shape rather
+  than a format's, so they belong in an R17 extension. What remains materialized is R30's
+  layout and feature extraction.
+
+## Out of scope for the POC
+
+Per `07`: no custom storage engine, no PyNWB-compatible object model, no NWB exporter, no distributed
+compute, no Iceberg-first design, no generalized ontology machinery.
