@@ -51,11 +51,36 @@ def presence(required: str, typ: str) -> str:
     return "nullable"                                  # 02: prefer present-nullable
 
 
+class _Since(list):
+    """The revision whose block is executing, which also records that the block ran.
+
+    Assignment is the only way a block declares itself, so recording it here is what keeps
+    `derived_from` from drifting: a revision that stamps a column can no longer be applied and
+    left out of the list, which R54, R65 and R66 each were.
+    """
+
+    def __init__(self, initial):
+        super().__init__(initial)
+        #: Every revision assigned during this build, by number.
+        self.applied: set[str] = set()
+
+    def __setitem__(self, index, value):
+        if value:
+            self.applied.add(value.split()[0])
+        super().__setitem__(index, value)
+
+
 #: The revision whose block is executing, stamped onto whatever it creates (R29 §2). A block
 #: sets it once; `col` and `new` read it, so the comment naming the revision and the data
 #: recording it cannot disagree. None while 02 is being carried forward, because a column 02
 #: declares and no revision touched carries no `since` -- absence is the meaningful state.
-SINCE = [None]
+SINCE = _Since([None])
+
+#: Revisions applied above that stamp no column, so nothing records them but this list: a rule,
+#: a key, a sort order, a withdrawal, or a decision about the format rather than about a table.
+#: R42 is withdrawn and so is not here.
+UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34, 35, 36, 37, 40,
+             43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69)
 
 
 #: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a
@@ -863,6 +888,15 @@ def build() -> dict:
     T("core.array_assets")["references"].append(
         {"columns": ["device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
 
+    # ---- R68 §2.1 : a presentation timestamp is an integer ---------------------------------------
+    # 02's float64 named two quantities a container offers -- its own integer timestamp and that
+    # value in seconds -- and the type argued for the one nothing records. An integer admits only
+    # the recorded reading, and it is the only type DELTA_BINARY_PACKED is defined for, which on a
+    # frame timeline is 6.3x the best a float can reach.
+    SINCE[0] = "R68 §2.1"
+    amend("core.media_frames", "pts", type="int64",
+          description="Container presentation timestamp, verbatim in the container's own time base.")
+
     # ---- R20 §5 : analysis arrays are described by analysis tables -------------------------------
     SINCE[0] = "R20 §5"
     import copy
@@ -1142,13 +1176,12 @@ def build() -> dict:
             "semantic_standard_version": "nwb-lake-semantic-v0.1",
             "logical_standard_version": "nwb-lake-logical-v0.1",
             # Every revision whose decisions are applied above, so the registry says what it
-            # was derived from rather than leaving it to the block comments.
+            # was derived from rather than leaving it to the block comments. The union of what
+            # the blocks stamped and what only this file records, so adding a column-touching
+            # revision cannot leave the list behind.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             # R42 is withdrawn, so it is not here. R54 is accepted and NOT
-                             # yet applied -- core.trials has not become core.intervals -- so
-                             # it is excluded, and the divergence is recorded in HANDOFF.md.
-                             "revisions": [f"R{n}" for n in [*range(1, 42), *range(43, 54),
-                                                             *range(55, 65)]]},
+                             "revisions": sorted({*SINCE.applied, *(f"R{n}" for n in UNSTAMPED)},
+                                                 key=lambda r: int(r[1:]))},
             "tables": dict(sorted(tables.items()))}
 
 

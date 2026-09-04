@@ -395,6 +395,20 @@
         "message": "the preferred run is superseded by another run",
         "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes_run_id = p.processing_run_id)"
       }
+    ],
+    "core.media_frames": [
+      {
+        "id": "core.media_frames.frame_index_contiguous",
+        "level": "error",
+        "message": "frame_index is not contiguous from 0 within an asset",
+        "sql": "SELECT media_asset_id, COUNT(*) AS n_frames, MAX(frame_index) AS max_index FROM core_media_frames GROUP BY media_asset_id HAVING MAX(frame_index) <> COUNT(*) - 1 OR MIN(frame_index) <> 0"
+      },
+      {
+        "id": "core.media_frames.pts_increases_with_frame_index",
+        "level": "error",
+        "message": "pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order (R69 \u00a72.1)",
+        "sql": "SELECT media_asset_id, frame_index, pts, prev AS previous_pts FROM (SELECT media_asset_id, frame_index, pts, LAG(pts) OVER (PARTITION BY media_asset_id ORDER BY frame_index) AS prev FROM core_media_frames WHERE pts IS NOT NULL) WHERE prev IS NOT NULL AND pts <= prev"
+      }
     ]
   }
 }

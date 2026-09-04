@@ -58,6 +58,7 @@
       "R51",
       "R52",
       "R53",
+      "R54",
       "R55",
       "R56",
       "R57",
@@ -67,7 +68,11 @@
       "R61",
       "R62",
       "R63",
-      "R64"
+      "R64",
+      "R65",
+      "R66",
+      "R68",
+      "R69"
     ]
   },
   "tables": {
@@ -2333,10 +2338,11 @@
         },
         {
           "name": "pts",
-          "type": "float64",
+          "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Media presentation timestamp if relevant."
+          "description": "Container presentation timestamp, verbatim in the container's own time base.",
+          "since": "R68 \u00a72.1"
         },
         {
           "name": "dropped",
@@ -2381,7 +2387,20 @@
         "media_asset_id",
         "frame_index"
       ],
-      "rules": []
+      "rules": [
+        {
+          "id": "core.media_frames.frame_index_contiguous",
+          "level": "error",
+          "message": "frame_index is not contiguous from 0 within an asset",
+          "sql": "SELECT media_asset_id, COUNT(*) AS n_frames, MAX(frame_index) AS max_index FROM core_media_frames GROUP BY media_asset_id HAVING MAX(frame_index) <> COUNT(*) - 1 OR MIN(frame_index) <> 0"
+        },
+        {
+          "id": "core.media_frames.pts_increases_with_frame_index",
+          "level": "error",
+          "message": "pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order (R69 \u00a72.1)",
+          "sql": "SELECT media_asset_id, frame_index, pts, prev AS previous_pts FROM (SELECT media_asset_id, frame_index, pts, LAG(pts) OVER (PARTITION BY media_asset_id ORDER BY frame_index) AS prev FROM core_media_frames WHERE pts IS NOT NULL) WHERE prev IS NOT NULL AND pts <= prev"
+        }
+      ]
     },
     "core.preferred_runs": {
       "columns": [

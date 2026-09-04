@@ -76,7 +76,7 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "When odor reached the animal. Null where no odor was delivered.",
-          "clock_from": "core.trials.clock_id"
+          "clock_from": "core.intervals.clock_id"
         },
         {
           "name": "choice_cue_tick",
@@ -84,7 +84,7 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "The choice (stop) cue. Null where no choice occurred, which is what makes it the has_choice the source carries separately.",
-          "clock_from": "core.trials.clock_id"
+          "clock_from": "core.intervals.clock_id"
         },
         {
           "name": "reward_onset_tick",
@@ -92,7 +92,7 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "When water was delivered. Null where none was, which is the source's has_reward.",
-          "clock_from": "core.trials.clock_id"
+          "clock_from": "core.intervals.clock_id"
         },
         {
           "name": "last_stop_tick",
@@ -100,7 +100,7 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "The last stop before the choice cue. The source calls this last_stop_time because NWB reserves stop_time for an interval's end; here the interval's end is in core and the name is free.",
-          "clock_from": "core.trials.clock_id"
+          "clock_from": "core.intervals.clock_id"
         },
         {
           "name": "reward_amount",

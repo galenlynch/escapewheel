@@ -191,6 +191,7 @@ NAMING_EXCEPTIONS = {
     "core.array_channels.offset": "as core.array_assets.offset, per channel (R19 §2)",
     "core.units.n_spikes": "a count, not a plural duration -- the shape R50 §3 renamed step_ticks for",
     "core.source_files.size_bytes": "a quantity in bytes, not a plural of `size_byte`",
+    "core.media_frames.pts": "the container's own initialism for one timestamp, not a plural (R68 §2.1)",
     # A metric's name is the vocabulary people search by, so renaming one makes the column match
     # nothing anyone's code expects. Unlike `sync_spike_8`, none of these is a parameter glued on.
     "aind_unit_qc.metrics.rp_violations": "the sorter's own metric name; a count of violations",

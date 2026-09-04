@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-34 tables, 312 columns, 75 references, 59 Tier 2 rules
+34 tables, 312 columns, 75 references, 61 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R68, R69
 ```
 
 ## Contents
@@ -521,7 +521,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `frame_index` | int64 | **required** |  | Frame index. |
 | `t_tick` | int64 | **required** |  | Frame time tick. |
 | `clock_id` | int32 | **required** |  | Clock ID. |
-| `pts` | float64 | nullable |  | Media presentation timestamp if relevant. |
+| `pts` | int64 | nullable | R68 §2.1 | Container presentation timestamp, verbatim in the container's own time base. |
 | `dropped` | bool | nullable |  | Dropped-frame flag. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
@@ -532,6 +532,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `clock_id` → `core.clocks` (`clock_id`)
 - `media_asset_id` → `core.media_assets` (`media_asset_id`)
+
+**Tier 2 rules** — 2
+
+- `core.media_frames.frame_index_contiguous` — error: frame_index is not contiguous from 0 within an asset
+- `core.media_frames.pts_increases_with_frame_index` — error: pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order (R69 §2.1)
 
 ### `core.preferred_runs`
 
