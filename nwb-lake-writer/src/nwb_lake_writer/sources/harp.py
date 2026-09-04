@@ -19,6 +19,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+
+def _clean(value: Any) -> str | None:
+    """Return a schema value as the string a column takes, or None where the schema omitted it."""
+    return None if value is None else str(value)
+
+
 #: The schema file the Harp protocol puts beside a device's data.
 SCHEMA = "device.yml"
 
@@ -83,8 +89,14 @@ class HarpSource:
                 # serial, and inventing either would assert what nothing states.
                 "manufacturer": None,
                 "model": f"Harp {declared['whoAmI']}" if declared.get("whoAmI") is not None else None,
+                # R66 §2.1: verbatim, unparsed. `hardwareTargets` is this schema's name for the
+                # hardware the firmware targets, which is the revision the device reports.
+                "firmware_version": _clean(declared.get("firmwareVersion")),
+                "hardware_version": _clean(declared.get("hardwareTargets")),
                 "serial_number": None,
-                "metadata": {k: v for k, v in declared.items() if v is not None and k != "device"} or None,
+                # whoAmI is on `model`; what remains is nothing, so the column stays empty rather
+                # than restating what two typed columns now carry (R66 §1.2).
+                "metadata": None,
             }
         return [rows[name] for name in sorted(rows)]
 
