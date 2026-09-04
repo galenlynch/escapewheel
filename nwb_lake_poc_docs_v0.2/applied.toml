@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 234
+undisposed = 227
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -343,3 +343,37 @@ note = "R53 §2.3's carried identity; a writer that reassigns declares the ident
 [clause."R76 §2.4"]
 disposition = "implementation"
 note = "the check is at the writer's boundary, in arrow.COERCE"
+
+[clause."R1 §2"]
+disposition = "registry"
+note = "the manifest.sessions rule is core.sessions.manifest_sessions_match; the field is 04 §3"
+
+[clause."R2 §2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §6"
+note = "restored 2026-09-04; the third presence state, optional, had been dropped"
+
+[clause."R3 §2.1"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §5.5"
+note = "restored 2026-09-04; the Parquet compression floor and tick encoding were absent"
+
+[clause."R26 §2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §10.2"
+note = "restored 2026-09-04; a report must say whether advisory rules ran"
+
+[clause."R31 §3"]
+disposition = "applied"
+where = "04_packet_catalog.md §3"
+note = "restored 2026-09-04; compiled as SHOULD where R31 §3 says MUST"
+
+[clause."R35 §2"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §9.4"
+note = "restored 2026-09-04; only the second of the two re-run conditions had survived"
+
+[clause."R57 §2.2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.2"
+note = "restored 2026-09-04; the info finding for an unheld meta-schema was absent"

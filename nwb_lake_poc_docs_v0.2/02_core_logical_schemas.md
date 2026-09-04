@@ -78,7 +78,16 @@ Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with micros
 
 ## 6. Presence
 
-A column is `required` or `nullable`. A required column MUST be present and non-null in every row.
+A column is `required`, `nullable` or `optional` (R2 §5):
+
+| state | the column | its values |
+|---|---|---|
+| `required` | MUST be present | MUST be non-null in every row |
+| `nullable` | MUST be present | MAY be null |
+| `optional` | MAY be absent | MAY be null where present |
+
+The third state is what R3 §2.1 confines a `json_string` to: a conforming reader must be able to
+satisfy every required column without a JSON parser, so a column holding JSON is never required.
 
 A present nullable column is preferred to an absent one, because a stable column set simplifies query code. A schema MUST NOT declare a column that duplicates what the data already declares: `core.array_assets` carries no dtype or shape, because the array declares them (R3 §3.0).
 
@@ -154,7 +163,13 @@ Table structure and validation rules are carried in one JSON document (R2 §2). 
 
 A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on (R2 §8). A packet whose embedded registry disagrees with its recorded version is invalid.
 
-A registry document SHOULD carry a top-level `$schema` naming its meta-schema (R57 §2). A validator MUST NOT dereference it and MUST NOT require it.
+A registry document SHOULD carry a top-level `$schema` naming its meta-schema (R57 §2.1). A
+validator MUST NOT dereference it and MUST NOT require it.
+
+Where `$schema` is present it MUST equal the `$id` of a meta-schema the consumer holds, or the
+document MUST be reported as governed by a schema this consumer does not have — an **`info`**
+finding, not an error (R57 §2.2). R17 §4 already says a core validator is not required to hold an
+extension's schema, and the same reasoning applies one level up.
 
 ### 9.3 Vocabularies
 
@@ -190,7 +205,11 @@ A rule the structure cannot imply is declared as SQL returning offending rows, o
 
 The execution contract is the whole protocol: **a check's query returns offending rows; empty is a pass, non-empty is a failure, and the returned rows are the finding.**
 
-A rule declares a level of `error`, `warning`, or `info`. A rule MAY be `advisory`, in which case it is off by default and MUST NOT be `error`, so that enabling it cannot change whether a packet previously passed (R26 §2).
+A rule declares a level of `error`, `warning`, or `info`. A rule MAY be `advisory`, in which case
+it is off by default and MUST NOT be `error`, so that enabling it cannot change whether a packet
+previously passed (R26 §2). A validator MUST expose the choice, and a report MUST state whether
+advisory rules were run: two reports over one packet may legitimately differ, and one that does
+not say which mode produced it cannot be compared with the other.
 
 ### 10.3 What is not a rule
 

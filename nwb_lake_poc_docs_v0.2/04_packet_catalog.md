@@ -50,7 +50,7 @@ The catalog identifies by name. `packet_id`, every entry's `resource_id`, the se
 | `codecs` | array of string | MUST for an array (§6.2) |
 | `external` | bool | MUST where true (§5) |
 | `derived_from` | array of string | MUST for a derived resource (§7) |
-| `processing_run_id` | string | SHOULD for a derived resource (§7) |
+| `processing_run_id` | string | MUST for an analysis resource (R31 §3); SHOULD for any other derived resource |
 
 ### 4.2 Kinds
 

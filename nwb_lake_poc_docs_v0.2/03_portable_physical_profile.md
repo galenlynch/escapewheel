@@ -95,6 +95,20 @@ A writer **MUST** emit `analysis.spike_events` in that order (R30 §3.2). It is 
 
 A writer **SHOULD** start a new row group at each bucket boundary (R30 §3.3). A group cut at a fixed row count straddles boundaries and spans two buckets' worth of time. Row-group size and encoding are otherwise not normative: the right values follow from session length and unit count rather than from the schema.
 
+### 5.5 The Parquet floor
+
+A reader MUST support the compressions **uncompressed, Snappy, Gzip and Zstd**. A writer MUST use
+one of those four and SHOULD use Zstd (R3 §2). Dictionary, RLE and delta encodings MAY be used and
+MUST be supported by readers.
+
+A writer SHOULD encode tick columns with `DELTA_BINARY_PACKED` and SHOULD NOT dictionary-encode
+them. On a high-cardinality tick column a writer builds a dictionary nearly as large as the column,
+abandons it at its size threshold, and emits a mix of partial-dictionary and plain pages larger
+than either encoding alone.
+
+Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
+precision; `INT96` MUST NOT be used. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
+
 ## 6. Array storage
 
 ### 6.1 Version
@@ -191,7 +205,11 @@ Where an amendment installs a different registry, the packet retains the superse
 
 ### 9.4 Scope of revalidation
 
-An amendment re-establishes physical order only for what it writes, and re-runs only the rules naming an added resource (R35 §2).
+An amendment re-establishes physical order only for what it writes. A check MUST be re-run when it
+is **attached to** a resource the amendment writes, **or when its query names one**; a check meeting
+neither condition MAY be skipped (R35 §2). The second test is syntactic — a generated check refers
+to a resource by its flattened name — so a rule that names a resource added later is caught without
+the registry having to declare that it might.
 
 ### 9.5 Cleanup
 
