@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-04 |
+| **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `02` (`core.devices`), `09` §4.4 (the minimum a device records) |
 | **Depends on** | R65 (an array names the device that made it) |
 | **Profile** | `nwb-lake-portable-v0.1` |
