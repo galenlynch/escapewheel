@@ -15,6 +15,18 @@ import pyarrow.parquet as pq
 HERE = Path(__file__).resolve().parent
 REGISTRY = json.loads((HERE.parent / "registry" / "logical_schemas.json").read_text())
 
+#: The one extension this corpus carries. R54 §2.4a makes an `interval_kind` naming a resource
+#: the packet does not declare an error, and no core table specialises an interval -- so a packet
+#: with intervals carries an extension by construction, and the corpus has to as well.
+EXTENSION_ID = "dynamic_foraging"
+EXTENSION = json.loads((HERE.parent / "registry" / "extensions" / f"{EXTENSION_ID}.json").read_text())
+
+#: Every table a fixture may write, core's and the extension's alike.
+SPECS = {**REGISTRY["tables"], **EXTENSION["tables"]}
+
+#: The interval kind the fixture declares, which is the extension table that carries it.
+KIND = "dynamic_foraging.trials"
+
 ARROW = {"string": pa.string(), "int32": pa.int32(), "int64": pa.int64(),
          "float32": pa.float32(), "float64": pa.float64(), "bool": pa.bool_(),
          "date": pa.date32(), "timestamp": pa.timestamp("us", tz="UTC"),
@@ -31,7 +43,7 @@ def table(resource: str, rows: list[dict]) -> pa.Table:
     optional, in which case they are omitted entirely — exercising all three presence
     states (R2 §5).
     """
-    spec = REGISTRY["tables"][resource]
+    spec = SPECS[resource]
     rows = number(spec, [dict(r) for r in rows])
     arrays, fields = [], []
     for c in spec["columns"]:
@@ -106,7 +118,7 @@ def preassign(tables: dict[str, list[dict]]) -> None:
     """
     pending: dict[str, set[str]] = {}
     for resource, rows in sorted(tables.items()):
-        spec = REGISTRY["tables"].get(resource)
+        spec = SPECS.get(resource)
         if spec is None:
             continue
         target = {
@@ -201,17 +213,18 @@ def content() -> dict[str, list[dict]]:
             {"clock_id": "imec_ap_s001", "session_id": "s001",
              "name": "Neuropixels AP sample clock", "tick_rate_hz": float(AP_HZ),
              "origin": "sample 0 at acquisition start", "tick_zero_utc": START}],
-        "core.trials": [
-            {"session_id": "s001", "trial_id": 1, "start_tick": 1000,
-             "stop_tick": 5000, "clock_id": "behavior_s001", "condition_id": "A_high",
-             "stimulus_id": "grating_45", "choice": "left", "rewarded": True},
-            {"session_id": "s001", "trial_id": 2, "start_tick": 6000,
-             "stop_tick": 10000, "clock_id": "behavior_s001", "condition_id": "A_high",
-             "stimulus_id": "grating_45", "choice": "right", "rewarded": False}],
-        "core.trial_tags": [
-            {"session_id": "s001", "trial_id": 1, "tag": "hit"},
-            {"session_id": "s001", "trial_id": 2, "tag": "miss"},
-            {"session_id": "s001", "trial_id": 2, "tag": "review"}],
+        # R54 §2.1: the kind is a dotted resource ID naming the table that says what the
+        # interval was, and §2.4a makes naming one the packet does not carry an error.
+        "core.intervals": [
+            {"session_id": "s001", "interval_kind": KIND, "interval_id": 1,
+             "start_tick": 1000, "stop_tick": 5000, "clock_id": "behavior_s001"},
+            {"session_id": "s001", "interval_kind": KIND, "interval_id": 2,
+             "start_tick": 6000, "stop_tick": 10000, "clock_id": "behavior_s001"}],
+        KIND: [
+            {"session_id": "s001", "interval_kind": KIND, "trial_id": 1,
+             "animal_response": 0, "rewarded_history_left": True, "rewarded_history_right": False},
+            {"session_id": "s001", "interval_kind": KIND, "trial_id": 2,
+             "animal_response": 1, "rewarded_history_left": False, "rewarded_history_right": False}],
         # Three streams: one hardware-detected, one with a processing run behind it, and
         # one emitting two event types -- which is why R23 4.1 keeps event_type on the row.
         "core.event_streams": [
@@ -303,7 +316,7 @@ def sql_name(resource): return resource.replace(".", "_")
 
 def sort_rows(resource: str, rows: list[dict]) -> list[dict]:
     """Apply the registry's declared physical ordering (R10 §2), as a writer should."""
-    keys = REGISTRY["tables"][resource].get("sort")
+    keys = SPECS[resource].get("sort")
     if not keys:
         return rows
     return sorted(rows, key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in keys))
@@ -325,15 +338,21 @@ def write_packet(out: Path, tables: dict[str, list[dict]], *, raw: dict = None,
     for resource, rows in tables.items():
         ordered = rows if resource in unsorted else sort_rows(resource, rows)
         t = (raw or {}).get(resource) or table(resource, ordered)
-        rel = f"tables/core/{resource.split('.')[1]}.parquet"
+        namespace, name = resource.split(".", 1)
+        rel = f"tables/{namespace}/{name}.parquet"
+        (out / "tables" / namespace).mkdir(exist_ok=True)
         pq.write_table(t, out / rel, compression="zstd")
+        extension = namespace == EXTENSION_ID
         resources.append({
-            "resource_id": resource, "layer": "core", "kind": "table",
+            "resource_id": resource, "layer": "extension" if extension else namespace,
+            **({"extension_id": EXTENSION_ID} if extension else {}), "kind": "table",
             "schema_id": f"{resource}.v0.1", "physical_profile": "parquet",
             "uri": rel, "canonical": True, "validation_state": "not_run"})
 
     (out / "schemas" / "logical_schemas.json").write_text(
         json.dumps(REGISTRY, indent=2) + "\n")
+    (out / "extensions").mkdir()
+    (out / "extensions" / f"{EXTENSION_ID}.json").write_text(json.dumps(EXTENSION, indent=2) + "\n")
 
     sessions = sorted({r["session_id"] for r in tables["core.sessions"]})
     (out / "nwb.packet.json").write_text(json.dumps({
@@ -348,6 +367,8 @@ def write_packet(out: Path, tables: dict[str, list[dict]], *, raw: dict = None,
         "description": "Phase 0 synthetic fixture, single session (R1 §6).",
         "sessions": sessions,
         "required_codecs": [],
+        "extensions": {EXTENSION_ID: {"version": str(EXTENSION["registry_version"]),
+                                      "registry": f"extensions/{EXTENSION_ID}.json"}},
         "resources": resources,
         "validation": {"status": "not_run", "validated_at": "2026-08-26T00:00:00Z",
                        "validator_name": "nwb_lake_validate", "validator_version": "0.1.0"},
@@ -363,9 +384,9 @@ def child(tables):
 
 def variants():
     def dup_pk(c):
-        c["core.trials"].append(dict(c["core.trials"][0]))
+        c["core.intervals"].append(dict(c["core.intervals"][0]))
     def orphan_fk(c):
-        c["core.trials"][1]["clock_id"] = "no_such_clock"
+        c["core.intervals"][1]["clock_id"] = "no_such_clock"
     def null_required(c):
         c["core.events"][2]["event_type"] = None
     def bad_vocabulary(c):
@@ -373,7 +394,7 @@ def variants():
         # projection, which stays closed to sua/mua/noise (R22 5).
         c["core.units"][0]["quality_label"] = "good"
     def bad_interval(c):
-        c["core.trials"][1]["stop_tick"] = 5999             # before its start_tick
+        c["core.intervals"][1]["stop_tick"] = 5999           # before its start_tick
     def stale_summary(c):
         c["core.units"][0]["n_spikes"] += 5
     def missing_amplitude_unit(c):
@@ -503,16 +524,16 @@ def main():
 
     # Two variants must break the physical schema, not the data.
     c = content()
-    t = table("core.trials", c["core.trials"])
+    t = table("core.intervals", c["core.intervals"])
     wrong = t.set_column(t.schema.get_field_index("start_tick"), "start_tick",
                          t.column("start_tick").cast(pa.int32()))
-    write_packet(root / "bad_type", c, raw={"core.trials": wrong})
+    write_packet(root / "bad_type", c, raw={"core.intervals": wrong})
     print(f"{'bad_type':26s}written")
 
     c = content()
-    t = table("core.trials", c["core.trials"])
+    t = table("core.intervals", c["core.intervals"])
     write_packet(root / "missing_column", c,
-                 raw={"core.trials": t.drop_columns(["condition_id"])})
+                 raw={"core.intervals": t.drop_columns(["clock_id"])})
     print(f"{'missing_column':26s}written")
 
 

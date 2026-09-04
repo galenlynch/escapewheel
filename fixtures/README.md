@@ -1,7 +1,7 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/R1-single-session-primary.md),
-and twelve variants each violating exactly one rule. Together they are the conformance
+and twenty-five variants each violating exactly one rule. Together they are the conformance
 corpus: expected findings recorded as data, so any implementation can be checked against
 the same evidence rather than against a prose description of what should happen.
 
@@ -30,17 +30,25 @@ one sorting run, one curation version, two units and their spikes, and provenanc
 The five absent tables are arrays (Phase 5) and media (in no phase of `07`). A packet need
 not carry every table; `validate.py` checks what the manifest declares.
 
+The packet carries one extension, `dynamic_foraging`, holding the two rows its `trials` table
+contributes. Not decoration: R54 §2.4a makes an `interval_kind` naming a resource the packet does
+not declare an error, and no core table specialises an interval, so a packet with intervals in it
+carries an extension by construction.
+
+`corpus.py`'s `EXPECTED` is the full list; the table below names the variants that have a prose
+description, and is not all of them.
+
 ## The corpus
 
 | Packet | Violates | Caught by |
 |---|---|---|
-| `dup_pk` | duplicate trial key | `core.trials.primary_key_unique` |
-| `orphan_fk` | trial names an absent clock | `core.trials.clock_id_resolves` |
+| `dup_pk` | duplicate interval key | `core.intervals.primary_key_unique` |
+| `orphan_fk` | an interval names an absent clock | `core.intervals.clock_id_resolves` |
 | `null_required` | null in a required column | `core.events.event_type.not_null` |
 | `bad_vocabulary` | `quality_label` is `good` | `core.units.quality_label.in_vocabulary` |
 | `inconsistent_projection` | one `(source, label)` pair projects two ways | `core.unit_quality_labels.projection_is_consistent` |
 | `stream_clock_mismatch` | an event's clock disagrees with its stream's | `core.events.clock_matches_stream` |
-| `bad_interval` | `stop_tick` before `start_tick` | `core.trials.interval_valid` |
+| `bad_interval` | `stop_tick` before `start_tick` | `core.intervals.interval_valid` |
 | `stale_summary` | `n_spikes` disagrees with the spikes | `core.units.spike_summary_consistent` |
 | `missing_amplitude_unit` | amplitudes with no declared unit | `core.sorting_runs.amplitude_unit_declared` |
 | `half_transform` | slope without offset | `core.clocks.transform_pair_complete` |
