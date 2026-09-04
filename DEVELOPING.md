@@ -110,13 +110,15 @@ every packet three times — R48, R53 and R56 — and each time it surfaced as a
 about the *data* rather than one about the copy. `build.py` writes them and `check.py` compares
 them, so the class is closed; do not edit a vendored copy.
 
-**A ledger going stale.** Three lists must track the registry and cannot be derived from it:
-`derived_from` in `build.py` (now the union of what the blocks stamp and a hand list of revisions
-that stamp nothing), the R9 §2 table ledger in `conformance/spec-sweep/tables.py`, and the
-`NAMING_EXCEPTIONS` in `check.py`. The first two were both wrong for several revisions in
-September 2026 — `derived_from` omitted R54, R65 and R66; the table ledger still named
-`core.trials`, which R54 renamed. `check.py` fails on each of the three, and each exception is
-itself checked to still be needed, so the list cannot go stale in the other direction.
+**A ledger going stale.** Four lists track the registry and cannot be fully derived from it:
+`derived_from` in `build.py`, the R9 §2 table ledger in `conformance/spec-sweep/tables.py`, the
+`NAMING_EXCEPTIONS` in `check.py`, and `applied.toml`'s dispositions. Every one now fails a check
+rather than drifting: `derived_from` is verified in **both** directions (each accepted revision
+appears, and nothing appears that is not accepted — the missing direction is what let R54, R65 and
+R66 be applied and left out for several revisions each), each naming exception is checked to still
+break a convention, and the clause ledger is checked for entries naming clauses that no longer
+exist. What stays a human judgement is *which* disposition a clause gets, which is the part that
+should be.
 
 **A revision clause that never reaches the spec.** Two independent audits found normative clauses
 dropped during compilation of the v0.2 prose — `R53 §2.4`'s `int64` escape, `R21`'s codec floor,
@@ -133,10 +135,16 @@ may fall and must not rise.
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
 | `nwb_lake_poc_docs_v0.2/ledger.py` | an accepted clause with nowhere recorded that it went |
 | `combine.py --check` | a single-file spec rendering that no longer matches its parts |
+| `facts.py` | a count in a root document that no longer matches what it counts |
 | `verify.py`'s clean-tree stage | a committed artifact that is not what the code produces |
 | the three test suites | everything else |
 
 ## 8. Reading the result
+
+No count in this repository should be typed by hand. `registry/README.md`'s are filled by
+`render.py`, the root documents' by `facts.py`, and the clause ledger's high-water mark lowers
+itself. If you find yourself editing a number, check whether something can compute it instead:
+every number that was hand-maintained here went stale, several of them twice in one day.
 
 `registry/tables.md` is the readable registry: every table, every column, its type, presence,
 role, unit, and the revision that introduced it. Read it to see what a table is **now**; read `02`
