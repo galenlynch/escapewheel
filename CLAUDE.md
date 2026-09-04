@@ -148,7 +148,7 @@ Version strings must stay consistent: `nwb-lake-portable-v0.1`, `nwb-lake-semant
 
 ## Verifying the whole monorepo
 
-`python conformance/verify.py` runs every generator and every check — the registry build, its
+`python verify.py` runs every generator and every check — the registry build, its
 structural checks, the prototype's chain, the 26-packet conformance corpus, and all three test
 suites — in 23 s, exiting non-zero on the first thing that is off. `--quick` skips the suites.
 
@@ -159,6 +159,9 @@ revisions without that check — the corpus stopped building at R54, the prototy
 R2's format at R48, and the registry README's counts were wrong in five places at once.
 
 Run it before committing anything that touches the registry, a rule, a fixture, or a generator.
+`.github/workflows/verify.yml` runs the same command on every push and pull request.
+
+**This is one repository.** It was ten, coupled by relative paths git could not see — `registry/build.py` writes into two packages' source trees, `check.py` runs `conformance/spec-sweep` and reads the prototype's registry, and the writer's `pyproject` declares path dependencies on its siblings. Every history was preserved through the join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ## Running anything that touches a real packet
 

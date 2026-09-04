@@ -1,6 +1,6 @@
 """Run every generator and every check in the monorepo, and fail on the first thing that is off.
 
-There was no single command for this. The chain is reproducible — `registry/build.py` writes
+The chain is reproducible — `registry/build.py` writes
 `logical_schemas.json`, `tables.md` and the registry README; `fixtures/build.py` writes the
 conformance corpus; the prototype writes its own packets — but reproducibility nobody runs is a
 claim rather than a property, and three artifacts drifted for many revisions without anything
@@ -13,7 +13,7 @@ not what the code produces, which is the failure the other checks cannot see.
 
 Usage:
 
-    python verify.py            # every stage
+    python verify.py            # every stage, ~25 s
     python verify.py --quick    # skip the test suites, which dominate the runtime
 """
 
@@ -26,7 +26,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent
 
 #: Packages whose venv `uv run --project` resolves. The writer's is used for anything needing
 #: pyarrow and duckdb outside a package, because it depends on all three.
@@ -51,9 +51,8 @@ STAGES: list[tuple[str, Path, list[str]]] = [
 #: nothing. Skipped by --quick, since they are most of the runtime.
 SUITES = ("nwb-lake-reader", "nwb-lake-validator", "nwb-lake-writer")
 
-#: Repositories whose working tree must be clean once the generators have run. Only the ones
-#: holding generated output; a package with an unrelated edit in progress is not this tool's
-#: business.
+#: Directories whose tracked content must be unchanged once the generators have run. Only the
+#: ones holding generated output; an unrelated edit elsewhere is not this tool's business.
 GENERATED = ("registry", "prototype", "fixtures")
 
 
@@ -71,9 +70,13 @@ def run(cwd: Path, argv: list[str]) -> tuple[bool, str]:
     return done.returncode == 0, tail[-1] if tail else ""
 
 
-def clean(repo: str) -> list[str]:
-    """Return the paths a repository reports as modified, which after generation must be none."""
-    done = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT / repo,
+def clean(where: str) -> list[str]:
+    """Return the paths git reports as changed under `where`, which after generation must be none.
+
+    Scoped by pathspec rather than by directory: this is one repository, so running `git status`
+    from a subdirectory would report the whole tree and every unrelated edit with it.
+    """
+    done = subprocess.run(["git", "status", "--porcelain", "--", where], cwd=ROOT,
                           capture_output=True, text=True, check=False)
     return [line for line in done.stdout.splitlines() if line.strip()]
 
@@ -98,14 +101,14 @@ def main() -> int:
 
     # The one thing no stage above can report: whether what is committed is what the code
     # produces. Every generator has just run, so any diff is drift.
-    for repo in GENERATED:
-        if dirty := clean(repo):
-            failed.append(f"{repo}: generated output differs from what is committed")
-            print(f"FAIL {repo}: regenerating changed {len(dirty)} tracked file(s)")
+    for where in GENERATED:
+        if dirty := clean(where):
+            failed.append(f"{where}: generated output differs from what is committed")
+            print(f"FAIL {where}: regenerating changed {len(dirty)} tracked file(s)")
             for line in dirty[:10]:
                 print(f"       {line}")
         else:
-            print(f"ok   {repo}: regenerating changed nothing")
+            print(f"ok   {where}: regenerating changed nothing")
 
     print()
     if failed:

@@ -1,0 +1,26 @@
+name: verify
+
+# Every generated file in this repository is committed, so `verify.py`'s last stage regenerates
+# them and demands a clean tree. Three artifacts drifted for many revisions before anything ran
+# that check: the conformance corpus stopped building, the prototype's registry left R2's format,
+# and the registry README's counts went wrong in five places.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install the three distributions
+        run: |
+          for package in nwb-lake-reader nwb-lake-validator nwb-lake-writer; do
+            uv sync --all-extras --project "$package"
+          done
+      - name: Every generator and every check
+        run: python verify.py
