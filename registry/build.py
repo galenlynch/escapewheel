@@ -203,6 +203,21 @@ def discriminator_of(name: str) -> dict[str, str]:
         ) from None
 
 
+#: R56 §2.1. A unit a column's name already encodes, declared from the name at one point so a
+#: new column carrying one cannot be added without it by forgetting -- the discipline `role_of`
+#: and `identity_of` apply to role and identity. A unit that varies row to row is not here; it
+#: is `unit_from`, which names the column carrying it and must be declared at the call site.
+UNIT_SUFFIX = {"_um": "um", "_hz": "Hz", "_ohm": "ohm", "_bytes": "byte"}
+
+
+def unit_of(name: str) -> str | None:
+    """Return the unit a column's name encodes, or None where it encodes none."""
+    for suffix, unit in UNIT_SUFFIX.items():
+        if name.endswith(suffix):
+            return unit
+    return None
+
+
 def identity_of(name: str) -> str:
     """Return whether an identifier was carried or assigned, refusing an unclassified one."""
     try:
@@ -240,6 +255,10 @@ CONTEXT: dict[tuple[str, str], dict[str, str]] = {
     ("core.event_stream_observation_intervals", "stop_tick"): {"clock_from": "core.event_streams.clock_id"},
     # R11 §2: the unit is a property of the sorting context, not of the spike.
     ("core.spike_events", "amplitude"): {"unit_from": "core.sorting_runs.amplitude_unit"},
+    # R19 §2: an offset is in the converted value's unit, which the asset carries. `conversion`
+    # gets no entry: it is a ratio of two units and so is in neither of them.
+    ("core.array_assets", "offset"): {"unit_from": "unit"},
+    ("analysis.array_assets", "offset"): {"unit_from": "unit"},
 }
 
 
@@ -254,6 +273,8 @@ def col(name, typ, pres, desc, since=None, determined_by=None):
         entry["identity"] = identity_of(name)
     if role == "discriminator":
         entry.update(discriminator_of(name))
+    if role == "data" and (measured := unit_of(name)):
+        entry["unit"] = measured
     if stamp := (since or SINCE[0]):
         entry["since"] = stamp
     if determined_by is not None:
@@ -530,7 +551,12 @@ def build() -> dict:
             ("unit", "string", "Physical unit of the converted value."),
             ("inter_sample_shift", "float64",
              "Acquisition time offset within one sample period, in sample periods.")]:
-        add_col("core.array_channels", col(name, typ, "nullable", desc), after="channel_label")
+        entry = col(name, typ, "nullable", desc)
+        if name == "offset":
+            # R56 §2.1: an offset is in the converted value's unit, which this table carries
+            # per channel. `conversion` is not: it is a ratio of two units, not either one.
+            entry["unit_from"] = "unit"
+        add_col("core.array_channels", entry, after="channel_label")
 
     # ---- R19 §3 : an electrode sits in more than one coordinate frame ----------------------------
     SINCE[0] = "R19 §3"
@@ -583,8 +609,11 @@ def build() -> dict:
              "Resource whose rows are this axis's positions (labelled axis)."),
             ("coordinate_position_column", "string",
              "Which column of that resource holds the 0-based position.")]:
-        add_col("core.array_dimensions", col(name, typ, "nullable", desc),
-                after="dimension_name")
+        entry = col(name, typ, "nullable", desc)
+        if name in ("origin_value", "step_value"):
+            # R56 §2.1: both are in the axis's own unit, which this table carries per axis.
+            entry["unit_from"] = "coordinate_unit"
+        add_col("core.array_dimensions", entry, after="dimension_name")
     T("core.array_dimensions")["references"].append(
         {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]})
 
@@ -1057,10 +1086,11 @@ def build() -> dict:
             # Every revision whose decisions are applied above, so the registry says what it
             # was derived from rather than leaving it to the block comments.
             "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             # R42 is withdrawn (see the root CLAUDE.md), so it is not here.
-                             # R42 and R54 are not accepted, so they are not here.
+                             # R42 is withdrawn, so it is not here. R54 is accepted and NOT
+                             # yet applied -- core.trials has not become core.intervals -- so
+                             # it is excluded, and the divergence is recorded in HANDOFF.md.
                              "revisions": [f"R{n}" for n in [*range(1, 42), *range(43, 54),
-                                                             *range(55, 60)]]},
+                                                             *range(55, 65)]]},
             "tables": dict(sorted(tables.items()))}
 
 

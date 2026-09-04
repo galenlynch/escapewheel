@@ -62,7 +62,12 @@
       "R56",
       "R57",
       "R58",
-      "R59"
+      "R59",
+      "R60",
+      "R61",
+      "R62",
+      "R63",
+      "R64"
     ]
   },
   "tables": {
@@ -151,6 +156,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "Sample rate if regularly sampled.",
+          "unit": "Hz",
           "since": "R20 \u00a75"
         },
         {
@@ -175,7 +181,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Add after conversion.",
-          "since": "R20 \u00a75"
+          "since": "R20 \u00a75",
+          "unit_from": "unit"
         },
         {
           "name": "metadata",
@@ -281,7 +288,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Increment per position.",
-          "since": "R20 \u00a75"
+          "since": "R20 \u00a75",
+          "unit_from": "coordinate_unit"
         },
         {
           "name": "origin_value",
@@ -289,7 +297,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Value at position 0 (regular numeric axis).",
-          "since": "R20 \u00a75"
+          "since": "R20 \u00a75",
+          "unit_from": "coordinate_unit"
         },
         {
           "name": "step_tick_num",
@@ -555,7 +564,8 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Sample rate if regularly sampled."
+          "description": "Sample rate if regularly sampled.",
+          "unit": "Hz"
         },
         {
           "name": "unit",
@@ -576,7 +586,8 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Add after conversion."
+          "description": "Add after conversion.",
+          "unit_from": "unit"
         },
         {
           "name": "metadata",
@@ -689,7 +700,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Add after conversion.",
-          "since": "R19 \u00a72"
+          "since": "R19 \u00a72",
+          "unit_from": "unit"
         },
         {
           "name": "conversion",
@@ -812,7 +824,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Increment per position.",
-          "since": "R20 \u00a72"
+          "since": "R20 \u00a72",
+          "unit_from": "coordinate_unit"
         },
         {
           "name": "origin_value",
@@ -820,7 +833,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Value at position 0 (regular numeric axis).",
-          "since": "R20 \u00a72"
+          "since": "R20 \u00a72",
+          "unit_from": "coordinate_unit"
         },
         {
           "name": "step_tick_num",
@@ -1137,7 +1151,8 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Tick rate as float, required unless exact tick rate provided."
+          "description": "Tick rate as float, required unless exact tick rate provided.",
+          "unit": "Hz"
         },
         {
           "name": "tick_rate_num",
@@ -1567,6 +1582,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "X in micrometres, in that frame.",
+          "unit": "um",
           "since": "R19 \u00a73"
         },
         {
@@ -1575,6 +1591,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "Y in micrometres.",
+          "unit": "um",
           "since": "R19 \u00a73"
         },
         {
@@ -1583,6 +1600,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "Z in micrometres.",
+          "unit": "um",
           "since": "R19 \u00a73"
         }
       ],
@@ -1670,7 +1688,8 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Impedance."
+          "description": "Impedance.",
+          "unit": "ohm"
         },
         {
           "name": "metadata",
@@ -3094,7 +3113,8 @@
           "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Size."
+          "description": "Size.",
+          "unit": "byte"
         },
         {
           "name": "modified_at",
@@ -3586,6 +3606,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "X in micrometres, in that frame.",
+          "unit": "um",
           "since": "R28 \u00a72-4"
         },
         {
@@ -3594,6 +3615,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "Y in micrometres.",
+          "unit": "um",
           "since": "R28 \u00a72-4"
         },
         {
@@ -3602,6 +3624,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "Z in micrometres.",
+          "unit": "um",
           "since": "R28 \u00a72-4"
         }
       ],
@@ -4069,7 +4092,8 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Firing rate if known."
+          "description": "Firing rate if known.",
+          "unit": "Hz"
         },
         {
           "name": "n_spikes",
