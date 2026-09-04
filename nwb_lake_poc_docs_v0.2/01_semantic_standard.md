@@ -197,6 +197,10 @@ Sampled extracellular voltage over time and channels, represented as a dense arr
 
 A dense array stored outside the table layer, with declared axes. An axis declares its coordinates; a regularly sampled axis declares them as an origin, a step, and a length rather than as stored values (R20 §2.1).
 
+An array asset holds **any** sampled quantity, whatever instrument produced it. This standard names the concepts it defines — §3.16 is the one it defines for extracellular voltage — and it does not enumerate instruments. A packet names its own arrays, and an array names the device that made it (§3.5); a rig fitted with an instrument this standard has never heard of therefore needs no extension, no new concept, and no revision.
+
+`semantic_type` is open (R8 §4). A value this standard does not define is a label and carries no contract, which is the honest state of affairs for a quantity whose meaning lives in the device rather than in the format.
+
 ### 3.18 Media asset
 
 An image or video stored in an ordinary container, with frame timing carried in tables.
