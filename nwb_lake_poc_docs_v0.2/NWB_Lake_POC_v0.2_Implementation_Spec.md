@@ -10,7 +10,7 @@ part number here as it does there.
 
 ## Status of this document
 
-This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41, R43–R66, R68 and R69 applied. R42 was withdrawn; R67 is proposed and is not applied.
+This document set specifies the NWB-Lake proof-of-principle data packet. It is v0.1 with revisions R1–R41, R43–R66 and R68–R70 applied. R42 was withdrawn; R67 is proposed and is not applied.
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
 
@@ -498,7 +498,7 @@ The index counts the frames the asset **holds**, not the exposures the capture p
 
 A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim (R68 §2.1, §2.2). A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets or use it to measure elapsed time (R68 §2.5); what it locates is the frame inside the file.
 
-The time base is not carried in core. The container declares it, and a consumer holding a presentation timestamp holds the file it indexes into (R68 §2.4).
+The asset declares the **rate** those timestamps count at, as an exact rational (R70 §2.1) — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have.
 
 ### 3.19 Source file
 
