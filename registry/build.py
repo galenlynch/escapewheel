@@ -121,7 +121,7 @@ for _role, _names in {
         "input_array_asset_id", "media_asset_id", "parent_clock_id", "parent_curation_id", "probe_id",
         "processing_run_id", "reference_clock_id", "region_id", "session_id", "sorting_run_id",
         "source_file_id",
-        "interval_id", "source_session_id", "stimulus_id", "stream_id", "subject_id", "supersedes_run_id", "trial_id",
+        "interval_id", "parent_device_id", "source_session_id", "stimulus_id", "stream_id", "subject_id", "supersedes_run_id", "trial_id",
         "unit_id",
     ),
     "coordinate": (
@@ -199,6 +199,7 @@ IDENTITY: dict[str, str] = {
     "sorting_run_id": "assigned",
     "source_file_id": "assigned",
     "source_session_id": "assigned",
+    "parent_device_id": "assigned",
     "stimulus_id": "assigned",
     "stream_id": "assigned",
     "subject_id": "assigned",
@@ -888,6 +889,19 @@ def build() -> dict:
             after="clock_id")
     T("core.array_assets")["references"].append(
         {"columns": ["device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
+
+    # ---- R67 §2.1 : a device names what it was attached to ---------------------------------------
+    # R66 made each element of an acquisition chain a device and left them unable to say they
+    # were connected. Self-referencing (R46 §2), nullable because a chain has a root and because
+    # a source that does not state the attachment must not be made to invent one.
+    SINCE[0] = "R67 §2.1"
+    add_col("core.devices",
+            col("parent_device_id", "int32", "nullable",
+                "The device this one was attached to -- a probe's headstage, a headstage's "
+                "connect board. Null at the root of a chain, or where no source states it."),
+            after="serial_number")
+    T("core.devices")["references"].append(
+        {"columns": ["parent_device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
 
     # ---- R70 §2.1 : an asset declares the rate its timestamps count at ---------------------------
     # R68 §2.4 left the time base to the container, which is reachable only while the referenced

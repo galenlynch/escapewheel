@@ -6,7 +6,7 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 <!-- BEGIN generated: counts -->
 ```
-34 tables, 314 columns, 75 references, 64 Tier 2 rules
+34 tables, 315 columns, 76 references, 66 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -89,7 +89,7 @@ declares, and therefore what a generator has to work with:
 <!-- BEGIN generated: structure -->
 ```
 138 required column, not null
-75  reference, resolves
+76  reference, resolves
 34  primary key, unique
 3   closed vocabulary, member of
 3   discriminator, resolvable
@@ -113,7 +113,7 @@ inline-versus-sibling open, to be decided when the content was generated; inline
 a table's whole contract is readable in one place.
 
 <!-- BEGIN generated: rules -->
-64 rules over 22 tables: 53 error, 7 warning, 4 info — the 4 at `info` being the advisory ones (R26 §2), off unless asked for.
+66 rules over 23 tables: 55 error, 7 warning, 4 info — the 4 at `info` being the advisory ones (R26 §2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
@@ -128,6 +128,7 @@ a table's whole contract is readable in one place.
 | `analysis.spike_events` | 2 |
 | `core.array_assets` | 2 |
 | `core.clock_observation_intervals` | 2 |
+| `core.devices` | 2 |
 | `core.event_stream_observation_intervals` | 2 |
 | `core.events` | 2 |
 | `core.media_frames` | 2 |

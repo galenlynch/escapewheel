@@ -71,6 +71,7 @@
       "R64",
       "R65",
       "R66",
+      "R67",
       "R68",
       "R69",
       "R70"
@@ -1552,6 +1553,15 @@
           "description": "Serial number."
         },
         {
+          "name": "parent_device_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it.",
+          "identity": "assigned",
+          "since": "R67 \u00a72.1"
+        },
+        {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
@@ -1565,6 +1575,15 @@
       "references": [
         {
           "columns": [
+            "parent_device_id"
+          ],
+          "resource": "core.devices",
+          "resource_columns": [
+            "device_id"
+          ]
+        },
+        {
+          "columns": [
             "session_id"
           ],
           "resource": "core.sessions",
@@ -1576,7 +1595,20 @@
       "sort": [
         "device_id"
       ],
-      "rules": []
+      "rules": [
+        {
+          "id": "core.devices.parent_chain_well_founded",
+          "level": "error",
+          "message": "a device is its own ancestor, or its attachment chain does not terminate (R67 \u00a72.3)",
+          "sql": "WITH RECURSIVE up(device_id, ancestor, depth) AS (SELECT device_id, parent_device_id, 1 FROM core_devices WHERE parent_device_id IS NOT NULL UNION ALL SELECT u.device_id, d.parent_device_id, u.depth + 1 FROM up u JOIN core_devices d ON d.device_id = u.ancestor WHERE d.parent_device_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT device_id FROM up WHERE ancestor = device_id OR depth >= 64"
+        },
+        {
+          "id": "core.devices.serial_identifies_one_device",
+          "level": "error",
+          "message": "one serial number appears on more than one device row; a device is the physical object (R67 \u00a72.2)",
+          "sql": "SELECT serial_number, COUNT(*) AS n_rows FROM core_devices WHERE serial_number IS NOT NULL GROUP BY serial_number HAVING COUNT(*) > 1"
+        }
+      ]
     },
     "core.electrode_coordinates": {
       "columns": [

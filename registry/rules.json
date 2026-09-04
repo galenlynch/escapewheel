@@ -396,6 +396,20 @@
         "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes_run_id = p.processing_run_id)"
       }
     ],
+    "core.devices": [
+      {
+        "id": "core.devices.parent_chain_well_founded",
+        "level": "error",
+        "message": "a device is its own ancestor, or its attachment chain does not terminate (R67 \u00a72.3)",
+        "sql": "WITH RECURSIVE up(device_id, ancestor, depth) AS (SELECT device_id, parent_device_id, 1 FROM core_devices WHERE parent_device_id IS NOT NULL UNION ALL SELECT u.device_id, d.parent_device_id, u.depth + 1 FROM up u JOIN core_devices d ON d.device_id = u.ancestor WHERE d.parent_device_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT device_id FROM up WHERE ancestor = device_id OR depth >= 64"
+      },
+      {
+        "id": "core.devices.serial_identifies_one_device",
+        "level": "error",
+        "message": "one serial number appears on more than one device row; a device is the physical object (R67 \u00a72.2)",
+        "sql": "SELECT serial_number, COUNT(*) AS n_rows FROM core_devices WHERE serial_number IS NOT NULL GROUP BY serial_number HAVING COUNT(*) > 1"
+      }
+    ],
     "core.media_assets": [
       {
         "id": "core.media_assets.pts_rate_pair_complete",
