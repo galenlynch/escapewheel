@@ -49,6 +49,29 @@ R20 §2.1's compact form therefore does not apply, and R33's rational step would
 error. The axis needs explicit tick coordinates. They are monotonic with a near-constant step, so
 they delta-encode to a small fraction of their 47 MB.
 
+### 2.2 The firmware says why, and R20 §2.1 already anticipated it
+
+`AllenNeuralDynamics/harp.device.sniff-detector`, `firmware/src/main.cpp`:
+
+```c
+dispatch_interval_us = div_u32u32(1'000'000, app_regs.voltage_dispatch_frequency_hz);
+if (int32_t(curr_time_us - next_msg_dispatch_time_us) >= dispatch_interval_us)
+    next_msg_dispatch_time_us += dispatch_interval_us;   // accumulates, so no drift
+```
+
+Register 33 (`RawVoltageDispatchRate`) reads **400**, so the interval is 2500 µs exactly. The
+device schedules on `time_us_32()`, the RP2040's own microsecond timer, accumulating rather than
+re-basing -- so the samples are **evenly spaced on that counter**. The HARP timestamp stamped on
+each message counts a different oscillator, 2.0 ppm away, which is why the intervals land on 78 or
+79 ticks and reach 924 ticks of deviation over 14,704 s.
+
+R20 §2.1 argued exactly this from LFP `times_seg0`: *"after HARP alignment the times are not
+regular in seconds. On the array's own clock they remain perfectly regular -- one tick per sample
+-- and R13's `core.clock_anchors` carries the mapping."* This is the same argument from a
+different device, with firmware as evidence rather than inference. So the axis is R20 §2.1's
+regular form on a dispatch clock, three integers, and the 2 ppm lives in the anchors -- of which
+every one is a measured `(sample_index, harp_tick)` pair, since each message carries its own.
+
 ## 3. The trials table drops configuration, not measurement
 
 The behaviour GUI writes `<session>.json` beside the raw: **264 per-trial arrays**, 27 `B_*`
