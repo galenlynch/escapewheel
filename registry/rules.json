@@ -396,6 +396,26 @@
         "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes_run_id = p.processing_run_id)"
       }
     ],
+    "core.media_assets": [
+      {
+        "id": "core.media_assets.pts_rate_pair_complete",
+        "level": "error",
+        "message": "an asset declares one half of its presentation-timestamp rate; half a rational is unusable (R70 \u00a72.2)",
+        "sql": "SELECT media_asset_id, pts_rate_num, pts_rate_den FROM core_media_assets WHERE (pts_rate_num IS NULL) <> (pts_rate_den IS NULL)"
+      },
+      {
+        "id": "core.media_assets.pts_rate_declared_where_frames_carry_pts",
+        "level": "error",
+        "message": "frames carry pts for an asset that does not say what those timestamps count (R70 \u00a72.2)",
+        "sql": "SELECT a.media_asset_id FROM core_media_assets a WHERE a.pts_rate_num IS NULL AND EXISTS (SELECT 1 FROM core_media_frames f WHERE f.media_asset_id = a.media_asset_id AND f.pts IS NOT NULL)"
+      },
+      {
+        "id": "core.media_assets.pts_rate_positive",
+        "level": "error",
+        "message": "a presentation-timestamp rate is not positive",
+        "sql": "SELECT media_asset_id, pts_rate_num, pts_rate_den FROM core_media_assets WHERE pts_rate_num <= 0 OR pts_rate_den <= 0"
+      }
+    ],
     "core.media_frames": [
       {
         "id": "core.media_frames.frame_index_contiguous",

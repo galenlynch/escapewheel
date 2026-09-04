@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-34 tables, 312 columns, 75 references, 61 Tier 2 rules
+34 tables, 314 columns, 75 references, 64 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R68, R69
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R68, R69, R70
 ```
 
 ## Contents
@@ -502,6 +502,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `name` | string | **required** |  | Name. |
 | `uri` | string | **required** |  | Media file URI. |
 | `format` | string | **required** |  | e.g. mp4. |
+| `pts_rate_num` | int64 | nullable | R70 §2.1 | Presentation timestamps per second in this asset's container: numerator. |
+| `pts_rate_den` | int64 | nullable | R70 §2.1 | Presentation timestamps per second in this asset's container: denominator. |
 | `clock_id` | int32 | nullable |  | Clock for frame timing. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
@@ -512,6 +514,12 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 3
+
+- `core.media_assets.pts_rate_pair_complete` — error: an asset declares one half of its presentation-timestamp rate; half a rational is unusable (R70 §2.2)
+- `core.media_assets.pts_rate_declared_where_frames_carry_pts` — error: frames carry pts for an asset that does not say what those timestamps count (R70 §2.2)
+- `core.media_assets.pts_rate_positive` — error: a presentation-timestamp rate is not positive
 
 ### `core.media_frames`
 

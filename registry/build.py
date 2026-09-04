@@ -150,7 +150,8 @@ for _role, _names in {
         "insertion_name", "institution", "inter_sample_shift", "is_primary", "kind", "label",
         "local_channel_label", "local_electrode_label", "local_unit_label", "manufacturer", "metadata",
         "model", "modified_at", "n_spikes", "name", "normalized_label", "notes", "offset", "origin",
-        "origin_value", "parameters", "payload", "probe_type", "pts", "quality_label",
+        "origin_value", "parameters", "payload", "probe_type", "pts", "pts_rate_den",
+        "pts_rate_num", "quality_label",
         "quality_label_source", "reason", "rewarded", "sample_rate_hz", "scope",
         "semantic_type", "serial_number", "session_description", "session_end_time", "session_start_time",
         "sex", "sha256", "size_bytes", "software_name", "software_version", "sorter_name", "sorter_version",
@@ -887,6 +888,18 @@ def build() -> dict:
             after="clock_id")
     T("core.array_assets")["references"].append(
         {"columns": ["device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
+
+    # ---- R70 §2.1 : an asset declares the rate its timestamps count at ---------------------------
+    # R68 §2.4 left the time base to the container, which is reachable only while the referenced
+    # file is -- the one thing R14 §2.3 does not promise. Rational and expressed as a rate, in the
+    # shape core.clocks.tick_rate_num already uses, so a consumer needs no second convention.
+    SINCE[0] = "R70 §2.1"
+    # Reversed, because each inserts directly after `format` and the numerator reads first.
+    for name, description in (
+        ("pts_rate_den", "Presentation timestamps per second in this asset's container: denominator."),
+        ("pts_rate_num", "Presentation timestamps per second in this asset's container: numerator."),
+    ):
+        add_col("core.media_assets", col(name, "int64", "nullable", description), after="format")
 
     # ---- R68 §2.1 : a presentation timestamp is an integer ---------------------------------------
     # 02's float64 named two quantities a container offers -- its own integer timestamp and that
