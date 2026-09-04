@@ -692,6 +692,15 @@ A `discriminator` column MUST hold a dotted resource identifier, and MUST declar
 | `required` | a defect: the row is uninterpretable |
 | `optional` | a fact: the packet does not hold that resource |
 
+A reader SHOULD offer the resolution: read the kind, take that resource's key from the registry,
+join (R55 §2.3). A discriminator nothing reads is a free-form name with extra steps, which is the
+observed fate of the mechanism this one replaces.
+
+Where a discriminator is paired with a value column, both are nullable and the two MUST agree — a
+row declares both or neither (R49 §2.4). A row declaring neither is **undeterminable**, which a
+consumer MUST report apart from a row whose value resolves to nothing: the fix for one is to record
+the missing half, and for the other to correct what it names.
+
 Resolution takes one of two shapes, and a discriminator declares which by whether it names a paired column.
 
 **Shared key.** The discriminated row and the named resource share a key, so the join is on that key. A resource a shared-key discriminator may name MUST declare a reference back to the discriminated table, and that reference MUST cover the discriminated table's **whole key**. A reference on part of it targets a set that is not unique — it identifies a row of some kind, which is not a foreign key, and the generated anti-join passes while resolving to several rows.
