@@ -146,10 +146,17 @@ A coordinate SHOULD name the processing run that produced it where the writer kn
 
 A monotonic counter with a declared rate and origin.
 
-- MUST declare a tick rate, as a rational where the rate is not an integer.
+- MUST declare a tick rate, as a rational where the rate is not an integer (R4 §4).
 - MAY declare a parent clock, and if so MUST be alignable to it.
 - MUST declare either a linear transform or anchor points, never both (R13 §2).
+- MAY bind its **tick 0 to a wall-clock instant** (R6 §2), which is the only route from a
+  packet's ticks to real time; absent it, ticks relate to each other and to nothing else.
 - A counter that resets mid-session is two clocks (R27 §4).
+
+A tick's zero is where the clock's declared origin says it is — for a sample clock whose origin is
+sample 0 of a recording, tick 0 **is** that sample. A writer MUST NOT re-base a source's sample
+index and a reader MUST NOT assume any base beyond what the origin declares (R45 §3); that
+prohibition is what makes a tick exact.
 
 Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default (R37 §3, R40 §2). A profile or a recipe MAY state a different tolerance; a writer MUST record the value it used.
 

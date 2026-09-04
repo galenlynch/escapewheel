@@ -134,10 +134,23 @@ One rule was struck after data refuted it: `aind_unit_qc.a_peak_is_counted` fail
 
 ## 5. Suggested order of work
 
-1. **Run the compliance scan against the implementation.** The equivalent scan against the spec
-   found ten missing rules; nothing has run it against the registry, writer and validator, so
-   §2 is what is known rather than what there is.
-2. **Decide what `registry_version` is for**, and write the revision. It is the last open
-   divergence and the only one that needs a decision rather than work.
-3. **R65** is drafted and unaccepted: one nullable `device_id` on `core.array_assets`, so an
-   array can name the instrument that made it.
+Before a production trial, in this order:
+
+1. **Package a second session.** Every adapter has been developed and validated against exactly
+   one, `ecephys_786867`. That is the largest unknown here, and there is already measured evidence
+   it will bite: R59 found `ecephys_776259` emits `ccf_id`, `ccf_acronym` and `ccf_name` where
+   786867 emits `brain_region_id` — two exporters of one pipeline disagreeing about core's own
+   column. Until a second session commits clean, "it works" means "it works on one file layout".
+2. **Decide what `registry_version` is for**, and write the revision. It reads `0.1.0` everywhere
+   and is pinned deliberately while the schema moves; two packets claiming one version with
+   incompatible schemas is the failure the field exists to prevent. Free to settle now, expensive
+   once anyone outside holds a packet. §2.5 has the reasoning. The only item here needing a
+   decision rather than work.
+3. **Run the compliance scan against the implementation.** The equivalent scan against the spec
+   found ten missing rules; nothing has run it against the registry, writer and validator, so §2
+   is what is known rather than what there is.
+
+Done since this document was written: R65 through R70 are accepted and implemented, the ten
+repositories became one with their histories preserved, and `python verify.py` runs every
+generator and every check in 25 s — including the stage nothing had: regenerate, then demand a
+clean tree.
