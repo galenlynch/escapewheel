@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from nwb_lake_writer.recipe import Recipe
-from nwb_lake_writer.session import CONSUMES, RecipeError, order
+from nwb_lake_writer.session import CONSUMES, RecipeError, _note_unclaimed, order
 
 BASE = """
 [packet]
@@ -174,3 +174,47 @@ def test_an_option_that_is_set_is_not_reported(tmp_path):
     )
     problems = Recipe.load(path).check({"tables": {"core.trials": {"columns": [], "references": []}}})
     assert not [p for p in problems if "zone" in str(p)]
+
+
+class Noted:
+    """The one thing `_note_unclaimed` needs of a source: somewhere to put a note."""
+
+    def __init__(self) -> None:
+        self.notes: list[str] = []
+
+
+def test_a_produced_resource_no_source_claims_is_noted(tmp_path):
+    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
+    source = Noted()
+    _note_unclaimed(recipe, recipe.sources[0], source, {"core.units": 4, "core.unit_quality_labels": 19_061})
+    assert len(source.notes) == 1
+    assert "core.unit_quality_labels (19,061 rows)" in source.notes[0]
+    assert "discarded" in source.notes[0]
+
+
+def test_a_resource_another_source_claims_is_not_noted(tmp_path):
+    body = (
+        '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'
+        '\n[[source]]\nkind = "nwb"\nroot = "n"\nowns = ["core.probes"]\n'
+    )
+    recipe = Recipe.load(write(tmp_path, body))
+    source = Noted()
+    # The sorter offers core.probes too; cli.PREFERRED gives it to the NWB, so losing it here
+    # is the design rather than an omission.
+    _note_unclaimed(recipe, recipe.sources[0], source, {"core.units": 4, "core.probes": 10})
+    assert source.notes == []
+
+
+def test_an_empty_unclaimed_resource_is_not_noted(tmp_path):
+    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
+    source = Noted()
+    _note_unclaimed(recipe, recipe.sources[0], source, {"core.units": 4, "core.unit_quality_labels": 0})
+    assert source.notes == []
+
+
+def test_what_the_recipe_itself_supplies_is_not_noted(tmp_path):
+    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
+    source = Noted()
+    # RECIPE_SUPPLIES: the recipe writes these, so a source producing them loses to it by design.
+    _note_unclaimed(recipe, recipe.sources[0], source, {"core.processing_runs": 2, "core.subjects": 1})
+    assert source.notes == []

@@ -36,7 +36,7 @@ from numpy.typing import NDArray
 from nwb_lake_reader.clocks import BOUND, align
 
 from .extensions import load as load_extension
-from .recipe import Recipe, SourceSpec
+from .recipe import RECIPE_SUPPLIES, Recipe, SourceSpec
 from .sources.compensations import describe
 from .writer import PacketWriter, StagedArray
 
@@ -492,25 +492,37 @@ def _first_spike_tick(context: Context, by_clock: Mapping[str, Any], bound: floa
     return min(earliest)
 
 
-def _add_batches(writer: PacketWriter, spec: SourceSpec, source: Any, counts: dict[str, int]) -> None:
+def _add_batches(writer: PacketWriter, spec: SourceSpec, source: Any, counts: dict[str, int]) -> dict[str, int]:
     """Stream whatever a source streams, rather than holding it as Python mappings.
 
     `core.spike_events` is the case that forced the streaming path -- 10^8 rows, and a dict per
     row is two orders of magnitude more memory than the Parquet file it becomes. Any source may
     use it for any resource it claims, because an extension's table may be as large as a core
     one and nothing about the reason was ever specific to spikes.
+
+    Returns
+    -------
+    dict
+        Rows the source produced per resource, whether or not this spec claimed them, for
+        `_unclaimed` to compare against the recipe.
     """
-    if "core.spike_events" in spec.claims and hasattr(source, "spike_batches"):
-        writer.add_batches("core.spike_events", source.spike_batches(batch_rows=BATCH_ROWS))
-        counts["core.spike_events"] = source.spike_count
+    produced: dict[str, int] = {}
+    if hasattr(source, "spike_batches"):
+        # Counted from the arrays' headers, so an unclaimed spike table still reports its size.
+        produced["core.spike_events"] = source.spike_count
+        if "core.spike_events" in spec.claims:
+            writer.add_batches("core.spike_events", source.spike_batches(batch_rows=BATCH_ROWS))
+            counts["core.spike_events"] = produced["core.spike_events"]
     streamed = getattr(source, "batches", None)
     if streamed is None:
-        return
+        return produced
     offered = source.offers()
     for resource_id, batches in streamed().items():
+        produced[resource_id] = offered.get(resource_id, 0)
         if resource_id in spec.claims:
             writer.add_batches(resource_id, batches)
-            counts[resource_id] = offered.get(resource_id, 0)
+            counts[resource_id] = produced[resource_id]
+    return produced
 
 
 def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[dict[str, Any]]]:
@@ -654,9 +666,9 @@ def build(
         context.sources[spec.kind] = source
         _harvest(spec, source, context, recipe)
 
-        _add_records(writer, spec, source, context, counts)
-
-        _add_batches(writer, spec, source, counts)
+        produced = _add_records(writer, spec, source, context, counts)
+        produced.update(_add_batches(writer, spec, source, counts))
+        _note_unclaimed(recipe, spec, source, produced)
         if spec.kind == "waveforms" and spec.options.get("array_asset_id", "waveform_mean"):
             _stage_array(writer, spec, source, say)
         # Any adapter may stage arrays, not only the waveform one. A source that has them says
@@ -761,9 +773,17 @@ def _add_records(
     source: Any,
     context: Context,
     counts: dict[str, int],
-) -> None:
-    """Add every table a source owns to the writer, counting the rows."""
+) -> dict[str, int]:
+    """Add every table a source owns to the writer, counting the rows.
+
+    Returns
+    -------
+    dict
+        Rows the source produced per resource, claimed or not, for `_unclaimed` to report.
+    """
+    produced: dict[str, int] = {}
     for resource, rows in _records(spec, source, context).items():
+        produced[resource] = len(rows)
         if resource not in spec.claims:
             continue
         if resource == "core.clock_observation_intervals":
@@ -771,6 +791,31 @@ def _add_records(
             context.observed.extend(rows)
         writer.add(resource, rows)
         counts[resource] = counts.get(resource, 0) + len(rows)
+    return produced
+
+
+def _note_unclaimed(recipe: Recipe, spec: SourceSpec, source: Any, produced: Mapping[str, int]) -> None:
+    """Note what a source produced that nothing in the recipe claims.
+
+    `owns` is exclusive and discards in silence, so rows every source produces and none claims
+    leave the packet with no record of the omission. The symptom surfaces layers later and
+    against the wrong table -- a Tier 2 rule left-joining one that was never staged reports its
+    finding on the table that *was*. Every other recipe defect is refused before a byte is read
+    (`Recipe.check`); this one needs the source to say what it holds, so it is a note, and
+    `--strict` refuses on it.
+
+    A resource some *other* source claims is not reported: `cli.PREFERRED` exists because two
+    sources offer the same rows and the one that knows more about them wins, which makes the
+    loser's copy discarded by design rather than by omission.
+    """
+    claimed = {resource for entry in recipe.sources for resource in entry.claims}
+    claimed.update(RECIPE_SUPPLIES)
+    dropped = {resource: rows for resource, rows in produced.items() if resource not in claimed and rows}
+    notes = getattr(source, "notes", None)
+    if not dropped or notes is None:
+        return
+    listed = ", ".join(f"{resource} ({rows:,} rows)" for resource, rows in sorted(dropped.items()))
+    notes.append(f"{spec.kind} produced {listed}, which no source in this recipe claims; discarded")
 
 
 def _declare_origin(context: Context, say: Callable[[str], None]) -> None:
