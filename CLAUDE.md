@@ -37,8 +37,15 @@ Phase 7 Iceberg experiment. It also prescribes the `nwb_lake/` package layout to
   replacement rule in RFC 2119 language. When an **accepted** revision and the frozen spec disagree,
   implement the revision; a **proposed** one is not yet binding.
 - `conformance/` — mechanical probes producing the measured evidence revisions cite
-  (`zarr-probe/`, `parquet-probe/`, `spec-sweep/`). Re-run them before trusting a revision's
-  numbers against newer library versions.
+  (`zarr-probe/`, `parquet-probe/`, `spec-sweep/`, `interval-kinds/`). Re-run them before trusting
+  a revision's numbers against newer library versions.
+
+  It overlaps `fixtures/` in appearance and not in kind, which is why both stay: `fixtures/` is
+  the conformance **corpus**, a durable artifact any implementation runs to prove it agrees, and
+  `conformance/` is **evidence**, a lab notebook of one-off measurements that a revision cites
+  once and that nothing re-runs. `spec-sweep/tables.py` leads a double life as the R9 §2 ledger
+  `registry/check.py` checks itself against, which argues for moving it into `registry/`; seven
+  revisions cite its path, so it stays where they can find it.
 - `inventory/` — `05` Stage 1 source inventories: what a real dataset offers per core
   resource, before anything is staged. Findings here become revisions.
 - `nwb-lake-reader/` — the reference reader (Phase 1). Opens a packet, resolves resources,
