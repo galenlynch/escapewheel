@@ -96,7 +96,7 @@ A consolidated single-file rendering is provided as `NWB_Lake_POC_v0.2_Implement
 
 ### 5.1 Identifiers a packet records
 
-This document set is v0.2. The identifiers a packet records are unchanged by it, and a packet written against v0.1 remains conforming:
+This document set is v0.2. The **identifier strings** a packet records are unchanged by it:
 
 | field | value |
 |---|---|
@@ -104,6 +104,10 @@ This document set is v0.2. The identifiers a packet records are unchanged by it,
 | `semantic_standard_version` | `nwb-lake-semantic-v0.1` |
 | `logical_standard_version` | `nwb-lake-logical-v0.1` |
 | `registry_version` | `0.1.0` |
+
+A packet built against v0.1's *schema* does **not** remain conforming. Several accepted revisions are breaking: R53 retyped every identifier from `string` to `int32`, R48 made a `role` required on every column with no default, and R54 replaced `core.trials` with `core.intervals` keyed by a discriminator. Those version strings identify the standard a packet was written against, not a guarantee that older physical shapes still validate — which is why §5.2 makes the embedded registry the authority.
+
+A packet remains conforming across v0.1 and v0.2 only where it was rebuilt against the current registry. Migration is regeneration (R53 §5): every packet is reproducible from its sources through the recipe recorded in `core.processing_runs.parameters`, so a conversion tool would be a second implementation of the writer that ran once.
 
 ### 5.2 Recording the registry version
 
