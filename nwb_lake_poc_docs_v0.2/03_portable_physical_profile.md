@@ -166,4 +166,6 @@ A writer records a `sha256` over each packet-owned resource by default (R52 §2)
 
 A digest is whole-file, not per-row-group. Parquet cannot be appended to, so "which pages moved" is not a question the format can be asked, and Parquet's own page CRC32 is a corruption detector that a rewritten file passes.
 
+A packet-owned resource recording no digest is not checked, and a verification report MUST state how many it skipped for that reason (R52 §2.3). A pass that does not say what it skipped reports clean on resources it never looked at.
+
 Verification of external resources is optional and layered (Part 04 §5.3).

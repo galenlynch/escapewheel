@@ -94,6 +94,8 @@ Map source objects onto the logical schemas: assign identifiers packet-wide befo
 
 Normalization MUST be deterministic in the recipe. Two runs of the same recipe over the same sources produce the same packet.
 
+An interval is closed (01 §2.3). A source whose intervals are half-open — `[start, stop)` — MUST be converted, which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
+
 An adapter compensating for a known defect in its source MUST declare the compensation, and every compensation applied MUST be recorded in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
 
 ## 5. Stage 4: Validate

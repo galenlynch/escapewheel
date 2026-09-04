@@ -29,7 +29,9 @@ An assigned identifier's owning table MUST carry a `*_name` column holding the n
 
 Every event, interval, spike time, dense time axis, and media frame timing record MUST declare a time basis: an integer tick and a `clock_id`.
 
-Floating-point seconds MUST NOT be the canonical representation. Seconds MAY be derived, and are defined from the session's time origin (Part 02, R39 §2.1). A consumer lacking that origin MUST refuse to derive seconds rather than assume one.
+Floating-point seconds MUST NOT be the canonical representation. Seconds MAY be derived, and are defined from the session's time origin (R39 §2.1). A consumer lacking that origin MUST refuse to derive seconds rather than assume one.
+
+A writer that cannot map one of its clocks' observation starts onto the reference MUST NOT declare a time origin (R39 §2.4). An origin it could not compute shifts every second a consumer derives.
 
 A tick is a coordinate, not a label and not a quantity (R45 §3). A writer MUST NOT re-base a source's sample index: for a sample clock, tick 0 is sample 0.
 
@@ -54,6 +56,8 @@ A unit is declared on the column, not left to the column's name (R56 §2).
 ### 2.6 Currency
 
 Where several derived results of the same kind and scope coexist, a consumer MUST NOT silently choose between them. A preference is declared, keyed on the producing run (R41 §2), and a run declares the scope it is about (R44 §2). A run declaring no scope is undeterminable, which a consumer MUST report separately from ambiguous.
+
+Where a run supersedes another, the chain MUST be well-founded: a run MUST NOT supersede itself, directly or transitively (R41 §2.2).
 
 ### 2.7 Extension
 
@@ -117,7 +121,13 @@ A position of an electrode or unit in a declared frame.
 
 The vocabulary is open. A consumer that does not recognise a basis MUST NOT treat the coordinate as `measured` (R58 §2.2).
 
-A coordinate MAY carry an atlas annotation: the structure the position falls in, as an identifier and a label (R59 §2). An electrode is not in a region; a position is.
+A coordinate MAY carry an atlas annotation: the structure the position falls in, as an identifier and a label (R59 §2). An electrode is not in a region; a position is, so the annotation belongs to the coordinate rather than to the contact.
+
+Where the identifier is present the label SHOULD be too, so a consumer without the atlas can still read the annotation. A structure's full name and its ancestry path MUST NOT be carried as columns: both are derivable from the identifier, and an ancestry path is a list, which Part 02 §5.2 forbids in a delimited string.
+
+A validator MUST NOT treat an absent annotation as a finding. A position outside any declared structure, or one no registration covered, is a fact about the session.
+
+A coordinate SHOULD name the processing run that produced it where the writer knows it (R60 §2). That is provenance — which run produced the row that is there — and not a choice between rows.
 
 ### 3.9 Clock
 
@@ -128,7 +138,9 @@ A monotonic counter with a declared rate and origin.
 - MUST declare either a linear transform or anchor points, never both (R13 §2).
 - A counter that resets mid-session is two clocks (R27 §4).
 
-Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance (R37 §3, R40 §2).
+Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default (R37 §3, R40 §2). A profile or a recipe MAY state a different tolerance; a writer MUST record the value it used.
+
+A writer reaching past one median anchor interval MUST measure its error and MUST record the median, p95, and maximum, so a consumer can judge the packet by a stricter rule than the writer applied. It MUST record how many rows it dropped for falling outside the bound **even when that count is zero** (R40 §2.3): silence is what lets a reader and a writer disagree about which rows exist.
 
 ### 3.10 Interval
 

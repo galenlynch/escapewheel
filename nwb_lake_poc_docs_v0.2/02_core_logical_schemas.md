@@ -8,6 +8,8 @@ This part defines how a logical schema is declared, what a declaration must cont
 
 The column-level definitions themselves are not written here. They are data (§9), carried in a registry document that a packet embeds and that generates the checks of Part 05. This part is the rules the registry obeys; the registry is the schema.
 
+Two renderings of that registry accompany this specification and are **generated, never edited**: `registry/logical_schemas.json`, which is normative and is what a packet embeds, and `registry/tables.md`, a human-readable listing of every table and column with the revision that introduced each (§9.4). Where this part and a rendering disagree, this part states the rule and the rendering states the current content.
+
 ## 2. Table resource requirements
 
 Every table resource MUST declare:
@@ -48,6 +50,8 @@ Column names MUST be lowercase snake case.
 
 A name is a property of the registry rather than of any packet's rows, so naming is checked against the declaration and not by a validation rule (R48 §4). An exception MUST be declared with a reason.
 
+A source-provenance label — `local_electrode_label`, `local_channel_label`, `local_unit_label` — is a `string` carrying whatever base the producing software used, and MUST NOT be used as an offset into any packet resource (R5 §5, R8 §2).
+
 ## 5. Type system
 
 ### 5.1 Permitted types
@@ -63,6 +67,8 @@ string  int32  int64  float32  float64  bool  timestamp  date  json_string
 `list`, `struct`, and `map` MUST NOT be used (R3 §2.1). A repeated value becomes a child table; a semi-structured value becomes a `json_string` in an optional column.
 
 This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps a native reader viable in a language without an embedded SQL engine.
+
+A writer SHOULD NOT fill a `json_string` column routinely. Doing so defeats that guarantee in practice: a column present on every row forces a parse on every row, in exactly the table where a consumer works. A value that varies per row and is queried belongs in a typed column of a specialising resource; a value constant across the table belongs once, on the table that owns the whole.
 
 ### 5.3 Fixed representations
 
@@ -103,6 +109,8 @@ The role is what makes index-base conversion derivable from a packet rather than
 
 An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column.
 
+A `carried` identifier gets no name column and MUST NOT be given one: the value is already the source's own, so a name beside it would be a second identity for one thing.
+
 ### 8.3 Discriminator
 
 A `discriminator` column MUST hold a dotted resource identifier, and MUST declare `resolves` as `required` or `optional` (R55 §2.2):
@@ -112,7 +120,15 @@ A `discriminator` column MUST hold a dotted resource identifier, and MUST declar
 | `required` | a defect: the row is uninterpretable |
 | `optional` | a fact: the packet does not hold that resource |
 
-A discriminator paired with a value column MUST declare `discriminates`, naming that column. A paired value holds one identifier and so can only name a resource with a single-column primary key.
+Resolution takes one of two shapes, and a discriminator declares which by whether it names a paired column.
+
+**Shared key.** The discriminated row and the named resource share a key, so the join is on that key. A resource a shared-key discriminator may name MUST declare a reference back to the discriminated table, and that reference MUST cover the discriminated table's **whole key**. A reference on part of it targets a set that is not unique — it identifies a row of some kind, which is not a foreign key, and the generated anti-join passes while resolving to several rows.
+
+A detail table therefore carries the discriminator as a constant column, restating in every row what its own identity implies. A column holding one value costs almost nothing once encoded, and what it buys is a reference that identifies a row.
+
+The reference runs extension → core, so a discriminator names downward while the integrity constraint points upward.
+
+**Paired value.** A separate column holds an identifier in the named resource's key space, and the discriminator MUST declare `discriminates` naming that column. A paired value holds one identifier, so the named resource's primary key MUST be a single column, and the value MUST be a `string` matching that key where it is `carried` or its `*_name` where it is `assigned`.
 
 Core MAY name an extension's resource through a discriminator. It MUST NOT reference one (R55 §5): naming does not create a dependency.
 
@@ -121,6 +137,8 @@ Core MAY name an extension's resource through a discriminator. It MUST NOT refer
 A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit_from` naming a column that carries it. A `coordinate` column MUST declare `clock_from` where the clock is not that row's `clock_id` (R56 §2).
 
 `clock_from` names a column of the same table or a one-hop `resource.column`. A consumer resolves it rather than guessing, because converting on the wrong clock fails silently.
+
+A consumer MAY label a quantity with its declared unit, and MUST NOT silently compare or combine two columns whose declared units differ (R56 §2.5).
 
 ## 9. The registry
 
@@ -151,6 +169,8 @@ A scorer's own `label` is open, because aggregating over scorers is incompatible
 ### 9.4 Provenance of a declaration
 
 A column SHOULD carry `since`, naming the revision that introduced or last changed it (R29 §2), so that the generated schema reference answers both what a table is and why.
+
+A column whose role is declared SHOULD NOT restate its base in its description (R48 §2.5). The role carries it, and prose repeating it is a second statement that can disagree with the first.
 
 ## 10. Validation rules
 
