@@ -115,6 +115,8 @@ precision; `INT96` MUST NOT be used. Dates MUST be Parquet `DATE`, int32 days si
 
 A packet-owned array MUST be Zarr v3 (R21 §3.1). A referenced array MAY be Zarr v2, because a packet does not control how an external producer wrote it.
 
+An array MUST use a **regular chunk grid** (R3 §7.1): every chunk the same shape, the last along each axis permitted to be partial. An irregular grid is expressible in Zarr and is not readable by every binding.
+
 Stated as the prohibition a validator can check: `physical_profile: "zarr_v2"` MUST NOT appear on a resource that is not `external: true` (R21 §3.2).
 
 Each array resource declares its own Zarr version in the catalog. A reader MUST check a resource's `physical_profile` together with its `codecs` before opening it, and MUST fail **for that resource**, naming whichever it lacks — the per-resource degradation R15 §2 requires applies to the version as much as to the codec, because a reader may support a codec in one Zarr version and not the other.
@@ -130,6 +132,13 @@ A column-major binding enumerates axes in reverse. The client adapts; the format
 Every axis MUST declare its coordinates in `core.array_dimensions`, in one of the forms of R20 §2. A regularly sampled axis declares an origin tick, a step, and a length rather than storing per-sample values.
 
 A step MAY be rational, declared as a numerator and denominator (R33 §2): a 30 ms bin at 31,250 Hz is 937.5 ticks.
+
+
+An axis MUST declare no more than one coordinate form: two descriptions of the same positions can disagree and nothing would say which governs (R20 §3).
+
+A rational step is a numerator and a denominator. `step_tick_den`, where present, MUST be positive, the numerator MUST be present wherever an origin is, and the pair SHOULD be in lowest terms so two packets describing the same axis describe it identically (R33 §2).
+
+Where an array declares both a sampling rate and a regular tick axis, the two describe the same thing and MUST agree (R20 §4). The rate is retained as a validated denormalization, not as a second source of truth.
 
 ### 6.4 Codecs
 

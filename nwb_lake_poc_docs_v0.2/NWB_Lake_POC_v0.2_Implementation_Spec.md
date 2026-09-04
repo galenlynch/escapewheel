@@ -197,6 +197,8 @@ A packet is divided into layers by namespace prefix.
 | `analysis` | derived products, reproducible from the canonical resources | no |
 | `nwb` | deferred compatibility projection | no |
 
+A layer MAY reference a layer beneath it and MUST NOT reference one above (R20 §5.1). Core does not reference analysis, and neither references an extension — a discriminator names without referencing, which is why core is allowed that one (R55 §2.6).
+
 A packet's **canonical** resources are its canonical core resources together with its canonical
 extension resources (R71 §2.1). Core is not the whole of what is canonical: R54 sends a task's own
 facts — which side the animal licked, whether it was rewarded — to a typed extension, and no
@@ -679,6 +681,16 @@ Every column MUST declare exactly one role, from a closed vocabulary with no def
 
 The role is what makes index-base conversion derivable from a packet rather than hard-coded in each one-based client (R3 §6). A `structural_index` converts at the client boundary; a `coordinate` does not.
 
+### 8.1.1 Index base
+
+A **structural index** addresses a position in a stored resource and MUST be a **0-based offset**. A client converting to a 1-based language MUST convert at the boundary (R3 §6); the format picks one base and clients adapt, because an offset whose base changes per reader is not an offset.
+
+A **source label** is copied verbatim from acquisition or sorting software. Its base is whatever that software used, and it MUST NOT be used as an offset into any packet resource.
+
+A **coordinate** is neither: copied verbatim like a source label, but used arithmetically, which a source label MUST NOT be (R45 §2.5). Its zero is where its clock's origin says it is.
+
+Because a reference relates columns of the same role (§7), converting every structural index at a boundary is join-preserving by construction.
+
 ### 8.2 Identity
 
 An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column.
@@ -998,6 +1010,8 @@ precision; `INT96` MUST NOT be used. Dates MUST be Parquet `DATE`, int32 days si
 
 A packet-owned array MUST be Zarr v3 (R21 §3.1). A referenced array MAY be Zarr v2, because a packet does not control how an external producer wrote it.
 
+An array MUST use a **regular chunk grid** (R3 §7.1): every chunk the same shape, the last along each axis permitted to be partial. An irregular grid is expressible in Zarr and is not readable by every binding.
+
 Stated as the prohibition a validator can check: `physical_profile: "zarr_v2"` MUST NOT appear on a resource that is not `external: true` (R21 §3.2).
 
 Each array resource declares its own Zarr version in the catalog. A reader MUST check a resource's `physical_profile` together with its `codecs` before opening it, and MUST fail **for that resource**, naming whichever it lacks — the per-resource degradation R15 §2 requires applies to the version as much as to the codec, because a reader may support a codec in one Zarr version and not the other.
@@ -1013,6 +1027,13 @@ A column-major binding enumerates axes in reverse. The client adapts; the format
 Every axis MUST declare its coordinates in `core.array_dimensions`, in one of the forms of R20 §2. A regularly sampled axis declares an origin tick, a step, and a length rather than storing per-sample values.
 
 A step MAY be rational, declared as a numerator and denominator (R33 §2): a 30 ms bin at 31,250 Hz is 937.5 ticks.
+
+
+An axis MUST declare no more than one coordinate form: two descriptions of the same positions can disagree and nothing would say which governs (R20 §3).
+
+A rational step is a numerator and a denominator. `step_tick_den`, where present, MUST be positive, the numerator MUST be present wherever an origin is, and the pair SHOULD be in lowest terms so two packets describing the same axis describe it identically (R33 §2).
+
+Where an array declares both a sampling rate and a regular tick axis, the two describe the same thing and MUST agree (R20 §4). The rate is retained as a validated denormalization, not as a second source of truth.
 
 ### 6.4 Codecs
 

@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 114
+undisposed = 96
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -858,4 +858,76 @@ note = "restored 2026-09-04; one unscoped run makes the whole group undeterminab
 disposition = "rationale"
 
 [clause."R44 §5"]
+disposition = "rationale"
+
+[clause."R3 §2.2"]
+disposition = "registry"
+note = "the columns R3 §2.1 changed; the ban on nested types is stated in Part 02 §5.2"
+
+[clause."R3 §2.3"]
+disposition = "rationale"
+
+[clause."R3 §3.0"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §6"
+
+[clause."R3 §3.4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+
+[clause."R3 §4"]
+disposition = "registry"
+note = "core.units gains n_spikes, first_spike_tick, last_spike_tick"
+
+[clause."R3 §5.1"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.2"
+
+[clause."R3 §5.2"]
+disposition = "rationale"
+
+[clause."R3 §6"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.1.1"
+note = "restored 2026-09-04; the index base R45 §2.5 and R48 both build on was absent"
+
+[clause."R3 §6.1"]
+disposition = "registry"
+note = "core.array_channels gains its axis binding"
+
+[clause."R3 §7.1"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.1"
+note = "restored 2026-09-04; the regular chunk grid was absent"
+
+[clause."R3 §7.3"]
+disposition = "rationale"
+note = "the measurements behind the sort order"
+
+[clause."R20 §2.1"]
+disposition = "registry"
+
+[clause."R20 §2.2"]
+disposition = "registry"
+
+[clause."R20 §3"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.3"
+
+[clause."R20 §4"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.3"
+note = "restored 2026-09-04; the rate and a regular tick axis must agree"
+
+[clause."R20 §5.1"]
+disposition = "applied"
+where = "00_architecture.md §3"
+note = "restored 2026-09-04; a layer references inward only"
+
+[clause."R33 §2"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §6.3"
+note = "restored 2026-09-04; the denominator's positivity and lowest terms were absent"
+
+[clause."R33 §5"]
 disposition = "rationale"

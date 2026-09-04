@@ -116,6 +116,16 @@ Every column MUST declare exactly one role, from a closed vocabulary with no def
 
 The role is what makes index-base conversion derivable from a packet rather than hard-coded in each one-based client (R3 §6). A `structural_index` converts at the client boundary; a `coordinate` does not.
 
+### 8.1.1 Index base
+
+A **structural index** addresses a position in a stored resource and MUST be a **0-based offset**. A client converting to a 1-based language MUST convert at the boundary (R3 §6); the format picks one base and clients adapt, because an offset whose base changes per reader is not an offset.
+
+A **source label** is copied verbatim from acquisition or sorting software. Its base is whatever that software used, and it MUST NOT be used as an offset into any packet resource.
+
+A **coordinate** is neither: copied verbatim like a source label, but used arithmetically, which a source label MUST NOT be (R45 §2.5). Its zero is where its clock's origin says it is.
+
+Because a reference relates columns of the same role (§7), converting every structural index at a boundary is join-preserving by construction.
+
 ### 8.2 Identity
 
 An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column.
