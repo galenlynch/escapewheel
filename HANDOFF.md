@@ -100,9 +100,32 @@ and the parameters block were gated on the count being non-zero. A reader could 
 clock that was checked and passed from one never checked. The packet now reports ten clocks where
 it reported four.
 
-**What this pass did not do:** walk all 240 sentences. It cleared the artifact layer exhaustively
-and sampled the behavioural layer — R10, R36 §2.4, R38, R39, R40 and R45 were checked against the
-code; the other 26 writer obligations, and the 42 validator and 33 reader ones, were not.
+**Two more writer obligations were not met, and are now fixed.**
+
+`prune` read a `retention` object from the manifest, the writer never wrote one, and the manifest
+schema did not declare the property — so the operation consumed a field nothing could legitimately
+produce, and R61 §2.2's *"a writer SHOULD emit one"* was unmet at all three layers. Every manifest
+now declares R61's defaults: one kept version, no age limit.
+
+`core.intervals.metadata` was filled on **450 of 450** rows with 10 keys and 138 KB of JSON, and
+all ten — `bait_left`, `reward_probabilityL`, `lickspout_position_x` and the rest — are already
+typed columns of `dynamic_foraging.trials`. R54 §2.5 forbids exactly this: filling that column
+routinely puts an extension's typed columns back into a string no rule can see and every row must
+parse. The column is now absent from the packet and carriage is an opt-in for a task with no
+extension.
+
+**Every writer and validator obligation has now been walked.** The 32 writer obligations: three
+were unmet (R40 §2.3, R61 §2.2, R54 §2.5) and are fixed; the rest hold, including R52's digest on
+34 of 34 owned resources, R57's `$schema` first, R64's `nominal` on 3,840 probe-frame contacts,
+R59's absent `ccf_name`, R44's scope on 22 of 22 runs, R70's paired rate, and R67's one device per
+instrument. The 42 validator obligations hold, several vacuously and correctly — R57's two MUST
+NOTs are satisfied by `$schema` appearing nowhere in the validator or reader, which is what "MUST
+NOT require, MUST NOT dereference" asks for.
+
+**What this pass did not do:** the 33 reader/consumer obligations. Most are prohibitions on a
+consumer rather than on this codebase — R58 §2.2's "MUST NOT treat an unrecognised basis as
+measured" binds whoever reads the packet — but the reference reader is a consumer too, and nothing
+has checked it against them.
 
 ## 3. The packaging layer
 
