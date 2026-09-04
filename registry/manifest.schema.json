@@ -18,6 +18,56 @@
     "validation"
   ],
   "properties": {
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "creators": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dataset_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "extensions": {
+      "description": "Extension registries this packet carries (`09` \u00a76, R17). Each is a registry document in R2's format, namespaced by its extension_id. A core validator verifies the declared file exists and MUST NOT require its schema.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "registry"
+        ],
+        "properties": {
+          "version": {
+            "description": "The extension registry's own registry_version (R17 \u00a75).",
+            "type": "string"
+          },
+          "registry": {
+            "description": "Where the registry document lives, relative to the packet root.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "license": {
+      "type": "string"
+    },
+    "logical_standard_version": {
+      "type": "string"
+    },
     "packet_id": {
       "type": "string",
       "minLength": 1
@@ -29,20 +79,65 @@
     "profile_id": {
       "const": "nwb-lake-portable-v0.1"
     },
-    "semantic_standard_version": {
-      "type": "string"
-    },
-    "logical_standard_version": {
-      "type": "string"
+    "provenance": {
+      "description": "Optional; provenance is SHOULD, not MUST (R9 \u00a75).",
+      "type": "object",
+      "properties": {
+        "source_files_resource": {
+          "type": "string"
+        },
+        "processing_runs_resource": {
+          "type": "string"
+        },
+        "processing_run_inputs_resource": {
+          "type": "string"
+        },
+        "import_processing_run_id": {
+          "type": "string"
+        }
+      }
     },
     "registry_version": {
       "description": "The registry this packet was written against (R2 \u00a78).",
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
-    "created_at": {
-      "type": "string",
-      "format": "date-time"
+    "release_id": {
+      "type": "string"
+    },
+    "required_codecs": {
+      "description": "The union of every resource's codecs (R15 \u00a73). Answers whether a reader can use the whole packet; it does not gate individual reads.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    },
+    "retention": {
+      "type": "object",
+      "description": "How many superseded manifests this packet retains, and for how long (R61 \u00a72.2). Both are floors: a manifest is expired only when both permit it. Absent means the defaults, one kept version and no age limit.",
+      "properties": {
+        "keep_versions": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Superseded manifests to retain. Default 1."
+        },
+        "keep_days": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Drop a superseded manifest older than this. Absent means age alone never expires one."
+        }
+      },
+      "additionalProperties": false
+    },
+    "semantic_standard_version": {
+      "type": "string"
     },
     "sessions": {
       "description": "Every session in the packet (R1 \u00a74). One entry in the primary single-session case.",
@@ -53,46 +148,8 @@
       },
       "uniqueItems": true
     },
-    "required_codecs": {
-      "description": "The union of every resource's codecs (R15 \u00a73). Answers whether a reader can use the whole packet; it does not gate individual reads.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
-    },
-    "dataset_id": {
-      "type": "string"
-    },
-    "release_id": {
-      "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "creators": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "license": {
-      "type": "string"
-    },
-    "keywords": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
     "source_summary": {
       "type": "object"
-    },
-    "resources": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/resource"
-      }
     },
     "validation": {
       "type": "object",
@@ -123,46 +180,6 @@
         "report_uri": {
           "type": "string"
         }
-      }
-    },
-    "provenance": {
-      "description": "Optional; provenance is SHOULD, not MUST (R9 \u00a75).",
-      "type": "object",
-      "properties": {
-        "source_files_resource": {
-          "type": "string"
-        },
-        "processing_runs_resource": {
-          "type": "string"
-        },
-        "processing_run_inputs_resource": {
-          "type": "string"
-        },
-        "import_processing_run_id": {
-          "type": "string"
-        }
-      }
-    },
-    "extensions": {
-      "description": "Extension registries this packet carries (`09` \u00a76, R17). Each is a registry document in R2's format, namespaced by its extension_id. A core validator verifies the declared file exists and MUST NOT require its schema.",
-      "type": "object",
-      "additionalProperties": {
-        "type": "object",
-        "required": [
-          "registry"
-        ],
-        "properties": {
-          "version": {
-            "description": "The extension registry's own registry_version (R17 \u00a75).",
-            "type": "string"
-          },
-          "registry": {
-            "description": "Where the registry document lives, relative to the packet root.",
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
       }
     }
   },

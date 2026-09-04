@@ -438,6 +438,10 @@ class PacketWriter:
         self._description = description
         self._tables: dict[str, list[Mapping[str, Any]]] = {}
         self._batches: dict[str, Iterable[pa.RecordBatch]] = {}
+        #: R61 §2.2's retention policy, written into every manifest. One kept version and no age
+        #: limit: a packet that is never amended retains nothing, and a packet is archival where
+        #: a table is operational, so age alone never expires a manifest.
+        self._retention: dict[str, Any] = {"keep_versions": 1}
         #: Rows each resource was written with, filled as `_stage` writes them. A streamed
         #: table has no count until then, so anything reported earlier is the source's estimate.
         self.rows_written: dict[str, int] = {}
@@ -881,6 +885,9 @@ class PacketWriter:
             # reader can answer "can I open this packet at all" without walking every entry.
             "required_codecs": sorted({c for e in entries for c in e.get("codecs", [])}),
             "resources": [dict(e) for e in entries],
+            # R61 §2.2: declared rather than left to a default, because `prune` reads it and a
+            # packet that says nothing makes the operator's policy invisible to the operation.
+            "retention": dict(self._retention),
             "validation": validation,
         }
         if inventory := self._extension_inventory():
