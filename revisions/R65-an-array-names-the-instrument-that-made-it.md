@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Proposed** 2026-09-04 |
-| **Amends** | `02` (`core.array_assets`), R19 §2 (what the array tables carry) |
+| **Amends** | `01` §3.17 (what an array asset holds), `02` (`core.array_assets`), R19 §2 (what the array tables carry) |
 | **Depends on** | R46 (references are declared), R53 (identifiers are assigned or carried) |
 | **Profile** | `nwb-lake-portable-v0.1` |
 
@@ -47,16 +47,25 @@ Everything a signal is — values over time, a unit, a scale, a clock, and a pro
 is already declared, four parts in `core.array_assets` and the fifth in `core.devices`. Only the
 join between them is missing.
 
-### 1.3 What this settles about namespaces
+### 1.3 The standard should never have to name an instrument
 
-`core.sniff_detector` looked like a core resource naming a concept the semantic standard does not
-define, and `semantic_type: "signal"` looked like a placeholder standing in for one.
+The absence has a second cost, and it is the larger one. With no way to say what made an array,
+the only thing distinguishing one acquired signal from another is `semantic_type` — so a rig
+fitting a new instrument appears to need a new value in the standard, or an extension, or a
+concept in `01`. None of that is true, and none of it should be.
 
-Neither is true once the instrument is reachable. `core.array_assets` is generic **by design**, so
-an acquired signal belongs in it whatever produced the signal; `signal` is an accurate value in an
-open vocabulary (R8 §4), and *which* signal is answered by the device rather than by the type. The
-alternative — a namespace per instrument, each declaring its own array tables as `analysis` does —
-fragments raw acquisition across extensions and buys nothing this column does not.
+`core.array_assets` is generic **by design**. An acquired signal belongs in it whatever produced
+the signal, and *which* signal it is should be answered by the **device**, which is data, rather
+than by the **type**, which is vocabulary. A packet names its own arrays; the standard names only
+the concepts it defines.
+
+This is the test the change has to pass: a rig fitted with an instrument nobody anticipated —
+a respiration sensor, a heart-rate monitor, a thermistor — produces a core-owned array, and
+**no clause of this specification mentions any of them.** A packet says what its instruments are;
+the standard says how an array points at one.
+
+The alternative — a namespace per instrument, each declaring its own array tables as `analysis`
+does — fragments raw acquisition across extensions and buys nothing this column does not.
 
 ## 2. Decision
 
@@ -70,7 +79,18 @@ A writer that knows which instrument produced an array **SHOULD** record it. Nul
 required, because a derived array has no instrument and a referenced one may come from a producer
 the packet cannot attribute.
 
-### 2.2 What a consumer may then do
+### 2.2 The standard does not enumerate instruments
+
+`01` §3.17 is amended to state positively what it previously permitted by silence: an array asset
+holds any sampled quantity, whatever instrument produced it, and this standard **MUST NOT**
+enumerate instruments. A quantity whose meaning lives in the device is identified by its
+`device_id`; a quantity the standard defines as a concept is identified by its `semantic_type`,
+and `01` §3.16 is the only such concept today.
+
+`semantic_type` stays open (R8 §4). A value the standard does not define is a label carrying no
+contract, which is the honest state of affairs rather than a gap to be filled.
+
+### 2.3 What a consumer may then do
 
 A consumer **MAY** resolve any array asset to the device that produced it, without knowing what
 kind of array it is and without the channel or unit tables that happen to serve two of the three
@@ -79,7 +99,7 @@ cases today.
 A consumer **MUST NOT** infer an instrument from an asset's `semantic_type`, its name, or its
 URI. Those are labels; this is a reference.
 
-### 2.3 What stays where it is
+### 2.4 What stays where it is
 
 Device-specific detail — calibration, what an arbitrary unit corresponds to, mounting, firmware —
 belongs on `core.devices.metadata` or in an extension, by `09`'s tiering unchanged. This revision
