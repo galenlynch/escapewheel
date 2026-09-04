@@ -1319,7 +1319,8 @@ def _run_rules(
                 connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
 
             kinds = _declared_kinds(packet, registry)
-            checks = generate(registry, only=set(present), advisory=advisory, aggregate=unsound or set(), kinds=kinds)
+            checks = generate(registry, only=set(present), advisory=advisory, aggregate=unsound or set(),
+                              kinds=kinds, specialises=_specialisations(packet, registry))
             if recheck is not None:
                 checks = [check for check in checks if concerns(check, recheck)]
             _run_checks(connection, checks, report, None)
@@ -1381,6 +1382,32 @@ def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, st
     # names tables whose key is composite by construction, and dropping them here made a
     # correctly declared `interval_kind` read as naming nothing.
     return {name: _resolve_column(spec) for name, spec in tables.items()}
+
+
+def _specialisations(packet: Packet, registry: Mapping[str, Any]) -> dict[str, list[tuple[str, dict[str, str]]]]:
+    """Which resources could specialise which, keyed by the discriminated resource.
+
+    A specialisation declares a reference back over the discriminated table's **whole** key
+    (R55 §2.3.1). Anything else a discriminator could name is a resource that could not carry
+    the key, so generating R72 §2.1's reverse check for it would be checking the impossible.
+    """
+    tables = dict(registry["tables"])
+    carried = {resource.resource_id for resource in packet.resources(kind="table")}
+    for document in packet.extensions().values():
+        if isinstance(document.get("tables"), Mapping):
+            tables.update({n: t for n, t in document["tables"].items() if n in carried})
+    found: dict[str, list[tuple[str, dict[str, str]]]] = {}
+    for name, spec in tables.items():
+        for reference in spec.get("references", []):
+            target = reference["resource"]
+            key = (tables.get(target) or {}).get("primary_key") or []
+            mapping = dict(zip(reference.get("resource_columns", []), reference["columns"], strict=False))
+            if key and set(mapping) >= set(key):
+                # The mapping, not just the name: R55 §2.3.1 requires the whole key and does not
+                # require the same column names for it. `dynamic_foraging.trials` carries the
+                # interval's id as `trial_id`, so a join on matching names finds nothing.
+                found.setdefault(target, []).append((name, mapping))
+    return found
 
 
 def _check_extensions(

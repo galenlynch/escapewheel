@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-04 |
+| **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `05` §? (the commit sequence), R32 §2 (how a new version becomes visible) |
 | **Depends on** | R14 §2.3 (packet-owned bytes are immutable), R32 (amending a committed packet) |
 | **Profile** | `nwb-lake-portable-v0.1` |

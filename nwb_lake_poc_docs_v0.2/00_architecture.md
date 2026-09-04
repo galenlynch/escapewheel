@@ -61,9 +61,20 @@ A packet is divided into layers by namespace prefix.
 
 | layer | contents | required |
 |---|---|---|
-| `core` | canonical normalized facts; the sole source of truth | yes |
-| `analysis` | derived products, reproducible from core | no |
+| `core` | canonical normalized facts, domain-general | yes |
+| extensions | canonical facts a domain owns, typed (Part 09) | no |
+| `analysis` | derived products, reproducible from the canonical resources | no |
 | `nwb` | deferred compatibility projection | no |
+
+A packet's **canonical** resources are its canonical core resources together with its canonical
+extension resources (R71 §2.1). Core is not the whole of what is canonical: R54 sends a task's own
+facts — which side the animal licked, whether it was rewarded — to a typed extension, and no
+computation over core recovers them. Core is what every packet has and what every consumer can
+read without an extension registry.
+
+A consumer MAY read core alone, and what it reads is complete for every core resource. It MUST NOT
+conclude it has read every canonical fact the packet holds (R71 §2.4); a discriminator resolving
+`required` is the case where the omission is guaranteed.
 
 Extension namespaces are additional to these and are specified in Part 09.
 
@@ -72,6 +83,10 @@ Extension namespaces are additional to these and are specified in Part 09.
 ### 4.1 Requirements
 
 The core layer MUST contain canonical facts in the logical schemas of Part 02. Core resources MUST be validated before they are committed.
+
+A fact belongs in core when common interpretation, validation, joining or analysis would break
+without it (Part 09 §3). A fact a single domain owns belongs in that domain's extension, typed,
+with its own vocabularies and rules — not in core, and not in a free-form column.
 
 Core resources are normalized enough to avoid drift and no further. One row per trial in `core.intervals`; one row per unit in a sorting and curation context in `core.units`; one row per spike in `core.spike_events`.
 

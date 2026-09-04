@@ -116,8 +116,42 @@ def _json_string(value: Any, column: str) -> Any:
     return json.dumps(_plain(value), sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
+def _bounded(low: int, high: int, kind: str) -> Any:
+    """Return a coercion that refuses a value the declared width cannot hold (R76 §2.1).
+
+    NumPy wraps: `np.int32(2**31)` is `-2147483648`, and casting an `int64` array to `int32`
+    truncates each element silently. A wrapped identifier is a *valid* `int32` -- it satisfies
+    not-null, it satisfies uniqueness unless it happens to collide, and its foreign key resolves
+    if the wrapped value happens to name a row -- so no rule in the registry can see it, and by
+    the time the rules run the evidence is gone (R12 §4's class of defect).
+    """
+
+    def check(value: Any, column: str) -> Any:
+        if value is None or isinstance(value, bool):
+            return value
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return value
+        if not low <= number <= high:
+            raise ValueError(
+                f"{column}: {number} does not fit {kind}; R76 §2.1 refuses the write rather than "
+                f"wrapping. Declare the wider type (R53 §2.4) or assign an identifier and record "
+                f"the source's own value as its name (R53 §2.3.1)"
+            )
+        return value
+
+    return check
+
+
 #: Per-type coercion applied before Arrow sees a value. Everything else passes through.
-COERCE = {"timestamp": _timestamp, "date": _date, "json_string": _json_string}
+COERCE = {
+    "timestamp": _timestamp,
+    "date": _date,
+    "json_string": _json_string,
+    "int32": _bounded(-(2**31), 2**31 - 1, "int32"),
+    "int64": _bounded(-(2**63), 2**63 - 1, "int64"),
+}
 
 #: Registry column type -> the Arrow type a conforming writer emits (R3 §2.1).
 #: Every one is a primitive: no struct, map, or list appears anywhere in the registry.

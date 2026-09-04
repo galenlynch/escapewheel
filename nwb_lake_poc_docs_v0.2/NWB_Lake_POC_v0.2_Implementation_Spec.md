@@ -192,9 +192,20 @@ A packet is divided into layers by namespace prefix.
 
 | layer | contents | required |
 |---|---|---|
-| `core` | canonical normalized facts; the sole source of truth | yes |
-| `analysis` | derived products, reproducible from core | no |
+| `core` | canonical normalized facts, domain-general | yes |
+| extensions | canonical facts a domain owns, typed (Part 09) | no |
+| `analysis` | derived products, reproducible from the canonical resources | no |
 | `nwb` | deferred compatibility projection | no |
+
+A packet's **canonical** resources are its canonical core resources together with its canonical
+extension resources (R71 §2.1). Core is not the whole of what is canonical: R54 sends a task's own
+facts — which side the animal licked, whether it was rewarded — to a typed extension, and no
+computation over core recovers them. Core is what every packet has and what every consumer can
+read without an extension registry.
+
+A consumer MAY read core alone, and what it reads is complete for every core resource. It MUST NOT
+conclude it has read every canonical fact the packet holds (R71 §2.4); a discriminator resolving
+`required` is the case where the omission is guaranteed.
 
 Extension namespaces are additional to these and are specified in Part 09.
 
@@ -203,6 +214,10 @@ Extension namespaces are additional to these and are specified in Part 09.
 ### 4.1 Requirements
 
 The core layer MUST contain canonical facts in the logical schemas of Part 02. Core resources MUST be validated before they are committed.
+
+A fact belongs in core when common interpretation, validation, joining or analysis would break
+without it (Part 09 §3). A fact a single domain owns belongs in that domain's extension, typed,
+with its own vocabularies and rules — not in core, and not in a free-form column.
 
 Core resources are normalized enough to avoid drift and no further. One row per trial in `core.intervals`; one row per unit in a sorting and curation context in `core.units`; one row per spike in `core.spike_events`.
 
@@ -604,6 +619,8 @@ A writer SHOULD NOT fill a `json_string` column routinely. Doing so defeats that
 
 ### 5.3 Fixed representations
 
+A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. A conversion whose result would fall outside the declared type MUST fail before the value is written, naming the column and the value (R76 §2.1). A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
+
 Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC, and MUST NOT use INT96. Identifier columns MUST be `int32` (R53 §2.1), except where the number of distinct values may exceed `int32`, where the column MUST be `int64` (R53 §2.4). No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
 
 ## 6. Presence
@@ -898,9 +915,23 @@ A partitioned table's row order across files is not defined by this profile. A s
 
 ### 5.3 Ordering
 
-Physical order is normative, not advisory: a reader relies on it for pruning, and a validator establishes it by scan rather than by query (Part 02 §10.3).
+A writer SHOULD sort every table by its primary key, in the order the key declares, unless a different ordering is specified for that table (R10 §2). A table written in another order is still conforming: row order is a physical property, it carries no meaning, and a reader MUST NOT depend on it for correctness.
 
-A writer MUST sort every table by its primary key except where §12 of Part 02 overrides it.
+What it is for is pruning. A validator establishes it by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3), and reports a departure at **warning** level — a packet whose rows are out of order is readable and slower, not wrong.
+
+Two tables override the default, both specified below, and `analysis.spike_events` overrides it under a `MUST` (R30 §3.2).
+
+### 5.4 The overriding orders
+
+| resource | order |
+|---|---|
+| `core.spike_events` | `session_id, sorting_run_id, curation_id, unit_id, t_tick` |
+| `core.events` | `session_id, clock_id, t_tick` |
+| `analysis.spike_events` | `session_id, clock_id, time_bucket_tick, sorting_run_id, curation_id, unit_id, t_tick` |
+
+A writer **MUST** emit `analysis.spike_events` in that order (R30 §3.2). It is the one resource whose layout is part of its reason for existing: bucketing by time and sorting by unit within each bucket leaves both columns with informative row-group statistics, so a unit filter and a time filter each prune.
+
+A writer **SHOULD** start a new row group at each bucket boundary (R30 §3.3). A group cut at a fixed row count straddles boundaries and spans two buckets' worth of time. Row-group size and encoding are otherwise not normative: the right values follow from session length and unit count rather than from the schema.
 
 ## 6. Array storage
 
@@ -926,7 +957,14 @@ A step MAY be rational, declared as a numerator and denominator (R33 §2): a 30 
 
 A writer MAY use any Zarr codec. The catalog MUST name every codec a resource uses. A reader MUST check a resource's declared codecs before opening it, and MUST fail naming what it lacks rather than returning partial data (R14 §2.2, R15 §2).
 
-The floor a reader is required to support is stated per Zarr version, because implementations differ between them. Codecs are declared per resource, not per packet: a reader MUST NOT refuse a packet over a codec used only by resources it does not open. The catalog's packet-level codec list is their union, for a whole-packet capability answer.
+The floor a reader is required to support is stated per Zarr version, because implementations differ between them (R21 §3):
+
+| `physical_profile` | a reader MUST support | a writer MAY also use |
+|---|---|---|
+| `zarr_v3` | `none`, `gzip`, `zstd` | `blosc` (cname=zstd, shuffle=shuffle), `sharding_indexed` |
+| `zarr_v2` | `none`, `zstd`, `blosc` (cname=zstd) | — |
+
+The asymmetry between the versions is measured, not chosen: `gzip` is in the v3 floor and not the v2 one because a v2 array compressed with gzip raises `KeyError: "gzip"` in a reader that reads every other combination. Codecs are declared per resource, not per packet: a reader MUST NOT refuse a packet over a codec used only by resources it does not open. The catalog's packet-level codec list is their union, for a whole-packet capability answer.
 
 ### 6.5 What the array declares, and what the tables declare
 
@@ -961,15 +999,39 @@ This specification promises nothing about bytes the packet does not own. What a 
 
 ## 9. Amendment, versioning, and retention
 
-### 9.1 Adding a resource
+### 9.1 What an amendment is
 
-Adding a resource to a committed packet produces a new `packet_version` and modifies no existing file. Every superseded manifest is retained (R32 §4), so that a later cleanup can distinguish a file an old version named from a file nothing ever named.
+An **amendment** produces a new version of an existing packet and MUST NOT modify any file the superseded manifest names (R32 §2). A table that gains rows is written as a **new file**, and the amended manifest names the new file; no byte of the old one changes. Immutability is thereby a property of files, and a resource's *content* may be superseded by naming different bytes.
 
-### 9.2 Scope of revalidation
+An amendment MUST set a `packet_version` that sorts strictly after the superseded one, compared as a semantic version.
+
+### 9.2 What an amendment may and may not do
+
+| | |
+|---|---|
+| Add an analysis resource | MAY |
+| Add rows to a provenance table (`core.processing_runs`, `core.source_files`, `core.processing_run_inputs`), as a new file | MAY |
+| Remove an analysis resource | MAY — Part 06 makes them disposable |
+| Add a core resource | MAY |
+| Change the content of a core resource other than the provenance tables | MUST NOT |
+| Remove a core resource | MUST NOT |
+| Change `packet_id`, `profile_id`, or the standard versions | MUST NOT |
+
+The asymmetry is the design: an amendment **extends** what a packet says and does not revise it. A packet whose core data was wrong is a new packet, not a new version of an old one, because anything already derived from the old core is silently invalidated and nothing in the format can detect that.
+
+Provenance tables are the exception because they are append-only by nature — a row records that something ran, and a later run does not change what an earlier one did.
+
+### 9.3 The manifest
+
+Every superseded manifest is retained under `manifests/` (R32 §4), so a later cleanup can distinguish a file an old version named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own validation record; an amendment MUST NOT rewrite either.
+
+Where an amendment installs a different registry, the packet retains the superseded copy alongside it (R32 §4.1). Installing different content under a `registry_version` the packet has already retained makes that version ambiguous **within one packet**, and a writer MUST refuse it.
+
+### 9.4 Scope of revalidation
 
 An amendment re-establishes physical order only for what it writes, and re-runs only the rules naming an added resource (R35 §2).
 
-### 9.3 Cleanup
+### 9.5 Cleanup
 
 Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second (R61 §2.1). Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
 
@@ -977,7 +1039,7 @@ A **stray** — a file no manifest ever named — MUST NOT be removed. The opera
 
 A packet MAY declare its own retention, and a writer SHOULD emit one (R61 §2.2): how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 
-### 9.4 What a version is not
+### 9.6 What a version is not
 
 `packet_version` versions the bundle. It MUST NOT be incremented for a rewrite of a table's rows under a future lakehouse profile (R61 §4).
 
@@ -1042,7 +1104,7 @@ The catalog identifies by name. `packet_id`, every entry's `resource_id`, the se
 | `uri` | string | MUST |
 | `canonical` | bool | MUST |
 | `validation_state` | string | MUST |
-| `sha256` | string | MUST for a packet-owned resource (03 §10) |
+| `sha256` | string | SHOULD for a packet-owned resource (R52 §2.1) |
 | `schema_id` | string | MUST for a table |
 | `codecs` | array of string | MUST for an array (§6.2) |
 | `external` | bool | MUST where true (§5) |
@@ -1068,7 +1130,7 @@ A top-level provenance block is withdrawn. Provenance is carried in `core.source
 
 ### 5.1 Declaration
 
-A resource the packet does not own MUST set `external: true` and MUST give an absolute URI (R14 §2.3).
+A resource the packet does not own MUST set `external: true`. A resource whose `uri` is absolute MUST declare `external: true`; **the converse does not hold** (R14 §2.3), so a packet MAY declare a resource external and still resolve it relatively, which is how a packet published beside its data records that it does not own it.
 
 Referencing is expected for large resources. Externalizing a table costs more than externalizing an array: its validation rules cannot run at all while it is unreachable.
 
@@ -1094,7 +1156,14 @@ Structural validation MUST NOT reach the network. Levels 3a to 3c run only in a 
 
 ### 5.4 Prefix resources
 
-Where an external resource is a prefix rather than a single object, `sha256` and `size_bytes` are undefined for the prefix itself. Such a resource MAY declare a `members` array recording what was seen, each member optionally carrying a `store_digest` (R51 §2.1).
+Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — `sha256` and `size_bytes` are **defined over its members** (R36 §2.2), not undefined:
+
+- `sha256` is the SHA-256 of the UTF-8 encoding of `[["<key>",<size>,"<sha256>"], ...]`, serialised as compact JSON with `,` and `:` separators, no whitespace and ASCII-escaped keys, one entry per object, `<key>` relative to the resource's `uri` with `/` separators, sorted by `<key>` in byte order.
+- `size_bytes` is the sum of the members' sizes.
+
+Sorting the keys is what makes the digest reproducible without knowing the store, since two implementations enumerate an object-store prefix and a local directory in different orders. Carrying each member's own digest is what lets a consumer that fetched three chunks verify those three without the other two hundred.
+
+Such a resource MAY additionally declare a `members` array recording what was seen, each member optionally carrying a `store_digest` (R51 §2.1).
 
 A member array is a record, not a resolution rule: a reader hands the prefix to the array library and does not enumerate it.
 
@@ -1269,9 +1338,22 @@ Commit MUST be atomic with respect to a concurrent reader:
 
 1. write the staged resources;
 2. validate them;
-3. write a **candidate** manifest;
-4. move resources into their final paths;
-5. rename the candidate to `nwb.packet.json` **last**.
+3. move resources into their final paths;
+4. **publish** the packet catalog at `nwb.packet.json`, last and atomically.
+
+A reader MUST observe either the previously committed catalog or the newly published one, and MUST
+NOT observe a catalog naming a resource that is not yet in place (R74 §2.1). Every packet-owned
+resource the catalog names MUST already be at its final location and MUST have passed validation
+before it is published.
+
+The publication mechanism is the profile's. A filesystem profile MAY publish by atomic rename
+within one directory; an object-store profile MAY publish by a single-object write. A writer MUST
+NOT be required to perform an atomic **directory** rename (R74 §2.2), which no object store
+offers and which the packet layout does not need — the catalog is one object.
+
+Where the store offers a conditional write, a writer publishing a new version SHOULD use it, so
+two writers cannot silently overwrite one another's head. Where it offers none, a writer MUST NOT
+claim it detected a conflict it could not detect (R74 §2.3).
 
 A commit that finds an error MUST NOT write a manifest at the packet root, and SHOULD leave staging in place for inspection.
 
@@ -1315,7 +1397,21 @@ An importer conforms when it:
 2. produces a packet that passes Tier 1, Tier 2, and the shim;
 3. records provenance for what it read and what it ran;
 4. leaves no manifest at the packet root when it refuses;
-5. produces byte-identical output from two runs over the same sources.
+5. is **logically deterministic**: for the same recipe, the same source bytes and the same
+   declared normalization, it produces the same canonical rows, the same values, the same assigned
+   identifiers, the same resource identities and the same declared physical ordering (R75 §2.1).
+   Identifier assignment MUST be a function of the recipe and the sources, never of wall-clock
+   time, iteration order over an unordered collection, or the order a filesystem listed a
+   directory.
+
+Byte-identical output is **not** required and cannot be: a manifest carries `created_at` and
+`validated_at`, and encoders may encode identical logical content differently between library
+versions. An implementation MAY offer a deterministic-build mode that pins those, and a packet
+MUST NOT be judged non-conforming for lacking one (R75 §2.2).
+
+A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would
+produce. Two conforming builds of one dataset may record different digests for the same rows
+(R75 §2.3).
 
 <!-- END 05_validation_and_import.md -->
 
@@ -1333,11 +1429,14 @@ This part describes the optional `analysis` layer: derived products computed fro
 
 Normative.
 
-An analysis resource MUST declare lineage to the core resources it derives from (04 §7).
+An analysis resource MUST declare lineage naming each canonical resource it derives from — core
+or extension (04 §7, R71 §2.3).
 
 An analysis resource is disposable. A consumer MAY delete and recompute any of them without loss.
 
-An analysis resource MUST NOT be the only place a fact exists. Anything a consumer needs that is not recomputable from core belongs in core.
+An analysis resource MUST NOT be the only place a fact exists. Anything a consumer needs that is
+not recomputable from the canonical resources belongs among them (R71 §2.3); which canonical layer
+it belongs to is decided by Part 09 §3's test, not by this rule.
 
 ## 3. What justifies materializing
 

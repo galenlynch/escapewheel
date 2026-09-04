@@ -393,6 +393,11 @@ def variants():
         # bombcell's raw label belongs in `label`; the designated column holds the
         # projection, which stays closed to sua/mua/noise (R22 5).
         c["core.units"][0]["quality_label"] = "good"
+    def unspecialised_interval(c):
+        # R72 §2.1: a core interval naming a kind with no counterpart there. Every other check
+        # passes -- the kind is a dotted resource ID, the packet declares it, and the detail
+        # rows that exist all resolve -- which is why the reverse direction had to be generated.
+        c[KIND] = c[KIND][:-1]
     def bad_interval(c):
         c["core.intervals"][1]["stop_tick"] = 5999           # before its start_tick
     def stale_summary(c):
@@ -489,6 +494,7 @@ def variants():
                  "ended_at": START + timedelta(hours=7)})
     return {"dup_pk": dup_pk, "orphan_fk": orphan_fk, "null_required": null_required,
             "bad_vocabulary": bad_vocabulary, "bad_interval": bad_interval,
+            "unspecialised_interval": unspecialised_interval,
             "stale_summary": stale_summary,
             "missing_amplitude_unit": missing_amplitude_unit,
             "half_transform": half_transform, "unsorted_spikes": unsorted_spikes,

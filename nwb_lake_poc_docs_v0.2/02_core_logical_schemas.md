@@ -72,6 +72,8 @@ A writer SHOULD NOT fill a `json_string` column routinely. Doing so defeats that
 
 ### 5.3 Fixed representations
 
+A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. A conversion whose result would fall outside the declared type MUST fail before the value is written, naming the column and the value (R76 §2.1). A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
+
 Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC, and MUST NOT use INT96. Identifier columns MUST be `int32` (R53 §2.1), except where the number of distinct values may exceed `int32`, where the column MUST be `int64` (R53 §2.4). No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
 
 ## 6. Presence

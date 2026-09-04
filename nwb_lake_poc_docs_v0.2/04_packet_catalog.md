@@ -45,7 +45,7 @@ The catalog identifies by name. `packet_id`, every entry's `resource_id`, the se
 | `uri` | string | MUST |
 | `canonical` | bool | MUST |
 | `validation_state` | string | MUST |
-| `sha256` | string | MUST for a packet-owned resource (03 §10) |
+| `sha256` | string | SHOULD for a packet-owned resource (R52 §2.1) |
 | `schema_id` | string | MUST for a table |
 | `codecs` | array of string | MUST for an array (§6.2) |
 | `external` | bool | MUST where true (§5) |
@@ -71,7 +71,7 @@ A top-level provenance block is withdrawn. Provenance is carried in `core.source
 
 ### 5.1 Declaration
 
-A resource the packet does not own MUST set `external: true` and MUST give an absolute URI (R14 §2.3).
+A resource the packet does not own MUST set `external: true`. A resource whose `uri` is absolute MUST declare `external: true`; **the converse does not hold** (R14 §2.3), so a packet MAY declare a resource external and still resolve it relatively, which is how a packet published beside its data records that it does not own it.
 
 Referencing is expected for large resources. Externalizing a table costs more than externalizing an array: its validation rules cannot run at all while it is unreachable.
 
@@ -97,7 +97,14 @@ Structural validation MUST NOT reach the network. Levels 3a to 3c run only in a 
 
 ### 5.4 Prefix resources
 
-Where an external resource is a prefix rather than a single object, `sha256` and `size_bytes` are undefined for the prefix itself. Such a resource MAY declare a `members` array recording what was seen, each member optionally carrying a `store_digest` (R51 §2.1).
+Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — `sha256` and `size_bytes` are **defined over its members** (R36 §2.2), not undefined:
+
+- `sha256` is the SHA-256 of the UTF-8 encoding of `[["<key>",<size>,"<sha256>"], ...]`, serialised as compact JSON with `,` and `:` separators, no whitespace and ASCII-escaped keys, one entry per object, `<key>` relative to the resource's `uri` with `/` separators, sorted by `<key>` in byte order.
+- `size_bytes` is the sum of the members' sizes.
+
+Sorting the keys is what makes the digest reproducible without knowing the store, since two implementations enumerate an object-store prefix and a local directory in different orders. Carrying each member's own digest is what lets a consumer that fetched three chunks verify those three without the other two hundred.
+
+Such a resource MAY additionally declare a `members` array recording what was seen, each member optionally carrying a `store_digest` (R51 §2.1).
 
 A member array is a record, not a resolution rule: a reader hands the prefix to the array library and does not enumerate it.
 

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-04 |
+| **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `02` §5 (the type system), `05` §? (what an importer must refuse) |
 | **Depends on** | R53 (an identifier is an integer), R45 (a tick is a coordinate) |
 | **Profile** | `nwb-lake-portable-v0.1` |

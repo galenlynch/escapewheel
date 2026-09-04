@@ -102,6 +102,7 @@ def _discriminator(
     column: Mapping[str, Any],
     kinds: Mapping[str, str | None] | None,
     included: Collection[str],
+    specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
 ) -> list[Check]:
     """Build the checks one discriminator column implies (R55 §2.4).
 
@@ -138,10 +139,33 @@ def _discriminator(
     )
 
     # A paired value lives in the named table's key space (R55 §2.3), so it resolves value-to-key.
-    # A shared-key discriminator needs no such check: the reference R55 §2.3.1 requires of the
-    # named table already generates the anti-join, pointing the other way.
     paired = column.get("discriminates")
     if paired is None:
+        # A shared-key discriminator: the reference R55 §2.3.1 requires of the named table
+        # generates the anti-join from detail to discriminated row. R72 §2.1 adds the direction a
+        # foreign key cannot point -- a row naming a kind with no counterpart in it, which is
+        # R54 §2.4a's "a kind that resolves to nothing is a name again" and which every other
+        # check passes. Only where `resolves` is required: an optional kind naming nothing is a
+        # fact (R49), not a defect.
+        if column.get("resolves") != "required" or not table.get("primary_key"):
+            return checks
+        # Only a resource that could *be* a specialisation: one declaring a reference back over
+        # the discriminated table's whole key, which is what R55 §2.3.1 requires of a named
+        # resource. Without the filter this generates one check per declared resource, and 34 of
+        # the 35 name a core table that could never carry the key (R72 §2.2).
+        for kind, mapping in sorted((specialises or {}).get(resource, ()), key=lambda pair: pair[0]):
+            on = " AND ".join(f"s.{quote(mapping[c])} = d.{quote(c)}" for c in table["primary_key"])
+            checks.append(
+                Check(
+                    f"{resource}.{column['name']}.{sql_name(kind)}_is_specialised",
+                    "error",
+                    f"a row names {kind} and has no counterpart there (R72 §2.1)",
+                    f"SELECT {', '.join(quote(c) for c in table['primary_key'])} FROM {name} d "
+                    f"WHERE d.{col} = '{kind}' "
+                    f"AND NOT EXISTS (SELECT 1 FROM {sql_name(kind)} s WHERE {on})",
+                    resource,
+                )
+            )
         return checks
     # Only a resource a paired value can actually name: one with a single-column key, which is
     # what `_resolve_column` returns a column for (R55 §2.3.3).
@@ -178,6 +202,7 @@ def generate(
     aggregate: set[str] | None = None,
     resolvable: set[str] | None = None,
     kinds: Mapping[str, str | None] | None = None,
+    specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
 ) -> list[Check]:
     """Build every check a registry implies.
 
@@ -249,7 +274,7 @@ def generate(
         for column in table["columns"]:
             if column.get("role") != "discriminator":
                 continue
-            checks.extend(_discriminator(resource, name, table, column, kinds, included))
+            checks.extend(_discriminator(resource, name, table, column, kinds, included, specialises))
 
         by_scan = adjacency_settles_uniqueness(table) and resource not in (aggregate or set())
         if (key := table.get("primary_key")) and not by_scan:

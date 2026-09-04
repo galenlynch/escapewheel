@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Proposed** 2026-09-04 |
+| **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `05` §? (the fifth property of a conforming import) |
 | **Depends on** | R52 (a packet-owned resource records a digest) |
 | **Profile** | `nwb-lake-portable-v0.1` |

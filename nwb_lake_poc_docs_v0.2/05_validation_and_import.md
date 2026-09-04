@@ -122,9 +122,22 @@ Commit MUST be atomic with respect to a concurrent reader:
 
 1. write the staged resources;
 2. validate them;
-3. write a **candidate** manifest;
-4. move resources into their final paths;
-5. rename the candidate to `nwb.packet.json` **last**.
+3. move resources into their final paths;
+4. **publish** the packet catalog at `nwb.packet.json`, last and atomically.
+
+A reader MUST observe either the previously committed catalog or the newly published one, and MUST
+NOT observe a catalog naming a resource that is not yet in place (R74 §2.1). Every packet-owned
+resource the catalog names MUST already be at its final location and MUST have passed validation
+before it is published.
+
+The publication mechanism is the profile's. A filesystem profile MAY publish by atomic rename
+within one directory; an object-store profile MAY publish by a single-object write. A writer MUST
+NOT be required to perform an atomic **directory** rename (R74 §2.2), which no object store
+offers and which the packet layout does not need — the catalog is one object.
+
+Where the store offers a conditional write, a writer publishing a new version SHOULD use it, so
+two writers cannot silently overwrite one another's head. Where it offers none, a writer MUST NOT
+claim it detected a conflict it could not detect (R74 §2.3).
 
 A commit that finds an error MUST NOT write a manifest at the packet root, and SHOULD leave staging in place for inspection.
 
@@ -168,4 +181,18 @@ An importer conforms when it:
 2. produces a packet that passes Tier 1, Tier 2, and the shim;
 3. records provenance for what it read and what it ran;
 4. leaves no manifest at the packet root when it refuses;
-5. produces byte-identical output from two runs over the same sources.
+5. is **logically deterministic**: for the same recipe, the same source bytes and the same
+   declared normalization, it produces the same canonical rows, the same values, the same assigned
+   identifiers, the same resource identities and the same declared physical ordering (R75 §2.1).
+   Identifier assignment MUST be a function of the recipe and the sources, never of wall-clock
+   time, iteration order over an unordered collection, or the order a filesystem listed a
+   directory.
+
+Byte-identical output is **not** required and cannot be: a manifest carries `created_at` and
+`validated_at`, and encoders may encode identical logical content differently between library
+versions. An implementation MAY offer a deterministic-build mode that pins those, and a packet
+MUST NOT be judged non-conforming for lacking one (R75 §2.2).
+
+A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would
+produce. Two conforming builds of one dataset may record different digests for the same rows
+(R75 §2.3).

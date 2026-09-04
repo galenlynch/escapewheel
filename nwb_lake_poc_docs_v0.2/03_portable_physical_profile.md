@@ -77,9 +77,23 @@ A partitioned table's row order across files is not defined by this profile. A s
 
 ### 5.3 Ordering
 
-Physical order is normative, not advisory: a reader relies on it for pruning, and a validator establishes it by scan rather than by query (Part 02 §10.3).
+A writer SHOULD sort every table by its primary key, in the order the key declares, unless a different ordering is specified for that table (R10 §2). A table written in another order is still conforming: row order is a physical property, it carries no meaning, and a reader MUST NOT depend on it for correctness.
 
-A writer MUST sort every table by its primary key except where §12 of Part 02 overrides it.
+What it is for is pruning. A validator establishes it by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3), and reports a departure at **warning** level — a packet whose rows are out of order is readable and slower, not wrong.
+
+Two tables override the default, both specified below, and `analysis.spike_events` overrides it under a `MUST` (R30 §3.2).
+
+### 5.4 The overriding orders
+
+| resource | order |
+|---|---|
+| `core.spike_events` | `session_id, sorting_run_id, curation_id, unit_id, t_tick` |
+| `core.events` | `session_id, clock_id, t_tick` |
+| `analysis.spike_events` | `session_id, clock_id, time_bucket_tick, sorting_run_id, curation_id, unit_id, t_tick` |
+
+A writer **MUST** emit `analysis.spike_events` in that order (R30 §3.2). It is the one resource whose layout is part of its reason for existing: bucketing by time and sorting by unit within each bucket leaves both columns with informative row-group statistics, so a unit filter and a time filter each prune.
+
+A writer **SHOULD** start a new row group at each bucket boundary (R30 §3.3). A group cut at a fixed row count straddles boundaries and spans two buckets' worth of time. Row-group size and encoding are otherwise not normative: the right values follow from session length and unit count rather than from the schema.
 
 ## 6. Array storage
 
@@ -105,7 +119,14 @@ A step MAY be rational, declared as a numerator and denominator (R33 §2): a 30 
 
 A writer MAY use any Zarr codec. The catalog MUST name every codec a resource uses. A reader MUST check a resource's declared codecs before opening it, and MUST fail naming what it lacks rather than returning partial data (R14 §2.2, R15 §2).
 
-The floor a reader is required to support is stated per Zarr version, because implementations differ between them. Codecs are declared per resource, not per packet: a reader MUST NOT refuse a packet over a codec used only by resources it does not open. The catalog's packet-level codec list is their union, for a whole-packet capability answer.
+The floor a reader is required to support is stated per Zarr version, because implementations differ between them (R21 §3):
+
+| `physical_profile` | a reader MUST support | a writer MAY also use |
+|---|---|---|
+| `zarr_v3` | `none`, `gzip`, `zstd` | `blosc` (cname=zstd, shuffle=shuffle), `sharding_indexed` |
+| `zarr_v2` | `none`, `zstd`, `blosc` (cname=zstd) | — |
+
+The asymmetry between the versions is measured, not chosen: `gzip` is in the v3 floor and not the v2 one because a v2 array compressed with gzip raises `KeyError: "gzip"` in a reader that reads every other combination. Codecs are declared per resource, not per packet: a reader MUST NOT refuse a packet over a codec used only by resources it does not open. The catalog's packet-level codec list is their union, for a whole-packet capability answer.
 
 ### 6.5 What the array declares, and what the tables declare
 
@@ -140,15 +161,39 @@ This specification promises nothing about bytes the packet does not own. What a 
 
 ## 9. Amendment, versioning, and retention
 
-### 9.1 Adding a resource
+### 9.1 What an amendment is
 
-Adding a resource to a committed packet produces a new `packet_version` and modifies no existing file. Every superseded manifest is retained (R32 §4), so that a later cleanup can distinguish a file an old version named from a file nothing ever named.
+An **amendment** produces a new version of an existing packet and MUST NOT modify any file the superseded manifest names (R32 §2). A table that gains rows is written as a **new file**, and the amended manifest names the new file; no byte of the old one changes. Immutability is thereby a property of files, and a resource's *content* may be superseded by naming different bytes.
 
-### 9.2 Scope of revalidation
+An amendment MUST set a `packet_version` that sorts strictly after the superseded one, compared as a semantic version.
+
+### 9.2 What an amendment may and may not do
+
+| | |
+|---|---|
+| Add an analysis resource | MAY |
+| Add rows to a provenance table (`core.processing_runs`, `core.source_files`, `core.processing_run_inputs`), as a new file | MAY |
+| Remove an analysis resource | MAY — Part 06 makes them disposable |
+| Add a core resource | MAY |
+| Change the content of a core resource other than the provenance tables | MUST NOT |
+| Remove a core resource | MUST NOT |
+| Change `packet_id`, `profile_id`, or the standard versions | MUST NOT |
+
+The asymmetry is the design: an amendment **extends** what a packet says and does not revise it. A packet whose core data was wrong is a new packet, not a new version of an old one, because anything already derived from the old core is silently invalidated and nothing in the format can detect that.
+
+Provenance tables are the exception because they are append-only by nature — a row records that something ran, and a later run does not change what an earlier one did.
+
+### 9.3 The manifest
+
+Every superseded manifest is retained under `manifests/` (R32 §4), so a later cleanup can distinguish a file an old version named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own validation record; an amendment MUST NOT rewrite either.
+
+Where an amendment installs a different registry, the packet retains the superseded copy alongside it (R32 §4.1). Installing different content under a `registry_version` the packet has already retained makes that version ambiguous **within one packet**, and a writer MUST refuse it.
+
+### 9.4 Scope of revalidation
 
 An amendment re-establishes physical order only for what it writes, and re-runs only the rules naming an added resource (R35 §2).
 
-### 9.3 Cleanup
+### 9.5 Cleanup
 
 Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second (R61 §2.1). Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
 
@@ -156,7 +201,7 @@ A **stray** — a file no manifest ever named — MUST NOT be removed. The opera
 
 A packet MAY declare its own retention, and a writer SHOULD emit one (R61 §2.2): how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 
-### 9.4 What a version is not
+### 9.6 What a version is not
 
 `packet_version` versions the bundle. It MUST NOT be incremented for a rewrite of a table's rows under a future lakehouse profile (R61 §4).
 

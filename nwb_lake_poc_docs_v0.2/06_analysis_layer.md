@@ -10,11 +10,14 @@ This part describes the optional `analysis` layer: derived products computed fro
 
 Normative.
 
-An analysis resource MUST declare lineage to the core resources it derives from (04 §7).
+An analysis resource MUST declare lineage naming each canonical resource it derives from — core
+or extension (04 §7, R71 §2.3).
 
 An analysis resource is disposable. A consumer MAY delete and recompute any of them without loss.
 
-An analysis resource MUST NOT be the only place a fact exists. Anything a consumer needs that is not recomputable from core belongs in core.
+An analysis resource MUST NOT be the only place a fact exists. Anything a consumer needs that is
+not recomputable from the canonical resources belongs among them (R71 §2.3); which canonical layer
+it belongs to is decided by Part 09 §3's test, not by this rule.
 
 ## 3. What justifies materializing
 
