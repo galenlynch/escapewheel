@@ -1,6 +1,6 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
-undisposed = 183
+undisposed = 157
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -578,3 +578,111 @@ disposition = "rationale"
 [clause."R61 §3"]
 disposition = "applied"
 where = "03_portable_physical_profile.md §9.6"
+
+[clause."R6 §4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+note = "restored 2026-09-04; tick_zero_utc and session_start_time must not be conflated"
+
+[clause."R13 §2"]
+disposition = "rationale"
+
+[clause."R13 §4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+
+[clause."R27 §3"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+
+[clause."R27 §5"]
+disposition = "rationale"
+note = "superseded in substance by R37 §3 and R40 §2, which the spec states"
+
+[clause."R27 §5.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+note = "restored 2026-09-04; an unmappable tick is reported, not dropped"
+
+[clause."R27 §6"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+note = "restored 2026-09-04; the prohibition on a reset within one clock was absent"
+
+[clause."R27 §6.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+note = "restored 2026-09-04; acquisition order is how a reset is visible at all"
+
+[clause."R27 §6.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+note = "restored 2026-09-04; a derived binding must not span a reset"
+
+[clause."R27 §9"]
+disposition = "rationale"
+
+[clause."R37 §2"]
+disposition = "rationale"
+note = "the measurement; §3 is the rule"
+
+[clause."R37 §3.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+
+[clause."R37 §3.2"]
+disposition = "implementation"
+note = "a writer's anchor test; the withheld count is recorded in the run's parameters"
+
+[clause."R37 §3.3"]
+disposition = "superseded"
+by = "R40"
+note = "R40 §2.1 replaces the tolerance and §2.2 the statistic"
+
+[clause."R38 §2.1"]
+disposition = "registry"
+note = "core.clock_observation_intervals"
+
+[clause."R38 §2.2"]
+disposition = "registry"
+note = "core.sorting_runs.clock_id"
+
+[clause."R38 §2.4"]
+disposition = "registry"
+note = "the two observation_declared rules, in rules.json"
+
+[clause."R38 §2.5"]
+disposition = "registry"
+note = "within_observation, in rules.json"
+
+[clause."R39 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.1"
+
+[clause."R39 §2.2"]
+disposition = "applied"
+where = "05_validation_and_import.md §7"
+
+[clause."R39 §2.4"]
+disposition = "implementation"
+note = "the shim's check, not a SQL rule (R12 §4)"
+
+[clause."R40 §2.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+
+[clause."R40 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.9"
+
+[clause."R45 §2.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §2.3"
+
+[clause."R45 §2.3"]
+disposition = "rationale"
+
+[clause."R45 §2.4"]
+disposition = "superseded"
+by = "R54"
+note = "core.trials became core.intervals; the closure rule is stated for every interval table"

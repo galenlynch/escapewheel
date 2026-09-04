@@ -79,7 +79,13 @@ def recorded() -> dict[str, dict[str, str]]:
     """What the ledger says, keyed the same way."""
     if not LEDGER.exists():
         return {}
-    return tomllib.loads(LEDGER.read_text()).get("clause", {})
+    text = LEDGER.read_text()
+    try:
+        return tomllib.loads(text).get("clause", {})
+    except tomllib.TOMLDecodeError as exc:
+        # Appending an entry that already exists is the usual cause, and tomllib's traceback
+        # says so only in its last line.
+        raise SystemExit(f"{LEDGER.name}: {exc}") from None
 
 
 def main() -> int:

@@ -438,7 +438,19 @@ A monotonic counter with a declared rate and origin.
 - MUST declare either a linear transform or anchor points, never both (R13 §2).
 - MAY bind its **tick 0 to a wall-clock instant** (R6 §2), which is the only route from a
   packet's ticks to real time; absent it, ticks relate to each other and to nothing else.
-- A counter that resets mid-session is two clocks (R27 §4).
+- A counter that resets mid-session is two clocks (R27 §6), one per epoch, each with its own
+  identifier, origin and wall-clock binding. A packet MUST NOT represent a reset as a
+  discontinuity within one clock: an anchor sequence requires both sides to increase, so there
+  is no way to express it and no way to read it.
+
+A clock's tick-zero binding and a session's start time are **independent and MUST NOT be
+conflated** (R6 §4). One is a property of a counter, the other a fact about when work began.
+Where a wall-clock binding is derived rather than declared, the tick it is anchored on MUST lie
+in the same epoch as the instant it is paired with (R27 §6.2) — a binding computed across a reset
+describes neither clock.
+
+An importer MUST examine a source in acquisition order and MUST NOT assume monotonicity (R27
+§6.1). A reset is visible only in the order the samples arrived; sorting first hides it.
 
 A tick's zero is where the clock's declared origin says it is — for a sample clock whose origin is
 sample 0 of a recording, tick 0 **is** that sample. A writer MUST NOT re-base a source's sample
@@ -447,7 +459,9 @@ prohibition is what makes a tick exact.
 
 Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default (R37 §3, R40 §2). A profile or a recipe MAY state a different tolerance; a writer MUST record the value it used.
 
-A writer reaching past one median anchor interval MUST measure its error and MUST record the median, p95, and maximum, so a consumer can judge the packet by a stricter rule than the writer applied. It MUST record how many rows it dropped for falling outside the bound **even when that count is zero** (R40 §2.3): silence is what lets a reader and a writer disagree about which rows exist.
+A writer reaching past one median anchor interval MUST measure its error and MUST record the median, p95, and maximum, so a consumer can judge the packet by a stricter rule than the writer applied.
+
+A consumer MUST **report** ticks it cannot map rather than omitting them (R27 §5.3), so a converted table has the same row count as its source with nulls where the mapping is undefined. A row that vanishes in conversion is indistinguishable from one that was never there. It MUST record how many rows it dropped for falling outside the bound **even when that count is zero** (R40 §2.3): silence is what lets a reader and a writer disagree about which rows exist.
 
 ### 3.10 Interval
 
