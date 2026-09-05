@@ -184,9 +184,12 @@ swallowed.**
    `.45883-1.samples` and the LFP source refused: *"2 clocks end in … so the time axis has no
    clock"*. `SorterSource(experiment=…)` disambiguates, and `sync` already defaulted to
    `experiment1`.
-3. **Several TTL streams carry no `original_timestamps.npy`** — on S3, not just locally — so their
-   timestamps are acquisition-local rather than HARP. `SyncSource` skipped each with a note and
-   still found 28 streams and 76,646 anchors.
+3. **Each probe is recorded by both record nodes, and only one copy is HARP-aligned.** Of 28 TTL
+   streams, 14 carry no `original_timestamps.npy` — node 109's copies of `45883-1..4` and
+   `46122`, node 111's of `46110`, `46113`, `46116-1..4` and `50209`. `SyncSource` skipped each
+   with a note and kept the aligned copy, so **all 12 sorted probes have a HARP-parented clock**
+   with 6,387-6,388 anchors each. The skip is duplicate elimination, not loss: `harp` is the
+   session's reference clock and every probe clock declares it as parent.
 4. **`aind_unit_qc` is a second pass.** `extract_qc.py` reads the *staged* packet to map unit ids,
    so it cannot run before a first build exists. The packet carries `dynamic_foraging` only.
 5. **A selective fetch has to take the metadata too.** Omitting the analyzers' own `.zattrs` left
