@@ -159,6 +159,47 @@ closed makes adjacency `next.start == prev.stop + 1` and someone will get it wro
 extension that genuinely exceeds `int32` — at which point R53 §2.4 applies and nothing needs
 reopening at all.
 
+### 2.8 A second session, packaged 2026-09-04
+
+`ecephys_776259_2025-04-09_17-25-12` commits clean: **0 core errors, 0 warnings**, 4m52s, 41
+resources of which 12 are external. It is the larger of the two — 287 M spikes against 131 M,
+6,781 units against 4,505, 708 intervals against 450 — and its numbers are the ones the revisions
+have been citing all along, which they took from inventory rather than from a built packet.
+
+Its inputs came from `aind-open-data` over S3. **31.7 MB out of a 213 GB raw prefix** served
+`sync` and `openephys`, because those adapters open `settings.xml`, `structure.oebin`,
+`sync_messages.txt` and `events/*/TTL/*.npy` and nothing else; the continuous data nothing reads is
+the other 213 GB. The sorted asset cost **7.5 GB in 71 seconds** with `s5cmd`, selecting
+`spikes.npy` and `spike_amplitudes` rather than the prefixes that hold them — `curated/` and
+`postprocessed/` together are 61 GB, and the `provenance.pkl` beside every `spikes.npy` is 12 GB
+that nothing opens.
+
+**Five differences from the first session, all of which the tooling surfaced rather than
+swallowed.**
+
+1. **No sniff detector.** Its acquisition streams are 786867's minus that one, and a recipe
+   declaring the signal failed. The message was misleading — `UnsupportedEncoding: … is not a
+   Zarr v2 array` for a path that does not exist.
+2. **Two record nodes over two experiments.** Both carry the same probes, so two clocks end in
+   `.45883-1.samples` and the LFP source refused: *"2 clocks end in … so the time axis has no
+   clock"*. `SorterSource(experiment=…)` disambiguates, and `sync` already defaulted to
+   `experiment1`.
+3. **Several TTL streams carry no `original_timestamps.npy`** — on S3, not just locally — so their
+   timestamps are acquisition-local rather than HARP. `SyncSource` skipped each with a note and
+   still found 28 streams and 76,646 anchors.
+4. **`aind_unit_qc` is a second pass.** `extract_qc.py` reads the *staged* packet to map unit ids,
+   so it cannot run before a first build exists. The packet carries `dynamic_foraging` only.
+5. **A selective fetch has to take the metadata too.** Omitting the analyzers' own `.zattrs` left
+   `settings.return_in_uV` unreadable, so no sorting run declared an `amplitude_unit` and
+   validation refused the commit. Caught by a rule, not by a crash.
+
+**Two usability gaps found.** `nwb-lake inspect nwb` cannot run: it needs `interval_kind` and
+`inspect` has no way to pass an option, so `05` Stage 1 is unavailable for the central adapter.
+And the Zarr message in (1) should distinguish an absent path from an unsupported encoding.
+
+**No adapter needed changing.** Every difference was absorbed by a recipe option or reported as a
+note, which is what the recipe layer is for.
+
 ## 3. The packaging layer
 
 The specification describes packets. It does not describe how packets get made, which is most of the code. That layer is deliberately outside the spec: a conforming packet can be produced by any means.
