@@ -47,54 +47,38 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. R54 — preconditions met, ready to judge
+## 1. The rename to escapewheel — drafted, held
 
-`revisions/R54-a-trial-is-an-interval.md`, **proposed**. `core.trials` becomes `core.intervals`
-with `interval_kind` in the key, so one session holds task trials, optotagging pulses and
-inactivation windows in one table with a schema per kind — the class-table-inheritance mapping.
-Five columns struck, `core.trial_tags` withdrawn, stimulation parameters explicitly not core.
+`revisions/R84-escapewheel-replaces-nwb-lake.md`, **proposed**. `nwb-lake` reads as an NWB
+sub-project, which is a claim this work cannot make, and naming it for ephys would be the same
+mistake one level down — the clock model is 72% of core and true of every modality. `escapement`
+is taken on PyPI by an adjacent "composable time code encoder/decoder"; `escapewheel` is free.
 
-**§4 blocks acceptance until a writer can emit a kind**, because a revision whose correct path is
-unimplementable teaches the wrong habit while people wait — and §2.4's refusal of opto columns
-holds only while declaring an extension is easier than arguing for four columns in core.
+**Held deliberately, 2026-09-05**, pending real-world testing of a packet. The rename forces both
+packets to be rebuilt (R14 §2.3 forbids editing a manifest in place), so it should land together
+with anything else that changes what a packet contains.
 
-**Two of three done.** A recipe declares `[packet].extensions`, `PacketWriter` resolves a resource
-against core then extensions, and a packet carries `extensions/<id>.json` with
-`layer: "extension"` entries. And an adapter may now come from another distribution, registered
-under the `nwb_lake.sources` entry-point group — built-ins consulted first so a plugin cannot
-shadow `sorter`, a broken one skipped with a warning rather than raised.
+Cost measured: 186 files carry `nwb-lake`, 129 carry `nwb_lake`, 104 the profile string, 47
+`nwb.packet.json`, and five directories. `nwb_lake_poc_docs/` keeps its name, being frozen.
 
-**All three preconditions are met.** The third — `nwb-lake extension <id> --table name=path.parquet`
-— reads what the data shows and reports what it cannot, writing **no role** so the draft does not
-validate until a human supplies them (R48 §2.2). And §5's doubt about the polymorphic query is
-answered: see `conformance/interval-kinds/`.
+## 2. `registry_version` — held with the rename
 
-**Old note, kept for the reasoning:** `nwb-lake init` generates a recipe from a source's *resources*;
-nothing generates an extension **registry document** from a source's *columns*.
-`inventory/vr-foraging-packaging.md:83` already records that the `Site` pydantic model *"converts
-mechanically into an R17 extension registry document"*, which is that scaffolder's specification —
-~30 fields, a closed interval, and eleven index columns to classify by R48 role.
+Still `0.1.0`, while R48 added roles, **R53 turned every identifier from string to int32**, R56
+added unit and clock context, R81 narrowed six primary keys and R83 added a table. Two packets
+claiming one version with incompatible schemas is what the field exists to prevent, and it is
+preventing nothing. Free to settle while nobody outside holds a packet, and free to batch into
+the rename's rebuild; two more rebuilds if left later.
 
-Until it exists, declaring an extension means hand-writing JSON, which is still harder than adding
-a column to core. That is the gradient §1.2 blames for NWB's mechanism going unused, and it is the
-last thing standing between R54 and acceptance.
+## 2a. `ecephys_786867` is four revisions behind
 
-## 2. R55 — ready to judge
+`/mnt/Data/df-packet/packet` predates R80 (no `sources.json`; **14 of 14 external resources name
+`file:///`**), R81 (four-column unit key, `unit_id` carried), R83 (no
+`core.sorting_run_channels`) and the `is_primary` fix. `ecephys_776259` was rebuilt 2026-09-05
+and is current.
 
-`revisions/R55-a-discriminated-reference.md`, **proposed**, and standing on its own.
-
-Names the pattern R49 and R54 both use: a value plus a kind holding a dotted resource ID. Makes
-`discriminator` a sixth R48 role with a required `resolves` — because R49 reads an unresolvable
-kind as a **fact** (the scope is not a packet resource) and R54 needs it to be a **defect** (the
-interval is uninterpretable), and nothing records that this is a choice.
-
-Requires the named resource to declare a reference back, so the join is mechanical rather than
-inferred from names matching — which is what lets a reader resolve an extension it has never
-heard of. Records two defects found while drafting: R49 §2.5's `scope_resolves` builds its `UNION`
-over the core registry, so a kind naming an extension table (which R49 §2.4 explicitly permits)
-passes unchecked; and R17 §2's stated reason for forbidding core→extension foreign keys does not
-survive examination, so §2.6 replaces it with separable verdicts and independent versioning.
-
+After a rebuild it will still declare no channel list: its `sorted/` tree has no `postprocessed/`
+directory, so no adapter can read one, and R83 §2.2 makes silence the correct answer rather than
+a gap.
 
 ## 3. `vr_foraging.json` — draftable now, not drafted
 
