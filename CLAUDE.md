@@ -13,7 +13,7 @@ conformance corpus, and 625 tests.
 35 tables, 308 columns, 76 references, 68 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R86 accepted. R42 and R73 withdrawn. R87–R88 proposed and not binding.
+R1–R41, R43–R72 and R74–R86 accepted. R42 and R73 withdrawn. R87–R89 proposed and not binding.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: extensions -->
 4 extension registries: aind_opto, aind_unit_qc, dynamic_foraging, vr_foraging

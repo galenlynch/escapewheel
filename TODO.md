@@ -9,7 +9,7 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R86 accepted. R42 and R73 withdrawn. R87–R88 proposed and not binding.
+R1–R41, R43–R72 and R74–R86 accepted. R42 and R73 withdrawn. R87–R89 proposed and not binding.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 35 tables, 308 columns, 76 references, 68 Tier 2 rules (2 advisory)
@@ -63,6 +63,15 @@ Only the user moves a revision from Proposed to Accepted. R85 and R86 were accep
   answers, and are never null in 41 and 48 rows. A run spanning sessions is recorded once per
   session (§2.4), so requiring the column forces no lie. Costs 1.0005x on `core.media_frames`
   (7,570,450 rows) and **requires both packets to be rebuilt**, since the column is required.
+- **R89 — A Calibration Names the Devices It Covers.** Nothing records a calibration, while
+  `dynamic_foraging.sessions` carries a valve open time *and* the volume it delivers, and
+  `aind_opto.emissions.power_mw` is the calibrated quantity an opto experiment is read through.
+  The curve is in `rig.json`: **the same two water calibrations dated 2024-11-27** appear in both
+  packets, 133 and 302 days before their sessions, so a calibration is not a processing run. Four
+  shapes are measured — a 7-point curve, an array in a `.npy`, a date and nothing else, and an
+  explicit "did not calibrate" — and **one calibration covers six probes**, so the devices are a
+  child table. Adds `core.calibrations`, `core.calibration_devices` and `core.calibration_points`;
+  35 tables → 38.
 
 Neither packet has been rebuilt against R85, so `core.devices.parent_port` is null in both. The
 column is nullable and both remain conforming; the values arrive with §2's rebuild.

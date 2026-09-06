@@ -163,11 +163,12 @@ projection covers all 33 session-scoped tables rather than 25.
 ## 5. Open
 
 - **Whether a run about no session at all should be recordable.** §2.4 answers the run that spans
-  sessions and not the run that belongs to none — a calibration owned by the rig rather than by any
-  session in the packet. R49 §2.2 already permits a `scope` naming a rig the packet does not hold,
-  so the case is anticipated one field over. No packet holds such a run, and the shape it would
-  want is a scope-only run table rather than a nullable column, which is more than this revision
-  needs.
+  sessions and not the run that belongs to none. The candidate case turned out not to be one: both
+  packets' `rig.json` carries the same water calibration dated 2024-11-27, **133 days** before one
+  session and **302 days** before the other, and a calibration produced no resource in either
+  packet, so it was never a `core.processing_runs` row to begin with. R89 gives it `core.calibrations`
+  instead. What remains open is a genuine processing run owned by a rig rather than a session, which
+  R49 §2.2 anticipates one field over and no packet holds.
 - **Whether `analysis.array_dimensions.coordinate_array_asset_id` is a seventeenth missing
   reference.** `core.array_dimensions` declares the analogous column against `core.array_assets`
   and the analysis copy declares nothing, so the two disagree about one column. It is the same
