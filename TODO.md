@@ -55,12 +55,13 @@ Only the user moves a revision from Proposed to Accepted. R85 and R86 were accep
 - **R87 — A Recipe May Not Contradict a Source It Reads.** Its check is already implemented and
   tested (3 tests in `test_session_extent.py`), because it caught a live bug: the 776259 recipe
   declared `subject_id = "786867"`.
-- **R88 — A Session-Scoped Table Carries `session_id`.** The 33 session-scoped tables use four
-  conventions between them and only 16 use the intended one. Six carry a `session_id` declaring no
-  reference, so Tier 1 generates no anti-join and **418,618,218 rows across the two packets carry a
-  session key nothing validates**; eight carry no column at all, which is the case the reader
+- **R88 — A Session-Scoped Table Names the Session of Every Row.** The 33 session-scoped tables use
+  four conventions between them and only 16 use the intended one. Six hold a `session_id` declaring
+  no reference, so Tier 1 generates no anti-join and **418,618,218 rows across the two packets hold
+  a session key nothing validates**; eight hold no column at all, which is the case the reader
   refuses with `MultiSessionUnresolved`; two are nullable for a scope question R86 §2.1 now
-  answers, and are never null in 41 and 48 rows. Costs 1.0005x on `core.media_frames`
+  answers, and are never null in 41 and 48 rows. A run spanning sessions is recorded once per
+  session (§2.4), so requiring the column forces no lie. Costs 1.0005x on `core.media_frames`
   (7,570,450 rows) and **requires both packets to be rebuilt**, since the column is required.
 
 Neither packet has been rebuilt against R85, so `core.devices.parent_port` is null in both. The

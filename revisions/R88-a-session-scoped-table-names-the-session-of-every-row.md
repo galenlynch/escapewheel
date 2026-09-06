@@ -1,4 +1,4 @@
-# R88 — A Session-Scoped Table Carries `session_id`
+# R88 — A Session-Scoped Table Names the Session of Every Row
 
 | | |
 |---|---|
@@ -19,28 +19,27 @@ core and analysis's 35 tables do. Measured on the two packaged sessions, **`ecep
 
 ### 1.1 Thirty-three session-scoped tables use four conventions between them
 
-Sixteen of the thirty-two that are not `core.sessions` itself carry `session_id` as a required
-column and declare the reference to `core.sessions`. The other sixteen each do one of three other
-things.
+Sixteen of the thirty-two that are not `core.sessions` itself hold `session_id` as a required
+column and declare its reference to `core.sessions`. The other sixteen each depart from that in
+one of three ways.
 
-| what the table does | tables | |
+| what the table has | tables | |
 |---|---:|---|
-| carries a required `session_id`, declares the reference | 16 | the intended shape |
-| carries a nullable `session_id`, declares the reference | 2 | `core.devices`, `core.processing_runs` |
-| carries `session_id`, declares no reference | 6 | `analysis.spike_events`, `core.sorting_run_channels`, `core.unit_coordinates`, `core.unit_electrodes`, `core.unit_observation_intervals`, `core.unit_quality_labels` |
-| carries no session column at all | 8 | `analysis.array_dimensions`, `core.array_channels`, `core.array_dimensions`, `core.clock_anchors`, `core.electrode_coordinates`, `core.event_stream_observation_intervals`, `core.media_frames`, `core.processing_run_inputs` |
+| a required `session_id`, and the reference declared | 16 | the intended shape |
+| a nullable `session_id`, and the reference declared | 2 | `core.devices`, `core.processing_runs` |
+| a `session_id`, and no reference declared | 6 | `analysis.spike_events`, `core.sorting_run_channels`, `core.unit_coordinates`, `core.unit_electrodes`, `core.unit_observation_intervals`, `core.unit_quality_labels` |
+| no session column at all | 8 | `analysis.array_dimensions`, `core.array_channels`, `core.array_dimensions`, `core.clock_anchors`, `core.electrode_coordinates`, `core.event_stream_observation_intervals`, `core.media_frames`, `core.processing_run_inputs` |
 
-Nothing chose the split. Each of the three departures has its own consequence, and the three are
-described below in the order they cost something.
+Nothing chose the split, and each of the three departures costs something different.
 
 ### 1.2 Six `session_id` columns are foreign keys no rule checks
 
 A Tier 1 anti-join is generated from a table's declared `references` and from nothing else
 (`escapewheel_validator/generate.py:292`), so a column naming another table's key without
-declaring it gets no check at all. Six `session_id` columns are in that state, and a row of
-`core.unit_electrodes` naming a session that is not in `core.sessions` therefore validates clean.
+declaring it gets no check at all. Six `session_id` columns are in that state, so a row of
+`core.unit_electrodes` naming a session that is not in `core.sessions` validates clean.
 
-The rows are not a rounding error. Across the two packets **418,618,218 rows carry a `session_id`
+The rows are not a rounding error. Across the two packets **418,618,218 rows hold a `session_id`
 nothing validates**, of which 286,876,859 are `analysis.spike_events` in `ecephys_776259` alone —
 the largest table either packet holds. R46 declared sixteen foreign keys that had never been
 written, for exactly this reason, and these six survived that sweep.
@@ -53,9 +52,9 @@ only route is a join to the parent that does — which R86 §2.4 measures at **2
 projected literal's 1.02x, and which R86 specifies nowhere. The reference reader refuses, raising
 `MultiSessionUnresolved` and naming the table rather than guessing.
 
-Nothing has met that refusal, because R1 §1 makes a single-session packet primary and no
-multi-session packet exists: where a packet holds one session, that session answers for every row
-it holds. The first multi-session packet meets it on eight tables at once.
+Nothing has met that refusal, because R1 §1 makes a single-session packet primary and none of
+the other kind exists: where a packet holds one session, that session answers for every row in it.
+The first multi-session packet meets the refusal on eight tables at once.
 
 ### 1.4 Two `session_id` columns are nullable for a question the registry now answers
 
@@ -64,35 +63,38 @@ them as *"Session if device record is session-scoped"* and *"Session ID if sessi
 hedges were written before anything could compute scope; R86 §2.1 now does, and both tables reach
 `core.sessions`, so both are session-scoped and the condition the hedge waits on is settled.
 
-A null in either would leave R86 §2.2's discriminator undefined for the row. Neither is ever null:
-**0 of 41 device rows and 0 of 48 processing-run rows** across the two packets. R85 §3 settles the
-first of them independently — `core.devices` is session-scoped because 11 device names appear in
-both packets with different hardware behind them.
+A null in either would leave R86 §2.2's discriminator undefined for the row, and would also degrade
+a rule that already exists: R82 §2.1's currency check groups by `session_id, activity_type, scope`,
+and SQL collects every null into one group, so two runs recording no session would be reported as
+competing alternatives whether or not they are. Neither column is ever null — **0 of 41 device rows
+and 0 of 48 processing-run rows** across the two packets. R85 §3 settles the first of them
+independently: `core.devices` is session-scoped because 11 device names appear in both packets with
+different hardware behind them.
 
 ## 2. Decision
 
-### 2.1 A session-scoped table carries `session_id`, and a table that is not MUST NOT
+### 2.1 Exactly the session-scoped tables have a `session_id`
 
-A table reaching `core.sessions` through its declared references **MUST** carry `session_id`:
-`int32`, presence **required**, R48 role `identifier`, R53 identity `assigned`. The eight tables
-that carry no session column gain one, and `core.devices.session_id` and
+A table reaching `core.sessions` through its declared references **MUST** have a `session_id`
+column: `int32`, presence **required**, R48 role `identifier`, R53 identity `assigned`. The
+eight tables holding no session column gain one, and `core.devices.session_id` and
 `core.processing_runs.session_id` become required.
 
-A table that does not reach `core.sessions` **MUST NOT** carry a `session_id`. Two do not —
+A table that does not reach `core.sessions` **MUST NOT** have one. Two do not —
 `core.subjects` and `core.source_files`, which `core.sessions` references rather than the reverse —
 and neither carries one today, so the prohibition costs nothing and states what a later table may
 not do.
 
 ### 2.2 A `session_id` declares its reference to `core.sessions`
 
-A table carrying `session_id` **MUST** declare the reference `session_id` →
+A table with a `session_id` **MUST** declare the reference `session_id` →
 `core.sessions.session_id`. Carrying the column without it is the state §1.2 measures, and the
 reference is the whole of what a rule can see: Tier 1 generates one anti-join per declared
 reference, so the column is checked or unchecked according to whether the reference is written.
 
 ### 2.3 A writer fills the column from the parent it already read
 
-Every one of the eight is **exactly one hop** from a parent that carries `session_id` —
+Every one of the eight is **exactly one hop** from a parent that holds `session_id` —
 `core.media_frames` from `core.media_assets`, `core.clock_anchors` from `core.clocks`,
 `core.electrode_coordinates` from `core.electrodes`, and so on. An adapter is also constructed
 with the session it is building, which is where the value actually comes from.
@@ -100,6 +102,23 @@ with the session it is building, which is where the value actually comes from.
 So the column costs no new read. A writer **MUST NOT** infer the session from a name — a file path
 and a packet directory both spell one, and neither is a statement this specification constrains,
 which is R67 §2.1's rule about attachment applied to the same shape of question.
+
+### 2.4 A run covering several sessions is recorded once per session
+
+`processing_run_id` is `assigned` (R53 §2.3) and `core.processing_runs` is keyed on it alone, so
+the packet mints the number and nothing obliges one computation to be one row. A run whose results
+reach several sessions is recorded **once per session**, and every dependent row — a sorting run, a
+curation version, a coordinate, a run input — references the copy for its own session.
+
+R85 §1.3 measures the same shape one level down: `core.devices` holds a row per session for
+hardware that is one physical object, because two sessions record different firmware behind one
+name. Here duplication costs a handful of columns on a table holding 26 and 22 rows.
+
+Currency is unaffected, because the machinery is already partitioned by session: R82 §2.1's rule
+groups by `session_id, activity_type, scope` and `core.preferred_runs` is keyed
+`(session_id, activity_type, scope_kind, scope)`, so two copies in different sessions never
+compete. The copies **MUST NOT** share a `processing_run_name`, which R85 §2.2 requires to be
+unique within a packet.
 
 ## 3. What this does not change
 
@@ -112,9 +131,10 @@ which is R67 §2.1's rule about attachment applied to the same shape of question
 - **R86 is unamended.** Its §2.2 already requires the discriminator on every session-scoped table;
   this makes that requirement satisfiable for a multi-session packet, where today it is only
   refusable.
-- **No primary key changes.** `session_id` is carried and not keyed, which is what the sixteen
-  tables already doing this do: `core.units` is keyed on `unit_id` alone since R81 §2.3 and carries
-  the session beside it. Uniqueness is unaffected on the eight tables that gain a column.
+- **No primary key changes.** `session_id` sits beside the key rather than in it, which is what the
+  sixteen tables already doing this do: `core.units` is keyed on `unit_id` alone since R81 §2.3 and
+  holds the session as an ordinary column. Uniqueness is unaffected on the eight tables that gain
+  one, since adding a column cannot make an existing key less unique.
 - **No packet's information changes.** Every value the new columns will hold is already in the
   packet, one declared reference away. What changes is where it sits and whether a rule can reach
   it.
@@ -124,9 +144,10 @@ which is R67 §2.1's rule about attachment applied to the same shape of question
 The registry goes from 308 columns to **316** and from 76 references to **90**, so Tier 1's
 not-null checks go from 130 to **140** and its anti-joins, one per reference, from 76 to **90**.
 
-Nothing fails. The six columns that already exist have **0 orphans across both packets**, so
-declaring their references turns on fourteen checks that all pass — R46's own result on its
-sixteen.
+Nothing fails. The six columns that already exist have **0 orphans across both packets**, so the
+six references declared over them turn on checks that already pass — R46's own result on its
+sixteen. The other eight cannot orphan by construction: §2.3 fills each from the parent row whose
+own reference to `core.sessions` is already checked.
 
 Storage is free. On `core.media_frames`, the largest of the eight at **7,570,450 rows**, adding the
 column costs **1.0005x** — 0.013 bits per row — because one distinct value under a clustered sort
@@ -136,18 +157,17 @@ compresses away. R81 measured the same shape at no cost over 286,896,563 spikes.
 built before this is non-conforming. R61 §5 makes a correction a rebuild, and this one re-reads no
 external resource; `ecephys_776259` was already owed one for its subject.
 
-The reference reader drops `MultiSessionUnresolved` with the case that produced it. R86 §2.4's
-projection then covers all 33 session-scoped tables rather than 25, and no reader needs the join
-R86 declined to specify.
+The reference reader drops `MultiSessionUnresolved` with the case that produced it, and R86 §2.4's
+projection covers all 33 session-scoped tables rather than 25.
 
 ## 5. Open
 
-- **Whether a processing run is always a session's.** §2.1 makes `core.processing_runs.session_id`
-  required on the evidence that it is never null, and R44 §2 gives a run a `scope` that may name a
-  rig or a camera rather than a session. A run about something no session owns would need the
-  column nullable again and would make R86 §2.2's discriminator genuinely undefined for that row
-  rather than accidentally so. No packet holds one, and that is the condition on which this clause
-  should be reopened.
+- **Whether a run about no session at all should be recordable.** §2.4 answers the run that spans
+  sessions and not the run that belongs to none — a calibration owned by the rig rather than by any
+  session in the packet. R49 §2.2 already permits a `scope` naming a rig the packet does not hold,
+  so the case is anticipated one field over. No packet holds such a run, and the shape it would
+  want is a scope-only run table rather than a nullable column, which is more than this revision
+  needs.
 - **Whether `analysis.array_dimensions.coordinate_array_asset_id` is a seventeenth missing
   reference.** `core.array_dimensions` declares the analogous column against `core.array_assets`
   and the analysis copy declares nothing, so the two disagree about one column. It is the same
