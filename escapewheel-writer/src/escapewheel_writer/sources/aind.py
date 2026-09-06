@@ -128,6 +128,18 @@ class SessionSource(Compensates):
         self._document: dict[str, Any] = json.loads(self.path.read_text())
         self.session_id = session_id or self.path.parent.name
 
+    @property
+    def subject_id(self) -> str | None:
+        """The subject `session.json` names, for the recipe's declaration to be checked against.
+
+        `core.subjects` is one of the few tables the recipe supplies outright (`05` §3.1), so
+        nothing else in the build has a second opinion about which animal this is -- and a
+        subject is exactly the identifier that must not be session-scoped, so a wrong one
+        unifies with another packet's rather than colliding with it.
+        """
+        value = self._document.get("subject_id")
+        return str(value) if value is not None else None
+
     # -- time -------------------------------------------------------------------------
 
     def _instant(self, raw: str, label: str) -> datetime:

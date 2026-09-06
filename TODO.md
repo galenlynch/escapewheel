@@ -9,7 +9,7 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R84 accepted. R42 and R73 withdrawn. Nothing is proposed.
+R1–R41, R43–R72 and R74–R84 accepted. R42 and R73 withdrawn. R85–R87 proposed and not binding.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 35 tables, 307 columns, 76 references, 68 Tier 2 rules (2 advisory)
@@ -47,33 +47,51 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. `registry_version` — still `0.1.0`
+## 1. Three revisions are drafted and none is accepted
 
-R84 renamed the project and deliberately left this alone. It has stood at `0.1.0` while R48 added
-roles, **R53 turned every identifier from string to int32**, R56 added unit and clock context,
-R81 narrowed six primary keys and R83 added a table. Two packets claiming one version with
-incompatible schemas is what the field exists to prevent, and it is preventing nothing.
+Only the user moves a revision from Proposed to Accepted. All three came out of the 2026-09-06
+session and each carries its measurements.
 
-Free to settle while nobody outside holds a packet. Settling it costs a rebuild of both packets,
-which R84 has already made necessary, so doing it before the next rebuild is free and doing it
-after costs two more.
+- **R85 — A Device Declares Which Port It Attached To.** `core.devices` gains a nullable
+  `parent_port`. Position currently hides in `device_name` because 13 of 20 rows have no serial
+  and Open Ephys writes `0` for every basestation, connect-board and headstage serial. §2.2 also
+  states that a `*_name` MUST be unique within a packet — `Keys.of` merges duplicates silently —
+  and that no rule can check it, because a writer cannot tell two things wrongly sharing a name
+  from one thing seen twice.
+- **R86 — A Reader Presents Many Packets as One Relation.** Session scope is derivable: a table is
+  session-scoped iff it reaches `core.sessions` through declared references, 32 of 34. The reader
+  discriminates by *the packet a row came from plus its `session_id`* — never by a `*_name`, since
+  6 of 12 name columns collide between packets that share nothing. Identity is carried, not joined
+  on (widening a join costs 2.93x) and projected as a literal, not joined for (1.02x against
+  2.22x).
+- **R87 — A Recipe May Not Contradict a Source It Reads.** Its check is already implemented and
+  tested (3 tests in `test_session_extent.py`), because it caught a live bug: the 776259 recipe
+  declared `subject_id = "786867"`.
 
-## 2. The repository directory is still `nwb-lake/`
+## 2. `ecephys_776259` needs rebuilding, and R86's evidence depends on it
 
-R84 §2.1 renames the repository. Everything inside it moved; the checkout directory itself did
-not, because renaming it mid-session breaks every absolute path in flight. `git mv` cannot do it
-either — it is the working tree's own root.
+Its recipe is corrected; the packet still names subject `786867`. Rebuilding is the next concrete
+task — everything else about that packet is current, and it reads its sorted asset from S3.
 
-## 2a. `ecephys_786867` is four revisions behind
+**R86 §2.2 says "6 of 12 name columns collide" and one of those six is this bug.** After the
+rebuild the honest number is 5 of 12, and the paragraph must be corrected before R86 is accepted.
 
-`/mnt/Data/df-packet/packet` predates R80 (no `sources.json`; **14 of 14 external resources name
-`file:///`**), R81 (four-column unit key, `unit_id` carried), R83 (no
-`core.sorting_run_channels`) and the `is_primary` fix. `ecephys_776259` was rebuilt 2026-09-05
-and is current.
+## 2a. `registry_version` — still `0.1.0`
 
-After a rebuild it will still declare no channel list: its `sorted/` tree has no `postprocessed/`
-directory, so no adapter can read one, and R83 §2.2 makes silence the correct answer rather than
-a gap.
+Unchanged through R48, R53's string-to-int32 change, R56, R81 and R83. Two packets claiming one
+version with incompatible schemas is what the field exists to prevent, and it is preventing
+nothing. Free to settle while nobody outside holds a packet, and free to batch into any rebuild.
+
+## 2b. The repository directory is still `nwb-lake/`
+
+R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
+because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
+working tree's own root.
+
+## 2c. Staging both packets to scratch needs a token
+
+`aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Both packets are
+current apart from 776259's subject; roughly 1.2 GB and 700 MB excluding referenced LFP.
 
 ## 3. `vr_foraging.json` — draftable now, not drafted
 

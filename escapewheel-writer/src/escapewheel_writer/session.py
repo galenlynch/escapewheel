@@ -37,6 +37,7 @@ from numpy.typing import NDArray
 
 from .extensions import load as load_extension
 from .recipe import RECIPE_SUPPLIES, Recipe, SourceSpec
+from .sources import SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
 
@@ -308,6 +309,23 @@ def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) ->
         }
         context.clocks.update({c["clock_id"]: float(c["tick_rate_hz"]) for c in source.clocks()})
     if spec.kind == "session":
+        # R87 §2.2: a recipe declares the facts no source carries (`05` §3.1), so a field a
+        # source does carry is one the recipe should not be inventing. One recipe declared
+        # `subject_id = "786867"` against a session.json reading 776259, and every packet built
+        # from it asserted 6,781 units from an animal that was never in the rig. R86 §2.3 makes
+        # `core.subjects` one of the two tables that are not session-scoped, so a wrong subject
+        # agrees with another packet's rather than colliding with it.
+        # `getattr`, because an adapter registered by another distribution need not expose it
+        # and R87 §2.3 makes silence a fact about the source rather than a contradiction.
+        stated = getattr(source, "subject_id", None)
+        declared = str(getattr(recipe, "subject", {}).get("subject_id", "")) or None
+        if stated and declared and stated != declared:
+            raise SourceDefect(
+                f"[subject].subject_id is {declared!r} and {source.path} states {stated!r}; "
+                "a recipe may not contradict a source it reads (R87 §2.1)"
+            )
+        if stated is None and declared:
+            source.notes.append(f"[subject].subject_id {declared} went unchecked; the session states none")
         # Both ends come from the declared stream windows rather than from the recipe: a
         # hand-entered start is a transcription of the same fact, and the two disagreeing
         # silently is worse than either being wrong loudly.
