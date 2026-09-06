@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-31 |
 | **Amends** | R6 §3 (what `tick_zero_utc` is for), R25 §5 (what locates a session in time) |
 | **Depends on** | R38 (observation belongs to the clock), R37 (error-bounded alignment), R27 §2 (reference clock) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

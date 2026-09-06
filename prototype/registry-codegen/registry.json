@@ -1,8 +1,8 @@
 {
-  "$schema": "https://nwb-lake.org/schemas/registry/v0.1",
+  "$schema": "https://escapewheel.org/schemas/registry/v0.1",
   "registry_version": "0.1.0",
-  "semantic_standard_version": "nwb-lake-semantic-v0.1",
-  "logical_standard_version": "nwb-lake-logical-v0.1",
+  "semantic_standard_version": "escapewheel-semantic-v0.1",
+  "logical_standard_version": "escapewheel-logical-v0.1",
   "tables": {
     "core.sessions": {
       "columns": [

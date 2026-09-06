@@ -6,7 +6,7 @@ candidates for. Nothing is committed on the strength of an inventory — it is w
 normalization and validation stages are written against.
 
 These are prose inventories of specific datasets. The machine-readable form is
-`nwb-lake inspect-source --out source_inventory.json` (`07`), which does not exist yet.
+`escapewheel inspect-source --out source_inventory.json` (`07`), which does not exist yet.
 
 | File | Dataset |
 |---|---|

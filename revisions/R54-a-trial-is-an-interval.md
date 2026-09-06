@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-03 |
 | **Amends** | `02` (`core.trials`, `core.trial_tags`), R3 §3.0 (one of its child-table examples), R43 §3 (which sent a task's columns to an extension) |
 | **Depends on** | R17 (extension registries), R45 (a tick interval is closed), R49 (a kind names a resource), R53 (an identifier is an integer) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -203,7 +203,7 @@ columns in core.
 What has to exist first:
 
 1. A recipe may name an extension resource, and `PacketWriter` may write one.
-2. `nwb-lake init` scaffolds a registry document from a source's columns.
+2. `escapewheel init` scaffolds a registry document from a source's columns.
    `inventory/vr-foraging-packaging.md:83` already records that the `Site` model *"converts
    mechanically into an R17 extension registry document"*, which is that scaffolder's
    specification.

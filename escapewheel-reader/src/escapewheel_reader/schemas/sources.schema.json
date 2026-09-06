@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://escapewheel.org/schemas/sources/0.1.0",
+  "title": "Escapewheel source resolution document",
+  "description": "Shape of sources.json, per R80 §2.2. Maps a source name declared by an external resource entry to where that body of data is, for one reader in one situation. It is not a packet resource: R14 §2.3's immutability does not reach it, which is what lets a location be corrected when a mirror moves.",
+  "type": "object",
+  "required": [
+    "sources_standard_version",
+    "sources"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This document's meta-schema, by $id. Identity rather than a fetch instruction: a reader MUST NOT dereference it and MUST NOT require it (R57 §2)."
+    },
+    "sources_standard_version": {
+      "type": "string",
+      "const": "escapewheel-sources-v0.1",
+      "description": "Which version of this document format is in use, so a reader refuses a future one rather than misreading it."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human context: whose mirror this is, and for whom. Read by nothing."
+    },
+    "sources": {
+      "type": "object",
+      "description": "Source name to where that source is. A name is opaque to this specification and matches the `source` field of an external resource entry.",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]*$",
+        "maxLength": 512
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "type": "string",
+            "pattern": "^([A-Za-z][A-Za-z0-9+.-]+:|/)",
+            "description": "Where this source is: an absolute URI, or an absolute filesystem path for data staged locally. A resource's own `uri` is a path relative to this."
+          },
+          "description": {
+            "type": "string",
+            "description": "Human context for this one source. Read by nothing."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

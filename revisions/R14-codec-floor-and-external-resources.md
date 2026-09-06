@@ -6,7 +6,7 @@
 | **Amends** | `03_portable_physical_profile.md`, `04_packet_catalog_manifest.md`, `05_validation_and_import.md`, R3 §7.2 |
 | **Depends on** | R3 (codec floor, `required_codecs`) |
 | **Blocks** | Phase 5 |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

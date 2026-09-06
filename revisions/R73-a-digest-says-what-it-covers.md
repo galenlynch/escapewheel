@@ -5,7 +5,7 @@
 | **Status** | **Withdrawn** 2026-09-04 |
 | **Amends** | nothing |
 | **Depends on** | R36 §2.2 (the canonical member listing), R52 (a packet-owned resource records a digest) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -34,7 +34,7 @@ bytes and both would believe they had complied.
 R36 §2.2 defines the construction exactly — SHA-256 over the compact JSON encoding of
 `[["<key>",<size>,"<sha256>"], ...]`, sorted by key in byte order, with `size_bytes` the sum of
 member sizes. R52 §2.1 extends it to packet-owned prefixes explicitly. The reference
-implementation has always used it: `nwb_lake_validator.stores.digest` routes a prefix through
+implementation has always used it: `escapewheel_validator.stores.digest` routes a prefix through
 R36 §2.2 and `PacketWriter` calls it for every owned resource.
 
 So the specification and the implementation agreed; the compiled prose disagreed with both, and in
@@ -49,7 +49,7 @@ their other clauses. Two independent reviews of v0.2 each found dropped clauses 
 different subset — R53 §2.4's `int64` escape, R21's codec floor, R55 §2.5's extension coverage,
 R61 §2.2's retention declaration, this one.
 
-The response was a ledger rather than a third audit: `nwb_lake_poc_docs_v0.2/ledger.py` enumerates
+The response was a ledger rather than a third audit: `escapewheel_poc_docs_v0.2/ledger.py` enumerates
 every Decision clause of every accepted revision, `applied.toml` records where each went, and a
 clause with no disposition fails the build. R73 is retained as the case that shows why a revision
 was the wrong instrument — the rule already existed, and nothing was checking that anyone had

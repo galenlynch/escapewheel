@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R2 §3 (the registry's column object); R3 §6 (the index-base taxonomy) |
 | **Depends on** | R2 (the registry format), R3 (the cross-language floor), R8 (source labels are strings), R29 (`since`), R45 (a tick is a coordinate) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

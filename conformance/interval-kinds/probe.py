@@ -75,7 +75,7 @@ def detail(extension_id, table, extra, *, based):
                            "resource_columns": ["clock_id"]})
     return {
         "registry_version": "0.1.0", "logical_standard_version": "0.1",
-        "extension_id": extension_id, "extends": "nwb-lake-logical-v0.1",
+        "extension_id": extension_id, "extends": "escapewheel-logical-v0.1",
         "tables": {f"{extension_id}.{table}": {
             "columns": columns + extra, "primary_key": key, "references": references,
             "sort": key, "rules": []}},
@@ -115,7 +115,7 @@ def rows(based):
 
 
 def build(root, *, based):
-    from nwb_lake_writer import PacketWriter
+    from escapewheel_writer import PacketWriter
 
     registry = base_registry() if based else json.loads(json.dumps(REGISTRY))
     extensions = [detail("dynamic_foraging", "trials", TASK_COLUMNS, based=based),
@@ -138,7 +138,7 @@ def build(root, *, based):
 
 def ask(root, *, based):
     """The two questions R54 §2.1 claims the base table answers, and what each costs."""
-    from nwb_lake_reader import open_packet
+    from escapewheel_reader import open_packet
 
     packet = open_packet(root)
     out = {}
@@ -190,7 +190,7 @@ def ask(root, *, based):
 
 
 def main():
-    scratch = Path("/mnt/Data/nwb-lake/scratch/interval-kinds")
+    scratch = Path("/mnt/Data/escapewheel/scratch/interval-kinds")
     shutil.rmtree(scratch, ignore_errors=True)
     scratch.mkdir(parents=True)
     for based in (True, False):

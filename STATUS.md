@@ -1,10 +1,10 @@
 # Implementation status
 
-Tracking document for NWB-Lake POC v0.1. Records what exists, what passes validation, and
+Tracking document for Escapewheel POC v0.1. Records what exists, what passes validation, and
 which phase is in progress. Design decisions live in `revisions/`, not here.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R83 accepted. R42 and R73 withdrawn. R84 proposed and not binding.
+R1–R41, R43–R72 and R74–R84 accepted. R42 and R73 withdrawn. Nothing is proposed.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 35 tables, 307 columns, 76 references, 68 Tier 2 rules (2 advisory)
@@ -22,15 +22,15 @@ Phases are `07_reference_api_and_implementation_plan.md`'s plan of record.
 
 | Phase | State | Notes |
 |---|---|---|
-| — Specification | **complete** | R1–R41 and R43–R70 accepted; R42 withdrawn. 34 tables. `nwb_lake_poc_docs_v0.2/` compiles the frozen spec plus every accepted revision. |
+| — Specification | **complete** | R1–R41 and R43–R70 accepted; R42 withdrawn. 34 tables. `escapewheel_poc_docs_v0.2/` compiles the frozen spec plus every accepted revision. |
 | — Registry content | **complete** | 34 tables, 315 columns, 76 references, 66 Tier 2 rules (4 advisory). Version held at 0.1.0 while unreleased; bumped only when an amendment forces it, which is the last open decision before a release. |
 | 0 Spec fixtures | **complete** | Single-session packet plus a 25-variant corpus carrying one extension; `fixtures/`. |
-| 1 Manifest and table reader | **complete** | `nwb-lake-reader`; 156 tests, mypy strict. Ticks come back on the packet's reference clock by default, and `seconds=True` derives R39 §2.3's seconds from the declared origin or refuses. `TableResource` and `ArrayResource`, each with its heavy dependency behind an extra. |
-| 2 Validator | **complete** | `nwb-lake-validator`, its own package since 2026-08-27; 87 tests. Corpus passes through it. R15 §4 level 2 checks packet-owned arrays against their own Zarr metadata; level 3 runs under `external=True`, reachable as `validate --external` and `--checksums`, and reports the fields it compared rather than asserting a resource was checked. R35 §5 bounds an amendment's rules to what it writes. |
-| 3 NWB source importer | **complete** | Four adapters: `NWBSource` (tables the NWB is authority for, plus R28's unit-electrode and CCF links), `SessionSource` (`tick_zero_utc`, observation intervals), `SorterSource` (units, spikes, per-stream clocks), `SyncSource` (anchors), plus `WaveformSource`. The session recipe and `nwb-lake inspect` / `init` / `import` replace the ad-hoc scripts: 776259 commits clean from `session.toml` in 2.5 min, and the recipe lands in `core.processing_runs.parameters`, closing `05` Stage 3. |
+| 1 Manifest and table reader | **complete** | `escapewheel-reader`; 156 tests, mypy strict. Ticks come back on the packet's reference clock by default, and `seconds=True` derives R39 §2.3's seconds from the declared origin or refuses. `TableResource` and `ArrayResource`, each with its heavy dependency behind an extra. |
+| 2 Validator | **complete** | `escapewheel-validator`, its own package since 2026-08-27; 87 tests. Corpus passes through it. R15 §4 level 2 checks packet-owned arrays against their own Zarr metadata; level 3 runs under `external=True`, reachable as `validate --external` and `--checksums`, and reports the fields it compared rather than asserting a resource was checked. R35 §5 bounds an amendment's rules to what it writes. |
+| 3 NWB source importer | **complete** | Four adapters: `NWBSource` (tables the NWB is authority for, plus R28's unit-electrode and CCF links), `SessionSource` (`tick_zero_utc`, observation intervals), `SorterSource` (units, spikes, per-stream clocks), `SyncSource` (anchors), plus `WaveformSource`. The session recipe and `escapewheel inspect` / `init` / `import` replace the ad-hoc scripts: 776259 commits clean from `session.toml` in 2.5 min, and the recipe lands in `core.processing_runs.parameters`, closing `05` Stage 3. |
 | 4 Analysis materializations | **complete** | `analysis.spike_events` (R30) materialised and amended into both packets. The success criterion is met — PSTH measured three ways, 2026-09-01, all bin-identical. The other six `06` names are **not** oversights: `spikes_by_trial`, `trials_wide` and `unit_condition_rates` were measured and declined by R43; `good_units` was already a view; `binned_spikes` and the spectrogram are Phase 5. |
 | 5 Dense arrays | **complete** | `core.waveform_mean`, a sparse int16 template array, `(6781, 26, 150)` in 26 MB, packet-owned Zarr v3. Layout measured in `conformance/zarr-probe/waveforms.py`: the chunk is the unit of the question, the shard the unit of the object, and the compressor goes *inside* the shard. **LFP is referenced, not copied** (R14 §2.3, R21 §3.2): twelve Zarr v2 arrays, 6.8 GB the packet points at, with R20's regular-tick axis replacing 767 MB of timestamps with three integers per series and `core.array_channels` carrying R19's per-channel `inter_sample_shift`. Both success criteria are met: `pkt.array("core.waveform_mean")` opens it, and the structural agreement is validated — rank against `core.array_dimensions`, codecs against the store, `zarr_format`, transpose ban. `07`'s "dtype/shape" wording is superseded, since R3 §3.3 struck both columns. Media assets are not Phase 5 scope: `07` never names them. |
-| 6 Release and version discipline | **partial** | `nwb-lake verify` records what is true about external resources (R36 §2.4); `nwb-lake prune` removes what a committed packet no longer names (R61 §3). What remains is the `registry_version` decision. |
+| 6 Release and version discipline | **partial** | `escapewheel verify` records what is true about external resources (R36 §2.4); `escapewheel prune` removes what a committed packet no longer names (R61 §3). What remains is the `registry_version` decision. |
 | 7 Iceberg experiment | not started | Explicitly last; MUST NOT be required earlier. |
 
 ## What exists
@@ -44,9 +44,9 @@ One repository since 2026-09-04; the `Repo` column is gone with the split that n
 | `conformance/` | Probe suites producing the evidence revisions cite. |
 | `prototype/registry-codegen/` | R2's chain working end to end, 3 tables. |
 | `fixtures/` | Phase 0 packets and the conformance corpus. |
-| `nwb-lake-reader/` | Phase 1: the reader. Owns the `nwb-lake` console script. |
-| `nwb-lake-validator/` | Phase 2: the validator. Adds `nwb-lake validate`. |
-| `nwb-lake-writer/` | Phase 3: writer, clock, NWB and JSON adapters. Adds `nwb-lake import`. |
+| `escapewheel-reader/` | Phase 1: the reader. Owns the `escapewheel` console script. |
+| `escapewheel-validator/` | Phase 2: the validator. Adds `escapewheel validate`. |
+| `escapewheel-writer/` | Phase 3: writer, clock, NWB and JSON adapters. Adds `escapewheel import`. |
 | `registry/` | Registry, meta-schema, manifest schema, and the derivation. |
 
 Root holds `CLAUDE.md` and this file, and is not tracked.
@@ -57,7 +57,7 @@ Root holds `CLAUDE.md` and this file, and is not tracked.
 adapters — `NWBSource` for the tables, `SessionSource` for the clock and the windows — and
 committed with no errors and one warning (`tick_zero_plausible`, the open R6 question below):
 
-**The 776259 packet is rebuilt under R37–R39** — `/mnt/Data/nwb-lake/packets/r38r39-full`,
+**The 776259 packet is rebuilt under R37–R39** — `/mnt/Data/escapewheel/packets/r38r39-full`,
 committed in 1 min 51 s with 0 errors and the one standing `tick_zero_plausible` warning:
 
 ```text
@@ -74,7 +74,7 @@ bound the run measured rather than assumed. `Packet.seconds` then answers in sec
 declared origin: the first behaviour event at 166.307 s, matching R39 §4's independent figure.
 
 **A second packet exists, with real spikes and a clock graph R27 accepts** —
-`/mnt/Data/nwb-lake/packets/ecephys_837772_2026-06-27_experiment1`, 749 MB, committed with
+`/mnt/Data/escapewheel/packets/ecephys_837772_2026-06-27_experiment1`, 749 MB, committed with
 zero findings in 3.0 min at 5,959 MiB peak:
 
 ```text
@@ -89,7 +89,7 @@ carrying `analysis.spike_events` (247,758,402 rows, 453 MB) added by `PacketWrit
 under R32 — see the layout section below.
 
 ```text
-/mnt/Data/nwb-lake/packets/ecephys_776259_2025-04-09_17-25-12   11 tables
+/mnt/Data/escapewheel/packets/ecephys_776259_2025-04-09_17-25-12   11 tables
 core.subjects 1   core.sessions 1   core.clocks 1   core.devices 15   core.probes 12
 core.electrodes 4608   core.electrode_coordinates 8832
 core.event_streams 7   core.event_stream_observation_intervals 4
@@ -101,7 +101,7 @@ recovered from this NWB, and the dense arrays are Phase 5. Every tick in it roun
 the source's stored seconds bit-exactly.
 
 The packet root carries **no extension**. `03`'s layout names it `packet_root/` and a packet
-is identified by `nwb.packet.json`, which is what `open_packet` and `PacketWriter.commit`
+is identified by `packet.json`, which is what `open_packet` and `PacketWriter.commit`
 both key on — neither reads the directory name. `07` and `08` write `session_001.nwbpkt` in
 examples only, never normatively. The suffix is dropped because on Linux it carries no
 machinery — it is a NeXTSTEP/macOS bundle convention that Launch Services implements and
@@ -128,17 +128,17 @@ are advisory; `facts.py` prints the current counts.
 Re-run these after any change to the specification or revisions.
 
 ```bash
-cd fixtures && uv run --no-cache --with ../nwb-lake-validator --with duckdb python corpus.py  # the whole corpus
-cd nwb-lake-writer && uv run --all-extras pytest   # 323 tests, incl. a synthetic NWB-Zarr
-cd nwb-lake-reader && uv run --all-extras pytest   # 156 tests
-cd nwb-lake-validator && uv run --all-extras pytest  # 87 tests
+cd fixtures && uv run --no-cache --with ../escapewheel-validator --with duckdb python corpus.py  # the whole corpus
+cd escapewheel-writer && uv run --all-extras pytest   # 323 tests, incl. a synthetic NWB-Zarr
+cd escapewheel-reader && uv run --all-extras pytest   # 156 tests
+cd escapewheel-validator && uv run --all-extras pytest  # 87 tests
 
 python3 conformance/spec-sweep/sweep.py        # 09 vs 02 drift; expects none outstanding
 python3 conformance/spec-sweep/compliance.py   # 02 against R3's rules
 python3 conformance/spec-sweep/tables.py       # table ledger; expects 34
 
 uv run --with duckdb --with jsonschema python registry/check.py   # 25 registry invariants
-uv run --with ./nwb-lake-validator python conformance/spec-sweep/rules.py  # revisions vs implementation
+uv run --with ./escapewheel-validator python conformance/spec-sweep/rules.py  # revisions vs implementation
 ```
 
 Library-dependent, re-run when versions change:
@@ -444,7 +444,7 @@ covers the row's own fields, which *are* SQL's business: a `materialization` run
 
 ```text
 processing_run_id: materialize.analysis.spike_events
-run: materialization  nwb_lake_writer 0.1.0
+run: materialization  escapewheel_writer 0.1.0
      {"bound":1.0,"bucket_seconds":300,"reference_clock_id":null}
 ```
 
@@ -501,7 +501,7 @@ between two different spike trains is not a format comparison.
 What survives is defined by the whole table rather than by a pairing:
 
 ```text
-operation                  nwb-lake       lazynwb    ratio   rows
+operation                  escapewheel       lazynwb    ratio   rows
 units table                  0.001s        0.014s    11.8x   4,505 / 4,559
 all spike times              0.136s        6.441s    47.5x   131,387,137 / 93,525,026
 trials table                 0.001s        0.013s    10.3x   450 / 450
@@ -533,12 +533,12 @@ identifier is half the width of a tick. The standing advice never to read the pe
 
 One session in both formats -- `ecephys_776259_2025-04-09`, 6,781 units, 286,896,563 spikes --
 read from local disk. lazynwb 0.2.91 (the current release) from the NWB-Zarr the pipeline
-wrote; nwb-lake from the packet built out of the sorting that NWB is derived from. Every row
+wrote; escapewheel from the packet built out of the sorting that NWB is derived from. Every row
 returns the same count on both sides, so the work is equal by construction. Script in
-`/mnt/Data/nwb-lake/bench/`; `conformance/` does not own it yet.
+`/mnt/Data/escapewheel/bench/`; `conformance/` does not own it yet.
 
 ```text
-operation                  nwb-lake       lazynwb    ratio   rows (both)
+operation                  escapewheel       lazynwb    ratio   rows (both)
 open + header                0.002s        0.000s     0.0x   -
 units table                  0.002s        0.022s    13.9x   6,781
 all spike times              0.328s       17.726s    54.1x   286,896,563
@@ -730,19 +730,19 @@ Carried from the revisions, none blocking the registry.
   JSONs, so the importer must not trust that offset. The rig's zone is
   **`America/Los_Angeles`**, an IANA zone rather than an offset: the session is PDT (−07:00)
   and the HARP epoch its ticks count from is PST (−08:00), so a fixed rig constant is wrong
-  for half the year. `nwb_lake_writer.arrow.localize` rejects fixed offsets for that reason.
+  for half the year. `escapewheel_writer.arrow.localize` rejects fixed offsets for that reason.
   The NWB is not wholly right either — its `date_of_birth` carries `−07:53`, Pacific Local
   Mean Time. Of three stored offsets, two are wrong in different directions, so `NWBSource`
   checks each against the declared zone and reports disagreement rather than resolving it.
 - **`analysis.spike_events`'s purpose is unrecorded.** `06` gives it a schema and says it
   flattens `core.unit_spike_chunks`, which R5 withdrew — so the columns survived and the
-  reason for them did not. The registry carries the table and `nwb_lake_writer.materialize`
+  reason for them did not. The registry carries the table and `escapewheel_writer.materialize`
   builds it, but as spikes on the session's reference clock, which is a different purpose
   from the one `06` states. That change wants a revision; until one exists the table carries
   no `since`, which R29 §2 reads as *came from the specification unamended* and is true of
   the schema if not of the intent.
 - **External verification is exercised against S3 and against a filesystem** (R36).
-  `nwb_lake_validator.stores` resolves through fsspec, and a packet's twelve LFP prefixes —
+  `escapewheel_validator.stores` resolves through fsspec, and a packet's twelve LFP prefixes —
   2,496 objects, 6.83 GB — cost 1.31 s to list and 88 s to digest against `s3://aind-open-data`,
   against 0.33 s and 75 s on local disk. The digest is byte-identical computed either way
   (`3660170e5c3f2205…`), so R36 §2.2's canonical listing is store-independent as intended.
@@ -751,7 +751,7 @@ Carried from the revisions, none blocking the registry.
   and `verified_at` and no digest. `validate --checksums` used to report `external.verified`
   regardless; it now names the fields it compared and warns which resources it had nothing to
   compare against. A recipe for a packet meant to outlive its build machine sets
-  `verify = "sha256"`, which `nwb-lake init` now drafts commented out.
+  `verify = "sha256"`, which `escapewheel init` now drafts commented out.
 - **Nothing records a verified fact after the bytes land** (R36 §2.4). The writer records only
   what it reached, so `uri_base` pointing at a bucket the build cannot see leaves all three fields
   absent — correctly. Verifying at publication rather than at build is the workflow this implies:

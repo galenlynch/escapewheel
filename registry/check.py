@@ -139,7 +139,7 @@ check("an extension's file name is its extension_id",
       [f"{_id}: declares {_doc.get('extension_id')!r}" for _id, _doc in EXT.items()
        if _doc.get("extension_id") != _id])
 check("every extension extends the logical standard",
-      [_id for _id, _doc in EXT.items() if _doc.get("extends") != "nwb-lake-logical-v0.1"])
+      [_id for _id, _doc in EXT.items() if _doc.get("extends") != "escapewheel-logical-v0.1"])
 # R57 §4: the check the key exists for. A meta-schema URI resolves to nothing over the network,
 # so what makes the declaration worth carrying is that it is verifiable offline against the
 # schema in hand -- a document drafted against an older format says so here rather than failing

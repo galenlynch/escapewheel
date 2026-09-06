@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R2 §4 (the Arrow type vocabulary's use), R5 §5 and R8 §2 (what a label is, restated), R48 §2.1 (what `identifier` implies), `02` (every identifier column) |
 | **Depends on** | R2 (registry format), R32 (a committed packet is immutable), R46 (declared references), R48 (column roles) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

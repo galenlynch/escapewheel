@@ -1,6 +1,6 @@
 {
-  "$schema": "https://nwb-lake.org/schemas/sources/0.1.0",
-  "sources_standard_version": "nwb-lake-sources-v0.1",
+  "$schema": "https://escapewheel.org/schemas/sources/0.1.0",
+  "sources_standard_version": "escapewheel-sources-v0.1",
   "description": "Where an on-prem reader finds the assets the two demonstration packets reference.",
   "sources": {
     "ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31": {

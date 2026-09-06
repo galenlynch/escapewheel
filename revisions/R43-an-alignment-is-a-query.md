@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-01 |
 | **Amends** | `06_analysis_layer.md` §46 (`analysis.spikes_by_trial`), §73 (`analysis.trials_wide`), §117 (`analysis.unit_condition_rates`), §186 ("Views versus materialized products"); `07_reference_api_and_implementation_plan.md` §217 (Phase 4) |
 | **Depends on** | R3 (no nested Parquet types), R5 (flat spikes), R13/R27/R37 (anchor-point alignment), R17 (extension registries), R30 (`analysis.spike_events` purpose and layout) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -224,7 +224,7 @@ is corrected here rather than left to the reader of a frozen document.
 
 ## 6. Evidence
 
-`/mnt/Data/nwb-lake/packets/r40-full` — 286,896,563 spikes, 6,781 units, 708 go cues, ±0.5 s
+`/mnt/Data/escapewheel/packets/r40-full` — 286,896,563 spikes, 6,781 units, 708 go cues, ±0.5 s
 around the go cue, 51 bins of 20 ms. Every path verified to return an identical histogram.
 Warm, seconds.
 

@@ -7,7 +7,7 @@ verify what the registry *contains* rather than what the revisions *asked for*.
 
 Run with the validator installed:
 
-    uv run --with ../../nwb-lake-validator python rules.py
+    uv run --with ../../escapewheel-validator python rules.py
 """
 
 from __future__ import annotations
@@ -33,11 +33,11 @@ ALIASES = {
 
 def emitted() -> set[str]:
     """Every check id a validator can produce: generated, carried, and shim."""
-    from nwb_lake_validator import generate
+    from escapewheel_validator import generate
 
     registry = json.loads((ROOT / "registry" / "logical_schemas.json").read_text())
     ids = {c.id for c in generate(registry, advisory=True)}
-    shim = (ROOT / "nwb-lake-validator" / "src" / "nwb_lake_validator" / "validator.py").read_text()
+    shim = (ROOT / "escapewheel-validator" / "src" / "escapewheel_validator" / "validator.py").read_text()
     ids |= set(re.findall(r'report\.add\(\s*"[a-z]+",\s*"([a-z0-9_.]+)"', shim))
     ids |= set(re.findall(r'"([a-z0-9_.]+\.physical_order)"', shim))
     ids |= {f"{r}.physical_order" for r in registry["tables"]}  # built per resource at runtime

@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-05 |
 | **Amends** | `02` (adds `core.sorting_run_channels`), R28 §2 (what `core.unit_electrodes` may name), R3 §6 (a structural index's coordinate system) |
 | **Depends on** | R28 (a unit sits on many electrodes), R38 (a sorting run names its clock), R46 (a reference is declared), R48 (a column declares its role), R53 (an identifier is an integer) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

@@ -1,8 +1,8 @@
 {
-  "$schema": "https://nwb-lake.org/schemas/registry/0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
   "registry_version": "0.1.0",
-  "semantic_standard_version": "nwb-lake-semantic-v0.1",
-  "logical_standard_version": "nwb-lake-logical-v0.1",
+  "semantic_standard_version": "escapewheel-semantic-v0.1",
+  "logical_standard_version": "escapewheel-logical-v0.1",
   "derived_from": {
     "specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
     "revisions": [
@@ -86,7 +86,8 @@
       "R80",
       "R81",
       "R82",
-      "R83"
+      "R83",
+      "R84"
     ]
   },
   "tables": {

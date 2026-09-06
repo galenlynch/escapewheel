@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-27 |
 | **Amends** | R11 §3, R16 §2, R16 §3 |
 | **Depends on** | R16 (attributed quality labels) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-05 |
 | **Amends** | `02` (`core.units` and the six tables keyed on it), R53 §2.3 (`unit_id` is carried), R28 §2.1 (`default_electrode_id`) |
 | **Depends on** | R53 (an identifier is an integer), R28 (a unit sits on many electrodes), R3 §3.0 (tables do not restate what the data declares), R75 (determinism is logical) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

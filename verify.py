@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent
 
 #: Packages whose venv `uv run --project` resolves. The writer's is used for anything needing
 #: pyarrow and duckdb outside a package, because it depends on all three.
-TOOLS = ROOT / "nwb-lake-writer"
+TOOLS = ROOT / "escapewheel-writer"
 
 #: Each stage: what it is, where it runs, and what to run. A stage fails on a non-zero exit.
 STAGES: list[tuple[str, Path, list[str]]] = [
@@ -41,9 +41,9 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     # A ratchet: the backlog of undisposed clauses may shrink and must not grow. Adding a
     # revision fails this until someone records where each of its clauses went, which is the
     # property two independent audits of the compiled spec found missing.
-    ("spec: every revision clause has a disposition", ROOT / "nwb_lake_poc_docs_v0.2",
+    ("spec: every revision clause has a disposition", ROOT / "escapewheel_poc_docs_v0.2",
      [sys.executable, "ledger.py", "--summary"]),
-    ("spec: the single-file rendering is current", ROOT / "nwb_lake_poc_docs_v0.2",
+    ("spec: the single-file rendering is current", ROOT / "escapewheel_poc_docs_v0.2",
      [sys.executable, "combine.py", "--check"]),
     ("prototype: write packets", ROOT / "prototype/registry-codegen",
      ["uv", "run", "--project", str(TOOLS), "python", "fixture.py"]),
@@ -57,11 +57,11 @@ STAGES: list[tuple[str, Path, list[str]]] = [
 
 #: Run after the generators, never before: a suite passing against stale generated input says
 #: nothing. Skipped by --quick, since they are most of the runtime.
-SUITES = ("nwb-lake-reader", "nwb-lake-validator", "nwb-lake-writer")
+SUITES = ("escapewheel-reader", "escapewheel-validator", "escapewheel-writer")
 
 #: Directories whose tracked content must be unchanged once the generators have run. Only the
 #: ones holding generated output; an unrelated edit elsewhere is not this tool's business.
-GENERATED = ("registry", "prototype", "fixtures", "nwb_lake_poc_docs_v0.2",
+GENERATED = ("registry", "prototype", "fixtures", "escapewheel_poc_docs_v0.2",
              "CLAUDE.md", "STATUS.md", "TODO.md")
 
 

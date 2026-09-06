@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-29 |
 | **Amends** | R28 §2 (`core.unit_electrodes`), R16 §5 |
 | **Depends on** | R16 (unit quality labels), R17 (extension registries), R28 (unit electrodes) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

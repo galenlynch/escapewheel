@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `02` (`core.media_frames.pts`) |
 | **Depends on** | R45 (a coordinate is copied verbatim), R14 §2.3 (media is referenced) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

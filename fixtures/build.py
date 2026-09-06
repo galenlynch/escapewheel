@@ -303,7 +303,7 @@ def content() -> dict[str, list[dict]]:
              "modified_at": START + timedelta(hours=1)}],
         "core.processing_runs": [
             {"processing_run_id": "run_import_001", "session_id": "s001",
-             "activity_type": "import", "software_name": "nwb_lake",
+             "activity_type": "import", "software_name": "escapewheel",
              "software_version": "0.1.0", "status": "succeeded",
              "started_at": START + timedelta(hours=5),
              "ended_at": START + timedelta(hours=5, minutes=10)}],
@@ -356,15 +356,15 @@ def write_packet(out: Path, tables: dict[str, list[dict]], *, raw: dict = None,
     (out / "extensions" / f"{EXTENSION_ID}.json").write_text(json.dumps(EXTENSION, indent=2) + "\n")
 
     sessions = sorted({r["session_id"] for r in tables["core.sessions"]})
-    (out / "nwb.packet.json").write_text(json.dumps({
+    (out / "packet.json").write_text(json.dumps({
         "packet_id": out.name,
         "packet_version": "0.1.0",
-        "profile_id": "nwb-lake-portable-v0.1",
+        "profile_id": "escapewheel-portable-v0.1",
         "semantic_standard_version": REGISTRY["semantic_standard_version"],
         "logical_standard_version": REGISTRY["logical_standard_version"],
         "registry_version": REGISTRY["registry_version"],
         "created_at": "2026-08-26T00:00:00Z",
-        "dataset_id": "nwb_lake_phase0",
+        "dataset_id": "escapewheel_phase0",
         "description": "Phase 0 synthetic fixture, single session (R1 §6).",
         "sessions": sessions,
         "required_codecs": [],
@@ -372,7 +372,7 @@ def write_packet(out: Path, tables: dict[str, list[dict]], *, raw: dict = None,
                                       "registry": f"extensions/{EXTENSION_ID}.json"}},
         "resources": resources,
         "validation": {"status": "not_run", "validated_at": "2026-08-26T00:00:00Z",
-                       "validator_name": "nwb_lake_validate", "validator_version": "0.1.0"},
+                       "validator_name": "escapewheel_validate", "validator_version": "0.1.0"},
         "provenance": {"import_processing_run_id": "run_import_001"},
     }, indent=2) + "\n")
 
@@ -521,9 +521,9 @@ def main():
             write_packet(root / name, c, unsorted=frozenset({"core.spike_events"}))
         elif name == "orphan_manifest_session":     # manifest must keep the original id
             write_packet(root / name, c)
-            m = json.loads((root / name / "nwb.packet.json").read_text())
+            m = json.loads((root / name / "packet.json").read_text())
             m["sessions"] = ["s001"]
-            (root / name / "nwb.packet.json").write_text(json.dumps(m, indent=2) + "\n")
+            (root / name / "packet.json").write_text(json.dumps(m, indent=2) + "\n")
         else:
             write_packet(root / name, c)
         print(f"{name:26s}written")

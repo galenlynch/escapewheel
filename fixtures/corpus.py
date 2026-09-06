@@ -3,15 +3,15 @@
 This is the conformance corpus: expected results as data. Any implementation runs it and
 must agree, which is what stops two validators drifting apart (R2 §7.4).
 
-The validator under test is `nwb_lake_validator`. Nothing is reimplemented here;
+The validator under test is `escapewheel_validator`. Nothing is reimplemented here;
 a second copy of the checks would be the drift this corpus exists to detect.
 """
 
 import sys
 from pathlib import Path
 
-from nwb_lake_reader import open_packet
-from nwb_lake_validator import validate
+from escapewheel_reader import open_packet
+from escapewheel_validator import validate
 
 HERE = Path(__file__).resolve().parent
 

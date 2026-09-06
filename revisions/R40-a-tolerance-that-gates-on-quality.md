@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-01 |
 | **Amends** | R37 §3.3 (the tolerance and the statistic), R27 §5.3 (what a writer must say when it drops) |
 | **Depends on** | R37 (error-bounded alignment), R13 (anchor alignment) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

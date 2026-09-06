@@ -5,13 +5,13 @@
 | **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `05` §? (the commit sequence), R32 §2 (how a new version becomes visible) |
 | **Depends on** | R14 §2.3 (packet-owned bytes are immutable), R32 (amending a committed packet) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
 ## 1. Motivation
 
-`05`'s commit sequence ends *"rename the candidate to `nwb.packet.json` **last**"*. The rename is
+`05`'s commit sequence ends *"rename the candidate to `packet.json` **last**"*. The rename is
 what makes a commit atomic: a reader sees the previous catalog or the new one, never a catalog
 naming resources still being moved.
 
@@ -24,7 +24,7 @@ than by path. An object store has no atomic directory rename: S3's "rename" is a
 a delete, which is neither atomic nor cheap, and a packet whose catalog is renamed that way has a
 window in which no catalog exists at all.
 
-What such a store does have is an atomic single-object write. `nwb.packet.json` is a single
+What such a store does have is an atomic single-object write. `packet.json` is a single
 object, so the invariant is reachable — by a different primitive than the one `05` mandates.
 
 ### 1.2 The requirement is stated one level too low

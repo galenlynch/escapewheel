@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-03 |
 | **Amends** | `02` (`core.electrodes.brain_region`), R19 §3 (`core.electrode_coordinates`), R28 §3 (`core.unit_coordinates`) |
 | **Depends on** | R3 §3.0 (no repeated values in a column), R48 (column roles), R53 (an identifier is an integer), R58 (a coordinate declares its basis) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-04 |
 | **Amends** | R29 §2 (`since` is a MAY on a table and a column), R56 §2.1 and §2.2 (`unit` and `clock_from` are MAYs) |
 | **Depends on** | R29 (schema provenance), R48 (a column declares its role), R56 (a column declares its context) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

@@ -6,7 +6,7 @@
 | **Amends** | `04_packet_catalog_manifest.md` (manifest location and required fields); `05_validation_and_import.md` Stage 5 |
 | **Depends on** | R14 (immutability and external resources), R31 (materialization provenance) |
 | **Forces** | R31, which cannot be satisfied on an already-committed packet without this |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -65,7 +65,7 @@ already treats them as separable from the scientific core.
 
 ## 4. The manifest
 
-`04` fixes the manifest at `nwb.packet.json`, and it MUST stay there — a reader finds a packet
+`04` fixes the manifest at `packet.json`, and it MUST stay there — a reader finds a packet
 by that path, not by scanning. So an amendment **rewrites** it, by the same atomic rename `05`
 Stage 5 already uses: write a candidate, validate, `rename` it onto the canonical path last.
 At every instant that path names a complete, validated manifest.
@@ -79,7 +79,7 @@ to determine the packet's current state in one read, without replaying a history
 manifests/nwb.packet.<packet_version>.json
 ```
 
-`nwb.packet.json` is a copy of the newest. The duplication is a few kilobytes and buys the
+`packet.json` is a copy of the newest. The duplication is a few kilobytes and buys the
 property that makes §6 workable: a superseded file is only interpretable if the manifest that
 named it still exists. Without the retained manifests, an orphaned file and a stray file are
 indistinguishable, and a `sha256` recorded under R14 refers to a state nothing can reconstruct.

@@ -1,4 +1,4 @@
-# NWB-Lake v0.2 Spec Review and Recommended Changes
+# Escapewheel v0.2 Spec Review and Recommended Changes
 
 Status: implementation handoff / design review  
 Scope: current v0.2 specification and handoff  
@@ -470,7 +470,7 @@ The same primitive can later support owned directory resources, multipart scient
 
 ## 7.1 Problem
 
-Part 05 currently makes commit atomic by renaming a candidate manifest to `nwb.packet.json` last.
+Part 05 currently makes commit atomic by renaming a candidate manifest to `packet.json` last.
 
 That is a good local-filesystem implementation, but the architecture explicitly permits an object-store prefix. Object stores generally do not provide directory rename as the commit primitive.
 

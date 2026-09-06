@@ -26,12 +26,12 @@ OUT = ROOT / "RELEASE.json"
 
 #: What a consumer needs, and why each is in the bundle rather than assumed.
 PARTS: dict[str, tuple[str, ...]] = {
-    "specification": ("nwb_lake_poc_docs_v0.2/NWB_Lake_POC_v0.2_Implementation_Spec.md",),
+    "specification": ("escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",),
     "registry": ("registry/logical_schemas.json", "registry/tables.md"),
     "schemas": ("registry/registry.schema.json", "registry/manifest.schema.json"),
     "extensions": tuple(sorted(str(p.relative_to(ROOT)) for p in (ROOT / "registry/extensions").glob("*.json"))),
     "conformance": ("fixtures/build.py", "fixtures/corpus.py"),
-    "provenance": ("nwb_lake_poc_docs_v0.2/applied.toml",),
+    "provenance": ("escapewheel_poc_docs_v0.2/applied.toml",),
 }
 
 
@@ -48,9 +48,9 @@ def described() -> dict[str, object]:
                            capture_output=True, text=True, check=False).stdout.strip()
     return {
         "standard": {
-            "semantic": "nwb-lake-semantic-v0.1",
-            "logical": "nwb-lake-logical-v0.1",
-            "profile": "nwb-lake-portable-v0.1",
+            "semantic": "escapewheel-semantic-v0.1",
+            "logical": "escapewheel-logical-v0.1",
+            "profile": "escapewheel-portable-v0.1",
             "registry_version": json.loads((ROOT / "registry/logical_schemas.json").read_text())["registry_version"],
         },
         "commit": revision,

@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-26 |
 | **Amends** | `02_core_logical_schemas.md`, `09_metadata_minimalism_and_extensions.md` |
 | **Blocks** | R2 (schema registry) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

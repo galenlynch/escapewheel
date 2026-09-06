@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-28 |
 | **Amends** | R2 §3 (registry document shape), §4 (column entry) |
 | **Depends on** | R2 (schema registry format) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

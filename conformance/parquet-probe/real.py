@@ -15,7 +15,7 @@ import time
 import pyarrow.parquet as pq
 
 SOURCE = sys.argv[1] if len(sys.argv) > 1 else (
-    "/mnt/Data/nwb-lake/packets/ecephys_837772_2026-06-27_experiment1/tables/core/spike_events.parquet"
+    "/mnt/Data/escapewheel/packets/ecephys_837772_2026-06-27_experiment1/tables/core/spike_events.parquet"
 )
 ROWS = 20_000_000
 STRINGS = ["session_id", "unit_id", "sorting_run_id", "curation_id", "clock_id"]

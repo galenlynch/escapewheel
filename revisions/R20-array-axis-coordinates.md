@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-27 |
 | **Amends** | `02_core_logical_schemas.md`, `06_analysis_layer.md`, R2 §12, R3 §3.3 |
 | **Depends on** | R3 §3.3 (`array_dimensions`), R3 §6.1 (`array_channels`), R13 (clock anchors) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

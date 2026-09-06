@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-03 |
 | **Amends** | R2 §5 (what a column declares), R48 §2.1 (what a `coordinate` role implies) |
 | **Depends on** | R2 (registry format), R13 (clock alignment), R17 (extension registries), R48 (column roles) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

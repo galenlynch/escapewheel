@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-26 |
 | **Amends** | `02_core_logical_schemas.md`, R3 §3.4 |
 | **Depends on** | R3 (typed clock transform), R6 (wall-clock binding) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -16,7 +16,7 @@ R3 §3.4 replaced `core.clocks.transform_to_parent` with two typed columns,
 
 > **Open:** non-linear alignment (piecewise, anchor-point) needs a child table. This
 > revision does not define one; packets requiring it are out of scope for
-> `nwb-lake-portable-v0.1`.
+> `escapewheel-portable-v0.1`.
 
 Discovery against a real AIND session finds that the intended data requires it
 (`inventory/ecephys_776259_2025-04-09.md` §5). Alignment is performed twice, both times

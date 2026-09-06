@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-03 |
 | **Amends** | R2 §2 (the registry document's top level), R2 §9 (the published meta-schema) |
 | **Depends on** | R2 (registry format), R17 (extension registries) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -23,8 +23,8 @@ The top level carries three version strings and none of them answers the questio
 
 ```
 registry_version           "0.1.0"                     the content's version
-logical_standard_version   "nwb-lake-logical-v0.1"     what the content describes
-semantic_standard_version  "nwb-lake-semantic-v0.1"    the concepts above that
+logical_standard_version   "escapewheel-logical-v0.1"     what the content describes
+semantic_standard_version  "escapewheel-semantic-v0.1"    the concepts above that
 ```
 
 `registry_version` versions the tables and rules. It does not name the format they are written in,
@@ -41,7 +41,7 @@ could check a resource before opening it, rather than inferring from a packet-le
 Both are the same defect — a value whose interpretation is known to the writer, needed by the
 reader, and recorded nowhere — and this is the third instance, one level up: the document's own
 format. R2 §9 publishes a meta-schema and gives it an `$id`
-(`https://nwb-lake.org/schemas/registry/0.1.0`); no document points at it.
+(`https://escapewheel.org/schemas/registry/0.1.0`); no document points at it.
 
 ### 1.2 What it costs today
 
@@ -61,7 +61,7 @@ other key is unchanged.
 
 ```json
 {
-  "$schema": "https://nwb-lake.org/schemas/registry/0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
   "registry_version": "0.1.0",
   "extension_id": "vr_foraging",
   ...
@@ -116,7 +116,7 @@ writer refuses, and its message names the fix.
 
 ## 4. What this does not deliver
 
-`https://nwb-lake.org/schemas/registry/0.1.0` is an identity, and nothing serves it. An editor that
+`https://escapewheel.org/schemas/registry/0.1.0` is an identity, and nothing serves it. An editor that
 fetches `$schema` over the network will get nothing and offer no validation, so the ergonomic
 return is **not** automatic — it requires a local mapping from that URI to
 `registry/registry.schema.json`, which is per-editor configuration this revision does not
@@ -149,7 +149,7 @@ this makes it load-bearing.
 | `registry/build.py` | emits `$schema` first in `logical_schemas.json` |
 | `registry/extensions/*.json` | each gains `$schema` |
 | `registry/check.py` | every document carries one, and it names this meta-schema |
-| `nwb_lake_writer.scaffold` | a draft carries it, as it carries the other top-level keys |
+| `escapewheel_writer.scaffold` | a draft carries it, as it carries the other top-level keys |
 
 A packet's embedded registry gains the key when it is next built, which for every packet in the
 conformance corpus is on the next run of `fixtures/build.py`. R53 §5's rule holds here too:

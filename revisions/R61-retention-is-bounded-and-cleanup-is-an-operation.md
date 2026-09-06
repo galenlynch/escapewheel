@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-03 |
 | **Supersedes** | R32 §4 (what a packet retains), R32 §6 (cleanup as a separate operation) |
 | **Depends on** | R14 §2.3 (packet-owned bytes are immutable), R32 (amending a committed packet), R35 (revalidation is bounded by immutability) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -79,7 +79,7 @@ cited in a paper.
 ### 2.3 What is retained is not what is readable
 
 Retention exists to make cleanup decidable. It does not promise that a consumer can read an earlier
-version of the packet, and no consumer does: `nwb.packet.json` is the packet.
+version of the packet, and no consumer does: `packet.json` is the packet.
 
 A retained **registry** is different and is not covered by the policy above. `logical_schemas.<version>.json`
 is read — `PacketWriter._install_registry` refuses an amendment that would put two different

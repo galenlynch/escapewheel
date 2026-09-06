@@ -1,15 +1,15 @@
 {
   "standard": {
-    "semantic": "nwb-lake-semantic-v0.1",
-    "logical": "nwb-lake-logical-v0.1",
-    "profile": "nwb-lake-portable-v0.1",
+    "semantic": "escapewheel-semantic-v0.1",
+    "logical": "escapewheel-logical-v0.1",
+    "profile": "escapewheel-portable-v0.1",
     "registry_version": "0.1.0"
   },
   "commit": "2a3a05ea10604e037016ae426054cab3955fa2db",
   "clean": true,
   "parts": {
     "specification": {
-      "nwb_lake_poc_docs_v0.2/NWB_Lake_POC_v0.2_Implementation_Spec.md": "5e253932fb87620d027cf9b086bc39b1a782035b2fe17989524d75644dfcff7c"
+      "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md": "5e253932fb87620d027cf9b086bc39b1a782035b2fe17989524d75644dfcff7c"
     },
     "registry": {
       "registry/logical_schemas.json": "a5674712141c70230199f631fa1bf2219ef6d6a02148d05885222dd2889ba04f",
@@ -30,7 +30,7 @@
       "fixtures/corpus.py": "13021871d0e935aeec8e80e246ffc463cf1f8308364801efd9a62a8e8bd29523"
     },
     "provenance": {
-      "nwb_lake_poc_docs_v0.2/applied.toml": "f38f215b14658c5f0327c7b244089d95a8374d9067be2915393a6c71578de687"
+      "escapewheel_poc_docs_v0.2/applied.toml": "f38f215b14658c5f0327c7b244089d95a8374d9067be2915393a6c71578de687"
     }
   }
 }

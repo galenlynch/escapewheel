@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-27 |
 | **Amends** | `09_metadata_minimalism_and_extensions.md`, R2 |
 | **Depends on** | R2 (registry format) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -38,7 +38,7 @@ An extension provides a **registry document in R2's format**, differing only in 
 {
   "registry_version": "0.2.1",
   "extension_id": "aind",
-  "extends": "nwb-lake-logical-v0.1",
+  "extends": "escapewheel-logical-v0.1",
   "tables": {
     "aind.unit_metrics": {
       "columns": [

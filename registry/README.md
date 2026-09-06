@@ -17,15 +17,15 @@ to see what a table looks like now; read `02` plus the revisions to see why.
 |---|---|
 | `logical_schemas.json` | The registry. Embedded in packets at `schemas/logical_schemas.json`. |
 | `registry.schema.json` | Meta-schema; the registry validates against it (R2 §9). |
-| `manifest.schema.json` | JSON Schema for `nwb.packet.json` (R2 §10). |
+| `manifest.schema.json` | JSON Schema for `packet.json` (R2 §10). |
 
 The two schemas are hand-written here and **vendored** by the distributions that use them — a
 wheel cannot read a file from another repository. Those copies are *build artifacts*, written by
 `build.py` and compared by `check.py`, not files to maintain:
 
 ```
-registry.schema.json  ──build.py──>  nwb-lake-validator/src/nwb_lake_validator/schemas/
-manifest.schema.json  ──build.py──>  nwb-lake-reader/src/nwb_lake_reader/schemas/
+registry.schema.json  ──build.py──>  escapewheel-validator/src/escapewheel_validator/schemas/
+manifest.schema.json  ──build.py──>  escapewheel-reader/src/escapewheel_reader/schemas/
 ```
 
 Edit the copy here, run `build.py`, and commit both repositories. A stale copy has broken every
@@ -98,7 +98,7 @@ declares, and therefore what a generator has to work with:
 
 How many checks that becomes is the **validator's** answer, not this file's: a table whose sort
 begins with its primary key has its uniqueness settled by the shim's ordering scan instead, so
-the count is fewer than the keys (R12 §4). `nwb_lake_validator.generate` decides it, and
+the count is fewer than the keys (R12 §4). `escapewheel_validator.generate` decides it, and
 restating the total here is what let this section claim 122 against a registry producing 236.
 
 A reference may be composite (`core.spike_events` → `core.units` on four columns) or

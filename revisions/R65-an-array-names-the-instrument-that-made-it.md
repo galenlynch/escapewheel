@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `01` §3.17 (what an array asset holds), `02` (`core.array_assets`), R19 §2 (what the array tables carry) |
 | **Depends on** | R46 (references are declared), R53 (identifiers are assigned or carried) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

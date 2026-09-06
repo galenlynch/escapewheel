@@ -6,14 +6,14 @@ This file provides guidance to coding agents when working with code in this mono
 
 A monorepo implementing the proof-of-principle specified in `nwb_lake_poc_docs/`. **Phases 0-6 of
 `07`'s plan are complete**; Phase 7 (Iceberg) is untouched and explicitly last. Three distributions
-(reader, validator, writer) sharing one `nwb-lake` CLI, a generated schema registry, a 26-packet
+(reader, validator, writer) sharing one `escapewheel` CLI, a generated schema registry, a 26-packet
 conformance corpus, and 625 tests.
 
 <!-- BEGIN facts: registry -->
 35 tables, 307 columns, 76 references, 68 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R83 accepted. R42 and R73 withdrawn. R84 proposed and not binding.
+R1–R41, R43–R72 and R74–R84 accepted. R42 and R73 withdrawn. Nothing is proposed.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: extensions -->
 4 extension registries: aind_opto, aind_unit_qc, dynamic_foraging, vr_foraging
@@ -36,12 +36,12 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 Commit from the root. Stage only the files a change touched, as always.
 
-The spec — **NWB-Lake POC v0.1** — defines an ecephys data-lake format over Parquet, Zarr v3, and a
+The spec — **Escapewheel POC v0.1** — defines an ecephys data-lake format over Parquet, Zarr v3, and a
 JSON manifest, with no runtime dependency on NWB/HDMF/PyNWB. PyNWB is allowed only as an
 import-boundary adapter. `07_reference_api_and_implementation_plan.md` is the plan of record: Phase 0
 hand-built fixture packet → Phase 1 manifest + Parquet reader → Phase 2 validator → Phase 3 NWB
 importer → Phase 4 analysis materializations → Phase 5 dense arrays → Phase 6 release discipline →
-Phase 7 Iceberg experiment. It also prescribes the `nwb_lake/` package layout to create.
+Phase 7 Iceberg experiment. It also prescribes the `escapewheel/` package layout to create.
 
 ## Document roles
 
@@ -68,18 +68,18 @@ Phase 7 Iceberg experiment. It also prescribes the `nwb_lake/` package layout to
   revisions cite its path, so it stays where they can find it.
 - `inventory/` — `05` Stage 1 source inventories: what a real dataset offers per core
   resource, before anything is staged. Findings here become revisions.
-- `nwb-lake-reader/` — the reference reader (Phase 1). Opens a packet, resolves resources,
+- `escapewheel-reader/` — the reference reader (Phase 1). Opens a packet, resolves resources,
   gives tabular access. Its own CLAUDE.md carries the conventions and the specification
   decisions that constrain it.
-- `nwb-lake-validator/` — the reference validator (Phase 2). Depends on the reader. Split out
+- `escapewheel-validator/` — the reference validator (Phase 2). Depends on the reader. Split out
   because its correctness is pinned to a *registry* version while the reader's API is not.
-- `nwb-lake-writer/` — the writer, the source adapters, and the session recipe that drives
+- `escapewheel-writer/` — the writer, the source adapters, and the session recipe that drives
   them (Phase 3). Depends on the validator, because `05`'s commit is validate-then-rename.
   A recipe is one TOML file declaring every source and which resources each owns; it is also
   the provenance record, landing in `core.processing_runs.parameters`.
 
-The three share one CLI. `nwb-lake-reader` owns the `nwb-lake` console script; the others
-register subcommands under the `nwb_lake.commands` entry-point group, because two
+The three share one CLI. `escapewheel-reader` owns the `escapewheel` console script; the others
+register subcommands under the `escapewheel.commands` entry-point group, because two
 distributions declaring the same `[project.scripts]` name is a conflict in which the last
 installed wins silently.
 - `prototype/` — working demonstrations, not the reference implementation.
@@ -162,7 +162,7 @@ Revision numbers are reserved even where the document is not yet written:
 | **R57** | [accepted](revisions/R57-a-registry-document-names-its-meta-schema.md) | A registry document does not say what it is. R17 §2 makes an extension one of the same format as core's, and nothing inside either records that; a packet embeds both, and its three version strings version the *content*, not the format it is written in. Adds an optional top-level `$schema` carrying R2 §9's published `$id`, first in the document. Identity, not a fetch instruction — a validator MUST NOT dereference it (R14 §2.2) and MUST NOT require it. The same shape as R49's `scope` and R15's per-resource codecs, one level up. Honest about its limit: nothing serves that URI, so the editor payoff needs a local mapping this revision does not standardise; what it delivers unconditionally is a claim `registry/check.py` verifies offline. `registry_version` does not bump — `build.py`'s policy bumps when an amendment forces it, and R48, R53 and R56 each changed columns without one. |
 | **R54** | [accepted](revisions/R54-a-trial-is-an-interval.md) | Intervals are declared, not assumed. `core.trials` is one table serving one task, and `03`'s sort, R45's closure rule and R47's key all had to name it specially; it becomes `core.intervals` with `interval_kind` in the key, so a block, an epoch and a trial are the same shape distinguished by a declared value rather than by three tables that would each need the same four rules. Strikes four columns `02` defined and nothing wrote, and withdraws `core.trial_tags` — R3 §3.0's child-table example that no packet ever populated, since a tag is a task's vocabulary and R43 §3 sent those to an extension. |
 | **R60** | [accepted](revisions/R60-a-coordinate-carries-provenance-not-currency.md) | R58 §2.3 cannot hold as written. It says two histology registrations of one probe are alternatives R41 arbitrates "within one `(frame, basis)`" — but R58 §2.1 keys the table on exactly `(electrode_id, coordinate_frame, coordinate_basis)`, so both registrations are `measured` in `ccf`, collide, and the second cannot be stored. Where the schema admits one row there is nothing to arbitrate. The nullable `processing_run_id` stays and is **provenance**: which run produced the row that is there, not a choice between rows that are not. |
-| **R62** | [accepted](revisions/R62-a-file-that-restates-the-manifest.md) | `schemas/semantic_version.txt` restates `semantic_standard_version`, which R2 §10's schema already requires the manifest to carry. 23 bytes inside a packet whose catalog is `nwb.packet.json`, so a consumer holding the file holds the manifest — duplication that buys no otherwise-unavailable access, which R3 §3.0 refuses. Nothing has written it and nothing has read it across every packet built. Struck. |
+| **R62** | [accepted](revisions/R62-a-file-that-restates-the-manifest.md) | `schemas/semantic_version.txt` restates `semantic_standard_version`, which R2 §10's schema already requires the manifest to carry. 23 bytes inside a packet whose catalog is `packet.json`, so a consumer holding the file holds the manifest — duplication that buys no otherwise-unavailable access, which R3 §3.0 refuses. Nothing has written it and nothing has read it across every packet built. Struck. |
 | **R63** | [accepted](revisions/R63-a-recipe-declares-what-it-narrows.md) | `Recipe.check` refuses contradictions — a resource owned twice, an undefined resource, a dangling required key — and an omission contradicts nothing, so a recipe naming four of a source's five resources passes every test the tool applies. One packet lost four that way, including 19,061 quality labels that surfaced 90 s into a build as a rule failure reported against a different table. Adapters declare a static `PRODUCES`, `owns` becomes optional, and silence means the whole: a recipe states only what it **narrows**. `PREFERRED`/`SHARED` move from the scaffolder into the recipe layer so a draft and a build arbitrate alike. |
 | **R64** | [accepted](revisions/R64-a-coordinate-that-was-never-in-question.md) | R58's two bases both presuppose the position was in question, and a probe-frame contact's is not: it sits where the shank was manufactured, neither aimed at nor observed. R58 §4 deferred this "until a packet carries such a frame" — both packets on hand already did, and the importer resolved the required column by stamping `measured` on 3,840 probe-frame rows, the one value R58 §2.2 says a consumer must never assume. Adds `nominal`. No schema change: the vocabulary was already open, and R58 §2.2's consumer rule makes an unmodified reader downgrade an unrecognised basis rather than trust it — the first case to exercise why R8 §4 opens these at all. The basis is about the claim, not the frame: a unit position computed from a waveform is `measured` in the same `probe` frame where a contact is `nominal`. |
 | **R65** | [accepted](revisions/R65-an-array-names-the-instrument-that-made-it.md) | `core.array_assets` is the generic dense-array registry and says nothing about what made any of its rows; its only references are to sessions and clocks. An `ElectricalSeries` reaches a probe through its channels and a waveform template through its units, but both routes exist because something *else* in core happens to link them, and neither exists for an array that is neither channel-mapped nor per-unit — which is every acquired signal from an ordinary instrument. `core.probes` has named its device since `02`. Adds a nullable `device_id`, one column and one reference, no new table and no vocabulary: everything a signal is was already declared, four parts on the asset and the fifth on the device, with only the join between them missing. The larger point is what it lets `01` §3.17 say — an array asset holds **any** sampled quantity and the standard enumerates no instruments, so *which* signal an array holds is answered by the **device**, which is data, rather than by `semantic_type`, which is vocabulary. A rig fitting a respiration sensor, a heart-rate monitor or a thermistor produces a core-owned array and no clause of the specification mentions any of them. |
@@ -177,13 +177,15 @@ Revision numbers are reserved even where the document is not yet written:
 
 | **R83** | [accepted](revisions/R83-a-sorting-run-declares-its-channels.md) | A sorting drops bad channels before it runs, so a channel index it emits afterwards counts what it kept and not the probe's contacts. `extremum_channel_index` is such an index, and read as a contact position it named the wrong electrode for **5,071 of 6,781 units** — found only because it landed outside the unit's own channel support for 609 of them, leaving those with no primary electrode while the other 4,462 pointed at a plausible wrong contact. The list it counts lived in the analyzer and in no file: `core.electrodes` holds every contact, `core.unit_electrodes` holds what some unit had signal on, and that bound is loose by 2 channels on one probe of `ecephys_776259` and by **50 of 384** on one of `ecephys_786867`. Adds `core.sorting_run_channels` — session, run, `channel_index`, `electrode_id` — recording the list in the run's own order, so an index resolves by counting rather than by guessing. A writer records what the run states and **MUST NOT** infer it, from unit support or from a bad-channel list, both measured wrong; a consumer meeting an index for a run that declares no channels **MUST** report it unresolvable rather than resolve it against the contact list, since a packet without the list is conforming. One rule checks that a unit's electrodes are among its run's, returning **0 of 171,280 rows** on `ecephys_776259` and 0 on `ecephys_786867`, whose runs kept every contact — which is also why the convention hid for so long: where nothing is dropped, an index into the kept channels and a contact number are the same number. 34 tables → 35. |
 
+| **R84** | [accepted](revisions/R84-escapewheel-replaces-nwb-lake.md) | `nwb-lake` read as an NWB sub-project, which is a claim this work cannot make: the format exists because of NWB's shortcomings and every design decision is a departure rather than an extension. Naming it for ephys would be the same mistake one level down — the clock model is **72% of core** and true of behaviour, photometry, imaging and EMG alike, where spikes are true of none of them, so `ephys-lake` would need renaming again and a format renamed twice is worse than one named carefully once. An **escape wheel** is the toothed wheel a pallet releases one tooth at a time: the part that emits ticks, which is what this format commits to and what NWB leaves implicit. `escapement` itself is taken on PyPI by a "composable time code encoder/decoder", close enough that a search for one returns the other. The three standard version strings become `escapewheel-portable-v0.1`, `-semantic-` and `-logical-`, `nwb.packet.json` becomes `packet.json` because inside a packet root the directory *is* the packet, and schema `$id`s move to `escapewheel.org`. The version component does not move: `v0.1` names the standard's revision and no clause of it changed. **No alias** is written for the old identifiers — an alias is a compatibility promise and there was nobody outside the repository to keep it for, which is why the rename landed before a remote existed. The `nwb` layer keeps its name, being the compatibility projection *to* NWB, and `nwb_lake_poc_docs/` keeps its, being frozen. 243 files rewritten, seven directories moved. |
+
 `NWB_Lake_POC_v0.1_Implementation_Spec.md` is generated: a concatenation of `README.md` and `00`–`09`
 delimited by `<!-- BEGIN <file> -->` / `<!-- END <file> -->`.
 
 MUST / SHOULD / MAY in the spec are RFC 2119 keywords and define the conformance surface.
 
-Version strings must stay consistent: `nwb-lake-portable-v0.1`, `nwb-lake-semantic-v0.1`,
-`nwb-lake-logical-v0.1`, and schema IDs such as `core.trials.v0.1`.
+Version strings must stay consistent: `escapewheel-portable-v0.1`, `escapewheel-semantic-v0.1`,
+`escapewheel-logical-v0.1`, and schema IDs such as `core.trials.v0.1`.
 
 ## Verifying the whole monorepo
 
@@ -242,12 +244,12 @@ bounds nothing.
   Storage- and shape-agnostic.
 - **Logical standard** (`02`, `06`) — concepts as computable resources: tables, dense array assets,
   media assets, views. Storage-agnostic, not shape-agnostic.
-- **Physical profile** (`03`) — storage. `nwb-lake-portable-v0.1` is Parquet + Zarr v3 + JSON and
+- **Physical profile** (`03`) — storage. `escapewheel-portable-v0.1` is Parquet + Zarr v3 + JSON and
   MUST be readable without a server. An Iceberg profile is deferred and reuses the same logical
   schemas.
 
 A **packet** is one concrete bundle under a declared profile. Its **packet catalog** is
-`nwb.packet.json` (`04`), which binds all resource kinds including Zarr arrays, media, and sidecar
+`packet.json` (`04`), which binds all resource kinds including Zarr arrays, media, and sidecar
 documents. An Iceberg catalog manages only tables and does not replace it.
 
 ## Layers
@@ -264,7 +266,7 @@ An analysis resource becomes canonical only through an explicit schema revision 
 
 - **Validation is importation** (`05`). Copying bytes is staging. Staged resources MUST NOT appear as
   committed canonical resources in the manifest; commit writes a candidate manifest and renames it to
-  `nwb.packet.json` last.
+  `packet.json` last.
 - **Time is integer ticks on a declared clock.** Every event, interval, spike time, dense time axis,
   and media frame carries `clock_id` and an integer `*_tick`. Float seconds are derived only.
 - **Stable IDs, not paths.** No HDF5 object references, Zarr hierarchy paths, or file layout as
@@ -415,7 +417,7 @@ and a storage-layer check written as SQL fails silently rather than loudly. R12 
 one did.
 
 Validation requires DuckDB, because the rules are SQL. Reading does not have to: a complete
-read path goes through PyArrow, so `nwb-lake-reader` makes DuckDB the optional `sql` extra
+read path goes through PyArrow, so `escapewheel-reader` makes DuckDB the optional `sql` extra
 and a packet can be read with it absent. That is also why validation is a separate
 distribution — the read path's dependency closure stays clean by construction, not by
 discipline. That is what R3 §2.1's ban on nested types exists to
@@ -428,7 +430,7 @@ that `build.py` expands (R24) — and merged into the generated
 `logical_schemas.json` at build time. Never edit the generated file.
 
 `fixtures/` holds the conformance corpus — one conforming packet and fourteen variants, each
-with its expected finding recorded as data. It runs against `nwb_lake_reader.validation`
+with its expected finding recorded as data. It runs against `escapewheel_reader.validation`
 rather than reimplementing the checks. Run it after changing the registry, the generator, or
 any rule.
 

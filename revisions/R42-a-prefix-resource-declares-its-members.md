@@ -5,7 +5,7 @@
 | **Status** | **Withdrawn** 2026-09-02 |
 | **Amends** | R14 §2.3 (what immutability covers), R32 §2 (what an amendment may add), R36 §3 (the deferred `parquet_dataset` case) |
 | **Depends on** | R14 (external resources), R32 (amending a committed packet), R35 (bounded revalidation), R36 (verifying a prefix) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

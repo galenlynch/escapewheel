@@ -5,7 +5,7 @@
 without knowing the paradigm — and R54 §5 records that nothing does that yet, so the argument was
 unmeasured. This builds both shapes over the same rows and asks what each costs a consumer.
 
-Run: `uv run --project ../../nwb-lake-writer --all-extras python probe.py`
+Run: `uv run --project ../../escapewheel-writer --all-extras python probe.py`
 
 ## The session
 

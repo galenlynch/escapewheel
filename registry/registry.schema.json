@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://nwb-lake.org/schemas/registry/0.1.0",
-  "title": "NWB-Lake schema registry",
+  "$id": "https://escapewheel.org/schemas/registry/0.1.0",
+  "title": "Escapewheel schema registry",
   "description": "Shape of logical_schemas.json, per R2 \u00a79. Validates the registry document; column semantics are values within it, not JSON Schema types (R2 \u00a710).",
   "type": "object",
   "required": [

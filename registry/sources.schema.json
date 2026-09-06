@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://nwb-lake.org/schemas/sources/0.1.0",
-  "title": "NWB-Lake source resolution document",
+  "$id": "https://escapewheel.org/schemas/sources/0.1.0",
+  "title": "Escapewheel source resolution document",
   "description": "Shape of sources.json, per R80 §2.2. Maps a source name declared by an external resource entry to where that body of data is, for one reader in one situation. It is not a packet resource: R14 §2.3's immutability does not reach it, which is what lets a location be corrected when a mirror moves.",
   "type": "object",
   "required": [
@@ -15,7 +15,7 @@
     },
     "sources_standard_version": {
       "type": "string",
-      "const": "nwb-lake-sources-v0.1",
+      "const": "escapewheel-sources-v0.1",
       "description": "Which version of this document format is in use, so a reader refuses a future one rather than misreading it."
     },
     "description": {

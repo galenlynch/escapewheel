@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-05 |
 | **Amends** | `03` §"URI rules", R14 §2.3 (the external resource declaration), `04` (manifest schema) |
 | **Depends on** | R14 §2.3 (immutability covers packet-owned bytes), R14 §2.3.1, R36 §2.4, R51 §2, R55 §2 (unresolvable as fact or defect) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -71,7 +71,7 @@ import; 776259 commits in 306 s.
 an untouched file's verdict is *determined*, which is what keeps an amendment from re-reading
 287 M rows.
 
-**A reader-side substitution** works today: `nwb-lake-reader` takes a mapping from declared-URI
+**A reader-side substitution** works today: `escapewheel-reader` takes a mapping from declared-URI
 prefix to replacement at open time, and one entry redirects all twelve LFP series of 776259 to the
 store, reading a 2,500 × 8 block out of a 7,983,750 × 96 array in 0.62 s. It touches no bytes and
 needs no revision, because it constrains the reader's API rather than the packet. What it costs is
@@ -113,13 +113,13 @@ readable.
 
 A **resolution document** is a JSON document, conventionally named `sources.json`, whose shape
 is published as `registry/sources.schema.json` at `$id`
-`https://nwb-lake.org/schemas/sources/0.1.0`. It is specified the way `04`'s manifest is, and for
+`https://escapewheel.org/schemas/sources/0.1.0`. It is specified the way `04`'s manifest is, and for
 the same reason: two implementations that must agree about a file need a schema rather than a
 description.
 
 | Field | Type | Required | Meaning |
 |---|---|:---:|---|
-| `sources_standard_version` | string | yes | `nwb-lake-sources-v0.1`. A reader MUST refuse a version it does not know rather than read the document as if it did |
+| `sources_standard_version` | string | yes | `escapewheel-sources-v0.1`. A reader MUST refuse a version it does not know rather than read the document as if it did |
 | `sources` | object | yes | source name to source entry |
 | `$schema` | string | no | this document's meta-schema by `$id`. Identity, not a fetch instruction: a reader MUST NOT dereference it and MUST NOT require it (R57 §2) |
 | `description` | string | no | whose mirror this is. Read by nothing |
@@ -134,8 +134,8 @@ changing the shape of every document in existence:
 
 ```json
 {
-  "$schema": "https://nwb-lake.org/schemas/sources/0.1.0",
-  "sources_standard_version": "nwb-lake-sources-v0.1",
+  "$schema": "https://escapewheel.org/schemas/sources/0.1.0",
+  "sources_standard_version": "escapewheel-sources-v0.1",
   "sources": {
     "ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31": {
       "uri": "s3://aind-open-data/ecephys_776259_…/ecephys_776259_…_experiment1_recording1.nwb"
@@ -234,15 +234,15 @@ packets, each forbidden.
 ## 4. What this adds to the repository
 
 `registry/sources.schema.json` is the published shape, hand-written beside `manifest.schema.json`
-and vendored into `nwb-lake-reader` by `build.py` exactly as that one is — a vendored copy is a
+and vendored into `escapewheel-reader` by `build.py` exactly as that one is — a vendored copy is a
 build artifact, and `check.py` compares it, because a stale copy has broken every packet three
 times already (R48, R53, R56). `registry/sources.example.json` is a document that validates, so
 the schema is exercised rather than merely well-formed.
 
-`nwb-lake-sources-v0.1` joins the version strings that must stay consistent, beside
-`nwb-lake-portable-v0.1`, `nwb-lake-semantic-v0.1` and `nwb-lake-logical-v0.1`.
+`escapewheel-sources-v0.1` joins the version strings that must stay consistent, beside
+`escapewheel-portable-v0.1`, `escapewheel-semantic-v0.1` and `escapewheel-logical-v0.1`.
 
-Validation is where the two documents part. `nwb-lake validate` checks a packet, and a resolution
+Validation is where the two documents part. `escapewheel validate` checks a packet, and a resolution
 document is not in one, so a document is checked against its schema by whatever loads it rather
 than by the packet validator. A reader MUST reject a document that does not conform, and MUST NOT
 let that rejection change a verdict about the packet.

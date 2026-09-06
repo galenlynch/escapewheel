@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-03 |
 | **Amends** | R48 §2.1 (the closed role vocabulary), R49 §2.2 and §2.5 (`scope_kind` and what checks it), R17 §2 (the reason core may not reference an extension) |
 | **Depends on** | R17 (extension registries), R48 (column roles), R49 (a scope names what kind of thing it is), R53 (an identifier is an integer) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -207,7 +207,7 @@ which is the case where core is not standalone.
 
   Implementing §2.4 sharpened the question from what type the column is to who assigns its value.
   `session_id` and `probe_id` are `assigned` (R53 §2.3), so a writer chooses their values at build
-  time, and `nwb_lake_writer.arrow.number` renumbers a foreign key through its target's map for
+  time, and `escapewheel_writer.arrow.number` renumbers a foreign key through its target's map for
   declared references only. A discriminated reference is by construction not a declared reference,
   so nothing renumbers `scope` and a value written before the build can never equal a number chosen
   during it. The corpus carries the instance: `undeclared_currency` has `scope = "probe0"` against

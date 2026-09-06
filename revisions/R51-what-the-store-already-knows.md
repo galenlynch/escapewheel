@@ -6,7 +6,7 @@
 | **Amends** | R14 §2.3 (what an external resource records), R36 §2.2 (the digest over a member listing), R36 §2.3 (the two verification levels) |
 | **Depends on** | R14 (external resources), R36 (verifying a prefix) |
 | **Supersedes** | R42 §2.1 (the member array), for external prefixes only — R42 is withdrawn |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

@@ -1,27 +1,27 @@
-# R84 — Escapewheel Replaces nwb-lake
+# R84 — Escapewheel Replaces escapewheel
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-09-06 |
 | **Amends** | `00`–`09` and `03` §2 (the profile identifier), `04` §2 (the catalog filename), R2 §9 (published schema `$id`s), R17 §2 (`extends`), R80 §2.2 (the sidecar's version string) |
 | **Depends on** | R32 (a packet version is the bundle), R61 (a correction is a rebuild), R71 (canonical is a property of a resource) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
-This project is currently called **nwb-lake**. The name appears in three distributions, one CLI,
+This project is currently called **escapewheel**. The name appears in three distributions, one CLI,
 the catalog filename every packet carries, and three version strings every packet declares:
 `profile_id`, `semantic_standard_version` and `logical_standard_version`, which on
-`ecephys_776259` read `nwb-lake-portable-v0.1`, `nwb-lake-semantic-v0.1` and
-`nwb-lake-logical-v0.1`.
+`ecephys_776259` read `escapewheel-portable-v0.1`, `escapewheel-semantic-v0.1` and
+`escapewheel-logical-v0.1`.
 
 ## 1. Motivation
 
 ### 1.1 The name claims an affiliation the project does not have
 
-`nwb-lake` reads as an NWB sub-project. Neurodata Without Borders has not blessed this work, is
+`escapewheel` reads as an NWB sub-project. Neurodata Without Borders has not blessed this work, is
 not consulted on it, and would have no way to correct the impression: a reader meeting
-`nwb-lake-portable-v0.1` in a manifest has no signal that the two are unrelated.
+`escapewheel-portable-v0.1` in a manifest has no signal that the two are unrelated.
 
 The relationship is the opposite of what the name suggests. This format exists because of NWB's
 shortcomings — implicit float seconds, identity by file path, a metadata model with no
@@ -66,7 +66,7 @@ The three standard version strings become `escapewheel-portable-v0.1`,
 `escapewheel-semantic-v0.1` and `escapewheel-logical-v0.1`; an extension's `extends` names the
 last of these (R17 §2); the source resolution document declares
 `escapewheel-sources-v0.1` (R80 §2.2); and published schema `$id`s move from
-`https://nwb-lake.org/schemas/…` to `https://escapewheel.org/schemas/…`.
+`https://escapewheel.org/schemas/…` to `https://escapewheel.org/schemas/…`.
 
 The version component does not move. `v0.1` names the standard's revision, the rename changes no
 clause of it, and bumping it would assert a change to the format that this revision does not
@@ -74,13 +74,13 @@ make.
 
 ### 2.3 The catalog filename drops its prefix
 
-`nwb.packet.json` becomes `packet.json`. Inside a packet root the directory *is* the packet, so
+`packet.json` becomes `packet.json`. Inside a packet root the directory *is* the packet, so
 the prefix disambiguates against nothing — R80 already wrote the sidecar as `sources.json` on
 that reasoning, and this makes the two agree.
 
 ### 2.4 No alias is added for the old identifiers
 
-A consumer meeting `nwb-lake-portable-v0.1` **MUST NOT** treat it as this profile. An alias is a
+A consumer meeting `escapewheel-portable-v0.1` **MUST NOT** treat it as this profile. An alias is a
 compatibility promise, and there is nobody outside this repository to keep it for: two packets
 exist, both rebuildable, and R61 §5 already makes a correction a rebuild that re-reads no
 external resource. Refusing an unrecognised profile is what a reader does today, so this clause
@@ -96,7 +96,7 @@ adapter and every reference to the NWB format as a format.
 
 - **`nwb_lake_poc_docs/` keeps its name.** It is the frozen v0.1 specification, which R1's
   process forbids editing even to correct an error, and seven revisions cite paths into it. The
-  live amended copy, `nwb_lake_poc_docs_v0.2/`, moves.
+  live amended copy, `escapewheel_poc_docs_v0.2/`, moves.
 - **No resource ID changes.** `core.*` and `analysis.*` carry no project name, so no table, column
   or rule is touched and no packet's data is rewritten.
 - **`registry_version` does not move.** It versions the registry's content, which this revision
@@ -106,8 +106,8 @@ adapter and every reference to the NWB format as a format.
 
 ## 4. Consequence
 
-Mechanical, and large: **186 files** contain `nwb-lake`, **129** contain `nwb_lake`, **104**
-contain the profile string, **47** contain `nwb.packet.json`, and five directories are named for
+Mechanical, and large: **186 files** contain `escapewheel`, **129** contain `escapewheel`, **104**
+contain the profile string, **47** contain `packet.json`, and five directories are named for
 the project. Every occurrence is in this repository.
 
 Both measured packets must be rebuilt, at roughly 300 s each, because their manifests declare the

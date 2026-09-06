@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-27 |
 | **Amends** | R2 §7.2 (Tier 2 rule shape), R18 §2 |
 | **Depends on** | R2 (registry format), R18 (unit observation intervals) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -70,7 +70,7 @@ A Tier 2 rule MAY carry `"advisory": true`. Absent means false.
 
 An advisory rule MUST NOT run unless the caller asks for it. A validator MUST expose that
 choice; the reference implementation takes `validate(packet, advisory=True)` and
-`nwb-lake validate --advisory`.
+`escapewheel validate --advisory`.
 
 An advisory rule MUST NOT have `level: "error"`. A finding that does not run by default cannot
 determine validity, and a packet whose conformance depended on a flag would be conforming or

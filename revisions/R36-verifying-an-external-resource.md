@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-30 |
 | **Amends** | R14 §2.3, R15 §4 |
 | **Depends on** | R14 (external resources), R15 (validation levels), R21 (per-resource Zarr version) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -107,12 +107,12 @@ time — is close to converged practice, which is a reason to keep it rather tha
 | Frictionless Data Package | `path` may be a URL | optional `hash` | optional `bytes` |
 | Croissant (MLCommons) | `fileObject.contentUrl` | optional `sha256` | optional `contentSize` |
 | STAC | asset `href` | optional `file:checksum` (multihash) | optional `file:size` |
-| **NWB-Lake (R14)** | `uri` + `external` | optional `sha256` | optional `size_bytes` |
+| **Escapewheel (R14)** | `uri` + `external` | optional `sha256` | optional `size_bytes` |
 
 Every one of them is per **file**. None defines a digest over a prefix of many objects,
 because none of them packages a chunked array store the way Zarr does. §2.2 is therefore new
 rather than borrowed, and is stated here so that it is decided once.
 
-NWB-Lake's `verified_at` has no counterpart in any of them. BagIt in particular treats a
+Escapewheel's `verified_at` has no counterpart in any of them. BagIt in particular treats a
 checksum as a standing truth; R14 §2.3.1 is explicit that it is not, and the timestamp is what
 carries the difference.

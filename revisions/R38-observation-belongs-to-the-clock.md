@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-31 |
 | **Amends** | R18 §2 (unit observation intervals), R25 §3 (event stream observation intervals) |
 | **Depends on** | R23 (event streams), R27 (clock graph integrity) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

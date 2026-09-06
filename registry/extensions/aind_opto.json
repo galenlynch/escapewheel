@@ -1,9 +1,9 @@
 {
-  "$schema": "https://nwb-lake.org/schemas/registry/0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
   "registry_version": "0.1.0",
   "logical_standard_version": "0.1",
   "extension_id": "aind_opto",
-  "extends": "nwb-lake-logical-v0.1",
+  "extends": "escapewheel-logical-v0.1",
   "tables": {
     "aind_opto.stimulations": {
       "columns": [

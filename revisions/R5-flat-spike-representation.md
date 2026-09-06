@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-26 |
 | **Amends** | `02`, `03`, `04`, `05`, `06`, `07` |
 | **Depends on** | R3 (decision recorded in R3 §4) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

@@ -39,7 +39,7 @@ range      median    MB/s   latency as a share of the fetch
 
 Round trip ~34 ms, single stream ~40 MB/s. Requiring a share *f* of the fetch to be transfer
 gives `S = f/(1-f) * latency * bandwidth`, which at 90% is 12.2 MB -- inside AWS's band, and
-4.5 MB from inside the region, where the latency is an order lower. `nwb_lake_writer.arrays`
+4.5 MB from inside the region, where the latency is an order lower. `escapewheel_writer.arrays`
 derives the size that way rather than storing 8-16 MB as a constant, since the constant is
 only correct for one kind of reader.
 

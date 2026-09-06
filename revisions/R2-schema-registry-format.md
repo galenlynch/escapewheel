@@ -6,7 +6,7 @@
 | **Amends** | `03_portable_physical_profile.md`, `04_packet_catalog_manifest.md` |
 | **Depends on** | R3 (type floor, §3.0 principles), R4 (reconciled column set) |
 | **Scope** | Format only. The registry *content* is a separate artifact; R9 §2 has the table ledger. |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -44,8 +44,8 @@ The registry is a single JSON document. Structure:
 ```json
 {
   "registry_version": "0.1.0",
-  "semantic_standard_version": "nwb-lake-semantic-v0.1",
-  "logical_standard_version": "nwb-lake-logical-v0.1",
+  "semantic_standard_version": "escapewheel-semantic-v0.1",
+  "logical_standard_version": "escapewheel-logical-v0.1",
   "tables": {
     "core.trials": {
       "schema_id": "core.trials.v0.1",
@@ -197,11 +197,11 @@ and gives generators a contract to code against.
 
 This is a different job from the packet manifest's JSON Schema (§10), and the two MUST NOT
 be conflated: one describes the shape of a registry, the other the shape of
-`nwb.packet.json`.
+`packet.json`.
 
 ## 10. Manifest JSON Schema
 
-`nwb.packet.json` is a JSON document whose contract `04` gives only by example. This
+`packet.json` is a JSON document whose contract `04` gives only by example. This
 revision requires a JSON Schema for it, covering `04`'s required and recommended fields plus
 those added by accepted revisions — `required_codecs` (R3 §7.2) and `sessions` (R1 §4), and
 minus `canonical_representations` (R5 §6).

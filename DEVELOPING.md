@@ -17,9 +17,9 @@ which files a person writes, the rest is a straight line.
 | `registry/build.py` | one block per revision, applying it to the parsed `02` |
 | `registry/rules.json` | Tier 2 rules — the checks structure cannot imply |
 | `registry/registry.schema.json` | the meta-schema a registry document validates against |
-| `registry/manifest.schema.json` | the JSON Schema for `nwb.packet.json` |
+| `registry/manifest.schema.json` | the JSON Schema for `packet.json` |
 | `registry/extensions/*.json` | extension registries, in the same format, hand-written |
-| `nwb-lake-validator/.../generate.py` | how Tier 1 checks are derived from structure |
+| `escapewheel-validator/.../generate.py` | how Tier 1 checks are derived from structure |
 
 Everything else in `registry/` is output.
 
@@ -32,8 +32,8 @@ registry/rules.json (+ R24 templates) ─┘         │
                                                  ├──render.py──> registry/tables.md
                                                  └──render.py──> registry/README.md (marked regions)
 
-registry/registry.schema.json ──build.py──> nwb-lake-validator/src/…/schemas/
-registry/manifest.schema.json ──build.py──> nwb-lake-reader/src/…/schemas/
+registry/registry.schema.json ──build.py──> escapewheel-validator/src/…/schemas/
+registry/manifest.schema.json ──build.py──> escapewheel-reader/src/…/schemas/
 ```
 
 `logical_schemas.json`, `tables.md`, the README's generated regions, and the two vendored schema
@@ -73,7 +73,7 @@ the order matters.
 5. **`check.py`** verifies the result: 21 structural invariants, the meta-schema, the naming
    conventions, and — with DuckDB present — that every Tier 2 rule is executable SQL against
    empty tables built from the registry.
-6. **Tier 1 checks are never stored.** `nwb_lake_validator.generate` derives them from the
+6. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the
    registry at validation time: not-null from `presence`, uniqueness from `primary_key`,
    anti-joins from `references`, membership from `enum`, and two more from each discriminator.
    Changing what Tier 1 means is a code change in `generate.py`, not a data change.
@@ -87,7 +87,7 @@ the order matters.
 |---|---|---|
 | add or change a column, key, type, reference | write a revision, get it accepted, add a block to `build.py` | `verify.py` |
 | add a Tier 2 rule | `registry/rules.json` | `verify.py` |
-| change how Tier 1 is derived | `nwb-lake-validator/.../generate.py` | `verify.py` |
+| change how Tier 1 is derived | `escapewheel-validator/.../generate.py` | `verify.py` |
 | add an extension | `registry/extensions/<id>.json` | `verify.py` |
 | change the manifest or the meta-schema | the hand-written copy in `registry/` | `build.py` re-vendors; `verify.py` |
 | add a fixture variant | `fixtures/build.py` and `fixtures/corpus.py` | `verify.py` |
@@ -123,7 +123,7 @@ should be.
 **A revision clause that never reaches the spec.** Two independent audits found normative clauses
 dropped during compilation of the v0.2 prose — `R53 §2.4`'s `int64` escape, `R21`'s codec floor,
 `R36 §2.2`'s prefix digest reversed into "undefined". A citation sweep cannot see these, because
-the revision is cited for its *other* clauses. `nwb_lake_poc_docs_v0.2/ledger.py` enumerates all
+the revision is cited for its *other* clauses. `escapewheel_poc_docs_v0.2/ledger.py` enumerates all
 185 Decision clauses and `applied.toml` records where each went; the count of undisposed clauses
 may fall and must not rise.
 
@@ -133,7 +133,7 @@ may fall and must not rise.
 |---|---|
 | `registry/check.py` | a registry that contradicts itself, a rule naming a removed column, a stale vendored copy, a naming convention broken without a declared reason |
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
-| `nwb_lake_poc_docs_v0.2/ledger.py` | an accepted clause with nowhere recorded that it went |
+| `escapewheel_poc_docs_v0.2/ledger.py` | an accepted clause with nowhere recorded that it went |
 | `combine.py --check` | a single-file spec rendering that no longer matches its parts |
 | `facts.py` | a count in a root document that no longer matches what it counts |
 | `verify.py`'s clean-tree stage | a committed artifact that is not what the code produces |

@@ -59,7 +59,7 @@ what had to be computed from several.
 
 Independently arrived at, which is worth more than agreement by construction:
 
-| | Packaging | NWB-Lake |
+| | Packaging | Escapewheel |
 |---|---|---|
 | Primary tabular format | Parquet | Parquet (`03`) |
 | NWB's role | a secondary projection built from the same processors | a compatibility projection, deferred (`00`) |
@@ -73,18 +73,18 @@ Independently arrived at, which is worth more than agreement by construction:
 ## 4. Where it differs, and what that costs an importer
 
 - **Time is float seconds, not integer ticks.** This is the one real gap. Every stream is harp
-  seconds as float64; NWB-Lake's cross-document invariant is an integer `*_tick` on a declared
+  seconds as float64; Escapewheel's cross-document invariant is an integer `*_tick` on a declared
   `clock_id`, with float seconds derived. Converting is arithmetic, but the direction matters:
   a float second cannot express exact sample alignment, which is the fault that put LFP 268
   days from the spikes in the ecephys NWB and the reason the sorter is our tick source.
 - **`odor_concentration: list[float]` is a list column**, which R3 §2.1 forbids outright. It
   becomes a child table on import, exactly as `core.trial_tags` does.
 - **The schema is code, not data.** Pydantic models plus parquet's self-description, guarded by
-  pytest. NWB-Lake's registry is data (R2 §7) and generates 241 checks. Neither is wrong; they
+  pytest. Escapewheel's registry is data (R2 §7) and generates 241 checks. Neither is wrong; they
   are different places to put the same knowledge, and the `Site` model converts mechanically
   into an R17 extension registry document.
-- **There is no manifest.** The export is a directory discovered by convention. NWB-Lake binds
-  every resource in `nwb.packet.json` with codecs, checksums and a validation state.
+- **There is no manifest.** The export is a directory discovered by convention. Escapewheel binds
+  every resource in `packet.json` with codecs, checksums and a validation state.
 - **Nullable moments are columns.** `odor_onset_time` is null when no odour was delivered.
   `core.events` is where we put those, because absence is a fact about the interval rather than
   a null to carry — and the same argument holds here.

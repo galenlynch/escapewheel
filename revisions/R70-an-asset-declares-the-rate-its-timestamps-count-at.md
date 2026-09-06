@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `02` (`core.media_assets`), R68 §2.4 (which it reverses) |
 | **Depends on** | R68 (a presentation timestamp is an integer), R33 (a rational is two integers) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

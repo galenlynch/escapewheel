@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://nwb-lake.org/schemas/manifest/0.1.0",
-  "title": "NWB-Lake packet manifest",
-  "description": "Shape of nwb.packet.json, per R2 \u00a710. Covers 04's fields plus sessions (R1 \u00a74) and required_codecs (R3 \u00a77.2), less canonical_representations (R5 \u00a76), with R9 \u00a74's provenance renames.",
+  "$id": "https://escapewheel.org/schemas/manifest/0.1.0",
+  "title": "Escapewheel packet manifest",
+  "description": "Shape of packet.json, per R2 \u00a710. Covers 04's fields plus sessions (R1 \u00a74) and required_codecs (R3 \u00a77.2), less canonical_representations (R5 \u00a76), with R9 \u00a74's provenance renames.",
   "type": "object",
   "required": [
     "packet_id",
@@ -77,7 +77,7 @@
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
     "profile_id": {
-      "const": "nwb-lake-portable-v0.1"
+      "const": "escapewheel-portable-v0.1"
     },
     "provenance": {
       "description": "Optional; provenance is SHOULD, not MUST (R9 \u00a75).",

@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `02` (`core.media_frames.frame_index`), answering R68 §5's first open question |
 | **Depends on** | R3 §6 (a structural index is a 0-based offset), R48 (a column declares a role) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

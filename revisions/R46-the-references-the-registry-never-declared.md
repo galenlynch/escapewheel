@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-02 |
 | **Amends** | `02_core_logical_schemas.md` (references on eleven tables); R28 §2 (which fixed one instance of this) |
 | **Depends on** | R2 (the registry format), R7 (every table declares a key), R9 (provenance tables), R28 (`core.array_channels.electrode_id`) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -26,7 +26,7 @@ it lacked"*. It was not an isolated case. Sixteen more were found by asking a di
 not *which reference is wrong*, but *which column names a table whose primary key is exactly that
 column, and says nothing about it*.
 
-**The reader degrades too.** `nwb_lake_reader.Packet.distinct` uses a reference to answer from the
+**The reader degrades too.** `escapewheel_reader.Packet.distinct` uses a reference to answer from the
 parent table — *"a foreign key means the parent table holds every value the child may carry, and
 it is the smaller table by construction"* — and falls back to scanning the fact table when none is
 declared. `core.units` is thousands of rows where `core.spike_events` is hundreds of millions.

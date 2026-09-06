@@ -19,7 +19,7 @@ jobs:
           enable-cache: true
       - name: Install the three distributions
         run: |
-          for package in nwb-lake-reader nwb-lake-validator nwb-lake-writer; do
+          for package in escapewheel-reader escapewheel-validator escapewheel-writer; do
             uv sync --all-extras --project "$package"
           done
       - name: Every generator and every check

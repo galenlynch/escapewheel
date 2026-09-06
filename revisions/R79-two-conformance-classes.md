@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `05` §8 (what a conforming importer does), `01` §2.4 (what a conforming packet carries) |
 | **Depends on** | R9 §5 (provenance is SHOULD), R31 §4 (MUST and SHOULD are about different claims) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

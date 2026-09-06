@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-26 |
 | **Amends** | R3 §7.2, `04_packet_catalog_manifest.md` |
 | **Depends on** | R14 (external resources) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

@@ -9,7 +9,7 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R83 accepted. R42 and R73 withdrawn. R84 proposed and not binding.
+R1–R41, R43–R72 and R74–R84 accepted. R42 and R73 withdrawn. Nothing is proposed.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 35 tables, 307 columns, 76 references, 68 Tier 2 rules (2 advisory)
@@ -26,7 +26,7 @@ Each drawn from columns measured in a real
 session rather than invented — see `registry/extensions/README.md`. The conformance corpus carries
 one, because R54 §2.4a leaves a packet holding intervals no way not to.
 
-**Phases 0–6 complete.** `nwb-lake verify` closes R36 §2.4 and `nwb-lake prune` closes R61 §3.
+**Phases 0–6 complete.** `escapewheel verify` closes R36 §2.4 and `escapewheel prune` closes R61 §3.
 Phase 7 (Iceberg) untouched.
 
 **This is one repository.** It was ten until 2026-09-04; each history was preserved through the
@@ -47,27 +47,22 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. The rename to escapewheel — drafted, held
+## 1. `registry_version` — still `0.1.0`
 
-`revisions/R84-escapewheel-replaces-nwb-lake.md`, **proposed**. `nwb-lake` reads as an NWB
-sub-project, which is a claim this work cannot make, and naming it for ephys would be the same
-mistake one level down — the clock model is 72% of core and true of every modality. `escapement`
-is taken on PyPI by an adjacent "composable time code encoder/decoder"; `escapewheel` is free.
+R84 renamed the project and deliberately left this alone. It has stood at `0.1.0` while R48 added
+roles, **R53 turned every identifier from string to int32**, R56 added unit and clock context,
+R81 narrowed six primary keys and R83 added a table. Two packets claiming one version with
+incompatible schemas is what the field exists to prevent, and it is preventing nothing.
 
-**Held deliberately, 2026-09-05**, pending real-world testing of a packet. The rename forces both
-packets to be rebuilt (R14 §2.3 forbids editing a manifest in place), so it should land together
-with anything else that changes what a packet contains.
+Free to settle while nobody outside holds a packet. Settling it costs a rebuild of both packets,
+which R84 has already made necessary, so doing it before the next rebuild is free and doing it
+after costs two more.
 
-Cost measured: 186 files carry `nwb-lake`, 129 carry `nwb_lake`, 104 the profile string, 47
-`nwb.packet.json`, and five directories. `nwb_lake_poc_docs/` keeps its name, being frozen.
+## 2. The repository directory is still `nwb-lake/`
 
-## 2. `registry_version` — held with the rename
-
-Still `0.1.0`, while R48 added roles, **R53 turned every identifier from string to int32**, R56
-added unit and clock context, R81 narrowed six primary keys and R83 added a table. Two packets
-claiming one version with incompatible schemas is what the field exists to prevent, and it is
-preventing nothing. Free to settle while nobody outside holds a packet, and free to batch into
-the rename's rebuild; two more rebuilds if left later.
+R84 §2.1 renames the repository. Everything inside it moved; the checkout directory itself did
+not, because renaming it mid-session breaks every absolute path in flight. `git mv` cannot do it
+either — it is the working tree's own root.
 
 ## 2a. `ecephys_786867` is four revisions behind
 
@@ -158,7 +153,7 @@ springs at a scale no packet has reached yet.
 
 `dynamic_foraging.blocks` now declares that blocks may not overlap, which is what makes the
 binary search sound: a trial inside two blocks has no containing block. Scripts in
-`/mnt/Data/nwb-lake/bench/nesting/` with the raw output in `results.txt`.
+`/mnt/Data/escapewheel/bench/nesting/` with the raw output in `results.txt`.
 
 ## 6. Parked: R42's write case
 
@@ -200,7 +195,7 @@ natural.
 
 # Measured, for reuse
 
-Scripts in `/mnt/Data/nwb-lake/bench/`: `s3_tires.py`, `s3_backends.py`, `clients.py`,
+Scripts in `/mnt/Data/escapewheel/bench/`: `s3_tires.py`, `s3_backends.py`, `clients.py`,
 `duckdb_s3.py`, `s3_full_verify.py`, and `partition/` (`make_parts.py`, `bench2.py`,
 `local_window.py`). Both staged prefixes under `s3://aind-scratch-data/galen.lynch/` are removed;
 nothing of ours is left in the bucket. Restaging is `aws s3 cp --recursive` of a packet.
@@ -253,7 +248,7 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 # Settled 2026-09-03
 
 - **The extension mechanism, end to end.** A recipe names extensions by id (installed, via the
-  `nwb_lake.extensions` entry point) or by path; `PacketWriter` resolves a resource against core
+  `escapewheel.extensions` entry point) or by path; `PacketWriter` resolves a resource against core
   then extensions; a packet carries `extensions/<id>.json` and `layer: "extension"` entries;
   the validator generates checks with no per-extension code and reports them apart from core.
   Three at once is three times one — tested.
@@ -262,9 +257,9 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
   nothing requires uv. Rows arrive as **names** and the writer numbers them, which is what lets an
   adapter run outside this process at all. An extension can now be *entirely data*: a JSON
   document and some Parquet, nothing installed and so nothing to rot.
-- **`nwb_lake.sources` entry point**, for the case that genuinely needs `Context`. Built-ins are
+- **`escapewheel.sources` entry point**, for the case that genuinely needs `Context`. Built-ins are
   consulted first so a plugin cannot shadow `sorter`; a broken one is skipped with its reason.
-- **`nwb-lake extension`** drafts a registry from Parquet. It writes no role, so the draft does
+- **`escapewheel extension`** drafts a registry from Parquet. It writes no role, so the draft does
   **not** validate until a human finishes it — the first version guessed and the draft validated,
   which a test asserting it should not is what caught.
 - **The invariant, written down:** an extension declares; it never ships code on the read path.
@@ -285,7 +280,7 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 - **R17 exercised, then plumbed.** `registry/extensions/dynamic_foraging.json`, 17 checks with no
   per-extension code, validated and reported apart from core. A recipe and the writer now carry
   one end to end.
-- **`nwb-lake verify` — Phase 6.** Records what is true once the bytes land, as a new packet
+- **`escapewheel verify` — Phase 6.** Records what is true once the bytes land, as a new packet
   version with both manifests retained. 208 members with 208 store digests in 1.2 s against S3.
 - **`pkt.table()` reads a remote table**, through `pyarrow.fs`. Schema 0.80 s, 6,781 rows 0.52 s.
 - **Five defects the work surfaced.** `core.media_frames.media_asset_id` referenced nothing (the
@@ -315,7 +310,7 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
   per-row-group — Parquet has no append, so "which pages moved" is not a question the format can
   be asked, and its page CRC32 is a corruption detector a rewritten file passes (0.06% of bytes,
   measured, shelved).
-- **`nwb-lake verify` — Phase 6.** Reaches a store once the bytes have landed and records what is
+- **`escapewheel verify` — Phase 6.** Reaches a store once the bytes have landed and records what is
   there, as a new packet version with both manifests retained. Three levels (`size`, `members`,
   `sha256`); validation narrowed to level 3 with `scan` and `recheck` empty, for the reason an
   amendment narrows them to what it wrote — here that is nothing. It also fills in a packet-owned
@@ -353,5 +348,5 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 - **R42 withdrawn.** Read case measured negative in both engines; pyarrow's apparent win is scan
   parallelism, reproducing at the same ratio on local disk with no round trips. Write case parked
   above.
-- **`nwb-lake init` can draft an `lfp` source**, and `LFPSource.offers` reports
+- **`escapewheel init` can draft an `lfp` source**, and `LFPSource.offers` reports
   `core.array_channels`. Between them, why no recipe had ever set `verify`.

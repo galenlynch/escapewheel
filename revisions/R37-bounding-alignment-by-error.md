@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-31 |
 | **Amends** | R27 §5.2, §5.3 |
 | **Depends on** | R13 (anchor alignment), R27 (clock graph integrity) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

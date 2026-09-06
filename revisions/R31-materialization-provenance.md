@@ -6,7 +6,7 @@
 | **Amends** | `06_analysis_layer.md` §13, §171 |
 | **Depends on** | R9 (provenance simplification), R12 (what belongs in the shim), R14 (external resources) |
 | **Forces** | R30 §3.1, which requires a bucket width to be declared as a transform parameter |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

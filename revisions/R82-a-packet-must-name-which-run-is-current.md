@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-05 |
 | **Amends** | R41 §2.4 (a consumer MUST NOT silently choose), R44 §2.3 (the undeterminable state), R26 §2 (as applied to two rules) |
 | **Depends on** | R41 (currency is not a version), R44 (a run declares its scope), R49 (a scope names its kind), R74 (a commit is a publication) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -129,7 +129,7 @@ advisory rules goes from four to two and the total is untouched. The SQL of both
 they already return exactly the offending rows.
 
 The writer refuses such a commit, which puts the refusal where R63 §2 puts a contradictory recipe.
-`nwb-lake-reader` keeps `runs.py`'s `ambiguities()` and `preferred_run()`; what changes is that
+`escapewheel-reader` keeps `runs.py`'s `ambiguities()` and `preferred_run()`; what changes is that
 `check()` becomes a validator's instrument rather than something every accessor runs on the chance
 that a packet is ambiguous.
 

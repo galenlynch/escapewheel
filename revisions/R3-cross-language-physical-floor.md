@@ -7,7 +7,7 @@
 | **Depends on** | R1 (single-session primary) |
 | **Forces** | R5 (flat spike representation) — see §4 |
 | **Defers** | Downstream edits to `04` §canonical_representations, `06`, `07` — to R5 |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -250,7 +250,7 @@ unreachable without a parser, contrary to §2.1's rule that required interpretat
 on one.
 
 **Open:** non-linear alignment (piecewise, anchor-point) needs a child table. This revision
-does not define one; packets requiring it are out of scope for `nwb-lake-portable-v0.1`.
+does not define one; packets requiring it are out of scope for `escapewheel-portable-v0.1`.
 
 ## 4. Consequence for spike representation
 

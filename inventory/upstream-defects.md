@@ -2,7 +2,7 @@
 
 Found while writing the Phase 3 adapters against `ecephys_776259_2025-04-09` and
 `ecephys_837772_2026-06-27`. Each is a bug in a producing pipeline rather than a gap in this
-specification, and each is worked around in `nwb-lake-writer` — the workarounds are noted so
+specification, and each is worked around in `escapewheel-writer` — the workarounds are noted so
 they can be removed once a fix lands.
 
 Measured 2026-08-28 to 2026-09-01. Nothing here has been filed.
@@ -68,7 +68,7 @@ it to about a second.
 **Repro:** any smashed session. Compare `timestamps_reference_time` against
 `min(units/spike_times)`; if the latter is ~10⁷ the field is unset.
 
-**Workaround:** `nwb_lake_writer.sources.aind.SessionSource.epoch` derives the epoch from a
+**Workaround:** `escapewheel_writer.sources.aind.SessionSource.epoch` derives the epoch from a
 cross-source span match and ignores the field.
 
 ---

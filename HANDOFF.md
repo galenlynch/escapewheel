@@ -1,10 +1,10 @@
 # Handoff — the v0.2 specification, and what is not in it
 
-For someone picking up NWB-Lake. Two things this covers: where the implementation disagrees with the specification, and the packaging layer the specification deliberately does not describe.
+For someone picking up Escapewheel. Two things this covers: where the implementation disagrees with the specification, and the packaging layer the specification deliberately does not describe.
 
 ## 1. What v0.2 is
 
-`nwb_lake_poc_docs_v0.2/` is v0.1 with R1–R41 and R43–R70 applied. R42 was withdrawn.
+`escapewheel_poc_docs_v0.2/` is v0.1 with R1–R41 and R43–R70 applied. R42 was withdrawn.
 
 `nwb_lake_poc_docs/` stays frozen and is the audit trail. `revisions/` stays the record of *why* each rule holds; v0.2 states only what holds, citing `(R<N> §x)` for provenance.
 
@@ -92,7 +92,7 @@ resolves against the registry, or is a struck or renamed artifact a revision nam
 changed. Four names needed chasing and all four were correct: `core.intervals.parent_interval_id`
 was considered and rejected by R54 itself; `scope_resolves` was regenerated under R55's names and
 does reach extension kinds; `index_contiguous` went with the `interval_index` R47 struck; and
-`nwb_lake_writer.arrow.number` exists.
+`escapewheel_writer.arrow.number` exists.
 
 **One writer obligation was not met, and is now fixed.** R40 §2.3 requires a withheld-anchor count
 per clock *including zero* — "a packet that drops nothing says so" — and both the per-clock entry
@@ -196,7 +196,7 @@ swallowed.**
    `settings.return_in_uV` unreadable, so no sorting run declared an `amplitude_unit` and
    validation refused the commit. Caught by a rule, not by a crash.
 
-**Two usability gaps found.** `nwb-lake inspect nwb` cannot run: it needs `interval_kind` and
+**Two usability gaps found.** `escapewheel inspect nwb` cannot run: it needs `interval_kind` and
 `inspect` has no way to pass an option, so `05` Stage 1 is unavailable for the central adapter.
 And the Zarr message in (1) should distinguish an absent path from an unsupported encoding.
 
@@ -238,7 +238,7 @@ Two properties worth knowing before writing one:
 
 ### 3.4 The CLI
 
-One command, `nwb-lake`, provided by three distributions through an entry-point group. `inspect` reports what a source offers; `init` drafts a recipe; `import --check` reports every knowable problem in milliseconds; `import` builds; `verify` records what is true of external resources; `prune` removes what a packet no longer names.
+One command, `escapewheel`, provided by three distributions through an entry-point group. `inspect` reports what a source offers; `init` drafts a recipe; `import --check` reports every knowable problem in milliseconds; `import` builds; `verify` records what is true of external resources; `prune` removes what a packet no longer names.
 
 ### 3.5 Extensions in practice
 

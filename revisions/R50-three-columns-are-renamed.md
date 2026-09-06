@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-02 |
 | **Amends** | R28 §2 (`core.unit_electrodes.channel_ordinal`), R41 §2.2 (`core.processing_runs.supersedes`), R33 §2 (`step_ticks`) |
 | **Depends on** | R33 (rational axis steps), R41 (a run may name the run it replaces), R48 (a column declares its role) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -72,7 +72,7 @@ SQL reserved words in DuckDB. They keep their names:
 
 - `offset` is the standard name for the additive term in `value x conversion + offset`, and a
   reader coming from NWB expects it;
-- the collision is already handled structurally rather than by avoidance — `nwb_lake_reader.sql`
+- the collision is already handled structurally rather than by avoidance — `escapewheel_reader.sql`
   quotes every column identifier unconditionally, because *"every engine reserves a different
   set"* and a word list is not portable.
 

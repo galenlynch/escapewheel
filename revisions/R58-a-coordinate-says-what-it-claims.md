@@ -7,7 +7,7 @@
 | **Forces** | R59 (an atlas annotation attaches to a coordinate, so it needs a basis to attach to) |
 | **Corrected by** | R60 (§2.3's currency claim; the key admits one row per basis, so R41 has nothing to arbitrate) |
 | **Depends on** | R8 (open vocabularies), R19 (coordinate frames), R28 (unit coordinates), R41 (currency), R44 (a run declares its scope) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

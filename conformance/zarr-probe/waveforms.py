@@ -17,9 +17,9 @@ import numpy as np
 import zarr
 from zarr.codecs import BloscCodec, BytesCodec, GzipCodec, ShardingCodec, ZstdCodec
 
-NWB = Path("/mnt/Data/nwb-lake/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/"
+NWB = Path("/mnt/Data/escapewheel/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/"
            "ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb")
-OUT = Path("/mnt/Data/nwb-lake/scratch/waveforms")
+OUT = Path("/mnt/Data/escapewheel/scratch/waveforms")
 
 #: (label, dtype, chunks, codecs, shard)
 LAYOUTS = [

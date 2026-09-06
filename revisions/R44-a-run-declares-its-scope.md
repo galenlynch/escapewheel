@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-01 |
 | **Amends** | R41 §2.2 (`core.processing_runs`), R41 §2.4 (what a consumer does) |
 | **Depends on** | R9 (light provenance), R23 (a stream names its run), R41 (currency) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

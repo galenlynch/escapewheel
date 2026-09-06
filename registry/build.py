@@ -24,9 +24,9 @@ OUT = HERE / "logical_schemas.json"
 #: Where each hand-written schema is vendored. A sibling distribution cannot read a file from
 #: another repository, so it carries a copy -- which makes the copy an output of this build.
 VENDORED = {
-    "registry.schema.json": HERE.parent / "nwb-lake-validator/src/nwb_lake_validator/schemas/registry.schema.json",
-    "manifest.schema.json": HERE.parent / "nwb-lake-reader/src/nwb_lake_reader/schemas/manifest.schema.json",
-    "sources.schema.json": HERE.parent / "nwb-lake-reader/src/nwb_lake_reader/schemas/sources.schema.json",
+    "registry.schema.json": HERE.parent / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+    "manifest.schema.json": HERE.parent / "escapewheel-reader/src/escapewheel_reader/schemas/manifest.schema.json",
+    "sources.schema.json": HERE.parent / "escapewheel-reader/src/escapewheel_reader/schemas/sources.schema.json",
 }
 RULES = HERE / "rules.json"
 
@@ -82,7 +82,7 @@ SINCE = _Since([None])
 #: R42 is withdrawn and so is not here.
 UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34, 35, 36, 37, 40,
              43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69, 71, 72, 74, 75, 76, 77, 78, 79,
-             80, 82)
+             80, 82, 84)
 
 
 #: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a
@@ -1272,8 +1272,8 @@ def build() -> dict:
     # the meta-schema rather than repeated, since a copy is what goes stale.
     return {"$schema": json.loads((HERE / "registry.schema.json").read_text())["$id"],
             "registry_version": "0.1.0",
-            "semantic_standard_version": "nwb-lake-semantic-v0.1",
-            "logical_standard_version": "nwb-lake-logical-v0.1",
+            "semantic_standard_version": "escapewheel-semantic-v0.1",
+            "logical_standard_version": "escapewheel-logical-v0.1",
             # Every revision whose decisions are applied above, so the registry says what it
             # was derived from rather than leaving it to the block comments. The union of what
             # the blocks stamped and what only this file records, so adding a column-touching

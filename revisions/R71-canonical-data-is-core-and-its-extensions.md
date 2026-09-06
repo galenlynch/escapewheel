@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-04 |
 | **Amends** | `00` §3 (the layer table), `00` §4.1, `06` §2 (what analysis must be recomputable from) |
 | **Depends on** | R54 (a trial is an interval), R55 (a discriminated reference), R17 (extension registries) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 

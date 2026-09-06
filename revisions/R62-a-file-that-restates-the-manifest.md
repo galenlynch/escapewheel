@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-09-03 |
 | **Amends** | `03` "Directory layout" (`03:75`), R2 §8 (versioning) |
 | **Depends on** | R3 §3.0 (duplication must buy otherwise-unavailable access) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -17,7 +17,7 @@ semantic standard version string and nothing else."* The manifest already carrie
 
 So the file restates a field the packet cannot omit. R3 §3.0 admits duplication only where it buys
 otherwise-unavailable access, and this buys none: a consumer holding the file holds the manifest,
-because the file is 23 bytes inside a packet whose catalog is `nwb.packet.json`.
+because the file is 23 bytes inside a packet whose catalog is `packet.json`.
 
 ### 1.1 Nothing has written it and nothing has read it
 
@@ -30,7 +30,7 @@ Only `fixtures/build.py` writes one, implementing `03:75` faithfully, and nothin
 ### 1.2 It was found by being unremovable
 
 R61 §2.1 classes a file no manifest names as a **stray** and forbids removing one. Running
-`nwb-lake prune` over the conformance packet reports exactly one:
+`escapewheel prune` over the conformance packet reports exactly one:
 
 ```
 stray     kept      schemas/semantic_version.txt
@@ -53,7 +53,7 @@ removed, so an existing packet needs no migration and loses nothing.
 
 ### 2.2 The manifest is where a version string lives
 
-`semantic_standard_version` in `nwb.packet.json` is the sole record of the semantic standard a
+`semantic_standard_version` in `packet.json` is the sole record of the semantic standard a
 packet was written against, as `logical_standard_version` and `registry_version` already are for
 theirs. R2 §10's manifest schema requires it.
 
@@ -70,5 +70,5 @@ manifest names but does not contain, so a packet without it is not self-describi
 ## 4. Rejected
 
 A plain-text file is readable without a JSON parser, where the manifest is not. That saves nothing
-here: `nwb.packet.json` is the packet catalog, so no consumer reads a packet without parsing JSON,
+here: `packet.json` is the packet catalog, so no consumer reads a packet without parsing JSON,
 and R3 §2.1's floor is about a *reader's* dependency closure rather than a shell script's.

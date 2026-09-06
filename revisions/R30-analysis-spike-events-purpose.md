@@ -5,7 +5,7 @@
 | **Status** | **Accepted** 2026-08-28 |
 | **Amends** | `06_analysis_layer.md` §23 (`analysis.spike_events`); `03_portable_physical_profile.md` §"Sorting" |
 | **Depends on** | R5 (flat spike representation), R10 (default sort order), R12 (physical order is a shim check), R13 (anchor-point alignment), R27 (clock graph integrity) |
-| **Profile** | `nwb-lake-portable-v0.1` |
+| **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
