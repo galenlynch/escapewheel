@@ -1,4 +1,4 @@
-# R80 — Locating a Reference Is a Separate Document's Job
+# R80 — A Source Resolution Document Locates an External Resource
 
 | | |
 |---|---|

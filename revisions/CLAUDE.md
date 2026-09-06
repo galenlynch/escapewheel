@@ -10,16 +10,44 @@ position, and the symptom table for a draft that reads badly — is in the globa
 a clause a reader has to re-parse, and a revision's reader is implementing it months later with
 no author to ask.
 
+**A title is a declarative statement of the rule, not an imperative.** A commit title is
+imperative because a commit is an action applied at a moment; a revision outlives the action, and
+its reader wants the rule that now holds. "An Identifier Is an Integer" answers the question they
+arrived with, where "Make Identifiers Integers" describes a finished task. Where the rule is that
+something declares a fact, R44, R48 and R56 give the form: "A Run Declares Its Scope".
+
 **A title says what the revision does, literally.** Not an aphorism, and not a metaphor a reader
 has to unpack before they know whether to open it. "A Packet Holds Only One Interpretation" over
 "A Second Interpretation Is a Second Packet"; "Unit IDs Are Assigned by the Packet" over "A Packet
 Numbers Its Own Units". Someone scanning the revision list is deciding whether this one is
 relevant, and a clever title makes them read the document to find out.
 
-**A section heading is a simple declarative statement.** One clause. A comma joining two findings
-means the section is doing two things and wants splitting, or the heading is describing rather
-than stating. "The label repeats across runs" over "A carried label is not an identifier, so the
-key grew to four columns".
+**A section heading states one finding.** A comma or an "and" joining two of them means the
+section is doing two things and wants splitting, or the heading is describing the route to a claim
+rather than stating it. "The label repeats across runs" over "A carried label is not an
+identifier, so the key grew to four columns"; "A channel index is an offset into the run's channel
+list" over "A channel index counts the channels the run kept".
+
+**Two clauses are right where the second corrects the first.** The count is of findings, not of
+clauses: a heading may put the reader's wrong assumption in the topic position and the fact in the
+stress position, which is the order Gopen and Swan prescribe and one finding delivered against the
+belief it displaces. "SpikeInterface does not index electrodes; it indexes a subset of the original
+channels" says more than either half alone. Join them with a semicolon — a comma between two
+independent clauses is a splice.
+
+**The opening paragraph introduces what the rest refers to.** A revision's first section is the
+reader's first contact with the problem, so it has no old information to put in a topic position
+and must create some. Name the column, the table or the file, say what was believed about it, then
+correct the belief — the measurement lands after that, in a reader who can be surprised by it.
+"`extremum_channel_index` is the NWB's statement of which electrode a unit peaks on" before
+anything counts how often it was read wrongly.
+
+**The headings must read as an outline on their own.** Someone deciding whether to open a section
+reads the contents and nothing else, so a heading leaning on the body for its referent tells them
+nothing: "Only one session records the list" leaves *which* list in a paragraph they have not
+read. Name the thing. A pronoun pointing back at an *earlier heading* is fine, since they are read
+in order — "A consumer resolves a channel index through the new table" works because the heading
+above it introduced one.
 
 ## What a revision is
 

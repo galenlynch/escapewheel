@@ -430,3 +430,38 @@ def test_supersedes_is_left_unset(source):
     """R41 §2.2: a first import supersedes nothing, and a writer must not guess."""
     assert all(r.get("supersedes") is None for r in rows_of(source, "core.processing_runs"))
 
+
+# -- the channels a run used -------------------------------------------------------------
+
+
+def test_a_run_declares_the_channels_it_used(source):
+    """R83 §2.1: the analyzer's list, in its own order, naming the contact at each position."""
+    rows = [r for r in rows_of(source, "core.sorting_run_channels") if r["sorting_run_id"] == SHANK1]
+    assert [r["channel_index"] for r in rows] == [0, 1, 2, 3]
+    assert [r["electrode_id"] for r in rows] == [f"50720-1.{c}" for c in sorterfixture.CHANNEL_IDS]
+
+
+def test_a_channel_index_is_not_a_contact_position(source):
+    """R83 §1.1's whole point, in four rows: `CH2` was dropped, so index 2 is `CH3`."""
+    rows = [r for r in rows_of(source, "core.sorting_run_channels") if r["sorting_run_id"] == SHANK1]
+    at = {r["channel_index"]: r["electrode_id"] for r in rows}
+    assert at[2] == "50720-1.CH3"
+
+
+def test_an_electrode_is_named_as_the_nwb_names_it(source):
+    """The two adapters meet on `<group>.<channel>`, which is what lets the writer number once.
+
+    `NWBSource._electrode_ids` composes the same string for `core.electrodes`, so the shared
+    `Keys` resolves both to one integer without this adapter running after that one.
+    """
+    rows = rows_of(source, "core.sorting_run_channels")
+    assert all(r["electrode_id"].count(".") == 1 for r in rows)
+    assert {r["electrode_id"].split(".")[0] for r in rows} == {"50720-1", "50720-2"}
+
+
+def test_a_stream_without_a_channel_list_contributes_nothing(tmp_path):
+    """R83 §2.2 forbids inferring one, so silence is the only other answer -- and it is reported."""
+    sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=[(0, 1)], channel_ids=None)
+    source = SorterSource(tmp_path, session_id=SESSION)
+    assert source.sorting_run_channels() == []
+    assert any("states no channel list" in note for note in source.notes)

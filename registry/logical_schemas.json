@@ -85,7 +85,8 @@
       "R79",
       "R80",
       "R81",
-      "R82"
+      "R82",
+      "R83"
     ]
   },
   "tables": {
@@ -3116,6 +3117,90 @@
         }
       ]
     },
+    "core.sorting_run_channels": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R83 \u00a72.1"
+        },
+        {
+          "name": "sorting_run_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The run whose channel list this row belongs to.",
+          "identity": "assigned",
+          "since": "R83 \u00a72.1"
+        },
+        {
+          "name": "channel_index",
+          "type": "int64",
+          "presence": "required",
+          "role": "structural_index",
+          "description": "0-based position in the run's own channel order, which is what a source's channel index counts (R83 \u00a71.1). int64 as every structural index is.",
+          "since": "R83 \u00a72.1"
+        },
+        {
+          "name": "electrode_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The contact at that position.",
+          "identity": "assigned",
+          "since": "R83 \u00a72.1"
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "sorting_run_id",
+        "channel_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "sorting_run_id"
+          ],
+          "resource": "core.sorting_runs",
+          "resource_columns": [
+            "sorting_run_id"
+          ]
+        },
+        {
+          "columns": [
+            "electrode_id"
+          ],
+          "resource": "core.electrodes",
+          "resource_columns": [
+            "electrode_id"
+          ]
+        }
+      ],
+      "sort": [
+        "session_id",
+        "sorting_run_id",
+        "channel_index"
+      ],
+      "rules": [
+        {
+          "id": "core.sorting_run_channels.contact_listed_once",
+          "level": "error",
+          "message": "a contact appears more than once in one run's channel list",
+          "sql": "SELECT session_id, sorting_run_id, electrode_id, COUNT(*) AS n FROM core_sorting_run_channels GROUP BY session_id, sorting_run_id, electrode_id HAVING COUNT(*) > 1"
+        },
+        {
+          "id": "core.sorting_run_channels.index_contiguous",
+          "level": "error",
+          "message": "channel_index is not contiguous from 0 within a run",
+          "sql": "SELECT session_id, sorting_run_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core_sorting_run_channels GROUP BY session_id, sorting_run_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
+        }
+      ],
+      "since": "R83 \u00a72.1"
+    },
     "core.sorting_runs": {
       "columns": [
         {
@@ -3737,6 +3822,12 @@
           "level": "error",
           "message": "channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
           "sql": "SELECT unit_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core_unit_electrodes WHERE channel_index IS NOT NULL GROUP BY unit_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
+        },
+        {
+          "id": "core.unit_electrodes.electrode_is_a_run_channel",
+          "level": "error",
+          "message": "a unit sits on an electrode its sorting run did not use",
+          "sql": "SELECT ue.unit_id, ue.electrode_id FROM core_unit_electrodes ue JOIN core_units u ON ue.unit_id = u.unit_id JOIN (SELECT DISTINCT session_id, sorting_run_id FROM core_sorting_run_channels) d ON d.session_id = u.session_id AND d.sorting_run_id = u.sorting_run_id LEFT JOIN core_sorting_run_channels c ON c.session_id = u.session_id AND c.sorting_run_id = u.sorting_run_id AND c.electrode_id = ue.electrode_id WHERE c.electrode_id IS NULL"
         }
       ],
       "since": "R28 \u00a72-4"

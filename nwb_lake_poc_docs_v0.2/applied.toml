@@ -1423,3 +1423,29 @@ where = "05_validation_and_import.md §11"
 
 
 
+
+[clause."R83 §2.1"]
+disposition = "registry"
+where = "core.sorting_run_channels, with contact_listed_once and index_contiguous"
+note = "also listed in 02_core_logical_schemas.md §11.5"
+
+[clause."R83 §2.2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §12"
+
+[clause."R83 §2.3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §12"
+
+[clause."R83 §2.4"]
+disposition = "registry"
+where = "core.unit_electrodes.electrode_is_a_run_channel"
+note = "also stated in 02_core_logical_schemas.md §12"
+
+[clause."R83 §3"]
+disposition = "rationale"
+note = "what the revision declines to change; its MUST and SHOULD cite §2's clauses rather than stating requirements"
+
+[clause."R83 §5"]
+disposition = "rationale"
+note = "three open questions; the MUST is the requirement §5 declines to impose"

@@ -41,6 +41,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "wide_anchor_gap": ("warning", "core.clock_anchors.gap_within_bound"),
     "two_primaries": ("warning", "core.unit_electrodes.one_primary"),
     "gapped_ordinal": ("error", "core.unit_electrodes.channel_index_contiguous"),
+    "unit_off_the_run": ("error", "core.unit_electrodes.electrode_is_a_run_channel"),
     "undeclared_currency": ("error", "core.processing_runs.undeclared_currency"),
     "unscoped_runs": ("error", "core.processing_runs.scope_undeclared"),
 }

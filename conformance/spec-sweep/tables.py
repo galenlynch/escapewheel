@@ -39,6 +39,9 @@ STEPS = [
     ("R54 §2.3 − core.trial_tags",             {"core.trial_tags"}, set()),
     ("R54 §2.1 core.trials -> core.intervals", {"core.trials"}, {"core.intervals"}),
     ("06      + analysis.spike_events",        set(), {"analysis.spike_events"}),
+    # R83 §2.1: a channel index a source emits counts the channels its run kept, and nothing
+    # held that list, so no packet could resolve one.
+    ("R83 §2.1 + core.sorting_run_channels",   set(), {"core.sorting_run_channels"}),
 ]
 
 if not PARSED.exists():

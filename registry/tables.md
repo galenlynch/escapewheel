@@ -8,16 +8,16 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-34 tables, 303 columns, 74 references, 65 Tier 2 rules
+35 tables, 307 columns, 76 references, 68 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83
 ```
 
 ## Contents
 
 **analysis** (3) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.spike_events`](#analysisspike_events)
 
-**core** (31) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
+**core** (32) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
 
 ## `analysis`
 
@@ -706,6 +706,30 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.sessions.reference_clock_declared` — error: a session declaring more than one clock names no reference clock (R27 2)
 - `core.sessions.every_clock_reaches_the_reference` — error: a clock does not reach the session's reference clock, so it cannot be converted to it
 
+### `core.sorting_run_channels`
+
+*Introduced by R83 §2.1 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R83 §2.1 | Session ID. |
+| `sorting_run_id` | int32 | **required** | R83 §2.1 | The run whose channel list this row belongs to. |
+| `channel_index` | int64 | **required** | R83 §2.1 | 0-based position in the run's own channel order, which is what a source's channel index counts (R83 §1.1). int64 as every structural index is. |
+| `electrode_id` | int32 | **required** | R83 §2.1 | The contact at that position. |
+
+**Primary key** — `session_id`, `sorting_run_id`, `channel_index`  
+**Sort** — `session_id`, `sorting_run_id`, `channel_index`
+
+**References**
+
+- `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
+- `electrode_id` → `core.electrodes` (`electrode_id`)
+
+**Tier 2 rules** — 2
+
+- `core.sorting_run_channels.contact_listed_once` — error: a contact appears more than once in one run's channel list
+- `core.sorting_run_channels.index_contiguous` — error: channel_index is not contiguous from 0 within a run
+
 ### `core.sorting_runs`
 
 | Column | Type | Presence | Since | Description |
@@ -842,10 +866,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `unit_id` → `core.units` (`unit_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
 
-**Tier 2 rules** — 2
+**Tier 2 rules** — 3
 
 - `core.unit_electrodes.one_primary` — warning: a unit designates more than one peak electrode (R28 2)
 - `core.unit_electrodes.channel_index_contiguous` — error: channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there
+- `core.unit_electrodes.electrode_is_a_run_channel` — error: a unit sits on an electrode its sorting run did not use
 
 ### `core.unit_observation_intervals`
 

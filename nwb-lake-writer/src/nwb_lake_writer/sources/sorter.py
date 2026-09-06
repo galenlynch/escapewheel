@@ -194,6 +194,7 @@ class SorterSource:
             "core.curation_versions",
             "core.probes",
             "core.processing_runs",
+            "core.sorting_run_channels",
             "core.sorting_runs",
             "core.spike_events",
             "core.unit_quality_labels",
@@ -512,6 +513,47 @@ class SorterSource:
             return None
         return int(lengths[0])
 
+    def _channel_ids(self, stream: SortedStream) -> list[str] | None:
+        """Return the channels the sorting ran on in its own order, or None where it states none."""
+        analyzer = self._analyzer(stream)
+        if analyzer is None:
+            return None
+        recorded = attrs_at(analyzer, "recording_info").get("recording_attributes") or {}
+        return [str(c) for c in recorded["channel_ids"]] if recorded.get("channel_ids") else None
+
+    def sorting_run_channels(self) -> list[dict[str, Any]]:
+        """`core.sorting_run_channels`, the channels each run used in its own order (R83 §2.1).
+
+        A sorting drops bad channels before it runs, so a channel index it emits afterwards
+        counts what it kept -- `extremum_channel_index` named the wrong electrode for 5,071 of
+        6,781 units read as a contact position. The analyzer holds that list and the NWB does
+        not, which is why this adapter owns the table and the NWB one cannot.
+
+        The electrode is named rather than numbered, so the writer resolves it against the same
+        `Keys` the NWB source's `core.electrodes` numbered: `<group>.<channel>` is what
+        `NWBSource._electrode_ids` composes, and a name is what makes the two agree without
+        this adapter having to run after that one.
+
+        R83 §2.2 forbids inferring the list, so a stream whose analyzer states none contributes
+        no rows and says so.
+        """
+        rows = []
+        for stream in self.streams():
+            channels = self._channel_ids(stream)
+            if channels is None:
+                self.notes.append(f"{stream.key}: the analyzer states no channel list; none written")
+                continue
+            rows += [
+                {
+                    "session_id": self.session_id,
+                    "sorting_run_id": self._sorting_run_id(stream),
+                    "channel_index": index,
+                    "electrode_id": f"{self.prefix}{stream.device}.{channel}",
+                }
+                for index, channel in enumerate(channels)
+            ]
+        return rows
+
     def observation_intervals(self) -> list[dict[str, Any]]:
         """`core.clock_observation_intervals`, one window per stream's sample clock.
 
@@ -820,6 +862,7 @@ class SorterSource:
             "core.probes": self.probes(),
             "core.clocks": self.clocks(),
             "core.sorting_runs": self.sorting_runs(),
+            "core.sorting_run_channels": self.sorting_run_channels(),
             "core.curation_versions": self.curation_versions(),
             "core.units": self.units(),
             "core.unit_quality_labels": self.unit_quality_labels(),

@@ -172,7 +172,13 @@ def content() -> dict[str, list[dict]]:
         "core.electrodes": [
             {"electrode_id": f"elec_{i:03d}", "session_id": "s001", "probe_id": "probe0",
              "local_electrode_label": str(i), "local_channel_label": f"AP{i}"} for i in range(4)],
-        # R28: a unit sits on several electrodes and somewhere, in more than one frame.
+        # R83 2.1: the channels the sorting ran on, in its own order. `elec_002` was dropped,
+        # so a channel index and a contact position part company at position 2 -- which is the
+        # whole reason the list has to be written down.
+        "core.sorting_run_channels": [
+            {"session_id": "s001", "sorting_run_id": "sort_ks4_001", "channel_index": k,
+             "electrode_id": f"elec_{e:03d}"}
+            for k, e in enumerate((0, 1, 3))],
         # R28: a unit sits on several electrodes and somewhere, in more than one frame.
         # Each unit's set contains its own default_electrode_id, which R28 2.1 requires.
         "core.unit_electrodes": [
@@ -180,9 +186,11 @@ def content() -> dict[str, list[dict]]:
              "curation_id": "curation_001", "electrode_id": f"elec_{e:03d}",
              "channel_index": k, "is_primary": f"elec_{e:03d}" == primary,
              "amplitude": -80.0 + k}
+            # Contacts drawn from the run's channel list only, which R83 2.4 requires:
+            # `elec_002` is a real electrode the sorting dropped, so no unit can sit on it.
             for unit, primary, contacts in (
-                (1, "elec_001", (0, 1, 2)),
-                (2, "elec_003", (2, 3)))
+                (1, "elec_001", (0, 1, 3)),
+                (2, "elec_003", (1, 3)))
             for k, e in enumerate(contacts)],
         "core.unit_coordinates": [
             {"session_id": "s001", "unit_id": unit, "coordinate_frame": frame,
@@ -444,6 +452,10 @@ def variants():
         # Two peak channels is not a peak, and the reader has no rule for choosing.
         c["core.unit_electrodes"][0]["is_primary"] = True
         c["core.unit_electrodes"][2]["is_primary"] = True
+    def unit_off_the_run(c):
+        # A unit sitting on a contact its run never used (R83 2.4). `elec_002` is a real
+        # electrode, so only the run's channel list can tell this from a valid row.
+        c["core.unit_electrodes"][0]["electrode_id"] = "elec_002"
     def gapped_ordinal(c):
         # A dense waveform axis indexed by this addresses a row that is not there (R20 2).
         c["core.unit_electrodes"][2]["channel_index"] = 7
@@ -493,7 +505,7 @@ def variants():
             "no_reference_clock": no_reference_clock, "clock_cycle": clock_cycle,
             "unreachable_clock": unreachable_clock, "unaligned_clock": unaligned_clock,
             "wide_anchor_gap": wide_anchor_gap, "two_primaries": two_primaries,
-            "gapped_ordinal": gapped_ordinal,
+            "gapped_ordinal": gapped_ordinal, "unit_off_the_run": unit_off_the_run,
             "undeclared_currency": undeclared_currency, "unscoped_runs": unscoped_runs}
 
 

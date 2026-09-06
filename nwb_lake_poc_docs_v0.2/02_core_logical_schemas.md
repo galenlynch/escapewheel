@@ -278,6 +278,7 @@ The core layer comprises the following resources. Column definitions are in the 
 | resource | contents |
 |---|---|
 | `core.sorting_runs` | what sorted what, on which clock |
+| `core.sorting_run_channels` | the channels a run used, in the order it counted them |
 | `core.curation_versions` | named states of a sorting's unit set |
 | `core.units` | one row per unit per sorting and curation |
 | `core.spike_events` | one row per spike |
@@ -321,6 +322,16 @@ numbers (R81 §2.2); `core.units` records the run and the curation as ordinary c
 `local_unit_label` records what the sorter called it. A table keyed on a unit carries `unit_id`
 and not the run or the curation (R81 §2.3), and a consumer relating a unit to anything outside
 the packet uses `(sorting_run_id, local_unit_label)` (R81 §2.5).
+
+A sorting drops bad channels before it runs, so a channel index a source emits counts the channels
+it kept and not the probe's contacts. `core.sorting_run_channels` records that list in the run's
+own order (R83 §2.1). A writer that can read it SHOULD emit the table, MUST NOT derive it from
+`core.unit_electrodes` or from a bad-channel list, and SHOULD emit nothing where it cannot read it
+(R83 §2.2). A consumer holding such an index MUST resolve it through that table and MUST NOT read
+it as a position in `core.electrodes`; where the run declares no channels the index is
+unresolvable, and the consumer MUST report that rather than resolve it against the contact list
+(R83 §2.3). Where a run declares its channels, every `core.unit_electrodes` row for one of its
+units MUST name an electrode among them (R83 §2.4).
 
 A writer SHOULD sort every table by its primary key (R10 §2). One table overrides this:
 

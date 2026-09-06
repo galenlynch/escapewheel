@@ -85,6 +85,11 @@ def structural(tables, universe, prefix=""):
     c_("primary key columns are required",
        [(n, k) for n, t in tables.items() for k in (t["primary_key"] or [])
         if k in cols[n] and cols[n][k]["presence"] != "required"])
+    # R10 §2's override names columns, and a revision that narrows a key leaves them behind:
+    # `aind_unit_qc` kept sorting by two columns R81 had removed, which no packet could satisfy
+    # and no rule could see, because a sort is physical and SQL cannot read it (R12 §4).
+    c_("sort columns exist",
+       [(n, k) for n, t in tables.items() for k in (t.get("sort") or []) if k not in cols[n]])
     c_("reference targets exist",
        [(n, r["resource"]) for n, t in tables.items() for r in t["references"]
         if r["resource"] not in universe])

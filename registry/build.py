@@ -1220,6 +1220,28 @@ def build() -> dict:
     for column in T("core.spike_events")["columns"]:
         column.pop("unit_from", None)
 
+    # ---- R83 §2 : a sorting run declares the channels it used ---------------------------------
+    SINCE[0] = "R83 §2.1"
+    # A sorting drops bad channels before it runs, so a channel index a source emits counts what
+    # it kept and not the probe's contacts -- `extremum_channel_index` named the wrong electrode
+    # for 5,071 of 6,781 units read the other way. The list it counts was in the analyzer and in
+    # no file, so nothing in the packet could resolve it.
+    tables["core.sorting_run_channels"] = {
+        "columns": [col("session_id", "int32", "required", "Session ID."),
+                    col("sorting_run_id", "int32", "required",
+                        "The run whose channel list this row belongs to."),
+                    col("channel_index", "int64", "required",
+                        "0-based position in the run's own channel order, which is what a source's "
+                        "channel index counts (R83 §1.1). int64 as every structural index is."),
+                    col("electrode_id", "int32", "required", "The contact at that position.")],
+        "primary_key": ["session_id", "sorting_run_id", "channel_index"],
+        "references": [{"columns": ["sorting_run_id"], "resource": "core.sorting_runs",
+                        "resource_columns": ["sorting_run_id"]},
+                       {"columns": ["electrode_id"], "resource": "core.electrodes",
+                        "resource_columns": ["electrode_id"]}],
+        "sort": ["session_id", "sorting_run_id", "channel_index"],
+        "rules": [], "since": SINCE[0]}
+
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
     # expand against the key, and R7 above is what settles three of them.

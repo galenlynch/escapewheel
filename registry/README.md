@@ -6,7 +6,7 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 <!-- BEGIN generated: counts -->
 ```
-34 tables, 303 columns, 74 references, 65 Tier 2 rules
+35 tables, 307 columns, 76 references, 68 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -88,9 +88,9 @@ declares, and therefore what a generator has to work with:
 
 <!-- BEGIN generated: structure -->
 ```
-126 required column, not null
-74  reference, resolves
-34  primary key, unique
+130 required column, not null
+76  reference, resolves
+35  primary key, unique
 3   closed vocabulary, member of
 3   discriminator, resolvable
 ```
@@ -113,7 +113,7 @@ inline-versus-sibling open, to be decided when the content was generated; inline
 a table's whole contract is readable in one place.
 
 <!-- BEGIN generated: rules -->
-65 rules over 23 tables: 56 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (R26 §2), off unless asked for.
+68 rules over 24 tables: 59 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (R26 §2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
@@ -125,6 +125,7 @@ a table's whole contract is readable in one place.
 | `core.units` | 4 |
 | `core.media_assets` | 3 |
 | `core.preferred_runs` | 3 |
+| `core.unit_electrodes` | 3 |
 | `analysis.spike_events` | 2 |
 | `core.array_assets` | 2 |
 | `core.clock_observation_intervals` | 2 |
@@ -132,8 +133,8 @@ a table's whole contract is readable in one place.
 | `core.event_stream_observation_intervals` | 2 |
 | `core.events` | 2 |
 | `core.media_frames` | 2 |
+| `core.sorting_run_channels` | 2 |
 | `core.spike_events` | 2 |
-| `core.unit_electrodes` | 2 |
 | `core.unit_observation_intervals` | 2 |
 | `core.array_channels` | 1 |
 | `core.event_streams` | 1 |

@@ -60,8 +60,13 @@ def zarr_array(path: Path, values) -> Path:
 #: spike, as a real one is: a sorter cannot centre a template at the very end.
 N_SAMPLES = (100,)
 
+#: What the analyzer says it ran on: four contacts of a five-contact probe, `CH2` dropped, so a
+#: channel index and a contact position part company at index 2 (R83 §1.1).
+CHANNEL_IDS = ("CH0", "CH1", "CH3", "CH4")
 
-def stream(root: Path, name: str, *, spikes, unit_ids=UNIT_IDS, analyzer=True, return_in_uv=True, n_samples=N_SAMPLES):
+
+def stream(root: Path, name: str, *, spikes, unit_ids=UNIT_IDS, analyzer=True, return_in_uv=True,
+           n_samples=N_SAMPLES, channel_ids=CHANNEL_IDS):
     """Write one curated stream, and optionally its SortingAnalyzer.
 
     Parameters
@@ -129,6 +134,8 @@ def stream(root: Path, name: str, *, spikes, unit_ids=UNIT_IDS, analyzer=True, r
         recording = {"recording_attributes": {"sampling_frequency": 30000.0}}
         if n_samples is not None:
             recording["recording_attributes"]["num_samples"] = list(n_samples)
+        if channel_ids is not None:
+            recording["recording_attributes"]["channel_ids"] = list(channel_ids)
         (zarr / ".zmetadata").write_text(json.dumps({"metadata": {"recording_info/.zattrs": recording}}))
         zarr_array(
             zarr / "extensions" / "spike_amplitudes" / "amplitudes",
