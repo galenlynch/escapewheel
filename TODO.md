@@ -63,7 +63,7 @@ Only the user moves a revision from Proposed to Accepted. R85 and R86 were accep
   answers, and are never null in 41 and 48 rows. A run spanning sessions is recorded once per
   session (§2.4), so requiring the column forces no lie. Costs 1.0005x on `core.media_frames`
   (7,570,450 rows) and **requires both packets to be rebuilt**, since the column is required.
-- **R89 — A Calibration Names the Devices It Covers.** Nothing records a calibration, while
+- **R89 — A Packet Records the Calibrations of Its Instruments.** Nothing records a calibration, while
   `dynamic_foraging.sessions` carries a valve open time *and* the volume it delivers, and
   `aind_opto.emissions.power_mw` is the calibrated quantity an opto experiment is read through.
   The curve is in `rig.json`: **the same two water calibrations dated 2024-11-27** appear in both

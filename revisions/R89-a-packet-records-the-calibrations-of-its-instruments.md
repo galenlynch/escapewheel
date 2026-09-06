@@ -1,4 +1,4 @@
-# R89 — A Calibration Names the Devices It Covers
+# R89 — A Packet Records the Calibrations of Its Instruments
 
 | | |
 |---|---|
