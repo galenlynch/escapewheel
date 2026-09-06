@@ -38,7 +38,7 @@ from nwb_lake_reader.clocks import BOUND, align
 from .extensions import load as load_extension
 from .recipe import RECIPE_SUPPLIES, Recipe, SourceSpec
 from .sources.compensations import describe
-from .writer import PacketWriter, StagedArray
+from .writer import PacketWriter
 
 #: Which sources a kind consumes the output of. Data-flow between adapters, which the
 #: registry cannot express; see the module docstring.
@@ -694,8 +694,6 @@ def build(
         produced = _add_records(writer, spec, source, context, counts)
         produced.update(_add_batches(writer, spec, source, counts))
         _note_unclaimed(recipe, spec, source, produced)
-        if spec.kind == "waveforms" and spec.options.get("array_asset_id", "waveform_mean"):
-            _stage_array(writer, spec, source, say)
         # Any adapter may stage arrays, not only the waveform one. A source that has them says
         # so by defining `staged_arrays`; the kind it happens to be is not the question.
         for staged in getattr(source, "staged_arrays", lambda: ())():
@@ -759,20 +757,6 @@ def _say_notes(kind: str, source: Any, seen: int, say: Callable[[str], None], st
     if strict and len(notes) > seen:
         raise RecipeError(f"{kind}: {len(notes) - seen} note(s) under --strict; first is {notes[seen]}")
     return len(notes)
-
-
-def _stage_array(writer: PacketWriter, spec: SourceSpec, source: Any, say: Callable[[str], None]) -> None:
-    """Stage a waveform source's dense array, sizing the shard for the store it will live in."""
-    from .arrays import shard_for
-
-    values = source.values
-    chunks = (1, *values.shape[1:])
-    shard = shard_for(values.shape, chunks, float(spec.options.get("compressed_per_chunk", 3850.0)))
-    say(f"  array {values.shape} {values.dtype}, {values.nbytes / 1e6:.0f} MB raw, shard {shard}")
-    writer.add_array(
-        f"core.{source.array_asset_id}",
-        StagedArray(values=values, array_asset_id=source.array_asset_id, chunks=chunks, shard=shard),
-    )
 
 
 def _import_run(

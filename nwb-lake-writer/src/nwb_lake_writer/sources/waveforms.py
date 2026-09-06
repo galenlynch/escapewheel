@@ -20,6 +20,14 @@ recording. A template is not a recording: one channel's trace is a smooth curve 
 channels are independent noise, so (unit, channel, sample) both compresses better and matches
 how a trace is read -- 11% smaller and a trace 3.8x faster. R3 §5 makes the stored order the
 packet's to declare.
+
+`waveform_sd` is the same array of a different quantity and is stored the same way, on the
+mean's support rather than on its own. Measured over 6,781 units the two live-channel masks
+disagree on 52 of 2,603,904 (unit, channel) cells, every one of them live in the mean and zero
+in the deviation and none the other way -- so the mean's support is a superset, cutting the
+deviation on it loses nothing, and one `core.unit_electrodes` describes both channel axes.
+Letting each array find its own support is what would make a position mean different contacts
+in the two.
 """
 
 from __future__ import annotations
@@ -36,6 +44,11 @@ from .store import SourceStore
 #: Samples either side of the window used to estimate what the average left behind. Only for
 #: reporting; the scale comes from the range, not from this.
 EDGE = 20
+
+
+def _uri(asset_id: str) -> str:
+    """Where the writer puts a packet-owned array, which `core.array_assets.uri` must match."""
+    return f"arrays/core/{asset_id}.zarr"
 
 
 def _support(dense: NDArray[Any], width: int) -> list[NDArray[np.int64]]:
@@ -62,7 +75,16 @@ class WaveformSource:
         Without it `core.unit_electrodes` is not emitted and the channel axis carries no
         coordinate.
     array_asset_id : str
-        Identifier for the array.
+        Identifier for the mean array.
+    sd : bool
+        Also read `waveform_sd` and store it as a second array. Off by default: it doubles what
+        the read holds and costs a second pass over 3.1 GB, and a packet that wants only the
+        template should not pay for it.
+    sd_asset_id : str
+        Identifier for the deviation array, when `sd` is set.
+    compressed_per_chunk : float
+        Expected compressed bytes per chunk, which is what `arrays.shard_for` sizes a shard
+        against.
     prefix : str
         Prepended to identifiers this adapter mints.
     """
@@ -86,6 +108,9 @@ class WaveformSource:
         units: dict[tuple[str, str], dict[str, str]],
         electrodes: dict[int, str] | None = None,
         array_asset_id: str = "waveform_mean",
+        sd: bool = False,
+        sd_asset_id: str = "waveform_sd",
+        compressed_per_chunk: float = 3850.0,
         prefix: str = "",
         store: Any = None,
     ) -> None:
@@ -95,6 +120,9 @@ class WaveformSource:
         self.units = dict(units)
         self.electrodes = dict(electrodes or {})
         self.array_asset_id = f"{prefix}{array_asset_id}"
+        self.sd = sd
+        self.sd_asset_id = f"{prefix}{sd_asset_id}"
+        self.compressed_per_chunk = compressed_per_chunk
         self.prefix = prefix
         self.notes: list[str] = []
         self._built: dict[str, Any] | None = None
@@ -102,8 +130,16 @@ class WaveformSource:
     # -- reading ------------------------------------------------------------------------
 
     def _scan(
-        self, array: Any, device: Any, ks: Any
-    ) -> tuple[list[int], list[dict[str, str]], list[NDArray[np.int64]], list[NDArray[np.float64]], float]:
+        self, array: Any, device: Any, ks: Any, spread: Any = None
+    ) -> tuple[
+        list[int],
+        list[dict[str, str]],
+        list[NDArray[np.int64]],
+        list[NDArray[np.float64]],
+        float,
+        list[NDArray[np.float64]],
+        float,
+    ]:
         """Walk the source a chunk row at a time, keeping only each unit's own contacts.
 
         The block is the source's own chunk along the unit axis, so every chunk is read exactly
@@ -111,6 +147,9 @@ class WaveformSource:
         smaller than the block that produced them. They stay float64: the arithmetic that follows
         is a division and a round, and in float32 fourteen values in twenty-six million land on
         the other side of a tie.
+
+        `spread` is cut on the mean's live mask rather than on its own, which is what keeps one
+        `core.unit_electrodes` describing both arrays.
         """
         total = array.shape[0]
         block = int(array.chunks[0]) or total
@@ -118,9 +157,11 @@ class WaveformSource:
         identity: list[dict[str, str]] = []
         support: list[NDArray[np.int64]] = []
         slabs: list[NDArray[np.float64]] = []
-        peak = 0.0
+        sd_slabs: list[NDArray[np.float64]] = []
+        peak = sd_peak = 0.0
         for start in range(0, total, block):
             dense = np.asarray(array[start : start + block])
+            deviation = np.asarray(spread[start : start + block]) if spread is not None else None
             for offset in range(dense.shape[0]):
                 found = self.units.get((str(device[start + offset]), str(int(ks[start + offset]))))
                 if found is None:
@@ -134,8 +175,30 @@ class WaveformSource:
                 identity.append(found)
                 support.append(live)
                 slabs.append(slab)
-            del dense
-        return keep, identity, support, slabs, peak
+                if deviation is not None:
+                    sd_slab = deviation[offset][:, live].T.copy()
+                    sd_peak = max(sd_peak, float(np.abs(sd_slab).max()))
+                    sd_slabs.append(sd_slab)
+            del dense, deviation
+        return keep, identity, support, slabs, peak, sd_slabs, sd_peak
+
+    @staticmethod
+    def _quantise(
+        slabs: list[NDArray[np.float64]], peak: float, width: int, samples: int
+    ) -> tuple[NDArray[np.int16], float]:
+        """Scale float64 slabs onto int16, the peak landing on the last code.
+
+        The quantisation this leaves is well under the standard error of the means themselves --
+        measured at 0.052 uV for the best-resolved tenth, against a step of peak/32767. The
+        deviation is non-negative and still stored signed, spending a bit it never uses: unsigned
+        would buy one bit of resolution on a quantity whose own sampling error is far larger, at
+        the cost of a second convention for reading these arrays.
+        """
+        scale = peak / 32767.0
+        values = np.zeros((len(slabs), width, samples), dtype=np.int16)
+        for position, slab in enumerate(slabs):
+            values[position, : slab.shape[0]] = np.rint(slab / scale).astype(np.int16)
+        return values, scale
 
     def _read(self) -> dict[str, Any]:
         """Pack the array once, and remember what packing it revealed.
@@ -145,7 +208,8 @@ class WaveformSource:
         chunk row is 195 MB, and a unit's own slab -- the contacts it actually has signal on --
         is 31 KB. Keeping the slabs and discarding each block holds about 0.4 GB, and reads
         every chunk exactly once: the peak the scale needs is accumulated as the blocks go by
-        rather than found in a second pass over an array held for the purpose.
+        rather than found in a second pass over an array held for the purpose. Asking for the
+        deviation doubles both, since it is the same shape read the same way.
         """
         if self._built is not None:
             return self._built
@@ -153,6 +217,15 @@ class WaveformSource:
 
         group = self.root / "units"
         array = zarr.open_array(str(group / "waveform_mean"), mode="r", zarr_format=2)
+        spread = None
+        if self.sd:
+            try:
+                # Broad, because which error an absent array raises is the store's business.
+                spread = zarr.open_array(str(group / "waveform_sd"), mode="r", zarr_format=2)
+            except Exception as absent:
+                raise SourceDefect(f"sd was asked for and {group / 'waveform_sd'} does not open") from absent
+            if spread.shape != array.shape:
+                raise SourceDefect(f"waveform_sd is {spread.shape} where waveform_mean is {array.shape}")
         device = self.store.array(group / "device_name")
         ks = self.store.array(group / "ks_unit_id")
         electrode_rows = self.store.array(group / "electrodes")
@@ -160,7 +233,7 @@ class WaveformSource:
         extremum = self.store.array(group / "extremum_channel_index")
 
         total, samples = array.shape[0], array.shape[1]
-        keep, identity, support, slabs, peak = self._scan(array, device, ks)
+        keep, identity, support, slabs, peak, sd_slabs, sd_peak = self._scan(array, device, ks, spread)
 
         if not keep:
             self.notes.append("units: no NWB row matches a unit in the packet's sorting")
@@ -171,14 +244,7 @@ class WaveformSource:
         if not peak:
             raise SourceDefect("waveform_mean is entirely zero, so no unit has a channel support")
 
-        # int16 spans the range; the scale is what makes the peak land on the last code. The
-        # quantisation this leaves is well under the standard error of the means themselves --
-        # measured at 0.052 uV for the best-resolved tenth, against a step of peak/32767.
-        scale = peak / 32767.0
-        values = np.zeros((len(keep), width, samples), dtype=np.int16)
-        for position, slab in enumerate(slabs):
-            values[position, : slab.shape[0]] = np.rint(slab / scale).astype(np.int16)
-
+        values, scale = self._quantise(slabs, peak, width, samples)
         self._built = {
             "extremum": extremum,
             "values": values,
@@ -190,55 +256,11 @@ class WaveformSource:
             "bounds": bounds,
             "samples": samples,
         }
-        return self._built
-        import zarr
-
-        group = self.root / "units"
-        dense = np.asarray(zarr.open_array(str(group / "waveform_mean"), mode="r", zarr_format=2)[:])
-        device = self.store.array(group / "device_name")
-        ks = self.store.array(group / "ks_unit_id")
-        electrode_rows = self.store.array(group / "electrodes")
-        bounds = self.store.array(group / "electrodes_index")
-        extremum = self.store.array(group / "extremum_channel_index")
-
-        width = max((s.size for s in _support(dense, dense.shape[2])), default=0)
-        if not width:
-            raise SourceDefect("waveform_mean is entirely zero, so no unit has a channel support")
-
-        keep, identity, support = [], [], []
-        for row in range(dense.shape[0]):
-            found = self.units.get((str(device[row]), str(int(ks[row]))))
-            if found is None:
-                continue
-            keep.append(row)
-            identity.append(found)
-            support.append(np.flatnonzero((dense[row] != 0).any(axis=0))[:width])
-        if not keep:
-            self.notes.append("units: no NWB row matches a unit in the packet's sorting")
-            raise SourceDefect("no unit in waveform_mean matches the packet's sorting")
-        if len(keep) < dense.shape[0]:
-            self.notes.append(f"units: {dense.shape[0] - len(keep)} NWB row(s) match no unit; skipped")
-
-        peak = float(np.abs(dense[keep]).max())
-        # int16 spans the range; the scale is what makes the peak land on the last code. The
-        # quantisation this leaves is well under the standard error of the means themselves --
-        # measured at 0.052 uV for the best-resolved tenth, against a step of peak/32767.
-        scale = peak / 32767.0 if peak else 1.0
-        values = np.zeros((len(keep), width, dense.shape[1]), dtype=np.int16)
-        for position, (row, channels) in enumerate(zip(keep, support, strict=True)):
-            values[position, : channels.size] = np.rint(dense[row][:, channels].T / scale).astype(np.int16)
-
-        self._built = {
-            "extremum": extremum,
-            "values": values,
-            "scale": scale,
-            "identity": identity,
-            "support": support,
-            "rows": keep,
-            "electrode_rows": electrode_rows,
-            "bounds": bounds,
-            "samples": dense.shape[1],
-        }
+        if self.sd:
+            if not sd_peak:
+                raise SourceDefect("waveform_sd is entirely zero over the mean's support")
+            sd_values, sd_scale = self._quantise(sd_slabs, sd_peak, width, samples)
+            self._built |= {"sd_values": sd_values, "sd_scale": sd_scale}
         return self._built
 
     # -- what the packet stores ----------------------------------------------------------
@@ -249,37 +271,95 @@ class WaveformSource:
         built = self._read()
         return built["values"]  # type: ignore[no-any-return]
 
-    def array_assets(self, uri: str, clock_id: str | None = None) -> list[dict[str, Any]]:
-        """`core.array_assets`, one row.
+    def _asset(
+        self, asset_id: str, semantic_type: str, name: str, scale: float, uri: str, clock_id: str | None
+    ) -> dict[str, Any]:
+        """One `core.array_assets` row.
 
         No `dtype` or `shape`: the Zarr array declares both, and R3 §3.0 forbids a table from
         restating what the data already says. `conversion` is the one thing the array cannot
         say, so it is the one thing recorded here.
         """
+        return {
+            "array_asset_id": asset_id,
+            "session_id": self.session_id,
+            "semantic_type": semantic_type,
+            "name": name,
+            "kind": "dense_array_asset",
+            "uri": uri,
+            "format": "zarr_v3",
+            "clock_id": clock_id,
+            "sample_rate_hz": 30000.0,
+            "unit": "uV",
+            "conversion": scale,
+            "offset": 0.0,
+            "metadata": {"quantisation": "int16, scale = peak / 32767"},
+        }
+
+    def array_assets(self, uri: str | None = None, clock_id: str | None = None) -> list[dict[str, Any]]:
+        """`core.array_assets`, one row per array this source stores.
+
+        The deviation gets its own row and its own `conversion`, because it is quantised against
+        its own peak; sharing the mean's scale would spend resolution on a range it never
+        reaches. Everything else about the two is identical, the deviation being the mean's
+        shape on the mean's contacts.
+        """
         built = self._read()
+        rows = [
+            self._asset(
+                self.array_asset_id,
+                "waveform_mean",
+                "mean waveform per unit",
+                built["scale"],
+                uri or _uri(self.array_asset_id),
+                clock_id,
+            )
+        ]
+        if self.sd:
+            rows.append(
+                self._asset(
+                    self.sd_asset_id,
+                    "waveform_sd",
+                    "waveform standard deviation per unit",
+                    built["sd_scale"],
+                    _uri(self.sd_asset_id),
+                    clock_id,
+                )
+            )
+        return rows
+
+    def _axes(self, asset_id: str, clock_id: str | None, origin: int | None) -> list[dict[str, Any]]:
+        """One array's three axes, in stored order (R3 §5)."""
+        built = self._read()
+        start = origin if origin is not None else -(built["samples"] // 2)
+        sample_axis: dict[str, Any] = {
+            "array_asset_id": asset_id,
+            "axis_index": 2,
+            "dimension_name": "sample",
+        }
+        if clock_id is None:
+            sample_axis |= {"origin_value": float(start), "step_value": 1.0, "coordinate_unit": "sample"}
+        else:
+            sample_axis |= {"clock_id": clock_id, "origin_tick": start, "step_tick_num": 1}
         return [
+            {"array_asset_id": asset_id, "axis_index": 0, "dimension_name": "unit"},
             {
-                "array_asset_id": self.array_asset_id,
-                "session_id": self.session_id,
-                "semantic_type": "waveform_mean",
-                "name": "mean waveform per unit",
-                "kind": "dense_array_asset",
-                "uri": uri,
-                "format": "zarr_v3",
-                "clock_id": clock_id,
-                "sample_rate_hz": 30000.0,
-                "unit": "uV",
-                "conversion": built["scale"],
-                "offset": 0.0,
-                "metadata": {"quantisation": "int16, scale = peak / 32767"},
-            }
+                "array_asset_id": asset_id,
+                "axis_index": 1,
+                "dimension_name": "channel",
+                "coordinate_resource": "core.unit_electrodes",
+                "coordinate_position_column": "channel_index",
+            },
+            sample_axis,
         ]
 
     def array_dimensions(self, clock_id: str | None = None, origin: int | None = None) -> list[dict[str, Any]]:
-        """`core.array_dimensions`, one row per axis, in stored order (R3 §5).
+        """`core.array_dimensions`, one row per axis of each array, in stored order (R3 §5).
 
         The channel axis takes R20 §2's labelled form, pointing at `core.unit_electrodes`,
         because which contact a position means is per unit and no coordinate array can say it.
+        Both arrays point at the same rows: the deviation is cut on the mean's support, so a
+        position means the same contact in each.
 
         The sample axis takes the **numeric** form, in samples, and not the tick form. A
         waveform window is not positioned on any session clock: position *k* is *k - origin*
@@ -292,28 +372,10 @@ class WaveformSource:
         Passing `clock_id` switches to the tick form, which is right only for an array whose
         units all sit on one clock.
         """
-        built = self._read()
-        start = origin if origin is not None else -(built["samples"] // 2)
-        sample_axis: dict[str, Any] = {
-            "array_asset_id": self.array_asset_id,
-            "axis_index": 2,
-            "dimension_name": "sample",
-        }
-        if clock_id is None:
-            sample_axis |= {"origin_value": float(start), "step_value": 1.0, "coordinate_unit": "sample"}
-        else:
-            sample_axis |= {"clock_id": clock_id, "origin_tick": start, "step_tick_num": 1}
-        return [
-            {"array_asset_id": self.array_asset_id, "axis_index": 0, "dimension_name": "unit"},
-            {
-                "array_asset_id": self.array_asset_id,
-                "axis_index": 1,
-                "dimension_name": "channel",
-                "coordinate_resource": "core.unit_electrodes",
-                "coordinate_position_column": "channel_index",
-            },
-            sample_axis,
-        ]
+        axes = self._axes(self.array_asset_id, clock_id, origin)
+        if self.sd:
+            axes += self._axes(self.sd_asset_id, clock_id, origin)
+        return axes
 
     def unit_electrodes(self) -> list[dict[str, Any]]:
         """`core.unit_electrodes`, one row per unit per contact it has signal on (R28).
@@ -355,12 +417,37 @@ class WaveformSource:
                 )
         return rows
 
-    def records(
-        self, *, uri: str = "arrays/core/waveform_mean.zarr", clock_id: str | None = None
-    ) -> dict[str, list[dict[str, Any]]]:
+    def staged_arrays(self) -> list[Any]:
+        """Return the arrays themselves, sized for the store they will live in.
+
+        The chunk is one unit, which is the unit of the question, and `shard_for` keeps that
+        from becoming one object per chunk (`conformance/zarr-probe/waveforms.py`).
+        """
+        from ..arrays import shard_for
+        from ..writer import StagedArray
+
+        built = self._read()
+        wanted = [(self.array_asset_id, built["values"])]
+        if self.sd:
+            wanted.append((self.sd_asset_id, built["sd_values"]))
+        staged = []
+        for asset_id, values in wanted:
+            chunks = (1, *values.shape[1:])
+            staged.append(
+                StagedArray(
+                    values=values,
+                    array_asset_id=asset_id,
+                    chunks=chunks,
+                    shard=shard_for(values.shape, chunks, self.compressed_per_chunk),
+                )
+            )
+        return staged
+
+    def records(self, *, uri: str | None = None, clock_id: str | None = None) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records, keyed by resource ID.
 
-        The array itself is not among them: it is bytes, staged through `PacketWriter.add_array`.
+        The arrays themselves are not among them: they are bytes, staged through
+        `PacketWriter.add_array` from `staged_arrays`.
         """
         built = {
             "core.array_assets": self.array_assets(uri=uri),
