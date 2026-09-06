@@ -5,9 +5,10 @@ number. Shared across adapters on purpose: the recipe exists because four source
 produce `core.probes`, and two of them numbering the same probe differently would be a defect no
 foreign key could see -- both values resolve, to different rows.
 
-A **carried** identifier does not come through here at all. `core.trials.trial_id` is the NWB's
-own `id` and `core.units.unit_id` the sorter's own label, so the writer passes them through
-rather than choosing.
+A **carried** identifier does not come through here at all. `core.intervals.interval_id` is the
+NWB's own `id`, so the writer passes it through rather than choosing. `core.units.unit_id` was
+one until R81 §2.1: a sorter numbers from zero within each run, so its label named several units
+and only the packet can say which is which.
 
 Numbers are assigned in first-seen order and start at 0. Nothing depends on the order -- R53 §2.5
 requires only that a key not move once committed -- but a deterministic one makes two builds of

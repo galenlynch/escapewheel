@@ -135,6 +135,7 @@ class WaveformSource:
         list[int],
         list[dict[str, str]],
         list[NDArray[np.int64]],
+        list[int],
         list[NDArray[np.float64]],
         float,
         list[NDArray[np.float64]],
@@ -150,12 +151,19 @@ class WaveformSource:
 
         `spread` is cut on the mean's live mask rather than on its own, which is what keeps one
         `core.unit_electrodes` describing both arrays.
+
+        The peak contact is taken here rather than from `extremum_channel_index`, which indexes
+        the channels the sorting kept while every other channel axis in the file is the probe's
+        full contact list. It is the most negative sample, not the largest absolute one: measured
+        against the retained lists over 6,781 units, the negative peak reproduces the source's
+        index in 6,781 and the absolute peak in 6,346.
         """
         total = array.shape[0]
         block = int(array.chunks[0]) or total
         keep: list[int] = []
         identity: list[dict[str, str]] = []
         support: list[NDArray[np.int64]] = []
+        primary: list[int] = []
         slabs: list[NDArray[np.float64]] = []
         sd_slabs: list[NDArray[np.float64]] = []
         peak = sd_peak = 0.0
@@ -174,13 +182,14 @@ class WaveformSource:
                 keep.append(start + offset)
                 identity.append(found)
                 support.append(live)
+                primary.append(int(slab.min(axis=1).argmin()))
                 slabs.append(slab)
                 if deviation is not None:
                     sd_slab = deviation[offset][:, live].T.copy()
                     sd_peak = max(sd_peak, float(np.abs(sd_slab).max()))
                     sd_slabs.append(sd_slab)
             del dense, deviation
-        return keep, identity, support, slabs, peak, sd_slabs, sd_peak
+        return keep, identity, support, primary, slabs, peak, sd_slabs, sd_peak
 
     @staticmethod
     def _quantise(
@@ -230,10 +239,9 @@ class WaveformSource:
         ks = self.store.array(group / "ks_unit_id")
         electrode_rows = self.store.array(group / "electrodes")
         bounds = self.store.array(group / "electrodes_index")
-        extremum = self.store.array(group / "extremum_channel_index")
 
         total, samples = array.shape[0], array.shape[1]
-        keep, identity, support, slabs, peak, sd_slabs, sd_peak = self._scan(array, device, ks, spread)
+        keep, identity, support, primary, slabs, peak, sd_slabs, sd_peak = self._scan(array, device, ks, spread)
 
         if not keep:
             self.notes.append("units: no NWB row matches a unit in the packet's sorting")
@@ -246,7 +254,7 @@ class WaveformSource:
 
         values, scale = self._quantise(slabs, peak, width, samples)
         self._built = {
-            "extremum": extremum,
+            "primary": primary,
             "values": values,
             "scale": scale,
             "identity": identity,
@@ -384,10 +392,16 @@ class WaveformSource:
         an offset into nothing, which is exactly the state the NWB is in -- it pads to 384 so
         that it never has to say which contacts a unit was computed on.
 
-        Supersedes `NWBSource.unit_electrodes`, which emits only the peak contact because it
-        reads the file without zarr and the support lives in a rank-3 array. One relation, one
-        emitter: a packet with waveforms takes the support from here, and the peak is marked
-        among it rather than standing as a separate row that would collide on the key.
+        Supersedes `NWBSource.unit_electrodes`, which emits nothing because the peak contact
+        is not resolvable from the file's own columns. One relation, one emitter: a packet with
+        waveforms takes the support from here, and the peak is marked among it rather than
+        standing as a separate row that would collide on the key.
+
+        `is_primary` is the template's own negative peak, taken in `_scan`. Reading
+        `extremum_channel_index` as a contact position names the wrong electrode whenever the
+        sorting dropped a channel below it -- 5,071 of 6,781 units on the measured session, of
+        which 609 were marked on no contact at all because the index landed outside the unit's
+        support and the other 4,462 were marked on a contact that is not the peak.
 
         R28 `amplitude` is left null. The source measures one amplitude per unit, not per
         electrode, and it is not a reduction of the template either -- no peak, trough,
@@ -412,7 +426,7 @@ class WaveformSource:
                         **identity,
                         "electrode_id": electrode,
                         "channel_index": ordinal,
-                        "is_primary": int(channel) == int(built["extremum"][row]),
+                        "is_primary": ordinal == built["primary"][position],
                     }
                 )
         return rows

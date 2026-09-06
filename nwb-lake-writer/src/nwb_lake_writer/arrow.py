@@ -288,13 +288,24 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> No
                     ) from None
 
 
+def _number_dictionary(values: pa.Array, column: Mapping[str, Any], kind: str, keys: Any) -> pa.Array:
+    """Return a dictionary-encoded identifier numbered through its dictionary, indices unchanged."""
+    dictionary = values.dictionary.to_pylist()
+    if column.get("identity") == "assigned":
+        numbered = [None if v is None else keys.of(kind, str(v)) for v in dictionary]
+    else:
+        numbered = [None if v is None else int(v) for v in dictionary]
+    return pa.array(numbered, type=pa.int32()).take(values.indices)
+
+
 def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> pa.RecordBatch:
     """Return a streamed batch with its identifier columns numbered, as `number` does for records.
 
     The streaming path exists so a 287 M-row table never becomes Python objects, so this maps
-    through the batch's *distinct* values rather than per row -- on `core.spike_events` three of
-    the four identity columns hold one value for the whole batch, and the fourth is already the
-    sorter's own integer.
+    through the batch's *distinct* values rather than per row. A dictionary-encoded column is
+    mapped through its dictionary and re-indexed, which is what keeps `core.spike_events`
+    affordable: its `unit_id` names one unit per row and holds a few hundred distinct names, so
+    expanding it to compare row by row would cost a million Python strings a batch.
 
     A batch cannot supply a `*_name`: it has no room for a column the caller did not yield, and
     the table it streams is a fact table, which R53 §2.3.1 does not ask one of.
@@ -313,6 +324,10 @@ def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> p
         kind = target.get(name, name)
         values = columns[name]
         if pa.types.is_integer(values.type):
+            continue
+        if pa.types.is_dictionary(values.type):
+            columns[name] = _number_dictionary(values, column, kind, keys)
+            changed = True
             continue
         if column.get("identity") == "assigned":
             seen = [v for v in set(values.to_pylist()) if v is not None]

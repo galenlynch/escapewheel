@@ -203,9 +203,16 @@ class NWBSource(Compensates):
             "core.sessions",
             "core.subjects",
             "core.unit_coordinates",
-            "core.unit_electrodes",
         }
     )
+
+    #: Not `core.unit_electrodes`, though the file has a column for it.
+    #: `extremum_channel_index` indexes the channels the **sorting kept**, while
+    #: `general/extracellular_ephys/electrodes` lists every contact of the probe and nothing
+    #: records which were dropped, so the index cannot be resolved here -- read as a contact
+    #: position it named the wrong electrode for 5,071 of 6,781 units on the measured session,
+    #: eleven of twelve probes having dropped between 1 and 18 channels. `WaveformSource` takes
+    #: the peak from `waveform_mean` itself, reproducing the source's index in 6,781 of 6,781.
 
     def __init__(
         self,
@@ -281,10 +288,10 @@ class NWBSource(Compensates):
 
         **A column an `<name>_index` declares ragged is not read.** Its rows are runs rather
         than values, so indexing it by a table row -- which is what every caller here does --
-        is wrong for all but the first row; a caller that wants one reads it with its index,
-        as `unit_electrodes` does. It is also where the bytes are: `units/spike_times` is
-        287 M values against the table's 6,781 rows, and decoding it accounts for most of the
-        time this adapter spends reading.
+        is wrong for all but the first row; a caller that wants one reads it alongside its index.
+        It is also where the bytes are: `units/spike_times` is 287 M values against the
+        table's 6,781 rows, and decoding it accounts for most of the time this adapter
+        spends reading.
 
         Cached: a table is consulted by more than one builder, and re-reading it would
         repeat every note it produced.
@@ -664,47 +671,6 @@ class NWBSource(Compensates):
             self.notes.append(f"units: {missed} NWB row(s) match no unit in the packet's sorting; skipped")
         return paired
 
-    def unit_electrodes(self) -> list[dict[str, Any]]:
-        """`core.unit_electrodes`, the electrode each unit peaks on (R28).
-
-        **Only the primary electrode.** The file's own `units/electrodes` link is dense -- every
-        unit points at every contact of its probe, measured at 384 per unit without exception --
-        so it says what `core.units.probe_id` already says and would cost 2.6 M rows to repeat.
-        `extremum_channel_index` is the column carrying information, and it is an offset *into
-        the unit's own slice* of `electrodes`, not a global row: resolving it any other way is
-        correct for the first probe and wrong for every other one.
-
-        A packet with template sparsity adds the non-primary rows; nothing here forbids them.
-        """
-        paired = self._unit_identity()
-        if not paired:
-            return []
-        columns = self._table("units")
-        electrodes = self._array("units/electrodes")
-        bounds = self._array("units/electrodes_index")
-        if "extremum_channel_index" not in columns:
-            self.notes.append("units: no extremum_channel_index, so no primary electrode is known")
-            return []
-        contacts = self._table("general/extracellular_ephys/electrodes")
-        ids = self._electrode_ids(contacts) if contacts else []
-        rows = []
-        for index, identity in paired:
-            start = 0 if index == 0 else int(bounds[index - 1])
-            offset = int(columns["extremum_channel_index"][index])
-            row = int(electrodes[start + offset])
-            if not 0 <= row < len(ids):
-                continue
-            rows.append(
-                {
-                    "session_id": self.session_id,
-                    **identity,
-                    "electrode_id": ids[row],
-                    "is_primary": True,
-                    "amplitude": _clean(columns["amplitude"][index]) if "amplitude" in columns else None,
-                }
-            )
-        return rows
-
     def unit_coordinates(self) -> list[dict[str, Any]]:
         """`core.unit_coordinates`, a unit's position per populated frame (R28).
 
@@ -1075,7 +1041,6 @@ class NWBSource(Compensates):
             "core.probes": self.probes(),
             "core.electrodes": self.electrodes(),
             "core.electrode_coordinates": self.electrode_coordinates(),
-            "core.unit_electrodes": self.unit_electrodes(),
             "core.unit_coordinates": self.unit_coordinates(),
             "core.event_streams": self.event_streams(),
             "core.events": self.events(),

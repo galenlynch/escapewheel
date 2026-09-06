@@ -12,10 +12,18 @@ SHANK1 = "experiment1.Neuropix-PXI-100.50720-1"
 SHANK2 = "experiment1.Neuropix-PXI-100.50720-2"
 
 
+def named(label, run=SHANK1):
+    """The name the adapter composes for one unit, which the writer turns into its number.
+
+    R81 §2.2 orders the numbering by `(sorting_run_id, curation_id, local_unit_label)`, so the
+    name is those three and the run is part of it rather than a column beside it.
+    """
+    return f"{run}|{run}.curated|{label:02d}"
+
+
 def keyed(rows, label, run=SHANK1):
-    """Rows for one unit. R53 §2.3 makes unit_id the sorter's own label, which is unique
-    within a stream and not across, so the run is part of naming a unit."""
-    return [r for r in rows if r["unit_id"] == label and r["sorting_run_id"] == run]
+    """Rows for one unit, which `unit_id` alone now identifies (R81 §2.1)."""
+    return [r for r in rows if r["unit_id"] == named(label, run)]
 
 
 @pytest.fixture
@@ -85,25 +93,27 @@ def test_unit_index_is_resolved_through_unit_ids(source):
     assert labels == ["0", "1", "2", "5", "12", "40"]
 
 
-def test_a_unit_id_is_the_sorters_own_label(source):
-    """R53 §2.3: unit_id is carried, so it is the Kilosort id and nothing is composed from it.
+def test_a_unit_name_is_unique_across_runs(source):
+    """R81 §1.2: the sorter numbers from zero in each run, so its label names two units.
 
-    It is not unique across streams and does not need to be -- unit identity is
-    `(session_id, unit_id, sorting_run_id, curation_id)`, never `unit_id` alone -- which is why
-    the two streams below share every label and the packet is still well keyed."""
-    by_run = {}
-    for unit in rows_of(source, "core.units"):
-        by_run.setdefault(unit["sorting_run_id"], set()).add(unit["unit_id"])
-    assert len(by_run) == 2, "two streams"
-    assert all(labels == set(sorterfixture.UNIT_IDS) for labels in by_run.values())
-    assert all(isinstance(label, int) for labels in by_run.values() for label in labels)
+    Both streams carry every label in the fixture, and the packet keys on `unit_id` alone --
+    which works only because what the adapter hands the writer is the run, the curation and the
+    label together, giving twelve names where the labels give six.
+    """
+    units = rows_of(source, "core.units")
+    assert len({u["local_unit_label"] for u in units}) == len(sorterfixture.UNIT_IDS) == 6
+    assert len({u["unit_id"] for u in units}) == 2 * len(sorterfixture.UNIT_IDS) == 12
 
 
-def test_unit_ids_need_no_padding_to_sort_numerically(source):
-    """What this replaces zero-padded, so that ordering `core.spike_events` by the column as
-    text matched the source's numeric order. An integer does that by construction."""
-    ids = sorted({u["unit_id"] for u in rows_of(source, "core.units")})
-    assert ids == sorted(sorterfixture.UNIT_IDS) == [0, 1, 2, 5, 12, 40]
+def test_a_unit_name_sorts_as_the_numbering_must(source):
+    """R81 §2.2 numbers by ascending `(sorting_run_id, curation_id, local_unit_label)`.
+
+    `PacketWriter._preassign` assigns in sorted-name order, so the name has to sort that way --
+    which is what the zero padding is for: unpadded, label 40 would precede label 5 as text.
+    """
+    units = rows_of(source, "core.units")
+    ordered = sorted(units, key=lambda u: (u["sorting_run_id"], u["curation_id"], int(u["local_unit_label"])))
+    assert [u["unit_id"] for u in ordered] == sorted(u["unit_id"] for u in units)
 
 
 def test_unit_ids_out_of_order_are_a_defect(tmp_path):
@@ -136,19 +146,13 @@ def test_a_unit_with_no_spikes_gets_null_bounds(tmp_path):
 
 
 def test_every_source_gets_a_row(source):
-    labels = [
-        q for q in rows_of(source, "core.unit_quality_labels") if q["unit_id"] == 0 and q["sorting_run_id"] == SHANK1
-    ]
+    labels = keyed(rows_of(source, "core.unit_quality_labels"), 0)
     assert {q["source"] for q in labels} == {"kilosort", "bombcell", "decoder", "unitrefine"}
 
 
 def test_non_soma_projects_to_null_not_noise(source):
     """R22 §3: "recorded off-soma" is a different claim from "not a unit"."""
-    row = next(
-        q
-        for q in rows_of(source, "core.unit_quality_labels")
-        if q["unit_id"] == 2 and q["sorting_run_id"] == SHANK1 and q["source"] == "bombcell"
-    )
+    row = next(q for q in keyed(rows_of(source, "core.unit_quality_labels"), 2) if q["source"] == "bombcell")
     assert (row["label"], row["normalized_label"]) == ("non_soma", None)
 
 
@@ -159,18 +163,14 @@ def test_the_source_label_survives_verbatim(source):
 
 
 def test_confidence_travels_where_the_source_reports_one(source):
-    labels = {
-        q["source"]: q
-        for q in rows_of(source, "core.unit_quality_labels")
-        if q["unit_id"] == 0 and q["sorting_run_id"] == SHANK1
-    }
+    labels = {q["source"]: q for q in keyed(rows_of(source, "core.unit_quality_labels"), 0)}
     assert labels["decoder"]["confidence"] == pytest.approx(0.5)
     assert labels["kilosort"]["confidence"] is None
 
 
 def test_the_designated_label_comes_from_the_decoder(source):
     """R11 §3 closed the column to sua/mua/noise, which is what the decoder emits natively."""
-    unit = next(u for u in rows_of(source, "core.units") if u["unit_id"] == 0 and u["sorting_run_id"] == SHANK1)
+    unit = keyed(rows_of(source, "core.units"), 0)[0]
     assert (unit["quality_label"], unit["quality_label_source"]) == ("sua", "decoder")
 
 
@@ -231,16 +231,14 @@ def test_batches_come_out_in_the_registry_sort_order(source):
     seen = []
     for batch in source.spike_batches(batch_rows=3):
         table = batch.to_pydict()
-        seen += list(zip(table["sorting_run_id"], table["unit_id"], table["t_tick"], strict=True))
+        seen += list(zip(table["unit_id"], table["t_tick"], strict=True))
     assert seen == sorted(seen)
 
 
 def test_a_spike_carries_the_resolved_unit_id(source):
-    """The source's unit_index 3 is unit 5; a spike must not be filed under u03."""
+    """The source's unit_index 3 is unit 5; a spike must not be filed under the offset."""
     first = next(source.spike_batches(batch_rows=1000)).to_pydict()
-    ticks = {u: t for u, t in zip(first["unit_id"], first["t_tick"], strict=True) if u == 5}
-    assert set(ticks) == {5}
-    assert sorted(t for u, t in zip(first["unit_id"], first["t_tick"], strict=True) if u == 5) == [11, 26]
+    assert sorted(t for u, t in zip(first["unit_id"], first["t_tick"], strict=True) if u == named(5)) == [11, 26]
 
 
 def test_every_spike_survives_the_sort(source):
@@ -292,17 +290,13 @@ def test_manual_labels_become_a_fifth_source(source):
 
 def test_a_manual_label_is_projected_like_any_other(source):
     """The fixture labels unit 1 `noise`, which is already in the closed set."""
-    row = next(
-        q
-        for q in rows_of(source, "core.unit_quality_labels")
-        if q["source"] == "manual" and q["unit_id"] == 1 and q["sorting_run_id"] == SHANK1
-    )
+    row = next(q for q in keyed(rows_of(source, "core.unit_quality_labels"), 1) if q["source"] == "manual")
     assert (row["label"], row["normalized_label"]) == ("noise", "noise")
 
 
 def test_only_labelled_units_get_a_manual_row(source):
     manual = [q for q in rows_of(source, "core.unit_quality_labels") if q["source"] == "manual"]
-    assert {q["unit_id"] for q in manual} == {1}
+    assert {q["unit_id"] for q in manual} == {named(1), named(1, SHANK2)}
 
 
 def test_a_removal_with_no_label_is_reported(tmp_path):
@@ -435,3 +429,4 @@ def test_a_curation_is_scoped_to_its_sorting_not_its_probe(source):
 def test_supersedes_is_left_unset(source):
     """R41 §2.2: a first import supersedes nothing, and a writer must not guess."""
     assert all(r.get("supersedes") is None for r in rows_of(source, "core.processing_runs"))
+

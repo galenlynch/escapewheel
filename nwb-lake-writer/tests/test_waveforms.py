@@ -25,15 +25,25 @@ SUPPORT = {0: (1, 2), 1: (0, 3, 4), 2: (2,)}
 #: Live in the mean and zero in the deviation, as the real file's 52 cells are.
 MEAN_ONLY = (1, 4)
 
+#: What the file says the peak is, chosen to be wrong in both of the ways the real one is:
+#: unit 0's value names a contact in the support that is not the peak, and unit 1's names one
+#: outside the support entirely. Unit 2's is right. The adapter reads none of them.
+EXTREMUM = [1, 1, 2]
+
 
 def _dense(support: dict[int, tuple[int, ...]], skip: tuple[int, int] | None = None) -> np.ndarray:
-    """A `(unit, sample, channel)` array, zero off each unit's support as the NWB pads it."""
+    """A `(unit, sample, channel)` array, zero off each unit's support as the NWB pads it.
+
+    A spike goes down, so the trough identifies the peak contact. It deepens along each unit's
+    support, which puts the peak on the last contact rather than the first.
+    """
     values = np.zeros((UNITS, SAMPLES, CHANNELS), dtype=np.float64)
     for unit, channels in support.items():
-        for channel in channels:
+        for ordinal, channel in enumerate(channels):
             if skip == (unit, channel):
                 continue
-            values[unit, :, channel] = np.arange(1, SAMPLES + 1) * (unit + 1) * (channel + 1)
+            trough = -3.0 * (ordinal + 1) * (unit + 1)
+            values[unit, :, channel] = [1.0, 2.0, trough, 1.0][:SAMPLES]
     return values
 
 
@@ -56,7 +66,7 @@ def nwb(tmp_path: Path) -> Path:
     array(units / "ks_unit_id", np.arange(UNITS, dtype="<i8"))
     array(units / "electrodes", np.arange(UNITS * CHANNELS, dtype="<i8"))
     array(units / "electrodes_index", np.arange(1, UNITS + 1, dtype="<i8") * CHANNELS)
-    array(units / "extremum_channel_index", np.array([2, 3, 2], dtype="<i8"))
+    array(units / "extremum_channel_index", np.array(EXTREMUM, dtype="<i8"))
     (root / ".zgroup").write_text(json.dumps({"zarr_format": 2}))
     return root
 
@@ -127,3 +137,34 @@ def test_sd_asked_for_and_absent_is_refused(nwb: Path) -> None:
     shutil.rmtree(nwb / "units" / "waveform_sd")
     with pytest.raises(SourceDefect, match="waveform_sd"):
         _source(nwb, sd=True).array_assets()
+
+
+def test_the_primary_contact_is_the_templates_own_trough(nwb: Path) -> None:
+    """The deepest trough, per unit, in the channel positions the packet actually stores."""
+    rows = _source(nwb).unit_electrodes()
+    primary = {r["unit_id"]: r["channel_index"] for r in rows if r["is_primary"]}
+    assert primary == {unit: len(channels) - 1 for unit, channels in SUPPORT.items()}
+
+
+def test_every_unit_gets_exactly_one_primary(nwb: Path) -> None:
+    """R81 §2.7 struck `default_electrode_id` on the grounds that this column carries the fact.
+
+    A unit with none is what the real session had for 609 of 6,781 -- the file's index landing
+    outside the support, so no row matched it and the fact went missing rather than wrong.
+    """
+    rows = _source(nwb).unit_electrodes()
+    counts = {unit: 0 for unit in SUPPORT}
+    for row in rows:
+        counts[row["unit_id"]] += bool(row["is_primary"])
+    assert counts == {unit: 1 for unit in SUPPORT}
+
+
+def test_the_files_extremum_column_is_not_read(nwb: Path) -> None:
+    """It counts the channels the sorting kept, and the packet's positions count the support.
+
+    Changing it changes nothing, which is the regression: read as a contact it named the wrong
+    electrode for 5,071 of 6,781 units on the measured session.
+    """
+    before = _source(nwb).unit_electrodes()
+    array(nwb / "units" / "extremum_channel_index", np.array([0, 0, 0], dtype="<i8"))
+    assert _source(nwb).unit_electrodes() == before

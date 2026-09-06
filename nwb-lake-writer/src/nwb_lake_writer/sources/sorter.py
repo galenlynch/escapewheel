@@ -291,19 +291,19 @@ class SorterSource:
     def _probe_id(self, stream: SortedStream) -> str:
         return f"{self.prefix}{stream.device}"
 
-    def _unit_id(self, stream: SortedStream, label: int, width: int) -> int:
-        """Return the sorter's own unit label, which R53 §2.3 calls a **carried** identifier.
+    def _unit_id(self, stream: SortedStream, label: int, width: int) -> str:
+        """Compose the name the writer numbers, ordered as R81 §2.2 requires.
 
-        `numpysorting_info.json` supplies `unit_ids` as int64 and strictly increasing, so this
-        passes it through rather than composing anything. What it replaces was a composed and
-        zero-padded string -- padded only so that ordering `core.spike_events` by it as text
-        matched the source's numeric order, which an integer does by construction.
-
-        Uniqueness across streams is not this column's job and never was: unit identity is
-        `(session_id, unit_id, sorting_run_id, curation_id)`, never `unit_id` alone. `width` is
-        accepted and unused so the call sites need not all change at once.
+        `unit_id` is assigned, so the sorter's label cannot be it: a sorter numbers from zero
+        within each run and a run is one probe, which put 810 distinct labels across 6,781 units
+        on the measured session. The number must follow ascending
+        `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces it (R75 §2),
+        and `PacketWriter._preassign` assigns in sorted-name order -- so the name is those three,
+        with the label zero-padded to `width` to make its text order its numeric one. Run and
+        curation ids are themselves assigned in sorted-name order, which is what makes ordering
+        by their names the same as ordering by their numbers.
         """
-        return int(label)
+        return f"{self._sorting_run_id(stream)}|{self._curation_id(stream)}|{label:0{width}d}"
 
     # -- tables -----------------------------------------------------------------------
 
@@ -697,8 +697,6 @@ class SorterSource:
                         {
                             "session_id": self.session_id,
                             "unit_id": self._unit_id(stream, int(label), width),
-                            "sorting_run_id": self._sorting_run_id(stream),
-                            "curation_id": self._curation_id(stream),
                             "source": source,
                             "label": raw,
                             "normalized_label": PROJECTION.get(raw),
@@ -752,8 +750,6 @@ class SorterSource:
                     {
                         "session_id": self.session_id,
                         "unit_id": self._unit_id(stream, int(label), width),
-                        "sorting_run_id": self._sorting_run_id(stream),
-                        "curation_id": self._curation_id(stream),
                         "source": "manual" if category == MANUAL_CATEGORY else f"manual:{category}",
                         "label": raw,
                         "normalized_label": PROJECTION.get(raw) if len(chosen) == 1 else None,
@@ -797,21 +793,18 @@ class SorterSource:
             # in C++ and is 18x faster, which over a quarter of a billion spikes is the
             # difference between 15 seconds and one.
             # int32 since R53 §2.1: unit_id is carried, so this is the sorter's own label. The
-            # `take` below stays in C++ either way, and an integer array is a quarter the width
-            # of the strings it replaces.
-            unit_values = pa.array([self._unit_id(stream, int(label), width) for label in ids], type=pa.int32())
-            run, curation = self._sorting_run_id(stream), self._curation_id(stream)
+            # Dictionary-encoded, so `number_batch` maps a few hundred names rather than a
+            # million strings a batch: the indices are already what `index` holds.
+            unit_names = pa.array([self._unit_id(stream, int(label), width) for label in ids], type=pa.string())
             clock = self._clock_id(stream)
             for start in range(0, order.size, batch_rows):
                 selected = order[start : start + batch_rows]
                 rows = selected.size
-                # `pa.repeat` for the four columns that are constant within a stream: a
+                # `pa.repeat` for the two columns that are constant within a stream: a
                 # million-element Python list per column would cost more than the spikes.
                 columns = {
                     "session_id": pa.repeat(pa.scalar(self.session_id, pa.string()), rows),
-                    "unit_id": unit_values.take(pa.array(index[selected], type=pa.int32())),
-                    "sorting_run_id": pa.repeat(pa.scalar(run, pa.string()), rows),
-                    "curation_id": pa.repeat(pa.scalar(curation, pa.string()), rows),
+                    "unit_id": pa.DictionaryArray.from_arrays(pa.array(index[selected], type=pa.int32()), unit_names),
                     "t_tick": pa.array(tick[selected], type=pa.int64()),
                     "clock_id": pa.repeat(pa.scalar(clock, pa.string()), rows),
                 }

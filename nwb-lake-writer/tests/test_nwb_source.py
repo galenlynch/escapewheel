@@ -123,6 +123,16 @@ def test_it_emits_no_units_or_spikes(source):
     assert "core.spike_events" not in source.records()
 
 
+def test_it_does_not_offer_the_primary_electrode(source):
+    """`extremum_channel_index` counts the channels the sorting kept, which the file never lists.
+
+    Declaring it would let a recipe give this adapter ownership of a relation it can only guess
+    at, and the guess is wrong by however many channels were dropped below the index.
+    """
+    assert "core.unit_electrodes" not in NWBSource.PRODUCES
+    assert "core.unit_electrodes" not in source.records()
+
+
 def test_the_asset_directory_is_accepted_as_well_as_the_nwb(tmp_path, harp):
     nwbfixture.build(tmp_path)
     assert NWBSource(tmp_path, clock=harp, zone=PACIFIC, interval_kind=KIND).session_id == SESSION
