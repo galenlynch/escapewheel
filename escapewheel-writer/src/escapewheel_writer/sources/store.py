@@ -19,10 +19,11 @@ one happened to ask first.
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any
 
 from numpy.typing import NDArray
+from upath import UPath
 
 from .zarr_compat import attrs, members, read_array
 
@@ -32,13 +33,21 @@ class SourceStore:
 
     Parameters
     ----------
-    root : str or Path
-        The source directory. Resolved, so two recipes naming the same tree by different paths
-        share one store.
+    root : str or path
+        The source directory, local or a store URI. Resolved, so two recipes naming the same
+        tree by different paths share one store.
+
+        A `UPath` because an AIND session's assets are prefixes on `aind-open-data`, and a
+        build reads about 12% of a sorted asset -- the spikes, the analyzer's `recording_info`
+        and its spike amplitudes, and none of the templates, PCA or provenance pickles. Which
+        12% is a fact about what the adapters read, so fetching it first means writing that
+        list down somewhere the adapters cannot check it. Reading in place has no list: it
+        costs 6.6 s against 0.07 s for a stream's 344 MB `spikes.npy`, roughly 66 s on a
+        121 s build, and saves the 3.8 GB copy.
     """
 
     def __init__(self, root: str | Path) -> None:
-        self.root = Path(root).resolve()
+        self.root = source_root(root)
         self._arrays: dict[str, NDArray[Any]] = {}
         self._attrs: dict[str, dict[str, Any]] = {}
         self._heads: dict[tuple[str, int], NDArray[Any]] = {}
@@ -50,14 +59,18 @@ class SourceStore:
         return f"SourceStore({self.root})"
 
     def _key(self, path: str | Path) -> str:
-        """Normalise a path to a key relative to the root."""
-        target = Path(path)
-        return str(target.relative_to(self.root) if target.is_absolute() else target)
+        """Normalise a path to a key relative to the root.
 
-    def path(self, path: str | Path) -> Path:
-        """Resolve a relative path against the root."""
-        target = Path(path)
-        return target if target.is_absolute() else self.root / target
+        The root's own flavour is preserved: re-wrapping a `UPath` with `Path` would collapse
+        `s3://bucket/x` to `s3:/bucket/x` and silently look for it on local disk.
+        """
+        target = path if isinstance(path, PurePath) else UPath(path)
+        return str(target.relative_to(self.root) if _rooted(target) else target)
+
+    def path(self, path: str | Path) -> Any:
+        """Resolve a relative path against the root, in the root's own flavour."""
+        target = path if isinstance(path, PurePath) else UPath(path)
+        return target if _rooted(target) else self.root / target
 
     def array(self, path: str | Path) -> NDArray[Any]:
         """Read a one-dimensional array, memoized.
@@ -112,7 +125,39 @@ class SourceStore:
         return self.zarray(path) is not None
 
 
-def store_for(root: str | Path, shared: dict[Path, SourceStore] | None = None) -> SourceStore:
+def _rooted(target: Any) -> bool:
+    """Whether a path already names a location, rather than a fragment under a root."""
+    return bool(getattr(target, "protocol", "")) or target.is_absolute()
+
+
+#: Protocols whose clients accept `anon`, which a public bucket needs and a stale credential
+#: chain otherwise defeats. Anything else is left to fsspec's own defaults.
+ANONYMOUS = frozenset({"s3", "gs", "gcs", "az", "abfs", "adl"})
+
+
+def source_root(root: str | PurePath, **storage: Any) -> Any:
+    """Return a root as a path: a local one resolved, a store one opened.
+
+    `resolve()` on a store URI is a no-op that still costs a round trip on some backends, and
+    a URI has no `..` to collapse: what makes two spellings of one local tree share a store is
+    exactly what a URI does not need.
+
+    **A store is read anonymously unless the caller says otherwise.** These packets are built
+    from public buckets, and signing is what fails: a stale profile makes the client refresh an
+    SSO token and give up before considering that the object needs no signing at all. Passing
+    `storage` replaces that default rather than adding to it, so `anon=False` asks for the
+    ambient credential chain back.
+    """
+    path = root if isinstance(root, PurePath) and not storage else UPath(str(root), **storage)
+    protocol = getattr(path, "protocol", "")
+    if protocol in ("", "file"):
+        return path.resolve()
+    if storage or protocol not in ANONYMOUS:
+        return path
+    return UPath(str(root), anon=True)
+
+
+def store_for(root: str | PurePath, shared: dict[Any, SourceStore] | None = None) -> SourceStore:
     """Return the store for a root, from `shared` where a caller is keeping one.
 
     An adapter constructed on its own gets a private store, so nothing about sharing leaks
@@ -120,10 +165,10 @@ def store_for(root: str | Path, shared: dict[Path, SourceStore] | None = None) -
     """
     if shared is None:
         return SourceStore(root)
-    resolved = Path(root).resolve()
+    resolved = source_root(root)
     if resolved not in shared:
         shared[resolved] = SourceStore(resolved)
     return shared[resolved]
 
 
-__all__ = ["SourceStore", "store_for"]
+__all__ = ["SourceStore", "source_root", "store_for"]

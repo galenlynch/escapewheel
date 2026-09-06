@@ -21,6 +21,8 @@ dependencies = [
     "escapewheel-validator",
     "numpy>=1.26",
     "pyarrow>=25.0.1",
+    "s3fs>=2026.7.0",
+    "universal-pathlib>=0.3.10",
 ]
 
 [project.optional-dependencies]

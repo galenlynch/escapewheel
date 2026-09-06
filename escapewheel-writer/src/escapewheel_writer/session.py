@@ -32,8 +32,8 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import numpy as np
-from numpy.typing import NDArray
 from escapewheel_reader.clocks import BOUND, align
+from numpy.typing import NDArray
 
 from .extensions import load as load_extension
 from .recipe import RECIPE_SUPPLIES, Recipe, SourceSpec

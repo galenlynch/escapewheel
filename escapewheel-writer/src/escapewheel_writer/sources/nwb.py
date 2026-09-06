@@ -55,7 +55,7 @@ from numpy.typing import NDArray
 
 from ..clock import Clock
 from .compensations import Compensates
-from .store import SourceStore
+from .store import SourceStore, source_root
 from .zarr_compat import UnsupportedEncoding
 
 #: NWB writes the literal string ``None`` where a value is absent -- in `laser_location`,
@@ -232,7 +232,7 @@ class NWBSource(Compensates):
     ) -> None:
         if not isinstance(zone, ZoneInfo):
             raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
-        self.root = _resolve(Path(root))
+        self.root = _resolve(source_root(root))
         # R54 §2.1: an interval declares the resource that says what it was, and this adapter
         # cannot know it -- an exported trials table is the task's, and which task it is is a
         # fact about the session rather than about the file. The recipe names it, which is the
@@ -725,6 +725,16 @@ class NWBSource(Compensates):
         and on a 400 Hz thermistor each read is 5.9 M elements twice over.
         """
         if name not in self._signals:
+            # A recipe declares its signals, because whether a stream is one is a fact about
+            # the instrument. Saying so about a stream the file lacks is a contradiction R63 §2
+            # refuses in a recipe, and it surfaced here as a Zarr encoding error naming a path
+            # rather than the declaration that asked for it.
+            if not self.store.is_array(f"acquisition/{name}/timestamps"):
+                held = ", ".join(self.store.members("acquisition")) or "nothing"
+                raise SourceDefect(
+                    f"the recipe declares signal {name!r} and this NWB has no "
+                    f"acquisition/{name} with timestamps; acquisition holds {held}"
+                )
             seconds = self.store.array(f"acquisition/{name}/timestamps")
             ticks, finite = self._ticks(seconds, f"acquisition/{name}")
             values = self._array(f"acquisition/{name}/data")

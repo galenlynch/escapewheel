@@ -50,6 +50,7 @@ from numpy.typing import NDArray
 
 from ..clock import Clock
 from .nwb import SourceDefect
+from .store import source_root
 from .zarr_compat import attrs, attrs_at, read_array
 
 #: ``experiment1_Record Node 109#Neuropix-PXI-100.50720-1_recording1``. The probe token holds
@@ -213,7 +214,7 @@ class SorterSource:
         parent_clock_id: str | None = None,
         sample: int | None = None,
     ) -> None:
-        path = Path(root)
+        path = source_root(root)
         self.root = path if path.name == "curated" else path / "curated"
         if not self.root.is_dir():
             raise SourceDefect(f"{path} holds no curated/ directory")
@@ -253,13 +254,43 @@ class SorterSource:
         loaded: dict[str, Any] = self._cache[key]
         return loaded
 
+    @staticmethod
+    def _npy(path: Any, *, mmap: bool = False) -> NDArray[Any]:
+        """Read a `.npy`, from a local file or from a store.
+
+        `mmap_mode` needs a real filesystem path, and it is what keeps `spikes.npy` off the
+        heap when the sorting is on disk. A store has no such trick -- the object is fetched
+        whole either way -- so it is opened as a file object and read.
+        """
+        if getattr(path, "protocol", ""):
+            with path.open("rb") as handle:
+                loaded: NDArray[Any] = np.load(handle, allow_pickle=False)
+            return loaded
+        return np.load(path, allow_pickle=False, **({"mmap_mode": "r"} if mmap else {}))
+
+    @staticmethod
+    def _npy_rows(path: Any) -> int:
+        """Return a `.npy`'s row count from its header, without reading the array.
+
+        Locally `mmap_mode` makes this free. Over a store it has to stay free too, or counting
+        a quarter of a billion spikes would fetch every one of them: the header is a few
+        hundred bytes at the front of the object, so it is one ranged read.
+        """
+        if not getattr(path, "protocol", ""):
+            return int(np.load(path, mmap_mode="r").shape[0])
+        readers = {(1, 0): np.lib.format.read_array_header_1_0, (2, 0): np.lib.format.read_array_header_2_0}
+        with path.open("rb") as handle:
+            version = np.lib.format.read_magic(handle)
+            read_header = readers.get(version)
+            if read_header is None:
+                raise SourceDefect(f"{path}: .npy format version {version}, which this reader does not know")
+            shape, _, _ = read_header(handle)
+        return int(shape[0])
+
     def _property(self, stream: SortedStream, name: str) -> NDArray[Any] | None:
         """Read one per-unit property array, or None if the sorting does not carry it."""
         path = stream.path / "properties" / f"{name}.npy"
-        if not path.is_file():
-            return None
-        loaded: NDArray[Any] = np.load(path, allow_pickle=False)
-        return loaded
+        return self._npy(path) if path.is_file() else None
 
     def _unit_ids(self, stream: SortedStream) -> NDArray[np.int64]:
         """Return the stream's unit ids, in the order `unit_index` offsets into."""
@@ -682,7 +713,7 @@ class SorterSource:
         Truncating in file order takes an opening time window; a unit with nothing in it keeps
         its row with a null first and last tick.
         """
-        spikes = np.load(stream.path / "spikes.npy", mmap_mode="r")
+        spikes = self._npy(stream.path / "spikes.npy", mmap=True)
         if self.sample is not None:
             spikes = spikes[: self.sample]
         return np.asarray(spikes["unit_index"]), np.asarray(spikes["sample_index"])
@@ -895,7 +926,7 @@ class SorterSource:
         A quarter of a billion spikes counts in milliseconds, so a caller that has streamed
         them into a writer can still report how many without holding any.
         """
-        held = (int(np.load(s.path / "spikes.npy", mmap_mode="r").shape[0]) for s in self.streams())
+        held = (self._npy_rows(s.path / "spikes.npy") for s in self.streams())
         return sum(n if self.sample is None else min(n, self.sample) for n in held)
 
     def offers(self) -> dict[str, int]:

@@ -29,6 +29,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from .nwb import SourceDefect
+from .store import source_root
 
 #: Rows per batch. Matched to `session.BATCH_ROWS` rather than imported, so a source does not
 #: depend on the driver that happens to run it.
@@ -67,7 +68,7 @@ class TablesSource:
         command: str | None = None,
         batch_rows: int = BATCH_ROWS,
     ) -> None:
-        self.root = Path(root)
+        self.root = source_root(root)
         self.session_id = session_id
         self.command = command
         self.batch_rows = batch_rows

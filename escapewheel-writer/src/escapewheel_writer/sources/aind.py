@@ -42,6 +42,7 @@ from zoneinfo import ZoneInfo
 from ..clock import Clock, epoch_from
 from .compensations import Compensates
 from .nwb import SourceDefect, _offset
+from .store import source_root
 
 #: `session.json`'s own name for the file, used to accept either it or its directory.
 SESSION_JSON = "session.json"
@@ -116,7 +117,7 @@ class SessionSource(Compensates):
     def __init__(self, root: str | Path, *, zone: ZoneInfo, session_id: str | None = None) -> None:
         if not isinstance(zone, ZoneInfo):
             raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
-        path = Path(root)
+        path = source_root(root)
         self.path = path if path.is_file() else path / SESSION_JSON
         if not self.path.is_file():
             raise SourceDefect(f"{path} holds no {SESSION_JSON}")

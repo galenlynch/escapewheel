@@ -39,7 +39,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .nwb import SourceDefect
-from .store import SourceStore
+from .store import SourceStore, source_root
 
 #: Samples either side of the window used to estimate what the average left behind. Only for
 #: reporting; the scale comes from the range, not from this.
@@ -114,7 +114,7 @@ class WaveformSource:
         prefix: str = "",
         store: Any = None,
     ) -> None:
-        self.root = Path(root)
+        self.root = source_root(root)
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.units = dict(units)

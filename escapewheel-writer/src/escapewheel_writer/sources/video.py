@@ -54,6 +54,7 @@ import pyarrow as pa
 
 from ..writer import ExternalMedia
 from .compensations import Compensates
+from .store import source_root
 
 #: Rows per emitted batch. A camera writes ~2.5 M frames a session and three cameras 7.5 M, which
 #: is why the frame table streams rather than being held as records.
@@ -103,7 +104,7 @@ class VideoSource(Compensates):
         uri_base: str | None = None,
         batch_rows: int = BATCH_ROWS,
     ) -> None:
-        self.root = Path(root)
+        self.root = source_root(root)
         self.session_id = session_id
         self.clock_id = clock_id
         self.tick_rate = int(tick_rate)

@@ -735,6 +735,280 @@ wheels = [
 ]
 
 [[package]]
+name = "escapewheel-reader"
+version = "0.1.0"
+source = { editable = "../escapewheel-reader" }
+dependencies = [
+    { name = "jsonschema" },
+    { name = "numpy" },
+    { name = "pyarrow" },
+]
+
+[package.optional-dependencies]
+sql = [
+    { name = "duckdb" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "duckdb", marker = "extra == 'sql'", specifier = ">=1.5.5" },
+    { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0" },
+    { name = "pyarrow", specifier = ">=25.0.1" },
+    { name = "zarr", marker = "extra == 'arrays'", specifier = ">=3" },
+]
+provides-extras = ["sql", "polars", "arrays"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "codespell" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+]
+docs = [
+    { name = "codespell" },
+    { name = "furo" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "myst-parser" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "sphinx", specifier = ">=5.0" },
+    { name = "sphinx-autodoc-typehints" },
+    { name = "sphinx-copybutton" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+]
+jupyter = [
+    { name = "codespell" },
+    { name = "interrogate" },
+    { name = "ipykernel" },
+    { name = "mypy" },
+    { name = "pip" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+]
+types = [
+    { name = "mypy" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+]
+
+[[package]]
+name = "escapewheel-validator"
+version = "0.1.0"
+source = { editable = "../escapewheel-validator" }
+dependencies = [
+    { name = "escapewheel-reader", extra = ["sql"] },
+    { name = "jsonschema" },
+    { name = "numpy" },
+    { name = "pyarrow" },
+]
+
+[package.optional-dependencies]
+remote = [
+    { name = "fsspec" },
+]
+s3 = [
+    { name = "s3fs" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "escapewheel-reader", extras = ["sql"], editable = "../escapewheel-reader" },
+    { name = "fsspec", marker = "extra == 'remote'", specifier = ">=2024.6" },
+    { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "pyarrow", specifier = ">=25.0.1" },
+    { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.6" },
+]
+provides-extras = ["remote", "s3"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "codespell" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+]
+docs = [
+    { name = "codespell" },
+    { name = "furo" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "myst-parser" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "sphinx", specifier = ">=5.0" },
+    { name = "sphinx-autodoc-typehints" },
+    { name = "sphinx-copybutton" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+]
+jupyter = [
+    { name = "codespell" },
+    { name = "interrogate" },
+    { name = "ipykernel" },
+    { name = "mypy" },
+    { name = "pip" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+]
+types = [
+    { name = "mypy" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+]
+
+[[package]]
+name = "escapewheel-writer"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "escapewheel-validator" },
+    { name = "numpy" },
+    { name = "pyarrow" },
+    { name = "s3fs" },
+    { name = "universal-pathlib" },
+]
+
+[package.optional-dependencies]
+arrays = [
+    { name = "zarr" },
+]
+harp = [
+    { name = "pyyaml" },
+]
+nwb = [
+    { name = "numcodecs" },
+]
+remote = [
+    { name = "escapewheel-validator", extra = ["remote"] },
+]
+s3 = [
+    { name = "escapewheel-validator", extra = ["s3"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "codespell" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "numcodecs" },
+    { name = "pyarrow-stubs" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+docs = [
+    { name = "codespell" },
+    { name = "furo" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "myst-parser" },
+    { name = "numcodecs" },
+    { name = "pyarrow-stubs" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "sphinx" },
+    { name = "sphinx-autodoc-typehints" },
+    { name = "sphinx-copybutton" },
+]
+jupyter = [
+    { name = "codespell" },
+    { name = "interrogate" },
+    { name = "ipykernel" },
+    { name = "mypy" },
+    { name = "numcodecs" },
+    { name = "pip" },
+    { name = "pyarrow-stubs" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+types = [
+    { name = "mypy" },
+    { name = "pyarrow-stubs" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "escapewheel-validator", editable = "../escapewheel-validator" },
+    { name = "escapewheel-validator", extras = ["remote"], marker = "extra == 'remote'", editable = "../escapewheel-validator" },
+    { name = "escapewheel-validator", extras = ["s3"], marker = "extra == 's3'", editable = "../escapewheel-validator" },
+    { name = "numcodecs", marker = "extra == 'nwb'", specifier = ">=0.13" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "pyarrow", specifier = ">=25.0.1" },
+    { name = "pyyaml", marker = "extra == 'harp'", specifier = ">=6" },
+    { name = "s3fs", specifier = ">=2026.7.0" },
+    { name = "universal-pathlib", specifier = ">=0.3.10" },
+    { name = "zarr", marker = "extra == 'arrays'", specifier = ">=3" },
+]
+provides-extras = ["nwb", "arrays", "harp", "remote", "s3"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "codespell" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "numcodecs" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+docs = [
+    { name = "codespell" },
+    { name = "furo" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "myst-parser" },
+    { name = "numcodecs" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "sphinx", specifier = ">=5.0" },
+    { name = "sphinx-autodoc-typehints" },
+    { name = "sphinx-copybutton" },
+]
+jupyter = [
+    { name = "codespell" },
+    { name = "interrogate" },
+    { name = "ipykernel" },
+    { name = "mypy" },
+    { name = "numcodecs" },
+    { name = "pip" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+types = [
+    { name = "mypy" },
+    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
+]
+
+[[package]]
 name = "executing"
 version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1568,276 +1842,6 @@ wheels = [
 ]
 
 [[package]]
-name = "escapewheel-reader"
-version = "0.1.0"
-source = { editable = "../escapewheel-reader" }
-dependencies = [
-    { name = "jsonschema" },
-    { name = "numpy" },
-    { name = "pyarrow" },
-]
-
-[package.optional-dependencies]
-sql = [
-    { name = "duckdb" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "duckdb", marker = "extra == 'sql'", specifier = ">=1.5.5" },
-    { name = "jsonschema", specifier = ">=4.26.0" },
-    { name = "numpy", specifier = ">=1.26" },
-    { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0" },
-    { name = "pyarrow", specifier = ">=25.0.1" },
-    { name = "zarr", marker = "extra == 'arrays'", specifier = ">=3" },
-]
-provides-extras = ["sql", "polars", "arrays"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "codespell" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
-]
-docs = [
-    { name = "codespell" },
-    { name = "furo" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "myst-parser" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "sphinx", specifier = ">=5.0" },
-    { name = "sphinx-autodoc-typehints" },
-    { name = "sphinx-copybutton" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
-]
-jupyter = [
-    { name = "codespell" },
-    { name = "interrogate" },
-    { name = "ipykernel" },
-    { name = "mypy" },
-    { name = "pip" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
-]
-types = [
-    { name = "mypy" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
-]
-
-[[package]]
-name = "escapewheel-validator"
-version = "0.1.0"
-source = { editable = "../escapewheel-validator" }
-dependencies = [
-    { name = "jsonschema" },
-    { name = "numpy" },
-    { name = "escapewheel-reader", extra = ["sql"] },
-    { name = "pyarrow" },
-]
-
-[package.optional-dependencies]
-remote = [
-    { name = "fsspec" },
-]
-s3 = [
-    { name = "s3fs" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fsspec", marker = "extra == 'remote'", specifier = ">=2024.6" },
-    { name = "jsonschema", specifier = ">=4.26.0" },
-    { name = "numpy", specifier = ">=1.26" },
-    { name = "escapewheel-reader", extras = ["sql"], editable = "../escapewheel-reader" },
-    { name = "pyarrow", specifier = ">=25.0.1" },
-    { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.6" },
-]
-provides-extras = ["remote", "s3"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "codespell" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
-]
-docs = [
-    { name = "codespell" },
-    { name = "furo" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "myst-parser" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "sphinx", specifier = ">=5.0" },
-    { name = "sphinx-autodoc-typehints" },
-    { name = "sphinx-copybutton" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
-]
-jupyter = [
-    { name = "codespell" },
-    { name = "interrogate" },
-    { name = "ipykernel" },
-    { name = "mypy" },
-    { name = "pip" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
-]
-types = [
-    { name = "mypy" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
-]
-
-[[package]]
-name = "escapewheel-writer"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "numpy" },
-    { name = "escapewheel-validator" },
-    { name = "pyarrow" },
-]
-
-[package.optional-dependencies]
-arrays = [
-    { name = "zarr" },
-]
-harp = [
-    { name = "pyyaml" },
-]
-nwb = [
-    { name = "numcodecs" },
-]
-remote = [
-    { name = "escapewheel-validator", extra = ["remote"] },
-]
-s3 = [
-    { name = "escapewheel-validator", extra = ["s3"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "codespell" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "numcodecs" },
-    { name = "pyarrow-stubs" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-docs = [
-    { name = "codespell" },
-    { name = "furo" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "myst-parser" },
-    { name = "numcodecs" },
-    { name = "pyarrow-stubs" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "sphinx" },
-    { name = "sphinx-autodoc-typehints" },
-    { name = "sphinx-copybutton" },
-]
-jupyter = [
-    { name = "codespell" },
-    { name = "interrogate" },
-    { name = "ipykernel" },
-    { name = "mypy" },
-    { name = "numcodecs" },
-    { name = "pip" },
-    { name = "pyarrow-stubs" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-types = [
-    { name = "mypy" },
-    { name = "pyarrow-stubs" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "numcodecs", marker = "extra == 'nwb'", specifier = ">=0.13" },
-    { name = "numpy", specifier = ">=1.26" },
-    { name = "escapewheel-validator", editable = "../escapewheel-validator" },
-    { name = "escapewheel-validator", extras = ["remote"], marker = "extra == 'remote'", editable = "../escapewheel-validator" },
-    { name = "escapewheel-validator", extras = ["s3"], marker = "extra == 's3'", editable = "../escapewheel-validator" },
-    { name = "pyarrow", specifier = ">=25.0.1" },
-    { name = "pyyaml", marker = "extra == 'harp'", specifier = ">=6" },
-    { name = "zarr", marker = "extra == 'arrays'", specifier = ">=3" },
-]
-provides-extras = ["nwb", "arrays", "harp", "remote", "s3"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "codespell" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "numcodecs" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-docs = [
-    { name = "codespell" },
-    { name = "furo" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "myst-parser" },
-    { name = "numcodecs" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "sphinx", specifier = ">=5.0" },
-    { name = "sphinx-autodoc-typehints" },
-    { name = "sphinx-copybutton" },
-]
-jupyter = [
-    { name = "codespell" },
-    { name = "interrogate" },
-    { name = "ipykernel" },
-    { name = "mypy" },
-    { name = "numcodecs" },
-    { name = "pip" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-types = [
-    { name = "mypy" },
-    { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
-]
-
-[[package]]
 name = "packaging"
 version = "26.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1853,6 +1857,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/30/4b/90c937815137d43ce71ba043cd3566221e9df6b9c805f24b5d138c9d40a7/parso-0.8.7.tar.gz", hash = "sha256:eaaac4c9fdd5e9e8852dc778d2d7405897ec510f2a298071453e5e3a07914bb1", size = 401824, upload-time = "2026-05-01T23:13:02.138Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/5d/8268b644392ee874ee82a635cd0df1773de230bde356c38de28e298392cc/parso-0.8.7-py2.py3-none-any.whl", hash = "sha256:a8926eb2a1b915486941fdbd31e86a4baf88fe8c210f25f2f35ecec5b574ca1c", size = 107025, upload-time = "2026-05-01T23:12:58.867Z" },
+]
+
+[[package]]
+name = "pathlib-abc"
+version = "0.5.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/cb/448649d7f25d228bf0be3a04590ab7afa77f15e056f8fa976ed05ec9a78f/pathlib_abc-0.5.2.tar.gz", hash = "sha256:fcd56f147234645e2c59c7ae22808b34c364bb231f685ddd9f96885aed78a94c", size = 33342, upload-time = "2025-10-10T18:37:20.524Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/29/c028a0731e202035f0e2e0bfbf1a3e46ad6c628cbb17f6f1cc9eea5d9ff1/pathlib_abc-0.5.2-py3-none-any.whl", hash = "sha256:4c9d94cf1b23af417ce7c0417b43333b06a106c01000b286c99de230d95eefbb", size = 19070, upload-time = "2025-10-10T18:37:19.437Z" },
 ]
 
 [[package]]
@@ -2640,6 +2653,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f6/cc/6253133b5bb138fc3306cebfbda2c520f545d36b5be2c7255cc528bb45d6/typing_extensions-4.16.0.tar.gz", hash = "sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5", size = 113555, upload-time = "2026-07-02T08:40:05.92Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl", hash = "sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8", size = 45571, upload-time = "2026-07-02T08:40:04.659Z" },
+]
+
+[[package]]
+name = "universal-pathlib"
+version = "0.3.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fsspec" },
+    { name = "pathlib-abc" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3d/6e/d997a70ee8f4c61f9a7e2f4f8af721cf072a3326848fc881b05187e52558/universal_pathlib-0.3.10.tar.gz", hash = "sha256:4487cbc90730a48cfb64f811d99e14b6faed6d738420cd5f93f59f48e6930bfb", size = 261110, upload-time = "2026-02-22T14:40:58.87Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/1a/5d9a402b39ec892d856bbdd9db502ff73ce28cdf4aff72eb1ce1d6843506/universal_pathlib-0.3.10-py3-none-any.whl", hash = "sha256:dfaf2fb35683d2eb1287a3ed7b215e4d6016aa6eaf339c607023d22f90821c66", size = 83528, upload-time = "2026-02-22T14:40:57.316Z" },
 ]
 
 [[package]]

@@ -23,6 +23,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from .store import source_root
+
 #: The file Open Ephys writes beside a recording, one per record node.
 SETTINGS = "settings.xml"
 
@@ -30,8 +32,15 @@ SETTINGS = "settings.xml"
 #: what it hangs off (R67 §2.1). A basestation is the root -- the PXI chassis it sits in is not
 #: described by this file, and inventing a device for it would assert something unmeasured.
 CHAIN = (
-    ("basestation", ("slot",), "bs_part_number", "bs_serial_number", "bs_firmware_version",
-     "bs_hardware_version", None),
+    (
+        "basestation",
+        ("slot",),
+        "bs_part_number",
+        "bs_serial_number",
+        "bs_firmware_version",
+        "bs_hardware_version",
+        None,
+    ),
     (
         "connect_board",
         ("slot",),
@@ -41,8 +50,15 @@ CHAIN = (
         "bsc_hardware_version",
         ("basestation", ("slot",)),
     ),
-    ("headstage", ("slot", "port"), "headstage_part_number", "headstage_serial_number", None,
-     "flex_version", ("connect_board", ("slot",))),
+    (
+        "headstage",
+        ("slot", "port"),
+        "headstage_part_number",
+        "headstage_serial_number",
+        None,
+        "flex_version",
+        ("connect_board", ("slot",)),
+    ),
 )
 
 #: What a source writes where it has no value. Recorded as given rather than as null, because a
@@ -65,7 +81,7 @@ class OpenEphysSource:
     PRODUCES = frozenset({"core.devices"})
 
     def __init__(self, root: str | Path, *, session_id: str) -> None:
-        self.root = Path(root)
+        self.root = source_root(root)
         self.session_id = session_id
         self.notes: list[str] = []
 

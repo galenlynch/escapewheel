@@ -19,6 +19,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .store import source_root
+
 
 def _clean(value: Any) -> str | None:
     """Return a schema value as the string a column takes, or None where the schema omitted it."""
@@ -49,7 +51,7 @@ class HarpSource:
     PRODUCES = frozenset({"core.devices"})
 
     def __init__(self, root: str | Path, *, session_id: str) -> None:
-        self.root = Path(root)
+        self.root = source_root(root)
         self.session_id = session_id
         self.notes: list[str] = []
 

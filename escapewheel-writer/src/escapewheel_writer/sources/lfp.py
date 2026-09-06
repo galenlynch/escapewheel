@@ -40,7 +40,7 @@ import numpy as np
 
 from .compensations import Compensates
 from .nwb import SourceDefect
-from .store import SourceStore
+from .store import SourceStore, source_root
 
 #: Where an NWB keeps its LFP series.
 GROUP = "processing/ecephys/LFP"
@@ -113,7 +113,7 @@ class LFPSource(Compensates):
         verify: str = "size",
         store: Any = None,
     ) -> None:
-        self.root = Path(root)
+        self.root = source_root(root)
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.clocks = list(clocks)

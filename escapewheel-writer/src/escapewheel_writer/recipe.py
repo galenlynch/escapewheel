@@ -28,6 +28,9 @@ from pathlib import Path
 from typing import Any
 
 import tomllib
+from upath import UPath
+
+from .sources.store import source_root
 
 #: Resources a recipe supplies from its own declarations rather than through a source: the
 #: session and subject it names, and the record of the run that read the sources.
@@ -76,7 +79,7 @@ REQUIRED_OPTIONS = {
 }
 
 #: Keys a `[[source]]` entry uses for itself; everything else is passed to the adapter.
-_SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes"})
+_SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes", "storage_options"})
 
 #: Keys a `[[materialize]]` entry uses for itself; the rest are the materializer's parameters.
 _MATERIALIZE_KEYS = frozenset({"resource"})
@@ -158,7 +161,8 @@ class SourceSpec:
     ----------
     kind : str
         Adapter to use.
-    root : Path
+    root : path
+        Local directory or store prefix; `storage_options` in the recipe reaches it here.
         What the adapter reads.
     owns : tuple of str
         Resource IDs this source is solely responsible for. Records it emits for anything it
@@ -173,7 +177,7 @@ class SourceSpec:
     """
 
     kind: str
-    root: Path
+    root: Any
     owns: tuple[str, ...]
     contributes: tuple[str, ...] = ()
     options: Mapping[str, Any] = field(default_factory=dict)
@@ -322,6 +326,26 @@ class Recipe:
             candidate = Path(value)
             return candidate if candidate.is_absolute() else here / candidate
 
+        def resolve_root(value: str, storage: Mapping[str, Any]) -> Any:
+            """Resolve a source root, which `05` §3.1 leaves free to name a store.
+
+            An AIND session's sorted asset is a prefix on `aind-open-data`, and a build reads
+            about 12% of one, so naming the prefix is both shorter and better provenance than
+            naming a staged copy (`05` §3.2).
+
+            **A store root is read anonymously unless the recipe says otherwise.** The data
+            these packets are built from is public, and signing it is what fails: a stale
+            profile makes the client refresh an SSO token and give up before it considers that
+            the object needs no signing at all. A recipe that does need credentials declares
+            `storage_options`, which replaces the default rather than adding to it, so
+            `{anon = false}` is how one asks for the ambient profile back. The rule itself lives
+            in `sources.store.source_root`, so an adapter built directly from a URI behaves as
+            a recipe-built one does.
+            """
+            if getattr(UPath(value), "protocol", "") in ("", "file"):
+                return resolve(value)
+            return source_root(value, **storage)
+
         return cls(
             path=path,
             digest=hashlib.sha256(raw).hexdigest(),
@@ -338,7 +362,7 @@ class Recipe:
                 tuple(
                     SourceSpec(
                         kind=str(s["kind"]),
-                        root=resolve(str(s.get("root", "."))),
+                        root=resolve_root(str(s.get("root", ".")), s.get("storage_options", {})),
                         owns=tuple(s.get("owns", ())),
                         contributes=tuple(s.get("contributes", ())),
                         options={k: v for k, v in s.items() if k not in _SOURCE_KEYS},

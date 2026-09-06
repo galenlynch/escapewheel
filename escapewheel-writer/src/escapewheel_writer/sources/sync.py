@@ -55,6 +55,7 @@ from numpy.typing import NDArray
 
 from ..clock import HARP_TICK_RATE_HZ, Clock
 from .nwb import SourceDefect
+from .store import source_root
 
 #: rig-qc archives the pre-alignment array under this name when it rewrites `timestamps.npy`.
 #: Its presence is the only signal that a stream was aligned; its absence, that the stream is
@@ -331,7 +332,7 @@ class SyncSource:
         first_samples: Mapping[str, int] | None = None,
         prefix: str = "",
     ) -> None:
-        self.root = _resolve(Path(root))
+        self.root = _resolve(source_root(root))
         self.session_id = session_id
         self.experiment = experiment
         self.recording = recording
@@ -340,7 +341,7 @@ class SyncSource:
         self.prefix = prefix
         self.notes: list[str] = []
         #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters. Every
-#: clock aligned appears here, dropping nothing included (R40 §2.3).
+        #: clock aligned appears here, dropping nothing included (R40 §2.3).
         self.withheld: dict[str, dict[str, Any]] = {}
         #: Clock ID to phase steps found in the parent's alignment, for the run's parameters.
         #: Reported, never corrected: whether a step also moved the devices timestamped on the
