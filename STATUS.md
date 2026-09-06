@@ -4,7 +4,7 @@ Tracking document for NWB-Lake POC v0.1. Records what exists, what passes valida
 which phase is in progress. Design decisions live in `revisions/`, not here.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R83 accepted. R42 and R73 withdrawn. Nothing is proposed.
+R1–R41, R43–R72 and R74–R83 accepted. R42 and R73 withdrawn. R84 proposed and not binding.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 35 tables, 307 columns, 76 references, 68 Tier 2 rules (2 advisory)
