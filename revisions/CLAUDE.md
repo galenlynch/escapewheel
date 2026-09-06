@@ -87,6 +87,11 @@ A revision that is short because it dropped a number is incomplete, not concise.
   number in both. State it where the rule it supports lives.
 - **"What this does not do" listing the unassumed.** It lists only what a reader would otherwise
   reasonably assume the revision does.
+- **A measurement taken while drafting goes stale.** A revision sits Proposed while the registry
+  moves under it. R86 was drafted saying 32 of 34 tables were session-scoped and R83 added one
+  before it was accepted; its name-collision count was measured before `core.events` carried
+  names, and missed the largest collision of all. Re-run every count against the current registry
+  and the current packets before the status line changes.
 
 ## Length
 
