@@ -45,6 +45,7 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 | type | responsibility |
 |---|---|
 | `Packet` | resolve the catalog; hand back resources |
+| `Dataset` | present several packets as one relation per resource (R86) |
 | `TableResource` | a table, as columnar batches or a scan |
 | `ArrayResource` | an array, opened through the array library |
 | `Validator` | run the generated and declared checks; return a report |
@@ -78,3 +79,4 @@ These are properties of the reference implementation, not requirements.
 - **Never convert a column to host objects inside a per-batch loop.** Every performance defect found in the reference writer has been this.
 - **Read a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.
 - **Bound memory explicitly** where a job's working set is data-dependent, and give the SQL engine a spill directory: a memory limit without one bounds nothing.
+- **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id` (R86 §2.4). A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.

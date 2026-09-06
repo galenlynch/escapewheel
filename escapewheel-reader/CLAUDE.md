@@ -69,6 +69,7 @@ its successors; this one stays a reader.
 
 ```
 Packet                 opened packet; resolves resources, accessors, DuckDB registration
+Dataset                several packets as one relation per resource, with session identity
 Manifest               parsed packet.json, validated against its JSON Schema
 Resource               one manifest entry: id, layer, kind, uri, plus the raw entry
 TableResource          a Resource bound to a root; reads, opens lazily, registers, scans
@@ -204,6 +205,37 @@ prefix first. R14 §2.3 makes reachability the reader's situation and a committe
 the writer's, so this is how the same bytes are reached from a mirror without editing bytes
 R14 §2.3 makes immutable. It is a reader convenience and not a format change: what a packet says
 is untouched. `git config url.<base>.insteadOf` is the same mechanism.
+
+### A dataset is the entry point for more than one packet (R86)
+
+`open_packet` gives one packet's tables under their own names, and R53 §2.5 makes those unsafe to
+concatenate: an assigned identifier is unique within its packet and means nothing outside it, so
+two packets both hold `unit_id` 0 and neither value names the other's unit. Measured on the two
+packaged sessions, **4,505 `unit_id` values name a unit in both** and both sessions are
+`session_id = 0`.
+
+`open_dataset` is the second entry point. It numbers every session it opens and projects
+`session_key` and `session_name` onto every **session-scoped** table -- one reaching
+`core.sessions` through its declared references, which `dataset.session_scoped` computes from the
+registry a packet embeds, 33 of 35. The two that are not, `core.subjects` and `core.source_files`,
+get no key, because R86 §2.2 forbids one where the row is not a session's.
+
+The discriminator comes from **provenance, never from a label**: the packet a row came from plus
+its own `session_id`. A `*_name` is not usable for it -- 6 of 13 name columns hold a value
+appearing in both packets, `event_name` on 4,223 trial-numbered events.
+
+Identity is **projected, not joined for** (R86 §2.4): a scalar `CASE` over `session_id`, which a
+query not selecting it has pruned, at 1.02x against the 2.22x of the `core.sessions` join a reader
+writes first. And it is **carried, not joined on** (R86 §2.3) -- a query over one session still
+joins on `unit_id` alone, because widening the key costs 2.93x over 286,896,563 spikes.
+
+The shape does not depend on how many packets are open, so an analysis written against one session
+and later pointed at twenty meets the same relation rather than a differently shaped one.
+
+**What R86 requires and does not specify.** 8 of the 33 scoped tables reach `core.sessions`
+without carrying `session_id`. For a single-session packet the packet's one session answers for
+every row; for a multi-session packet only a join would, which R86 §2.4 declines to specify, so
+`Dataset` raises `MultiSessionUnresolved` naming the table rather than guessing.
 
 ### Registration is not free over a store
 

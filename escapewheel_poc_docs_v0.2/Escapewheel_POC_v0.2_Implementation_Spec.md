@@ -176,6 +176,12 @@ A packet contains a packet catalog, core tables, and any of: dense arrays, media
 
 A packet is primarily single-session. Multi-session packets are a permitted extension, and a packet declares its sessions in the catalog (R1 §2).
 
+A packet is the unit of storage and a session is the unit of analysis, so a consumer holding several packets — or one packet holding several sessions — has to know which rows belong to which session. That is derivable rather than declared: a table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively (R86 §2.1). 33 of 35 tables are, the exceptions being `core.subjects` and `core.source_files`, which `core.sessions` references rather than the reverse. `registry/check.py` computes it, and every table carrying a `session_id` reaches the table while eight reach it without carrying the column, so the reference graph is the stricter test.
+
+A reader presenting one or more packets MUST carry a session discriminator on every session-scoped table, and MUST NOT carry one on a table that is not (R86 §2.2). The discriminator is **the packet a row came from together with the row's `session_id`**: the reader opened the file and the identifier is unique within it, so the pair is unique by construction and nothing has to be assumed about the world. A reader MUST NOT derive it from a `*_name` — a name is a label, and 6 of 13 name columns hold a value appearing in both of two packets that share no session, no animal and no probe. It SHOULD carry `session_name` beside the discriminator, which promises nothing: whether two packets' matching labels denote one thing is a fact about the world, and an analyst asserting it does so knowingly.
+
+Session identity MUST NOT become part of a join key where the assigned identifier is already unique (R86 §2.3). Within one packet `unit_id` identifies a unit by itself, and widening the join to `(session_id, unit_id)` costs 2.93x over 286,896,563 spikes; across packets that identifier is genuinely ambiguous and the second column buys correctness.
+
 ### 2.5 Packet catalog
 
 The **packet catalog** is the dataset-level map. In the portable profile it is `packet.json`, specified in Part 04.
@@ -1740,6 +1746,7 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 | type | responsibility |
 |---|---|
 | `Packet` | resolve the catalog; hand back resources |
+| `Dataset` | present several packets as one relation per resource (R86) |
 | `TableResource` | a table, as columnar batches or a scan |
 | `ArrayResource` | an array, opened through the array library |
 | `Validator` | run the generated and declared checks; return a report |
@@ -1773,6 +1780,7 @@ These are properties of the reference implementation, not requirements.
 - **Never convert a column to host objects inside a per-batch loop.** Every performance defect found in the reference writer has been this.
 - **Read a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.
 - **Bound memory explicitly** where a job's working set is data-dependent, and give the SQL engine a spill directory: a memory limit without one bounds nothing.
+- **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id` (R86 §2.4). A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.
 
 <!-- END 07_reference_implementation.md -->
 

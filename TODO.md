@@ -9,7 +9,7 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R85 accepted. R42 and R73 withdrawn. R86–R87 proposed and not binding.
+R1–R41, R43–R72 and R74–R86 accepted. R42 and R73 withdrawn. R87 proposed and not binding.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 35 tables, 308 columns, 76 references, 68 Tier 2 rules (2 advisory)
@@ -47,23 +47,24 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. Two revisions are drafted and neither is accepted
+## 1. R87 is drafted and not accepted
 
-Only the user moves a revision from Proposed to Accepted. Both came out of the 2026-09-06
-session and each carries its measurements. R85 was accepted the same day and is applied.
+Only the user moves a revision from Proposed to Accepted. R85 and R86 were accepted on
+2026-09-06 and are applied.
 
-- **R86 — A Reader Presents Many Packets as One Relation.** Session scope is derivable: a table is
-  session-scoped iff it reaches `core.sessions` through declared references, 32 of 34. The reader
-  discriminates by *the packet a row came from plus its `session_id`* — never by a `*_name`, since
-  6 of 12 name columns collide between packets that share nothing. Identity is carried, not joined
-  on (widening a join costs 2.93x) and projected as a literal, not joined for (1.02x against
-  2.22x).
 - **R87 — A Recipe May Not Contradict a Source It Reads.** Its check is already implemented and
   tested (3 tests in `test_session_extent.py`), because it caught a live bug: the 776259 recipe
   declared `subject_id = "786867"`.
 
 Neither packet has been rebuilt against R85, so `core.devices.parent_port` is null in both. The
 column is nullable and both remain conforming; the values arrive with §2's rebuild.
+
+## 1a. A code quality audit of the whole project
+
+Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
+above all **which problem domains this project owns**: where a dependency already solves something
+well, the code should not be solving it again. The reader's `Location`, the writer's store
+abstraction, the registry's generators and the clock arithmetic are the places to look first.
 
 ## 2. `ecephys_776259` needs rebuilding, and R86's evidence depends on it
 
@@ -72,8 +73,10 @@ Its recipe is corrected in `[subject]` and **not in `[session]`**, where `subjec
 `core.subjects.subject_name`, and nothing else about it is stale — its session times are the true
 April ones, because the session source supplies them, and it reads its sorted asset from S3.
 
-**R86 §2.2 says "6 of 12 name columns collide" and one of those six is this bug.** After the
-rebuild the honest number is 5 of 12, and the paragraph must be corrected before R86 is accepted.
+R86 §2.2 was corrected before acceptance and no longer depends on this: it states **6 of 13**
+name columns colliding and excludes `subject_name` explicitly, naming the recipe defect as the
+only reason the two packets agree on a value. The rebuild removes the collision and changes
+nothing in the revision.
 
 ## 2a. `registry_version` — still `0.1.0`
 

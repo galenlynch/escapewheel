@@ -292,6 +292,34 @@ print(f"      {sum(named.values())} name columns must be unique within a packet 
       f"{core_unique} of them in core and analysis; {len(NAMES_A_KIND)} name a kind of thing")
 
 
+# R86 §2.1. Which tables a reader must carry a session discriminator on: the ones reaching
+# `core.sessions` through their declared references. A property of the registry, decided with no
+# packet in hand, and the stricter of the two available tests -- every table carrying a
+# `session_id` reaches the table, while eight reach it without carrying the column, so the graph
+# subsumes the column and the column does not subsume the graph. R46 is what made it usable, by
+# declaring the sixteen foreign keys that had never been written.
+def session_scoped(tables):
+    """Every table reaching `core.sessions`, `core.sessions` itself included."""
+    edges = {n: {r["resource"] for r in t["references"]} for n, t in tables.items()}
+
+    def reaches(name, seen):
+        if name == "core.sessions":
+            return True
+        if name in seen:
+            return False          # a self-reference is well-founded (R67 §2.3) and not a route
+        seen.add(name)
+        return any(reaches(m, seen) for m in edges.get(name, ()))
+
+    return {n for n in tables if reaches(n, set())}
+
+
+scoped = session_scoped(T)
+carries = {n for n, t in T.items() if any(c["name"] == "session_id" for c in t["columns"])}
+check("every table carrying session_id reaches core.sessions (R86 §2.1)", sorted(carries - scoped))
+print(f"      {len(scoped)} of {len(T)} core and analysis tables are session-scoped; "
+      f"{len(set(T) - scoped)} are not ({', '.join(sorted(set(T) - scoped))}); "
+      f"{len(scoped - carries)} reach core.sessions without carrying the column")
+
 # R55 §2.2, §2.3.2. What a discriminator declares, checked where the meta-schema cannot: the
 # enum constrains the value but not that a discriminator has one, and `resolves` on anything else
 # is a declaration that decides nothing.

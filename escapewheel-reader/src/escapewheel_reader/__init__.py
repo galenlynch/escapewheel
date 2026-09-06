@@ -12,6 +12,14 @@ from importlib.metadata import version
 
 from .alignment import ClockMismatch, aligned_spikes, assigned_spikes, windows_disjoint
 from .clocks import BOUND, NotAligned, Unanchored, align, on_clock, origin, seconds
+from .dataset import (
+    PROJECTED,
+    Dataset,
+    MultiSessionUnresolved,
+    Session,
+    open_dataset,
+    session_scoped,
+)
 from .errors import (
     AmbiguousRun,
     ManifestError,
@@ -45,14 +53,17 @@ __version__ = version("escapewheel-reader")
 __all__ = [
     "BASELINE_CODECS",
     "BOUND",
+    "PROJECTED",
     "STORED",
     "Ambiguity",
     "AmbiguousRun",
     "ArrayResource",
     "ClockMismatch",
+    "Dataset",
     "Location",
     "Manifest",
     "ManifestError",
+    "MultiSessionUnresolved",
     "NoTimeOrigin",
     "NotAligned",
     "Packet",
@@ -61,6 +72,7 @@ __all__ = [
     "Resource",
     "ResourceNotFoundError",
     "ResourceUnreadableError",
+    "Session",
     "StaleSupport",
     "TableResource",
     "Unanchored",
@@ -75,6 +87,7 @@ __all__ = [
     "observed_seconds",
     "observed_ticks",
     "on_clock",
+    "open_dataset",
     "open_packet",
     "origin",
     "preferred_run",
@@ -84,6 +97,7 @@ __all__ = [
     "read_sources",
     "resolve_sources",
     "seconds",
+    "session_scoped",
     "sources_schema",
     "sql_name",
     "stream_windows",

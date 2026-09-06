@@ -1486,3 +1486,21 @@ where = "02_core_logical_schemas.md §8.2 (a name is unique), 01_semantic_standa
 [clause."R85 §2.3"]
 disposition = "applied"
 where = "01_semantic_standard.md §3.5"
+
+[clause."R86 §2.1"]
+disposition = "applied"
+where = "00_architecture.md §2.4"
+note = "registry/check.py computes the scope and reports the 33 and the 2"
+
+[clause."R86 §2.2"]
+disposition = "applied"
+where = "00_architecture.md §2.4"
+note = "escapewheel_reader.dataset.Dataset carries it; the projection is per-packet, never from a name"
+
+[clause."R86 §2.3"]
+disposition = "applied"
+where = "00_architecture.md §2.4"
+
+[clause."R86 §2.4"]
+disposition = "implementation"
+where = "escapewheel_reader.dataset.Dataset._identity; 07_reference_implementation.md §7 records why"

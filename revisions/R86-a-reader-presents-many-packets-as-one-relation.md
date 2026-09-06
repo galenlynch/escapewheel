@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-09-06 |
 | **Amends** | `07` (the reference reader's surface), R1 §2 (multi-session packets) |
 | **Depends on** | R46 (a reference is declared), R53 §2.5 (an assigned identifier is not stable across packets), R81 (unit IDs are assigned by the packet) |
 | **Profile** | `escapewheel-portable-v0.1` |
@@ -53,7 +53,7 @@ A table is **session-scoped** if it reaches `core.sessions` through its declared
 directly or transitively. That is a property of the registry, computable with no packet in hand,
 and `registry/check.py` reports it.
 
-Of 34 core and analysis tables, **32 are session-scoped and 2 are not** — `core.subjects` and
+Of 35 core and analysis tables, **33 are session-scoped and 2 are not** — `core.subjects` and
 `core.source_files`, which fall out unscoped because `core.sessions` references *them*. No
 declaration is needed and none is added: **zero tables carry a `session_id` column without also
 declaring the reference**, while **8 reach `core.sessions` without carrying the column**, so the
@@ -75,9 +75,14 @@ A reader **MUST NOT** derive the discriminator from a `*_name`. R53 §2.3.1 says
 what a number stands for, and R53 §2.5 offers it as what "recovers the correspondence" across
 packets — but a name is a **label**, and half of them are labels of a kind rather than of a
 thing. Measured across these two packets, which share no session, no animal and no probe, **6 of
-12 name columns collide**: `device_name` on 11 rig positions, `event_stream_name` on 10 stream
-kinds, and `clock_name`, `array_asset_name` and `processing_run_name` on one each. `harp` and
-`waveform_mean` are correct names in both packets and denote different things in each.
+13 name columns hold a value that appears in both**: `event_name` on **4,223** trial-numbered
+events, `device_name` on 11 rig positions, `event_stream_name` on 10 stream kinds, and
+`clock_name`, `array_asset_name` and `processing_run_name` on one each. `harp`, `waveform_mean`
+and `delay_start:0` are correct names in both packets and denote different things in each.
+
+A seventh column, `subject_name`, is left out of that count rather than added to it:
+`ecephys_776259`'s recipe declared the other session's animal, so the two packets agree on a value
+only because one of them is wrong. Its rebuild removes the collision and changes nothing here.
 
 A reader **SHOULD** carry `session_name` beside the discriminator, as a label for reading and
 grouping. It promises nothing: whether two packets' matching labels denote one thing is a fact
@@ -141,11 +146,11 @@ two percent and pay for it with the shape change §2.2 exists to prevent.
 Nothing to rebuild and nothing to migrate.
 
 The reader gains a multi-packet open that walks the reference graph once, projects session
-identity into the 32 session-scoped tables and leaves the 2 that are not alone. Its cost is §1.1's
+identity into the 33 session-scoped tables and leaves the 2 that are not alone. Its cost is §1.1's
 union — 2x a merged table locally, about a second of requests for twenty sessions over an object
 store — and 1.02x on a query that ignores the column.
 
-`registry/check.py` gains the scope computation, so the 32 and the 2 are reported rather than
+`registry/check.py` gains the scope computation, so the 33 and the 2 are reported rather than
 rediscovered by whoever next needs them.
 
 ## 5. Open

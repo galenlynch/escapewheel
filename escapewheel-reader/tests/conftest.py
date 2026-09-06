@@ -13,8 +13,8 @@ SESSION = 1
 SUBJECT = 7
 CLOCK_BEHAVIOUR = 3
 CLOCK_PROBE = 4
-TRIALS = (0, 1)          # carried: an NWB trials table numbers its rows from 0
-UNITS = (11, 12, 13)     # carried: the sorter's own labels
+TRIALS = (0, 1)  # carried: an NWB trials table numbers its rows from 0
+UNITS = (11, 12, 13)  # carried: the sorter's own labels
 SORTING_RUN = 5
 CURATION = 6
 EVENTS = (20, 21, 22)
@@ -54,11 +54,10 @@ _CARRIED = {"interval_id", "unit_id"}
 def _col(name, type_, presence, **extra):
     # R48 §2.1: every column declares a role. Inferred here from the same two conventions the
     # registry's own map rests on, because a test fixture's columns are all ordinary shapes.
-    role = ("coordinate" if name.endswith("_tick")
-            else "identifier" if name.endswith("_id")
-            else extra.pop("role", "data"))
-    column = {"name": name, "type": type_, "presence": presence, "role": role,
-              "description": name, **extra}
+    role = (
+        "coordinate" if name.endswith("_tick") else "identifier" if name.endswith("_id") else extra.pop("role", "data")
+    )
+    column = {"name": name, "type": type_, "presence": presence, "role": role, "description": name, **extra}
     if role == "identifier":
         column["identity"] = "carried" if name in _CARRIED else "assigned"
     return column
@@ -96,8 +95,7 @@ def _registry():
             "core.intervals": {
                 "columns": [
                     _col("session_id", "int32", "required"),
-                    dict(_col("interval_kind", "string", "required"),
-                         role="discriminator", resolves="required"),
+                    dict(_col("interval_kind", "string", "required"), role="discriminator", resolves="required"),
                     _col("interval_id", "int32", "required"),
                     _col("start_tick", "int64", "required"),
                     _col("stop_tick", "int64", "required"),
@@ -130,7 +128,13 @@ def _registry():
                     _col("quality_label", "string", "nullable", enum=["sua", "mua", "noise"]),
                 ],
                 "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
-                "references": [],
+                "references": [
+                    {
+                        "columns": ["session_id"],
+                        "resource": "core.sessions",
+                        "resource_columns": ["session_id"],
+                    }
+                ],
                 "sort": ["session_id", "unit_id"],
                 "rules": [],
             },
@@ -143,7 +147,13 @@ def _registry():
                     _col("clock_id", "int32", "required"),
                 ],
                 "primary_key": ["session_id", "event_id"],
-                "references": [],
+                "references": [
+                    {
+                        "columns": ["session_id"],
+                        "resource": "core.sessions",
+                        "resource_columns": ["session_id"],
+                    }
+                ],
                 "sort": ["session_id", "event_id"],
                 "rules": [],
             },
