@@ -19,6 +19,8 @@ one happened to ask first.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path, PurePath
 from typing import Any
 
@@ -64,12 +66,12 @@ class SourceStore:
         The root's own flavour is preserved: re-wrapping a `UPath` with `Path` would collapse
         `s3://bucket/x` to `s3:/bucket/x` and silently look for it on local disk.
         """
-        target = path if isinstance(path, PurePath) else UPath(path)
+        target = path if _pathlike(path) else UPath(path)
         return str(target.relative_to(self.root) if _rooted(target) else target)
 
     def path(self, path: str | Path) -> Any:
         """Resolve a relative path against the root, in the root's own flavour."""
-        target = path if isinstance(path, PurePath) else UPath(path)
+        target = path if _pathlike(path) else UPath(path)
         return target if _rooted(target) else self.root / target
 
     def array(self, path: str | Path) -> NDArray[Any]:
@@ -125,6 +127,11 @@ class SourceStore:
         return self.zarray(path) is not None
 
 
+def _pathlike(value: Any) -> bool:
+    """Whether a value is already a path, local or store, rather than a string to parse."""
+    return isinstance(value, PurePath) or hasattr(value, "protocol")
+
+
 def _rooted(target: Any) -> bool:
     """Whether a path already names a location, rather than a fragment under a root."""
     return bool(getattr(target, "protocol", "")) or target.is_absolute()
@@ -135,8 +142,13 @@ def _rooted(target: Any) -> bool:
 ANONYMOUS = frozenset({"s3", "gs", "gcs", "az", "abfs", "adl"})
 
 
-def source_root(root: str | PurePath, **storage: Any) -> Any:
-    """Return a root as a path: a local one resolved, a store one opened.
+def cache_directory() -> Path:
+    """Where a store's fetched objects are kept, honouring `TMPDIR`."""
+    return Path(os.environ.get("TMPDIR", tempfile.gettempdir())) / "escapewheel-source-cache"
+
+
+def source_root(root: str | PurePath, *, cache: str | PurePath | None = None, **storage: Any) -> Any:
+    """Return a root as a path: a local one resolved, a store one opened through a cache.
 
     `resolve()` on a store URI is a no-op that still costs a round trip on some backends, and
     a URI has no `..` to collapse: what makes two spellings of one local tree share a store is
@@ -147,14 +159,35 @@ def source_root(root: str | PurePath, **storage: Any) -> Any:
     SSO token and give up before considering that the object needs no signing at all. Passing
     `storage` replaces that default rather than adding to it, so `anon=False` asks for the
     ambient credential chain back.
+
+    **A store is also read through a local cache**, because an adapter reads some objects more
+    than once: `spikes.npy` is read for a stream's unit summary and again to stream its spikes,
+    and over a network that second read costs another 344 MB. Bandwidth is not the lever --
+    parallel ranges within one object win 1.1x and concurrency across objects 1.2x against a
+    link that saturates near 99 MB/s -- so what pays is not fetching twice, which the cache
+    turns from 4.0 s into 0.1 s. What lands in it is exactly what the adapters read, which is
+    the list a hand-written prefetch would have to keep in step with them. Pass `cache=False`
+    to read straight through.
     """
-    path = root if isinstance(root, PurePath) and not storage else UPath(str(root), **storage)
-    protocol = getattr(path, "protocol", "")
+    if not storage and not isinstance(root, str):
+        # Idempotent: a root reaches an adapter already resolved by the recipe, and `str()` on
+        # a store path drops the options it was opened with -- anonymity among them. Tested on
+        # the type rather than on `PurePath`, because a chained `UPath` is not one: a
+        # `simplecache::s3://` path subclasses `UPath` alone, so an isinstance check against
+        # `PurePath` silently sends it down the re-parse path and it comes back signed.
+        if getattr(root, "protocol", "") not in ("", "file"):
+            return root
+        return Path(root).resolve()
+    text = str(root)
+    protocol = getattr(UPath(text), "protocol", "")
     if protocol in ("", "file"):
-        return path.resolve()
-    if storage or protocol not in ANONYMOUS:
-        return path
-    return UPath(str(root), anon=True)
+        return Path(text).resolve()
+    options = dict(storage) or ({"anon": True} if protocol in ANONYMOUS else {})
+    if cache is False or protocol == "simplecache":
+        return UPath(text, **options)
+    where = cache_directory() if cache is None else Path(cache)
+    where.mkdir(parents=True, exist_ok=True)
+    return UPath(f"simplecache::{text}", **{protocol: options, "simplecache": {"cache_storage": str(where)}})
 
 
 def store_for(root: str | PurePath, shared: dict[Any, SourceStore] | None = None) -> SourceStore:
