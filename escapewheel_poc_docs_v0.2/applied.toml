@@ -1473,3 +1473,16 @@ note = "the nwb layer, source adapter and format references keep the name; nothi
 [clause."R84 §3"]
 disposition = "rationale"
 note = "what the rename leaves alone; its MUST and SHOULD say the standard's clauses are unchanged"
+
+[clause."R85 §2.1"]
+disposition = "registry"
+where = "core.devices.parent_port"
+note = "also stated in 01_semantic_standard.md §3.5; the openephys and nwb adapters fill it"
+
+[clause."R85 §2.2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.2 (a name is unique), 01_semantic_standard.md §3.5 (a port is not read from one)"
+
+[clause."R85 §2.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.5"

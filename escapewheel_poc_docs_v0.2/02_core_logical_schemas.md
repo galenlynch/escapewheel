@@ -132,6 +132,8 @@ An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table
 
 A `carried` identifier gets no name column and MUST NOT be given one: the value is already the source's own, so a name beside it would be a second identity for one thing.
 
+An assigned identifier's `*_name` MUST be unique within its packet (R85 §2.2) — the 16 name columns in core and analysis that pair with one, not the 6 that name a kind of thing and are expected to repeat, such as `core.sorting_runs.sorter_name`. `registry/check.py` sorts them and requires the second kind to be declared. No rule can check it: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct one R67 §2.2 requires, where four streams naming one serial become one device. The obligation falls on whatever composes the name.
+
 ### 8.3 Discriminator
 
 A `discriminator` column MUST hold a dotted resource identifier, and MUST declare `resolves` as `required` or `optional` (R55 §2.2):

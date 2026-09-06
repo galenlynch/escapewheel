@@ -87,7 +87,8 @@
       "R81",
       "R82",
       "R83",
-      "R84"
+      "R84",
+      "R85"
     ]
   },
   "tables": {
@@ -1547,6 +1548,14 @@
           "description": "The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it.",
           "identity": "assigned",
           "since": "R67 \u00a72.1"
+        },
+        {
+          "name": "parent_port",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (R85 \u00a72.3).",
+          "since": "R85 \u00a72.1"
         },
         {
           "name": "metadata",

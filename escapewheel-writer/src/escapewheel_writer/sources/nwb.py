@@ -412,8 +412,8 @@ class NWBSource(Compensates):
             }
         ]
 
-    def _attachment(self) -> dict[str, str]:
-        """Which headstage each probe was in, by the acquisition's name for it, or nothing."""
+    def _attachment(self) -> dict[str, dict[str, str | None]]:
+        """Which headstage each probe was in and on which dock, or nothing."""
         if self.attachments is None:
             return {}
         from .openephys import OpenEphysSource
@@ -437,6 +437,7 @@ class NWBSource(Compensates):
             description = str(described.get("description", ""))
             parsed = DEVICE_DESCRIPTION.match(description)
             serial = parsed["serial"] if parsed else None
+            attachment = attached.get(name) or {}
             row = {
                 "device_id": self.prefix + name,
                 "session_id": self.session_id,
@@ -444,7 +445,10 @@ class NWBSource(Compensates):
                 "manufacturer": _clean(described.get("manufacturer")),
                 "model": (parsed["model"] or None) if parsed else None,
                 "serial_number": serial,
-                "parent_device_id": attached.get(name),
+                "parent_device_id": attachment.get("parent_device_id"),
+                # R85 §2.1: the dock of that headstage. Null where no attachment is stated, and
+                # null is what a consumer must read as unrecorded rather than parse out of a name.
+                "parent_port": attachment.get("parent_port"),
                 "metadata": _described(parsed, description),
             }
             # A device with no serial is its own object: nothing says two of them are one.

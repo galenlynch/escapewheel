@@ -9,10 +9,10 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R84 accepted. R42 and R73 withdrawn. R85–R87 proposed and not binding.
+R1–R41, R43–R72 and R74–R85 accepted. R42 and R73 withdrawn. R86–R87 proposed and not binding.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
-35 tables, 307 columns, 76 references, 68 Tier 2 rules (2 advisory)
+35 tables, 308 columns, 76 references, 68 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
 27 conformance packets
@@ -47,17 +47,11 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. Three revisions are drafted and none is accepted
+## 1. Two revisions are drafted and neither is accepted
 
-Only the user moves a revision from Proposed to Accepted. All three came out of the 2026-09-06
-session and each carries its measurements.
+Only the user moves a revision from Proposed to Accepted. Both came out of the 2026-09-06
+session and each carries its measurements. R85 was accepted the same day and is applied.
 
-- **R85 — A Device Declares Which Port It Attached To.** `core.devices` gains a nullable
-  `parent_port`. Position currently hides in `device_name` because 13 of 20 rows have no serial
-  and Open Ephys writes `0` for every basestation, connect-board and headstage serial. §2.2 also
-  states that a `*_name` MUST be unique within a packet — `Keys.of` merges duplicates silently —
-  and that no rule can check it, because a writer cannot tell two things wrongly sharing a name
-  from one thing seen twice.
 - **R86 — A Reader Presents Many Packets as One Relation.** Session scope is derivable: a table is
   session-scoped iff it reaches `core.sessions` through declared references, 32 of 34. The reader
   discriminates by *the packet a row came from plus its `session_id`* — never by a `*_name`, since
@@ -68,10 +62,15 @@ session and each carries its measurements.
   tested (3 tests in `test_session_extent.py`), because it caught a live bug: the 776259 recipe
   declared `subject_id = "786867"`.
 
+Neither packet has been rebuilt against R85, so `core.devices.parent_port` is null in both. The
+column is nullable and both remain conforming; the values arrive with §2's rebuild.
+
 ## 2. `ecephys_776259` needs rebuilding, and R86's evidence depends on it
 
-Its recipe is corrected; the packet still names subject `786867`. Rebuilding is the next concrete
-task — everything else about that packet is current, and it reads its sorted asset from S3.
+Its recipe is corrected in `[subject]` and **not in `[session]`**, where `subject_id` still reads
+`786867`; both need the true value before the rebuild. The packet still names subject `786867` in
+`core.subjects.subject_name`, and nothing else about it is stale — its session times are the true
+April ones, because the session source supplies them, and it reads its sorted asset from S3.
 
 **R86 §2.2 says "6 of 12 name columns collide" and one of those six is this bug.** After the
 rebuild the honest number is 5 of 12, and the paragraph must be corrected before R86 is accepted.

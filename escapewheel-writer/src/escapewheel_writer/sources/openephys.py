@@ -28,9 +28,12 @@ from .store import source_root
 #: The file Open Ephys writes beside a recording, one per record node.
 SETTINGS = "settings.xml"
 
-#: Each element of the chain: how its identity is formed, which attributes describe it, and
-#: what it hangs off (R67 §2.1). A basestation is the root -- the PXI chassis it sits in is not
-#: described by this file, and inventing a device for it would assert something unmeasured.
+#: Each element of the chain: how its identity is formed, which attributes describe it, what it
+#: hangs off (R67 §2.1), and which attribute names the coordinate it hangs off at (R85 §2.1). A
+#: basestation is the root -- the PXI chassis it sits in is not described by this file, and
+#: inventing a device for it would assert something unmeasured. A connect board has a parent and
+#: no coordinate: `slot` identifies the basestation and the board alike, so the file states no
+#: place on the one where the other sits, and R85 §2.1 wants that left null rather than invented.
 CHAIN = (
     (
         "basestation",
@@ -39,6 +42,7 @@ CHAIN = (
         "bs_serial_number",
         "bs_firmware_version",
         "bs_hardware_version",
+        None,
         None,
     ),
     (
@@ -49,6 +53,7 @@ CHAIN = (
         "bsc_firmware_version",
         "bsc_hardware_version",
         ("basestation", ("slot",)),
+        None,
     ),
     (
         "headstage",
@@ -58,8 +63,13 @@ CHAIN = (
         None,
         "flex_version",
         ("connect_board", ("slot",)),
+        "port",
     ),
 )
+
+#: Which attribute names the dock a probe sat in. The probe's own device row comes from the NWB,
+#: so its port is handed over by `attachments` rather than written here.
+PROBE_PORT = "dock"
 
 #: What a source writes where it has no value. Recorded as given rather than as null, because a
 #: source that reported `UNKNOWN` said something a source that stayed silent did not (R66 §2.1).
@@ -109,7 +119,7 @@ class OpenEphysSource:
         """`core.devices`, one row per distinct chain element (R66 §2.3)."""
         rows: dict[str, dict[str, Any]] = {}
         for probe in self._probes():
-            for kind, key, part, serial, firmware, hardware, parent in CHAIN:
+            for kind, key, part, serial, firmware, hardware, parent, port in CHAIN:
                 if any(probe.get(k) is None for k in key):
                     continue
                 identifier = _identity((kind, key), probe)
@@ -129,19 +139,26 @@ class OpenEphysSource:
                     # R67 §2.1: each element names the one below it in the chain. A basestation
                     # is the root here, because nothing in this file describes the PXI chassis.
                     "parent_device_id": _identity(parent, probe) if parent else None,
+                    # R85 §2.1: and where the file coordinates that link, which port of it.
+                    "parent_port": probe.get(port) if port else None,
                     "metadata": {k: probe[k] for k in key if k in probe} or None,
                 }
         return [rows[name] for name in sorted(rows)]
 
-    def attachments(self) -> dict[str, str]:
-        """Which headstage each probe was in, keyed by the name the acquisition gave it.
+    def attachments(self) -> dict[str, dict[str, str | None]]:
+        """Which headstage each probe was in and on which dock, by the acquisition's name for it.
 
         `custom_probe_name` is what Open Ephys calls the probe and what the NWB names its
         Device, so the two join without going through a serial number -- which matters for a
-        quad-base probe, where one serial covers four stream names (R67 §1.2).
+        quad-base probe, where one serial covers four stream names (R67 §1.2). The dock is the
+        probe's `parent_port` (R85 §2.1), and it does not distinguish those four: all four bases
+        report one dock, which is why R85 §2.3 keeps a port out of identity.
         """
         return {
-            name: _identity(("headstage", ("slot", "port")), probe)
+            name: {
+                "parent_device_id": _identity(("headstage", ("slot", "port")), probe),
+                "parent_port": probe.get(PROBE_PORT),
+            }
             for probe in self._probes()
             if (name := probe.get("custom_probe_name")) and all(k in probe for k in ("slot", "port"))
         }
@@ -176,4 +193,4 @@ def _stated(value: str | None) -> str | None:
     return None if value is None or value in UNSET else value
 
 
-__all__ = ["CHAIN", "SETTINGS", "OpenEphysSource"]
+__all__ = ["CHAIN", "PROBE_PORT", "SETTINGS", "OpenEphysSource"]

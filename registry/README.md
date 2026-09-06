@@ -6,7 +6,7 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 <!-- BEGIN generated: counts -->
 ```
-35 tables, 307 columns, 76 references, 68 Tier 2 rules
+35 tables, 308 columns, 76 references, 68 Tier 2 rules
 ```
 <!-- END generated: counts -->
 

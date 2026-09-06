@@ -100,10 +100,13 @@ A physical instrument used during acquisition.
 - SHOULD declare manufacturer, model, and serial number where its source states them.
 - SHOULD declare the **hardware revision** and **firmware version** it was running (R66 §2.1).
 - SHOULD name the device it was **attached to**, where a source states it (R67 §2.1).
+- SHOULD declare **which port** of that device it occupied, where a source states it (R85 §2.1).
 
 A serial number identifies the object; its firmware determines what the object does. Two sessions can record the same make, model and serial and need interpreting differently, so a version is not an identifier's decoration but a separate fact.
 
 A consumer MAY walk from a probe to the hardware that acquired it, and MAY group probes by any element of the chain they share (R67 §2.4) — which is the question the chain exists to answer. It MUST NOT infer attachment from a device's name: a name is unconstrained by this standard, and the reference is the statement.
+
+Attachment names a device, and which place on that device a child occupied is a second fact. A device SHOULD declare the port, dock or slot of its parent it attached to, where a source states one (R85 §2.1). Where it declares none the coordinate is **unrecorded**, and a consumer MUST report it as such rather than parse it out of a name (R85 §2.2). Two devices sharing a parent and a port are not one device, and nothing declares that they are: the four bases of a quad-base probe occupy a single dock, so a port says where something was plugged in and not what it was (R85 §2.3).
 
 A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT create a second device row for one instrument (R67 §2.2). Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor (R67 §2.3, §2.4).
 

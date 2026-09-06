@@ -152,7 +152,7 @@ for _role, _names in {
         "insertion_name", "institution", "inter_sample_shift", "is_primary", "kind", "label",
         "local_channel_label", "local_electrode_label", "local_unit_label", "manufacturer", "metadata",
         "model", "modified_at", "n_spikes", "name", "normalized_label", "notes", "offset", "origin",
-        "origin_value", "parameters", "payload", "probe_type", "pts", "pts_rate_den",
+        "origin_value", "parameters", "parent_port", "payload", "probe_type", "pts", "pts_rate_den",
         "pts_rate_num", "quality_label",
         "quality_label_source", "reason", "rewarded", "sample_rate_hz", "scope",
         "semantic_type", "serial_number", "session_description", "session_end_time", "session_start_time",
@@ -1241,6 +1241,22 @@ def build() -> dict:
                         "resource_columns": ["electrode_id"]}],
         "sort": ["session_id", "sorting_run_id", "channel_index"],
         "rules": [], "since": SINCE[0]}
+
+    # ---- R85 §2.1 : a device declares the port it attached to -----------------------------------
+    # R67 §2.1 gave the chain its reference and stopped at which device; which *port of it* was
+    # left in the child's name, and R67 §2.1 forbids reading a name. Thirteen of twenty rows have
+    # no serial and repeat their part number, so position is what keeps them apart -- the name
+    # cannot be cleaned up, and the fact moves into a column instead. Open, because the coordinate
+    # a link is named by differs along the chain: a probe attaches to a dock, a headstage to a
+    # port, a card to a slot. Nullable, since a writer knowing the parent and not the port must
+    # leave it unstated rather than invent one (R66 §1.4).
+    SINCE[0] = "R85 §2.1"
+    add_col("core.devices",
+            col("parent_port", "string", "nullable",
+                "Which port, dock or slot of `parent_device_id` this device attached to. Null "
+                "where the attachment is stated and its coordinate is not. Establishes nothing "
+                "about identity: two rows may share a parent and a port (R85 §2.3)."),
+            after="parent_device_id")
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates

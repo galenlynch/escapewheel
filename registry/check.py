@@ -255,6 +255,43 @@ print(f"      {len(NAMING)} conventions over {sum(len(t['columns']) for t in ALL
       f"{len(NAMING_EXCEPTIONS)} declared exceptions")
 
 
+#: R85 §2.2. Name columns that name a **kind** of thing rather than one assigned identifier's
+#: value, and are therefore expected to repeat. Declared rather than inferred, for the reason
+#: NAMING_EXCEPTIONS is: a set absorbing whatever has no `*_id` sibling today would absorb the
+#: next identifier whose name column was added without one.
+NAMES_A_KIND = {
+    "core.array_dimensions.dimension_name": "an axis's name, repeated across every array",
+    "analysis.array_dimensions.dimension_name": "as core.array_dimensions.dimension_name",
+    "core.probes.insertion_name": "the trajectory the probe was inserted along, not the probe",
+    "core.processing_runs.software_name": "what ran, so every run of one tool repeats it",
+    "core.sessions.task_name": "which task, so every session running it repeats the name",
+    "core.sorting_runs.sorter_name": "as software_name, per sorting",
+    "dynamic_foraging.sessions.auto_train_curriculum_name": "which curriculum, not which session",
+    "vr_foraging.sessions.curriculum_name": "as auto_train_curriculum_name",
+    "vr_foraging.sessions.curriculum_stage_name": "which stage of it",
+}
+
+# R85 §2.2. Which `*_name` columns carry the uniqueness obligation: the ones naming an assigned
+# identifier of their own table. No rule can enforce it -- a writer numbering per distinct name
+# has already merged two things into one row, and that merge is what R67 §2.2 requires of four
+# streams naming one serial -- so the registry says which columns it falls on and `02` §8.2 states
+# the counts. Everything else must be declared above, so a new name column is a decision.
+named = {}
+for tid, tbl in ALL.items():
+    owned = {c["name"]: c for c in tbl["columns"]}
+    for c in tbl["columns"]:
+        if c["name"].endswith("_name"):
+            identifier = owned.get(f"{c['name'][:-len('_name')]}_id") or {}
+            named[f"{tid}.{c['name']}"] = identifier.get("identity") == "assigned"
+check("a name column names an assigned identifier, or is declared to name a kind of thing",
+      sorted(n for n, paired in named.items() if not paired and n not in NAMES_A_KIND))
+check("every column declared to name a kind of thing still exists and still names one",
+      sorted(n for n in NAMES_A_KIND if named.get(n, True)))
+core_unique = sum(1 for n, paired in named.items() if paired and not n.startswith(tuple(EXT)))
+print(f"      {sum(named.values())} name columns must be unique within a packet (R85 §2.2), "
+      f"{core_unique} of them in core and analysis; {len(NAMES_A_KIND)} name a kind of thing")
+
+
 # R55 §2.2, §2.3.2. What a discriminator declares, checked where the meta-schema cannot: the
 # enum constrains the value but not that a discriminator has one, and `resolves` on anything else
 # is a declaration that decides nothing.
