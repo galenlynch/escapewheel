@@ -1,0 +1,18 @@
+{
+  "$schema": "https://nwb-lake.org/schemas/sources/0.1.0",
+  "sources_standard_version": "nwb-lake-sources-v0.1",
+  "description": "Where an on-prem reader finds the assets the two demonstration packets reference.",
+  "sources": {
+    "ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31": {
+      "uri": "s3://aind-open-data/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb",
+      "description": "The Zarr-backed NWB holding twelve referenced LFP series."
+    },
+    "ecephys_786867_2025-09-25_12-43-56_nwb": {
+      "uri": "s3://aind-open-data/ecephys_786867_2025-09-25_12-43-56/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb"
+    },
+    "ecephys_786867_2025-09-25_12-43-56_behavior_videos": {
+      "uri": "/scratch/staged/ecephys_786867_2025-09-25_12-43-56/behavior-videos",
+      "description": "Staged onto a compute node's local disk, which is why this one is a path."
+    }
+  }
+}

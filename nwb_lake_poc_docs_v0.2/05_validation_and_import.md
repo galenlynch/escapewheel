@@ -210,3 +210,9 @@ MUST NOT be judged non-conforming for lacking one (R75 §2.2).
 A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would
 produce. Two conforming builds of one dataset may record different digests for the same rows
 (R75 §2.3).
+
+## 11. Alternatives are resolved before a commit
+
+Where two or more `core.processing_runs` rows share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not (R82 §2.1). Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` (R82 §2.2) — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
+
+Both are checked at `error` level. R41 §2.4's rule that a consumer MUST NOT silently choose stands and becomes unreachable on a conforming packet: a consumer that meets an unresolved alternative is holding a packet that failed validation and reports that (R82 §2.3). Nothing here forbids a packet holding two sortings of one probe or two curations of one sorting (R82 §2.4); what it requires is that the packet says which is current.

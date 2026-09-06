@@ -146,7 +146,7 @@ class _Buckets:
     76.6 s.
 
     Bucketing by time and sorting by unit inside each bucket needs no global sort, because
-    `core.spike_events` is already ordered by `(sorting_run_id, curation_id, unit_id, t_tick)`
+    `core.spike_events` is already ordered by `(session_id, unit_id, t_tick)` (R81 §2.4)
     (R10 §2, `03`). Visiting it in that order and appending each row to its bucket's file
     leaves every file in exactly the intra-bucket order R30 §3.2 declares. What remains is to
     concatenate the files in bucket order, which is a second pass and no comparisons.
@@ -290,7 +290,7 @@ def spike_events(
     dropped = [0] if dropped is None else dropped
     by_clock = anchors(packet)
     handle = packet.table_resource("core.spike_events")
-    columns = ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick", "clock_id"]
+    columns = ["session_id", "unit_id", "t_tick", "clock_id"]
     # Types come from the registry rather than being spelled here. They were dictionary-coded
     # strings until R53 made every identifier an `int32`, and the machinery that avoided
     # decoding them -- 9.13 GB of Arrow per 40 row groups -- has nothing left to avoid: four
@@ -321,8 +321,6 @@ def spike_events(
                 {
                     "session_id": batch.column("session_id").take(taken),
                     "unit_id": batch.column("unit_id").take(taken),
-                    "sorting_run_id": batch.column("sorting_run_id").take(taken),
-                    "curation_id": batch.column("curation_id").take(taken),
                     "t_tick": pa.array(ticks, type=pa.int64()),
                     # Every row is on the reference clock by construction, so this is one
                     # value repeated rather than a column read from the source.

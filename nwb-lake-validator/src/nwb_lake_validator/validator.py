@@ -28,6 +28,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from nwb_lake_reader import Packet, PacketError, ResourceUnreadableError, sql_name
+from nwb_lake_reader.location import SOURCES_FILENAME
 
 from .generate import adjacency_settles_uniqueness, concerns, generate
 from .stores import StoreUnreachable, digest, listing, read_member
@@ -415,7 +416,11 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     Storage, not values, so the shim and not SQL (R12 §4). No query can see a chunk grid, and
     a codec the manifest omits is exactly the kind of disagreement a SQL rule passes silently.
     """
-    owned = [r for r in packet.resources(kind="dense_array_asset") if not r.is_external]
+    # A resource naming a source is not packet-owned whatever `external` says, and `_check_sources`
+    # has already reported the contradiction; resolving it here would raise instead of report.
+    owned = [
+        r for r in packet.resources(kind="dense_array_asset") if not r.is_external and r.source is None
+    ]
     if not owned:
         return
     extents = _declared_extents(packet)
@@ -536,6 +541,69 @@ def _check_owned_digests(packet: Packet, report: Report) -> None:
             "info",
             "owned.verified",
             f"{matched} of {checked} packet-owned resource(s) digested to what the manifest records",
+        )
+
+
+def _check_sources(packet: Packet, report: Report) -> None:
+    """R80: what a source declaration must be, decided without reaching the network.
+
+    Three things are structural and one is not. A `source` names a body of data rather than a
+    location, so the entry's `uri` MUST be relative to it (R80 §2.1) and the entry MUST be
+    external, since the mechanism exists for bytes the packet does not own. `sources.json` MUST
+    NOT be a declared resource (R80 §2.3): being outside the manifest is what keeps R14 §2.3's
+    immutability off it, and a packet that declared it would freeze the one file that has to
+    stay editable.
+
+    Whether a source **resolves** is not structural and is reported rather than failed. R80 §2.4
+    makes an unresolved source a fact about the reader's situation -- which mirrors it can reach
+    -- and R14 §2.3.2 keeps structural validation off the network, so this reports what the
+    packet names and leaves reachability to the mode that asks for it.
+    """
+    named: dict[str, list[str]] = {}
+    for resource in packet.resources():
+        source = resource.source
+        if source is None:
+            if Path(str(resource.entry.get("uri", ""))).name == SOURCES_FILENAME:
+                report.add(
+                    "error",
+                    "sources.declared",
+                    f"{resource.resource_id} declares {SOURCES_FILENAME} as a resource; R80 §2.3 keeps it "
+                    "outside the manifest so R14 §2.3's immutability does not reach it",
+                )
+            continue
+        named.setdefault(source, []).append(resource.resource_id)
+        if not resource.is_external:
+            report.add(
+                "error",
+                "source.not_external",
+                f"{resource.resource_id} names source {source!r} without external: true; a source locates "
+                "bytes the packet does not own (R80 §2.1)",
+            )
+        if "://" in resource.uri:
+            report.add(
+                "error",
+                "source.absolute_uri",
+                f"{resource.resource_id} names source {source!r} and an absolute uri {resource.uri!r}; "
+                "where a source is named the uri is a path under it (R80 §2.1)",
+            )
+    if not named:
+        return
+    located = dict(packet.location.sources)
+    unresolved = sorted(name for name in named if name not in located)
+    report.add(
+        "info",
+        "sources.declared_count",
+        f"{len(named)} source(s) named by {sum(len(v) for v in named.values())} resource(s); "
+        f"{len(named) - len(unresolved)} located by a resolution document",
+    )
+    if unresolved:
+        # A fact, not a defect (R80 §2.4): the packet is conforming and this reader cannot reach
+        # those bytes. Reported so a report says which, rather than leaving it to a later failure.
+        report.add(
+            "info",
+            "sources.unresolved",
+            f"{len(unresolved)} source(s) no available resolution document locates (R80 §2.4)",
+            [(name, ", ".join(named[name][:3])) for name in unresolved[:20]],
         )
 
 
@@ -1301,7 +1369,9 @@ def _run_rules(
 ) -> None:
     """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
     with _spill_beside(packet) as spill:
-        connection = _bounded(packet.duckdb(), LIMITS if limits is None else limits, spill)
+        # Every table, because a validator runs every rule: this is the one caller that
+        # wants what the reader stopped doing by default.
+        connection = _bounded(packet.duckdb(tables="all"), LIMITS if limits is None else limits, spill)
         try:
             # A Tier 2 rule may reference a table other than the one it is declared on --
             # core.clocks.one_alignment_model reads core.clock_anchors, for instance. A packet that
@@ -1560,6 +1630,7 @@ def validate(
 
     if embedded is not None:
         _check_embedded_registry(packet, embedded, report)
+    _check_sources(packet, report)
     _check_codec_declarations(packet, report, resolved=external)
     if external:
         _resolve_external(packet, report, checksums, store_digests)

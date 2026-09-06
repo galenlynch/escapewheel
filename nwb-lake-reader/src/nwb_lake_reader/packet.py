@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import contextlib
 import json
+import re
 import warnings
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -15,14 +16,20 @@ import pyarrow.dataset as pads
 
 from .clocks import NotAligned, anchors, on_clock, origin, seconds, stored_span
 from .errors import ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
+from .location import SOURCES_FILENAME, Location, Rewrite, Sources, read_sources
 from .manifest import Manifest, Resource
-from .observation import attach_support, register_views, unit_windows
+from .observation import VIEWS, attach_support, register_views, unit_windows
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity
 from .runs import check as _check_runs
+from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
+
+    # By name as well as by module: inside the class body `duckdb` is the method, so a
+    # `duckdb.DuckDBPyConnection` annotation after it resolves to the wrong thing.
+    from duckdb import DuckDBPyConnection
 
 #: What a column constraint may be: a scalar for equality, a two-item tuple for a closed
 #: range, or None to leave the column unconstrained.
@@ -55,17 +62,17 @@ class Packet:
     packet that partitions a table or relocates a file stays readable without changes here.
     """
 
-    def __init__(self, root: Path, manifest: Manifest) -> None:
+    def __init__(self, root: Location | Path | str, manifest: Manifest) -> None:
         """Wrap an already-parsed manifest at a packet root.
 
         Parameters
         ----------
-        root : Path
-            Packet root directory.
+        root : Location, Path, or str
+            Packet root: a local directory or a store prefix such as ``s3://bucket/prefix``.
         manifest : Manifest
             The parsed manifest.
         """
-        self._root = root
+        self._root = Location.of(root)
         self._manifest = manifest
         self._by_id = {r.resource_id: r for r in manifest.resources}
         self._anchor_cache: dict[str, Any] | None = None
@@ -77,7 +84,18 @@ class Packet:
 
     @property
     def root(self) -> Path:
-        """The packet root directory."""
+        """The packet root directory.
+
+        Raises
+        ------
+        ResourceUnreadableError
+            If the packet is in a store, which has no directory. Use :attr:`location`.
+        """
+        return self._root.path
+
+    @property
+    def location(self) -> Location:
+        """Where the packet is, local or in a store."""
         return self._root
 
     @property
@@ -249,10 +267,10 @@ class Packet:
         dict or None
             The parsed registry, or None if the packet does not embed one.
         """
-        path = self._root / REGISTRY_PATH
-        if not path.is_file():
+        try:
+            parsed: dict[str, Any] = json.loads(self._root.join(REGISTRY_PATH).read_bytes())
+        except Exception:  # noqa: BLE001 - a packet without an embedded registry is conforming
             return None
-        parsed: dict[str, Any] = json.loads(path.read_text())
         return parsed
 
     def extensions(self) -> dict[str, dict[str, Any]]:
@@ -276,13 +294,10 @@ class Packet:
             location = entry.get("registry") if isinstance(entry, Mapping) else None
             if not location:
                 continue
-            path = self._root / str(location)
-            if not path.is_file():
-                continue
-            try:
-                loaded[extension_id] = json.loads(path.read_text())
-            except ValueError:
-                continue
+            # `09` §6 makes verifying that a declared file exists the validator's job, so an
+            # unreadable one is left out rather than raised.
+            with contextlib.suppress(Exception):
+                loaded[extension_id] = json.loads(self._root.join(str(location)).read_bytes())
         return loaded
 
     # -- codec capability -------------------------------------------------------------
@@ -398,8 +413,20 @@ class Packet:
         """
         return self.table_resource(resource_id).dataset()
 
-    def duckdb(self, *, connection: duckdb.DuckDBPyConnection | None = None) -> duckdb.DuckDBPyConnection:
-        """Register every table resource as a view and return the connection.
+    def duckdb(
+        self,
+        *,
+        connection: duckdb.DuckDBPyConnection | None = None,
+        tables: Collection[str] | Literal["all"] | None = None,
+        for_query: str | None = None,
+    ) -> duckdb.DuckDBPyConnection:
+        """Register table resources as views and return the connection.
+
+        **Nothing is registered unless asked for.** DuckDB binds a view when it is created, and
+        binding a Parquet view reads that file's footer -- free on local disk and a round trip
+        per table in an object store, which for a 28-table packet was 3.5 s before the first
+        query ran. Name what a query needs, or pass the query as `for_query` and let this work
+        it out.
 
         Views are named by flattening the dotted resource ID, so ``core.intervals`` is queried
         as ``core_intervals``. `unit_observation` and `stream_observation` are registered
@@ -411,11 +438,18 @@ class Packet:
         connection : duckdb.DuckDBPyConnection, optional
             An existing connection to register into. A new in-memory one is created if
             omitted.
+        tables : collection of str or "all", optional
+            Which table resources to register, by dotted resource ID. ``"all"`` registers
+            every one, which is what a validator wants and what a query rarely does. The
+            default registers none.
+        for_query : str, optional
+            SQL to read table names out of, registering those and the inputs of any view it
+            names. Combines with `tables`.
 
         Returns
         -------
         duckdb.DuckDBPyConnection
-            The connection, with every readable table resource registered.
+            The connection, with the requested table resources registered.
         """
         if connection is not None:
             con = connection
@@ -429,14 +463,36 @@ class Packet:
                     "TableResource.dataset() all go through PyArrow."
                 ) from exc
             con = _duckdb.connect()
-        tables = self.resources(kind="table") + self.resources(kind="materialized_table")
-        if any(not TableResource(r, self._root).is_local for r in tables):
+        declared = self._table_resources()
+        if any(not TableResource(r, self._root).is_local for r in declared):
             _prepare_remote(con)
+        wanted = {r.resource_id for r in declared} if tables == "all" else set(tables or ())
+        if for_query is not None:
+            wanted |= self._named_in(for_query)
+        self._register(con, wanted)
+        return con
+
+    def _table_resources(self) -> tuple[Resource, ...]:
+        """Every resource a SQL engine can be given, tabular or materialized."""
+        return self.resources(kind="table") + self.resources(kind="materialized_table")
+
+    def _register(self, connection: DuckDBPyConnection, wanted: Collection[str]) -> None:
+        """Register the named tables that are not on this connection already, then the views.
+
+        Asking the connection what it holds rather than remembering keeps this correct when a
+        caller registers something itself, and costs one local query against a round trip per
+        table saved.
+        """
+        if not wanted:
+            return
+        # `internal` excludes DuckDB's own catalog views, which are numerous and none of ours.
+        held = {row[0] for row in connection.sql("SELECT view_name FROM duckdb_views() WHERE NOT internal").fetchall()}
         skipped = []
-        for resource in tables:
-            handle = TableResource(resource, self._root)
+        for resource in self._table_resources():
+            if resource.resource_id not in wanted or sql_name(resource.resource_id) in held:
+                continue
             try:
-                handle.register(con)
+                TableResource(resource, self._root).register(connection)
             except ResourceUnreadableError as exc:
                 # Not silently: an unregistered view fails later as "table does not exist",
                 # which points at the query rather than at the resource that could not be read.
@@ -448,12 +504,34 @@ class Packet:
                 stacklevel=2,
             )
         # After the tables, because DuckDB binds a view at creation and one over a table this
-        # packet does not declare is refused rather than deferred.
-        register_views(con)
-        return con
+        # packet does not declare is refused rather than deferred. Re-run rather than run once:
+        # a view skipped for want of an input gains it when that input is registered later.
+        # What the packet declares is passed separately from what is registered, so a view whose
+        # refinements table exists but is not yet registered is skipped rather than built without
+        # its guard (R38 §2) -- which would answer, wrongly, instead of not answering.
+        register_views(connection, [sql_name(r.resource_id) for r in self._table_resources()])
+
+    def _named_in(self, query: str) -> set[str]:
+        """Which declared tables a query mentions, including the ones its views are built on.
+
+        Registering a table a query does not use costs one footer read; leaving out one it does
+        use fails the query, so this errs towards registering. Matching is on whole words, so a
+        name inside a string literal or a column name still counts -- which is the safe way to
+        be wrong.
+        """
+        words = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", query))
+        needed = set(words)
+        for view, spec in VIEWS.items():
+            if view in words:
+                needed |= set(spec["declared"][0]) | set(spec["inherited"][0]) | {spec["refinements"]}
+        return {r.resource_id for r in self._table_resources() if sql_name(r.resource_id) in needed}
 
     def sql(self, query: str) -> pa.Table:
         """Run a query against this packet's tables.
+
+        The tables the query names are registered first, and only those: over an object store
+        each registration is a round trip, so registering a packet's other 27 tables to answer
+        a question about one is most of what the question costs.
 
         Parameters
         ----------
@@ -465,7 +543,7 @@ class Packet:
         pyarrow.Table
             The result.
         """
-        return self.duckdb().sql(query).to_arrow_table()
+        return self.duckdb(for_query=query).sql(query).to_arrow_table()
 
     # -- convenience accessors --------------------------------------------------------
 
@@ -873,20 +951,71 @@ def _prepare_remote(connection: duckdb.DuckDBPyConnection) -> None:
         connection.execute("SET enable_object_cache=true")
 
 
-def open_packet(path: str | Path, *, validate_manifest: bool = True) -> Packet:
+def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | None) -> dict[str, str]:
+    """Work out where each named source is, in the order R80 §2.3 fixes.
+
+    The caller's documents come first, in the order given, then `sources.json` at the packet
+    root if it is there. First match wins, so a caller redirects a source without editing
+    anything. A missing default is not an error -- a packet naming no source needs none, and an
+    unresolved one is a fact rather than a defect (R80 §2.4).
+
+    Parameters
+    ----------
+    root : Location
+        Packet root, where the default document is looked for.
+    supplied : iterable, optional
+        Mappings of source name to URI, or paths to resolution documents.
+
+    Returns
+    -------
+    dict
+        Source name to URI, earlier entries winning.
+    """
+    found: dict[str, str] = {}
+    for one in supplied or ():
+        located = one if isinstance(one, Mapping) else read_sources(Location.of(one))
+        for name, uri in located.items():
+            found.setdefault(name, str(uri))
+    with contextlib.suppress(Exception):
+        # The default is advisory: absent is the common case, and unreadable is the caller's
+        # problem only once something actually asks for a source it would have located.
+        for name, uri in read_sources(root.join(SOURCES_FILENAME)).items():
+            found.setdefault(name, uri)
+    return found
+
+
+def open_packet(
+    path: str | Path | Location,
+    *,
+    validate_manifest: bool = True,
+    rewrite: Rewrite | None = None,
+    sources: Iterable[Sources | str | Path] | None = None,
+) -> Packet:
     """Open a packet for reading.
 
     Parameters
     ----------
-    path : str or Path
-        Packet root directory.
+    path : str, Path, or Location
+        Packet root: a local directory, or a store prefix such as ``s3://bucket/prefix``.
+        `00` §56 admits both, and an object store is where a shared dataset lives.
     validate_manifest : bool, default True
         Whether to check the manifest against its JSON Schema before parsing.
+    rewrite : Mapping, optional
+        Declared-URI prefix to replacement, applied to every resource before it is resolved.
+        R14 §2.3 makes reachability the reader's situation, and a committed packet records the
+        writer's -- so this is how the same bytes are reached from somewhere else without
+        editing bytes R14 §2.3 makes immutable. Longest prefix wins.
+    sources : iterable, optional
+        Source resolution documents (R80 §2.2), as mappings or as paths to read. Consulted
+        before the packet root's own `sources.json`, in the order given.
 
     Returns
     -------
     Packet
         The opened packet.
     """
-    root = Path(path)
-    return Packet(root, Manifest.load(root, validate=validate_manifest))
+    root = Location.of(path, rewrite)
+    return Packet(
+        Location.of(root, rewrite, resolve_sources(root, sources)),
+        Manifest.load(root, validate=validate_manifest),
+    )

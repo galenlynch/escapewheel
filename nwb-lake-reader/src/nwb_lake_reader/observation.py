@@ -52,6 +52,7 @@ one tick; the writer follows the column definition.
 from __future__ import annotations
 
 import json
+from collections.abc import Collection
 from typing import TYPE_CHECKING, Any
 
 import pyarrow as pa
@@ -69,7 +70,9 @@ STREAM_INTERVALS = "core.event_stream_observation_intervals"
 DECLARED = "declared"
 INHERITED = "inherited"
 
-_UNIT_KEY = ("session_id", "unit_id", "sorting_run_id", "curation_id")
+#: What identifies a unit in a result. R81 §2.1 made `unit_id` the whole key; `session_id`
+#: stays because every unit table carries it and a caller filters on it.
+_UNIT_KEY = ("session_id", "unit_id")
 
 
 def _has(packet: Any, resource_id: str) -> bool:
@@ -84,6 +87,7 @@ def _empty(names: tuple[str, ...]) -> pa.Table:
     an `_id` an identifier in int32 (R53 §2.1), and what remains is a label. Pinning them all to
     one type makes the empty result unable to concatenate with a populated one.
     """
+
     def _type(name: str) -> pa.DataType:
         if name.endswith("_tick"):
             return pa.int64()
@@ -160,7 +164,7 @@ def unit_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
     """
     if not _has(packet, "core.units") or not _has(packet, "core.sorting_runs"):
         return _empty(_UNIT_KEY)
-    units = packet.table("core.units", columns=list(_UNIT_KEY), session_id=session_id)
+    units = packet.table("core.units", columns=[*_UNIT_KEY, "sorting_run_id"], session_id=session_id)
     runs = {
         r["sorting_run_id"]: r["clock_id"]
         for r in packet.table("core.sorting_runs", columns=["sorting_run_id", "clock_id"]).to_pylist()
@@ -172,19 +176,22 @@ def unit_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
     rows = []
     for unit in units.to_pylist():
         clock = runs.get(unit["sorting_run_id"])
+        keyed = {k: unit[k] for k in _UNIT_KEY}
         for start, stop in windows.get((unit["session_id"], clock), []):
-            rows.append({**unit, "clock_id": clock, "start_tick": start, "stop_tick": stop, "source": INHERITED})
+            rows.append({**keyed, "clock_id": clock, "start_tick": start, "stop_tick": stop, "source": INHERITED})
     inherited = pa.Table.from_pylist(rows, schema=_empty(_UNIT_KEY).schema) if rows else _empty(_UNIT_KEY)
 
     own = _empty(_UNIT_KEY)
     if _has(packet, UNIT_INTERVALS):
+        # R81 §2.3: the interval row names only the unit, so its run comes from `core.units`.
+        by_unit = {u["unit_id"]: u["sorting_run_id"] for u in units.to_pylist()}
         declared = packet.table(UNIT_INTERVALS, session_id=session_id).to_pylist()
         if declared:
             own = pa.Table.from_pylist(
                 [
                     {
                         **{k: d[k] for k in _UNIT_KEY},
-                        "clock_id": runs.get(d["sorting_run_id"]),
+                        "clock_id": runs.get(by_unit.get(d["unit_id"])),
                         "start_tick": d["start_tick"],
                         "stop_tick": d["stop_tick"],
                         "source": DECLARED,
@@ -273,15 +280,16 @@ VIEWS: dict[str, dict[str, Any]] = {
     "unit_observation": {
         "refinements": "core_unit_observation_intervals",
         "declared": (
-            ("core_unit_observation_intervals", "core_sorting_runs"),
-            """SELECT o.session_id, o.unit_id, o.sorting_run_id, o.curation_id, r.clock_id,
+            ("core_unit_observation_intervals", "core_units", "core_sorting_runs"),
+            """SELECT o.session_id, o.unit_id, r.clock_id,
                       o.start_tick, o.stop_tick, 'declared' AS source
                FROM core_unit_observation_intervals o
-               JOIN core_sorting_runs r ON o.sorting_run_id = r.sorting_run_id""",
+               JOIN core_units u ON o.unit_id = u.unit_id
+               JOIN core_sorting_runs r ON u.sorting_run_id = r.sorting_run_id""",
         ),
         "inherited": (
             ("core_units", "core_sorting_runs", "core_clock_observation_intervals"),
-            """SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id, r.clock_id,
+            """SELECT u.session_id, u.unit_id, r.clock_id,
                       c.start_tick, c.stop_tick, 'inherited' AS source
                FROM core_units u
                JOIN core_sorting_runs r
@@ -292,8 +300,7 @@ VIEWS: dict[str, dict[str, Any]] = {
         ),
         "guard": """WHERE NOT EXISTS (
                    SELECT 1 FROM core_unit_observation_intervals o
-                   WHERE o.session_id = u.session_id AND o.unit_id = u.unit_id
-                     AND o.sorting_run_id = u.sorting_run_id AND o.curation_id = u.curation_id)""",
+                   WHERE o.unit_id = u.unit_id)""",
     },
     "stream_observation": {
         "refinements": "core_event_stream_observation_intervals",
@@ -318,16 +325,26 @@ VIEWS: dict[str, dict[str, Any]] = {
 }
 
 
-def register_views(connection: duckdb.DuckDBPyConnection) -> list[str]:
+def register_views(connection: duckdb.DuckDBPyConnection, declared: Collection[str] | None = None) -> list[str]:
     """Register the observation views, using whichever branches the packet can bind.
 
     A view with no usable branch is skipped, so a packet carrying no observation tables offers
     no resolved window rather than an empty one that looks answered.
 
+    `declared` is what the **packet** holds, against which `connection` holds whatever has been
+    registered so far. The two differ once registration is by demand rather than wholesale, and
+    conflating them is a silent wrong answer: a refinements table that exists but is not yet
+    registered makes `refined` false, which drops the guard and returns an inherited window for
+    every unit that has a declared one. So a view whose refinements table the packet holds and
+    the connection lacks is skipped rather than built, and gets built when that table arrives.
+
     Parameters
     ----------
     connection : duckdb.DuckDBPyConnection
-        A connection with the packet's tables already registered.
+        A connection with some of the packet's tables registered.
+    declared : collection of str, optional
+        SQL names of every table the packet declares. Defaults to what is registered, which is
+        correct only when everything has been.
 
     Returns
     -------
@@ -340,9 +357,13 @@ def register_views(connection: duckdb.DuckDBPyConnection) -> list[str]:
             "SELECT table_name FROM duckdb_tables() UNION SELECT view_name FROM duckdb_views()"
         ).fetchall()
     }
+    held = known if declared is None else set(declared)
     made = []
     for name, spec in VIEWS.items():
-        refined = spec["refinements"] in known
+        refinements = spec["refinements"]
+        if refinements in held and refinements not in known:
+            continue
+        refined = refinements in known
         branches = []
         needs, sql = spec["declared"]
         if known.issuperset(needs):

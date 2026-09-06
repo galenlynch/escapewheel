@@ -19,9 +19,11 @@ from .errors import (
     PacketError,
     ResourceNotFoundError,
     ResourceUnreadableError,
+    UnresolvedSource,
     UnsupportedCodecError,
 )
-from .manifest import Manifest, Resource
+from .location import Location, read_sources
+from .manifest import Manifest, Resource, sources_schema
 from .observation import (
     StaleSupport,
     clock_windows,
@@ -33,7 +35,7 @@ from .observation import (
     support_of,
     unit_windows,
 )
-from .packet import BASELINE_CODECS, STORED, Packet, Predicate, open_packet
+from .packet import BASELINE_CODECS, STORED, Packet, Predicate, open_packet, resolve_sources
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity, ambiguities, preferred_run
 from .sql import quote, sql_name
@@ -48,6 +50,7 @@ __all__ = [
     "AmbiguousRun",
     "ArrayResource",
     "ClockMismatch",
+    "Location",
     "Manifest",
     "ManifestError",
     "NoTimeOrigin",
@@ -61,6 +64,7 @@ __all__ = [
     "StaleSupport",
     "TableResource",
     "Unanchored",
+    "UnresolvedSource",
     "UnsupportedCodecError",
     "__version__",
     "align",
@@ -77,7 +81,10 @@ __all__ = [
     "quote",
     "rate",
     "rate_of",
+    "read_sources",
+    "resolve_sources",
     "seconds",
+    "sources_schema",
     "sql_name",
     "stream_windows",
     "support_of",

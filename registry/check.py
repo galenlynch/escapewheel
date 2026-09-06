@@ -374,6 +374,16 @@ try:
     manifest = json.loads((HERE / "manifest.schema.json").read_text())
     jsonschema.Draft202012Validator.check_schema(manifest)
     check("manifest schema is valid JSON Schema", [])
+    # R80 §2.2's sidecar is specified the way the manifest is, so it is checked the way the
+    # manifest is: valid JSON Schema here, vendored by build.py, compared by the loop above.
+    _sources = json.loads((HERE / "sources.schema.json").read_text())
+    jsonschema.Draft202012Validator.check_schema(_sources)
+    check("source resolution schema is valid JSON Schema", [])
+    _example = HERE / "sources.example.json"
+    check("the example resolution document validates against it",
+          [f"{list(e.path)[:4]} {e.message[:60]}"
+           for e in jsonschema.Draft202012Validator(_sources).iter_errors(
+               json.loads(_example.read_text()))] if _example.exists() else [])
     # The prototype argues that the format drives the tooling, which is worth nothing if its
     # own input is a document the format rejects. It drifted 16 errors out of conformance
     # unnoticed -- 13 columns with no `role` after R48, two tables with no `rules`.

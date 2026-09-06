@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-34 tables, 315 columns, 76 references, 66 Tier 2 rules
+34 tables, 303 columns, 74 references, 65 Tier 2 rules
 registry 0.1.0   logical standard nwb-lake-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82
 ```
 
 ## Contents
@@ -86,18 +86,16 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** |  | Session ID. |
 | `unit_id` | int32 | **required** |  | Unit ID. |
-| `sorting_run_id` | int32 | **required** |  | Sorting run ID. |
-| `curation_id` | int32 | **required** |  | Curation ID. |
 | `t_tick` | int64 | **required** |  | Spike tick on clock_id, mapped through core.clock_anchors. |
 | `clock_id` | int32 | **required** |  | The clock these ticks are on, normally the session's reference. |
 | `time_bucket_tick` | int64 | **required** | R30 §3.1 | First tick of the bucket this spike falls in, on clock_id. |
 
-**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `t_tick`  
-**Sort** — `session_id`, `clock_id`, `time_bucket_tick`, `sorting_run_id`, `curation_id`, `unit_id`, `t_tick`
+**Primary key** — `session_id`, `unit_id`, `t_tick`  
+**Sort** — `session_id`, `clock_id`, `time_bucket_tick`, `unit_id`, `t_tick`
 
 **References**
 
-- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+- `unit_id` → `core.units` (`unit_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
 **Tier 2 rules** — 2
@@ -656,8 +654,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.processing_runs.materialization_records_software` — error: a materialization run does not record the software that produced it
 - `core.processing_runs.supersedes_not_self` — error: a run supersedes_run_id itself
 - `core.processing_runs.supersedes_well_founded` — error: the supersedes chain contains a cycle
-- `core.processing_runs.undeclared_currency` — info *(advisory, R26)*: several runs share an activity and scope and none is preferred, so a consumer cannot choose between them
-- `core.processing_runs.scope_undeclared` — info *(advisory, R26)*: an activity has several runs and at least one records no scope, so whether they compete cannot be determined
+- `core.processing_runs.undeclared_currency` — error: several runs share an activity and scope and none is preferred, so a consumer cannot choose between them (R82 §2.1)
+- `core.processing_runs.scope_undeclared` — error: an activity has several runs and at least one records no scope, so whether they compete cannot be determined (R82 §2.2)
 - `core.processing_runs.scope_pair_complete` — error: a run declares one half of its scope; the pair is what carries the meaning (R49 §2.4)
 
 ### `core.session_experimenters`
@@ -764,22 +762,19 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** |  | Session ID. |
 | `unit_id` | int32 | **required** |  | Unit ID. |
-| `sorting_run_id` | int32 | **required** |  | Sorting run ID. |
-| `curation_id` | int32 | **required** |  | Curation ID. |
 | `t_tick` | int64 | **required** |  | Spike tick. |
 | `clock_id` | int32 | **required** |  | Clock ID. |
 | `amplitude` | float32 | nullable |  | Spike amplitude if available. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
-**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `t_tick`  
-**Sort** — `session_id`, `sorting_run_id`, `curation_id`, `unit_id`, `t_tick`
+**Primary key** — `session_id`, `unit_id`, `t_tick`  
+**Sort** — `session_id`, `unit_id`, `t_tick`
 
 **References**
 
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
-- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
-- `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
+- `unit_id` → `core.units` (`unit_id`)
 
 **Tier 2 rules** — 2
 
@@ -810,8 +805,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | R28 §2-4 | Session ID. |
 | `unit_id` | int32 | **required** | R28 §2-4 | Unit ID. |
-| `sorting_run_id` | int32 | **required** | R28 §2-4 | Sorting run ID. |
-| `curation_id` | int32 | **required** | R28 §2-4 | Curation ID. |
 | `coordinate_frame` | string | **required** | R28 §2-4 | The frame these coordinates are in. Open, as R19 §3 left it. |
 | `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
 | `region_id` | int32 | nullable | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
@@ -821,12 +814,12 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `y_um` | float64 | nullable | R28 §2-4 | Y in micrometres. |
 | `z_um` | float64 | nullable | R28 §2-4 | Z in micrometres. |
 
-**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `coordinate_frame`, `coordinate_basis`  
+**Primary key** — `session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`  
 **Sort** — the primary key (R10 §2)
 
 **References**
 
-- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+- `unit_id` → `core.units` (`unit_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
 ### `core.unit_electrodes`
@@ -837,18 +830,16 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | R28 §2-4 | Session ID. |
 | `unit_id` | int32 | **required** | R28 §2-4 | Unit ID. |
-| `sorting_run_id` | int32 | **required** | R28 §2-4 | Sorting run ID. |
-| `curation_id` | int32 | **required** | R28 §2-4 | Curation ID. |
 | `electrode_id` | int32 | **required** | R28 §2-4 | An electrode this unit was detected on. |
 | `channel_index` | int64 | nullable | R50 §2 | 0-based position of this electrode in the unit's channel list, where a dense array axis is indexed by it (R20 §2). Nothing joins on it. |
 | `is_primary` | bool | nullable | R28 §2-4 | Whether this is the unit's peak electrode. |
 
-**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `electrode_id`  
+**Primary key** — `session_id`, `unit_id`, `electrode_id`  
 **Sort** — the primary key (R10 §2)
 
 **References**
 
-- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+- `unit_id` → `core.units` (`unit_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
 
 **Tier 2 rules** — 2
@@ -864,18 +855,16 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | R18 §2 | Session ID. |
 | `unit_id` | int32 | **required** | R18 §2 | Unit ID. |
-| `sorting_run_id` | int32 | **required** | R18 §2 | Sorting run ID. |
-| `curation_id` | int32 | **required** | R18 §2 | Curation ID. |
 | `start_tick` | int64 | **required** | R18 §2 | First tick, inclusive. |
 | `stop_tick` | int64 | **required** | R18 §2 | Last tick, inclusive. |
 | `clock_id` | int32 | **required** | R18 §2 | Clock for the interval bounds. |
 
-**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `start_tick`  
+**Primary key** — `session_id`, `unit_id`, `start_tick`  
 **Sort** — the primary key (R10 §2)
 
 **References**
 
-- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+- `unit_id` → `core.units` (`unit_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
 **Tier 2 rules** — 2
@@ -891,19 +880,17 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | R16 §2-3 | Session ID. |
 | `unit_id` | int32 | **required** | R16 §2-3 | Unit ID. |
-| `sorting_run_id` | int32 | **required** | R16 §2-3 | Sorting run ID. |
-| `curation_id` | int32 | **required** | R16 §2-3 | Curation ID. |
 | `source` | string | **required** | R16 §2-3 | What produced the label, e.g. kilosort, decoder, bombcell. |
 | `label` | string | **required** | R16 §2-3 | The source's own label, verbatim. |
 | `normalized_label` | string | nullable | R16 §2-3 | Declared projection onto the closed set. Null where the source's label does not project. |
 | `confidence` | float64 | nullable | R16 §2-3 | The source's confidence, where it reports one. |
 
-**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`, `source`  
+**Primary key** — `session_id`, `unit_id`, `source`  
 **Sort** — the primary key (R10 §2)
 
 **References**
 
-- `session_id`, `unit_id`, `sorting_run_id`, `curation_id` → `core.units` (`session_id`, `unit_id`, `sorting_run_id`, `curation_id`)
+- `unit_id` → `core.units` (`unit_id`)
 
 **Tier 2 rules** — 1
 
@@ -915,21 +902,21 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** |  | Session ID. |
 | `unit_id` | int32 | **required** |  | Stable unit ID. |
+| `unit_name` | string | nullable | R53 §2.3.1 | What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `probe_id` | int32 | nullable |  | Probe ID. |
 | `sorting_run_id` | int32 | **required** |  | Sorting run ID. |
 | `curation_id` | int32 | **required** |  | Curation ID. |
 | `local_unit_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `quality_label` | string | nullable | R11 §3-4 | Quality label. |
 | `quality_label_source` | string | nullable | R16 §2-3 | Which core.unit_quality_labels source the designated label came from. |
-| `default_electrode_id` | int32 | nullable |  | Default electrode. |
 | `firing_rate_hz` | float64 | nullable |  | Firing rate if known. |
 | `n_spikes` | int64 | nullable | R5 | Total spikes for this unit in this context. |
 | `first_spike_tick` | int64 | nullable | R5 | Lowest t_tick for this unit. |
 | `last_spike_tick` | int64 | nullable | R5 | Highest t_tick for this unit. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
-**Primary key** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`  
-**Sort** — `session_id`, `unit_id`, `sorting_run_id`, `curation_id`
+**Primary key** — `unit_id`  
+**Sort** — `unit_id`
 
 **References**
 
@@ -937,12 +924,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `probe_id` → `core.probes` (`probe_id`)
 - `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
 - `curation_id` → `core.curation_versions` (`curation_id`)
-- `default_electrode_id` → `core.electrodes` (`electrode_id`)
 
-**Tier 2 rules** — 5
+**Tier 2 rules** — 4
 
 - `core.units.spike_summary_consistent` — error: n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events
 - `core.units.designated_label_is_recorded` — error: the designated quality label is not among the recorded ones
 - `core.units.designated_label_pair_complete` — error: quality_label and quality_label_source must be present together
 - `core.units.observation_declared` — info *(advisory, R26)*: units carry no observation intervals and their clock declares none, so no rate over them has a denominator
-- `core.units.default_electrode_is_declared` — error: the designated electrode is not one the unit was detected on (R28 2.1)

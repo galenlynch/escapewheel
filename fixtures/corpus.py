@@ -41,15 +41,15 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "wide_anchor_gap": ("warning", "core.clock_anchors.gap_within_bound"),
     "two_primaries": ("warning", "core.unit_electrodes.one_primary"),
     "gapped_ordinal": ("error", "core.unit_electrodes.channel_index_contiguous"),
-    "undetected_default": ("error", "core.units.default_electrode_is_declared"),
-    "undeclared_currency": ("info", "core.processing_runs.undeclared_currency"),
-    "unscoped_runs": ("info", "core.processing_runs.scope_undeclared"),
+    "undeclared_currency": ("error", "core.processing_runs.undeclared_currency"),
+    "unscoped_runs": ("error", "core.processing_runs.scope_undeclared"),
 }
 
 #: Packets whose expected finding is advisory (R26 §3). Advisory rules are off by default --
 #: enabling them must never change whether a packet passed -- so these run with them on, and
 #: the `info` level they carry keeps the verdict unchanged either way.
-ADVISORY = {"undeclared_currency", "unscoped_runs"}
+#: R82 §2 made both mandatory errors, so nothing here needs the advisory pass any more.
+ADVISORY: set[str] = set()
 
 
 def main() -> int:

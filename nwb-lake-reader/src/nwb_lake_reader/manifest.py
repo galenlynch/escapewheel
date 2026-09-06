@@ -16,6 +16,7 @@ from typing import Any
 import jsonschema
 
 from .errors import ManifestError
+from .location import Location
 
 MANIFEST_FILENAME = "nwb.packet.json"
 
@@ -29,6 +30,22 @@ def manifest_schema() -> dict[str, Any]:
         The parsed schema.
     """
     text = importlib_resources.files(__package__).joinpath("schemas/manifest.schema.json").read_text()
+    parsed: dict[str, Any] = json.loads(text)
+    return parsed
+
+
+def sources_schema() -> dict[str, Any]:
+    """Load the bundled JSON Schema for a source resolution document (R80 §2.2).
+
+    Vendored from `registry/` the way the manifest's is, because a wheel cannot read a file from
+    another repository.
+
+    Returns
+    -------
+    dict
+        The parsed schema.
+    """
+    text = importlib_resources.files(__package__).joinpath("schemas/sources.schema.json").read_text()
     parsed: dict[str, Any] = json.loads(text)
     return parsed
 
@@ -82,6 +99,16 @@ class Resource:
         return tuple(str(c) for c in self.entry.get("codecs", ()))
 
     @property
+    def source(self) -> str | None:
+        """The body of data this resource belongs to, if it names one (R80 §2.1).
+
+        Where present, `uri` is a path relative to wherever that source turns out to be, and a
+        resolution document says where that is. Neither field is a location.
+        """
+        value = self.entry.get("source")
+        return str(value) if value is not None else None
+
+    @property
     def is_external(self) -> bool:
         """Whether the packet references these bytes rather than owning them."""
         return bool(self.entry.get("external", False))
@@ -128,13 +155,13 @@ class Manifest:
     entry: Mapping[str, Any]
 
     @classmethod
-    def load(cls, root: Path, *, validate: bool = True) -> Manifest:
+    def load(cls, root: Location | Path | str, *, validate: bool = True) -> Manifest:
         """Read and parse the manifest at a packet root.
 
         Parameters
         ----------
-        root : Path
-            Packet root directory.
+        root : Location, Path, or str
+            Packet root: a local directory or a store prefix such as ``s3://bucket/prefix``.
         validate : bool, default True
             Whether to check the manifest against its JSON Schema before parsing.
 
@@ -148,13 +175,18 @@ class Manifest:
         ManifestError
             If the manifest is missing, unparsable, or does not conform to its schema.
         """
-        path = root / MANIFEST_FILENAME
-        if not path.is_file():
-            raise ManifestError(f"no {MANIFEST_FILENAME} at {root}")
+        where = Location.of(root)
+        document = where.join(MANIFEST_FILENAME)
         try:
-            parsed: dict[str, Any] = json.loads(path.read_text())
-        except json.JSONDecodeError as exc:
-            raise ManifestError(f"{path} is not valid JSON: {exc}") from exc
+            # One request, not an existence check and then a read: over a store the second
+            # round trip buys only a different error message.
+            raw = document.read_bytes()
+        except Exception as exc:
+            raise ManifestError(f"no {MANIFEST_FILENAME} at {where}: {exc}") from exc
+        try:
+            parsed: dict[str, Any] = json.loads(raw)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ManifestError(f"{document} is not valid JSON: {exc}") from exc
         if validate:
             errors = sorted(
                 jsonschema.Draft202012Validator(manifest_schema()).iter_errors(parsed),
@@ -162,7 +194,7 @@ class Manifest:
             )
             if errors:
                 detail = "; ".join(f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message}" for e in errors[:5])
-                raise ManifestError(f"{path} does not conform to the manifest schema: {detail}")
+                raise ManifestError(f"{document} does not conform to the manifest schema: {detail}")
         return cls.from_dict(parsed)
 
     @classmethod

@@ -486,8 +486,7 @@ def on_clock(packet: Any, table: pa.Table, clock: str | None = None, *, bound: f
     # The replacement keeps the column's declared type. A dictionary would change it, and buys
     # nothing on an integer, which is what every identifier is (R53 §2.1).
     clock = table.column("clock_id")
-    out = out.set_column(names.index("clock_id"), "clock_id",
-                         pa.array([target] * table.num_rows, type=clock.type))
+    out = out.set_column(names.index("clock_id"), "clock_id", pa.array([target] * table.num_rows, type=clock.type))
     return out.filter(pa.array(keep))
 
 

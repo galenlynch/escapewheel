@@ -122,16 +122,14 @@
       },
       {
         "id": "core.processing_runs.undeclared_currency",
-        "level": "info",
-        "advisory": true,
-        "message": "several runs share an activity and scope and none is preferred, so a consumer cannot choose between them",
+        "level": "error",
+        "message": "several runs share an activity and scope and none is preferred, so a consumer cannot choose between them (R82 \u00a72.1)",
         "sql": "WITH grouped AS ( SELECT session_id, activity_type, scope, count(*) AS n FROM core_processing_runs WHERE scope IS NOT NULL GROUP BY session_id, activity_type, scope HAVING count(*) > 1) SELECT g.session_id, g.activity_type, g.scope, g.n FROM grouped g WHERE NOT EXISTS ( SELECT 1 FROM core_preferred_runs p WHERE p.activity_type = g.activity_type AND p.scope = g.scope AND (p.session_id = g.session_id OR (p.session_id IS NULL AND g.session_id IS NULL)))"
       },
       {
         "id": "core.processing_runs.scope_undeclared",
-        "level": "info",
-        "advisory": true,
-        "message": "an activity has several runs and at least one records no scope, so whether they compete cannot be determined",
+        "level": "error",
+        "message": "an activity has several runs and at least one records no scope, so whether they compete cannot be determined (R82 \u00a72.2)",
         "sql": "WITH per_activity AS ( SELECT session_id, activity_type, count(*) AS n, count(*) FILTER (WHERE scope IS NULL) AS unscoped FROM core_processing_runs GROUP BY session_id, activity_type) SELECT session_id, activity_type, n, unscoped FROM per_activity WHERE n > 1 AND unscoped > 0"
       },
       {
@@ -172,7 +170,7 @@
         "id": "core.sorting_runs.amplitude_unit_declared",
         "level": "error",
         "message": "spikes carry amplitudes but the sorting run declares no amplitude_unit",
-        "sql": "SELECT DISTINCT s.sorting_run_id FROM core_spike_events s JOIN core_sorting_runs r USING (sorting_run_id) WHERE s.amplitude IS NOT NULL AND r.amplitude_unit IS NULL"
+        "sql": "SELECT DISTINCT r.sorting_run_id FROM core_spike_events s JOIN core_units u USING (unit_id) JOIN core_sorting_runs r USING (sorting_run_id) WHERE s.amplitude IS NOT NULL AND r.amplitude_unit IS NULL"
       }
     ],
     "core.spike_events": [
@@ -186,7 +184,7 @@
         "id": "core.spike_events.within_observation",
         "level": "warning",
         "message": "spikes fall outside the observation window in force for their unit",
-        "sql": "WITH unit_windows AS ( SELECT o.session_id, o.unit_id, o.sorting_run_id, o.curation_id, o.start_tick, o.stop_tick FROM core_unit_observation_intervals o UNION ALL SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id, c.start_tick, c.stop_tick FROM core_units u JOIN core_sorting_runs r ON u.session_id = r.session_id AND u.sorting_run_id = r.sorting_run_id JOIN core_clock_observation_intervals c ON c.session_id = r.session_id AND c.clock_id = r.clock_id WHERE NOT EXISTS ( SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = u.session_id AND o.unit_id = u.unit_id AND o.sorting_run_id = u.sorting_run_id AND o.curation_id = u.curation_id ) ), observed AS ( SELECT DISTINCT session_id, unit_id, sorting_run_id, curation_id FROM unit_windows ) SELECT s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, s.t_tick FROM core_spike_events s JOIN observed k ON s.session_id = k.session_id AND s.unit_id = k.unit_id AND s.sorting_run_id = k.sorting_run_id AND s.curation_id = k.curation_id LEFT JOIN unit_windows w ON s.session_id = w.session_id AND s.unit_id = w.unit_id AND s.sorting_run_id = w.sorting_run_id AND s.curation_id = w.curation_id AND s.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"
+        "sql": "WITH unit_windows AS ( SELECT o.unit_id, o.start_tick, o.stop_tick FROM core_unit_observation_intervals o UNION ALL SELECT u.unit_id, c.start_tick, c.stop_tick FROM core_units u JOIN core_sorting_runs r ON u.session_id = r.session_id AND u.sorting_run_id = r.sorting_run_id JOIN core_clock_observation_intervals c ON c.session_id = r.session_id AND c.clock_id = r.clock_id WHERE NOT EXISTS ( SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id ) ), observed AS ( SELECT DISTINCT unit_id FROM unit_windows ) SELECT s.session_id, s.unit_id, s.t_tick FROM core_spike_events s JOIN observed k ON s.unit_id = k.unit_id LEFT JOIN unit_windows w ON s.unit_id = w.unit_id AND s.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"
       }
     ],
     "core.intervals": [
@@ -201,13 +199,13 @@
         "id": "core.units.spike_summary_consistent",
         "level": "error",
         "message": "n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events",
-        "sql": "SELECT u.session_id, u.unit_id FROM core_units u LEFT JOIN ( SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM core_spike_events GROUP BY session_id, unit_id, sorting_run_id, curation_id ) s USING (session_id, unit_id, sorting_run_id, curation_id) WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM COALESCE(s.n, 0)) OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo) OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)"
+        "sql": "SELECT u.session_id, u.unit_id FROM core_units u LEFT JOIN ( SELECT unit_id, COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM core_spike_events GROUP BY unit_id ) s USING (unit_id) WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM COALESCE(s.n, 0)) OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo) OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)"
       },
       {
         "id": "core.units.designated_label_is_recorded",
         "level": "error",
         "message": "the designated quality label is not among the recorded ones",
-        "sql": "SELECT u.session_id, u.unit_id, u.quality_label, u.quality_label_source FROM core_units u LEFT JOIN core_unit_quality_labels q ON u.session_id = q.session_id AND u.unit_id = q.unit_id AND u.sorting_run_id = q.sorting_run_id AND u.curation_id = q.curation_id AND u.quality_label = q.normalized_label AND u.quality_label_source = q.source WHERE u.quality_label IS NOT NULL AND q.source IS NULL"
+        "sql": "SELECT u.session_id, u.unit_id, u.quality_label, u.quality_label_source FROM core_units u LEFT JOIN core_unit_quality_labels q ON u.unit_id = q.unit_id AND u.quality_label = q.normalized_label AND u.quality_label_source = q.source WHERE u.quality_label IS NOT NULL AND q.source IS NULL"
       },
       {
         "id": "core.units.designated_label_pair_complete",
@@ -220,13 +218,7 @@
         "level": "info",
         "advisory": true,
         "message": "units carry no observation intervals and their clock declares none, so no rate over them has a denominator",
-        "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id FROM core_units u JOIN core_sorting_runs r ON u.sorting_run_id = r.sorting_run_id WHERE NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.session_id = u.session_id AND o.unit_id = u.unit_id AND o.sorting_run_id = u.sorting_run_id AND o.curation_id = u.curation_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = u.session_id AND c.clock_id = r.clock_id)"
-      },
-      {
-        "id": "core.units.default_electrode_is_declared",
-        "level": "error",
-        "message": "the designated electrode is not one the unit was detected on (R28 2.1)",
-        "sql": "SELECT u.session_id, u.unit_id, u.sorting_run_id, u.curation_id, u.default_electrode_id FROM core_units u WHERE u.default_electrode_id IS NOT NULL AND EXISTS (SELECT 1 FROM core_unit_electrodes e WHERE e.session_id = u.session_id AND e.unit_id = u.unit_id AND e.sorting_run_id = u.sorting_run_id AND e.curation_id = u.curation_id) AND NOT EXISTS (SELECT 1 FROM core_unit_electrodes e WHERE e.session_id = u.session_id AND e.unit_id = u.unit_id AND e.sorting_run_id = u.sorting_run_id AND e.curation_id = u.curation_id AND e.electrode_id = u.default_electrode_id)"
+        "sql": "SELECT u.session_id, u.unit_id FROM core_units u JOIN core_sorting_runs r ON u.sorting_run_id = r.sorting_run_id WHERE NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = u.session_id AND c.clock_id = r.clock_id)"
       }
     ],
     "core.clock_anchors": [
@@ -262,9 +254,7 @@
         "stop": "stop_tick",
         "partition_of": [
           "session_id",
-          "unit_id",
-          "sorting_run_id",
-          "curation_id"
+          "unit_id"
         ],
         "overlap_op": "<=",
         "overlap_message": "observation windows overlap, which would double-count observed time"
@@ -340,13 +330,13 @@
         "id": "core.unit_electrodes.one_primary",
         "level": "warning",
         "message": "a unit designates more than one peak electrode (R28 2)",
-        "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n FROM core_unit_electrodes WHERE is_primary GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING COUNT(*) > 1"
+        "sql": "SELECT unit_id, COUNT(*) AS n FROM core_unit_electrodes WHERE is_primary GROUP BY unit_id HAVING COUNT(*) > 1"
       },
       {
         "id": "core.unit_electrodes.channel_index_contiguous",
         "level": "error",
         "message": "channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
-        "sql": "SELECT session_id, unit_id, sorting_run_id, curation_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core_unit_electrodes WHERE channel_index IS NOT NULL GROUP BY session_id, unit_id, sorting_run_id, curation_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
+        "sql": "SELECT unit_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core_unit_electrodes WHERE channel_index IS NOT NULL GROUP BY unit_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
       }
     ],
     "analysis.spike_events": [

@@ -14,7 +14,8 @@ def test_success_criterion(packet_root):
     """07's Phase 1 success criterion, verbatim."""
     pkt = open_packet(packet_root)
     assert pkt.table("core.intervals").num_rows == 2
-    assert pkt.duckdb().sql("SELECT COUNT(*) FROM core_intervals").fetchone() == (2,)
+    query = "SELECT COUNT(*) FROM core_intervals"
+    assert pkt.duckdb(for_query=query).sql(query).fetchone() == (2,)
 
 
 def test_resource_listing_and_filtering(packet_root):
@@ -56,7 +57,7 @@ def test_declared_but_absent_resource(packet_root):
 def test_duckdb_skips_unreadable_resources(packet_root):
     """One missing file must not prevent the rest of the packet being queried."""
     (packet_root / "tables" / "core" / "intervals.parquet").unlink()
-    con = open_packet(packet_root).duckdb()
+    con = open_packet(packet_root).duckdb(tables="all")
     assert con.sql("SELECT COUNT(*) FROM core_sessions").fetchone() == (1,)
 
 
@@ -135,3 +136,103 @@ def test_sessions_and_repr(packet_root):
     assert pkt.sessions == (SESSION_NAME,)
     assert "session_001" in repr(pkt)
     assert pkt.root == packet_root
+
+
+def _views(connection):
+    """The views this packet registered, without DuckDB's own catalog views."""
+    return {r[0] for r in connection.sql("SELECT view_name FROM duckdb_views() WHERE NOT internal").fetchall()}
+
+
+def test_duckdb_registers_nothing_until_asked(packet_root):
+    """Binding a view reads a footer, which over a store is a round trip per table."""
+    con = open_packet(packet_root).duckdb()
+    assert _views(con) == set()
+
+
+def test_a_query_registers_only_the_tables_it_names(packet_root):
+    """So asking about one table does not pay for the packet's other twenty-seven."""
+    packet = open_packet(packet_root)
+    con = packet.duckdb(for_query="SELECT count(*) FROM core_intervals")
+    assert _views(con) == {"core_intervals"}
+
+
+def test_registering_twice_is_not_two_reads(packet_root):
+    """A second query naming the same table finds it registered rather than re-binding it."""
+    packet = open_packet(packet_root)
+    con = packet.duckdb(for_query="SELECT count(*) FROM core_intervals")
+    join = "SELECT count(*) FROM core_intervals JOIN core_sessions USING (session_id)"
+    packet.duckdb(connection=con, for_query=join)
+    assert _views(con) == {"core_intervals", "core_sessions"}
+
+
+def test_a_packet_in_a_store_resolves_its_tables_there(packet_root):
+    """The same manifest, unchanged, addressing a bucket instead of a directory."""
+    import pytest
+
+    from nwb_lake_reader import Manifest, Packet, ResourceUnreadableError
+
+    packet = Packet("s3://bucket/prefix", Manifest.load(packet_root))
+    handle = packet.table_resource("core.intervals")
+    assert not handle.is_local
+    assert handle.location.uri == "s3://bucket/prefix/tables/core/intervals.parquet"
+    with pytest.raises(ResourceUnreadableError, match="no local path"):
+        _ = packet.root
+
+
+def test_a_rewrite_reaches_bytes_the_manifest_names_elsewhere(packet_root, tmp_path):
+    """R14 §2.3 makes reachability the reader's situation, and a committed packet records the
+    writer's -- so a caller redirects rather than editing bytes R14 §2.3 makes immutable."""
+    import json
+    import shutil
+
+    moved = tmp_path / "moved"
+    moved.mkdir()
+    shutil.copy(packet_root / "tables" / "core" / "intervals.parquet", moved / "intervals.parquet")
+    manifest_path = packet_root / "nwb.packet.json"
+    entry = json.loads(manifest_path.read_text())
+    for resource in entry["resources"]:
+        if resource["resource_id"] == "core.intervals":
+            resource["uri"] = "file:///gone/intervals.parquet"
+            resource["external"] = True
+    manifest_path.write_text(json.dumps(entry))
+
+    packet = open_packet(packet_root, rewrite={"file:///gone/": f"{moved}/"})
+    assert packet.table("core.intervals").num_rows == 2
+
+
+def test_the_packet_roots_default_document_is_read(packet_root):
+    """R80 §2.3: under the root so a copy carries it, outside the manifest so it may be edited."""
+    import json
+
+    (packet_root / "sources.json").write_text(
+        json.dumps(
+            {"sources_standard_version": "nwb-lake-sources-v0.1", "sources": {"raw": {"uri": "s3://bucket/raw"}}}
+        )
+    )
+    packet = open_packet(packet_root)
+    assert dict(packet.location.sources) == {"raw": "s3://bucket/raw"}
+
+
+def test_a_caller_document_wins_over_the_packets_own(packet_root):
+    """R80 §2.3's order: the caller's first, so a mirror is named without editing the packet."""
+    import json
+
+    (packet_root / "sources.json").write_text(
+        json.dumps({"sources_standard_version": "nwb-lake-sources-v0.1", "sources": {"raw": {"uri": "s3://stale/raw"}}})
+    )
+    packet = open_packet(packet_root, sources=[{"raw": "/scratch/staged"}])
+    assert dict(packet.location.sources)["raw"] == "/scratch/staged"
+
+
+def test_a_document_of_an_unknown_version_is_refused(packet_root, tmp_path):
+    """R80 §2.2: reading it as if it were this version is how a location silently goes wrong."""
+    import json
+
+    import pytest
+
+    from nwb_lake_reader import ManifestError
+
+    doc = tmp_path / "future.json"
+    doc.write_text(json.dumps({"sources_standard_version": "nwb-lake-sources-v9", "sources": {}}))
+    with pytest.raises(ManifestError, match="nwb-lake-sources-v0.1"):
+        open_packet(packet_root, sources=[doc])

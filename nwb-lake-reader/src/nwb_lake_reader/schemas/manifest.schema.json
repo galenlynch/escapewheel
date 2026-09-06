@@ -275,6 +275,10 @@
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
         },
+        "source": {
+          "description": "R80 \u00a72.1: the body of data this external resource belongs to. Its uri is then a path relative to wherever that source is, located by a source resolution document rather than by the packet. Names no location itself.",
+          "type": "string"
+        },
         "external": {
           "description": "True when the packet does not own these bytes (R14 \u00a72.3). Required wherever uri is absolute. Immutability and checksums cover packet-owned bytes only.",
           "type": "boolean"

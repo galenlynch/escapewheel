@@ -169,12 +169,10 @@ def test_a_packet_without_observation_tables_invents_nothing(packet_root):
 
 def test_the_sql_view_agrees_with_the_function(observed_packet):
     """Drift protection. Two implementations of one rule agree only if something checks."""
-    con = observed_packet.duckdb()
+    con = observed_packet.duckdb(tables="all")
     columns = [
         "session_id",
         "unit_id",
-        "sorting_run_id",
-        "curation_id",
         "clock_id",
         "start_tick",
         "stop_tick",
@@ -225,7 +223,7 @@ def test_the_view_survives_a_packet_with_no_refinements(tmp_path, packet_root):
     )
     (root / "nwb.packet.json").write_text(json.dumps(manifest, indent=2))
     packet = open_packet(root)
-    con = packet.duckdb()
+    con = packet.duckdb(tables="all")
     assert con.sql("SELECT count(*) FROM unit_observation").fetchone()[0] == 2
     assert {r[0] for r in con.sql("SELECT DISTINCT source FROM unit_observation").fetchall()} == {INHERITED}
 
@@ -233,7 +231,7 @@ def test_the_view_survives_a_packet_with_no_refinements(tmp_path, packet_root):
 def test_no_observation_tables_registers_no_view(packet_root):
     """A view over nothing would look answered. Absent is the honest state."""
     packet = open_packet(packet_root)
-    assert register_views(packet.duckdb()) == []
+    assert register_views(packet.duckdb(tables="all")) == []
 
 
 @pytest.fixture
@@ -284,7 +282,7 @@ def test_a_streams_denominator_is_its_own(stream_packet):
 
 def test_the_stream_view_agrees_with_the_function(stream_packet):
     """Drift protection for the second view, as for the first."""
-    con = stream_packet.duckdb()
+    con = stream_packet.duckdb(tables="all")
     columns = ["event_stream_id", "clock_id", "start_tick", "stop_tick", "source"]
     from_sql = sorted(con.sql(f"SELECT {', '.join(columns)} FROM stream_observation").fetchall())
     from_arrow = sorted(tuple(r[c] for c in columns) for r in stream_windows(stream_packet).to_pylist())
@@ -354,3 +352,19 @@ def test_attaching_an_empty_support_attaches_nothing(observed_packet):
     bare = observed_packet.table("core.spike_events", columns=["t_tick"])
     assert support_of(bare) is None
     assert support_of(attach_support(bare, unit_windows(observed_packet).slice(0, 0))) is None
+
+
+def test_a_view_is_skipped_while_its_refinements_table_is_unregistered(observed_packet):
+    """The hazard lazy registration introduces: a partial connection answering instead of not.
+
+    Without `core_unit_observation_intervals` registered, the guard that drops an inherited
+    window for a unit that declares its own is omitted, and the view would return a wider span
+    for every refined unit. Refusing to build it is what keeps a subset from being wrong.
+    """
+    con = observed_packet.duckdb(tables=["core.units", "core.sorting_runs", "core.clock_observation_intervals"])
+    assert "unit_observation" not in {
+        r[0] for r in con.sql("SELECT view_name FROM duckdb_views() WHERE NOT internal").fetchall()
+    }
+    observed_packet.duckdb(connection=con, tables=["core.unit_observation_intervals"])
+    from_sql = con.sql("SELECT count(*) FROM unit_observation").fetchone()
+    assert from_sql == (unit_windows(observed_packet).num_rows,)

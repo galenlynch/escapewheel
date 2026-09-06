@@ -97,7 +97,7 @@ def test_disjoint_windows_return_each_spike_once(aligned_packet):
 
 def test_the_asof_shortcut_returns_the_same_rows(aligned_packet):
     """The optimisation is invisible: the disjoint path must agree with the range join."""
-    con = aligned_packet.duckdb()
+    con = aligned_packet.duckdb(tables=("analysis.spike_events", "core.events"))
     half = 30
     reference = con.sql(
         "SELECT s.t_tick, e.event_id FROM analysis_spike_events s "

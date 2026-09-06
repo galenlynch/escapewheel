@@ -54,8 +54,12 @@ class ClockMismatch(ValueError):
 
 
 def _connect(packet: Any, connection: duckdb.DuckDBPyConnection | None) -> duckdb.DuckDBPyConnection:
-    """Return a connection with this packet's tables registered."""
-    con: duckdb.DuckDBPyConnection = packet.duckdb() if connection is None else packet.duckdb(connection=connection)
+    """Return a connection with the two tables every alignment reads registered.
+
+    Named rather than left to the default, which registers nothing: over an object store each
+    registration is a round trip, and an alignment touches two of a packet's twenty-eight.
+    """
+    con: duckdb.DuckDBPyConnection = packet.duckdb(connection=connection, tables=(SPIKES, EVENTS))
     return con
 
 

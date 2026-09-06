@@ -1136,3 +1136,78 @@ def test_a_kind_the_packet_does_not_declare_is_not_joined():
     assert "ext_absent" not in sql
     declared = next(c.sql for c in checks if c.id == "core.runs.k_kind.kind_declared")
     assert "'ext.absent'" in declared
+
+
+def _reference(root, **overrides):
+    """Append an external array entry to a packet's manifest and return the path."""
+    path = root / "nwb.packet.json"
+    entry = json.loads(path.read_text())
+    resource = {
+        "resource_id": "array.probe0",
+        "layer": "core",
+        "kind": "dense_array_asset",
+        "uri": "processing/ecephys/LFP/data",
+        "external": True,
+        "source": "raw_nwb",
+        "codecs": ["zstd"],
+    }
+    resource.update(overrides)
+    entry["resources"].append(resource)
+    entry["required_codecs"] = sorted({*entry.get("required_codecs", []), *resource.get("codecs", [])})
+    path.write_text(json.dumps(entry))
+    return path
+
+
+def test_a_named_source_no_document_locates_is_reported_not_failed(packet_root):
+    """R80 §2.4: which mirrors a reader can reach is the reader's situation, not a defect."""
+    _reference(packet_root)
+    report = validate(open_packet(packet_root))
+    assert report.passed
+    info = next(f for f in report.findings if f.check == "sources.unresolved")
+    assert info.level == "info"
+    assert info.rows[0][0] == "raw_nwb"
+
+
+def test_a_located_source_is_counted_as_located(packet_root):
+    """R80 §2.3: the packet root's own document is consulted, and says which are reachable."""
+    _reference(packet_root)
+    (packet_root / "sources.json").write_text(
+        json.dumps(
+            {
+                "sources_standard_version": "nwb-lake-sources-v0.1",
+                "sources": {"raw_nwb": {"uri": "s3://bucket/session.nwb"}},
+            }
+        )
+    )
+    report = validate(open_packet(packet_root))
+    assert report.passed
+    assert not [f for f in report.findings if f.check == "sources.unresolved"]
+
+
+def test_a_source_with_an_absolute_uri_is_refused(packet_root):
+    """R80 §2.1: naming a source and an absolute URI means the source would do nothing."""
+    _reference(packet_root, uri="s3://elsewhere/data")
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert any(f.check == "source.absolute_uri" and f.level == "error" for f in report.findings)
+
+
+def test_a_source_on_a_packet_owned_resource_is_refused(packet_root):
+    """R80 §2.1: a source locates bytes the packet does not own."""
+    _reference(packet_root, external=False)
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert any(f.check == "source.not_external" and f.level == "error" for f in report.findings)
+
+
+def test_declaring_the_resolution_document_as_a_resource_is_refused(packet_root):
+    """R80 §2.3: inside the manifest, immutability would freeze the file that must stay editable."""
+    path = packet_root / "nwb.packet.json"
+    entry = json.loads(path.read_text())
+    entry["resources"].append(
+        {"resource_id": "docs.sources", "layer": "docs", "kind": "document_asset", "uri": "sources.json"}
+    )
+    path.write_text(json.dumps(entry))
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert any(f.check == "sources.declared" and f.level == "error" for f in report.findings)

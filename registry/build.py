@@ -26,6 +26,7 @@ OUT = HERE / "logical_schemas.json"
 VENDORED = {
     "registry.schema.json": HERE.parent / "nwb-lake-validator/src/nwb_lake_validator/schemas/registry.schema.json",
     "manifest.schema.json": HERE.parent / "nwb-lake-reader/src/nwb_lake_reader/schemas/manifest.schema.json",
+    "sources.schema.json": HERE.parent / "nwb-lake-reader/src/nwb_lake_reader/schemas/sources.schema.json",
 }
 RULES = HERE / "rules.json"
 
@@ -80,7 +81,8 @@ SINCE = _Since([None])
 #: a key, a sort order, a withdrawal, or a decision about the format rather than about a table.
 #: R42 is withdrawn and so is not here.
 UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34, 35, 36, 37, 40,
-             43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69, 71, 72, 74, 75, 76, 77, 78, 79)
+             43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69, 71, 72, 74, 75, 76, 77, 78, 79,
+             80, 82)
 
 
 #: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a
@@ -172,13 +174,15 @@ IDENTITY: dict[str, str] = {
     # Carried -- the source's own, so two independent builds agree without being told to.
     "interval_id": "carried",         # R54 §2.2: each kind keeps its source's own numbering
     "trial_id": "carried",            # NWB intervals/trials/id, int64, already 0..n
-    "unit_id": "carried",             # numpysorting_info.json unit_ids, int64, strictly increasing
+    "unit_id": "assigned",            # R81 §2.1: the packet numbers its units; the sorter's
+                                      # label stays in local_unit_label, which R53 §2.3 requires
     # electrode_id looked carried and is not: `_electrode_ids` composes (group, channel)
     # because no NWB column is unique on its own -- electrode_name repeats across the shanks of
     # a quad-base probe, and channel_name is per-probe.
     "electrode_id": "assigned",
     "region_id": "carried",           # the atlas's structure number, which coordinate_frame names
-    "default_electrode_id": "assigned",  # references electrode_id, so it inherits
+    # Declared until R81 §2.7 drops the column: it exists earlier in this build.
+    "default_electrode_id": "assigned",
     # Assigned -- this format chose the number, and something must record what it stands for.
     "array_asset_id": "assigned",
     "clock_id": "assigned",
@@ -287,7 +291,6 @@ CONTEXT: dict[tuple[str, str], dict[str, str]] = {
     ("core.event_stream_observation_intervals", "start_tick"): {"clock_from": "core.event_streams.clock_id"},
     ("core.event_stream_observation_intervals", "stop_tick"): {"clock_from": "core.event_streams.clock_id"},
     # R11 §2: the unit is a property of the sorting context, not of the spike.
-    ("core.spike_events", "amplitude"): {"unit_from": "core.sorting_runs.amplitude_unit"},
     # R19 §2: an offset is in the converted value's unit, which the asset carries. `conversion`
     # gets no entry: it is a ratio of two units and so is in neither of them.
     ("core.array_assets", "offset"): {"unit_from": "unit"},
@@ -1169,6 +1172,53 @@ def build() -> dict:
     # R54 §2.3: the one place this format let meaning accrete without a schema, which R17 §3
     # exists to refuse. An extension needing a multi-valued attribute declares a typed child.
     del tables["core.trial_tags"]
+
+    # ---- R81 §2 : the packet numbers its units -----------------------------------------------
+    # `unit_id` was carried, so it repeated across runs -- 810 distinct values over 6,781
+    # (unit_id, sorting_run_id) pairs -- and identity grew to four columns to compensate. It also
+    # duplicated `local_unit_label` exactly, in 6,781 of 6,781 rows, which R3 §3.0 forbids.
+    SINCE[0] = "R81 §2"
+    one = ["unit_id"]
+    T("core.units")["primary_key"] = one
+    if T("core.units").get("sort"):
+        T("core.units")["sort"] = one
+    # R81 §2.7: `core.unit_electrodes.is_primary` already names the peak electrode, and this
+    # column is null in every row of every packet because the adapter that knows the extremum
+    # does not own this table.
+    drop_col("core.units", "default_electrode_id")
+    T("core.units")["references"] = [r for r in T("core.units")["references"]
+                                     if r["columns"] != ["default_electrode_id"]]
+    # R81 §2.3: every table keyed on a unit narrows to the one column, and so does its reference.
+    narrowed = {"columns": one, "resource": "core.units", "resource_columns": one}
+    for name in ("core.spike_events", "analysis.spike_events", "core.unit_electrodes",
+                 "core.unit_coordinates", "core.unit_quality_labels",
+                 "core.unit_observation_intervals"):
+        table = T(name)
+        table["references"] = [narrowed if r["resource"] == "core.units" else r
+                               for r in table["references"]]
+        table["primary_key"] = [c for c in table["primary_key"]
+                                if c not in ("sorting_run_id", "curation_id")]
+        for struck in ("sorting_run_id", "curation_id"):
+            if any(c["name"] == struck for c in table["columns"]):
+                drop_col(name, struck)
+        # A reference on a struck column has nothing to join from. `core.units` still names the
+        # run and the curation, so the fact is one hop away rather than gone.
+        table["references"] = [r for r in table["references"]
+                               if not set(r["columns"]) & {"sorting_run_id", "curation_id"}]
+    # R81 §2.4: `03` §5.3's override named two columns that no longer exist. Numbering by
+    # (run, curation, label) makes ascending unit_id run-major, so the clustering is unchanged
+    # and the key, the sort and the uniqueness check finally agree -- R47 §2's outcome.
+    T("core.spike_events")["primary_key"] = ["session_id", "unit_id", "t_tick"]
+    T("core.spike_events")["sort"] = ["session_id", "unit_id", "t_tick"]
+    T("analysis.spike_events")["primary_key"] = ["session_id", "unit_id", "t_tick"]
+    T("analysis.spike_events")["sort"] = ["session_id", "clock_id", "time_bucket_tick",
+                                          "unit_id", "t_tick"]
+    # R81 §5: `amplitude` named its unit through `core.sorting_runs.amplitude_unit`, which was one
+    # hop while the spike carried `sorting_run_id`. It is now two -- spike to unit to run -- and
+    # R56 §2.2 permits one, so the declaration is dropped rather than made to name a hop that
+    # cannot be followed. The same shape as the gap R70 §5 left and recorded.
+    for column in T("core.spike_events")["columns"]:
+        column.pop("unit_from", None)
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates

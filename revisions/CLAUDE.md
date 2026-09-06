@@ -4,6 +4,23 @@ Guidance for writing the revision documents in this directory. Prose structure â
 position, and the symptom table for a draft that reads badly â€” is in the global `CLAUDE.md` and the
 `prose` skill. What follows is what a revision specifically needs.
 
+## Before drafting
+
+**Invoke the `prose` skill.** Not optional and not only for long ones: the failure it prevents is
+a clause a reader has to re-parse, and a revision's reader is implementing it months later with
+no author to ask.
+
+**A title says what the revision does, literally.** Not an aphorism, and not a metaphor a reader
+has to unpack before they know whether to open it. "A Packet Holds Only One Interpretation" over
+"A Second Interpretation Is a Second Packet"; "Unit IDs Are Assigned by the Packet" over "A Packet
+Numbers Its Own Units". Someone scanning the revision list is deciding whether this one is
+relevant, and a clever title makes them read the document to find out.
+
+**A section heading is a simple declarative statement.** One clause. A comma joining two findings
+means the section is doing two things and wants splitting, or the heading is describing rather
+than stating. "The label repeats across runs" over "A carried label is not an identifier, so the
+key grew to four columns".
+
 ## What a revision is
 
 A decision record: what was wrong, what the rule is now, what it cost. Its reader is implementing

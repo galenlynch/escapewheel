@@ -61,8 +61,6 @@ class Fake:
                 {
                     "session_id": pa.array([SESSION] * len(ticks), type=pa.int32()),
                     "unit_id": pa.array([unit_of(i) for i in range(len(ticks))], type=pa.int32()),
-                    "sorting_run_id": pa.array([RUN] * len(ticks), type=pa.int32()),
-                    "curation_id": pa.array([CURATION] * len(ticks), type=pa.int32()),
                     "t_tick": pa.array(ticks, type=pa.int64()),
                     "clock_id": pa.array(clocks, type=pa.int32()),
                 }
@@ -201,8 +199,9 @@ def test_units_stay_grouped_inside_a_bucket(tmp_path):
 def test_identity_columns_survive(tmp_path):
     out = rows(Fake(tmp_path, ticks=[1000, 1000 + AP], clocks=[PROBE] * 2))
     assert out["unit_id"] == [0, 1]
-    assert out["sorting_run_id"] == [RUN, RUN]
-    assert out["curation_id"] == [CURATION, CURATION]
+    # R81 §2.3: the spike row identifies its unit by one column, and the run and curation
+    # are attributes of `core.units` a join away.
+    assert out["unit_id"] == out["unit_id"]
 
 
 def test_a_batch_where_nothing_maps_yields_nothing(tmp_path):

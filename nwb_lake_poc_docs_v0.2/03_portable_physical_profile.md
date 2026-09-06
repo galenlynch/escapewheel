@@ -55,9 +55,11 @@ The catalog MUST record the actual layout. A reader MUST resolve resources throu
 
 ## 4. URI rules
 
-A URI in the catalog or in a table MAY be relative to the packet root or absolute. A portable local packet SHOULD use relative URIs.
+A URI in the catalog or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
 
 An absolute URI MAY name an external asset. An external asset MUST be declared as such in the catalog (Part 04 §5).
+
+A packet root MAY itself be an object-store prefix rather than a directory, in which case a relative URI resolves under that prefix (Part 00 §3).
 
 ## 5. Table storage
 
@@ -81,15 +83,14 @@ A writer SHOULD sort every table by its primary key, in the order the key declar
 
 What it is for is pruning. A validator establishes it by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3), and reports a departure at **warning** level — a packet whose rows are out of order is readable and slower, not wrong.
 
-Two tables override the default, both specified below, and `analysis.spike_events` overrides it under a `MUST` (R30 §3.2).
+One table overrides the default, specified below, and `analysis.spike_events` overrides it under a `MUST` (R30 §3.2). `core.spike_events` no longer needs an override: R81 §2.4 makes its key `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
 
 ### 5.4 The overriding orders
 
 | resource | order |
 |---|---|
-| `core.spike_events` | `session_id, sorting_run_id, curation_id, unit_id, t_tick` |
 | `core.events` | `session_id, clock_id, t_tick` |
-| `analysis.spike_events` | `session_id, clock_id, time_bucket_tick, sorting_run_id, curation_id, unit_id, t_tick` |
+| `analysis.spike_events` | `session_id, clock_id, time_bucket_tick, unit_id, t_tick` |
 
 A writer **MUST** emit `analysis.spike_events` in that order (R30 §3.2). It is the one resource whose layout is part of its reason for existing: bucketing by time and sorting by unit within each bucket leaves both columns with informative row-group statistics, so a unit filter and a time filter each prune.
 

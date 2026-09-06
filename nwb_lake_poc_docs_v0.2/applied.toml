@@ -1333,3 +1333,93 @@ where = "05_validation_and_import.md §10"
 [clause."R79 §2.3"]
 disposition = "applied"
 where = "05_validation_and_import.md §10"
+
+[clause."R80 §2.1"]
+disposition = "applied"
+where = "04_packet_catalog.md §4.1, §5.5; 03_portable_physical_profile.md §4"
+
+[clause."R80 §2.2"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.5"
+note = "the document's shape is published as registry/sources.schema.json, which the spec names rather than restates"
+
+[clause."R80 §2.3"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.5"
+
+[clause."R80 §2.4"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.5"
+
+[clause."R80 §2.5"]
+disposition = "applied"
+where = "04_packet_catalog.md §5.5"
+
+[clause."R80 §2.6"]
+disposition = "rationale"
+note = "what a consumer may then do; states no requirement"
+
+[clause."R80 §3"]
+disposition = "rationale"
+note = "what does not change"
+
+[clause."R80 §4"]
+disposition = "registry"
+note = "registry/sources.schema.json, its example, and build.py's VENDORED entry"
+
+[clause."R80 §5"]
+disposition = "rationale"
+note = "open questions"
+
+[clause."R81 §2.1"]
+disposition = "registry"
+where = "core.units.unit_id identity assigned; primary_key ['unit_id']"
+note = "also stated in 02_core_logical_schemas.md §9"
+
+[clause."R81 §2.2"]
+disposition = "implementation"
+note = "the writer numbers units by (sorting_run_id, curation_id, local_unit_label); stated in 02 §9"
+
+[clause."R81 §2.3"]
+disposition = "registry"
+where = "the six unit-keyed tables and their references narrowed to ['unit_id']"
+
+[clause."R81 §2.4"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §5.3, §5.4; 02_core_logical_schemas.md §9"
+
+[clause."R81 §2.5"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9"
+
+[clause."R81 §2.6"]
+disposition = "rationale"
+note = "how multiplicity is expressed once the key is one column; states no new requirement"
+
+[clause."R81 §2.7"]
+disposition = "registry"
+where = "core.units.default_electrode_id struck with its rule core.units.default_electrode_is_declared"
+
+
+
+
+[clause."R82 §2.1"]
+disposition = "registry"
+where = "core.processing_runs.undeclared_currency, advisory removed and level error"
+note = "also stated in 05_validation_and_import.md §11"
+
+[clause."R82 §2.2"]
+disposition = "registry"
+where = "core.processing_runs.scope_undeclared, advisory removed and level error"
+note = "also stated in 05_validation_and_import.md §11"
+
+[clause."R82 §2.3"]
+disposition = "applied"
+where = "05_validation_and_import.md §11"
+
+[clause."R82 §2.4"]
+disposition = "applied"
+where = "05_validation_and_import.md §11"
+
+
+

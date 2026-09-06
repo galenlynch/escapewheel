@@ -20,24 +20,8 @@
           "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "identity": "carried",
+          "identity": "assigned",
           "description": "Unit Id."
-        },
-        {
-          "name": "sorting_run_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Sorting Run Id."
-        },
-        {
-          "name": "curation_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Curation Id."
         },
         {
           "name": "num_spikes_used",
@@ -200,24 +184,16 @@
       ],
       "primary_key": [
         "session_id",
-        "unit_id",
-        "sorting_run_id",
-        "curation_id"
+        "unit_id"
       ],
       "references": [
         {
           "columns": [
-            "session_id",
-            "unit_id",
-            "sorting_run_id",
-            "curation_id"
+            "unit_id"
           ],
           "resource": "core.units",
           "resource_columns": [
-            "session_id",
-            "unit_id",
-            "sorting_run_id",
-            "curation_id"
+            "unit_id"
           ]
         }
       ],
@@ -287,24 +263,8 @@
           "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "identity": "carried",
+          "identity": "assigned",
           "description": "Unit Id."
-        },
-        {
-          "name": "sorting_run_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Sorting Run Id."
-        },
-        {
-          "name": "curation_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Curation Id."
         },
         {
           "name": "peak_to_valley",
@@ -391,24 +351,16 @@
       ],
       "primary_key": [
         "session_id",
-        "unit_id",
-        "sorting_run_id",
-        "curation_id"
+        "unit_id"
       ],
       "references": [
         {
           "columns": [
-            "session_id",
-            "unit_id",
-            "sorting_run_id",
-            "curation_id"
+            "unit_id"
           ],
           "resource": "core.units",
           "resource_columns": [
-            "session_id",
-            "unit_id",
-            "sorting_run_id",
-            "curation_id"
+            "unit_id"
           ]
         }
       ],
@@ -442,24 +394,8 @@
           "type": "int32",
           "presence": "required",
           "role": "identifier",
-          "identity": "carried",
+          "identity": "assigned",
           "description": "Unit Id."
-        },
-        {
-          "name": "sorting_run_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Sorting Run Id."
-        },
-        {
-          "name": "curation_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Curation Id."
         },
         {
           "name": "synchrony_size",
@@ -479,24 +415,16 @@
       "primary_key": [
         "session_id",
         "unit_id",
-        "sorting_run_id",
-        "curation_id",
         "synchrony_size"
       ],
       "references": [
         {
           "columns": [
-            "session_id",
-            "unit_id",
-            "sorting_run_id",
-            "curation_id"
+            "unit_id"
           ],
           "resource": "core.units",
           "resource_columns": [
-            "session_id",
-            "unit_id",
-            "sorting_run_id",
-            "curation_id"
+            "unit_id"
           ]
         }
       ],
@@ -524,7 +452,7 @@
           "id": "aind_unit_qc.synchrony.larger_is_rarer",
           "level": "error",
           "message": "a larger synchrony size is reported as more common than a smaller one, which its nesting forbids",
-          "sql": "SELECT a.session_id, a.unit_id, a.synchrony_size, b.synchrony_size AS larger FROM aind_unit_qc_synchrony a JOIN aind_unit_qc_synchrony b ON a.session_id = b.session_id AND a.unit_id = b.unit_id AND a.sorting_run_id = b.sorting_run_id AND a.curation_id = b.curation_id AND a.synchrony_size < b.synchrony_size WHERE a.sync_spike IS NOT NULL AND b.sync_spike IS NOT NULL AND b.sync_spike > a.sync_spike"
+          "sql": "SELECT a.session_id, a.unit_id, a.synchrony_size, b.synchrony_size AS larger FROM aind_unit_qc_synchrony a JOIN aind_unit_qc_synchrony b ON a.unit_id = b.unit_id AND a.synchrony_size < b.synchrony_size WHERE a.sync_spike IS NOT NULL AND b.sync_spike IS NOT NULL AND b.sync_spike > a.sync_spike"
         }
       ]
     }

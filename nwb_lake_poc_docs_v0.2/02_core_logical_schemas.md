@@ -315,11 +315,17 @@ The core layer comprises the following resources. Column definitions are in the 
 
 ## 12. Ordering
 
-A writer SHOULD sort every table by its primary key (R10 §2). Two tables override this:
+A unit is identified by `unit_id` alone (R81 §2.1). The packet assigns it, numbering units by
+ascending `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces the same
+numbers (R81 §2.2); `core.units` records the run and the curation as ordinary columns, and
+`local_unit_label` records what the sorter called it. A table keyed on a unit carries `unit_id`
+and not the run or the curation (R81 §2.3), and a consumer relating a unit to anything outside
+the packet uses `(sorting_run_id, local_unit_label)` (R81 §2.5).
+
+A writer SHOULD sort every table by its primary key (R10 §2). One table overrides this:
 
 | resource | order |
 |---|---|
-| `core.spike_events` | `session_id, sorting_run_id, curation_id, unit_id, t_tick` |
 | `core.events` | `session_id, clock_id, t_tick, event_type` |
 
 A large table SHOULD be partitioned by `session_id`. A table MUST NOT be partitioned by `unit_id`.

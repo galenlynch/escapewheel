@@ -50,7 +50,9 @@ def _ls(args: argparse.Namespace) -> int:
 def _sql(args: argparse.Namespace) -> int:
     """Run a query against a packet's tables."""
     packet = open_packet(args.packet)
-    result = packet.duckdb().sql(args.query)
+    # `for_query` so only the tables the query names are registered -- over an object store
+    # the others would each cost a round trip to bind a view nothing reads.
+    result = packet.duckdb(for_query=args.query).sql(args.query)
     if result is not None:
         result.show()
     return 0

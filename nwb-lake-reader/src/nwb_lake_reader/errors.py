@@ -40,3 +40,12 @@ class AmbiguousRun(PacketError):
     about the result says so. Picking the newest, or the first, produces numbers that cannot be
     compared with another consumer's.
     """
+
+
+class UnresolvedSource(PacketError):
+    """An external resource names a source no available resolution document locates (R80 §2.4).
+
+    A fact rather than a defect: which mirrors a reader can reach is a property of the reader,
+    so the packet is not invalid. It is raised when the bytes are actually asked for, and the
+    resource is otherwise readable metadata.
+    """

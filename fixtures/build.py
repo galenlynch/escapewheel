@@ -140,8 +140,7 @@ def preassign(tables: dict[str, list[dict]]) -> None:
 
 
 def spikes(unit, run, cur, clock, ticks):
-    return [{"session_id": "s001", "unit_id": unit, "sorting_run_id": run,
-             "curation_id": cur, "t_tick": int(t), "clock_id": clock,
+    return [{"session_id": "s001", "unit_id": unit, "t_tick": int(t), "clock_id": clock,
              "amplitude": float(-80 - (i % 7) * 3)} for i, t in enumerate(ticks)]
 
 
@@ -186,8 +185,7 @@ def content() -> dict[str, list[dict]]:
                 (2, "elec_003", (2, 3)))
             for k, e in enumerate(contacts)],
         "core.unit_coordinates": [
-            {"session_id": "s001", "unit_id": unit, "sorting_run_id": "sort_ks4_001",
-             "curation_id": "curation_001", "coordinate_frame": frame,
+            {"session_id": "s001", "unit_id": unit, "coordinate_frame": frame,
              "coordinate_basis": "measured", "region_id": region, "region_label": label,
              "x_um": x, "y_um": y, "z_um": z}
             for unit, depth in ((1, 22.0), (2, 58.0))
@@ -266,19 +264,16 @@ def content() -> dict[str, list[dict]]:
              "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
              "local_unit_label": "17", "quality_label": "sua",
              "quality_label_source": "decoder",
-             "default_electrode_id": "elec_001",
              "firing_rate_hz": len(u1) / (300_000 / AP_HZ),
              "n_spikes": len(u1), "first_spike_tick": u1[0], "last_spike_tick": u1[-1]},
             {"session_id": "s001", "unit_id": 2, "probe_id": "probe0",
              "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
              "local_unit_label": "42", "quality_label": "mua",
              "quality_label_source": "decoder",
-             "default_electrode_id": "elec_003",
              "firing_rate_hz": len(u2) / (300_000 / AP_HZ),
              "n_spikes": len(u2), "first_spike_tick": u2[0], "last_spike_tick": u2[-1]}],
         "core.unit_quality_labels": [
-            {"session_id": "s001", "unit_id": u, "sorting_run_id": "sort_ks4_001",
-             "curation_id": "curation_001", "source": src, "label": lab,
+            {"session_id": "s001", "unit_id": u, "source": src, "label": lab,
              "normalized_label": norm, "confidence": conf}
             for u, src, lab, norm, conf in (
                 (1, "decoder", "sua", "sua", 0.94),
@@ -287,9 +282,7 @@ def content() -> dict[str, list[dict]]:
                 # non_soma has no honest projection, so it is null rather than forced (R22 3).
                 (2, "bombcell", "non_soma", None, None))],
         "core.unit_observation_intervals": [
-            {"session_id": "s001", "unit_id": u, "sorting_run_id": "sort_ks4_001",
-             "curation_id": "curation_001",
-             "start_tick": lo, "stop_tick": hi, "clock_id": "imec_ap_s001"}
+            {"session_id": "s001", "unit_id": u, "start_tick": lo, "stop_tick": hi, "clock_id": "imec_ap_s001"}
             for u, windows in ((1, [(0, 300_000)]),
                                (2, [(0, 120_000), (150_000, 300_000)]))
             for i, (lo, hi) in enumerate(windows)],
@@ -415,14 +408,12 @@ def variants():
         # bombcell's `good` already projects to `sua` for unit_001; projecting the same
         # (source, label) pair to `mua` here is not a projection at all (R22 4).
         c["core.unit_quality_labels"].append(
-            {"session_id": "s001", "unit_id": 3, "sorting_run_id": "sort_ks4_001",
-             "curation_id": "curation_001", "source": "bombcell", "label": "good",
+            {"session_id": "s001", "unit_id": 3, "source": "bombcell", "label": "good",
              "normalized_label": "mua", "confidence": None})
     def spike_outside_window(c):
         # a spike in unit_002's declared drop-out, which its windows say was not observed
         c["core.spike_events"].append(
-            {"session_id": "s001", "unit_id": 2, "sorting_run_id": "sort_ks4_001",
-             "curation_id": "curation_001", "t_tick": 129_000, "clock_id": "imec_ap_s001",
+            {"session_id": "s001", "unit_id": 2, "t_tick": 129_000, "clock_id": "imec_ap_s001",
              "amplitude": -80.0})
         c["core.units"][1]["n_spikes"] += 1
     def stream_clock_mismatch(c):
@@ -456,9 +447,6 @@ def variants():
     def gapped_ordinal(c):
         # A dense waveform axis indexed by this addresses a row that is not there (R20 2).
         c["core.unit_electrodes"][2]["channel_index"] = 7
-    def undetected_default(c):
-        # The designated electrode is not one the unit was detected on.
-        c["core.units"][0]["default_electrode_id"] = "elec_003"
     def wide_anchor_gap(c):
         # 1 kHz anchors with one 20x hole: inside the span, outside the bound (R27 5.3).
         child(c)["transform_slope"] = None
@@ -505,7 +493,7 @@ def variants():
             "no_reference_clock": no_reference_clock, "clock_cycle": clock_cycle,
             "unreachable_clock": unreachable_clock, "unaligned_clock": unaligned_clock,
             "wide_anchor_gap": wide_anchor_gap, "two_primaries": two_primaries,
-            "gapped_ordinal": gapped_ordinal, "undetected_default": undetected_default,
+            "gapped_ordinal": gapped_ordinal,
             "undeclared_currency": undeclared_currency, "unscoped_runs": unscoped_runs}
 
 

@@ -176,16 +176,47 @@ agreement that is *not* recoverable from the array alone, and the validator chec
 against `core.array_dimensions`, declared `codecs` against the store, `zarr_format`, and R3 §5's
 transpose ban.
 
-### This package reaches no object store
+### This package acquires no transport of its own
 
-`stores` moved to **nwb-lake-validator**, because no read path here uses it. A table resolves to
-a local path or is refused; a Zarr array is handed its URI and `zarr` opens it with its own
-backend; DuckDB reaches an object store through its own C++ client. What needs a store client is
-R36's verification -- list a prefix, hash its members -- which is the validator's job, so the
-`remote` and `s3` extras live there now.
+`stores` moved to **nwb-lake-validator**, because what needs a store *client* is R36's
+verification -- list a prefix, hash its members -- and that is the validator's job, so the
+`remote` and `s3` extras live there.
 
-Keep it that way. If a read path here ever needs a remote byte, the engine that reads it brings
-its own transport; this package should not acquire one.
+Everything a read path reaches remotely, it reaches through an engine already depended on.
+`pyarrow.fs` opens a Parquet file or a JSON document, DuckDB reaches an object store through
+its own C++ client, and `zarr` opens an array URI with its own backend. `Location` is where the
+choice between a path and a store URI is made, once, so no caller repeats it.
+
+Keep it that way. A read path here may need a remote byte -- an object store is where a shared
+dataset lives -- but the engine that reads it brings its transport; this package adds no
+dependency to get one.
+
+### A packet root may be a store prefix
+
+`00` §56 admits three forms -- a local directory, an object-store prefix, or a release manifest
+pointing at distributed assets -- and `open_packet` takes any of them. `Location` resolves a
+declared URI against the root: relative under it, absolute where it says, and `file:` as the
+spelling of a path it is. `Packet.root` is the local answer and refuses a store; `Packet.location`
+is the one to pass on.
+
+`open_packet(..., rewrite=...)` substitutes a declared-URI prefix before resolution, longest
+prefix first. R14 §2.3 makes reachability the reader's situation and a committed packet records
+the writer's, so this is how the same bytes are reached from a mirror without editing bytes
+R14 §2.3 makes immutable. It is a reader convenience and not a format change: what a packet says
+is untouched. `git config url.<base>.insteadOf` is the same mechanism.
+
+### Registration is not free over a store
+
+DuckDB binds a view when it is created, and binding a Parquet view reads that file's footer.
+Locally that is nothing; against S3 it is a round trip per table, measured at 3.5 s of the 3.9 s
+a one-table question cost on a 28-table packet. So `Packet.duckdb()` **registers nothing by
+default**. Name what you need with `tables=`, pass the query as `for_query=` and let it read the
+names out, or ask for `tables="all"` -- which is what the validator does, because it runs every
+rule. `Packet.sql()` is unchanged for callers: it registers what the query names.
+
+Registration is idempotent and re-entrant: `_register` asks the connection what it already holds
+and re-runs `register_views` afterwards, so a view skipped for want of an input gains it when
+that input is registered by a later query.
 
 `07` names the CLI `nwb-lake`, which this package claims under `[project.scripts]`. Later
 packages **cannot** also claim it — two distributions declaring the same console script is a

@@ -894,11 +894,17 @@ The core layer comprises the following resources. Column definitions are in the 
 
 ## 12. Ordering
 
-A writer SHOULD sort every table by its primary key (R10 §2). Two tables override this:
+A unit is identified by `unit_id` alone (R81 §2.1). The packet assigns it, numbering units by
+ascending `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces the same
+numbers (R81 §2.2); `core.units` records the run and the curation as ordinary columns, and
+`local_unit_label` records what the sorter called it. A table keyed on a unit carries `unit_id`
+and not the run or the curation (R81 §2.3), and a consumer relating a unit to anything outside
+the packet uses `(sorting_run_id, local_unit_label)` (R81 §2.5).
+
+A writer SHOULD sort every table by its primary key (R10 §2). One table overrides this:
 
 | resource | order |
 |---|---|
-| `core.spike_events` | `session_id, sorting_run_id, curation_id, unit_id, t_tick` |
 | `core.events` | `session_id, clock_id, t_tick, event_type` |
 
 A large table SHOULD be partitioned by `session_id`. A table MUST NOT be partitioned by `unit_id`.
@@ -964,9 +970,11 @@ The catalog MUST record the actual layout. A reader MUST resolve resources throu
 
 ## 4. URI rules
 
-A URI in the catalog or in a table MAY be relative to the packet root or absolute. A portable local packet SHOULD use relative URIs.
+A URI in the catalog or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
 
 An absolute URI MAY name an external asset. An external asset MUST be declared as such in the catalog (Part 04 §5).
+
+A packet root MAY itself be an object-store prefix rather than a directory, in which case a relative URI resolves under that prefix (Part 00 §3).
 
 ## 5. Table storage
 
@@ -990,15 +998,14 @@ A writer SHOULD sort every table by its primary key, in the order the key declar
 
 What it is for is pruning. A validator establishes it by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3), and reports a departure at **warning** level — a packet whose rows are out of order is readable and slower, not wrong.
 
-Two tables override the default, both specified below, and `analysis.spike_events` overrides it under a `MUST` (R30 §3.2).
+One table overrides the default, specified below, and `analysis.spike_events` overrides it under a `MUST` (R30 §3.2). `core.spike_events` no longer needs an override: R81 §2.4 makes its key `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
 
 ### 5.4 The overriding orders
 
 | resource | order |
 |---|---|
-| `core.spike_events` | `session_id, sorting_run_id, curation_id, unit_id, t_tick` |
 | `core.events` | `session_id, clock_id, t_tick` |
-| `analysis.spike_events` | `session_id, clock_id, time_bucket_tick, sorting_run_id, curation_id, unit_id, t_tick` |
+| `analysis.spike_events` | `session_id, clock_id, time_bucket_tick, unit_id, t_tick` |
 
 A writer **MUST** emit `analysis.spike_events` in that order (R30 §3.2). It is the one resource whose layout is part of its reason for existing: bucketing by time and sorting by unit within each bucket leaves both columns with informative row-group statistics, so a unit filter and a time filter each prune.
 
@@ -1226,6 +1233,7 @@ The catalog identifies by name. `packet_id`, every entry's `resource_id`, the se
 | `schema_id` | string | MUST for a table |
 | `codecs` | array of string | MUST for an array (§6.2) |
 | `external` | bool | MUST where true (§5) |
+| `source` | string | MAY, on an external entry (§5.5) |
 | `derived_from` | array of string | MUST for a derived resource (§7) |
 | `processing_run_id` | string | MUST for an analysis resource (R31 §3); SHOULD for any other derived resource |
 
@@ -1290,6 +1298,33 @@ Where `members` accompanies R36 §2.2's `sha256`, the listing digested MUST be t
 A validator asked to verify content **without reading** compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading (R51 §2.3). A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped.
 
 A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A verification pass MUST report what it skipped for these reasons, and a store-digest pass **MUST NOT** be reported as a checksum verification (R51 §2.4): it establishes something weaker and store-specific, so it gets its own finding.
+
+### 5.5 Source resolution
+
+An external resource entry MAY carry `source`, an identifier naming the body of data it belongs to;
+its `uri` is then a path relative to wherever that source is, and neither field is a location. An
+entry carrying no `source` keeps the meaning §5.1 gives it.
+
+Where a source is, is stated by a **source resolution document**: a JSON document, conventionally
+`sources.json`, whose shape is published as `https://nwb-lake.org/schemas/sources/0.1.0`. It carries
+`sources_standard_version` and a `sources` object mapping each source name to an entry with a
+required `uri`, and both objects are closed.
+
+A resolution document MUST NOT be a packet resource. Immutability (§5.1, R14 §2.3) does not reach
+it, which is what lets a location be corrected when a mirror moves without rebuilding the packet.
+
+A reader MUST accept one or more resolution documents from its caller, and resolves a `source` in
+this order: the documents the caller supplied, in the order supplied; then `sources.json` at the
+packet root if it is there; then the source is unresolved. A writer SHOULD write that default.
+
+An unresolved `source` MUST be reported as unresolved and MUST NOT fail structural validation:
+which mirrors a reader can reach is a property of the reader. Structural validation MUST NOT
+require a resolution document.
+
+Resolving through a different document MUST NOT be read as invalidating a recorded `sha256`,
+`size_bytes` or `members`. A reader that verifies a resolved source and finds a mismatch MUST
+report it against the resource entry, and MUST NOT silently prefer either the recorded digest or
+the bytes it found.
 
 ## 6. Codecs
 
@@ -1548,6 +1583,12 @@ MUST NOT be judged non-conforming for lacking one (R75 §2.2).
 A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would
 produce. Two conforming builds of one dataset may record different digests for the same rows
 (R75 §2.3).
+
+## 11. Alternatives are resolved before a commit
+
+Where two or more `core.processing_runs` rows share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not (R82 §2.1). Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` (R82 §2.2) — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
+
+Both are checked at `error` level. R41 §2.4's rule that a consumer MUST NOT silently choose stands and becomes unreachable on a conforming packet: a consumer that meets an unresolved alternative is holding a packet that failed validation and reports that (R82 §2.3). Nothing here forbids a packet holding two sortings of one probe or two curations of one sorting (R82 §2.4); what it requires is that the packet says which is current.
 
 <!-- END 05_validation_and_import.md -->
 

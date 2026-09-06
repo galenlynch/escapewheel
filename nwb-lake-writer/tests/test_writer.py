@@ -179,13 +179,15 @@ def test_a_date_written_as_a_string_becomes_a_date(tmp_path, registry, minimal):
 
 
 def _spike_batch(n, unit, first_tick):
-    """One batch of core.spike_events, already in the registry's sort order."""
+    """One batch of core.spike_events, already in the registry's sort order.
+
+    `unit` is the number the writer assigned (R81 §2.1), not the sorter's label: a batch is
+    written as given, so a caller streaming one supplies identifiers the packet already knows.
+    """
     return pa.record_batch(
         {
             "session_id": pa.array(["s001"] * n),
             "unit_id": pa.array([unit] * n),
-            "sorting_run_id": pa.array(["sort_1"] * n),
-            "curation_id": pa.array(["cur_1"] * n),
             "t_tick": pa.array(range(first_tick, first_tick + n), type=pa.int64()),
             "clock_id": pa.array(["harp_s001"] * n),
             "amplitude": pa.array([-50.0] * n, type=pa.float32()),
@@ -209,7 +211,8 @@ def test_batches_reach_the_packet(tmp_path, registry, minimal):
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
-    writer.add_batches("core.spike_events", (_spike_batch(500, 1, t) for t in (0, 500, 1000)))
+    unit = writer.keys.of("unit", "1")
+    writer.add_batches("core.spike_events", (_spike_batch(500, unit, t) for t in (0, 500, 1000)))
     writer.commit(tmp_path / "pkt")
     table = pq.read_table(tmp_path / "pkt" / "tables" / "core" / "spike_events.parquet")
     assert table.num_rows == 1500
@@ -247,8 +250,9 @@ def test_a_later_batch_may_omit_a_declared_column(tmp_path, registry, minimal):
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
-    wide = _spike_batch(10, 1, 0)
-    narrow = _spike_batch(10, 1, 10).drop_columns(["amplitude"])
+    unit = writer.keys.of("unit", "1")
+    wide = _spike_batch(10, unit, 0)
+    narrow = _spike_batch(10, unit, 10).drop_columns(["amplitude"])
     writer.add_batches("core.spike_events", iter([wide, narrow]))
     writer.commit(tmp_path / "pkt")
     table = pq.read_table(tmp_path / "pkt" / "tables" / "core" / "spike_events.parquet")
@@ -261,8 +265,9 @@ def test_a_later_batch_may_not_introduce_a_column(tmp_path, registry, minimal):
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
-    plain = _spike_batch(10, 1, 0)
-    later = _spike_batch(10, 1, 10)  # continues the order, so the schema is what fails
+    unit = writer.keys.of("unit", "1")
+    plain = _spike_batch(10, unit, 0)
+    later = _spike_batch(10, unit, 10)  # continues the order, so the schema is what fails
     extra = pa.record_batch(
         [*later.columns, pa.array(['{"a":1}'] * 10)],
         names=[*later.schema.names, "metadata"],
@@ -587,6 +592,7 @@ def test_a_codec_outside_the_floor_is_written_and_declared(tmp_path):
 
     assert (zarr.open(tmp_path / "wf.zarr", mode="r")[:] == spec.values).all()
 
+
 def test_shard_size_follows_the_bandwidth_delay_product():
     """The rule is `S = share/(1-share) * latency * bandwidth`, not a constant.
 
@@ -642,8 +648,6 @@ def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
             # streamed batch's identifiers are numbered, so this builds them already numbered.
             "session_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
             "unit_id": pa.repeat(pa.scalar(1, pa.int32()), rows),
-            "sorting_run_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
-            "curation_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
             "clock_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
             "t_tick": pa.array(range(rows), type=pa.int64()),
         }
@@ -704,7 +708,12 @@ def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, regist
     writer.add("core.processing_runs", [_run("run_import")])
 
     def derive(packet, target):
-        target.add("core.processing_runs", [_run("run_derived")])
+        # R31 §2: a materialization records what produced it, which its own rule checks.
+        target.add(
+            "core.processing_runs",
+            [dict(_run("run_derived", "materialization"),
+                  software_name="nwb_lake_writer", software_version="0.0.0")],
+        )
 
     writer.commit(root, materialize=[derive])
 
@@ -717,12 +726,16 @@ def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, regist
     assert [e["resource_id"] for e in entries].count("core.processing_runs") == 1, "duplicated entry"
 
 
-def _run(run_id):
-    """One `core.processing_runs` row."""
+def _run(run_id, activity="import"):
+    """One `core.processing_runs` row.
+
+    The activity is a parameter because R82 §2.2 makes two runs of one activity declare their
+    scopes, and a derived run is a materialization rather than a second import (R31 §2).
+    """
     return {
         "processing_run_id": run_id,
         "session_id": "s001",
-        "activity_type": "import",
+        "activity_type": activity,
         "status": "succeeded",
     }
 
@@ -797,8 +810,7 @@ def test_no_catalog_names_a_resource_that_is_not_in_place(tmp_path, registry, mi
     writer.commit(root)
 
     manifest = json.loads((root / "nwb.packet.json").read_text())
-    absent = [r["uri"] for r in manifest["resources"]
-              if not r.get("external") and not (root / r["uri"]).exists()]
+    absent = [r["uri"] for r in manifest["resources"] if not r.get("external") and not (root / r["uri"]).exists()]
     assert not absent, f"the catalog names {absent}, which are not in place"
 
 
@@ -813,8 +825,50 @@ def test_a_refused_commit_publishes_no_catalog(tmp_path, registry, minimal):
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     # A clock that names a parent it does not have: refused by the generated foreign key.
-    writer.add("core.clocks", [{"clock_id": "orphan", "session_id": "s1", "name": "x",
-                                "origin": "sample 0", "parent_clock_id": "nowhere"}])
+    writer.add(
+        "core.clocks",
+        [{"clock_id": "orphan", "session_id": "s1", "name": "x", "origin": "sample 0", "parent_clock_id": "nowhere"}],
+    )
     with pytest.raises(CommitRefused):
         writer.commit(root)
     assert not (root / "nwb.packet.json").exists()
+
+
+def test_a_referenced_source_reaches_the_default_document(tmp_path, registry, minimal):
+    """R80 §2.3: written at the packet root, and not declared as a resource."""
+    from nwb_lake_writer.writer import ExternalArray
+
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id=root.name)
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    writer.declare_source("raw_nwb", "file:///mnt/Data/ephys/session.nwb")
+    writer.reference_array(
+        "core.probe0.lfp",
+        ExternalArray(
+            array_asset_id="lfp0",
+            uri="processing/ecephys/LFP/data",
+            source="raw_nwb",
+            physical_profile="zarr_v2",
+        ),
+    )
+    writer.commit(root)
+
+    document = json.loads((root / "sources.json").read_text())
+    assert document["sources_standard_version"] == "nwb-lake-sources-v0.1"
+    assert document["sources"]["raw_nwb"]["uri"] == "file:///mnt/Data/ephys/session.nwb"
+
+    manifest = json.loads((root / "nwb.packet.json").read_text())
+    entry = next(r for r in manifest["resources"] if r["resource_id"] == "core.probe0.lfp")
+    assert entry["source"] == "raw_nwb"
+    assert entry["uri"] == "processing/ecephys/LFP/data"
+    # Not a packet resource: nothing in the manifest names it, which is what keeps R14 §2.3's
+    # immutability off it and lets a moved mirror be corrected in place.
+    assert not any(r.get("uri") == "sources.json" for r in manifest["resources"])
+
+
+def test_no_source_means_no_document(tmp_path, registry, minimal):
+    """A document locating nothing is worse than none: it answers a lookup it should not."""
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    assert not (root / "sources.json").exists()

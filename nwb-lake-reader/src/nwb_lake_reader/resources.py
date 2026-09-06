@@ -15,13 +15,13 @@ import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
-from urllib.parse import unquote, urlparse
 
 import pyarrow as pa
 import pyarrow.dataset as pads
 import pyarrow.parquet as pq
 
 from .errors import ResourceUnreadableError
+from .location import Location
 from .manifest import Resource
 from .sql import sql_name
 
@@ -39,15 +39,15 @@ _ZARR_PROFILES: dict[str, Literal[2, 3]] = {"zarr_v2": 2, "zarr_v3": 3}
 _ZARR_METADATA: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
 
 
-def _resolve(resource: Resource, root: Path) -> Path:
-    """Resolve a declared URI against the packet root.
+def _resolve(resource: Resource, root: Location) -> Path:
+    """Resolve a declared URI to a local filesystem path.
 
     Parameters
     ----------
     resource : Resource
         The manifest entry.
-    root : Path
-        Packet root directory.
+    root : Location
+        Packet root.
 
     Returns
     -------
@@ -59,31 +59,30 @@ def _resolve(resource: Resource, root: Path) -> Path:
     ResourceUnreadableError
         If the URI names a store this cannot open locally, or the path does not exist.
     """
-    scheme = urlparse(resource.uri).scheme
-    if scheme and scheme != "file" and len(scheme) > 1:
-        # A single-letter scheme is a Windows drive, not a URI. Anything else is a store only
-        # a library with that backend can open, which `store` hands over as the URI itself.
+    where = root.resolve(resource.uri, resource.source)
+    if not where.is_local:
+        # A store only a library with that backend can open, which `store` hands over as the
+        # URI itself.
         raise ResourceUnreadableError(
-            f"{resource.resource_id}: {resource.uri} is {scheme}:, which has no local path; "
+            f"{resource.resource_id}: {where} is {where.scheme}:, which has no local path; "
             "open it through a store that speaks that scheme"
         )
-    declared = Path(unquote(urlparse(resource.uri).path)) if scheme == "file" else Path(resource.uri)
-    resolved = declared if declared.is_absolute() else root / declared
+    resolved = where.path
     if not resolved.exists():
         raise ResourceUnreadableError(f"{resource.resource_id}: {resource.uri} does not resolve under {root}")
     return resolved
 
 
-def _store(resource: Resource, root: Path) -> str:
+def _store(resource: Resource, root: Location) -> str:
     """Return what to hand a Zarr store: the URI itself when remote, else the resolved path.
 
     An external array is expected to be the large one (R14 §2.3), and in production that means
     an object store rather than a filesystem. Zarr opens such a URI directly given a backend
     for it, so resolving to a `Path` first would be the thing that made it unopenable.
     """
-    scheme = urlparse(resource.uri).scheme
-    if scheme and scheme != "file" and len(scheme) > 1:
-        return resource.uri
+    where = root.resolve(resource.uri, resource.source)
+    if not where.is_local:
+        return where.uri
     return str(_resolve(resource, root))
 
 
@@ -121,23 +120,28 @@ class TableResource:
     declared in the manifest and is not the caller's concern.
     """
 
-    def __init__(self, resource: Resource, root: Path) -> None:
+    def __init__(self, resource: Resource, root: Location | Path | str) -> None:
         """Bind a declared resource to the packet root that contains it.
 
         Parameters
         ----------
         resource : Resource
             The manifest entry.
-        root : Path
-            Packet root directory.
+        root : Location, Path, or str
+            Packet root: a local directory or a store prefix.
         """
         self._resource = resource
-        self._root = root
+        self._root = Location.of(root)
 
     @property
     def resource(self) -> Resource:
         """The underlying manifest entry."""
         return self._resource
+
+    @property
+    def location(self) -> Location:
+        """Where this resource's bytes are, after the root, any source, and any substitution."""
+        return self._root.resolve(self._resource.uri, self._resource.source)
 
     @property
     def resource_id(self) -> str:
@@ -187,13 +191,10 @@ class TableResource:
         """
         if self.is_local:
             return self.path, None
-        from pyarrow.fs import FileSystem
-
         try:
-            filesystem, path = FileSystem.from_uri(self._resource.uri)
-        except Exception as exc:
-            raise ResourceUnreadableError(f"{self.resource_id}: cannot reach {self._resource.uri}: {exc}") from exc
-        return path, filesystem
+            return self.location.store()
+        except ResourceUnreadableError as exc:
+            raise ResourceUnreadableError(f"{self.resource_id}: {exc}") from exc
 
     def to_arrow(self, *, columns: list[str] | None = None) -> pa.Table:
         """Read the resource into memory, in stored order.
@@ -225,8 +226,9 @@ class TableResource:
             A lazy dataset, suitable for predicate pushdown over large resources.
         """
         path, filesystem = self._store()
-        opened: pads.Dataset = pads.dataset(path, format=pads.ParquetFileFormat(),
-                                            partitioning="hive", filesystem=filesystem)
+        opened: pads.Dataset = pads.dataset(
+            path, format=pads.ParquetFileFormat(), partitioning="hive", filesystem=filesystem
+        )
         return opened
 
     def schema(self) -> pa.Schema:
@@ -246,10 +248,10 @@ class TableResource:
     def is_local(self) -> bool:
         """Whether the resource resolves to a filesystem path rather than a store URI.
 
-        A single-letter scheme is a Windows drive, not a URI scheme.
+        A relative URI follows the packet root, so the same packet is local on disk and remote
+        in a store without either resource entry changing.
         """
-        scheme = urlparse(self._resource.uri).scheme
-        return not scheme or scheme == "file" or len(scheme) == 1
+        return self.location.is_local
 
     def register(self, connection: duckdb.DuckDBPyConnection, *, name: str | None = None) -> str:
         """Register the resource as a view on a DuckDB connection.
@@ -269,7 +271,7 @@ class TableResource:
         view = name or self.sql_name
         # A remote table is handed over as its URI: DuckDB reads an object store through its own
         # client, so resolving to a local path first is the thing that would make it unreadable.
-        base = str(self.path) if self.is_local else self._resource.uri
+        base = str(self.path) if self.is_local else self.location.uri
         target = f"{base}/**/*.parquet" if self._resource.is_partitioned else base
         connection.sql(f"CREATE OR REPLACE VIEW {view} AS SELECT * FROM '{target}'")
         return view
@@ -293,7 +295,8 @@ class TableResource:
             import polars as _pl
         except ImportError as exc:  # pragma: no cover - exercised only without the extra
             raise ImportError("scan_polars requires polars; install the 'polars' extra") from exc
-        target = f"{self.path}/**/*.parquet" if self._resource.is_partitioned else str(self.path)
+        base = str(self.path) if self.is_local else self.location.uri
+        target = f"{base}/**/*.parquet" if self._resource.is_partitioned else base
         frame: pl.LazyFrame = _pl.scan_parquet(target)
         return frame
 
@@ -308,20 +311,25 @@ class ArrayResource:
     :meth:`read` needs Zarr, behind the ``arrays`` extra.
     """
 
-    def __init__(self, resource: Resource, root: Path) -> None:
+    def __init__(self, resource: Resource, root: Location | Path | str) -> None:
         """Bind a declared array resource to the packet root that contains it.
 
         Parameters
         ----------
         resource : Resource
             The manifest entry.
-        root : Path
-            Packet root directory.
+        root : Location, Path, or str
+            Packet root: a local directory or a store prefix.
         """
         self._resource = resource
-        self._root = root
+        self._root = Location.of(root)
         self._metadata: dict[str, Any] | None = None
         self._array: Any = None
+
+    @property
+    def location(self) -> Location:
+        """Where this array's bytes are, after the root, any source, and any substitution."""
+        return self._root.resolve(self._resource.uri, self._resource.source)
 
     @property
     def resource(self) -> Resource:
@@ -386,28 +394,27 @@ class ArrayResource:
         ResourceUnreadableError
             If neither metadata document is present.
         """
-        if not self._is_local:
-            # The manifest's word, and only here. Taking it for a packet-owned array would
-            # make R15 §4's level 2 compare a value with itself; for a remote external one
-            # there is nothing local to compare against, and R14 §2.3.1 already frames the
-            # declaration as a claim rather than a verified fact.
+        where = self.location
+        if self._resource.is_external:
+            # The manifest's word, and only here. R14 §2.3.1 frames an external resource's
+            # declaration as a claim rather than a verified fact, and there is nothing the
+            # packet owns to compare it against.
             declared = str(self._resource.entry.get("physical_profile", ""))
             if declared in _ZARR_PROFILES:
                 return _ZARR_PROFILES[declared]
-            raise ResourceUnreadableError(
-                f"{self.resource_id}: {self._resource.uri} is remote and declares no Zarr version"
-            )
-        root = self.path
+            raise ResourceUnreadableError(f"{self.resource_id}: {where} is external and declares no Zarr version")
+        # A packet-owned array is read from the store whether that store is a disk or a
+        # bucket: taking the manifest's word would make R15 §4's level 2 compare a value with
+        # itself, and where the packet sits does not change what the check is for.
         for version, name in _ZARR_METADATA.items():
-            if (root / name).is_file():
+            if where.join(name).exists():
                 return version
-        raise ResourceUnreadableError(f"{self.resource_id}: {root} holds no Zarr metadata document")
+        raise ResourceUnreadableError(f"{self.resource_id}: {where} holds no Zarr metadata document")
 
     @property
     def _is_local(self) -> bool:
         """Whether the array's bytes are reachable as a filesystem path."""
-        scheme = urlparse(self._resource.uri).scheme
-        return not scheme or scheme == "file" or len(scheme) == 1
+        return self.location.is_local
 
     def metadata(self) -> dict[str, Any]:
         """Read and parse the array's own Zarr metadata document.
@@ -423,9 +430,10 @@ class ArrayResource:
             The parsed document, read once and kept.
         """
         if self._metadata is None:
-            if self._is_local:
-                parsed: dict[str, Any] = json.loads((self.path / _ZARR_METADATA[self.zarr_format]).read_text())
-            else:
+            document = self.location.join(_ZARR_METADATA[self.zarr_format])
+            try:
+                parsed: dict[str, Any] = json.loads(document.read_bytes())
+            except Exception:  # noqa: BLE001 - a store this cannot read is Zarr's problem, not an error
                 parsed = dict(self.open().metadata.to_dict())
             self._metadata = parsed
         return self._metadata
@@ -515,7 +523,7 @@ class ArrayResource:
             try:
                 self._array = zarr.open_array(self.store, mode="r", zarr_format=self.zarr_format)
             except ImportError as exc:  # pragma: no cover - depends on which backends are installed
-                scheme = urlparse(self._resource.uri).scheme or "file"
+                scheme = self.location.scheme or "file"
                 raise ImportError(
                     f"{self.resource_id}: opening a {scheme}: store needs a backend for that scheme "
                     f"(s3fs for s3://, gcsfs for gs://); zarr resolves it through fsspec"

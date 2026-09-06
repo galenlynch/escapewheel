@@ -61,6 +61,14 @@ def _version() -> str:
 #: Where a manifest lives once committed (`04`).
 MANIFEST = "nwb.packet.json"
 
+#: R80 §2.3's default source resolution document. Written at the packet root and **not** a packet
+#: resource: under the root so a copy carries it, outside the manifest so R14 §2.3's immutability
+#: does not reach it and a moved mirror is fixed by editing it in place.
+SOURCES = "sources.json"
+
+#: The version of that document this writer emits (R80 §2.2).
+SOURCES_VERSION = "nwb-lake-sources-v0.1"
+
 #: Where a packet embeds the registry it was written against (R2 §8).
 REGISTRY_PATH = "schemas/logical_schemas.json"
 #: Where an extension registry lives in a packet (R17 §2, `09` §6).
@@ -324,6 +332,10 @@ class ExternalArray:
 
     array_asset_id: str
     uri: str
+    #: R80 §2.1: the body of data these bytes belong to. Where set, `uri` is a path relative to
+    #: wherever that source turns out to be rather than a location, and a resolution document
+    #: says where that is.
+    source: str | None = None
     physical_profile: str = "zarr_v3"
     codecs: tuple[str, ...] = ()
     sha256: str | None = None
@@ -349,9 +361,25 @@ class ExternalMedia:
     media_asset_id: str
     uri: str
     format: str
+    #: R80 §2.1, as on `ExternalArray`.
+    source: str | None = None
     sha256: str | None = None
     size_bytes: int | None = None
     verified_at: str | None = None
+
+
+def _check_reference(resource_id: str, uri: str, source: str | None) -> None:
+    """Refuse a referenced URI that does not match how it will be resolved (R14 §2.3, R80 §2.1).
+
+    Absolute where the entry names no source, because a relative one would resolve against a
+    packet the bytes do not live in. Relative where it names one, because the source supplies
+    the part in front and an absolute URI there would ignore it.
+    """
+    if source is None:
+        if "://" not in uri:
+            raise ValueError(f"{resource_id}: {uri!r} is not absolute, so it cannot resolve without the packet")
+    elif "://" in uri:
+        raise ValueError(f"{resource_id}: {uri!r} is absolute, so naming source {source!r} would have no effect")
 
 
 def _digest(path: Path) -> str:
@@ -442,6 +470,10 @@ class PacketWriter:
         #: limit: a packet that is never amended retains nothing, and a packet is archival where
         #: a table is operational, so age alone never expires a manifest.
         self._retention: dict[str, Any] = {"keep_versions": 1}
+        #: R80 §2.3: where each named source was read from, written to `sources.json` at commit.
+        #: A record of where the writer looked, never a resolution rule binding a later reader --
+        #: the same standing R14 §2.3.1 gives `sha256` and `verified_at`.
+        self._sources: dict[str, str] = {}
         #: Rows each resource was written with, filled as `_stage` writes them. A streamed
         #: table has no count until then, so anything reported earlier is the source's estimate.
         self.rows_written: dict[str, int] = {}
@@ -629,13 +661,12 @@ class PacketWriter:
         Raises
         ------
         ValueError
-            If this resource already has an array, or if the URI is not absolute -- a relative
-            one would resolve against a packet the bytes do not live in.
+            If this resource already has an array, or if the URI does not match how it resolves:
+            absolute where no `source` is named, relative where one is (R80 §2.1).
         """
         if resource_id in self._staged_arrays or resource_id in self._referenced_arrays:
             raise ValueError(f"{resource_id} already has an array")
-        if "://" not in array.uri:
-            raise ValueError(f"{resource_id}: {array.uri!r} is not absolute, so it cannot resolve without the packet")
+        _check_reference(resource_id, array.uri, array.source)
         self._referenced_arrays[resource_id] = array
 
     def reference_media(self, resource_id: str, media: ExternalMedia) -> None:
@@ -654,12 +685,12 @@ class PacketWriter:
         Raises
         ------
         ValueError
-            If this resource already has media, or if the URI is not absolute.
+            If this resource already has media, or if the URI does not match how it resolves
+            (R80 §2.1).
         """
         if resource_id in self._referenced_media:
             raise ValueError(f"{resource_id} already has media")
-        if "://" not in media.uri:
-            raise ValueError(f"{resource_id}: {media.uri!r} is not absolute, so it cannot resolve without the packet")
+        _check_reference(resource_id, media.uri, media.source)
         self._referenced_media[resource_id] = media
 
     def produced_by(self, resource_id: str, processing_run_id: str) -> None:
@@ -739,7 +770,7 @@ class PacketWriter:
                 "validation_state": "not_run",
                 "external": True,
             }
-            for name in ("sha256", "size_bytes", "verified_at"):
+            for name in ("source", "sha256", "size_bytes", "verified_at"):
                 if (value := getattr(media, name)) is not None:
                     entry[name] = value
             entries.append(entry)
@@ -761,7 +792,7 @@ class PacketWriter:
                 "external": True,
                 "codecs": list(array.codecs),
             }
-            for name in ("sha256", "size_bytes", "verified_at"):
+            for name in ("source", "sha256", "size_bytes", "verified_at"):
                 if (value := getattr(array, name)) is not None:
                     entry[name] = value
             if array.members is not None:
@@ -896,6 +927,46 @@ class PacketWriter:
             manifest["description"] = self._description
         return manifest
 
+    def declare_source(self, name: str, uri: str) -> None:
+        """Record where a named body of referenced data was read from (R80 §2.1).
+
+        An adapter that references bytes belonging to a nameable asset calls this once and then
+        gives each resource a `source` and a path relative to it. What the packet stores is the
+        name; where it is goes to `sources.json`, which is not a packet resource and may be
+        corrected when a mirror moves.
+
+        Parameters
+        ----------
+        name : str
+            The source's identifier, as resource entries will spell it.
+        uri : str
+            Where this writer read it.
+        """
+        self._sources[name] = uri
+
+    def _write_sources(self, root: Path) -> None:
+        """Write R80 §2.3's default resolution document, where any resource names a source.
+
+        Before the manifest, because R74 §2.1 makes publishing the catalog what makes a commit
+        visible: everything a reader may look for is in place first. Skipped entirely when no
+        resource names a source, since a document locating nothing is worse than none -- it
+        would answer a lookup the caller meant to answer itself.
+        """
+        located = {
+            referenced.source: {"uri": self._sources[referenced.source]}
+            for referenced in (*self._referenced_arrays.values(), *self._referenced_media.values())
+            if referenced.source is not None and referenced.source in self._sources
+        }
+        if not located:
+            return
+        document = {
+            "$schema": "https://nwb-lake.org/schemas/sources/0.1.0",
+            "sources_standard_version": SOURCES_VERSION,
+            "description": f"Where {self._packet_id} read its referenced data. Editable: not a packet resource.",
+            "sources": dict(sorted(located.items())),
+        }
+        (root / SOURCES).write_text(json.dumps(document, indent=2) + "\n")
+
     def commit(
         self,
         root: str | Path,
@@ -1018,6 +1089,7 @@ class PacketWriter:
 
         # 4. rename the manifest last: until this line the root holds no manifest at all,
         #    so a reader finds nothing rather than a partial import claiming to be valid.
+        self._write_sources(root)
         candidate = root / f"{MANIFEST}.candidate"
         candidate.write_text(json.dumps(self._manifest(entries, report), indent=2) + "\n")
         os.replace(candidate, root / MANIFEST)
