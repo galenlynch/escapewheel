@@ -4,6 +4,34 @@ Guidance for writing the revision documents in this directory. Prose structure �
 position, and the symptom table for a draft that reads badly — is in the global `CLAUDE.md` and the
 `prose` skill. What follows is what a revision specifically needs.
 
+## House style: follow the v0.2 specification, not R1-R89
+
+**The style of the existing revisions is not the target and should not be imitated.** R1 through R89
+were written to a house style whose titles and section headings are often hard to interpret, and
+`escapewheel_poc_docs_v0.2/` is the model to copy instead. A new revision is read by someone
+implementing it months later, and their cost of reading is what the style is chosen to lower.
+
+**A section heading names its subject.** Part 06 numbers its sections `Scope`, `Rules`,
+`What justifies materializing`, `analysis.spike_events`, `Provenance of a materialization` —
+noun phrases a reader locates by, not findings they must absorb in sequence. The older revisions
+put a full-sentence claim in every heading, so a contents list of nine sections is nine
+propositions to hold with nowhere to put them. State the finding in the body, where the stress
+positions carry it.
+
+This overrides the `prose` skill's heading guidance, which is written for a report or an argument.
+A revision is navigated like a specification, by subject.
+
+**Say which sections are normative, at the top.** Part 06 opens "Informative, except §2 and §5,
+which are normative", and a reader then knows what binds them without inferring it from the
+RFC 2119 keywords.
+
+**Number sections and cite revisions inline**, as the v0.2 parts do: the rule, then `(R30 §2)`.
+The citation belongs beside the clause it supports rather than in a paragraph about provenance.
+
+**A title names what the revision settles.** Still declarative, still not an imperative and not an
+aphorism, but a subject a reader can recognise before they open it: "Primary-Key Order for Every
+Table" over "A Table Sorts Itself the Way It Is Keyed".
+
 ## Before drafting
 
 **Invoke the `prose` skill.** Not optional and not only for long ones: the failure it prevents is
@@ -64,6 +92,14 @@ rule rather than describing it.
 **MUST is RFC 2119 here.** A lowercase "must" in a Decision section states no requirement, whatever
 the surrounding emphasis suggests. Where the implementation enforces something, the document says
 **MUST**.
+
+**A requirement needs an actor who can comply, not a tool that can catch them.** "The two MUST
+agree" names nobody who could fail, so it binds nothing and the repair is to say who acts: "a build
+MUST refuse where they differ". That a validator cannot see the breach is not the same defect —
+"a consumer MUST NOT infer attachment from a device's name" (R67 §2.4) binds a named actor to a
+determinable behaviour, and 24 clauses across Parts 00-09 are of that kind, including a reader's
+ban on depending on stored order and R39's rule that a consumer without a time origin refuses
+rather than invents. Strike the actorless MUST; keep the uncheckable one.
 
 ## What a revision must carry
 
