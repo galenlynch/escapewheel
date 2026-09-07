@@ -82,7 +82,7 @@ SINCE = _Since([None])
 #: R42 is withdrawn and so is not here.
 UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34, 35, 36, 37, 40,
              43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69, 71, 72, 74, 75, 76, 77, 78, 79,
-             80, 82, 84, 86)
+             80, 82, 84, 86, 87)
 
 
 #: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a
@@ -1257,6 +1257,37 @@ def build() -> dict:
                 "where the attachment is stated and its coordinate is not. Establishes nothing "
                 "about identity: two rows may share a parent and a port (R85 §2.3)."),
             after="parent_device_id")
+
+    SINCE[0] = "R88 §2.1"
+    # A table reaching `core.sessions` through its declared references is session-scoped (R86
+    # §2.1), which 33 of 35 are, and until now they used four conventions between them. Eight
+    # held no session column at all, so R86 §2.2's discriminator had nothing to derive from and
+    # the reader refused; six held one and declared no reference, so Tier 1 generated no
+    # anti-join and 418,618,218 rows across the two packets carried a session key nothing
+    # validated. `core.devices` and `core.processing_runs` were nullable for a question R86 §2.1
+    # now answers, and neither is null in any packet built.
+    SESSION_COLUMN = (
+        "analysis.array_dimensions", "core.array_channels", "core.array_dimensions",
+        "core.clock_anchors", "core.electrode_coordinates",
+        "core.event_stream_observation_intervals", "core.media_frames",
+        "core.processing_run_inputs",
+    )
+    SESSION_REFERENCE = (
+        "analysis.spike_events", "core.sorting_run_channels", "core.unit_coordinates",
+        "core.unit_electrodes", "core.unit_observation_intervals", "core.unit_quality_labels",
+    )
+    for resource in SESSION_COLUMN:
+        # First, as the sixteen tables already doing this have it. R88 §2.3: a writer fills it
+        # from the parent it is exactly one hop from, so the column costs no new read.
+        T(resource)["columns"].insert(0, col("session_id", "int32", "required", "Session ID."))
+    for resource in (*SESSION_COLUMN, *SESSION_REFERENCE):
+        T(resource)["references"].append(
+            {"columns": ["session_id"], "resource": "core.sessions",
+             "resource_columns": ["session_id"]})
+    SINCE[0] = "R88 §2.1"
+    for resource in ("core.devices", "core.processing_runs"):
+        # `02` hedged these as "if session-scoped", written before anything could compute scope.
+        amend(resource, "session_id", presence="required")
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates

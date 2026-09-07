@@ -89,7 +89,9 @@
       "R83",
       "R84",
       "R85",
-      "R86"
+      "R86",
+      "R87",
+      "R88"
     ]
   },
   "tables": {
@@ -265,6 +267,15 @@
     "analysis.array_dimensions": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
+        {
           "name": "array_asset_id",
           "type": "int32",
           "presence": "required",
@@ -396,6 +407,15 @@
           "resource_columns": [
             "clock_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
         }
       ],
       "sort": [
@@ -475,6 +495,15 @@
           "resource": "core.clocks",
           "resource_columns": [
             "clock_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
           ]
         }
       ],
@@ -673,6 +702,15 @@
     "core.array_channels": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
+        {
           "name": "array_asset_id",
           "type": "int32",
           "presence": "required",
@@ -775,6 +813,15 @@
           "resource_columns": [
             "electrode_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
         }
       ],
       "sort": [
@@ -792,6 +839,15 @@
     },
     "core.array_dimensions": {
       "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
         {
           "name": "array_asset_id",
           "type": "int32",
@@ -933,6 +989,15 @@
           "resource_columns": [
             "array_asset_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
         }
       ],
       "sort": [
@@ -988,6 +1053,15 @@
     "core.clock_anchors": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
+        {
           "name": "clock_id",
           "type": "int32",
           "presence": "required",
@@ -1034,6 +1108,15 @@
           "resource": "core.clocks",
           "resource_columns": [
             "clock_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
           ]
         }
       ],
@@ -1492,10 +1575,11 @@
         {
           "name": "session_id",
           "type": "int32",
-          "presence": "nullable",
+          "presence": "required",
           "role": "identifier",
           "description": "Session if device record is session-scoped.",
-          "identity": "assigned"
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
         },
         {
           "name": "name",
@@ -1610,6 +1694,15 @@
     "core.electrode_coordinates": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
+        {
           "name": "electrode_id",
           "type": "int32",
           "presence": "required",
@@ -1714,6 +1807,15 @@
           "resource_columns": [
             "processing_run_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
         }
       ],
       "sort": null,
@@ -1817,6 +1919,15 @@
     "core.event_stream_observation_intervals": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
+        {
           "name": "event_stream_id",
           "type": "int32",
           "presence": "required",
@@ -1856,6 +1967,15 @@
           "resource": "core.event_streams",
           "resource_columns": [
             "event_stream_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
           ]
         }
       ],
@@ -2372,6 +2492,15 @@
     "core.media_frames": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
+        {
           "name": "media_asset_id",
           "type": "int32",
           "presence": "required",
@@ -2445,6 +2574,15 @@
           "resource": "core.media_assets",
           "resource_columns": [
             "media_asset_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
           ]
         }
       ],
@@ -2694,6 +2832,15 @@
     "core.processing_run_inputs": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
+        {
           "name": "processing_run_id",
           "type": "int32",
           "presence": "required",
@@ -2734,6 +2881,15 @@
           "resource_columns": [
             "source_file_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
         }
       ],
       "sort": [
@@ -2764,10 +2920,11 @@
         {
           "name": "session_id",
           "type": "int32",
-          "presence": "nullable",
+          "presence": "required",
           "role": "identifier",
           "description": "Session ID if session-scoped.",
-          "identity": "assigned"
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
         },
         {
           "name": "activity_type",
@@ -3188,6 +3345,15 @@
           "resource": "core.electrodes",
           "resource_columns": [
             "electrode_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
           ]
         }
       ],
@@ -3743,6 +3909,15 @@
           "resource_columns": [
             "processing_run_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
         }
       ],
       "sort": null,
@@ -3817,6 +3992,15 @@
           "resource": "core.electrodes",
           "resource_columns": [
             "electrode_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
           ]
         }
       ],
@@ -3912,6 +4096,15 @@
           "resource_columns": [
             "clock_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
         }
       ],
       "sort": null,
@@ -4004,6 +4197,15 @@
           "resource": "core.units",
           "resource_columns": [
             "unit_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
           ]
         }
       ],

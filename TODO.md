@@ -9,10 +9,10 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R86 accepted. R42 and R73 withdrawn. R87–R89 proposed and not binding.
+R1–R41, R43–R72 and R74–R88 accepted. R42 and R73 withdrawn. R89–R93 proposed and not binding.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
-35 tables, 308 columns, 76 references, 68 Tier 2 rules (2 advisory)
+35 tables, 316 columns, 90 references, 68 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
 27 conformance packets
@@ -47,22 +47,15 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. R87 and R88 are drafted and neither is accepted
+## 1. R89 to R93 are drafted and none is accepted
 
 Only the user moves a revision from Proposed to Accepted. R85 and R86 were accepted on
-2026-09-06 and are applied.
+2026-09-06 and R87 and R88 on 2026-09-07; all four are applied.
 
-- **R87 — A Recipe May Not Contradict a Source It Reads.** Its check is already implemented and
-  tested (3 tests in `test_session_extent.py`), because it caught a live bug: the 776259 recipe
-  declared `subject_id = "786867"`.
-- **R88 — A Session-Scoped Table Names the Session of Every Row.** The 33 session-scoped tables use
-  four conventions between them and only 16 use the intended one. Six hold a `session_id` declaring
-  no reference, so Tier 1 generates no anti-join and **418,618,218 rows across the two packets hold
-  a session key nothing validates**; eight hold no column at all, which is the case the reader
-  refuses with `MultiSessionUnresolved`; two are nullable for a scope question R86 §2.1 now
-  answers, and are never null in 41 and 48 rows. A run spanning sessions is recorded once per
-  session (§2.4), so requiring the column forces no lie. Costs 1.0005x on `core.media_frames`
-  (7,570,450 rows) and **requires both packets to be rebuilt**, since the column is required.
+R87 left one thing owed: `ecephys_776259` still carries `core.subjects.subject_name = 786867`
+against a session named `ecephys_776259_2025-04-09`, so it must be rebuilt. R88 and R90 want
+the same rebuild, so it is one build rather than three.
+
 - **R89 — A Packet Records the Calibrations of Its Instruments.** Nothing records a calibration, while
   `dynamic_foraging.sessions` carries a valve open time *and* the volume it delivers, and
   `aind_opto.emissions.power_mw` is the calibrated quantity an opto experiment is read through.

@@ -201,7 +201,7 @@ def content() -> dict[str, list[dict]]:
                 ("probe", 8.0, depth, None, None, None),
                 ("ccf", -1960.0, 8770.0 + depth, -5140.0, 385, "VISp"))],
         "core.electrode_coordinates": [
-            {"electrode_id": f"elec_{i:03d}", "coordinate_frame": frame,
+            {"session_id": "s001", "electrode_id": f"elec_{i:03d}", "coordinate_frame": frame,
              "coordinate_basis": "measured", "region_id": region, "region_label": label,
              "x_um": x, "y_um": y, "z_um": z}
             for i in range(4)
@@ -242,10 +242,10 @@ def content() -> dict[str, list[dict]]:
              "clock_id": "behavior_s001", "device_id": "imec0",
              "processing_run_id": "run_import_001"}],
         "core.event_stream_observation_intervals": [
-            {"event_stream_id": "stim", "start_tick": 0, "stop_tick": 12000},
-            {"event_stream_id": "reward", "start_tick": 0, "stop_tick": 5000},
+            {"session_id": "s001", "event_stream_id": "stim", "start_tick": 0, "stop_tick": 12000},
+            {"session_id": "s001", "event_stream_id": "reward", "start_tick": 0, "stop_tick": 5000},
             # the sensor dropped out mid-session, which is why one window is not enough
-            {"event_stream_id": "reward", "start_tick": 6000, "stop_tick": 12000}],
+            {"session_id": "s001", "event_stream_id": "reward", "start_tick": 6000, "stop_tick": 12000}],
         "core.events": [
             {"session_id": "s001", "event_id": "ev_0001", "stream_id": "stim",
              "event_type": "stimulus_onset", "t_tick": 1200, "clock_id": "behavior_s001"},
@@ -308,7 +308,8 @@ def content() -> dict[str, list[dict]]:
              "started_at": START + timedelta(hours=5),
              "ended_at": START + timedelta(hours=5, minutes=10)}],
         "core.processing_run_inputs": [
-            {"processing_run_id": "run_import_001", "source_file_id": "src_0001"}],
+            {"session_id": "s001", "processing_run_id": "run_import_001",
+             "source_file_id": "src_0001"}],
     }
 
 
@@ -464,8 +465,8 @@ def variants():
         child(c)["transform_slope"] = None
         child(c)["transform_offset"] = None
         c["core.clock_anchors"] = [
-            {"clock_id": "behavior_s001", "anchor_index": i, "t_tick": t,
-             "parent_tick": t * 30}
+            {"session_id": "s001", "clock_id": "behavior_s001", "anchor_index": i,
+             "t_tick": t, "parent_tick": t * 30}
             for i, t in enumerate([0, 1000, 2000, 3000, 23_000, 24_000, 25_000])]
     def undeclared_currency(c):
         # One probe sorted twice with nothing saying which to read (R41 §2.4). Both runs carry

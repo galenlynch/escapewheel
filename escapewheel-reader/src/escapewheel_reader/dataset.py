@@ -43,10 +43,14 @@ PROJECTED = ("session_key", "session_name")
 class MultiSessionUnresolved(PacketError):
     """A packet holds several sessions and a scoped table cannot say which row is whose.
 
-    R86 §2.2 requires a discriminator on every session-scoped table; 8 of the 33 reach
-    `core.sessions` without carrying `session_id`, so their rows can only be attributed by
-    joining, which R86 §2.4 measures at 2.22x and does not specify. Single-session packets are
-    unaffected -- the packet's one session is the answer for every row it holds.
+    R86 §2.2 requires a discriminator on every session-scoped table, and eight of the 33 reached
+    `core.sessions` without carrying `session_id`, so their rows could only be attributed by
+    joining -- which R86 §2.4 measures at 2.22x and does not specify.
+
+    R88 §2.1 closed that: every session-scoped table now carries the column, so a **conforming**
+    packet cannot reach this. It is kept rather than removed because a packet built before R88
+    can, and refusing such a packet loudly is what a reader owes one it cannot attribute. R86
+    §2.4's projection now covers all 33 tables rather than 25.
     """
 
 

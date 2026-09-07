@@ -6,7 +6,7 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 <!-- BEGIN generated: counts -->
 ```
-35 tables, 308 columns, 76 references, 68 Tier 2 rules
+35 tables, 316 columns, 90 references, 68 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -88,8 +88,8 @@ declares, and therefore what a generator has to work with:
 
 <!-- BEGIN generated: structure -->
 ```
-130 required column, not null
-76  reference, resolves
+140 required column, not null
+90  reference, resolves
 35  primary key, unique
 3   closed vocabulary, member of
 3   discriminator, resolvable

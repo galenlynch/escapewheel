@@ -687,6 +687,14 @@ A table declares each foreign key as a reference naming the target resource, thi
 
 A reference MUST relate columns of the same role, and of the same identity where both are identifiers. Relating an assigned identifier to a carried one resolves to nothing.
 
+### 7.1 Session scope
+
+A table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively (R86 §2.1). That is a property of the registry, computable with no packet in hand.
+
+A session-scoped table MUST carry a `session_id` column — `int32`, required, role `identifier`, identity `assigned` — and MUST declare the reference `session_id` → `core.sessions.session_id` (R88 §2.1, §2.2). A table that does not reach `core.sessions` MUST NOT carry one; `core.subjects` and `core.source_files` are the two, which `core.sessions` references rather than the reverse.
+
+Carrying the column without the reference is what the rule forbids: Tier 1 generates one anti-join per declared reference and nothing from a column's name, so an undeclared `session_id` is a foreign key no rule can see.
+
 ## 8. Column semantics
 
 ### 8.1 Role
@@ -1431,7 +1439,9 @@ A recipe declares, for one packet:
 - which resources each source supplies;
 - the clocks the packet declares, and their parents;
 - what to materialize;
-- session and subject facts no source carries.
+- session facts no source carries.
+
+A recipe MAY declare a fact a source it reads also states; §3.6 says which of the two the packet gets. `core.subjects` is not a resource the recipe supplies unconditionally: a source that states a subject MAY own it, arbitrated as any other resource two sources can produce, and the recipe's `[subject]` block supplies the table only where no source owns it (R87 §2.8).
 
 ### 3.2 The recipe is the provenance record
 
@@ -1456,6 +1466,8 @@ A source entry that declares no `owns` MUST be read as owning every resource in 
 
 Where two sources default to the same resource and no preference is declared, the recipe MUST be refused naming both.
 
+A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for (R87 §2.2). What that declaration is called and where it lives is Part 07 §4's.
+
 ### 3.5 Checking a recipe
 
 A recipe MUST be checked against the registry before any source is opened. The check MUST refuse:
@@ -1469,9 +1481,22 @@ A recipe MUST be checked against the registry before any source is opened. The c
 The check MUST report as a **warning**:
 
 - an owned table whose **nullable** foreign key targets a table nothing supplies;
-- a resource some listed source declares in `PRODUCES` that no source claims (R63 §2.3).
+- a resource some listed source declares in `PRODUCES` that no source claims (R63 §2.3);
+- a field the recipe declares that some listed source states and no override covers (R87 §2.3).
 
 A warning is not an error because narrowing is legitimate, and only the recipe's author knows whether this one was meant.
+
+### 3.6 Authority for a declared fact
+
+Where a recipe declares a fact and a source the same recipe reads states that fact, a build MUST report a difference between the two, naming the field, the declared value, the source's value and the file it came from (R87 §2.1). A build MUST refuse only where the fact identifies something a reader resolves across packets; otherwise it proceeds, and `--strict` refuses. `[subject].subject_id` is that case and the only one: a subject is not scoped to a session, so a wrong one agrees with another packet's animal instead of colliding with the true value.
+
+Two values are compared at the type the packet will store, both normalized to it first. A source stating no value for a declared fact is not a disagreement: the declaration stands, a writer MUST NOT report it as a mismatch, and SHOULD note that it went unchecked (R87 §2.4).
+
+A recipe MAY declare that its own value supersedes the source's, by naming the field in a top-level `[overrides]` table keyed `block.field`. The value MUST be a non-empty reason. Declaring an override is never required: it records a decision and silences the report, and a recipe declaring none is conforming. A build MUST report an override for a field the source agrees with, or that no source states, and MUST NOT refuse on either (R87 §2.5).
+
+The comparison needs the source read, so it happens as each source is built and MUST refuse before any resource is staged (R87 §2.6). A source's statement of a fact is whatever its adapter exposes for that fact; which of several values inside a file it stands behind is the adapter's judgement and not the recipe's.
+
+A fact the source **derives** is the source's. `core.sessions.session_start_time` and `session_end_time` come from the session source's declared stream windows, and a writer MUST use the source's value where a session source is present and MUST report a declaration it did not use rather than discarding it silently (R87 §2.7).
 
 ## 4. Stages 1 to 3
 
@@ -1753,6 +1778,8 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 | `PacketWriter` | accumulate records; stage, validate, commit |
 
 An adapter's return type is records, not a path. That is what lets adapters be tested without a filesystem and stops normalization decisions leaking into I/O code.
+
+An adapter carries two static declarations, both readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4), and `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2). For each name in `STATES` the adapter exposes the value it holds. Both are class attributes here; the requirements in Part 05 are on what a build can determine, not on how an implementation stores it.
 
 ## 5. Phases
 

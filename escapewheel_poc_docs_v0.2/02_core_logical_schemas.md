@@ -99,6 +99,14 @@ A table declares each foreign key as a reference naming the target resource, thi
 
 A reference MUST relate columns of the same role, and of the same identity where both are identifiers. Relating an assigned identifier to a carried one resolves to nothing.
 
+### 7.1 Session scope
+
+A table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively (R86 §2.1). That is a property of the registry, computable with no packet in hand.
+
+A session-scoped table MUST carry a `session_id` column — `int32`, required, role `identifier`, identity `assigned` — and MUST declare the reference `session_id` → `core.sessions.session_id` (R88 §2.1, §2.2). A table that does not reach `core.sessions` MUST NOT carry one; `core.subjects` and `core.source_files` are the two, which `core.sessions` references rather than the reverse.
+
+Carrying the column without the reference is what the rule forbids: Tier 1 generates one anti-join per declared reference and nothing from a column's name, so an undeclared `session_id` is a foreign key no rule can see.
+
 ## 8. Column semantics
 
 ### 8.1 Role

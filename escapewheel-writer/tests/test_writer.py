@@ -298,6 +298,9 @@ def _runs(**overrides):
     return [
         {
             "processing_run_id": "run1",
+            # R88 §2.1: a run is session-scoped, and an amendment names the session it is for
+            # rather than inheriting one -- the packet it amends may hold more than one.
+            "session_id": "s001",
             "activity_type": "materialization",
             "software_name": "escapewheel_writer",
             "software_version": "0.0.0",

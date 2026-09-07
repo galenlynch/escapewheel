@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-35 tables, 308 columns, 76 references, 68 Tier 2 rules
+35 tables, 316 columns, 90 references, 68 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88
 ```
 
 ## Contents
@@ -58,6 +58,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `array_asset_id` | int32 | **required** | R20 §5 | Array asset ID. |
 | `axis_index` | int64 | **required** | R20 §5 | 0-based axis position in stored order (R3 §5). |
 | `dimension_name` | string | **required** | R20 §5 | Axis name. |
@@ -79,6 +80,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `array_asset_id` → `analysis.array_assets` (`array_asset_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 ### `analysis.spike_events`
 
@@ -97,6 +99,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `unit_id` → `core.units` (`unit_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 2
 
@@ -143,6 +146,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `array_asset_id` | int32 | **required** |  | Array asset ID. |
 | `axis_index` | int64 | **required** | R3 §6.1 | Axis that channel_index indexes, in stored order. |
 | `channel_index` | int64 | **required** |  | Channel dimension index. |
@@ -161,6 +165,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `array_asset_id`, `axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 1
 
@@ -172,6 +177,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `array_asset_id` | int32 | **required** | R3 §3.1-3.3 | Array asset ID. |
 | `axis_index` | int64 | **required** | R3 §3.1-3.3 | 0-based axis position in stored order (R3 §5). |
 | `dimension_name` | string | **required** | R3 §3.1-3.3 | Axis name. |
@@ -194,6 +200,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `array_asset_id` → `core.array_assets` (`array_asset_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 - `coordinate_array_asset_id` → `core.array_assets` (`array_asset_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 7
 
@@ -211,6 +218,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `clock_id` | int32 | **required** | R13 §3 | The clock being aligned. |
 | `anchor_index` | int64 | **required** | R13 §3 | 0-based position in this clock's anchor sequence. |
 | `t_tick` | int64 | **required** | R13 §3 | Tick on clock_id. |
@@ -222,6 +230,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **References**
 
 - `clock_id` → `core.clocks` (`clock_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 4
 
@@ -325,7 +334,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `device_id` | int32 | **required** |  | Stable device ID. |
 | `device_name` | string | nullable | R53 §2.3.1 | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | nullable |  | Session if device record is session-scoped. |
+| `session_id` | int32 | **required** | R88 §2.1 | Session if device record is session-scoped. |
 | `name` | string | **required** |  | Human-readable name. |
 | `manufacturer` | string | nullable |  | Manufacturer. |
 | `model` | string | nullable |  | Model. |
@@ -355,6 +364,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `electrode_id` | int32 | **required** | R19 §3 | Electrode ID. |
 | `coordinate_frame` | string | **required** | R19 §3 | The frame these coordinates are in. |
 | `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
@@ -372,6 +382,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `electrode_id` → `core.electrodes` (`electrode_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 ### `core.electrodes`
 
@@ -400,6 +411,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `event_stream_id` | int32 | **required** | R25 §2 | The stream being observed. |
 | `start_tick` | int64 | **required** | R25 §2 | First observed tick, on the stream's clock. |
 | `stop_tick` | int64 | **required** | R25 §2 | Last observed tick, on the stream's clock. |
@@ -410,6 +422,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **References**
 
 - `event_stream_id` → `core.event_streams` (`event_stream_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 2
 
@@ -531,6 +544,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `media_asset_id` | int32 | **required** |  | Media asset ID. |
 | `frame_index` | int64 | **required** |  | Frame index. |
 | `t_tick` | int64 | **required** |  | Frame time tick. |
@@ -546,6 +560,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `clock_id` → `core.clocks` (`clock_id`)
 - `media_asset_id` → `core.media_assets` (`media_asset_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 2
 
@@ -610,6 +625,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `processing_run_id` | int32 | **required** | R9 | The run. |
 | `source_file_id` | int32 | **required** | R9 | A source file the run consumed. |
 
@@ -620,6 +636,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `source_file_id` → `core.source_files` (`source_file_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 ### `core.processing_runs`
 
@@ -627,7 +644,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `processing_run_id` | int32 | **required** |  | Stable processing run ID. |
 | `processing_run_name` | string | nullable | R53 §2.3.1 | What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | nullable |  | Session ID if session-scoped. |
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID if session-scoped. |
 | `activity_type` | string | **required** | R8 §3-4 | import, validation, sorting, curation, materialization, etc. |
 | `scope` | string | nullable | R44 §2.1 | What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Open, as activity_type is. |
 | `scope_kind` | string | nullable | R49 §2.1 | The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. Open (R8 §4); a value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
@@ -725,6 +742,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 2
 
@@ -846,6 +864,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `unit_id` → `core.units` (`unit_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 ### `core.unit_electrodes`
 
@@ -866,6 +885,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `unit_id` → `core.units` (`unit_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 3
 
@@ -892,6 +912,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `unit_id` → `core.units` (`unit_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 2
 
@@ -917,6 +938,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **References**
 
 - `unit_id` → `core.units` (`unit_id`)
+- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 1
 

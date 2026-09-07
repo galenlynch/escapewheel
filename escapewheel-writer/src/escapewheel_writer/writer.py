@@ -531,7 +531,30 @@ class PacketWriter:
                 f"no registry defines a table named {resource_id}; core and "
                 f"{len(self._extensions)} extension(s) were consulted"
             )
-        self._tables.setdefault(resource_id, []).extend(records)
+        self._tables.setdefault(resource_id, []).extend(self._with_session(resource_id, records))
+
+    def _with_session(
+        self, resource_id: str, records: Sequence[Mapping[str, Any]]
+    ) -> Sequence[Mapping[str, Any]]:
+        """Fill `session_id` on a session-scoped table's rows that omit it (R88 §2.3).
+
+        Filled centrally rather than in each of the eight adapters, because the value is the
+        session this build is for: R88 §2.3 puts it in the adapter the build constructed, and
+        that is one value here. It is not inferred from a name, which R88 §2.3 forbids and
+        R67 §2.4 forbids a consumer for the same reason.
+
+        Only where the packet holds one session, so a multi-session build cannot be stamped with
+        whichever session went first; there, an adapter states it and this does nothing.
+        """
+        spec = self.spec(resource_id) or {}
+        wanted = any(c["name"] == "session_id" and c["presence"] == "required" for c in spec.get("columns", ()))
+        if not wanted or resource_id == "core.sessions":
+            return records
+        declared = {r.get("session_id") for r in self._tables.get("core.sessions", [])}
+        if len(declared) != 1:
+            return records
+        session = next(iter(declared))
+        return [r if r.get("session_id") is not None else {"session_id": session, **r} for r in records]
 
     def add_batches(self, resource_id: str, batches: Iterable[pa.RecordBatch]) -> None:
         """Add one table as a stream of Arrow record batches, written without buffering.

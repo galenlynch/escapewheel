@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
-| **Amends** | `02` (`core.devices.session_id`, `core.processing_runs.session_id`, and the eight tables that carry no session column) |
+| **Status** | **Accepted** 2026-09-07 |
+| **Amends** | `02` (`core.devices.session_id`, `core.processing_runs.session_id`, and the eight tables that carry no session column), R86 §2.1 (its count of undeclared `session_id` columns) |
 | **Depends on** | R46 (the references the registry never declared), R86 (session scope is derivable) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -38,6 +38,13 @@ A Tier 1 anti-join is generated from a table's declared `references` and from no
 (`escapewheel_validator/generate.py:292`), so a column naming another table's key without
 declaring it gets no check at all. Six `session_id` columns are in that state, so a row of
 `core.unit_electrodes` naming a session that is not in `core.sessions` validates clean.
+
+R86 §2.1 states the opposite, and its count is wrong: *"zero tables carry a `session_id` column
+without also declaring the reference"*. Measured against the current registry, **25 tables carry
+the column and 7 declare no reference** — `core.sessions` itself, which owns the key, and these
+six. R86's conclusion is unharmed and better supported than it was: all six reach `core.sessions`
+transitively, so the reference graph finds them where a declared-reference test does not, which is
+what R86 §2.1 calls the stricter test.
 
 The rows are not a rounding error. Across the two packets **418,618,218 rows hold a `session_id`
 nothing validates**, of which 286,876,859 are `analysis.spike_events` in `ecephys_776259` alone —
@@ -100,8 +107,9 @@ Every one of the eight is **exactly one hop** from a parent that holds `session_
 with the session it is building, which is where the value actually comes from.
 
 So the column costs no new read. A writer **MUST NOT** infer the session from a name — a file path
-and a packet directory both spell one, and neither is a statement this specification constrains,
-which is R67 §2.1's rule about attachment applied to the same shape of question.
+and a packet directory both spell one, and neither is a statement this specification constrains.
+R67 §2.4 forbids the same inference to a consumer reading a device's name, so this is that rule's
+shape turned on the other actor: the reference is the statement, whoever is reading it.
 
 ### 2.4 A run covering several sessions is recorded once per session
 
@@ -153,7 +161,7 @@ Storage is free. On `core.media_frames`, the largest of the eight at **7,570,450
 column costs **1.0005x** — 0.013 bits per row — because one distinct value under a clustered sort
 compresses away. R81 measured the same shape at no cost over 286,896,563 spikes.
 
-**Both packets MUST be rebuilt.** The column is required and eight tables lack it, so every packet
+**Both packets must be rebuilt.** The column is required and eight tables lack it, so every packet
 built before this is non-conforming. R61 §5 makes a correction a rebuild, and this one re-reads no
 external resource; `ecephys_776259` was already owed one for its subject.
 
@@ -170,10 +178,10 @@ projection covers all 33 session-scoped tables rather than 25.
   instead. What remains open is a genuine processing run owned by a rig rather than a session, which
   R49 §2.2 anticipates one field over and no packet holds.
 - **Whether `analysis.array_dimensions.coordinate_array_asset_id` is a seventeenth missing
-  reference.** `core.array_dimensions` declares the analogous column against `core.array_assets`
-  and the analysis copy declares nothing, so the two disagree about one column. It is the same
-  defect class as §1.2 and is left out because one column is a case rather than a class, and
-  because it is not about sessions.
+  reference.** Settled by R93 §2.4, which declares it. Unpacking it found a second defect in the
+  same two columns that this revision's scope would have hidden: `coordinate_resource` holds a
+  dotted resource ID in **25 rows across the two packets** and carries R48 role `data`, so nothing
+  checks the value R55 §2.1 added a role for.
 - **Whether `registry/check.py` should enforce §2.1 both ways.** It already computes scope and
   reports the 33 and the 2, so both halves of §2.1 are checkable there rather than left to review.
   Doing it is implementation and needs no clause; recording that it was the intent does.

@@ -1504,3 +1504,54 @@ where = "00_architecture.md §2.4"
 [clause."R86 §2.4"]
 disposition = "implementation"
 where = "escapewheel_reader.dataset.Dataset._identity; 07_reference_implementation.md §7 records why"
+
+[clause."R87 §2.1"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.6"
+
+[clause."R87 §2.2"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.4"
+note = "the spelling is 07 §4's; 05 requires only what a build can determine"
+
+[clause."R87 §2.3"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.5"
+
+[clause."R87 §2.4"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.6"
+
+[clause."R87 §2.5"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.6"
+
+[clause."R87 §2.6"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.6"
+
+[clause."R87 §2.7"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.6"
+
+[clause."R87 §2.8"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.1"
+
+[clause."R88 §2.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §7.1"
+note = "the rule in 02; the columns themselves in the registry"
+
+[clause."R88 §2.2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §7.1"
+note = "fourteen references to core.sessions, six over columns that already existed"
+
+[clause."R88 §2.3"]
+disposition = "implementation"
+note = "each of the eight is one hop from a parent that holds the session"
+
+[clause."R88 §2.4"]
+disposition = "implementation"
+note = "a run whose results reach several sessions is recorded once per session"
