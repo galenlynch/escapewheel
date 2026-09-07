@@ -17,7 +17,7 @@ Adding a dependency to read four YAML scalars would buy nothing and cost a depen
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from .store import source_root
 
@@ -49,6 +49,10 @@ class HarpSource:
 
     #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
     PRODUCES = frozenset({"core.devices"})
+
+    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: empty rather than omitted, because a build refuses a source it cannot ask.
+    STATES: ClassVar[dict[str, str]] = {}
 
     def __init__(self, root: str | Path, *, session_id: str) -> None:
         self.root = source_root(root)

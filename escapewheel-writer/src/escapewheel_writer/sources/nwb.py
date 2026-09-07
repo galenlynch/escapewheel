@@ -47,7 +47,7 @@ from datetime import datetime
 from functools import cached_property
 from os.path import commonprefix
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -146,6 +146,15 @@ def _alike(a: Any, b: Any) -> bool:
     return bool(a == b)
 
 
+def _subject_fact(key: str) -> property:
+    """Return a `subject.*` fact this file states, from the row `subjects()` already builds.
+
+    R87 §2.2 has a build ask an adapter what it states without opening it, so each fact needs an
+    attribute of its own for the class-level check to see; the value still comes from one read.
+    """
+    return property(lambda self: self.subjects()[0].get(key))
+
+
 class NWBSource(Compensates):
     """An NWB file, read as records against a declared clock and zone.
 
@@ -205,6 +214,24 @@ class NWBSource(Compensates):
             "core.unit_coordinates",
         }
     )
+
+    #: R87 §2.2: every column of `core.subjects` this file states. The recipe declares four of
+    #: them by hand, and until R87 §2.8 the row built from these was discarded unread.
+    STATES: ClassVar[dict[str, str]] = {
+        "subject.subject_id": "stated_subject_id",
+        "subject.species": "stated_species",
+        "subject.sex": "stated_sex",
+        "subject.genotype": "stated_genotype",
+        "subject.date_of_birth": "stated_date_of_birth",
+        "subject.strain": "stated_strain",
+    }
+
+    stated_subject_id = _subject_fact("subject_id")
+    stated_species = _subject_fact("species")
+    stated_sex = _subject_fact("sex")
+    stated_genotype = _subject_fact("genotype")
+    stated_date_of_birth = _subject_fact("date_of_birth")
+    stated_strain = _subject_fact("strain")
 
     #: Not `core.unit_electrodes`, though the file has a column for it.
     #: `extremum_channel_index` indexes the channels the **sorting kept**, while

@@ -48,7 +48,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -320,6 +320,10 @@ class SyncSource:
             "core.clocks",
         }
     )
+
+    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: empty rather than omitted, because a build refuses a source it cannot ask.
+    STATES: ClassVar[dict[str, str]] = {}
 
     def __init__(
         self,

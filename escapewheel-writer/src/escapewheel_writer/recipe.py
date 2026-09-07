@@ -38,7 +38,12 @@ from .sources.store import source_root
 #: seconds instead of minutes. Only the sorter: the spike table is 99.9% of a packet's rows.
 SAMPLED = frozenset({"sorter"})
 
-RECIPE_SUPPLIES = ("core.sessions", "core.subjects", "core.processing_runs")
+RECIPE_SUPPLIES = ("core.sessions", "core.processing_runs")
+
+#: Resources the recipe supplies only where no source owns them (R87 §2.8). `core.subjects` left
+#: RECIPE_SUPPLIES because the NWB states every column of it and the row was built and discarded;
+#: a `[subject]` block is now the fallback for a packet whose sources name no subject.
+RECIPE_MAY_SUPPLY = ("core.subjects",)
 
 #: Where a resource goes when more than one adapter can produce it (R63 §2.2). The winner is the
 #: source that knows most about it: the NWB knows a probe's type and manufacturer where the sorter
@@ -55,6 +60,36 @@ PREFERRED = {
 #: Resources several sources each supply *part* of, which `owns` refuses and `contributes` is for.
 #: A defaulted source contributes to these rather than owning them.
 SHARED = frozenset({"core.clocks", "core.array_assets", "core.array_dimensions", "core.devices"})
+
+
+def states(kind: str) -> Mapping[str, str]:
+    """Return the recipe fields an adapter of this kind can state, to the attribute holding each.
+
+    R87 §2.2 puts the obligation on the build rather than on the adapter, so a kind whose adapter
+    declares nothing is reported by `check` rather than silently treated as stating nothing --
+    which is the failure `produces` has, and which R63 §4 left open.
+    """
+    from . import sources
+
+    adapter = sources.ADAPTERS.get(kind)
+    declared = getattr(adapter, "STATES", None) if adapter is not None else None
+    return dict(declared) if declared is not None else {}
+
+
+def declares_states(kind: str) -> bool:
+    """Whether this kind's adapter declares `STATES` at all, empty or not (R87 §2.2)."""
+    from . import sources
+
+    adapter = sources.ADAPTERS.get(kind)
+    return adapter is not None and getattr(adapter, "STATES", None) is not None
+
+
+def state_accessors(kind: str) -> Mapping[str, str]:
+    """`STATES` entries whose named attribute the adapter class does not expose (R87 §2.2)."""
+    from . import sources
+
+    adapter = sources.ADAPTERS.get(kind)
+    return {f: a for f, a in states(kind).items() if adapter is not None and not hasattr(adapter, a)}
 
 
 def produces(kind: str) -> frozenset[str]:
@@ -92,7 +127,8 @@ class Problem:
     Attributes
     ----------
     level : str
-        ``error`` or ``warning``.
+        ``error``, ``warning`` or ``info``. Only an error refuses the recipe; ``info`` records
+        something the build will do, such as an override it will apply (R87 §2.3).
     message : str
         What is wrong, naming the recipe's own vocabulary rather than the registry's internals.
     """
@@ -282,6 +318,8 @@ class Recipe:
     description: str | None
     session: Mapping[str, Any]
     subject: Mapping[str, Any]
+    #: R87 §2.5: `block.field` to the reason the recipe's value supersedes the source's.
+    overrides: Mapping[str, str]
     clocks: tuple[ClockSpec, ...]
     sources: tuple[SourceSpec, ...]
     materialize: tuple[MaterializeSpec, ...]
@@ -357,6 +395,7 @@ class Recipe:
             description=packet.get("description"),
             session=document.get("session", {}),
             subject=document.get("subject", {}),
+            overrides=document.get("overrides", {}),
             clocks=tuple(ClockSpec(**c) for c in document.get("clock", [])),
             sources=_resolve_ownership(
                 tuple(
@@ -438,7 +477,12 @@ class Recipe:
         """
         claimed = self._claims("claims")
         for resource in RECIPE_SUPPLIES:
-            if resource != "core.subjects" or self.subject:
+            claimed.setdefault(resource, []).append("recipe")
+        # R87 §2.8: the recipe supplies these only where no source owns them, so a `[subject]`
+        # block still satisfies a foreign key into `core.subjects` and stops satisfying it the
+        # moment a source claims the table.
+        for resource in RECIPE_MAY_SUPPLY:
+            if self.subject and resource not in claimed:
                 claimed.setdefault(resource, []).append("recipe")
         return claimed
 
@@ -491,10 +535,74 @@ class Recipe:
         errors.extend(self._dangling_references(tables, claimants, warnings))
         errors.extend(self._clock_problems())
         errors.extend(self._option_problems())
+        errors.extend(self._states_problems())
+        fact_errors, fact_warnings, notes = self._declared_fact_problems()
+        errors.extend(fact_errors)
+        warnings.extend(fact_warnings)
 
-        return [Problem("error", m) for m in sorted(set(errors))] + [
-            Problem("warning", m) for m in sorted(set(warnings))
-        ]
+        return (
+            [Problem("error", m) for m in sorted(set(errors))]
+            + [Problem("warning", m) for m in sorted(set(warnings))]
+            + [Problem("info", m) for m in sorted(set(notes))]
+        )
+
+    def _states_problems(self) -> list[str]:
+        """Adapters a build cannot ask which recipe fields they state (R87 §2.2).
+
+        Refused rather than defaulted: an adapter that declares nothing would otherwise read as
+        one that states nothing, which is the failure R63 §4 records for `PRODUCES`.
+        """
+        problems = []
+        for kind in sorted({spec.kind for spec in self.sources}):
+            if not declares_states(kind):
+                problems.append(f"source {kind} declares no STATES, so a build cannot tell what facts it states")
+            for fact, attribute in sorted(state_accessors(kind).items()):
+                problems.append(
+                    f"source {kind} states {fact} through {attribute!r}, which its adapter does not expose"
+                )
+        return problems
+
+    @property
+    def declared_facts(self) -> dict[str, Any]:
+        """`block.field` to the value the recipe declares for it (R87 §2.2)."""
+        blocks = {"session": self.session, "subject": self.subject}
+        return {f"{block}.{k}": v for block, fields in blocks.items() for k, v in fields.items()}
+
+    def stated_by(self) -> dict[str, list[str]]:
+        """`block.field` to the source kinds in this recipe that state it (R87 §2.2)."""
+        by_field: dict[str, list[str]] = {}
+        for kind in sorted({spec.kind for spec in self.sources}):
+            for fact in states(kind):
+                by_field.setdefault(fact, []).append(kind)
+        return by_field
+
+    def _declared_fact_problems(self) -> tuple[list[str], list[str], list[str]]:
+        """Errors, warnings and notes about declared facts and their overrides (R87 §2.3, §2.5).
+
+        Only an empty override reason is an error. A field a source states is a warning because
+        agreement is the likely case and only the build can tell, and a stale override costs a
+        line rather than a build because it leaves the packet correct.
+        """
+        declared, stated = self.declared_facts, self.stated_by()
+        errors: list[str] = []
+        warnings: list[str] = []
+        notes: list[str] = []
+        for fact, reason in sorted(self.overrides.items()):
+            if not str(reason).strip():
+                errors.append(f"[overrides] {fact} carries no reason; an override must say why (R87 §2.5)")
+            if fact not in stated:
+                warnings.append(f"[overrides] {fact} overrides nothing; no source in this recipe states it")
+            elif fact not in declared:
+                warnings.append(f"[overrides] {fact} overrides nothing; the recipe declares no value for it")
+        for fact, kinds in sorted(stated.items()):
+            if fact not in declared:
+                continue
+            who = ", ".join(kinds)
+            if fact in self.overrides:
+                notes.append(f"{fact} is declared and overrides {who}")
+            else:
+                warnings.append(f"{fact} is declared and {who} states it; the build compares them")
+        return errors, warnings, notes
 
     def _dangling_references(
         self, tables: Mapping[str, Any], supplied: Mapping[str, list[str]], warnings: list[str]

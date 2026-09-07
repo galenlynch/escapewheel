@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from functools import partial
 from math import ceil
 from pathlib import Path
@@ -36,7 +36,7 @@ from escapewheel_reader.clocks import BOUND, align
 from numpy.typing import NDArray
 
 from .extensions import load as load_extension
-from .recipe import RECIPE_SUPPLIES, Recipe, SourceSpec
+from .recipe import RECIPE_SUPPLIES, Recipe, SourceSpec, states
 from .sources import SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
@@ -153,6 +153,9 @@ class Context:
     _alignment: tuple[dict[str, Any], float] | None = None
     #: What the build itself observed, reported beside the adapters' own notes.
     notes: list[str] = field(default_factory=list)
+    #: R87 §2.1: `block.field` to the registry type the packet stores it as, so a declared
+    #: value and a stated one are compared after both are normalized, not as they were written.
+    fact_types: dict[str, str] = field(default_factory=dict)
 
     def alignment(self) -> tuple[dict[str, Any], float]:
         """Return the anchors and the bound to map at, measured once and kept.
@@ -296,6 +299,76 @@ def _reference_clock(recipe: Recipe, context: Context) -> Any:
     raise RecipeError(f"no [[clock]] declares {wanted!r}, which [session].reference_clock_id names")
 
 
+#: R87 §2.1: facts whose difference refuses a build rather than being reported. A subject is not
+#: scoped to a session (R86 §2.1), so a wrong one agrees with another packet's animal instead of
+#: colliding with the true value, and nothing downstream can detect it.
+REFUSES_ON_DIFFERENCE = frozenset({"subject.subject_id"})
+
+#: The recipe block each resource's fields are declared in, for R87 §2.1's comparison type.
+FACT_BLOCKS = {"session": "core.sessions", "subject": "core.subjects"}
+
+
+def _fact_types(registry: Mapping[str, Any]) -> dict[str, str]:
+    """`block.field` to the registry type the packet stores it as (R87 §2.1)."""
+    return {
+        f"{block}.{column['name']}": column["type"]
+        for block, resource in FACT_BLOCKS.items()
+        for column in registry["tables"].get(resource, {}).get("columns", ())
+    }
+
+
+def _normalized(value: Any, declared_type: str | None) -> Any:
+    """Reduce a value to the type the packet stores it as, so two spellings compare equal.
+
+    `session.json` states a subject as the number 776259 where a recipe declares the string
+    `"776259"`, and an NWB states a date of birth as a timestamp where R4 §3.3 makes the column a
+    calendar date. Comparing what was written would refuse both.
+    """
+    if value is None:
+        return None
+    if declared_type == "date":
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
+    return str(value)
+
+
+def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) -> None:
+    """Compare what the recipe declares against what this source states (R87 §2.1).
+
+    Reported rather than refused, except where the fact identifies something a reader resolves
+    across packets: a recipe correcting a source is the ordinary case (R87 §1.3), and refusing on
+    every difference would tax every recipe to catch a rarer defect than the note surfaces.
+    """
+    declared, notes = recipe.declared_facts, getattr(source, "notes", context.notes)
+    for fact, attribute in sorted(states(spec.kind).items()):
+        if fact not in declared:
+            continue
+        want, stated = declared[fact], getattr(source, attribute, None)
+        reason = recipe.overrides.get(fact)
+        if stated is None:
+            # R87 §2.4: silence is a fact about the source, not a disagreement -- but it is
+            # reported, so a build log tells a verified fact from an asserted one.
+            notes.append(f"{fact} {want!r} went unchecked; {spec.kind} states none")
+            continue
+        column = context.fact_types.get(fact)
+        if _normalized(stated, column) == _normalized(want, column):
+            if reason is not None:
+                notes.append(f"{fact} declares an override and {spec.kind} states the same value")
+            continue
+        if reason is not None:
+            notes.append(f"{fact} is {want!r} over {spec.kind}'s {stated!r}: {reason}")
+        elif fact in REFUSES_ON_DIFFERENCE:
+            raise SourceDefect(
+                f"{fact} is {want!r} and {getattr(source, 'path', spec.kind)} states {stated!r}; "
+                "a declared fact differs from the source that states it, with no override (R87 §2.1)"
+            )
+        else:
+            notes.append(f"{fact} is {want!r} and {spec.kind} states {stated!r}; the recipe's value is used")
+
+
 def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) -> None:
     """Take from a built source whatever the sources after it consume."""
     if spec.kind == "sorter":
@@ -308,27 +381,11 @@ def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) ->
             for row in source.units()
         }
         context.clocks.update({c["clock_id"]: float(c["tick_rate_hz"]) for c in source.clocks()})
+    _compare_declared_facts(spec, source, context, recipe)
     if spec.kind == "session":
-        # R87 §2.2: a recipe declares the facts no source carries (`05` §3.1), so a field a
-        # source does carry is one the recipe should not be inventing. One recipe declared
-        # `subject_id = "786867"` against a session.json reading 776259, and every packet built
-        # from it asserted 6,781 units from an animal that was never in the rig. R86 §2.3 makes
-        # `core.subjects` one of the two tables that are not session-scoped, so a wrong subject
-        # agrees with another packet's rather than colliding with it.
-        # `getattr`, because an adapter registered by another distribution need not expose it
-        # and R87 §2.3 makes silence a fact about the source rather than a contradiction.
-        stated = getattr(source, "subject_id", None)
-        declared = str(getattr(recipe, "subject", {}).get("subject_id", "")) or None
-        if stated and declared and stated != declared:
-            raise SourceDefect(
-                f"[subject].subject_id is {declared!r} and {source.path} states {stated!r}; "
-                "a recipe may not contradict a source it reads (R87 §2.1)"
-            )
-        if stated is None and declared:
-            source.notes.append(f"[subject].subject_id {declared} went unchecked; the session states none")
-        # Both ends come from the declared stream windows rather than from the recipe: a
-        # hand-entered start is a transcription of the same fact, and the two disagreeing
-        # silently is worse than either being wrong loudly.
+        # R87 §2.7: both ends come from the declared stream windows rather than from the
+        # recipe, because a hand-entered start transcribes the source's own derivation rather
+        # than competing with it. Reported, never discarded silently.
         began, ended = source.extent()
         context.session_extra["session_start_time"] = began
         context.session_extra["session_end_time"] = ended
@@ -683,7 +740,7 @@ def build(
         Loaded with every record, ready to commit.
     """
     session_id = str(recipe.session["session_id"])
-    context = Context(session_id=session_id)
+    context = Context(session_id=session_id, fact_types=_fact_types(registry))
     if recipe.session.get("reference_clock_id"):
         context.reference = _reference_clock(recipe, context)
     writer = PacketWriter(
@@ -696,7 +753,9 @@ def build(
         extensions=[load_extension(named, base=recipe.path.parent) for named in recipe.extensions],
     )
 
-    if recipe.subject:
+    # R87 §2.8: the recipe supplies `core.subjects` only where no source owns it, so a packet
+    # whose NWB claims the table gets the row that file states rather than a hand-typed one.
+    if recipe.subject and "core.subjects" not in recipe.owners:
         writer.add("core.subjects", [dict(recipe.subject)])
 
     counts: dict[str, int] = {}

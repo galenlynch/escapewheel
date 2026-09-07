@@ -34,7 +34,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
@@ -101,6 +101,10 @@ class LFPSource(Compensates):
             "core.array_dimensions",
         }
     )
+
+    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: empty rather than omitted, because a build refuses a source it cannot ask.
+    STATES: ClassVar[dict[str, str]] = {}
 
     def __init__(
         self,

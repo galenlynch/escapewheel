@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 from escapewheel_writer.recipe import RECIPE_SUPPLIES, Recipe
@@ -216,8 +218,16 @@ def test_what_the_recipe_itself_supplies_is_not_noted(tmp_path):
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
     source = Noted()
     # RECIPE_SUPPLIES: the recipe writes these, so a source producing them loses to it by design.
-    _note_unclaimed(recipe, recipe.sources[0], source, {"core.processing_runs": 2, "core.subjects": 1})
+    _note_unclaimed(recipe, recipe.sources[0], source, {"core.processing_runs": 2, "core.sessions": 1})
     assert source.notes == []
+
+
+def test_a_source_that_could_supply_the_subject_is_noted(tmp_path):
+    """R87 §2.8: `core.subjects` left the recipe-supplied set, so R63 §2.3's warning finally sees it."""
+    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
+    source = Noted()
+    _note_unclaimed(recipe, recipe.sources[0], source, {"core.subjects": 1})
+    assert any("core.subjects" in n for n in source.notes)
 
 
 # -- R63: a recipe declares what it narrows ------------------------------------------------
@@ -286,3 +296,65 @@ def test_what_a_source_produces_is_what_it_can_emit():
         declared = set(getattr(adapter, "PRODUCES", ()))
         assert declared or kind == "tables", f"{kind} declares no PRODUCES (R63 §2.1)"
         assert all(r.count(".") == 1 for r in declared), f"{kind} declares a malformed resource ID"
+
+
+# -- R87: authority for a declared fact ------------------------------------------------------
+
+NWB = '\n[[source]]\nkind = "nwb"\nroot = "s"\nzone = "UTC"\nowns = ["core.probes"]\n'
+
+
+def test_a_declared_fact_a_source_states_is_reported_before_any_io(tmp_path, registry):
+    """R87 §2.3. The base recipe declares `[subject].subject_id` and the NWB states it."""
+    problems = levels(Recipe.load(write(tmp_path, NWB)).check(registry))
+    assert any("subject.subject_id is declared and nwb states it" in m for m in problems.get("warning", []))
+
+
+def test_an_override_is_recorded_rather_than_warned(tmp_path, registry):
+    """R87 §2.3: a field an override covers is information; the build will apply it."""
+    body = '\n[overrides]\n"subject.subject_id" = "the file names the wrong animal"\n' + NWB
+    problems = levels(Recipe.load(write(tmp_path, body)).check(registry))
+    assert any("subject.subject_id is declared and overrides nwb" in m for m in problems.get("info", []))
+    assert not any("subject.subject_id is declared and nwb" in m for m in problems.get("warning", []))
+
+
+def test_an_override_with_no_reason_is_refused(tmp_path, registry):
+    """R87 §2.5: a bare marker would silence a difference without saying why."""
+    body = '\n[overrides]\n"subject.subject_id" = "   "\n' + NWB
+    problems = levels(Recipe.load(write(tmp_path, body)).check(registry))
+    assert any("carries no reason" in m for m in problems.get("error", []))
+
+
+def test_an_override_of_a_fact_nothing_states_is_reported_not_refused(tmp_path, registry):
+    """R87 §2.5: a stale override leaves the packet correct, so it costs a line of the log."""
+    body = (
+        '\n[overrides]\n"subject.subject_id" = "why"\n'
+        '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'
+    )
+    problems = levels(Recipe.load(write(tmp_path, body)).check(registry))
+    assert any("overrides nothing" in m for m in problems.get("warning", []))
+    assert not any("overrides nothing" in m for m in problems.get("error", []))
+
+
+def test_a_source_that_cannot_say_what_it_states_is_refused(tmp_path, registry, monkeypatch):
+    """R87 §2.2: an adapter declaring nothing must not read as one that states nothing."""
+    from escapewheel_writer import sources
+
+    class Mute:
+        PRODUCES = frozenset({"core.units"})
+
+    monkeypatch.setitem(sources.ADAPTERS, "sorter", Mute)
+    problems = levels(Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n')).check(registry))
+    assert any("declares no STATES" in m for m in problems.get("error", []))
+
+
+def test_a_stated_fact_with_no_accessor_is_refused(tmp_path, registry, monkeypatch):
+    """R87 §2.2: the declaration is checked against the class, so it cannot drift unseen."""
+    from escapewheel_writer import sources
+
+    class Absent:
+        PRODUCES = frozenset({"core.units"})
+        STATES: ClassVar[dict[str, str]] = {"subject.subject_id": "nowhere"}
+
+    monkeypatch.setitem(sources.ADAPTERS, "sorter", Absent)
+    problems = levels(Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n')).check(registry))
+    assert any("which its adapter does not expose" in m for m in problems.get("error", []))

@@ -23,7 +23,7 @@ import shlex
 import subprocess
 from collections.abc import Iterator, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -58,6 +58,10 @@ class TablesSource:
     #: R63 §2.1's exception: empty, because what this source supplies is named by the recipe
     #: entry and is not a property of the adapter at all.
     PRODUCES: frozenset[str] = frozenset()
+
+    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: empty rather than omitted, because a build refuses a source it cannot ask.
+    STATES: ClassVar[dict[str, str]] = {}
 
     def __init__(
         self,

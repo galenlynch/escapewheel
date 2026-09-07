@@ -29,14 +29,26 @@ class Stub:
         return self.extent_value
 
 
+def _recipe(session=None, subject=None, overrides=None):
+    """The parts of a Recipe `_harvest` reads, which a whole one would only pad out."""
+    session = {"session_id": "s001", **(session or {})}
+    subject = subject or {}
+    return SimpleNamespace(
+        session=session,
+        subject=subject,
+        overrides=overrides or {},
+        declared_facts={f"session.{k}": v for k, v in session.items()}
+        | {f"subject.{k}": v for k, v in subject.items()},
+    )
+
+
 def recipe_with(**session):
-    """Only `.session` is read here, so a whole Recipe would be scaffolding."""
-    return SimpleNamespace(session={"session_id": "s001", **session}, subject={})
+    return _recipe(session=session)
 
 
-def recipe_for(subject_id):
-    """A recipe declaring one subject, which is all §2.2's check reads."""
-    return SimpleNamespace(session={"session_id": "s001"}, subject={"subject_id": subject_id})
+def recipe_for(subject_id, **overrides):
+    """A recipe declaring one subject, which is all R87 §2.1's comparison reads."""
+    return _recipe(subject={"subject_id": subject_id}, overrides=overrides or None)
 
 
 def test_both_bounds_come_from_the_windows():
@@ -92,8 +104,31 @@ def test_a_subject_the_source_agrees_with_passes_silently():
 
 
 def test_a_source_stating_no_subject_leaves_the_declaration_unchecked():
-    """R87 §2.3: silence is a fact about the source, not a disagreement -- but it is reported,
+    """R87 §2.4: silence is a fact about the source, not a disagreement -- but it is reported,
     so a build log tells a verified subject from an asserted one."""
     source = Stub(subject_id=None)
     _harvest(Spec(), source, Context(session_id="s001"), recipe_for("776259"))
     assert any("went unchecked" in n for n in source.notes)
+
+
+def test_an_override_lets_the_recipe_win_and_says_why():
+    """R87 §2.5. The refusal is what an override lifts, and the reason is what it leaves behind."""
+    source = Stub(subject_id="776259")
+    recipe = recipe_for("786867", **{"subject.subject_id": "the session names the wrong animal"})
+    _harvest(Spec(), source, Context(session_id="s001"), recipe)
+    assert any("the session names the wrong animal" in n for n in source.notes)
+
+
+def test_an_override_that_changes_nothing_is_reported():
+    """R87 §2.5: a stale override costs a line of the log, not a build."""
+    source = Stub(subject_id="776259")
+    recipe = recipe_for("776259", **{"subject.subject_id": "no longer needed"})
+    _harvest(Spec(), source, Context(session_id="s001"), recipe)
+    assert any("states the same value" in n for n in source.notes)
+
+
+def test_a_number_and_a_string_naming_one_subject_agree():
+    """R87 §2.1: `session.json` states 776259 as a number; comparing what was written would refuse."""
+    source = Stub(subject_id=776259)
+    _harvest(Spec(), source, Context(session_id="s001"), recipe_for("776259"))
+    assert source.notes == []

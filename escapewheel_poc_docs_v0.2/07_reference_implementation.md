@@ -53,6 +53,8 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 
 An adapter's return type is records, not a path. That is what lets adapters be tested without a filesystem and stops normalization decisions leaking into I/O code.
 
+An adapter carries two static declarations, both readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4), and `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2). For each name in `STATES` the adapter exposes the value it holds. Both are class attributes here; the requirements in Part 05 are on what a build can determine, not on how an implementation stores it.
+
 ## 5. Phases
 
 | phase | scope | state |

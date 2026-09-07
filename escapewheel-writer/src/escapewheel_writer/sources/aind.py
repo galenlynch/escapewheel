@@ -36,7 +36,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
 from ..clock import Clock, epoch_from
@@ -113,6 +113,10 @@ class SessionSource(Compensates):
             "core.event_stream_observation_intervals",
         }
     )
+
+    #: R87 §2.2: `session.json` names the subject, which the recipe declares by hand. The
+    #: value is `subject_id` below; a build compares the two and refuses where they differ.
+    STATES: ClassVar[dict[str, str]] = {"subject.subject_id": "subject_id"}
 
     def __init__(self, root: str | Path, *, zone: ZoneInfo, session_id: str | None = None) -> None:
         if not isinstance(zone, ZoneInfo):

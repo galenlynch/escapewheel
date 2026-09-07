@@ -47,7 +47,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pyarrow as pa
@@ -93,6 +93,10 @@ class VideoSource(Compensates):
 
     #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
     PRODUCES = frozenset({"core.media_assets", "core.media_frames"})
+
+    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: empty rather than omitted, because a build refuses a source it cannot ask.
+    STATES: ClassVar[dict[str, str]] = {}
 
     def __init__(
         self,
