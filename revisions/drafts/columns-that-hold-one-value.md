@@ -38,12 +38,13 @@ value per row rather than one value repeating:
 
 | table | rows | distinct values |
 |---|---:|---:|
-| `core.devices` | 21 | 21 |
+| `core.devices` | 20 and 21 | all |
 | `core.probes` | 12 and 10 | all |
-| `core.event_streams` | 10 | 10 |
-| `core.media_assets` | 4 | 4 |
+| `core.event_streams` | 10 and 10 | all |
+| `core.media_assets` | 4, in `ecephys_786867` only | 4 |
 
-The two columns differ in what they promise. `name` is **required** on five of the seven and its
+The two columns differ in what they promise. `name` is **required** on six of the seven —
+`core.probes` alone declares it nullable — and its
 description is generic — "Human-readable name." — where the generated `<base>_name` is nullable and
 carries R53 §2.5's job: the bridge between two packets that numbered the same thing differently,
 which R85 §2.2 requires be unique within its packet. So the column with the obligation is optional
@@ -57,7 +58,8 @@ rule, not by anyone reading the table it landed on.
 `core.clocks.tick_rate_hz` is `float64`, nullable, described as "required unless exact tick rate
 provided" — a fallback for a source that states only a float. In both packets it is written on
 every row **alongside** `tick_rate_num` and `tick_rate_den`, and equals `tick_rate_num` on all
-eleven rows, because `tick_rate_den` is **1 in every row of both packets**. The fallback is being
+**13** rows of `ecephys_776259` and all **11** of `ecephys_786867`, because `tick_rate_den` is
+**1 in every row of both**. The fallback is being
 used as a copy.
 
 `core.clocks.tick_rate_declared` requires at least one of the two forms and nothing forbids both,
@@ -87,7 +89,7 @@ table's `name` is **renamed** to `<base>_name`, keeping the presence `02` gave i
 
 The rename rather than the strike, because the two columns are unequal in what they promise and
 each has half of what is wanted: `02`'s presence, and R53 §2.5's meaning. After it each of the
-**sixteen** tables carrying a generated name carries exactly one, and the five that were `required`
+**sixteen** tables carrying a generated name carries exactly one, and the six that were `required`
 stay required.
 
 The surviving column takes R53 §2.3.1's description, so what a reader is told about
@@ -95,9 +97,9 @@ The surviving column takes R53 §2.3.1's description, so what a reader is told a
 
 ### 3.2 A clock states one rate form
 
-`core.clocks.tick_rate_hz` **stays**, `float64` and **nullable** rather than optional, since the
-rules below name it and a rule may not name a column that a packet is free to omit (`a-rule-names-
-no-optional-column`). A clock **MUST NOT** declare both
+`core.clocks.tick_rate_hz` **stays**, `float64` and nullable, which is what it already is; it
+**MUST NOT** become optional, since the rules below name it and R94 §3 forbids a rule naming a
+column a packet may omit. A clock **MUST NOT** declare both
 `tick_rate_hz` and `tick_rate_num`. `core.clocks.tick_rate_declared` already requires at least one,
 and `core.clocks.tick_rate_one_form` refuses both:
 
@@ -117,7 +119,7 @@ the rational would make a writer invent one: a source stating **29999.7 Hz** has
 or choose a denominator, which is a rounding decision this format does not make on a source's
 behalf (R66 §2.1).
 
-Both packets fail the new rule today, all eleven clock rows carrying both forms. The writer keeps
+Both packets fail the new rule today, all 24 clock rows carrying both forms. The writer keeps
 the rational and stops emitting the float, `tick_rate_den` being 1 in every row of both.
 
 ### 3.3 The check that finds the class
@@ -137,7 +139,7 @@ and it puts the observation in the report without letting it fail a build.
 - **No key or reference changes.** The struck columns are in no key and carry no reference.
 - **A float rate stays expressible.** §3.2 forbids stating both forms, not the float, so a source
   that measured a rate rather than deriving it still records what it measured.
-- **R53 §2.3.1 still generates a name.** For the twelve tables with no `name` of their own —
+- **R53 §2.3.1 still generates a name.** For the nine tables with no `name` of their own —
   `core.units`, `core.electrodes`, `core.sessions` among them — nothing changes.
 - **The identifier coincidence is left alone.** §3.3 reports it and no rule forbids it. What a
   consumer must not do is already stated: R85 §2.1 forbids reading identity out of a name, and the
