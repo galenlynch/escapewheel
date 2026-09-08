@@ -162,7 +162,7 @@ column costs **1.0005x** — 0.013 bits per row — because one distinct value u
 compresses away. R81 measured the same shape at no cost over 286,896,563 spikes.
 
 **Both packets must be rebuilt.** The column is required and eight tables lack it, so every packet
-built before this is non-conforming. R61 §5 makes a correction a rebuild, and this one re-reads no
+built before this is non-conforming. R61 §3 makes a correction a rebuild, and this one re-reads no
 external resource; `ecephys_776259` was already owed one for its subject.
 
 The reference reader drops `MultiSessionUnresolved` with the case that produced it, and R86 §2.4's

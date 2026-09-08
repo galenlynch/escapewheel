@@ -236,7 +236,7 @@ session adapter already parses both files for other reasons, so no source is ope
 opened already. §2.2's device rows are the new work: a lick spout is not a device the writer
 builds today.
 
-Both packets are rebuilt to gain the tables. R61 §5 already settled what that costs: a correction
+Both packets are rebuilt to gain the tables. R61 §3 already settled what that costs: a correction
 is a rebuild, and this one re-reads no external resource.
 
 ## 5. Open

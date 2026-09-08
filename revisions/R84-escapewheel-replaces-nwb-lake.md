@@ -82,7 +82,7 @@ that reasoning, and this makes the two agree.
 
 A consumer meeting `escapewheel-portable-v0.1` **MUST NOT** treat it as this profile. An alias is a
 compatibility promise, and there is nobody outside this repository to keep it for: two packets
-exist, both rebuildable, and R61 §5 already makes a correction a rebuild that re-reads no
+exist, both rebuildable, and R61 §3 already makes a correction a rebuild that re-reads no
 external resource. Refusing an unrecognised profile is what a reader does today, so this clause
 adds no code — it records that the absence is deliberate.
 
@@ -112,7 +112,7 @@ the project. Every occurrence is in this repository.
 
 Both measured packets must be rebuilt, at roughly 300 s each, because their manifests declare the
 old identifiers and R14 §2.3 forbids editing a manifest in place. Neither rebuild re-reads an
-external resource (R61 §5), and no table's bytes change.
+external resource (R61 §3), and no table's bytes change.
 
 `verify.py` makes the change safe to do mechanically. It regenerates the registry, the spec
 rendering, the fixtures and the tracking documents and then demands a clean tree, so a

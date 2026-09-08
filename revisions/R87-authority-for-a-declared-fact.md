@@ -265,7 +265,7 @@ no new machinery.
   to no source, so an existing recipe supplies `core.subjects` exactly as it does today and gains
   one warning telling it that a source could.
 - **No packet becomes invalid.** A committed packet is unaffected — except that
-  `ecephys_776259`'s is wrong for the reason in §1.1 and must be rebuilt, which R61 §5 makes a
+  `ecephys_776259`'s is wrong for the reason in §1.1 and must be rebuilt, which R61 §3 makes a
   rebuild that re-reads no external resource.
 - **R63's pre-I/O check keeps its scope.** It still refuses what it can see without opening
   anything, and §2.6 adds a second point rather than moving the first.

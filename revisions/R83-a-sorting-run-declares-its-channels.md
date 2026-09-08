@@ -169,7 +169,7 @@ varying integer column beside three that hold one value per run.
 
 The writer gains one read per stream, of an artifact the sorter adapter already opens.
 
-Migration is a rebuild, which re-reads no external resource (R61 §5).
+Migration is a rebuild, which re-reads no external resource (R61 §3).
 
 ## 5. Open
 
