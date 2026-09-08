@@ -973,48 +973,73 @@ The core layer comprises the following resources. Column definitions are in the 
 | `analysis.array_assets` | derived dense arrays |
 | `analysis.array_dimensions` | their axes |
 
-## 12. Ordering
+## 12. Rules for particular resources
 
-A unit is identified by `unit_id` alone (R81 §2.1). The packet assigns it, numbering units by
+Sections 2 through 10 bind every table. What follows binds three of them, where identifying a row,
+resolving a value, or reading an absence takes more than the generic rules give.
+
+### 12.1 Unit identity
+
+`unit_id` identifies a unit on its own (R81 §2.1). The packet assigns it, numbering units by
 ascending `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces the same
 numbers (R81 §2.2); `core.units` records the run and the curation as ordinary columns, and
-`local_unit_label` records what the sorter called it. A table keyed on a unit carries `unit_id`
-and not the run or the curation (R81 §2.3), and a consumer relating a unit to anything outside
-the packet uses `(sorting_run_id, local_unit_label)` (R81 §2.5).
+`local_unit_label` records what the sorter called it.
+
+A table keyed on a unit carries `unit_id` and not the run or the curation (R81 §2.3), and a
+consumer relating a unit to anything outside the packet uses `(sorting_run_id, local_unit_label)`
+(R81 §2.5).
+
+### 12.2 Channel indices in a sorting run
 
 A sorting drops bad channels before it runs, so a channel index a source emits counts the channels
 it kept and not the probe's contacts. `core.sorting_run_channels` records that list in the run's
-own order (R83 §2.1). A writer that can read it SHOULD emit the table, MUST NOT derive it from
-`core.unit_electrodes` or from a bad-channel list, and SHOULD emit nothing where it cannot read it
-(R83 §2.2). A consumer holding such an index MUST resolve it through that table and MUST NOT read
-it as a position in `core.electrodes`; where the run declares no channels the index is
-unresolvable, and the consumer MUST report that rather than resolve it against the contact list
-(R83 §2.3). Where a run declares its channels, every `core.unit_electrodes` row for one of its
-units MUST name an electrode among them (R83 §2.4).
+own order (R83 §2.1).
+
+A writer that can read it SHOULD emit the table, MUST NOT derive it from `core.unit_electrodes` or
+from a bad-channel list, and SHOULD emit nothing where it cannot read it (R83 §2.2).
+
+A consumer holding such an index MUST resolve it through that table and MUST NOT read it as a
+position in `core.electrodes`; where the run declares no channels the index is unresolvable, and
+the consumer MUST report that rather than resolve it against the contact list (R83 §2.3).
+
+Where a run declares its channels, every `core.unit_electrodes` row for one of its units MUST name
+an electrode among them (R83 §2.4).
+
+### 12.3 Calibration
 
 A calibration is a standing property of an instrument rather than an activity of this packet, so
 `core.calibrations` records the session it was **in force** for and, separately, when it was
 measured; a consumer MUST NOT read the two as one fact (R89 §2.1). A calibration in force for
 several sessions is recorded once per session, as R88 §2.4 requires of any row whose results reach
-more than one. The devices a calibration covers are a child table, since one calibration of the
-rig's manipulators is cited by six probes (R89 §2.2); a calibration covering a device the packet
-does not hold gets no row there, which is a fact rather than a defect, and a writer that records
-the calibration SHOULD record the devices it names. A paired series is carried as
-`core.calibration_points`, whose two value columns take their units of measure from the
-calibration, since the unit varies per calibration and so cannot be a literal on either column
-(R89 §2.3). Content that is an array rather than a curve names the array asset holding it (R89
-§2.4).
+more than one.
+
+The devices a calibration covers are a child table, since one calibration of the rig's manipulators
+is cited by six probes (R89 §2.2); a calibration covering a device the packet does not hold gets no
+row there, which is a fact rather than a defect, and a writer that records the calibration SHOULD
+record the devices it names.
+
+A paired series is carried as `core.calibration_points`, whose two value columns take their units
+of measure from the calibration, since the unit varies per calibration and so cannot be a literal
+on either column (R89 §2.3). Content that is an array rather than a curve names the array asset
+holding it (R89 §2.4).
 
 A row with no points, no array asset and no detail kind records that the calibration was in force
 and that the packet holds nothing further, which a consumer MUST read as **unrecorded** rather than
 as absent (R89 §2.5). A source stating that no calibration was performed gets no row at all.
+
 `core.calibrations` declares `metadata` and the two child tables MUST NOT, because its key holds an
 identifier of its own where theirs are keyed by other tables' identifiers (R89 §2.6).
+
+## 13. Stored layout
+
+### 13.1 Ordering
 
 A writer SHOULD sort every table by its primary key (R10 §2). No core table overrides this: R81
 §2.4 removed the spike table's override by numbering `unit_id` run-major, and R91 §3.2 removed
 `core.events`' by keying the table on the order it is stored in. `analysis.spike_events` overrides
 it under a MUST, specified in `03` §5.4.
+
+### 13.2 Partitioning
 
 A large table SHOULD be partitioned by `session_id`. A table MUST NOT be partitioned by `unit_id`.
 

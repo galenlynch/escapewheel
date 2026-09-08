@@ -1384,11 +1384,11 @@ note = "open questions"
 [clause."R81 §2.1"]
 disposition = "registry"
 where = "core.units.unit_id identity assigned; primary_key ['unit_id']"
-note = "also stated in 02_core_logical_schemas.md §9"
+note = "also stated in 02_core_logical_schemas.md §12.1"
 
 [clause."R81 §2.2"]
 disposition = "implementation"
-note = "the writer numbers units by (sorting_run_id, curation_id, local_unit_label); stated in 02 §9"
+note = "the writer numbers units by (sorting_run_id, curation_id, local_unit_label); stated in 02 §12.1"
 
 [clause."R81 §2.3"]
 disposition = "registry"
@@ -1441,16 +1441,16 @@ note = "also listed in 02_core_logical_schemas.md §11.5"
 
 [clause."R83 §2.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12"
+where = "02_core_logical_schemas.md §12.2"
 
 [clause."R83 §2.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12"
+where = "02_core_logical_schemas.md §12.2"
 
 [clause."R83 §2.4"]
 disposition = "registry"
 where = "core.unit_electrodes.electrode_is_a_run_channel"
-note = "also stated in 02_core_logical_schemas.md §12"
+note = "also stated in 02_core_logical_schemas.md §12.2"
 
 [clause."R83 §3"]
 disposition = "rationale"
@@ -1569,12 +1569,12 @@ note = "a run whose results reach several sessions is recorded once per session"
 [clause."R89 §2.1"]
 disposition = "registry"
 where = "core.calibrations, with unit_pair_complete and points_declare_units"
-note = "also stated in 02_core_logical_schemas.md §12 and 01_semantic_standard.md §3.23"
+note = "also stated in 02_core_logical_schemas.md §12.3 and 01_semantic_standard.md §3.23"
 
 [clause."R89 §2.2"]
 disposition = "registry"
 where = "core.calibration_devices"
-note = "the SHOULD on a writer recording the devices it names is in 02_core_logical_schemas.md §12"
+note = "the SHOULD on a writer recording the devices it names is in 02_core_logical_schemas.md §12.3"
 
 [clause."R89 §2.3"]
 disposition = "registry"
@@ -1583,17 +1583,17 @@ where = "core.calibration_points, whose value columns declare unit_from onto cor
 [clause."R89 §2.4"]
 disposition = "registry"
 where = "core.calibrations.array_asset_id, referencing core.array_assets"
-note = "also stated in 02_core_logical_schemas.md §12"
+note = "also stated in 02_core_logical_schemas.md §12.3"
 
 [clause."R89 §2.5"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12"
+where = "02_core_logical_schemas.md §12.3"
 note = "the consumer MUST read an empty calibration as unrecorded; also 01_semantic_standard.md §3.23"
 
 [clause."R89 §2.6"]
 disposition = "registry"
 where = "core.calibrations.metadata, absent from both child tables"
-note = "also stated in 02_core_logical_schemas.md §12"
+note = "also stated in 02_core_logical_schemas.md §12.3"
 
 [clause."R90 §2.1"]
 disposition = "rationale"
