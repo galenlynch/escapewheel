@@ -79,8 +79,11 @@ def adjacency_settles_uniqueness(table: Mapping[str, Any]) -> bool:
     the only correct check.
     """
     key = table.get("primary_key")
-    sort = table.get("sort")
-    if not key or not sort:
+    # R92 §2.2: a table declaring no sort is required to be in its primary key's order, so the
+    # absence is a declaration rather than a gap. Before it, thirteen tables returned False here
+    # and the validator checked nothing about their order.
+    sort = table.get("sort") or key
+    if not key:
         return False
     determined = {c["name"]: set(c["determined_by"]) for c in table.get("columns", []) if "determined_by" in c}
     positions = [sort.index(k) for k in key if k in sort]

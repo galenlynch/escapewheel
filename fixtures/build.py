@@ -320,8 +320,13 @@ def sql_name(resource): return resource.replace(".", "_")
 
 
 def sort_rows(resource: str, rows: list[dict]) -> list[dict]:
-    """Apply the registry's declared physical ordering (R10 §2), as a writer should."""
-    keys = SPECS[resource].get("sort")
+    """Apply the registry's declared physical ordering (R10 §2), as a writer should.
+
+    A resource declaring no sort takes its primary key's order, which R92 §2.2 requires of it:
+    before that rule the thirteen tables with `sort: null` were written in insertion order and
+    the validator scanned none of them.
+    """
+    keys = SPECS[resource].get("sort") or SPECS[resource].get("primary_key")
     if not keys:
         return rows
     return sorted(rows, key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in keys))

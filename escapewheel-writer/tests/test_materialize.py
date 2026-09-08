@@ -5,7 +5,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_writer.materialize import NotAligned, spike_events
+from escapewheel_writer.materialize import Collided, NotAligned, spike_events
 
 from .conftest import REGISTRY
 
@@ -108,6 +108,24 @@ def test_an_unmappable_spike_is_dropped(tmp_path):
     far = 1000 + 20 * AP
     out = rows(Fake(tmp_path, ticks=[1000, far], clocks=[PROBE] * 2))
     assert out["t_tick"] == [500_000_000]
+
+
+def test_two_spikes_of_one_unit_on_one_reference_tick_refuse_the_table(tmp_path):
+    """R92 §2.4. The table is keyed on the converted tick, so a collision is unbuildable.
+
+    A conversion preserves distinctness only where it expands; here the two spikes are already
+    on the reference clock and pass through, which is the same arrival the writer must refuse.
+    """
+    packet = Fake(tmp_path, ticks=[777, 777], clocks=[REF, REF], unit_of=lambda i: 0)
+    with pytest.raises(Collided, match="unit 0 has two spikes on reference tick 777"):
+        rows(packet)
+
+
+def test_two_spikes_of_different_units_on_one_tick_are_fine(tmp_path):
+    """The key is `(session_id, unit_id, t_tick)`, so one tick may carry many units' spikes."""
+    out = rows(Fake(tmp_path, ticks=[777, 777], clocks=[REF, REF], unit_of=lambda i: i))
+    assert out["t_tick"] == [777, 777]
+    assert out["unit_id"] == [0, 1]
 
 
 def test_a_dropped_spike_is_counted(tmp_path):

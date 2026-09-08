@@ -67,13 +67,17 @@ def test_wrong_column_type_is_caught_before_any_query(packet_root):
     assert any(f.check == "schema.column_type" for f in report.findings)
 
 
-def test_physical_order_is_a_warning_not_an_error(packet_root):
-    """Ordering is a performance property; a packet in the wrong order still conforms."""
+def test_physical_order_is_an_error(packet_root):
+    """R92 §2.2. A waiver may not rest on a property nothing requires.
+
+    `02` §10.1 skips the uniqueness query for a table whose order settles its key, so the order
+    is what a correctness check is discharged by and a departure fails the packet.
+    """
     events = pq.read_table(packet_root / "tables" / "core" / "events.parquet")
     _rewrite(packet_root, "events", events.take([2, 0, 1]))
     report = validate(open_packet(packet_root))
-    assert report.passed
-    assert any(f.check == "core.events.physical_order" and f.level == "warning" for f in report.findings)
+    assert not report.passed
+    assert any(f.check == "core.events.physical_order" and f.level == "error" for f in report.findings)
 
 
 def test_registry_version_must_match_the_manifest(packet_root):

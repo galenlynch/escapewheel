@@ -1136,8 +1136,6 @@ def _check_ordering(
         if scan is not None and resource_id not in scan:
             continue
         spec = tables[resource_id]
-        if not spec.get("sort"):
-            continue
         if _scan_one_ordering(resource_id, handle, spec, report):
             unsound.add(resource_id)
     return unsound
@@ -1145,10 +1143,17 @@ def _check_ordering(
 
 def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], report: Report) -> bool:
     """One table's ordering scan. True where uniqueness must fall back to the aggregate."""
-    keys = spec["sort"]
+    # R92 §2.2 makes a missing declaration mean the primary key's own order, so every table is
+    # scanned rather than the 25 that declare a sort.
+    keys = spec.get("sort") or spec["primary_key"]
     unique = spec["primary_key"] if adjacency_settles_uniqueness(spec) else None
+    # R92 §2.3: the declarations this table's adjacency argument leans on.
+    determined = [c["name"] for c in spec.get("columns", ())
+                  if c["name"] in keys and "determined_by" in c
+                  and set(c["determined_by"]) <= set(spec["primary_key"])] if unique else []
     offending: list[tuple[int, Any, Any]] = []
     duplicated: list[tuple[int, Any]] = []
+    broken: list[tuple[int, str, Any, Any]] = []
     tail: tuple[Any, ...] | None = None
     start = 0
     try:
@@ -1182,6 +1187,14 @@ def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], r
             if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
                 duplicated.append((start, _row_at(batch, unique, 0)))
             duplicated.extend((start + offset, _row_at(batch, unique, offset)) for offset in repeats)
+            # R92 §2.3. Two rows sharing the key must agree on every column declared a function
+            # of it; where they do not, the declaration is false and the waiver it earns is
+            # unearned. Reported apart from the duplicate, because the repair is different.
+            for offset in repeats:
+                for name in determined:
+                    was, now = batch.column(name)[offset - 1].as_py(), batch.column(name)[offset].as_py()
+                    if was != now:
+                        broken.append((start + offset, name, was, now))
         tail = _row_at(batch, keys, batch.num_rows - 1)
         start += batch.num_rows
         if len(offending) >= ORDER_REPORT and len(duplicated) >= ORDER_REPORT:
@@ -1191,17 +1204,23 @@ def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], r
         # saw before the damage says nothing about the file as a whole.
         report.add("error", "resource.unreadable", f"{resource_id}: {damaged}")
         return False
+    if broken:
+        report.add(
+            "error",
+            f"{resource_id}.determined_by",
+            "a column declared determined_by the key differs between two rows sharing it",
+            [(f"row {i}", col, f"{a} != {b}") for i, col, a, b in broken[:ORDER_REPORT]],
+        )
     if offending:
         report.add(
-            "warning",
+            "error",
             f"{resource_id}.physical_order",
             f"rows are not in declared sort order ({', '.join(keys)})",
             [(f"row {i}", str(prev), str(cur)) for i, prev, cur in offending[:ORDER_REPORT]],
         )
         # Adjacency settles uniqueness only for a file actually in order: a duplicate anywhere but
-        # beside its twin is invisible to a scan of neighbours. Ordering is a warning by design --
-        # a packet in the wrong order still conforms -- so uniqueness falls back to the aggregate
-        # rather than being escalated or skipped.
+        # beside its twin is invisible to a scan of neighbours. R92 §2.2 makes the departure an
+        # error, and uniqueness still falls back to the aggregate rather than being skipped.
         return bool(unique)
     if duplicated:
         report.add(

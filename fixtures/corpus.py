@@ -27,7 +27,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "stale_summary": ("error", "core.units.spike_summary_consistent"),
     "missing_amplitude_unit": ("error", "core.sorting_runs.amplitude_unit_declared"),
     "half_transform": ("error", "core.clocks.transform_pair_complete"),
-    "unsorted_spikes": ("warning", "core.spike_events.physical_order"),
+    "unsorted_spikes": ("error", "core.spike_events.physical_order"),
     "inconsistent_projection": ("error", "core.unit_quality_labels.projection_is_consistent"),
     "spike_outside_window": ("warning", "core.spike_events.within_observation"),
     "orphan_manifest_session": ("error", "core.sessions.manifest_sessions_match"),

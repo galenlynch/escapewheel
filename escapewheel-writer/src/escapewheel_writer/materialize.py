@@ -45,6 +45,33 @@ from .arrow import schema as arrow_schema
 #: The resource these buckets become, so the spill can take the encoding its columns want.
 RESOURCE = "analysis.spike_events"
 
+
+class Collided(NotAligned):
+    """Two spikes of one unit convert to the same reference tick, so the table cannot be built.
+
+    R92 §2.4. This table is keyed on the converted tick, and a conversion preserves distinctness
+    only where it expands -- a reference clock slower than a probe's collapses spikes that were
+    distinct on the probe. Refusing costs nothing usable: a histogram over collapsed spikes
+    undercounts them, so a clock that coarse makes this table the wrong instrument rather than a
+    broken one, and `06` §2 makes not building it an ordinary outcome.
+    """
+
+
+def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) -> None:
+    """Raise where two consecutive spikes of one unit share a converted tick (R92 §2.4).
+
+    Core sorts by `(session_id, unit_id, t_tick)` and the mapping is monotone, so a collision is
+    always between neighbours; `carry` is the previous batch's last row, since a pair split
+    across a boundary would otherwise pass unseen.
+    """
+    if units.size > 1:
+        hit = np.flatnonzero((units[1:] == units[:-1]) & (np.diff(ticks) == 0))
+        if hit.size:
+            at = int(hit[0]) + 1
+            raise Collided(f"unit {int(units[at])} has two spikes on reference tick {int(ticks[at])}")
+    if carry is not None and units.size and units[0] == carry[0] and ticks[0] == carry[1]:
+        raise Collided(f"unit {int(units[0])} has two spikes on reference tick {int(ticks[0])}")
+
 BATCH_ROWS = 1 << 17
 
 #: Bucket width in seconds of the reference clock. The dial trades scattered-unit access
@@ -304,6 +331,7 @@ def spike_events(
     buckets = _Buckets(root, out, _bytes(memory_budget))
     try:
         reader = pq.ParquetFile(handle.path)
+        carry: tuple[int, int] | None = None
         for batch in reader.iter_batches(batch_size=BATCH_ROWS, columns=columns):
             parent, keep = mapped(batch, reference, by_clock, bound)
             # R40 §2.3: counted whether or not any are dropped. A recorded zero is the
@@ -314,13 +342,16 @@ def spike_events(
                 continue
             taken = np.flatnonzero(keep)
             ticks = parent[taken]
+            units = batch.column("unit_id").take(taken).to_numpy(zero_copy_only=False)
+            _refuse_on_collision(units, ticks, carry)
+            carry = (int(units[-1]), int(ticks[-1])) if units.size else carry
             # Floor division, so a negative tick lands in the bucket that starts before it
             # rather than the one that starts after.
             starts = (ticks // width) * width
             converted = pa.record_batch(
                 {
                     "session_id": batch.column("session_id").take(taken),
-                    "unit_id": batch.column("unit_id").take(taken),
+                    "unit_id": pa.array(units),
                     "t_tick": pa.array(ticks, type=pa.int64()),
                     # Every row is on the reference clock by construction, so this is one
                     # value repeated rather than a column read from the source.
@@ -428,4 +459,4 @@ def into(
     return resource
 
 
-__all__ = ["BATCH_ROWS", "BUCKET_SECONDS", "RUN_ID", "NotAligned", "into", "spike_events"]
+__all__ = ["BATCH_ROWS", "BUCKET_SECONDS", "RUN_ID", "Collided", "NotAligned", "into", "spike_events"]
