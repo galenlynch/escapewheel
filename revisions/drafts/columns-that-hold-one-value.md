@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | R53 §2.3.1 (which tables get a generated name), `02` (the `name` column on seven tables), R2 §5 and §7.2 (what a rule may name) |
-| **Depends on** | R53 (an identifier is an integer, and its owner carries a name), R33 (a rational rate), R13 (one alignment model, the same shape), R81 (the same defect, found the same way) |
+| **Amends** | R53 §2.3.1 (which tables get a generated name), `02` (the `name` column on seven tables) |
+| **Depends on** | R53 (an identifier is an integer, and its owner carries a name), R33 (a rational rate), R13 (one alignment model, the same shape), R81 (the same defect, found the same way), R94 §3 (a rule names no optional column) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 §3 is normative; every other section is informative.
@@ -17,7 +17,8 @@ R3 §3.0 forbids a table restating what something else already declares, and not
 columns of one table to see whether they do. A sweep over both packaged sessions —
 **`ecephys_776259`** (twelve probes, 6,781 sorted units) and **`ecephys_786867`** (ten probes,
 4,505 units) — comparing every pair of columns in every table under five million rows found two
-duplications and one coincidence that reads like one.
+duplications and one coincidence that reads like one. The row bound was the script's; §3.3 needs
+none.
 
 This part strikes the duplicated name columns, makes the two rate forms exclusive, and adds the
 report that found both.
@@ -173,6 +174,10 @@ packet without a bound anyone has to choose.
 
 333 columns become **326**: seven generated names struck, and seven `name` columns renamed rather
 than removed. Tier 2 rules go from 69 to **70**, and references are unchanged.
+
+Two other drafts change the column count — `a-sorted-unit-declares-its-spikes-context` by two and
+`the-free-form-metadata-column` to 330 — and none of the three touches a column another strikes, so
+whichever lands second states the total against a registry the first has already changed.
 
 `registry/build.py` skips its R53 §2.3.1 pass for a table declaring `name`, and renames that column
 in the same block. `registry/check.py` gains §3.3's check. The writer stops emitting the duplicated
