@@ -7,7 +7,7 @@
 | **Depends on** | R92 (which states the ordering rule this part relocates) |
 | **Profile** | all |
 
-Normative, except §2 and §6, which are informative.
+§3 is normative; every other section is informative.
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -15,7 +15,8 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 `00` §2 defines three levels — a semantic standard independent of storage, a logical standard that
 is storage-agnostic but not shape-agnostic, and a physical profile saying how logical resources are
-stored. Part 02 breaks the second of those in four places, and Part 03 mixes rules a packet is
+stored. The second is crossed in four places: three clauses of Part 02 and one field of the
+registry, which is Part 02's machine form. Part 03 crosses the other way, mixing rules a packet is
 judged against with advice no validator can check.
 
 This part states where a clause belongs, moves the clauses that are in the wrong document, and
@@ -213,9 +214,9 @@ what it exists to make citable.
 **Position is not the signal, and is not made into one.** Part 09 is normative and follows two
 informative parts, and no arrangement could fix that in general, since Part 06 is normative in two
 sections and informative in the rest. Renumbering to tidy the sequence would move identifiers that
-**170** citations depend on across the revisions, the drafts and the parts themselves — **68**
-distinct part-and-section pairs — many inside accepted revisions and one inside the ledger's own
-`where`. So the order stays as it is and the table carries what the order cannot.
+**119** citations depend on across the accepted revisions and the parts themselves, **51** distinct
+part-and-section pairs, with more in the drafts and one inside the ledger's own `where`. So the
+order stays as it is and the table carries what the order cannot.
 
 ## 4. Placing a clause
 
@@ -286,8 +287,9 @@ Informative.
 
 ## 7. Consequence
 
-Three sentences move out of `02` and one number moves out of `03` §5.1, and Part 10 is written
-from material that currently sits in accepted revisions and in `conformance/`.
+`02` loses a section and half a sentence — §13 whole, and §5.3's `INT96` clause — and `03` §5.1
+loses a number to Part 10, which is written from material that currently sits in accepted revisions
+and in `conformance/`.
 
 §3.3 removes one field from the registry's meta-schema and from every document written against it:
 25 declarations across core and 11 across the four extensions, none of which changes a stored
