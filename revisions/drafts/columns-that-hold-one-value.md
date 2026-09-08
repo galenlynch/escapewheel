@@ -143,7 +143,9 @@ the rational and stops emitting the float, `tick_rate_den` being 1 in every row 
 
 A validator **SHOULD** report, at `info`, two columns of one table holding equal values in every
 row where that value is not constant. It **MUST NOT** report a failure: §2.3 measures why, since
-four independent numberings coinciding is a fact about a packet rather than a defect in it.
+four independent numberings coinciding is a fact about a packet rather than a defect in it. What a
+consumer must not do is already stated — R85 §2.1 forbids reading identity out of a name, and the
+same reasoning covers reading it out of a number that happens to match.
 
 The level is what makes it useful. R26 §2 makes an advisory rule off by default, which would leave
 this finding where it has been; `info` is what R15 §4 gives a codec claim that cannot be verified,
@@ -162,21 +164,10 @@ packet without a bound anyone has to choose.
 - **No value is lost from any packet.** Each struck name holds what a surviving column holds, and
   §3.2 keeps both rate forms; what stops is writing the same fact twice.
 - **No key or reference changes.** The struck columns are in no key and carry no reference.
-- **Six required names come under R85 §2.2 for the first time.** That rule is stated over a
-  `*_name`, and a bare `name` is not one, so renaming brings `core.devices`, `core.clocks`,
-  `core.event_streams`, `core.media_assets` and both array-asset tables under its requirement that
-  the value be unique within its packet. Nothing breaks: measured, `name` is unique and non-null in
-  every written table of both packets — 20 and 21 devices, 12 and 10 probes, 10 and 10 streams, 13
-  and 11 clocks, 14 and 11 array assets, 4 media assets. A writer meeting a source that names
-  nothing must compose one, which two adapters already do and which R89 §2.1 recorded for a
-  calibration; the obligation follows from `required` and R85 §2.2 rather than from a new clause.
 - **A float rate stays expressible.** §3.2 forbids stating both forms, not the float, so a source
   that measured a rate rather than deriving it still records what it measured.
 - **R53 §2.3.1 still generates a name.** For the nine tables with no `name` of their own —
   `core.units`, `core.electrodes`, `core.sessions` among them — nothing changes.
-- **The identifier coincidence is left alone.** §3.3 reports it and no rule forbids it. What a
-  consumer must not do is already stated: R85 §2.1 forbids reading identity out of a name, and the
-  same reasoning covers reading it out of a number that happens to match.
 
 ## 5. Consequence
 
@@ -189,6 +180,14 @@ name and the float rate beside the rational; `escapewheel_reader.observation` ke
 branch, which §3.2 makes reachable only for a clock that states no rational. The seven renames
 reach the writer's adapters, which write `"name"` today for a device, a probe, an event stream, a
 media asset, a clock and an array asset.
+
+Six required columns come under R85 §2.2 for the first time. That rule is stated over a `*_name`
+and a bare `name` is not one, so renaming brings `core.devices`, `core.clocks`,
+`core.event_streams`, `core.media_assets` and both array-asset tables under its requirement that
+the value be unique within its packet, and a writer meeting a source that names nothing must
+compose one — which two adapters already do and R89 §2.1 recorded for a calibration. Nothing
+breaks: `name` is unique and non-null in every written table of both packets, 20 and 21 devices,
+12 and 10 probes, 10 and 10 streams, 13 and 11 clocks, 14 and 11 array assets and 4 media assets.
 
 **Both packets must be rebuilt.** Renaming a column leaves a file the registry no longer describes.
 R87 §2.1 and R88 §2 already require that rebuild, so this adds none of its own.
