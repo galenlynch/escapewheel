@@ -25,9 +25,10 @@ adds a Part 10 for the measurements that justify the profile's choices.
 
 Informative.
 
-Part 02 names a storage technology twice in 344 lines, so the leak is narrow rather than pervasive,
-and Part 01 states its own independence and keeps it. Four clauses are nevertheless in the wrong
-place, and two of them have already drifted apart from their copies.
+Part 01 states its own independence and keeps it. Part 02 names a storage technology three times
+and only one is a leak: `02` §10.3 places Parquet and Zarr rules outside SQL's reach, which §3.1's
+rule permits in as many words, and `02` §8 cites Zarr in an example of what duplication buys. Four
+clauses are nevertheless in the wrong place, and two have already drifted apart from their copies.
 
 **Ordering is stated in both parts.** `02` §13.1 and `03` §5.3 each say a writer SHOULD sort every
 table by its primary key, and each names `analysis.spike_events` as the one override. One rule,
@@ -60,10 +61,9 @@ Part 02 **MUST NOT** name a storage technology, a file format, an encoding, or a
 of a stored resource, except to place such a rule outside its own scope. Every clause of Part 02
 **MUST** hold unchanged under any physical profile.
 
-`02` §13 is struck whole — ordering and partitioning are its only two subsections;
-R92 §2.2 carries the ordering rule and
-`03` §5.2 already carries the partitioning rules. `02` §5.3's sentence forbidding `INT96` is
-struck; `03` §5.5 already states it.
+`02` §13 is struck whole — ordering and partitioning are its only two subsections; R92 §2.2
+carries the ordering rule and `03` §5.2 already carries the partitioning rules. `02` §5.3's
+sentence forbidding `INT96` is struck; `03` §5.5 already states it.
 
 `02` §5.3's remaining requirements stay, because a tick being `int64` and a wall clock being a
 microsecond UTC timestamp are statements about the value rather than about its storage.
@@ -73,16 +73,15 @@ microsecond UTC timestamp are statements about the value rather than about its s
 Part 03 is normative for a packet whose manifest declares its `profile_id`, and binds no other
 packet. It is the only part that names a storage technology.
 
-No clause of Part 01 or Part 02 **MAY** depend on a clause of Part 03. A logical rule discharged
-by a physical property is the defect R92 §2.1
-repairs, and this states the general form of it so a later revision does not reintroduce one.
+No clause of Part 01 or Part 02 **MAY** depend on a clause of Part 03. A logical rule discharged by
+a physical property is the defect R92 §2.1 repairs, and this states the general form of it so a
+later revision does not reintroduce one.
 
 ### 3.3 The registry declares no stored order
 
 The `sort` field is removed from `registry.schema.json` and from every table of
 `logical_schemas.json`. A table's stored order is its primary key's, unless `03` §5.4 names another
-for it, and a named override **MUST** satisfy
-R92 §2.2.
+for it, and a named override **MUST** satisfy R92 §2.2.
 
 Every registry document drops the field, an extension's (R17 §2) as much as core's, since the
 amended meta-schema admits no property it does not declare; all eleven extension tables carrying a
@@ -92,11 +91,13 @@ amended meta-schema admits no property it does not declare; all eleven extension
 of `t_tick` is a statement about values, true under any profile, and it is what lets `03` §5.4's
 one remaining override coexist with a minimal key.
 
-The validator holds the override list, since a physical rule is the shim's rather than SQL's
-(R12 §4), and **MUST** refuse an override that does not satisfy
-R92 §2.2 — a check made with no
-packet in hand, as R56 §2.4's is. That is what `aind_unit_qc` needed when it went on sorting by two
-columns R81 had removed, which no packet could satisfy and no rule could see.
+With the field gone, `03` §5.4's table is the only statement an override has, and it is read by
+two actors rather than one: a writer **MUST** emit an overridden table in that order (`03` §5.4)
+and a validator **MUST** establish it (R92 §2.2), by scan rather than by query, since a physical
+rule is the shim's rather than SQL's (R12 §4). A validator **MUST** refuse an override that does
+not satisfy R92 §2.2 — a check made with no packet in hand, as R56 §2.4's is, and what
+`aind_unit_qc` needed when it went on sorting by two columns R81 had removed, which no packet could
+satisfy and no rule could see.
 
 The thirteen tables carrying `sort: null` stop being a category rather than getting filled in: with
 no field there is no null, and a table with no override is in key order by rule rather than by a
@@ -146,7 +147,7 @@ statement governs.
 | 04 | packet catalog | normative |
 | 05 | validation and import | normative |
 | 06 | analysis layer | informative, except §2 and §5 |
-| 07 | reference implementation and plan | informative |
+| 07 | reference implementation | informative |
 | 08 | example packet | informative |
 | 09 | metadata and extensions | normative |
 | 10 | performance notes | informative |
@@ -159,8 +160,9 @@ one place that answers which parts bind, which no part can answer about the othe
 **Position is not the signal, and is not made into one.** Part 09 is normative and follows two
 informative parts, and no arrangement could fix that in general, since Part 06 is normative in two
 sections and informative in the rest. Renumbering to tidy the sequence would move identifiers that
-**52** citations depend on, many inside accepted revisions and one inside the ledger's own
-`where`, so the order stays as it is and the table carries what the order cannot.
+**170** citations depend on across the revisions, the drafts and the parts themselves — **68**
+distinct part-and-section pairs — many inside accepted revisions and one inside the ledger's own
+`where`. So the order stays as it is and the table carries what the order cannot.
 
 ## 4. Placing a clause
 
@@ -181,8 +183,8 @@ repository's code were replaced is Part 07's, and one that would survive that re
 
 `00` §7.3 says Iceberg is a later profile that MUST NOT be required by an implementation, and `00`
 §2 says a physical profile says how the logical resources of Part 02 are stored. Neither is
-satisfiable today: an Iceberg profile would inherit `02` §13.1's ordering rules, which its compaction
-does not preserve, and `02` §5.3's prohibition on an encoding it does not have.
+satisfiable today: an Iceberg profile would inherit `02` §13.1's ordering rules, which its
+compaction does not preserve, and `02` §5.3's prohibition on an encoding it does not have.
 
 This part does not add that profile and makes no claim that it is close. What it establishes is
 that adding one requires no amendment to Part 01 or Part 02, which is what `00` §2 already
@@ -193,8 +195,8 @@ promises.
 Informative.
 
 - **No table, column, reference or rule.** Every change is to which document holds a sentence.
-- **No part is renumbered.** §3.5 records why: the sequence cannot express Part 06, and the
-  identifiers 52 citations depend on are worth more than a tidy order.
+- **No part is renumbered.** §3.6 records why: the sequence cannot express Part 06, and what
+  depends on the identifiers is worth more than a tidy order.
 - **No packet is invalidated.** The moved clauses say the same things in their new homes, and
   `03` §5.4 names one override where it once named two, R91 §3.2 having removed `core.events`',
   so there is no disagreement left here to reconcile.
@@ -215,10 +217,15 @@ that currently sits in accepted revisions and in `conformance/`.
 
 §3.3 removes one field from the registry's meta-schema and from every document written against it:
 25 declarations across core and 11 across the four extensions, none of which changes a stored
-order. `registry/build.py` loses its `OVERRIDE` table and its fill pass, `registry/render.py` loses
-the `**Sort**` line that would otherwise print the same sentence 38 times, and
-`escapewheel_validator` gains the profile's override list and the check over it. No packet's rows
-move, and no packet is invalidated: the field was never written into one.
+order. Six places read the field and each is accounted for. `registry/build.py` loses its `OVERRIDE`
+table and its fill pass; `registry/render.py` loses the `**Sort**` line that would otherwise print
+the same sentence 38 times; and `escapewheel_writer.scaffold` stops writing `"sort": None` into a
+scaffolded registry. The other three read `03` §5.4's list instead, which `escapewheel_reader`
+gains: both packages needing it depend on the reader and neither depends on the other, so one copy
+serves `escapewheel_writer.arrow`, which emits the order §3.3 binds a writer to;
+`fixtures/build.py`, which builds the corpus against it; and `escapewheel_validator`, which
+establishes it and refuses an override failing R92 §2.2. No packet's rows move, and no packet is
+invalidated: the field was never written into one.
 
 `00` gains §3.6's table, eleven rows restating a line each part already carries.
 `escapewheel_poc_docs_v0.2/combine.py` gains Part 10 in its concatenation, and the ledger gains
