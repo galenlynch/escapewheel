@@ -138,15 +138,16 @@ def _registry():
                 "sort": ["session_id", "unit_id"],
                 "rules": [],
             },
-            "core.events": {
+            # R91 §3.2: an event is a tick on a stream. The kind and the clock are the stream's.
+            "core.event_streams": {
                 "columns": [
+                    _col("event_stream_id", "int32", "required"),
                     _col("session_id", "int32", "required"),
-                    _col("event_id", "int32", "required"),
+                    _col("name", "string", "required"),
                     _col("event_type", "string", "required", vocabulary="open"),
-                    _col("t_tick", "int64", "required"),
                     _col("clock_id", "int32", "required"),
                 ],
-                "primary_key": ["session_id", "event_id"],
+                "primary_key": ["event_stream_id"],
                 "references": [
                     {
                         "columns": ["session_id"],
@@ -154,7 +155,29 @@ def _registry():
                         "resource_columns": ["session_id"],
                     }
                 ],
-                "sort": ["session_id", "event_id"],
+                "sort": ["event_stream_id"],
+                "rules": [],
+            },
+            "core.events": {
+                "columns": [
+                    _col("session_id", "int32", "required"),
+                    _col("stream_id", "int32", "required"),
+                    _col("t_tick", "int64", "required"),
+                ],
+                "primary_key": ["session_id", "stream_id", "t_tick"],
+                "references": [
+                    {
+                        "columns": ["session_id"],
+                        "resource": "core.sessions",
+                        "resource_columns": ["session_id"],
+                    },
+                    {
+                        "columns": ["stream_id"],
+                        "resource": "core.event_streams",
+                        "resource_columns": ["event_stream_id"],
+                    },
+                ],
+                "sort": ["session_id", "stream_id", "t_tick"],
                 "rules": [],
             },
             "core.spike_events": {
@@ -215,13 +238,20 @@ def packet_root(tmp_path):
             "quality_label": pa.array(["sua", "mua"]),
         }
     )
+    event_streams = pa.table(
+        {
+            "event_stream_id": pa.array([0, 1], type=i32),
+            "session_id": pa.array([SESSION] * 2, type=i32),
+            "name": pa.array(["stimulus", "reward"]),
+            "event_type": pa.array(["stimulus_onset", "reward"]),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR] * 2, type=i32),
+        }
+    )
     events = pa.table(
         {
             "session_id": pa.array([SESSION] * 3, type=i32),
-            "event_id": pa.array(list(EVENTS), type=i32),
-            "event_type": pa.array(["stimulus_onset", "reward", "stimulus_onset"]),
-            "t_tick": pa.array([1200, 4200, 6200], type=pa.int64()),
-            "clock_id": pa.array([CLOCK_BEHAVIOUR] * 3, type=i32),
+            "stream_id": pa.array([0, 0, 1], type=i32),
+            "t_tick": pa.array([1200, 6200, 4200], type=pa.int64()),
         }
     )
     spike_events = pa.table(
@@ -238,6 +268,7 @@ def packet_root(tmp_path):
         _resource("core.sessions", _write(root, "sessions", sessions)),
         _resource("core.intervals", _write(root, "intervals", trials)),
         _resource("core.units", _write(root, "units", units)),
+        _resource("core.event_streams", _write(root, "event_streams", event_streams)),
         _resource("core.events", _write(root, "events", events)),
         _resource("core.spike_events", _write(root, "spike_events", spike_events)),
     ]
@@ -331,15 +362,24 @@ def two_clock_packet(tmp_path, packet_root):
     events = pa.table(
         {
             "session_id": pa.array([SESSION], type=i32),
-            "event_id": pa.array([EVENTS[0]], type=i32),
-            "event_type": pa.array(["go_cue"]),
+            "stream_id": pa.array([0], type=i32),
             "t_tick": pa.array([1_200_000], type=pa.int64()),
+        }
+    )
+    # R91 §3.1: the kind lives on the stream, so the fixture declares the one it emits.
+    event_streams = pa.table(
+        {
+            "event_stream_id": pa.array([0], type=i32),
+            "session_id": pa.array([SESSION], type=i32),
+            "name": pa.array(["go_cue"]),
+            "event_type": pa.array(["go_cue"]),
             "clock_id": pa.array([CLOCK_BEHAVIOUR], type=i32),
         }
     )
     for resource_id, name, table in (
         ("core.sessions", "sessions", sessions),
         ("core.spike_events", "spike_events", spikes),
+        ("core.event_streams", "event_streams", event_streams),
         ("core.events", "events", events),
     ):
         by_id[resource_id]["uri"] = _write(root, name, table)

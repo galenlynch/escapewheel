@@ -314,7 +314,7 @@ The core layer comprises the following resources. Column definitions are in the 
 | resource | contents |
 |---|---|
 | `core.intervals` | bounded spans, discriminated by kind |
-| `core.events` | timestamped observations |
+| `core.events` | timestamped observations, one per tick per stream |
 | `core.event_streams` | what produced a set of events, and on what clock |
 | `core.event_stream_observation_intervals` | a stream's refinement of its clock's window |
 
@@ -397,10 +397,9 @@ as absent (R89 §2.5). A source stating that no calibration was performed gets n
 `core.calibrations` declares `metadata` and the two child tables MUST NOT, because its key holds an
 identifier of its own where theirs are keyed by other tables' identifiers (R89 §2.6).
 
-A writer SHOULD sort every table by its primary key (R10 §2). One table overrides this:
-
-| resource | order |
-|---|---|
-| `core.events` | `session_id, clock_id, t_tick, event_type` |
+A writer SHOULD sort every table by its primary key (R10 §2). No core table overrides this: R81
+§2.4 removed the spike table's override by numbering `unit_id` run-major, and R91 §3.2 removed
+`core.events`' by keying the table on the order it is stored in. `analysis.spike_events` overrides
+it under a MUST, specified in `03` §5.4.
 
 A large table SHOULD be partitioned by `session_id`. A table MUST NOT be partitioned by `unit_id`.

@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-38 tables, 335 columns, 97 references, 70 Tier 2 rules
+38 tables, 333 columns, 96 references, 69 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91
 ```
 
 ## Contents
@@ -509,6 +509,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `event_stream_name` | string | nullable | R53 §2.3.1 | What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `session_id` | int32 | **required** | R23 §2-3 | Session ID. |
 | `name` | string | **required** | R23 §2-3 | Human-readable name, e.g. left_lick_sensor. |
+| `event_type` | string | **required** | R91 §3.1 | What kind of event this stream emits. Open (R8 §4); a stream emits one kind, so a source emitting several on one channel is written as several streams. |
+| `detail_kind` | string | nullable | R91 §3.1 | A table specialising this stream's events, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the detail is elsewhere (R90 §3.4). Resolved against `core.events`' key by R90 §3.5's shared key, through the reference `discriminates_via` names. |
 | `device_id` | int32 | nullable | R23 §2-3 | The device that produced it, where one is identified. |
 | `clock_id` | int32 | **required** | R23 §2-3 | The clock its events are timed on. |
 | `processing_run_id` | int32 | nullable | R23 §2-3 | The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 §4: the manifest records outputs per resource and cannot distinguish streams within one table. |
@@ -533,27 +535,21 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** |  | Session ID. |
-| `event_id` | int32 | **required** |  | Stable event ID. |
-| `event_name` | string | nullable | R53 §2.3.1 | What `event_id` stands for: the identifier a source or an earlier packet used for this event. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `stream_id` | int32 | **required** | R23 §2-3 | The stream this event belongs to. |
-| `event_type` | string | **required** | R11 §3-4 | Event type. |
 | `t_tick` | int64 | **required** |  | Event tick. |
-| `clock_id` | int32 | **required** |  | Event clock. |
 | `payload` | json_string | optional |  | Event payload. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
-**Primary key** — `session_id`, `event_id`  
-**Sort** — `session_id`, `clock_id`, `t_tick`, `event_type`
+**Primary key** — `session_id`, `stream_id`, `t_tick`  
+**Sort** — `session_id`, `stream_id`, `t_tick`
 
 **References**
 
 - `session_id` → `core.sessions` (`session_id`)
-- `clock_id` → `core.clocks` (`clock_id`)
 - `stream_id` → `core.event_streams` (`event_stream_id`)
 
-**Tier 2 rules** — 2
+**Tier 2 rules** — 1
 
-- `core.events.clock_matches_stream` — error: an event's clock_id disagrees with its stream's
 - `core.events.within_observation` — warning: events fall outside the observation window in force for their stream
 
 ### `core.intervals`

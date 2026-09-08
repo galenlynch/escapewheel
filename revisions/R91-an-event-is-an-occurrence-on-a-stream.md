@@ -1,8 +1,8 @@
-# An Event Is an Occurrence on a Stream
+# R91 — An Event Is an Occurrence on a Stream
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | `02` (`core.events`' columns and key, `core.event_streams`' columns), R23 §2 (what a stream declares), R11 §4 (which table declares `event_type`) |
 | **Depends on** | R23 (an event stream is the context events lacked), R53 (an identifier is an integer, and an assigned one carries a name), R55 (a discriminated reference), R56 (a column declares its context) |
 | **Profile** | `escapewheel-portable-v0.1` |
@@ -83,9 +83,10 @@ both, and guesses wrong for every source but the one measured.
 | `event_type` | `string` | required | data; what kind of event this stream emits, open (R8 §4) |
 | `detail_kind` | `string` | nullable | discriminator, `resolves: optional`; §3.4 |
 
-A stream therefore emits **one kind of event**. A source emitting several kinds on one channel is
-written as several streams, which is what the only adapter already does and what
-`core.event_streams.name` — the source's own field name — makes natural.
+A stream emits **one kind of event**, which is why `event_type` is required: a writer **MUST**
+write a source emitting several kinds on one channel as several streams. That is what the only
+adapter already does, and what `core.event_streams.name` — the source's own field name — makes
+natural.
 
 ### 3.2 What an event is
 
@@ -102,8 +103,10 @@ A consumer naming the event a spike was aligned to takes the event's `t_tick`:
 
 ### 3.3 Where a mark goes
 
-A stream whose events carry marks names the table holding them through §3.4's `detail_kind`, and
-**that table declares how many there are and what type each is**. Core adds no column for one.
+Core adds no column for a mark. A stream whose events carry marks **MUST** name the table holding
+them through §3.4's `detail_kind`, and **that table declares how many there are and what type each
+is**. A writer **MUST NOT** put a mark in `core.events.metadata`, which no rule reads and no filter
+can use.
 
 Core cannot declare it. §2.4 is why: cardinality and type are properties of what produced the
 event, and a column in `core.events` would fix both for every source. An extension table fixes
@@ -120,9 +123,10 @@ on a table entitled to one — and that argument needs nothing from here.
 ### 3.4 Where structured detail lives
 
 `core.event_streams.detail_kind` names a table that specialises the events of that stream, as a
-dotted resource ID. It declares `resolves: optional`, so a kind naming a table the packet does not
-carry records that the detail is elsewhere rather than that the stream is wrong (R90 §3.4) — which
-is R89 §2.5's judgement, not R54 §2.1's, because an event with no detail is still an event.
+dotted resource ID. It **MUST** declare `resolves: optional`, so a kind naming a table the packet
+does not carry records that the detail is elsewhere rather than that the stream is wrong (R90
+§3.4) — which is R89 §2.5's judgement, not R54 §2.1's, because an event with no detail is still an
+event.
 
 Resolution is R90 §3.5's shared key: the named table carries `(session_id, stream_id, t_tick)` and
 declares a reference to `core.events` on those three columns, so Tier 1 generates the anti-join
@@ -179,9 +183,16 @@ R87 §2.1 and R88 §2 already require that rebuild, so this adds none of its own
 correction a rebuild, and this one re-reads no external resource.
 
 `escapewheel_reader.alignment` selects the event's tick in `_events`, `aligned_spikes` and the
-`argmin` that picks the nearest; the NWB adapter writes `event_type` once per stream instead of
-once per event and stops composing `f"{name}:{offset}"`. Its `{"value": …}` payload is untouched
-and keeps working.
+`argmin` that picks the nearest, and reads the kind and the clock from `core.event_streams` —
+selecting one kind of event becomes a join rather than a predicate on the event row.
+`Packet.events` resolves the type to a set of streams and pushes those keys down, which needs
+membership as a predicate alongside equality and range. The NWB adapter writes `event_type` once
+per stream instead of once per event and stops composing `f"{name}:{offset}"`; its `{"value": …}`
+payload is untouched and keeps working.
+
+One conformance variant is retired with the rule it exercised. `stream_clock_mismatch` put an
+event on a clock its stream did not declare, and after §3.2 an event has no clock to put anywhere:
+the defect is unconstructible, not merely unchecked. The corpus goes from 27 packets to 26.
 
 ## 6. Open
 

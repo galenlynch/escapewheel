@@ -233,28 +233,31 @@ def content() -> dict[str, list[dict]]:
              "animal_response": 1, "rewarded_history_left": False, "rewarded_history_right": False}],
         # Three streams: one hardware-detected, one with a processing run behind it, and
         # one emitting two event types -- which is why R23 4.1 keeps event_type on the row.
+        # R91 §3.1: a stream emits one kind of event, so the trigger's onset and offset are two.
         "core.event_streams": [
             {"event_stream_id": "stim", "session_id": "s001", "name": "stimulus_trigger",
-             "clock_id": "behavior_s001", "device_id": None, "processing_run_id": None},
+             "event_type": "stimulus_onset", "clock_id": "behavior_s001",
+             "device_id": None, "processing_run_id": None},
+            {"event_stream_id": "stim_off", "session_id": "s001", "name": "stimulus_trigger_off",
+             "event_type": "stimulus_offset", "clock_id": "behavior_s001",
+             "device_id": None, "processing_run_id": None},
             {"event_stream_id": "reward", "session_id": "s001", "name": "reward_valve",
-             "clock_id": "behavior_s001", "device_id": "imec0", "processing_run_id": None},
+             "event_type": "reward", "clock_id": "behavior_s001",
+             "device_id": "imec0", "processing_run_id": None},
             {"event_stream_id": "lick", "session_id": "s001", "name": "lick_sensor",
-             "clock_id": "behavior_s001", "device_id": "imec0",
+             "event_type": "lick", "clock_id": "behavior_s001", "device_id": "imec0",
              "processing_run_id": "run_import_001"}],
         "core.event_stream_observation_intervals": [
             {"session_id": "s001", "event_stream_id": "stim", "start_tick": 0, "stop_tick": 12000},
             {"session_id": "s001", "event_stream_id": "reward", "start_tick": 0, "stop_tick": 5000},
             # the sensor dropped out mid-session, which is why one window is not enough
             {"session_id": "s001", "event_stream_id": "reward", "start_tick": 6000, "stop_tick": 12000}],
+        # R91 §3.2: an event is a tick on a stream, keyed (session_id, stream_id, t_tick).
         "core.events": [
-            {"session_id": "s001", "event_id": "ev_0001", "stream_id": "stim",
-             "event_type": "stimulus_onset", "t_tick": 1200, "clock_id": "behavior_s001"},
-            {"session_id": "s001", "event_id": "ev_0002", "stream_id": "reward",
-             "event_type": "reward", "t_tick": 4200, "clock_id": "behavior_s001"},
-            {"session_id": "s001", "event_id": "ev_0003", "stream_id": "stim",
-             "event_type": "stimulus_offset", "t_tick": 6200, "clock_id": "behavior_s001"},
-            {"session_id": "s001", "event_id": "ev_0004", "stream_id": "lick",
-             "event_type": "lick", "t_tick": 6900, "clock_id": "behavior_s001"}],
+            {"session_id": "s001", "stream_id": "lick", "t_tick": 6900},
+            {"session_id": "s001", "stream_id": "reward", "t_tick": 4200},
+            {"session_id": "s001", "stream_id": "stim", "t_tick": 1200},
+            {"session_id": "s001", "stream_id": "stim_off", "t_tick": 6200}],
         "core.sorting_runs": [
             {"sorting_run_id": "sort_ks4_001", "session_id": "s001", "probe_id": "probe0",
              # R38 §2.2: the clock a unit reaches through its run.
@@ -390,7 +393,7 @@ def variants():
     def orphan_fk(c):
         c["core.intervals"][1]["clock_id"] = "no_such_clock"
     def null_required(c):
-        c["core.events"][2]["event_type"] = None
+        c["core.event_streams"][2]["event_type"] = None
     def bad_vocabulary(c):
         # bombcell's raw label belongs in `label`; the designated column holds the
         # projection, which stays closed to sua/mua/noise (R22 5).
@@ -425,9 +428,6 @@ def variants():
             {"session_id": "s001", "unit_id": 2, "t_tick": 129_000, "clock_id": "imec_ap_s001",
              "amplitude": -80.0})
         c["core.units"][1]["n_spikes"] += 1
-    def stream_clock_mismatch(c):
-        # An event on a clock its own stream does not declare (R23 4.2).
-        c["core.events"][0]["clock_id"] = "imec_ap_s001"
     def orphan_manifest_session(c):
         c["core.sessions"][0]["session_id"] = "s999"        # manifest still says s001
 
@@ -501,7 +501,6 @@ def variants():
             "half_transform": half_transform, "unsorted_spikes": unsorted_spikes,
             "inconsistent_projection": inconsistent_projection,
             "spike_outside_window": spike_outside_window,
-            "stream_clock_mismatch": stream_clock_mismatch,
             "orphan_manifest_session": orphan_manifest_session,
             "no_reference_clock": no_reference_clock, "clock_cycle": clock_cycle,
             "unreachable_clock": unreachable_clock, "unaligned_clock": unaligned_clock,

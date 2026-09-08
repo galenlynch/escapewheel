@@ -52,17 +52,28 @@ def aligned_packet(tmp_path, packet_root):
             "time_bucket_tick": pa.array([0] * len(SPIKES), type=pa.int64()),
         }
     )
+    # R91 §3.1: the kind and the clock are the stream's, and an event is a tick on one.
     events = pa.table(
         {
             "session_id": pa.array([SESSION] * len(CUES)),
-            "event_id": pa.array([f"cue_{i}" for i in range(len(CUES))]),
-            "event_type": pa.array(["cue"] * len(CUES)),
+            "stream_id": pa.array(["cue_stream"] * len(CUES)),
             "t_tick": pa.array(CUES, type=pa.int64()),
-            "clock_id": pa.array([CLOCK_BEHAVIOUR] * len(CUES)),
         }
     )
-    manifest["resources"] = [r for r in manifest["resources"] if r["resource_id"] != "core.events"]
+    streams = pa.table(
+        {
+            "event_stream_id": pa.array(["cue_stream"]),
+            "session_id": pa.array([SESSION]),
+            "name": pa.array(["cue"]),
+            "event_type": pa.array(["cue"]),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR]),
+        }
+    )
+    manifest["resources"] = [r for r in manifest["resources"]
+                             if r["resource_id"] not in {"core.events", "core.event_streams"}]
     manifest["resources"].append(_resource("core.events", write("core", "events", events)))
+    manifest["resources"].append(
+        _resource("core.event_streams", write("core", "event_streams", streams)))
     entry = _resource("analysis.spike_events", write("analysis", "spike_events", spikes))
     entry["layer"] = "analysis"
     manifest["resources"].append(entry)
@@ -81,10 +92,10 @@ def test_a_spike_in_two_windows_is_returned_twice(aligned_packet):
     rows = aligned_spikes(aligned_packet, "cue", 60).fetchall()
     assert len(rows) == 6, "five spikes, one of them in both windows"
 
-    by_tick: dict[int, list[str]] = {}
+    by_tick: dict[int, list[int]] = {}
     for row in rows:
         by_tick.setdefault(row[5], []).append(row[4])
-    assert sorted(by_tick[145]) == ["cue_0", "cue_1"], "the shared spike names both events"
+    assert sorted(by_tick[145]) == sorted(CUES), "the shared spike names both events"
     assert all(len(v) == 1 for t, v in by_tick.items() if t != 145)
 
 
@@ -97,11 +108,13 @@ def test_disjoint_windows_return_each_spike_once(aligned_packet):
 
 def test_the_asof_shortcut_returns_the_same_rows(aligned_packet):
     """The optimisation is invisible: the disjoint path must agree with the range join."""
-    con = aligned_packet.duckdb(tables=("analysis.spike_events", "core.events"))
+    con = aligned_packet.duckdb(
+        tables=("analysis.spike_events", "core.events", "core.event_streams"))
     half = 30
     reference = con.sql(
-        "SELECT s.t_tick, e.event_id FROM analysis_spike_events s "
-        "JOIN (SELECT event_id, t_tick FROM core_events WHERE event_type = 'cue') e "
+        "SELECT s.t_tick, e.t_tick FROM analysis_spike_events s "
+        "JOIN (SELECT e.t_tick FROM core_events e JOIN core_event_streams m "
+        "ON e.stream_id = m.event_stream_id WHERE m.event_type = 'cue') e "
         f"ON s.t_tick BETWEEN e.t_tick - {half} AND e.t_tick + {half}"
     ).fetchall()
     assert windows_disjoint(aligned_packet, "cue", half)
@@ -127,12 +140,13 @@ def test_assignment_gives_each_spike_at_most_one_event(aligned_packet):
 def test_preceding_and_nearest_disagree(aligned_packet):
     """Two rules, two answers.
 
-    Spike 190 has cue_1 as its nearest and cue_0 as its preceding, and cue_0 is further away
-    than the window, so preceding drops it while nearest keeps it.
+    Spike 190 has the second cue as its nearest and the first as its preceding, and the first is
+    further away than the window, so preceding drops it while nearest keeps it. R91 §3.2 names an
+    event by its tick, there being no identifier to name it by.
     """
     nearest = {r[4]: r[5] for r in assigned_spikes(aligned_packet, "cue", to="nearest", half_window=60).fetchall()}
     preceding = {r[4]: r[5] for r in assigned_spikes(aligned_packet, "cue", to="preceding", half_window=60).fetchall()}
-    assert nearest[190] == "cue_1"
+    assert nearest[190] == CUES[1]
     assert 190 not in preceding
     assert len(nearest) == 5
     assert len(preceding) == 3
@@ -152,19 +166,20 @@ def test_an_unknown_assignment_is_refused(aligned_packet):
 
 def test_an_absent_event_type_is_a_lookup_failure(aligned_packet):
     """Nothing to align to is a missing key, not an empty result."""
-    with pytest.raises(KeyError, match="no 'lick' events"):
+    with pytest.raises(KeyError, match="no 'lick' stream"):
         aligned_spikes(aligned_packet, "lick", 30)
 
 
 def test_events_on_another_clock_are_refused(aligned_packet):
     """A tick means nothing beside a tick on another clock (R27 §2), so this must not join."""
     root = aligned_packet.root
-    path = root / "tables" / "core" / "events.parquet"
-    events = pq.read_table(path)
-    moved = events.set_column(
-        events.schema.get_field_index("clock_id"),
+    # The clock is the stream's since R91 §3.1, so moving the events means moving their stream.
+    path = root / "tables" / "core" / "event_streams.parquet"
+    streams = pq.read_table(path)
+    moved = streams.set_column(
+        streams.schema.get_field_index("clock_id"),
         "clock_id",
-        pa.array([CLOCK_PROBE] * events.num_rows),
+        pa.array([CLOCK_PROBE] * streams.num_rows),
     )
     pq.write_table(moved, path, compression="zstd")
     with pytest.raises(ClockMismatch, match="map one onto the other"):

@@ -39,6 +39,9 @@ if TYPE_CHECKING:  # pragma: no cover
 #: on, so comparing it against an event is only meaningful after R30's mapping.
 SPIKES = "analysis.spike_events"
 EVENTS = "core.events"
+#: R91 §3.1 moved `event_type` and `clock_id` onto the stream, so selecting one kind of event and
+#: knowing what clock it is on both go through here.
+STREAMS = "core.event_streams"
 
 #: How a spike is matched to the one event it is assigned to.
 ASSIGNMENTS = ("preceding", "nearest")
@@ -57,22 +60,24 @@ def _connect(packet: Any, connection: duckdb.DuckDBPyConnection | None) -> duckd
     """Return a connection with the two tables every alignment reads registered.
 
     Named rather than left to the default, which registers nothing: over an object store each
-    registration is a round trip, and an alignment touches two of a packet's twenty-eight.
+    registration is a round trip, and an alignment touches three of a packet's twenty-eight.
     """
-    con: duckdb.DuckDBPyConnection = packet.duckdb(connection=connection, tables=(SPIKES, EVENTS))
+    con: duckdb.DuckDBPyConnection = packet.duckdb(
+        connection=connection, tables=(SPIKES, EVENTS, STREAMS))
     return con
 
 
 def _clock(packet: Any, event_type: str) -> str:
     """Return the clock both sides are on, refusing if they differ.
 
-    Checked rather than assumed. `core.events` may carry several streams on several clocks, and
-    a packet is free to hold one the mapping never touched.
+    Checked rather than assumed. A packet may carry several streams on several clocks, and is
+    free to hold one the mapping never touched. The clock is the stream's since R91 §3.1, so this
+    reads `core.event_streams` where it read the event.
     """
-    events = packet.table(EVENTS, columns=["event_type", "clock_id"], event_type=event_type)
-    if not events.num_rows:
-        raise KeyError(f"no {event_type!r} events in {EVENTS}")
-    on = sorted({v for v in events.column("clock_id").unique().to_pylist() if v is not None})
+    streams = packet.table(STREAMS, columns=["event_type", "clock_id"], event_type=event_type)
+    if not streams.num_rows:
+        raise KeyError(f"no {event_type!r} stream in {STREAMS}")
+    on = sorted({v for v in streams.column("clock_id").unique().to_pylist() if v is not None})
     spikes = packet.table(SPIKES, columns=["clock_id"]).column("clock_id").unique().to_pylist()
     reference = sorted({v for v in spikes if v is not None})
     if len(on) > 1 or on != reference:
@@ -94,11 +99,16 @@ def _literal(value: str) -> str:
 
 
 def _events(event_type: str, session_id: str | None) -> str:
-    """Build the event subquery both operations join against."""
-    where = f"event_type = {_literal(event_type)}"
+    """Build the event subquery both operations join against.
+
+    The kind is the stream's (R91 §3.1), so selecting one kind of event is a join rather than a
+    predicate on the event row.
+    """
+    where = f"m.event_type = {_literal(event_type)}"
     if session_id is not None:
-        where += f" AND session_id = {_literal(session_id)}"
-    return f"(SELECT event_id, t_tick FROM {sql_name(EVENTS)} WHERE {where})"
+        where += f" AND e.session_id = {_literal(session_id)}"
+    return (f"(SELECT e.t_tick FROM {sql_name(EVENTS)} e "
+            f"JOIN {sql_name(STREAMS)} m ON e.stream_id = m.event_stream_id WHERE {where})")
 
 
 def windows_disjoint(packet: Any, event_type: str, half_window: int, *, session_id: str | None = None) -> bool:
@@ -166,8 +176,10 @@ def aligned_spikes(
     Returns
     -------
     duckdb.DuckDBPyRelation
-        Columns ``session_id``, ``unit_id``, ``sorting_run_id``, ``curation_id``, ``event_id``,
-        ``t_tick`` and ``t_rel_tick``, the last being the spike's tick relative to its event.
+        Columns ``session_id``, ``unit_id``, ``sorting_run_id``, ``curation_id``,
+        ``event_tick``, ``t_tick`` and ``t_rel_tick``, the last being the spike's tick
+        relative to its event. R91 §3.2 struck ``event_id``; an event is named by its tick,
+        unique within the ``(session_id, event_type)`` scope these queries impose.
         A relation rather than a table, so it composes with a filter or an aggregate and the
         rows a caller does not want are never materialised.
 
@@ -193,7 +205,7 @@ def aligned_spikes(
         join = f"JOIN {events} e ON s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window}"
         where = ""
     return con.sql(
-        f"SELECT s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, e.event_id, "
+        f"SELECT s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, e.t_tick AS event_tick, "
         f"s.t_tick, s.t_tick - e.t_tick AS t_rel_tick FROM {spikes} s {join} {where}"
     )
 
@@ -253,7 +265,7 @@ def assigned_spikes(
     if to == "preceding":
         bound = "" if half_window is None else f"WHERE s.t_tick <= e.t_tick + {half_window}"
         return con.sql(
-            f"SELECT {keys}, e.event_id, s.t_tick - e.t_tick AS t_rel_tick "
+            f"SELECT {keys}, e.t_tick AS event_tick, s.t_tick - e.t_tick AS t_rel_tick "
             f"FROM {spikes} s ASOF JOIN {events} e ON s.t_tick >= e.t_tick {bound}"
         )
     # `nearest` cannot be an ASOF join in either direction: the closest event may be the one
@@ -262,7 +274,7 @@ def assigned_spikes(
     if half_window is None:
         raise ValueError("to='nearest' needs half_window: without a bound every spike is compared to every event")
     return con.sql(
-        f"SELECT {keys}, argmin(e.event_id, abs(s.t_tick - e.t_tick)) AS event_id, "
+        f"SELECT {keys}, argmin(e.t_tick, abs(s.t_tick - e.t_tick)) AS event_tick, "
         f"argmin(s.t_tick - e.t_tick, abs(s.t_tick - e.t_tick)) AS t_rel_tick "
         f"FROM {spikes} s JOIN {events} e "
         f"ON s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window} "
@@ -270,4 +282,7 @@ def assigned_spikes(
     )
 
 
-__all__ = ["ASSIGNMENTS", "EVENTS", "SPIKES", "ClockMismatch", "aligned_spikes", "assigned_spikes", "windows_disjoint"]
+__all__ = [
+    "ASSIGNMENTS", "EVENTS", "SPIKES", "STREAMS",
+    "ClockMismatch", "aligned_spikes", "assigned_spikes", "windows_disjoint",
+]

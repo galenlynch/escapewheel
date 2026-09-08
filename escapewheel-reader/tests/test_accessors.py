@@ -95,9 +95,11 @@ def test_accessors_push_predicates_into_the_reader(packet_root, monkeypatch):
 
 
 def test_table_pushes_equality_constraints(packet_root):
+    """R91 §3.2 leaves `stream_id` as the event's only equality column; the type is the
+    stream's, which `events()` resolves and `table()` does not."""
     pkt = open_packet(packet_root)
-    assert pkt.table("core.events", event_type="reward").num_rows == 1
-    assert pkt.table("core.events", event_type="stimulus_onset").num_rows == 2
+    assert pkt.table("core.events", stream_id=1).num_rows == 1
+    assert pkt.table("core.events", stream_id=0).num_rows == 2
 
 
 def test_table_pushes_range_constraints(packet_root):
@@ -110,7 +112,7 @@ def test_table_pushes_range_constraints(packet_root):
 
 def test_table_combines_constraints(packet_root):
     pkt = open_packet(packet_root)
-    assert pkt.table("core.events", event_type="stimulus_onset", t_tick=(0, 2000)).num_rows == 1
+    assert pkt.table("core.events", stream_id=0, t_tick=(0, 2000)).num_rows == 1
 
 
 def test_table_projects_columns(packet_root):
@@ -144,7 +146,7 @@ def test_scan_is_lazy(packet_root):
 
     dataset = open_packet(packet_root).scan("core.events")
     assert isinstance(dataset, pads.Dataset)
-    assert dataset.to_table(filter=pads.field("event_type") == "lick").num_rows == 0
+    assert dataset.to_table(filter=pads.field("stream_id") == 99).num_rows == 0
     assert pq  # the import exists so the lazy contrast is explicit
 
 

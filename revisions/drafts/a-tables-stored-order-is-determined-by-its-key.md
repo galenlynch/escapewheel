@@ -56,7 +56,7 @@ event_type)` order, which R10 §3 records as an override for pruning by time. Ke
 order disagree on 5,483 of 5,485 rows in `ecephys_776259` and 6,255 of 6,256 in `ecephys_786867`,
 so §5 cannot be satisfied while a surrogate is the key.
 
-`an-event-is-an-occurrence-on-a-stream` strikes `event_id`, `event_name`, `event_type` and
+R91 strikes `event_id`, `event_name`, `event_type` and
 `clock_id` — the first two unread, the last two the stream's — and keys the table on
 `(session_id, stream_id, t_tick)`, measured unique in both packets. This part depends on that: with
 it, `core.events` is stored in its key's order, every table in both packets satisfies §5, and both
@@ -64,7 +64,7 @@ override statements are struck.
 
 They disagree, which is a second reason to strike them: `03` §5.4 gives the order as three columns
 where `02` §12 and R10 §3 give four, and three is not unique —
-`an-event-is-an-occurrence-on-a-stream` §2 measures 5,480 distinct triples against 5,485 rows. The
+R91 §2 measures 5,480 distinct triples against 5,485 rows. The
 disagreement is moot once neither statement exists, and the order the key now gives — stream, then
 tick — prunes the query the override was written for, since a stream is one kind of event.
 

@@ -33,7 +33,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 #: What a column constraint may be: a scalar for equality, a two-item tuple for a closed
 #: range, or None to leave the column unconstrained.
-Predicate = str | int | float | bool | tuple[Any, Any] | None
+Predicate = str | int | float | bool | tuple[Any, Any] | list[Any] | None
 
 REGISTRY_PATH = "schemas/logical_schemas.json"
 
@@ -551,9 +551,13 @@ class Packet:
     def _predicate(where: Mapping[str, Predicate]) -> pads.Expression | None:
         """Build a dataset expression from column constraints.
 
-        A scalar means equality; a two-item tuple means a closed range; ``None`` means the
-        column is unconstrained. An unknown column raises when the expression is applied,
-        rather than silently matching nothing.
+        A scalar means equality; a two-item tuple means a closed range; a list or set means
+        membership; ``None`` means the column is unconstrained. An unknown column raises when
+        the expression is applied, rather than silently matching nothing.
+
+        Membership exists because R91 §3.1 made one kind of event several streams: resolving a
+        type gives a set of keys, and pushing them down is what lets row-group statistics prune
+        rather than reading and filtering.
         """
         expression: pads.Expression | None = None
         for column, value in where.items():
@@ -563,6 +567,8 @@ class Packet:
             if isinstance(value, tuple):
                 low, high = value
                 term = (field >= low) & (field <= high)
+            elif isinstance(value, (list, set, frozenset)):
+                term = field.isin(list(value))
             else:
                 term = field == value
             expression = term if expression is None else expression & term
@@ -628,8 +634,9 @@ class Packet:
         Parameters
         ----------
         event_type : str, optional
-            Keep only events of this type. The vocabulary is open, so an unrecognized
-            value is not an error, only empty.
+            Keep only events of this type. The type is the stream's since R91 §3.1, so this
+            resolves the streams that emit it and keeps their events. The vocabulary is open,
+            so an unrecognized value is not an error, only empty.
         session_id : str, optional
             Keep only this session.
         t_tick : tuple of int, optional
@@ -649,9 +656,26 @@ class Packet:
         pyarrow.Table
             Matching events, with `t_tick` on `clock` and `clock_id` naming it.
         """
+        streams = None
+        if event_type is not None:
+            # R91 §3.1: one lookup in a table of streams, then a key filter on the events --
+            # the shape R86 §2.4 measured as cheaper than carrying the type on every row.
+            streams = self.table(
+                "core.event_streams", columns=["event_stream_id"],
+                event_type=event_type, session_id=session_id,
+            ).column("event_stream_id").to_pylist()
         found = self.table(
-            "core.events", event_type=event_type, session_id=session_id, t_tick=self._span(t_tick, clock)
+            "core.events", session_id=session_id, t_tick=self._span(t_tick, clock),
+            **({"stream_id": streams} if streams is not None else {}),
         )
+        # A tick has no meaning without its clock, and R91 §3.2 puts the clock on the stream, so
+        # the accessor attaches it: `core.event_streams` is tens of rows against an event table's
+        # thousands, and every caller of this needs it either to convert or to report.
+        clocks = dict(zip(*(self.table("core.event_streams", columns=["event_stream_id", "clock_id"])
+                            .column(c).to_pylist() for c in ("event_stream_id", "clock_id")),
+                          strict=True))
+        found = found.append_column(
+            "clock_id", pa.array([clocks.get(s) for s in found.column("stream_id").to_pylist()]))
         if clock != STORED:
             found = self._narrowed(self.on_clock(found, clock), t_tick)
         return self.seconds(found, session_id=session_id) if seconds else found

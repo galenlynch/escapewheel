@@ -20,10 +20,10 @@ def test_success_criterion(packet_root):
 
 def test_resource_listing_and_filtering(packet_root):
     pkt = open_packet(packet_root)
-    assert len(pkt.resources()) == 5
-    assert len(pkt.resources(layer="core")) == 5
+    assert len(pkt.resources()) == 6
+    assert len(pkt.resources(layer="core")) == 6
     assert len(pkt.resources(layer="analysis")) == 0
-    assert len(pkt.resources(kind="table")) == 5
+    assert len(pkt.resources(kind="table")) == 6
     assert all(r.is_table for r in pkt.resources())
 
 
@@ -78,6 +78,7 @@ def test_embedded_registry_is_exposed(packet_root):
         "core.sessions",
         "core.intervals",
         "core.units",
+        "core.event_streams",
         "core.events",
         "core.spike_events",
     }

@@ -907,6 +907,10 @@ class NWBSource(Compensates):
         `processing_run_id` is null, which R23 §4 defines as *came off the device as
         recorded*. That is the truth for these streams: lick detection is capacitance
         thresholding done online in the rig, and reward delivery is logged by the valve.
+
+        `event_type` is the stream's, not the event's (R91 §3.1), and it is the source's field
+        name normalised -- `left_lick_time` becomes `left_lick`. Nothing derives it at read time:
+        this is the writer stating what kind of event the stream emits.
         """
         rows = []
         for name, _, _ in self._series():
@@ -915,6 +919,7 @@ class NWBSource(Compensates):
                     "event_stream_id": self.prefix + name,
                     "session_id": self.session_id,
                     "name": name,
+                    "event_type": name.removesuffix("_time"),
                     "clock_id": self.clock.clock_id,
                     "metadata": {"description": self._attrs(f"acquisition/{name}").get("description")},
                 }
@@ -925,6 +930,7 @@ class NWBSource(Compensates):
                     "event_stream_id": self.prefix + kind,
                     "session_id": self.session_id,
                     "name": kind,
+                    "event_type": kind,
                     "clock_id": self.clock.clock_id,
                     "metadata": {"description": f"intervals/trials/{column}, one per trial"},
                 }
@@ -939,25 +945,22 @@ class NWBSource(Compensates):
     def events(self) -> list[dict[str, Any]]:
         """`core.events`, one row per timestamp on an acquisition TimeSeries.
 
-        `event_id` embeds the value's zero-based offset into its source array, which is an
-        identifier and not a position -- it is what makes the row traceable back to the NWB.
+        An event is a tick on a stream (R91 §3.2): no identifier, no name, and no type of its
+        own, the type being the stream's. The row is traceable back to the NWB through its
+        stream, which carries the source's field name.
         """
         rows = []
         for name, seconds, data in self._series():
             ticks, finite = self._ticks(seconds, f"acquisition/{name}")
-            offsets = np.flatnonzero(finite)
             payloads = data[finite] if data.size == seconds.size else None
             # `data` is a constant marker on every stream here; carrying 3184 copies of 1.0
             # would be noise, so it travels only when it varies.
             varies = payloads is not None and payloads.size > 0 and len(np.unique(payloads)) > 1
-            for tick, offset, position in zip(ticks, offsets, range(len(ticks)), strict=True):
+            for position, tick in enumerate(ticks):
                 row: dict[str, Any] = {
                     "session_id": self.session_id,
-                    "event_id": f"{name}:{int(offset)}",
                     "stream_id": self.prefix + name,
-                    "event_type": name.removesuffix("_time"),
                     "t_tick": int(tick),
-                    "clock_id": self.clock.clock_id,
                 }
                 if varies and payloads is not None:
                     row["payload"] = {"value": _clean(payloads[position])}
@@ -975,19 +978,15 @@ class NWBSource(Compensates):
         columns = self._table("intervals/trials")
         if not columns:
             return []
-        identifiers = columns.get("id", np.arange(len(columns["start_time"])))
         rows = []
         for column, kind in self._trial_event_columns():
-            ticks, finite = self._ticks(columns[column], f"intervals/trials/{column}")
-            for tick, index in zip(ticks, np.flatnonzero(finite), strict=True):
+            ticks, _ = self._ticks(columns[column], f"intervals/trials/{column}")
+            for tick in ticks:
                 rows.append(
                     {
                         "session_id": self.session_id,
-                        "event_id": f"{kind}:{int(identifiers[index])}",
                         "stream_id": self.prefix + kind,
-                        "event_type": kind,
                         "t_tick": int(tick),
-                        "clock_id": self.clock.clock_id,
                         # No payload naming the interval. R11 §5 struck `core.events.trial_id`,
                         # and carrying the same reference as JSON keeps the letter of that while
                         # defeating it: untyped, unjoinable, and invisible to every check. R54 §3

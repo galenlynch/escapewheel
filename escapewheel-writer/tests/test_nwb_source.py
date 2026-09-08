@@ -142,11 +142,15 @@ def test_the_asset_directory_is_accepted_as_well_as_the_nwb(tmp_path, harp):
 
 
 def test_seconds_become_ticks_on_the_declared_clock(source):
-    events = source.records()["core.events"]
-    acquisition = [e["t_tick"] for e in events if e["event_type"].endswith("lick")]
+    """R91 §3.1 puts the kind on the stream, so a tick is found through the stream that emits it."""
+    records = source.records()
+    kind = {s["event_stream_id"]: s["event_type"] for s in records["core.event_streams"]}
+    events = records["core.events"]
+    acquisition = [e["t_tick"] for e in events if kind[e["stream_id"]].endswith("lick")]
     assert acquisition == [31250, 62500]
     # The trial columns land on the same clock: 1.2 s and 1.5 s at 31,250 Hz.
-    assert {e["event_type"]: e["t_tick"] for e in events if e["event_type"] in TRIAL_EVENT_TYPES} == {
+    assert {kind[e["stream_id"]]: e["t_tick"] for e in events
+            if kind[e["stream_id"]] in TRIAL_EVENT_TYPES} == {
         "go_cue": 37500,
         "reward_outcome": 46875,
     }
@@ -352,7 +356,15 @@ def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
 
     packet = open_packet(tmp_path / "packet")
     assert list(packet.sessions) == [SESSION]
-    assert packet.table("core.events").column("t_tick").to_pylist() == [31250, 37500, 46875, 62500]
+    # R91 §3.2 keys and sorts events `(session_id, stream_id, t_tick)`, so ticks ascend within a
+    # stream and not across them -- the layout a filter on one stream prunes.
+    written = packet.table("core.events")
+    assert sorted(written.column("t_tick").to_pylist()) == [31250, 37500, 46875, 62500]
+    by_stream: dict[str, list[int]] = {}
+    for stream, tick in zip(written.column("stream_id").to_pylist(),
+                            written.column("t_tick").to_pylist(), strict=True):
+        by_stream.setdefault(stream, []).append(tick)
+    assert all(ticks == sorted(ticks) for ticks in by_stream.values())
     carried = json.loads(packet.table("core.intervals").column("metadata").to_pylist()[0])
     assert carried["auto_train_stage"] == "None"  # metadata is verbatim, not normalized
     # NumPy's integers and booleans are not Python's, and JSON knows only Python's.
@@ -371,23 +383,38 @@ def test_notes_do_not_grow_when_a_builder_is_called_twice(source):
 # -- a moment recorded as a trial column is still an event ---------------------------------
 
 
+def _stream_of(source, event_type):
+    """The stream emitting one kind of event, which R91 §3.1 makes the stream's property."""
+    return next(s["event_stream_id"] for s in source.event_streams()
+                if s["event_type"] == event_type)
+
+
 def test_trial_timing_columns_become_events(source):
     """A task writes the go cue into its trials table because it happens once a trial. It is
-    still a moment on a clock, and a query should find it without knowing the task's shape."""
-    kinds = {e["event_type"] for e in source.events()}
+    still a moment on a clock, and a query should find it without knowing the task's shape.
+
+    The kind is the stream's since R91 §3.1, so finding one means finding its stream."""
+    kinds = {s["event_type"] for s in source.event_streams()}
     assert {"go_cue", "reward_outcome"} <= kinds
+    emitting = {s["event_stream_id"] for s in source.event_streams()
+                if s["event_type"] in {"go_cue", "reward_outcome"}}
+    assert emitting <= {e["stream_id"] for e in source.events()}
 
 
 def test_a_trial_event_does_not_name_its_interval(source):
     """R11 §5 struck the column; carrying it as JSON would keep the letter and lose the point."""
-    go = next(e for e in source.events() if e["event_type"] == "go_cue")
+    go = next(e for e in source.events() if e["stream_id"] == _stream_of(source, "go_cue"))
     assert "payload" not in go or "trial_id" not in (go.get("payload") or {})
     assert go["stream_id"] in {s["event_stream_id"] for s in source.event_streams()}
 
 
 def test_a_trial_event_is_on_the_declared_clock(source, harp):
-    go = next(e for e in source.events() if e["event_type"] == "go_cue")
-    assert go["clock_id"] == harp.clock_id
+    """R91 §3.2 struck `core.events.clock_id`: the tick is on the clock its stream declares."""
+    stream = _stream_of(source, "go_cue")
+    go = next(e for e in source.events() if e["stream_id"] == stream)
+    assert "clock_id" not in go
+    assert next(s for s in source.event_streams()
+                if s["event_stream_id"] == stream)["clock_id"] == harp.clock_id
     assert go["t_tick"] == harp.ticks(np.array([1.2]))[0]
 
 
@@ -397,7 +424,7 @@ def test_a_trial_that_never_reached_the_moment_emits_no_event(tmp_path, harp):
     root = nwbfixture.build(tmp_path)
     nwbfixture.array(root / "intervals/trials/goCue_start_time", np.array([np.nan]))
     source = NWBSource(root, clock=harp, zone=PACIFIC, session_id=SESSION, units={})
-    assert not [e for e in source.events() if e["event_type"] == "go_cue"]
+    assert not [e for e in source.events() if e["stream_id"] == _stream_of(source, "go_cue")]
     assert "go_cue" in {s["name"] for s in source.event_streams()}
 
 

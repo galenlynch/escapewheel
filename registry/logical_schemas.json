@@ -93,7 +93,8 @@
       "R87",
       "R88",
       "R89",
-      "R90"
+      "R90",
+      "R91"
     ]
   },
   "tables": {
@@ -2320,6 +2321,24 @@
           "since": "R23 \u00a72-3"
         },
         {
+          "name": "event_type",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "What kind of event this stream emits. Open (R8 \u00a74); a stream emits one kind, so a source emitting several on one channel is written as several streams.",
+          "since": "R91 \u00a73.1"
+        },
+        {
+          "name": "detail_kind",
+          "type": "string",
+          "presence": "nullable",
+          "role": "discriminator",
+          "description": "A table specialising this stream's events, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the detail is elsewhere (R90 \u00a73.4). Resolved against `core.events`' key by R90 \u00a73.5's shared key, through the reference `discriminates_via` names.",
+          "resolves": "optional",
+          "since": "R91 \u00a73.1",
+          "discriminates_via": "core.events.stream_id"
+        },
+        {
           "name": "device_id",
           "type": "int32",
           "presence": "nullable",
@@ -2419,22 +2438,6 @@
           "identity": "assigned"
         },
         {
-          "name": "event_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Stable event ID.",
-          "identity": "assigned"
-        },
-        {
-          "name": "event_name",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "What `event_id` stands for: the identifier a source or an earlier packet used for this event. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
-        },
-        {
           "name": "stream_id",
           "type": "int32",
           "presence": "required",
@@ -2444,36 +2447,12 @@
           "since": "R23 \u00a72-3"
         },
         {
-          "name": "event_type",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "description": "Event type.",
-          "vocabulary": "open",
-          "reserved_values": [
-            "stimulus_onset",
-            "reward",
-            "lick",
-            "threshold_crossing",
-            "ttl_edge",
-            "sync_pulse"
-          ],
-          "since": "R11 \u00a73-4"
-        },
-        {
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
           "role": "coordinate",
-          "description": "Event tick."
-        },
-        {
-          "name": "clock_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Event clock.",
-          "identity": "assigned"
+          "description": "Event tick.",
+          "clock_from": "core.event_streams.clock_id"
         },
         {
           "name": "payload",
@@ -2492,7 +2471,8 @@
       ],
       "primary_key": [
         "session_id",
-        "event_id"
+        "stream_id",
+        "t_tick"
       ],
       "references": [
         {
@@ -2502,15 +2482,6 @@
           "resource": "core.sessions",
           "resource_columns": [
             "session_id"
-          ]
-        },
-        {
-          "columns": [
-            "clock_id"
-          ],
-          "resource": "core.clocks",
-          "resource_columns": [
-            "clock_id"
           ]
         },
         {
@@ -2525,22 +2496,15 @@
       ],
       "sort": [
         "session_id",
-        "clock_id",
-        "t_tick",
-        "event_type"
+        "stream_id",
+        "t_tick"
       ],
       "rules": [
-        {
-          "id": "core.events.clock_matches_stream",
-          "level": "error",
-          "message": "an event's clock_id disagrees with its stream's",
-          "sql": "SELECT e.session_id, e.event_id, e.clock_id, s.clock_id AS stream_clock_id FROM core_events e JOIN core_event_streams s ON e.stream_id = s.event_stream_id WHERE e.clock_id <> s.clock_id"
-        },
         {
           "id": "core.events.within_observation",
           "level": "warning",
           "message": "events fall outside the observation window in force for their stream",
-          "sql": "WITH stream_windows AS ( SELECT o.event_stream_id, o.start_tick, o.stop_tick FROM core_event_stream_observation_intervals o UNION ALL SELECT s.event_stream_id, c.start_tick, c.stop_tick FROM core_event_streams s JOIN core_clock_observation_intervals c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE NOT EXISTS ( SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = s.event_stream_id ) ), observed AS ( SELECT DISTINCT event_stream_id FROM stream_windows ) SELECT e.session_id, e.event_id, e.stream_id, e.t_tick FROM core_events e JOIN observed k ON e.stream_id = k.event_stream_id LEFT JOIN stream_windows w ON e.stream_id = w.event_stream_id AND e.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"
+          "sql": "WITH stream_windows AS ( SELECT o.event_stream_id, o.start_tick, o.stop_tick FROM core_event_stream_observation_intervals o UNION ALL SELECT s.event_stream_id, c.start_tick, c.stop_tick FROM core_event_streams s JOIN core_clock_observation_intervals c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE NOT EXISTS ( SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = s.event_stream_id ) ), observed AS ( SELECT DISTINCT event_stream_id FROM stream_windows ) SELECT e.session_id, e.stream_id, e.t_tick FROM core_events e JOIN observed k ON e.stream_id = k.event_stream_id LEFT JOIN stream_windows w ON e.stream_id = w.event_stream_id AND e.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"
         }
       ]
     },

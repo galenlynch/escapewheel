@@ -496,18 +496,29 @@ A trial is one kind of interval. Blocks, epochs, and stimulation periods are oth
 
 ### 3.11 Event
 
-An instantaneous or near-instantaneous timestamped observation.
+An instantaneous or near-instantaneous timestamped observation: a tick, and the stream it was
+observed on.
 
-- MUST belong to one session.
-- MUST have an event type and a tick on a declared clock.
-- MUST belong to an event stream.
+- MUST belong to one session and to one event stream.
+- MUST have a tick, on the clock its stream declares.
 - MAY carry a structured payload.
 
-An event does not reference an interval (R11 §5). Examples: stimulus onset, reward delivery, lick, threshold crossing, TTL edge, synchronization pulse.
+An event carries no type and no clock of its own: both are properties of the stream, which emits
+one kind of event and declares one clock (R91 §3.2). An event does not reference an interval
+(R11 §5). Examples: stimulus onset, reward delivery, lick, threshold crossing, TTL edge,
+synchronization pulse.
 
 ### 3.12 Event stream
 
-The context an event was observed in: what produced it, and on what clock (R23 §2).
+The context a class of events was observed in: what produced them, on what clock, what kind of
+event they are, and where anything further about them lives (R23 §2, R91 §3.1).
+
+- MUST declare an event type, from an open vocabulary, and the clock its events are timed on.
+- MAY name a device, a processing run, and a table specialising its events.
+
+A stream emits **one kind** of event, so a source emitting several on one channel is written as
+several streams. What a stream's events carry beyond a tick is that named table's to declare, not
+core's: how many marks an event has and of what type is a property of what produced it (R91 §3.3).
 
 ### 3.13 Unit
 
@@ -917,7 +928,7 @@ The core layer comprises the following resources. Column definitions are in the 
 | resource | contents |
 |---|---|
 | `core.intervals` | bounded spans, discriminated by kind |
-| `core.events` | timestamped observations |
+| `core.events` | timestamped observations, one per tick per stream |
 | `core.event_streams` | what produced a set of events, and on what clock |
 | `core.event_stream_observation_intervals` | a stream's refinement of its clock's window |
 
@@ -1000,11 +1011,10 @@ as absent (R89 §2.5). A source stating that no calibration was performed gets n
 `core.calibrations` declares `metadata` and the two child tables MUST NOT, because its key holds an
 identifier of its own where theirs are keyed by other tables' identifiers (R89 §2.6).
 
-A writer SHOULD sort every table by its primary key (R10 §2). One table overrides this:
-
-| resource | order |
-|---|---|
-| `core.events` | `session_id, clock_id, t_tick, event_type` |
+A writer SHOULD sort every table by its primary key (R10 §2). No core table overrides this: R81
+§2.4 removed the spike table's override by numbering `unit_id` run-major, and R91 §3.2 removed
+`core.events`' by keying the table on the order it is stored in. `analysis.spike_events` overrides
+it under a MUST, specified in `03` §5.4.
 
 A large table SHOULD be partitioned by `session_id`. A table MUST NOT be partitioned by `unit_id`.
 
@@ -1097,13 +1107,12 @@ A writer SHOULD sort every table by its primary key, in the order the key declar
 
 What it is for is pruning. A validator establishes it by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3), and reports a departure at **warning** level — a packet whose rows are out of order is readable and slower, not wrong.
 
-One table overrides the default, specified below, and `analysis.spike_events` overrides it under a `MUST` (R30 §3.2). `core.spike_events` no longer needs an override: R81 §2.4 makes its key `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
+One table overrides the default, `analysis.spike_events`, under a `MUST` (R30 §3.2). `core.events` no longer needs one: R91 §3.2 keys it on `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` no longer needs an override: R81 §2.4 makes its key `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
 
 ### 5.4 The overriding orders
 
 | resource | order |
 |---|---|
-| `core.events` | `session_id, clock_id, t_tick` |
 | `analysis.spike_events` | `session_id, clock_id, time_bucket_tick, unit_id, t_tick` |
 
 A writer **MUST** emit `analysis.spike_events` in that order (R30 §3.2). It is the one resource whose layout is part of its reason for existing: bucketing by time and sorting by unit within each bucket leaves both columns with informative row-group statistics, so a unit filter and a time filter each prune.

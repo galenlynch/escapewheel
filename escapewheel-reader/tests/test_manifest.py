@@ -18,6 +18,7 @@ def test_load_parses_declared_fields(packet_root):
         "core.sessions",
         "core.intervals",
         "core.units",
+        "core.event_streams",
         "core.events",
         "core.spike_events",
     }

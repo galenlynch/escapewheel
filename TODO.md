@@ -9,13 +9,13 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R90 accepted. R42 and R73 withdrawn. 10 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R91 accepted. R42 and R73 withdrawn. 9 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
-38 tables, 335 columns, 97 references, 70 Tier 2 rules (2 advisory)
+38 tables, 333 columns, 96 references, 69 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
-27 conformance packets
+26 conformance packets
 <!-- END facts: corpus -->
 
 <!-- BEGIN facts: extensions -->

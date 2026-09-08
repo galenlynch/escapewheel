@@ -18,19 +18,18 @@ Dependencies run downward: a draft depends on the ones above it and on nothing b
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `an-event-is-an-occurrence-on-a-stream` | moves the stream's columns onto it and rekeys; first use of R90 §3.2's placement |
-| 2 | `a-tables-stored-order-is-determined-by-its-key` | states the ordering rule, which 3 moves into the profile |
-| 3 | `separation-of-the-logical-standard-from-the-physical-profile` | moves ordering, partitioning and the `sort` field to where each belongs |
-| 4 | `a-rule-names-no-optional-column` | the presence constraint 5 turns on |
-| 5 | `columns-that-hold-one-value` | strikes seven duplicated names, makes the two clock-rate forms exclusive |
-| 6 | `a-sorted-unit-declares-its-spikes-context` | moves `amplitude_unit` and `clock_id` to `core.units` |
-| 7 | `the-free-form-metadata-column` | which tables declare `metadata`, and what may go in one |
-| 8 | `the-alignment-keys-in-a-runs-parameters` | three keys a reader reads and no document states |
-| 9 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
-| — | `what-a-reserved-value-is-for` | outside the order: changes no packet and owes no rebuild |
+| 1 | `a-tables-stored-order-is-determined-by-its-key` | states the ordering rule, which 2 moves into the profile |
+| 2 | `separation-of-the-logical-standard-from-the-physical-profile` | moves ordering, partitioning and the `sort` field to where each belongs |
+| 3 | `a-rule-names-no-optional-column` | the presence constraint 4 turns on |
+| 4 | `columns-that-hold-one-value` | strikes seven duplicated names, makes the two clock-rate forms exclusive |
+| 5 | `a-sorted-unit-declares-its-spikes-context` | moves `amplitude_unit` and `clock_id` to `core.units` |
+| 6 | `the-free-form-metadata-column` | which tables declare `metadata`, and what may go in one; strikes `core.events.payload` |
+| 7 | `the-alignment-keys-in-a-runs-parameters` | three keys a reader reads and no document states |
+| 8 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
+| — | `what-a-reserved-value-is-for` | outside the order, but repoint `core.events.event_type` to `core.event_streams` first (R91) |
 
-Six through nine are independent of each other and of one through five; their order is a
-convenience, not a constraint. One through five is a chain: each is cheaper before the next than
+Five through eight are independent of each other and of one through four; their order is a
+convenience, not a constraint. One through four is a chain: each is cheaper before the next than
 after it.
 
 Four of them change the registry's column count, each measured against the registry as it stood

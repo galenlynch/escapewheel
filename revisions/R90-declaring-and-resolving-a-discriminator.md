@@ -62,7 +62,7 @@ real `core.intervals` row where the regex asks only that a wrong value look plau
 
 ### 2.3 One case wants the column elsewhere
 
-`an-event-is-an-occurrence-on-a-stream` moves everything constant across a stream's events onto the
+R91 moves everything constant across a stream's events onto the
 stream, and the table specialising those events is one of them. On the event it is a string
 repeated across 5,485 and 6,256 rows; on the stream it is ten. The resolution does not change — a
 detail table still carries the event's key — but the column naming it is one join from the rows it
@@ -262,7 +262,7 @@ Six discriminators become **four**, all in core, and two generated `is_a_resourc
 with them. Two extension registries are edited and `registry/check.py` gains two
 `NAMING_EXCEPTIONS` entries, two checks for §3.2's placement, and a `discriminates_via` property in
 `registry.schema.json` that no declaration uses until
-`an-event-is-an-occurrence-on-a-stream` §3.4.
+R91 §3.4.
 
 Nine `applied.toml` entries for R55 §2 and three for R72 §2 become `superseded`, naming this part.
 `02` §8.3 is rewritten from §3 rather than amended.
