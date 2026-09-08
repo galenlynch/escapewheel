@@ -57,10 +57,10 @@ on all twenty-one tables declaring it, `parameters` on both, `core.events.payloa
 of those literals contains any of the four.
 
 **That invariant is what the check rests on, and no clause states it.** Qualifying the match by
-table is not the repair: **40** of the 69 rules name a single table, where a bare column resolves
-to the rule's own, and **7** more qualify every reference — but the remainder join while leaving
-some references bare, and resolving those needs the parser this part has just declined. So a
-qualified match would cover most rules and fail exactly where ambiguity makes it necessary.
+table is not the repair. **42** of the 69 rules read one relation, where a bare column resolves to
+it without ambiguity; the other **27** read two to five, and a bare column in any of those cannot
+be resolved without the parser this part has just declined. So a qualified match would cover the
+easy majority and fail on the rules whose ambiguity is what would make it necessary.
 
 The repair is to require the presence rather than to qualify the reference: a column named
 `metadata` is optional because that is what the column is for, and a revision governing the
