@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `00` §2 (the three-level vocabulary), `02` §5.3 and §13, `03` §1 and §5, `07` §7 (its boundary with Part 10), R2 §6 and `registry.schema.json` (the `sort` field); adds a contents table to `00` and adds Part 10 |
+| **Amends** | `00` §2 (the three-level vocabulary), `00` §7.3 (what a second profile must satisfy), `02` §5.3 and §13, `03` §1 and §5, `07` §7 (its boundary with Part 10), R2 §6 and `registry.schema.json` (the `sort` field); adds a contents table to `00` and adds Part 10 |
 | **Depends on** | R92 (which states the ordering rule this part relocates) |
 | **Profile** | all |
 
@@ -77,6 +77,17 @@ No clause of Part 01 or Part 02 **MAY** depend on a clause of Part 03. A logical
 a physical property is the defect R92 §2.1 repairs, and this states the general form of it so a
 later revision does not reintroduce one.
 
+`00` §7.3 gains what a second profile has to satisfy. A physical profile **MUST** declare a
+`profile_id` that a packet's manifest names, **MUST** bind only the packets declaring it, and
+**MUST** say how each logical resource of Part 02 is stored. It **MUST NOT** require an amendment
+to Part 01 or Part 02; where one would be needed, the defect is in those parts rather than in the
+profile.
+
+Today §7.3's only binding sentence about a second profile is that no implementation may be required
+to support one, which is a portability guarantee and says nothing about how to write one. Keeping
+the prohibition and adding the requirements makes a profile something a reader can attempt rather
+than only something they may decline.
+
 ### 3.3 The registry declares no stored order
 
 The `sort` field is removed from `registry.schema.json` and from every table of
@@ -111,6 +122,16 @@ R42 and R86 measured, and the storage measurements of R53 and R81.
 
 A clause **MUST NOT** appear in Part 10 and in a normative part both. Where a measurement supports
 a rule, the rule stays where it binds and Part 10 carries the reading.
+
+Part 10 **MUST** carry a version of its own. The three the specification declares — semantic,
+logical and portable — version what binds, and a measurement binds nothing. Each measurement
+**MUST** record the date it was taken and the versions of the libraries it was taken against.
+
+The two answer different questions and neither substitutes for the other: the version says which
+edition of the part a citation names, and the date and the toolchain say whether a number is still
+true, which a version cannot, since it bumps on any edit. R21's codec finding is the case — Zarr.jl
+reads gzip in v3 and not in v2 — and a reading of that kind stops being true the moment the library
+moves, with nothing in the prose changing to show it.
 
 Part 10 is not a substitute for `conformance/`, which holds the probes that produced the numbers.
 Part 10 says what they mean.
@@ -181,14 +202,14 @@ repository's code were replaced is Part 07's, and one that would survive that re
 
 ## 5. What this makes possible
 
-`00` §7.3 says Iceberg is a later profile that MUST NOT be required by an implementation, and `00`
-§2 says a physical profile says how the logical resources of Part 02 are stored. Neither is
-satisfiable today: an Iceberg profile would inherit `02` §13.1's ordering rules, which its
-compaction does not preserve, and `02` §5.3's prohibition on an encoding it does not have.
+`00` §2 says a physical profile says how the logical resources of Part 02 are stored, and today
+that is not satisfiable: a second profile would inherit `02` §13.1's ordering rules, which
+Iceberg's compaction does not preserve, and `02` §5.3's prohibition on an encoding it does not
+have. §3.1 removes both, and §3.2 states what a profile must satisfy in their place.
 
-This part does not add that profile and makes no claim that it is close. What it establishes is
-that adding one requires no amendment to Part 01 or Part 02, which is what `00` §2 already
-promises.
+This part adds no profile and makes no claim that one is close. What it establishes is that adding
+one requires no amendment to Part 01 or Part 02, which `00` §2 promised and nothing made
+checkable.
 
 ## 6. What this does not change
 
@@ -235,14 +256,13 @@ measurement — §3.5 confirms belongs to it rather than to Part 10.
 
 ## 8. Open
 
-- **Whether Part 10 should carry a version.** The measurements go stale as libraries move, and
-  `conformance/`'s probes are re-runnable where a prose reading is not. Dating each measurement is
-  the cheaper answer and needs no clause; versioning the part is a decision this revision does not
-  take.
-- **Whether `01` §2.5's units belong to the semantic standard.** A unit of measure is a semantic
-  fact and R56 puts `unit` in the registry, which is Part 02's machine form, so the two parts
-  describe one thing at different levels. Nothing is wrong today; the question is whether the
-  registry is the logical standard's form or the semantic standard's as well.
-- **Whether a second profile should be attempted before v1.** The separation is only tested by
-  writing one, and `00` §7.3 defers Iceberg indefinitely. A profile over a single Parquet file
-  with no catalog would test it more cheaply.
+- **Whether the registry is the logical standard's machine form or the semantic standard's as
+  well.** `01` §2.5 says a measured quantity SHOULD declare its unit, and R56 §2 puts `unit` on the
+  column, so a semantic fact is stored in the artifact §3.1 treats as Part 02's. Nothing is wrong
+  today and no clause contradicts another; what is unstated is which level a registry field belongs
+  to, which decides where the next one like it goes. §3.1's rule constrains what Part 02 may say
+  and not what the registry may hold.
+- **Whether a second profile should be attempted before v1.** §3.2 states what one must satisfy and
+  nothing has tested the statement, which only writing one does. Iceberg is the profile `00` §7.3
+  names and `07`'s Phase 7 carries, and it is the expensive one; a profile over a single Parquet
+  file with no catalog would exercise the same separation for far less.
