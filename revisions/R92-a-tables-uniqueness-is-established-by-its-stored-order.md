@@ -81,9 +81,16 @@ verify it: of two adjacent rows sharing a primary key, every sort column declare
 subset of that key **MUST** hold the same value in both, and a validator **MUST** report a
 difference as an **error**.
 
-A wrong declaration otherwise **waives** a check rather than failing one, which is silent, where
-every other structural declaration that can be wrong fails loudly: a wrong reference generates an
-anti-join, and a wrong `clock_from` is refused by R56 §2.4 with no packet in hand.
+A wrong declaration otherwise **waives** a check rather than failing one, where every other
+structural declaration that can be wrong fails loudly: a wrong reference generates an anti-join,
+and a wrong `clock_from` is refused by R56 §2.4 with no packet in hand.
+
+What the comparison reaches is bounded by what a scan of neighbours can see. Two rows sharing a key
+and disagreeing on a declared column are adjacent, so the scan reports both the duplicate and the
+false declaration, and the second is what says which to repair. A declaration false enough to sort
+two duplicates apart is beyond it, since the rows are then never neighbours — and proving the
+dependency instead costs §3.5's 8.5 s against the 8.8 s it saves. So this buys the diagnosis, and
+the detection it rests on stays the duplicate-key check itself.
 
 ### 2.4 A conversion that collides is not materialised
 
