@@ -380,7 +380,13 @@ def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) ->
             }
             for row in source.units()
         }
-        context.clocks.update({c["clock_id"]: float(c["tick_rate_hz"]) for c in source.clocks()})
+        # R95 §3.2 makes the two rate forms exclusive, so a clock states one or the other and
+        # this reads whichever it states. The rational is the common case; the float is what a
+        # source that measured its rate rather than declaring it records.
+        context.clocks.update(
+            {c["clock_id"]: (float(c["tick_rate_hz"]) if c.get("tick_rate_hz") is not None
+                             else c["tick_rate_num"] / c["tick_rate_den"])
+             for c in source.clocks()})
     _compare_declared_facts(spec, source, context, recipe)
     if spec.kind == "session":
         # R87 §2.7: both ends come from the declared stream windows rather than from the

@@ -6,7 +6,7 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 <!-- BEGIN generated: counts -->
 ```
-38 tables, 333 columns, 96 references, 69 Tier 2 rules
+38 tables, 326 columns, 96 references, 70 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -113,11 +113,11 @@ inline-versus-sibling open, to be decided when the content was generated; inline
 a table's whole contract is readable in one place.
 
 <!-- BEGIN generated: rules -->
-69 rules over 25 tables: 60 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (R26 §2), off unless asked for.
+70 rules over 25 tables: 61 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (R26 §2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
-| `core.clocks` | 8 |
+| `core.clocks` | 9 |
 | `core.array_dimensions` | 7 |
 | `core.processing_runs` | 7 |
 | `core.clock_anchors` | 4 |

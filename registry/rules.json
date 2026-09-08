@@ -142,6 +142,12 @@
         "sql": "SELECT clock_id FROM core_clocks WHERE tick_rate_hz IS NULL AND (tick_rate_num IS NULL OR tick_rate_den IS NULL)"
       },
       {
+        "id": "core.clocks.tick_rate_one_form",
+        "level": "error",
+        "message": "a clock declares both a float rate and a rational one (R95 \u00a73.2)",
+        "sql": "SELECT clock_id, tick_rate_hz, tick_rate_num, tick_rate_den FROM core_clocks WHERE tick_rate_hz IS NOT NULL AND tick_rate_num IS NOT NULL"
+      },
+      {
         "id": "core.clocks.tick_rate_positive",
         "level": "error",
         "message": "tick rate is not positive",
@@ -216,7 +222,7 @@
         "level": "info",
         "advisory": true,
         "message": "streams carry no observation intervals and their clock declares none, so no rate over them has a denominator",
-        "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s WHERE NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
+        "sql": "SELECT s.event_stream_id, s.event_stream_name FROM core_event_streams s WHERE NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
       }
     ],
     "core.events": [

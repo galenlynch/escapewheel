@@ -136,7 +136,7 @@ Because a reference relates columns of the same role (§7), converting every str
 
 ### 8.2 Identity
 
-An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column.
+An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing (R95 §3.1). Seven tables carried both a generated `*_name` and a `name` declared by `02`, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
 
 A `carried` identifier gets no name column and MUST NOT be given one: the value is already the source's own, so a name beside it would be a second identity for one thing.
 
@@ -423,3 +423,7 @@ as absent (R89 §2.5). A source stating that no calibration was performed gets n
 
 `core.calibrations` declares `metadata` and the two child tables MUST NOT, because its key holds an
 identifier of its own where theirs are keyed by other tables' identifiers (R89 §2.6).
+
+### 12.4 A clock's rate
+
+A clock MUST NOT declare both `tick_rate_hz` and a rational rate (R95 §3.2); `core.clocks.tick_rate_declared` already requires at least one, so exactly one is present. The float is for a source that measured its rate rather than stating an exact one, and forcing a rational on it would make a writer invent a denominator — a rounding decision this specification does not make on a source's behalf (R66 §2.1).

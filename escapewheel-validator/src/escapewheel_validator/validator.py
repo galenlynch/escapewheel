@@ -12,6 +12,7 @@ that, and a storage-layer check written as SQL fails silently rather than loudly
 from __future__ import annotations
 
 import contextlib
+import itertools
 import json
 import shutil
 import tempfile
@@ -1112,6 +1113,55 @@ def _ordering_scan(
     return kept, settles, reader.iter_batches(batch_size=ORDER_BATCH, columns=kept)
 
 
+def _duplicated_columns(handle: Any, spec: Mapping[str, Any]) -> list[tuple[str, str]]:
+    """Pairs of this table's columns holding equal values in every row (R95 §3.3).
+
+    Bounded by the footer, not by a row sample. Two columns can hold equal values in every row
+    only if their per-chunk minimum, maximum and null count agree, which Parquet already records,
+    so statistics decide almost every pair and values are read for the few that survive. Measured
+    on `ecephys_776259`: 2,126 pairs across 32 tables reduce to 51 in 0.06 s with no values read.
+
+    Constant columns are excluded rather than reported. A column holding one value equals every
+    other column holding that value, which says nothing about either.
+    """
+    reader = pq.ParquetFile(handle.path)
+    meta, names = reader.metadata, reader.schema_arrow.names
+    ranges: dict[str, list[Any]] = {}
+    for index, name in enumerate(names):
+        chunks = []
+        for group in range(meta.num_row_groups):
+            stats = meta.row_group(group).column(index).statistics
+            if stats is None or not stats.has_min_max:
+                chunks = []
+                break
+            chunks.append((stats.min, stats.max, stats.null_count))
+        ranges[name] = chunks
+    candidates = [(a, b) for a, b in itertools.combinations(names, 2)
+                  if ranges[a] and ranges[a] == ranges[b]
+                  and any(c[0] != c[1] for c in ranges[a])]
+    if not candidates:
+        return []
+    wanted = sorted({n for pair in candidates for n in pair})
+    table = reader.read(columns=wanted)
+    return [(a, b) for a, b in candidates if table.column(a).equals(table.column(b))]
+
+
+def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
+    """R95 §3.3. Reported at `info` and never as a failure.
+
+    R95 §2.3 measures why it may not fail: four identifiers numbered independently coincide on
+    both packaged sessions, which is a fact about a packet rather than a defect in it.
+    """
+    for resource_id, handle in present.items():
+        try:
+            pairs = _duplicated_columns(handle, tables[resource_id])
+        except (OSError, pa.ArrowException):
+            continue
+        for a, b in pairs:
+            report.add("info", f"{resource_id}.columns_duplicated",
+                       f"{a} and {b} hold equal values in every row")
+
+
 def _check_ordering(
     tables: Mapping[str, Any],
     present: Mapping[str, Any],
@@ -1662,6 +1712,7 @@ def validate(
     _check_time_origin(packet, report)
     present = _check_schemas(packet, effective["tables"], report)
     unsound = _check_ordering(effective["tables"], present, report, scan)
+    _check_duplication(present, effective["tables"], report)
     _run_rules(packet, effective, present, report, advisory, limits, unsound, recheck)
     return report
 

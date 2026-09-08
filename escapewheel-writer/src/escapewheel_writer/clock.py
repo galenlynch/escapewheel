@@ -209,18 +209,22 @@ class Clock:
         Returns
         -------
         dict
-            The row. `tick_rate_hz` is written alongside the rational so a reader that wants
-            a float does not have to divide; `core.clocks.tick_rate_declared` accepts either.
+            The row. One rate form, never both (R95 §3.2): the rational where there is one,
+            and `tick_rate_hz` only for a source that states no exact rate. Writing both made
+            the float a copy of `tick_rate_num`, since `tick_rate_den` is 1 on every clock
+            either packet holds, and left two columns free to disagree with nothing to see it.
         """
         row: dict[str, Any] = {
             "clock_id": self.clock_id,
             "session_id": self.session_id,
-            "name": self.name,
-            "tick_rate_hz": self.hz,
-            "tick_rate_num": self.tick_rate_num,
-            "tick_rate_den": self.tick_rate_den,
+            "clock_name": self.name,
             "origin": self.origin,
         }
+        if self.tick_rate_num is not None:
+            row["tick_rate_num"] = self.tick_rate_num
+            row["tick_rate_den"] = self.tick_rate_den
+        else:
+            row["tick_rate_hz"] = self.hz
         if self.tick_zero_utc is not None:
             row["tick_zero_utc"] = self.tick_zero_utc
         if self.parent_clock_id is not None:

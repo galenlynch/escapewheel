@@ -1755,3 +1755,29 @@ note = "also enforced in registry/check.py, which matches identifiers with liter
 [clause."R94 §2"]
 disposition = "rationale"
 note = "what the registry does today; informative, and its SHOULD is R2 §5's quoted rather than a new one"
+
+[clause."R95 §2.1"]
+disposition = "rationale"
+note = "a generated name beside a declared one, equal on every row of the four tables that write them"
+
+[clause."R95 §2.2"]
+disposition = "rationale"
+note = "a float rate beside the rational it rounds, on all 24 clock rows of both packets"
+
+[clause."R95 §2.3"]
+disposition = "rationale"
+note = "four identifiers numbered independently coincide; a fact about a packet, which is why §3.3 may not fail"
+
+[clause."R95 §3.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.2"
+note = "one name column per table; build.py merges the generated name and the declared one after the R53 §2.3.1 pass"
+
+[clause."R95 §3.2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §12.4"
+note = "core.clocks.tick_rate_one_form refuses both forms; the writer emits the rational, or the float where a rate was measured"
+
+[clause."R95 §3.3"]
+disposition = "implementation"
+note = "escapewheel_validator._check_duplication, at info; bounded by row-group statistics, 2,126 pairs to 51"

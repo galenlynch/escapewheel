@@ -424,7 +424,7 @@ def test_a_trial_that_never_reached_the_moment_emits_no_event(tmp_path, harp):
     nwbfixture.array(root / "intervals/trials/goCue_start_time", np.array([np.nan]))
     source = NWBSource(root, clock=harp, zone=PACIFIC, session_id=SESSION, units={})
     assert not [e for e in source.events() if e["stream_id"] == _stream_of(source, "go_cue")]
-    assert "go_cue" in {s["name"] for s in source.event_streams()}
+    assert "go_cue" in {s["event_stream_name"] for s in source.event_streams()}
 
 
 def test_a_condition_is_named_where_the_task_varies_one(source):

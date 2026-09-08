@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-38 tables, 333 columns, 96 references, 69 Tier 2 rules
+38 tables, 326 columns, 96 references, 70 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95
 ```
 
 ## Contents
@@ -28,10 +28,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
 | `array_asset_id` | int32 | **required** | R20 §5 | Stable array asset ID. |
-| `array_asset_name` | string | nullable | R53 §2.3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `array_asset_name` | string | **required** | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `session_id` | int32 | **required** | R20 §5 | Session ID. |
 | `semantic_type` | string | **required** | R20 §5 | Semantic type, e.g. ElectricalSeries. |
-| `name` | string | **required** | R20 §5 | Human-readable name. |
 | `kind` | string | **required** | R20 §5 | `raw`, `ap`, `lfp`, `waveform`, etc. |
 | `uri` | string | **required** | R20 §5 | URI/path to array store. |
 | `format` | string | **required** | R20 §5 | `zarr_v3` for portable profile. |
@@ -110,10 +109,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
 | `array_asset_id` | int32 | **required** |  | Stable array asset ID. |
-| `array_asset_name` | string | nullable | R53 §2.3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `array_asset_name` | string | **required** | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `session_id` | int32 | **required** |  | Session ID. |
 | `semantic_type` | string | **required** | R8 §3-4 | Semantic type, e.g. ElectricalSeries. |
-| `name` | string | **required** |  | Human-readable name. |
 | `kind` | string | **required** | R8 §3-4 | `raw`, `ap`, `lfp`, `waveform`, etc. |
 | `uri` | string | **required** |  | URI/path to array store. |
 | `format` | string | **required** |  | `zarr_v3` for portable profile. |
@@ -327,9 +325,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
 | `clock_id` | int32 | **required** |  | Stable clock ID. |
-| `clock_name` | string | nullable | R53 §2.3.1 | What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `clock_name` | string | **required** | R95 §3.1 | What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `session_id` | int32 | **required** |  | Session ID. |
-| `name` | string | **required** |  | Human-readable clock name. |
 | `tick_rate_hz` | float64 | nullable |  | Tick rate as float, required unless exact tick rate provided. |
 | `tick_rate_num` | int64 | nullable |  | Exact rational numerator. |
 | `tick_rate_den` | int64 | nullable |  | Exact rational denominator. |
@@ -348,9 +345,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `session_id` → `core.sessions` (`session_id`)
 - `parent_clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 8
+**Tier 2 rules** — 9
 
 - `core.clocks.tick_rate_declared` — error: neither tick_rate_hz nor an exact rational rate is present
+- `core.clocks.tick_rate_one_form` — error: a clock declares both a float rate and a rational one (R95 §3.2)
 - `core.clocks.tick_rate_positive` — error: tick rate is not positive
 - `core.clocks.transform_pair_complete` — error: transform_slope and transform_offset must be present together
 - `core.clocks.transform_requires_parent` — error: a clock transform is declared without a parent clock
@@ -390,9 +388,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
 | `device_id` | int32 | **required** |  | Stable device ID. |
-| `device_name` | string | nullable | R53 §2.3.1 | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `device_name` | string | **required** | R95 §3.1 | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `session_id` | int32 | **required** | R88 §2.1 | Session if device record is session-scoped. |
-| `name` | string | **required** |  | Human-readable name. |
 | `manufacturer` | string | nullable |  | Manufacturer. |
 | `model` | string | nullable |  | Model. |
 | `firmware_version` | string | nullable | R66 §2.1 | The firmware the instrument was running, verbatim as its source stated it. |
@@ -489,9 +486,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
 | `event_stream_id` | int32 | **required** | R23 §2-3 | Stable ID. |
-| `event_stream_name` | string | nullable | R53 §2.3.1 | What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `event_stream_name` | string | **required** | R95 §3.1 | What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `session_id` | int32 | **required** | R23 §2-3 | Session ID. |
-| `name` | string | **required** | R23 §2-3 | Human-readable name, e.g. left_lick_sensor. |
 | `event_type` | string | **required** | R91 §3.1 | What kind of event this stream emits. Open (R8 §4); a stream emits one kind, so a source emitting several on one channel is written as several streams. |
 | `detail_kind` | string | nullable | R91 §3.1 | A table specialising this stream's events, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the detail is elsewhere (R90 §3.4). Resolved against `core.events`' key by R90 §3.5's shared key, through the reference `discriminates_via` names. |
 | `device_id` | int32 | nullable | R23 §2-3 | The device that produced it, where one is identified. |
@@ -561,10 +557,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
 | `media_asset_id` | int32 | **required** |  | Stable media asset ID. |
-| `media_asset_name` | string | nullable | R53 §2.3.1 | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `media_asset_name` | string | **required** | R95 §3.1 | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `session_id` | int32 | **required** |  | Session ID. |
 | `semantic_type` | string | **required** | R8 §3-4 | e.g. BehaviorVideo. |
-| `name` | string | **required** |  | Name. |
 | `uri` | string | **required** |  | Media file URI. |
 | `format` | string | **required** |  | e.g. mp4. |
 | `pts_rate_num` | int64 | nullable | R70 §2.1 | Presentation timestamps per second in this asset's container: numerator. |
@@ -643,10 +638,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
 | `probe_id` | int32 | **required** |  | Stable probe ID. |
-| `probe_name` | string | nullable | R53 §2.3.1 | What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `probe_name` | string | nullable | R95 §3.1 | What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `session_id` | int32 | **required** |  | Session ID. |
 | `device_id` | int32 | nullable |  | Associated device. |
-| `name` | string | nullable |  | Probe name. |
 | `probe_type` | string | nullable |  | Probe type, e.g. Neuropixels 1.0. |
 | `manufacturer` | string | nullable |  | Manufacturer. |
 | `serial_number` | string | nullable |  | Serial number. |

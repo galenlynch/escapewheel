@@ -97,7 +97,8 @@
       "R91",
       "R92",
       "R93",
-      "R94"
+      "R94",
+      "R95"
     ]
   },
   "tables": {
@@ -115,10 +116,10 @@
         {
           "name": "array_asset_name",
           "type": "string",
-          "presence": "nullable",
+          "presence": "required",
           "role": "data",
           "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R95 \u00a73.1"
         },
         {
           "name": "session_id",
@@ -136,14 +137,6 @@
           "role": "data",
           "description": "Semantic type, e.g. ElectricalSeries.",
           "vocabulary": "open",
-          "since": "R20 \u00a75"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "description": "Human-readable name.",
           "since": "R20 \u00a75"
         },
         {
@@ -534,10 +527,10 @@
         {
           "name": "array_asset_name",
           "type": "string",
-          "presence": "nullable",
+          "presence": "required",
           "role": "data",
           "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R95 \u00a73.1"
         },
         {
           "name": "session_id",
@@ -555,13 +548,6 @@
           "description": "Semantic type, e.g. ElectricalSeries.",
           "vocabulary": "open",
           "since": "R8 \u00a73-4"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "description": "Human-readable name."
         },
         {
           "name": "kind",
@@ -1494,10 +1480,10 @@
         {
           "name": "clock_name",
           "type": "string",
-          "presence": "nullable",
+          "presence": "required",
           "role": "data",
           "description": "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R95 \u00a73.1"
         },
         {
           "name": "session_id",
@@ -1506,13 +1492,6 @@
           "role": "identifier",
           "description": "Session ID.",
           "identity": "assigned"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "description": "Human-readable clock name."
         },
         {
           "name": "tick_rate_hz",
@@ -1619,6 +1598,12 @@
           "level": "error",
           "message": "neither tick_rate_hz nor an exact rational rate is present",
           "sql": "SELECT clock_id FROM core_clocks WHERE tick_rate_hz IS NULL AND (tick_rate_num IS NULL OR tick_rate_den IS NULL)"
+        },
+        {
+          "id": "core.clocks.tick_rate_one_form",
+          "level": "error",
+          "message": "a clock declares both a float rate and a rational one (R95 \u00a73.2)",
+          "sql": "SELECT clock_id, tick_rate_hz, tick_rate_num, tick_rate_den FROM core_clocks WHERE tick_rate_hz IS NOT NULL AND tick_rate_num IS NOT NULL"
         },
         {
           "id": "core.clocks.tick_rate_positive",
@@ -1814,10 +1799,10 @@
         {
           "name": "device_name",
           "type": "string",
-          "presence": "nullable",
+          "presence": "required",
           "role": "data",
           "description": "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R95 \u00a73.1"
         },
         {
           "name": "session_id",
@@ -1827,13 +1812,6 @@
           "description": "Session if device record is session-scoped.",
           "identity": "assigned",
           "since": "R88 \u00a72.1"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "description": "Human-readable name."
         },
         {
           "name": "manufacturer",
@@ -2249,10 +2227,10 @@
         {
           "name": "event_stream_name",
           "type": "string",
-          "presence": "nullable",
+          "presence": "required",
           "role": "data",
           "description": "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R95 \u00a73.1"
         },
         {
           "name": "session_id",
@@ -2261,14 +2239,6 @@
           "role": "identifier",
           "description": "Session ID.",
           "identity": "assigned",
-          "since": "R23 \u00a72-3"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "description": "Human-readable name, e.g. left_lick_sensor.",
           "since": "R23 \u00a72-3"
         },
         {
@@ -2372,7 +2342,7 @@
           "level": "info",
           "advisory": true,
           "message": "streams carry no observation intervals and their clock declares none, so no rate over them has a denominator",
-          "sql": "SELECT s.event_stream_id, s.name FROM core_event_streams s WHERE NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
+          "sql": "SELECT s.event_stream_id, s.event_stream_name FROM core_event_streams s WHERE NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
         }
       ],
       "since": "R23 \u00a72-3"
@@ -2560,10 +2530,10 @@
         {
           "name": "media_asset_name",
           "type": "string",
-          "presence": "nullable",
+          "presence": "required",
           "role": "data",
           "description": "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R95 \u00a73.1"
         },
         {
           "name": "session_id",
@@ -2581,13 +2551,6 @@
           "description": "e.g. BehaviorVideo.",
           "vocabulary": "open",
           "since": "R8 \u00a73-4"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "description": "Name."
         },
         {
           "name": "uri",
@@ -2918,7 +2881,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R95 \u00a73.1"
         },
         {
           "name": "session_id",
@@ -2935,13 +2898,6 @@
           "role": "identifier",
           "description": "Associated device.",
           "identity": "assigned"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Probe name."
         },
         {
           "name": "probe_type",

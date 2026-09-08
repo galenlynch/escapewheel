@@ -132,7 +132,7 @@ class OpenEphysSource:
                 rows[identifier] = {
                     "device_id": identifier,
                     "session_id": self.session_id,
-                    "name": identifier,
+                    "device_name": identifier,
                     # Open Ephys reports the part, not who made it. IMEC makes the Neuropixels
                     # chain, but the file does not say so and this adapter does not add it.
                     "manufacturer": None,

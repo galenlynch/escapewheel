@@ -296,7 +296,7 @@ class WaveformSource:
             "array_asset_id": asset_id,
             "session_id": self.session_id,
             "semantic_type": semantic_type,
-            "name": name,
+            "array_asset_name": name,
             "kind": "dense_array_asset",
             "uri": uri,
             "format": "zarr_v3",

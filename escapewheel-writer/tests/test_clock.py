@@ -52,9 +52,11 @@ def test_a_non_positive_rate_is_rejected_at_construction():
         Clock("c", session_id="s1", name="c", tick_rate_num=0, origin="e")
 
 
-def test_the_record_carries_both_rate_forms():
+def test_the_record_carries_one_rate_form():
+    """R95 §3.2. Both forms made the float a copy of `tick_rate_num`, free to disagree."""
     row = harp().record()
-    assert (row["tick_rate_num"], row["tick_rate_den"], row["tick_rate_hz"]) == (31250, 1, 31250.0)
+    assert (row["tick_rate_num"], row["tick_rate_den"]) == (31250, 1)
+    assert "tick_rate_hz" not in row
     assert "tick_zero_utc" not in row  # absent unless the source recorded it
 
 

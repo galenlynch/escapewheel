@@ -59,7 +59,7 @@ def source(tmp_path):
 
 
 def by_name(rows):
-    return {row["name"]: row for row in rows}
+    return {row["device_name"]: row for row in rows}
 
 
 def test_each_chain_element_that_reports_a_version_is_a_device(source):

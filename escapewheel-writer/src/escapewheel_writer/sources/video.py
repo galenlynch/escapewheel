@@ -167,7 +167,7 @@ class VideoSource(Compensates):
                     "media_asset_id": video.stem,
                     "session_id": self.session_id,
                     "semantic_type": "behavior_video",
-                    "name": video.stem,
+                    "media_asset_name": video.stem,
                     "uri": self._uri(video),
                     "format": SUFFIX.lstrip("."),
                     **(self._pts_rate(video) if timing else {}),

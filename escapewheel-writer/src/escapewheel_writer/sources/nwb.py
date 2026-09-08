@@ -468,7 +468,7 @@ class NWBSource(Compensates):
             row = {
                 "device_id": self.prefix + name,
                 "session_id": self.session_id,
-                "name": name,
+                "device_name": name,
                 "manufacturer": _clean(described.get("manufacturer")),
                 "model": (parsed["model"] or None) if parsed else None,
                 "serial_number": serial,
@@ -489,7 +489,7 @@ class NWBSource(Compensates):
             covers = row.pop("covers")
             if len(covers) > 1:
                 shared = commonprefix(covers).rstrip("-_ .") or covers[0]
-                row |= {"device_id": self.prefix + shared, "name": shared}
+                row |= {"device_id": self.prefix + shared, "device_name": shared}
                 self.notes.append(
                     f"devices: {', '.join(covers)} share serial {row['serial_number']}; "
                     f"recorded as one device named {shared} (R67 §2.2)"
@@ -509,7 +509,7 @@ class NWBSource(Compensates):
             parsed = DEVICE_DESCRIPTION.match(str(described.get("description", "")))
             by_name[name] = parsed["serial"] if parsed else None
         rows = {row["serial_number"]: row for row in self.devices() if row["serial_number"]}
-        named = {row["name"]: row for row in self.devices()}
+        named = {row["device_name"]: row for row in self.devices()}
         return {name: rows.get(serial) or named.get(name) for name, serial in by_name.items()}
 
     def probes(self) -> list[dict[str, Any]]:
@@ -536,7 +536,7 @@ class NWBSource(Compensates):
                     "probe_id": self.prefix + name,
                     "session_id": self.session_id,
                     "device_id": device["device_id"] if device else None,
-                    "name": name,
+                    "probe_name": name,
                     "probe_type": device["model"] if device else None,
                     "manufacturer": device["manufacturer"] if device else None,
                     "serial_number": device["serial_number"] if device else None,
@@ -816,7 +816,7 @@ class NWBSource(Compensates):
                     # `_signal_devices` declares the device from, so the two cannot disagree.
                     "device_id": self._signal_device_id(name),
                     "semantic_type": "signal",
-                    "name": str(attrs.get("description") or name),
+                    "array_asset_name": str(attrs.get("description") or name),
                     "kind": "dense_array_asset",
                     "uri": f"arrays/core/{name}.zarr",
                     "format": "zarr_v3",
@@ -864,10 +864,13 @@ class NWBSource(Compensates):
                 {
                     "clock_id": self._dispatch_clock_id(name),
                     "session_id": self.session_id,
-                    "name": f"{name} dispatch counter",
+                    "clock_name": f"{name} dispatch counter",
+                    # The float alone (R95 §3.2). This rate is measured from the dispatch
+                    # spacing rather than declared, so `round(rate)` invented a rational the
+                    # source never stated -- the rounding R95 §3.2 says this format does not
+                    # do on a source's behalf. R95 §4 keeps the float expressible for exactly
+                    # this: a rate someone measured is recorded as measured.
                     "tick_rate_hz": round(rate, 6) if rate else None,
-                    "tick_rate_num": round(rate) if rate else None,
-                    "tick_rate_den": 1 if rate else None,
                     "origin": "the device's first dispatched sample; tick k is sample k",
                     "parent_clock_id": self.clock.clock_id,
                 }
@@ -918,7 +921,7 @@ class NWBSource(Compensates):
                 {
                     "event_stream_id": self.prefix + name,
                     "session_id": self.session_id,
-                    "name": name,
+                    "event_stream_name": name,
                     "event_type": name.removesuffix("_time"),
                     "clock_id": self.clock.clock_id,
                     "metadata": {"description": self._attrs(f"acquisition/{name}").get("description")},
@@ -929,7 +932,7 @@ class NWBSource(Compensates):
                 {
                     "event_stream_id": self.prefix + kind,
                     "session_id": self.session_id,
-                    "name": kind,
+                    "event_stream_name": kind,
                     "event_type": kind,
                     "clock_id": self.clock.clock_id,
                     "metadata": {"description": f"intervals/trials/{column}, one per trial"},

@@ -90,7 +90,7 @@ class HarpSource:
             rows[name] = {
                 "device_id": str(name),
                 "session_id": self.session_id,
-                "name": str(name),
+                "device_name": str(name),
                 # Harp is the bus, not the maker: a schema names neither a manufacturer nor a
                 # serial, and inventing either would assert what nothing states.
                 "manufacturer": None,

@@ -1,8 +1,8 @@
-# Columns That Hold One Value
+# R95 — Columns That Hold One Value
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | R53 §2.3.1 (which tables get a generated name), `02` (the `name` column on seven tables) |
 | **Depends on** | R53 (an identifier is an integer, and its owner carries a name), R33 (a rational rate), R13 (one alignment model, the same shape), R81 (the same defect, found the same way), R94 §3 (a rule names no optional column) |
 | **Profile** | `escapewheel-portable-v0.1` |
@@ -93,7 +93,9 @@ each has half of what is wanted: `02`'s presence, and R53 §2.5's meaning. After
 **sixteen** tables carrying a generated name carries exactly one, and the six that were `required`
 stay required.
 
-**A `*_name` names what a `*_id` of the same base identifies.** Sixteen do; the six that do not —
+**A `*_name` names what a `*_id` of the same base identifies**, which `02` §8.2 already states and
+`registry/check.py` already sorts: sixteen pair with an identifier and six name a kind of thing.
+The six that do not pair —
 `dimension_name` on both array-dimension tables, `insertion_name`, `software_name`, `task_name`,
 `sorter_name` — each name something the packet assigns no identifier to, so an unpaired name says
 what it names and the absence of a partner is the signal. The seven bare `name` columns are where
@@ -175,12 +177,15 @@ packet without a bound anyone has to choose.
 333 columns become **326**: seven generated names struck, and seven `name` columns renamed rather
 than removed. Tier 2 rules go from 69 to **70**, and references are unchanged.
 
-Two other drafts change the column count — `a-sorted-unit-declares-its-spikes-context` by two and
-`the-free-form-metadata-column` to 330 — and none of the three touches a column another strikes, so
-whichever lands second states the total against a registry the first has already changed.
+Two revisions still to come change the column count, one by two and one to 330, and neither touches
+a column this part strikes, so whichever lands second states its total against a registry this one
+has already changed.
 
-`registry/build.py` skips its R53 §2.3.1 pass for a table declaring `name`, and renames that column
-in the same block. `registry/check.py` gains §3.3's check. The writer stops emitting the duplicated
+`registry/build.py` merges the two columns after its R53 §2.3.1 pass has run: the generated name
+takes the presence `02` gave the declared one, and `name` is struck. `escapewheel_validator` gains
+§3.3's check, which reads a packet's values and so cannot live in `registry/check.py`, whose checks
+are structural. One Tier 2 rule follows the rename — `core.event_streams.observation_declared`
+selects `s.event_stream_name` where it selected `s.name`. The writer stops emitting the duplicated
 name and the float rate beside the rational; `escapewheel_reader.observation` keeps its float
 branch, which §3.2 makes reachable only for a clock that states no rational. The seven renames
 reach the writer's adapters, which write `"name"` today for a device, a probe, an event stream, a

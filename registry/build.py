@@ -1406,6 +1406,25 @@ def build() -> dict:
     next(c for c in T("core.events")["columns"]
          if c["name"] == "t_tick")["clock_from"] = "core.event_streams.clock_id"
 
+    # ---- R95 §3.1 : one name column per table -------------------------------------------------
+    # R53 §2.3.1 generates a `<base>_name` for every assigned identifier in a key, and seven tables
+    # already declared a `name` from `02`, so they carried both -- equal on every row of every
+    # packet that writes them. The generated column has R53 §2.5's meaning and the declared one has
+    # `02`'s presence, so one survives with both: the generated name keeps its own description and
+    # takes the presence `02` gave, and `name` is struck.
+    SINCE[0] = "R95 §3.1"
+    for resource, spec in tables.items():
+        declared = next((c for c in spec["columns"] if c["name"] == "name"), None)
+        if declared is None:
+            continue
+        generated = next((c for c in spec["columns"]
+                          if c["name"].endswith("_name") and c.get("since") == "R53 §2.3.1"), None)
+        if generated is None:
+            raise SystemExit(f"R95 §3.1: {resource} declares `name` and no generated name to merge it into")
+        generated["presence"] = declared["presence"]
+        generated["since"] = SINCE[0]
+        spec["columns"].remove(declared)
+
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
     # expand against the key, and R7 above is what settles three of them.

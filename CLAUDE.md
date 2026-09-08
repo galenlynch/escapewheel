@@ -10,10 +10,10 @@ A monorepo implementing the proof-of-principle specified in `nwb_lake_poc_docs/`
 conformance corpus, and 625 tests.
 
 <!-- BEGIN facts: registry -->
-38 tables, 333 columns, 96 references, 69 Tier 2 rules (2 advisory)
+38 tables, 326 columns, 96 references, 70 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R94 accepted. R42 and R73 withdrawn. 6 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R95 accepted. R42 and R73 withdrawn. 5 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: extensions -->
 4 extension registries: aind_opto, aind_unit_qc, dynamic_foraging, vr_foraging

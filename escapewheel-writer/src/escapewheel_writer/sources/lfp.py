@@ -276,7 +276,7 @@ class LFPSource(Compensates):
                     "array_asset_id": self.array_asset_id(series),
                     "session_id": self.session_id,
                     "semantic_type": "ElectricalSeries",
-                    "name": series.name,
+                    "array_asset_name": series.name,
                     "kind": "lfp",
                     "uri": self._uri(series),
                     "format": "zarr_v2",
