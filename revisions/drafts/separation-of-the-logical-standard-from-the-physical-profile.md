@@ -195,15 +195,20 @@ statement governs.
 | 04 | packet catalog | normative |
 | 05 | validation and import | normative |
 | 06 | analysis layer | informative, except §2 and §5 |
-| 07 | reference implementation | informative |
+| 07 | reference implementation and plan | informative |
 | 08 | example packet | informative |
 | 09 | metadata and extensions | normative |
 | 10 | performance notes | informative |
 
 Today a reader learns what binds them by opening ten files and reading the third line of each,
-because `00` has no contents list at all. R3 §3.0 forbids restating what a document already
-declares unless the duplication buys otherwise-unavailable access, and this buys exactly that:
-one place that answers which parts bind, which no part can answer about the others.
+which is where every part states its status, because `00` has no contents list at all. R3 §3.0
+forbids a table restating what the data it describes already declares unless the duplication buys
+otherwise-unavailable access; the same test one level up admits this one, since what it buys is a
+single place that answers which parts bind, and no part can answer that about the others.
+
+The table is **appended** to `00` rather than inserted. `00` runs to §8 and the identifiers this
+section counts are part *and* section both, so a table placed anywhere but the end would renumber
+what it exists to make citable.
 
 **Position is not the signal, and is not made into one.** Part 09 is normative and follows two
 informative parts, and no arrangement could fix that in general, since Part 06 is normative in two
