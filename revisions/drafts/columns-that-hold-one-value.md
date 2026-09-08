@@ -92,6 +92,23 @@ each has half of what is wanted: `02`'s presence, and R53 §2.5's meaning. After
 **sixteen** tables carrying a generated name carries exactly one, and the six that were `required`
 stay required.
 
+**A `*_name` names what a `*_id` of the same base identifies.** Sixteen do; the six that do not —
+`dimension_name` on both array-dimension tables, `insertion_name`, `software_name`, `task_name`,
+`sorter_name` — each name something the packet assigns no identifier to, so an unpaired name says
+what it names and the absence of a partner is the signal. The seven bare `name` columns are where
+that pairing is broken: `core.devices.name` sits beside `device_id` and does not say so.
+
+Normalizing the other way — `device_name` to `name`, since the table is devices — is **rejected**,
+because the other half of the pair cannot follow. A `*_id` carries its base for foreign keys: 17 of
+26 appear on more than one table, `session_id` on 36, and **89 of 97** reference column mappings
+join columns of the same name. Bare `id` on each owner would make every one of those a rename, and
+the **8** that are renamed today all carry a role in the base — `parent_clock_id`,
+`reference_clock_id`, `supersedes_run_id`, `coordinate_array_asset_id`, `input_array_asset_id` and
+two more self-references, with `core.events.stream_id` the one abbreviation among them — so making
+the exception universal would destroy what it signals. A `*_name` could normalize alone, since only
+2 of 20 appear on more than one table and neither is a reference; it must not, because it would
+then disagree with the column it exists to explain.
+
 The surviving column takes R53 §2.3.1's description, so what a reader is told about
 `core.devices.device_name` no longer depends on which of two columns they happened to read.
 
@@ -132,11 +149,27 @@ The level is what makes it useful. R26 §2 makes an advisory rule off by default
 this finding where it has been; `info` is what R15 §4 gives a codec claim that cannot be verified,
 and it puts the observation in the report without letting it fail a build.
 
+The cost is bounded by the footer rather than by a row sample. Two columns can hold equal values in
+every row only if their per-chunk minimum, maximum and null count agree, which Parquet already
+records, so the comparison starts from statistics and reads values only for what survives. Measured
+over `ecephys_776259`: **2,126** column pairs across 32 tables reduce to **51** in **0.06 s**, with
+no values read, and none of the 51 is on a table over a million rows. The prefilter is exact rather
+than heuristic — it can only admit pairs, never reject a real one — so the check runs on every
+packet without a bound anyone has to choose.
+
 ## 4. What this does not change
 
 - **No value is lost from any packet.** Each struck name holds what a surviving column holds, and
   §3.2 keeps both rate forms; what stops is writing the same fact twice.
 - **No key or reference changes.** The struck columns are in no key and carry no reference.
+- **Six required names come under R85 §2.2 for the first time.** That rule is stated over a
+  `*_name`, and a bare `name` is not one, so renaming brings `core.devices`, `core.clocks`,
+  `core.event_streams`, `core.media_assets` and both array-asset tables under its requirement that
+  the value be unique within its packet. Nothing breaks: measured, `name` is unique and non-null in
+  every written table of both packets — 20 and 21 devices, 12 and 10 probes, 10 and 10 streams, 13
+  and 11 clocks, 14 and 11 array assets, 4 media assets. A writer meeting a source that names
+  nothing must compose one, which two adapters already do and which R89 §2.1 recorded for a
+  calibration; the obligation follows from `required` and R85 §2.2 rather than from a new clause.
 - **A float rate stays expressible.** §3.2 forbids stating both forms, not the float, so a source
   that measured a rate rather than deriving it still records what it measured.
 - **R53 §2.3.1 still generates a name.** For the nine tables with no `name` of their own —
@@ -160,19 +193,3 @@ media asset, a clock and an array asset.
 **Both packets must be rebuilt.** Renaming a column leaves a file the registry no longer describes.
 R87 §2.1 and R88 §2 already require that rebuild, so this adds none of its own.
 R61 §3 makes a correction a rebuild, and this one re-reads no external resource.
-
-## 6. Open
-
-- **Whether the sweep should run on every build.** §3.3 puts it in the validator, where it sees one
-  packet. The three findings here came from a script comparing every column pair in every table
-  under five million rows, which takes seconds on these packets and would not on a larger one. What
-  bound makes it affordable — a row sample, a column-type filter, row-group statistics rather than
-  values — is not settled here.
-- **Whether `insertion_name` is a third name.** `core.probes` carries `probe_name`, `name` and
-  `insertion_name`. §3.1 merges the first two; the third holds an insertion label rather than the
-  probe's own name, and is null in both packets, so nothing distinguishes a distinct fact from an
-  unused column yet.
-- **What a required name obliges a writer to invent.** §3.1 keeps `required` on five tables, and
-  R85 §2.2 requires the value be unique within a packet, so an adapter meeting a source that names
-  nothing must compose one. R89 §2.1 hit this for a calibration and said so; no revision states the
-  general rule.
