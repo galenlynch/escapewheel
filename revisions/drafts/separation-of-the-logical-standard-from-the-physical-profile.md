@@ -118,14 +118,28 @@ value someone remembered to write.
 
 Part 10 is added, wholly **informative**. It carries what a packet's bytes make true under this
 profile: the encoding and compression comparisons, row-group sizing, the object-store request rate
-R42 and R86 measured, and the storage measurements of R53 and R81.
+R86 §1.1 measured, R42's comparison of four ways of staging one table to S3, and the storage
+measurements of R53 and R81.
 
 A clause **MUST NOT** appear in Part 10 and in a normative part both. Where a measurement supports
 a rule, the rule stays where it binds and Part 10 carries the reading.
 
 Part 10 **MUST** carry a version of its own. The three the specification declares — semantic,
-logical and portable — version what binds, and a measurement binds nothing. Each measurement
-**MUST** record the date it was taken and the versions of the libraries it was taken against.
+logical and portable — version what binds, and a measurement binds nothing, so none of them covers
+it. This is the same requirement §3.6 puts on every part's status line and for the same reason: it
+binds an editor rather than a packet, and a citation of `10` §3 that names no edition is the
+navigability defect §3.6's table exists to fix.
+
+What a measurement records is a recommendation rather than a requirement, since the part is
+informative and a reading without a date is still a reading. Each **SHOULD** record the date it was
+taken and the versions of the libraries it was taken against, and where those were not kept it
+**SHOULD** say so rather than leave the field out.
+
+The alternative is a requirement nothing already measured could meet. Six measurements across every
+accepted revision name a library version — `zarr-python 3.3.0` and `pyarrow 25.0.1` — and the rest,
+R53's storage figures and R68's encoding comparison among them, record none, most of them
+irrecoverably. A number whose toolchain is marked unkept says what a reader needs, which is that
+its currency is unknown; one silently missing the field says nothing.
 
 The two answer different questions and neither substitutes for the other: the version says which
 edition of the part a citation names, and the date and the toolchain say whether a number is still
@@ -148,10 +162,11 @@ group's span, a store's request rate. Part 07 §7 carries what follows from this
 code and would change if someone wrote another in another language: how a columnar library decodes
 a batch, how one query planner treats a projection against a join.
 
-R86 §2.4 is the case that splits. Its **~120 requests per second** is the store's and belongs to
-Part 10; its **1.02x** projection against a **2.22x** join is one planner's and stays where Part
-07 §7 already records it. R43's query timings split the same way and stay in `06`, since what they
-justify is a materialization rule rather than a storage choice.
+R86 is the case that splits, and it splits across its own sections. The **~120 requests per
+second** its §1.1 measures is the store's and belongs to Part 10; the **1.02x** projection against
+a **2.22x** join its §2.4 measures is one planner's and stays where Part 07 §7 already records it.
+R43's query timings split the same way and stay in `06`, since what they justify is a
+materialization rule rather than a storage choice.
 
 ### 3.6 `00` lists the parts and what each one binds
 
@@ -254,8 +269,8 @@ Informative.
 
 ## 7. Consequence
 
-Three sentences move out of `02`, one is corrected in `03`, and Part 10 is written from material
-that currently sits in accepted revisions and in `conformance/`.
+Three sentences move out of `02` and one number moves out of `03` §5.1, and Part 10 is written
+from material that currently sits in accepted revisions and in `conformance/`.
 
 §3.3 removes one field from the registry's meta-schema and from every document written against it:
 25 declarations across core and 11 across the four extensions, none of which changes a stored
