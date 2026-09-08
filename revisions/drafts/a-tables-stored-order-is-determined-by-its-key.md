@@ -117,10 +117,17 @@ them checkable rather than conventional.
 
 ### 5.1 The obligation and the means
 
-`02` §10.1's sentence waiving the uniqueness query is **struck**. What the logical standard requires
-is the fact alone: a validator **MUST** establish that a table's primary key is unique, by query or
-by any means a physical profile defines as establishing it. That clause holds under every profile,
-which is what a clause of Part 02 has to do.
+`02` §10.1 states two things about uniqueness and both change. Its list of what a validator **MUST**
+generate from the declaration alone keeps required-column non-null checks, foreign-key anti-joins
+and closed-vocabulary membership, and loses primary-key uniqueness; its sentence waiving the
+uniqueness query where the sort begins with the key is **struck**. In their place the logical
+standard requires the fact alone: a validator **MUST** establish that a table's primary key is
+unique, by query or by any means a physical profile defines as establishing it.
+
+Both sentences had to move together. Striking only the waiver would leave the list requiring a
+query be generated for every table, which is the opposite of what the waiver permitted and would
+make the two clauses of one subsection contradict each other. What survives is a statement that
+holds under every profile, which is what a clause of Part 02 has to do.
 
 How it is established under `escapewheel-portable-v0.1` is §5.2, and Part 03 is where a rule
 belongs that would change if the profile changed. An Iceberg compaction rewrites files and
@@ -131,7 +138,8 @@ preserves no order across them, so a table's stored order is exactly such a rule
 A table under `escapewheel-portable-v0.1` **MUST** be stored in an order that settles its primary
 key by adjacency: every key column appears in the sort, and every sort column up to and including
 the last key column is either a key column itself or one the registry declares `determined_by` a
-subset of the key. A validator **MUST** report a departure as an **error**.
+subset of the key. Where the registry declares no sort for a table, the order required is its
+primary key's. A validator **MUST** report a departure as an **error**.
 
 Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a
 column that is a function of the key takes the same value in both. So the scan that establishes
@@ -151,11 +159,11 @@ A reader **MUST NOT** depend on stored order for correctness. Establishing the o
 validator's work, and a reader that assumed it would be trusting a property of the profile rather
 than of the logical standard.
 
-### 5.3 What the level costs
+### 5.3 The level a departure is reported at
 
 `03` §5.3's SHOULD becomes a **MUST**, and its **warning** an **error**. The uniqueness query is
-skipped for 25 of 38 tables today and for all 38 under §5.2, so the level decides whether that many
-correctness checks rest on a requirement or on a recommendation.
+skipped for the 25 tables §5.2 counts today and for all 38 under it, so the level decides whether
+that many correctness checks rest on a requirement or on a recommendation.
 
 Cost does not decide it. Re-measured on `core.spike_events`'s 286,896,563 rows under a 4 GB memory
 limit, the aggregate the waiver avoids runs in **8.8 s** and returns 0 duplicate keys. The 26 GB
@@ -176,8 +184,9 @@ difference as an **error**.
 
 Verifying it in the scan costs nothing, and verifying it as a query costs everything the
 declaration saves. Measured on `analysis.spike_events`' 286,876,859 rows, the aggregate that checks
-`time_bucket_tick` is a function of `t_tick` runs in **8.5 s** against the **8.8 s** uniqueness
-aggregate the declaration waives, so a rule per declaration would spend the saving to protect it.
+`time_bucket_tick` is a function of `t_tick` runs in **8.5 s**, against §5.3's 8.8 s for the
+uniqueness aggregate the declaration waives, so a rule per declaration would spend the saving to
+protect it.
 The scan already compares each row with its predecessor, which makes this one more equality on a
 pass being made anyway, and it belongs in the shim where R12 §4 puts what SQL cannot observe.
 
@@ -204,6 +213,11 @@ hand. Two columns declare `determined_by` today, both on `analysis.spike_events`
   of Part 02 may name a physical property or depend on a clause of Part 03, and sweep the crossings
   this part does not touch. §5.1 repairs only the one clause this part was already rewriting,
   rather than leaving a physical condition in the logical standard for a later part to move.
+- **The `sort` field is not filled in.** §5.2 makes a missing declaration mean primary-key order
+  rather than requiring one be written for each of the thirteen tables that lack it, so
+  `separation-of-the-logical-standard-from-the-physical-profile` §3.3 can remove the field
+  outright without undoing anything here. Filling it first and removing it next would be the same
+  rule implemented twice.
 - **`03` §5.2's partitioning rules are untouched.** A partitioned table's order across files is
   still undefined by the profile, and §5.2 is a statement about a table's contents rather than
   about file boundaries.
@@ -219,19 +233,20 @@ hand. Two columns declare `determined_by` today, both on `analysis.spike_events`
 
 ## 7. Consequence
 
-No column, reference or rule changes.
+No column, reference or Tier 2 rule changes, so `registry/build.py` gains no block and this part is
+recorded in its `UNSTAMPED` tuple. What it does lose is `core.events` from the `OVERRIDE` table its
+R10 block reads, dead since the R91 block rewrites the same field afterwards.
 
-`registry/build.py` loses `core.events` from its `OVERRIDE` table, and fills `sort` from the
-primary key for every table declaring none, in a pass at the **end** of the build: the thirteen
-nulls of §2 are tables added after that pass ran, and a pass that runs last cannot be outrun by a
-later block. `escapewheel_validator.generate.adjacency_settles_uniqueness` is unchanged, §5.2 being
-that function stated as a rule rather than left as an optimisation the validator happens to make;
-the ordering scan gains §5.4's comparison.
+`escapewheel_validator.generate.adjacency_settles_uniqueness` gains one line, reading a table's
+primary key where it declares no sort, which is §5.2's baseline stated as code; today the function
+returns `False` for those thirteen and the validator checks nothing about their order. The ordering
+scan gains §5.4's comparison. Nothing else in the validator changes, §5.2 being that function
+stated as a rule rather than left as an optimisation it happens to make.
 
 Tier 1 uniqueness goes from **13** generated `GROUP BY` checks to none on a conforming packet, all
-thirteen from the filled sorts. Ordering scans go from 25 tables to all 38, and the writer stamps
-`RowGroup.sorting_columns` on 38 rather than 25, since `writer.py` writes it for a table that
-declares an order.
+thirteen from the tables that declare no sort. Ordering scans go from 25 tables to all 38.
+`RowGroup.sorting_columns` is unaffected: `writer.py` stamps it for a table declaring an order, and
+§5.2 adds no declaration.
 
 **No rebuild is owed by this part.** §3 records the one table that fails §5.2 in the committed
 packets, and the rebuild R87 §2.1, R88 §2 and R91 §5 already require is what clears it.
