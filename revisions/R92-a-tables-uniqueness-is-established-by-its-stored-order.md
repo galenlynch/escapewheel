@@ -1,8 +1,8 @@
-# A Table's Uniqueness Is Established by Its Stored Order
+# R92 — A Table's Uniqueness Is Established by Its Stored Order
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | `02` §10.1 (the uniqueness obligation, losing its physical condition), `02` §8 (a new §8.5 defining `determined_by`), `03` §5.3 (the ordering rule and the level a departure is reported at), `06` §4 (when `analysis.spike_events` is not materialised) |
 | **Depends on** | R10 §2 (sort by primary key), R30 §3.2 (`analysis.spike_events`' layout), R81 §2.4 (that layout narrowed to five columns), R75 §2.1 (an assigned identifier is reproducible), R91 §3.2 (`core.events`' key) |
 | **Profile** | `escapewheel-portable-v0.1` |
@@ -214,13 +214,14 @@ R91 §5 already requires is what clears it.
   `dynamic_foraging` and `vr_foraging` sort by their primary key outright, so §2.2 holds for each
   of them without a `determined_by` declaration.
 - **The `sort` field is not filled in.** §2.2 makes a missing declaration mean primary-key order
-  rather than requiring one be written for each of the thirteen tables that lack it, so
-  `separation-of-the-logical-standard-from-the-physical-profile` §3.3 can remove the field outright
-  without undoing anything here.
-- **The general form of this belongs to another part.**
-  `separation-of-the-logical-standard-from-the-physical-profile` §3.1 and §3.2 state that no clause
-  of Part 02 may name a physical property or depend on a clause of Part 03, and sweep the crossings
-  this part does not touch.
+  rather than requiring one be written for each of the thirteen tables that lack it. Filling the
+  field and later removing it would implement one rule twice, and the field is a physical
+  declaration sitting in the logical standard's machine form, so its removal is a question about
+  where a declaration belongs rather than about what order a table is in.
+- **Only one boundary crossing is repaired.** §2.1 moves the clause this part was already
+  rewriting; Part 02 names a physical property in other places, and stating the general
+  prohibition — that no clause of Part 02 may name one or depend on a clause of Part 03 — is a
+  question about which part holds which rule, not about uniqueness.
 - **`03` §5.2's partitioning rules are untouched.** A partitioned table's order across files is
   still undefined by the profile, and §2.2 is a statement about a table's contents rather than
   about file boundaries.

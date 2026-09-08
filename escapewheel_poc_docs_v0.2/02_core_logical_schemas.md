@@ -214,6 +214,12 @@ A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit
 
 A consumer MAY label a quantity with its declared unit, and MUST NOT silently compare or combine two columns whose declared units differ (R56 §2.5).
 
+### 8.5 Functional dependence
+
+A column MAY declare `determined_by`, naming the columns whose values fix its own: two rows agreeing on every column named agree on this one, and an empty list declares a constant (R92 §2.2). The declaration is structural, decidable from the registry with no packet in hand.
+
+It is a statement about values and holds under any profile. What a profile does with it is the profile's: `03` §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows (R92 §2.3), because a wrong one waives a check rather than failing one.
+
 ## 9. The registry
 
 ### 9.1 The schema is one document
@@ -256,9 +262,9 @@ A column whose role is declared SHOULD NOT restate its base in its description (
 
 ### 10.1 Tier 1: generated from structure
 
-A validator MUST generate, from the declaration alone: required-column non-null checks, primary-key uniqueness, foreign-key anti-joins, and closed-vocabulary membership. A nullable foreign key is guarded with a null test.
+A validator MUST generate, from the declaration alone: required-column non-null checks, foreign-key anti-joins, and closed-vocabulary membership. A nullable foreign key is guarded with a null test.
 
-Uniqueness need not be checked by query where a table's physical sort begins with its primary key, since duplicates are then adjacent and the ordering scan settles it.
+A validator MUST establish that a table's primary key is unique, by query or by any means a physical profile defines as establishing it (R92 §2.1). That a key is unique holds under any profile and is this part's; how a validator may establish it depends on how rows are stored, and is the profile's.
 
 ### 10.2 Tier 2: declared
 

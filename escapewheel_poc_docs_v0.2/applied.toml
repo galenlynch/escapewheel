@@ -1684,3 +1684,31 @@ where = "core.event_streams.detail_kind, discriminates_via core.events.stream_id
 [clause."R91 §4"]
 disposition = "rationale"
 note = "what the restructure leaves alone; its MUST NOT cites §3.3's clause rather than adding one"
+
+[clause."R92 §2.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §10.1"
+note = "uniqueness leaves the generated list and becomes an obligation about the fact; the physical condition is struck"
+
+[clause."R92 §2.2"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §5.3"
+note = "the adjacency rule, at error; determined_by is defined in 02 §8.5, which this clause introduces"
+
+[clause."R92 §2.3"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §5.3"
+note = "the ordering scan verifies each determined_by declaration it relies on"
+
+[clause."R92 §2.4"]
+disposition = "applied"
+where = "06_analysis_layer.md §4"
+note = "a writer MUST NOT materialize analysis.spike_events where the conversion collides two spikes of one unit"
+
+[clause."R92 §3.1"]
+disposition = "rationale"
+note = "why the condition is adjacency and not a prefix; quotes R30 §3.2's MUST rather than stating one"
+
+[clause."R92 §4"]
+disposition = "rationale"
+note = "what the part leaves alone; its MUST is R30 §3.2's, restated as standing"

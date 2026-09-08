@@ -82,7 +82,7 @@ SINCE = _Since([None])
 #: R42 is withdrawn and so is not here.
 UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34, 35, 36, 37, 40,
              43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69, 71, 72, 74, 75, 76, 77, 78, 79,
-             80, 82, 84, 86, 87, 90)
+             80, 82, 84, 86, 87, 90, 92)
 
 
 #: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a
@@ -561,7 +561,8 @@ def build() -> dict:
     OVERRIDE = {                                                          # R10 §3, from 03
         "core.spike_events": ["session_id", "sorting_run_id", "curation_id",
                               "unit_id", "t_tick"],
-        "core.events": ["session_id", "clock_id", "t_tick", "event_type"],
+        # R91 §3.2 keyed `core.events` on the order it is stored in, so its entry here became a
+        # second, contradicting statement that the R91 block overwrote; R92 §5 strikes it.
     }
     for n, t in tables.items():
         t["sort"] = OVERRIDE.get(n) or t["primary_key"]                   # R10 §2, §6

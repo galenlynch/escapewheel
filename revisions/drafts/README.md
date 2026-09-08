@@ -18,20 +18,19 @@ Dependencies run downward: a draft depends on the ones above it and on nothing b
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `a-tables-uniqueness-is-established-by-its-stored-order` | states the ordering rule, which 2 moves into the profile |
-| 2 | `separation-of-the-logical-standard-from-the-physical-profile` | moves ordering, partitioning and the `sort` field to where each belongs |
-| 3 | `a-rule-names-no-optional-column` | the presence constraint 4 turns on |
-| 4 | `columns-that-hold-one-value` | strikes seven duplicated names, makes the two clock-rate forms exclusive |
-| 5 | `a-sorted-unit-declares-its-spikes-context` | moves `amplitude_unit` and `clock_id` to `core.units` |
-| 6 | `the-free-form-metadata-column` | which tables declare `metadata`, and what may go in one; strikes `core.events.payload` |
-| 7 | `the-alignment-keys-in-a-runs-parameters` | three keys a reader reads and no document states |
-| 8 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
+| 1 | `separation-of-the-logical-standard-from-the-physical-profile` | moves ordering, partitioning and the `sort` field to where each belongs; R92 §2.2 is the rule it relocates |
+| 2 | `a-rule-names-no-optional-column` | the presence constraint 3 turns on |
+| 3 | `columns-that-hold-one-value` | strikes seven duplicated names, makes the two clock-rate forms exclusive |
+| 4 | `a-sorted-unit-declares-its-spikes-context` | moves `amplitude_unit` and `clock_id` to `core.units` |
+| 5 | `the-free-form-metadata-column` | which tables declare `metadata`, and what may go in one; strikes `core.events.payload` |
+| 6 | `the-alignment-keys-in-a-runs-parameters` | three keys a reader reads and no document states |
+| 7 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
 | — | `what-a-reserved-value-is-for` | outside the order; it amends R11 §4 alone and depends on nothing here |
 
-Five through eight are independent of each other and of one through four; their order is a
-convenience, not a constraint. One through four is a chain: each is cheaper before the next than
+Four through seven are independent of each other and of one through three; their order is a
+convenience, not a constraint. One through three is a chain: each is cheaper before the next than
 after it.
 
-Four of them change the registry's column count, each measured against the registry as it stood
+Three of them change the registry's column count, each measured against the registry as it stood
 when it was drafted. Whichever is accepted second re-measures — which the pre-acceptance checks in
 `../CLAUDE.md` require of every number anyway.
