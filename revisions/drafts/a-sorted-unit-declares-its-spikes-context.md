@@ -50,10 +50,12 @@ tables, `core.spike_events` among them, removing the reference with the column. 
 the `unit_from` rather than leave it naming a hop that cannot be followed, and R81 §5 recorded the
 loss as *"the same shape as the gap R70 §4 left."*
 
-Of the seven columns declaring a `unit_from` today, all seven name a column of their own table.
-Five `clock_from` declarations do use the one-hop form — `core.clock_anchors.parent_tick` through
-`core.clocks.parent_clock_id`, and four more — so no unit of measure has ever been reached across a
-reference, which is the half R56 built for this column.
+Nine columns declare a `unit_from` today and **two** use the one-hop form:
+`core.calibration_points.input_value` and `output_value`, each reaching its calibration's declared
+unit of measure (R89 §2.3). Six `clock_from` declarations use it too —
+`core.clock_anchors.parent_tick` through `core.clocks.parent_clock_id`, `core.events.t_tick`
+through its stream (R91 §3.2), and four more. So the form this part needs for a spike is one the
+registry already resolves in both halves, which is what makes §3.3 a use rather than a first.
 
 ### 2.2 Reference paths from a spike to its run
 
@@ -94,8 +96,8 @@ construction, since `core.units.sorting_run_id` is required and a run names one 
 
 | packet | spikes | `clock_id` compressed | share of the table |
 |---|---:|---:|---:|
-| `ecephys_776259` | 286,896,563 | 1,026,681 B | 0.134% |
-| `ecephys_786867` | 131,396,535 | 470,536 B | 0.123% |
+| `ecephys_776259` | 286,896,563 | 1,026,681 B | 0.152% |
+| `ecephys_786867` | 131,396,535 | 470,536 B | 0.136% |
 
 Twelve `int32` values under a sort that clusters them compress almost to nothing, so storage does
 not decide this. Nor does query cost. Three shapes against `ecephys_776259`, warm, as three-run
@@ -158,8 +160,9 @@ one. The registry's `CONTEXT` block carries entries only where that default does
 `core.spike_events.amplitude` **MUST** declare `unit_from: "core.units.amplitude_unit"`, and
 `core.spike_events.t_tick` **MUST** declare `clock_from: "core.units.clock_id"`.
 `core.spike_events` declares a reference on `unit_id` to `core.units`, so both are R56 §2.3's
-one-hop `resource.column` form resolving through a reference the table already has. The
-`unit_from` is that form's first use for a unit of measure anywhere in the registry.
+one-hop `resource.column` form resolving through a reference the table already has — the form
+R89 §2.3 first used for a unit of measure and R91 §3.2 for a clock, resolved here for the largest
+table either packet holds.
 
 ### 3.4 The copies that are struck
 
@@ -218,9 +221,10 @@ columns and two references leave the registry. The Tier 2 rules are unchanged in
 them rewritten.
 
 `core.units` grows by one nullable string holding one distinct value per packet and one required
-`int32`. Measured by rewriting both tables with the string added: **+278 bytes each**, 149,394 →
-149,672 B at 6,781 rows (**1.0019x**) and 95,507 → 95,785 B at 4,505 rows. `core.spike_events`
-sheds 1,026,681 and 470,536 bytes.
+`int32`. Measured by rewriting both tables with each column added: the string costs **+278 bytes**
+in each, the `int32` **+364** and **+350**, so the table goes 149,394 → 150,033 B at 6,781 rows
+(**1.0043x**) and 95,507 → 96,132 B at 4,505 rows (**1.0065x**). `core.spike_events` sheds
+1,026,681 and 470,536 bytes, which is 3.7x and 1.5x what `core.units` gains.
 
 Both packets **MUST** be rebuilt. Adding a required column fails an existing packet with
 `schema.column_absent`, the validator checking the registry's columns against the file and never
