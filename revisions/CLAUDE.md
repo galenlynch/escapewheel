@@ -112,8 +112,33 @@ Brevity is never worth an implementer's question. Never cut:
 
 A revision that is short because it dropped a number is incomplete, not concise.
 
-## Checks before proposing
+## Checks before acceptance
 
+Run these against the document before the status line moves. Each has caught a real defect, and
+the ones a tool can settle are cheaper than the ones only a reader can.
+
+- **Re-measure every number against the current registry and the current packets.** A revision
+  sits Proposed while the registry moves under it. R86 was drafted saying 32 of 34 tables were
+  session-scoped and R83 added one before it was accepted; its name-collision count was measured
+  before `core.events` carried names, and missed the largest collision of all. R89's §4 arithmetic
+  was measured before R88 and was wrong by 18 columns and 14 references.
+- **Run `check.py`'s `NAMING` against every column the revision declares.** The conventions are
+  data — lift `NAMING`, `RESERVED` and `INTEGERS` out of `registry/check.py` and apply them to the
+  proposed names, types and roles rather than reading them. R89 declared `calibration_kind` for an
+  open vocabulary of values, which would have failed the build: a `_kind` column is a discriminator
+  (R55 §2.1), and an open vocabulary takes `_type`, as `event_type` and `activity_type` do.
+- **Every column declares a type, a presence and a role.** R48 §2.2 gives a role no default, so a
+  column named in prose but not declared is a build error rather than a guess. R89 gave one table a
+  full declaration and two others as tuples, leaving eight columns without a type.
+- **Every citation resolves to the section that says it.** R89 §2.3 cited R56 §2.2 for the one-hop
+  `resource.column` form, which R56 §2.3 defines; §2.2 is `clock_from`. Open the cited section.
+- **No section contradicts another.** R89 §1.2 argued a calibration is reported as in force
+  *rather than as having happened*, and §2.5 then said a row records that it happened. Read the
+  Decision against the Motivation it rests on, and read §3's bullets against the Decision.
+- **Name the other Proposed revisions that touch the same counts, and say which order.** R89 and
+  R95 both change the column count and R95's rule adds a column to one of R89's tables, so
+  whichever lands second is describing a registry that already has the other. Whatever is measured
+  against today is re-measured at the second acceptance.
 - **A claim about rows coexisting is a claim about the primary key.** Anything the text says can
   exist together, be distinguished, or be chosen between — write the key out and check it admits
   them. R49 §1 found a colliding key this way and R55 §2.3.1 a reference targeting a non-unique
@@ -123,11 +148,43 @@ A revision that is short because it dropped a number is incomplete, not concise.
   number in both. State it where the rule it supports lives.
 - **"What this does not do" listing the unassumed.** It lists only what a reader would otherwise
   reasonably assume the revision does.
-- **A measurement taken while drafting goes stale.** A revision sits Proposed while the registry
-  moves under it. R86 was drafted saying 32 of 34 tables were session-scoped and R83 added one
-  before it was accepted; its name-collision count was measured before `core.events` carried
-  names, and missed the largest collision of all. Re-run every count against the current registry
-  and the current packets before the status line changes.
+
+## After the user accepts
+
+Only the user moves a revision to Accepted. What follows is one sequence, in this order, and
+`python verify.py` is what says it is complete. `DEVELOPING.md` §4 is the machinery each step
+touches.
+
+1. **The status line** becomes `**Accepted** <YYYY-MM-DD>`. Until it does, `ledger.py` skips the
+   revision and `check.py` refuses the `derived_from` entry a build block creates.
+2. **`registry/build.py`.** Register every new column name in `ROLES`, every new identifier in
+   `IDENTITY`, and every new discriminator in `DISCRIMINATOR` — each refuses an unclassified name
+   with a `SystemExit` naming the choice. Then add the block, stamped `SINCE[0] = "R<N> §<x>"`,
+   after the last revision's block and before the Tier 2 merge. `derived_from` follows from the
+   stamp; a revision that changes no column goes in `UNSTAMPED` instead.
+3. **`registry/rules.json`** for each Tier 2 rule, whose query returns offending rows (R2 §7.3).
+4. **`conformance/spec-sweep/tables.py`** for a table added or withdrawn, or `check.py` fails
+   against the R9 §2 ledger.
+5. **The v0.2 parts the revision amends**, which is what `Amends` named. A concept goes in `01`
+   §3 and is appended rather than inserted, since the numbering is cited throughout.
+6. **`escapewheel_poc_docs_v0.2/applied.toml`**, one entry per clause. `ledger.py` demands a
+   disposition for every §2 subsection and for any other section carrying a MUST or a SHOULD, and
+   fails equally on an entry naming a clause that no longer exists.
+7. **`python escapewheel_poc_docs_v0.2/combine.py`** for the single-file rendering.
+8. **`python verify.py`.** Every stage but the three clean-tree ones must pass before committing;
+   those compare against the committed state and so clear only on the commit itself.
+
+Three traps, each of which cost time here:
+
+- **`CONTEXT` and the R53 §2.3.1 name block are consumed before a late block runs**, so a table
+  added at the end declares its own `unit_from` inline and its own `*_name` column. A `CONTEXT`
+  entry for a table that does not yet exist raises.
+- **`check.py` skips rule execution without DuckDB**, and a rule referencing a missing column
+  passes silently. Run it as `uv run --with duckdb python check.py` from `registry/`, or let
+  `verify.py` do it.
+- **A generated file edited by hand is overwritten**, `logical_schemas.json` above all. Everything
+  in `registry/` except `build.py`, `rules.json`, `check.py` and the two hand-written schemas is
+  output.
 
 ## Length
 

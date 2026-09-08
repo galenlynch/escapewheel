@@ -85,7 +85,7 @@ the order matters.
 
 | you want to | edit | then |
 |---|---|---|
-| add or change a column, key, type, reference | write a revision, get it accepted, add a block to `build.py` | `verify.py` |
+| add or change a column, key, type, reference | write a revision, get it accepted, add a block to `build.py` | `verify.py`; `revisions/CLAUDE.md` has the whole sequence |
 | add a Tier 2 rule | `registry/rules.json` | `verify.py` |
 | change how Tier 1 is derived | `escapewheel-validator/.../generate.py` | `verify.py` |
 | add an extension | `registry/extensions/<id>.json` | `verify.py` |
