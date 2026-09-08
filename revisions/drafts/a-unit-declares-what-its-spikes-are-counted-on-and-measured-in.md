@@ -193,9 +193,11 @@ from a unit to its clock; `core.spike_events.ticks_within_clock_span` gains one,
 
 - **No tick and no amplitude changes value.** Every number keeps what it had and the clock it was
   counted on; what changes is which column a consumer reads to learn the context.
-- **`core.spike_events.amplitude` keeps its type.** `float32` is right: **99.71%** and **99.95%**
-  of values are non-integral, so unlike `core.media_frames.pts` before R68 this is not an integer
-  wearing a float type.
+- **`core.spike_events.amplitude` keeps its type.** The values are quantised — §6 measures every
+  one as an integer multiple of 0.585 µV — but what the column stores is the scaled microvolt
+  rather than the count, and **99.78%** and **99.62%** of those are non-integral. So unlike
+  `core.media_frames.pts` before R68, this is not an integer wearing a float type: recovering the
+  integer needs the conversion, which §6 measures as recorded and unreachable.
 - **R56 §2.3 is not widened.** §2.2 measures why — two hops are ambiguous here, which is the
   opposite of the evidence R56 §4 said would justify relaxing the rule.
 - **The clock is still a property of the run's recording.** A sorting run consumes one probe's
