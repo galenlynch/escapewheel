@@ -263,5 +263,5 @@ packets, and the rebuild R87 §2.1, R88 §2 and R91 §5 already require is what 
   file, a later batch would be ordered within itself but forbidden from re-entering an earlier
   batch's key range, which makes appending useful only where data arrives in key order; read per
   table, the whole table must be re-established, which makes appending no cheaper than a rewrite.
-  What would decide it is the Iceberg profile `07` defers to Phase 7, where a snapshot versions a
+  What would decide it is the Iceberg profile `00` §7.3 holds open, where a snapshot versions a
   table's rows and appending is the ordinary operation.
