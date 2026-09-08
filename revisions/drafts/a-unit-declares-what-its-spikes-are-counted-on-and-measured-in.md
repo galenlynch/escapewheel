@@ -181,9 +181,8 @@ SELECT DISTINCT u.unit_id FROM core_spike_events s JOIN core_units u USING (unit
  WHERE s.amplitude IS NOT NULL AND u.amplitude_unit IS NULL
 ```
 
-It reports the units whose spikes carry an amplitude no unit of measure interprets, where before it
-reported their runs — the narrower finding, and the one a reader can act on now that the column it
-names is on that row.
+It names the units whose spikes have amplitudes and whose `amplitude_unit` is empty, where before
+it named their runs. The finding is narrower and lands on the row a reader would fix.
 
 Two more shorten and one lengthens. `core.spike_events.within_observation` and
 `core.units.observation_declared` each drop a `core_sorting_runs` join that existed only to walk
@@ -235,12 +234,18 @@ sorter adapter writes both facts onto the unit row rather than the run row, and
 
 ## 6. Open
 
-- **The scale that produced the amplitude is unrecorded.** The values are integer ADC counts times
-  bitVolts: the quantum is **2.339966 µV** in `ecephys_776259` and **2.924988 µV** in
-  `ecephys_786867`, and 100% of values are integer multiples of it. Neither number is in either
-  packet. `core.array_channels.conversion`, which R19 added for exactly this, is filled on **0 of
-  1,152** channels in one and **0 of 960** in the other, and `core.array_channels.unit` is empty in
-  both. A consumer can read microvolts and can neither recover the count nor check the conversion.
+- **The scale that produced the amplitude is recorded and unreachable.** The values are integer ADC
+  counts times bitVolts, and every one is an integer multiple of **0.585 µV** — 286,896,563 of
+  286,896,563 in `ecephys_776259` and 131,396,535 of 131,396,535 in `ecephys_786867`. The packets
+  record that quantum: `core.array_assets.conversion` holds **0.585, 2.34 and 2.925 µV** in volts
+  across the LFP series, three gains standing at 1x, 4x and 5x. What no consumer can do is get from
+  a unit to the asset carrying its own. `core.sorting_runs.input_array_asset_id` declares a
+  reference to `core.array_assets` for exactly this and is null on all **22** runs;
+  `core.array_assets.device_id`, which R65 added so an array names the instrument that made it, is
+  null on all **14** assets of one packet and **11** of the other, so probe → device → asset joins
+  **0** rows. Both are writer gaps rather than schema ones. Behind them is one the schema does not
+  answer either: the recorded conversion is the LFP series', where a spike's amplitude comes from
+  the AP band, which neither packet holds.
 - **What a run with no units is on.** After §3.2 a sorting run that produced nothing — every unit
   removed by curation, or a run that failed — records no clock, where today it records one. No
   consumer asks, and `core.processing_runs` carries the run's provenance either way, but a packet
