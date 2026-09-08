@@ -200,6 +200,27 @@ It settles the boundary §3.4 draws for the same reason. A measurement that woul
 repository's code were replaced is Part 07's, and one that would survive that replacement is Part
 10's, which is why an object store's request rate and a query planner's cost model separate.
 
+The same test places a **registry field**, and the answer it gives is that the registry is not a
+level at all. A field belongs to the semantic level where it would survive replacing the tabular
+model with another encoding of the same concepts, to the logical level where it would not, and to
+the physical level where it changes with the profile.
+
+A column may carry seventeen. Seven are semantic — `unit`, `unit_from`, `clock_from`, `identity`,
+`enum`, `vocabulary` and `reserved_values` — since a quantity's unit and a tick's clock are the
+same fact in any encoding. Seven are logical: `name`, `type`, `presence`, `determined_by`,
+`discriminates`, `discriminates_via` and `resolves`, each of which presupposes columns and tables.
+`description` and `since` are documentation and belong to neither. `role` spans the two, which is
+what makes it the interesting case rather than an exception: `data`, `identifier` and `coordinate`
+survive any encoding, where `structural_index` and `sequence_position` presuppose an indexed
+sequence and `discriminator` presupposes resolution to a table. The one physical field a table
+carries is `sort`, which is why §3.3 removes it.
+
+So `00` §2's levels classify **statements, not documents**. §3.1's rule binds Part 02 because a
+part is made of clauses; the registry is made of fields and carries statements at every level,
+which is what makes it the machine form of the specification rather than of one part of it.
+Turning §3.1 on it would strike `unit` and `clock_from` and leave a consumer resolving a tick to
+join against Part 01's prose, which no consumer can read.
+
 ## 5. What this makes possible
 
 `00` §2 says a physical profile says how the logical resources of Part 02 are stored, and today
@@ -256,12 +277,6 @@ measurement — §3.5 confirms belongs to it rather than to Part 10.
 
 ## 8. Open
 
-- **Whether the registry is the logical standard's machine form or the semantic standard's as
-  well.** `01` §2.5 says a measured quantity SHOULD declare its unit, and R56 §2 puts `unit` on the
-  column, so a semantic fact is stored in the artifact §3.1 treats as Part 02's. Nothing is wrong
-  today and no clause contradicts another; what is unstated is which level a registry field belongs
-  to, which decides where the next one like it goes. §3.1's rule constrains what Part 02 may say
-  and not what the registry may hold.
 - **Whether a second profile should be attempted before v1.** §3.2 states what one must satisfy and
   nothing has tested the statement, which only writing one does. Iceberg is the profile `00` §7.3
   names and `07`'s Phase 7 carries, and it is the expensive one; a profile over a single Parquet
