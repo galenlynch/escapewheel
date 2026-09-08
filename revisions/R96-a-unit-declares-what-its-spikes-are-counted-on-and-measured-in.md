@@ -1,8 +1,8 @@
-# A Unit Declares What Its Spikes Are Counted On and Measured In
+# R96 — A Unit Declares What Its Spikes Are Counted On and Measured In
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | R11 §2 (which table declares `amplitude_unit`), R38 §3 (which table declares a unit's clock), R81 §5 (retracts the gap it recorded), the registry declarations of `clock_id` on `core.sorting_runs`, `core.spike_events` and `core.unit_observation_intervals` |
 | **Depends on** | R56 (a column declares its context), R81 (why the hop was lost, and unit identity), R38 (observation belongs to the clock), R11 (the unit of measure is the sorting context's) |
 | **Profile** | `escapewheel-portable-v0.1` |
@@ -136,8 +136,8 @@ Two joins over 286,896,563 spikes, because the schema cannot declare what the ru
 
 ### 3.1 `amplitude_unit` moves to the unit
 
-`core.sorting_runs.amplitude_unit` is **struck**. `core.units` gains `amplitude_unit`, `string`,
-nullable, vocabulary open as R11 §2 made it, holding the unit of measure of
+`core.sorting_runs` **MUST NOT** declare `amplitude_unit`, and `core.units` **MUST** declare it:
+`string`, nullable, vocabulary open as R11 §2 made it, holding the unit of measure of
 `core.spike_events.amplitude` for every spike of that unit.
 
 ### 3.2 `clock_id` moves to the unit
@@ -165,9 +165,9 @@ table either packet holds.
 
 ### 3.4 Two copies of the clock are struck
 
-`core.spike_events.clock_id` is **struck**, §3.3 having given `t_tick` a hop that resolves without
-it. `core.unit_observation_intervals.clock_id` is **struck** on the same ground, its `start_tick`
-and `stop_tick` declaring `clock_from: "core.units.clock_id"`: a table keyed on a unit reaches that
+`core.spike_events` **MUST NOT** declare `clock_id`, §3.3 having given `t_tick` a hop that resolves
+without it. `core.unit_observation_intervals` **MUST NOT** declare one either, its `start_tick` and
+`stop_tick` declaring `clock_from: "core.units.clock_id"` instead: a table keyed on a unit reaches that
 unit's clock in one hop, so the rule is uniform rather than applying to the large table and not the
 small one. Nothing is measured for the second, which is unwritten in both packets.
 

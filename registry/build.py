@@ -293,8 +293,6 @@ CONTEXT: dict[tuple[str, str], dict[str, str]] = {
     # The clock is named, and not `clock_id` (R39 §2).
     ("core.sessions", "t_zero_tick"): {"clock_from": "reference_clock_id"},
     # R38 §3 gave the sorting run a clock precisely so a unit's ticks have one.
-    ("core.units", "first_spike_tick"): {"clock_from": "core.sorting_runs.clock_id"},
-    ("core.units", "last_spike_tick"): {"clock_from": "core.sorting_runs.clock_id"},
     # The stream's clock, reached through the stream (R25 §2).
     ("core.event_stream_observation_intervals", "start_tick"): {"clock_from": "core.event_streams.clock_id"},
     ("core.event_stream_observation_intervals", "stop_tick"): {"clock_from": "core.event_streams.clock_id"},
@@ -1424,6 +1422,44 @@ def build() -> dict:
         generated["presence"] = declared["presence"]
         generated["since"] = SINCE[0]
         spec["columns"].remove(declared)
+
+    # ---- R96 §3 : a unit declares what its spikes are counted on and measured in --------------
+    # Both facts belong to the sorting run and a spike cannot reach it: R56 §2.3 admits one hop and
+    # spike -> unit -> run is two. They move to `core.units`, which a spike references directly, so
+    # each resolves in the one hop the format allows.
+    SINCE[0] = "R96 §3.1"
+    drop_col("core.sorting_runs", "amplitude_unit")
+    add_col("core.units", col("amplitude_unit", "string", "nullable",
+                              "Unit of measure of `core.spike_events.amplitude` for this unit's "
+                              "spikes -- microvolts, or ADC counts. Open (R11 §2)."),
+            after="quality_label")
+    amend("core.units", "amplitude_unit", vocabulary="open")
+
+    SINCE[0] = "R96 §3.2"
+    drop_col("core.sorting_runs", "clock_id")
+    T("core.sorting_runs")["references"] = [r for r in T("core.sorting_runs")["references"]
+                                            if r["resource"] != "core.clocks"]
+    add_col("core.units", col("clock_id", "int32", "required",
+                              "The clock every tick of this unit is counted on."),
+            after="amplitude_unit")
+    T("core.units")["references"].append({"columns": ["clock_id"], "resource": "core.clocks",
+                                          "resource_columns": ["clock_id"]})
+
+    # §3.3: one hop each, through the reference `core.spike_events` already declares on `unit_id`.
+    SINCE[0] = "R96 §3.3"
+    amend("core.spike_events", "amplitude", unit_from="core.units.amplitude_unit")
+    amend("core.spike_events", "t_tick", clock_from="core.units.clock_id")
+
+    # §3.4: with the hop resolving, the copies say nothing the reference does not.
+    SINCE[0] = "R96 §3.4"
+    drop_col("core.spike_events", "clock_id")
+    T("core.spike_events")["references"] = [r for r in T("core.spike_events")["references"]
+                                            if r["resource"] != "core.clocks"]
+    drop_col("core.unit_observation_intervals", "clock_id")
+    T("core.unit_observation_intervals")["references"] = [
+        r for r in T("core.unit_observation_intervals")["references"] if r["resource"] != "core.clocks"]
+    for _bound in ("start_tick", "stop_tick"):
+        amend("core.unit_observation_intervals", _bound, clock_from="core.units.clock_id")
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates

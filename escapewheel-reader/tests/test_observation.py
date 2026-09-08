@@ -64,7 +64,17 @@ def observed_packet(tmp_path, packet_root):
             {
                 "sorting_run_id": pa.array([SORTING_RUN]),
                 "session_id": pa.array([SESSION]),
-                "clock_id": pa.array([CLOCK]),
+            }
+        ),
+        units=pa.table(
+            {
+                "session_id": pa.array([SESSION] * 2, type=pa.int32()),
+                "unit_id": pa.array(list(UNITS[:2]), type=pa.int32()),
+                "sorting_run_id": pa.array([SORTING_RUN] * 2, type=pa.int32()),
+                "curation_id": pa.array([CURATION] * 2, type=pa.int32()),
+                "quality_label": pa.array(["sua", "mua"]),
+                # R96 §3.2: the unit names the clock, so this fixture's units name CLOCK.
+                "clock_id": pa.array([CLOCK] * 2, type=pa.int32()),
             }
         ),
         clock_observation_intervals=pa.table(
@@ -208,7 +218,17 @@ def test_the_view_survives_a_packet_with_no_refinements(tmp_path, packet_root):
             {
                 "sorting_run_id": pa.array([SORTING_RUN]),
                 "session_id": pa.array([SESSION]),
-                "clock_id": pa.array([CLOCK]),
+            }
+        ),
+        units=pa.table(
+            {
+                "session_id": pa.array([SESSION] * 2, type=pa.int32()),
+                "unit_id": pa.array(list(UNITS[:2]), type=pa.int32()),
+                "sorting_run_id": pa.array([SORTING_RUN] * 2, type=pa.int32()),
+                "curation_id": pa.array([CURATION] * 2, type=pa.int32()),
+                "quality_label": pa.array(["sua", "mua"]),
+                # R96 §3.2: the unit names the clock, so this fixture's units name CLOCK.
+                "clock_id": pa.array([CLOCK] * 2, type=pa.int32()),
             }
         ),
         clock_observation_intervals=pa.table(

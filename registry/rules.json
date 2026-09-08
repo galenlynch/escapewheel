@@ -378,26 +378,19 @@
         "sql": "SELECT session_id, sorting_run_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core_sorting_run_channels GROUP BY session_id, sorting_run_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
       }
     ],
-    "core.sorting_runs": [
-      {
-        "id": "core.sorting_runs.amplitude_unit_declared",
-        "level": "error",
-        "message": "spikes carry amplitudes but the sorting run declares no amplitude_unit",
-        "sql": "SELECT DISTINCT r.sorting_run_id FROM core_spike_events s JOIN core_units u USING (unit_id) JOIN core_sorting_runs r USING (sorting_run_id) WHERE s.amplitude IS NOT NULL AND r.amplitude_unit IS NULL"
-      }
-    ],
+    "core.sorting_runs": [],
     "core.spike_events": [
       {
         "id": "core.spike_events.ticks_within_clock_span",
         "level": "warning",
         "message": "negative ticks on a clock with no absolute reference",
-        "sql": "SELECT s.session_id, s.clock_id, MIN(s.t_tick) AS min_tick FROM core_spike_events s JOIN core_clocks c USING (clock_id) WHERE s.t_tick < 0 AND c.tick_zero_utc IS NULL GROUP BY s.session_id, s.clock_id"
+        "sql": "SELECT u.session_id, u.clock_id, MIN(s.t_tick) AS min_tick FROM core_spike_events s JOIN core_units u USING (unit_id) JOIN core_clocks c ON c.clock_id = u.clock_id WHERE s.t_tick < 0 AND c.tick_zero_utc IS NULL GROUP BY u.session_id, u.clock_id"
       },
       {
         "id": "core.spike_events.within_observation",
         "level": "warning",
         "message": "spikes fall outside the observation window in force for their unit",
-        "sql": "WITH unit_windows AS ( SELECT o.unit_id, o.start_tick, o.stop_tick FROM core_unit_observation_intervals o UNION ALL SELECT u.unit_id, c.start_tick, c.stop_tick FROM core_units u JOIN core_sorting_runs r ON u.session_id = r.session_id AND u.sorting_run_id = r.sorting_run_id JOIN core_clock_observation_intervals c ON c.session_id = r.session_id AND c.clock_id = r.clock_id WHERE NOT EXISTS ( SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id ) ), observed AS ( SELECT DISTINCT unit_id FROM unit_windows ) SELECT s.session_id, s.unit_id, s.t_tick FROM core_spike_events s JOIN observed k ON s.unit_id = k.unit_id LEFT JOIN unit_windows w ON s.unit_id = w.unit_id AND s.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"
+        "sql": "WITH unit_windows AS ( SELECT o.unit_id, o.start_tick, o.stop_tick FROM core_unit_observation_intervals o UNION ALL SELECT u.unit_id, c.start_tick, c.stop_tick FROM core_units u JOIN core_clock_observation_intervals c ON c.session_id = u.session_id AND c.clock_id = u.clock_id WHERE NOT EXISTS ( SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id ) ), observed AS ( SELECT DISTINCT unit_id FROM unit_windows ) SELECT s.session_id, s.unit_id, s.t_tick FROM core_spike_events s JOIN observed k ON s.unit_id = k.unit_id LEFT JOIN unit_windows w ON s.unit_id = w.unit_id AND s.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"
       }
     ],
     "core.unit_electrodes": [
@@ -465,7 +458,13 @@
         "level": "info",
         "advisory": true,
         "message": "units carry no observation intervals and their clock declares none, so no rate over them has a denominator",
-        "sql": "SELECT u.session_id, u.unit_id FROM core_units u JOIN core_sorting_runs r ON u.sorting_run_id = r.sorting_run_id WHERE NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = u.session_id AND c.clock_id = r.clock_id)"
+        "sql": "SELECT u.session_id, u.unit_id FROM core_units u WHERE NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = u.session_id AND c.clock_id = u.clock_id)"
+      },
+      {
+        "id": "core.units.amplitude_unit_declared",
+        "level": "error",
+        "message": "a unit's spikes carry an amplitude and the unit declares no amplitude_unit (R96 \u00a73.5)",
+        "sql": "SELECT DISTINCT u.unit_id FROM core_spike_events s JOIN core_units u USING (unit_id) WHERE s.amplitude IS NOT NULL AND u.amplitude_unit IS NULL"
       }
     ]
   }

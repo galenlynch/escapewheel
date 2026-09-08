@@ -162,20 +162,19 @@ def unit_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
         (:data:`DECLARED` or :data:`INHERITED`). One row per window, so a unit observed across
         a recording gap appears more than once.
     """
-    if not _has(packet, "core.units") or not _has(packet, "core.sorting_runs"):
+    # R96 §3.2 moved the clock from the run to the unit, so the run is no longer read here: a
+    # unit names the clock its ticks are counted on, and the map through `core.sorting_runs`
+    # this used to build was answering that question one table away.
+    if not _has(packet, "core.units"):
         return _empty(_UNIT_KEY)
-    units = packet.table("core.units", columns=[*_UNIT_KEY, "sorting_run_id"], session_id=session_id)
-    runs = {
-        r["sorting_run_id"]: r["clock_id"]
-        for r in packet.table("core.sorting_runs", columns=["sorting_run_id", "clock_id"]).to_pylist()
-    }
+    units = packet.table("core.units", columns=[*_UNIT_KEY, "clock_id"], session_id=session_id)
     windows: dict[tuple[str | None, str | None], list[tuple[int, int]]] = {}
     for row in clock_windows(packet, session_id=session_id).to_pylist():
         windows.setdefault((row["session_id"], row["clock_id"]), []).append((row["start_tick"], row["stop_tick"]))
 
     rows = []
     for unit in units.to_pylist():
-        clock = runs.get(unit["sorting_run_id"])
+        clock = unit["clock_id"]
         keyed = {k: unit[k] for k in _UNIT_KEY}
         for start, stop in windows.get((unit["session_id"], clock), []):
             rows.append({**keyed, "clock_id": clock, "start_tick": start, "stop_tick": stop, "source": INHERITED})
@@ -183,15 +182,16 @@ def unit_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
 
     own = _empty(_UNIT_KEY)
     if _has(packet, UNIT_INTERVALS):
-        # R81 §2.3: the interval row names only the unit, so its run comes from `core.units`.
-        by_unit = {u["unit_id"]: u["sorting_run_id"] for u in units.to_pylist()}
+        # R81 §2.3 leaves the interval row naming only the unit, and R96 §3.2 puts the clock on
+        # the unit, so one lookup answers what two did.
+        by_unit = {u["unit_id"]: u["clock_id"] for u in units.to_pylist()}
         declared = packet.table(UNIT_INTERVALS, session_id=session_id).to_pylist()
         if declared:
             own = pa.Table.from_pylist(
                 [
                     {
                         **{k: d[k] for k in _UNIT_KEY},
-                        "clock_id": runs.get(by_unit.get(d["unit_id"])),
+                        "clock_id": by_unit.get(d["unit_id"]),
                         "start_tick": d["start_tick"],
                         "stop_tick": d["stop_tick"],
                         "source": DECLARED,
@@ -279,23 +279,21 @@ def stream_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
 VIEWS: dict[str, dict[str, Any]] = {
     "unit_observation": {
         "refinements": "core_unit_observation_intervals",
+        # R96 §3.2 put the clock on the unit, so neither arm reaches through `core.sorting_runs`.
         "declared": (
-            ("core_unit_observation_intervals", "core_units", "core_sorting_runs"),
-            """SELECT o.session_id, o.unit_id, r.clock_id,
+            ("core_unit_observation_intervals", "core_units"),
+            """SELECT o.session_id, o.unit_id, u.clock_id,
                       o.start_tick, o.stop_tick, 'declared' AS source
                FROM core_unit_observation_intervals o
-               JOIN core_units u ON o.unit_id = u.unit_id
-               JOIN core_sorting_runs r ON u.sorting_run_id = r.sorting_run_id""",
+               JOIN core_units u ON o.unit_id = u.unit_id""",
         ),
         "inherited": (
-            ("core_units", "core_sorting_runs", "core_clock_observation_intervals"),
-            """SELECT u.session_id, u.unit_id, r.clock_id,
+            ("core_units", "core_clock_observation_intervals"),
+            """SELECT u.session_id, u.unit_id, u.clock_id,
                       c.start_tick, c.stop_tick, 'inherited' AS source
                FROM core_units u
-               JOIN core_sorting_runs r
-                 ON u.session_id = r.session_id AND u.sorting_run_id = r.sorting_run_id
                JOIN core_clock_observation_intervals c
-                 ON c.session_id = r.session_id AND c.clock_id = r.clock_id
+                 ON c.session_id = u.session_id AND c.clock_id = u.clock_id
                {guard}""",
         ),
         "guard": """WHERE NOT EXISTS (

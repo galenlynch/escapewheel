@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-38 tables, 326 columns, 96 references, 70 Tier 2 rules
+38 tables, 324 columns, 94 references, 70 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96
 ```
 
 ## Contents
@@ -788,11 +788,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `sorting_run_name` | string | nullable | R53 §2.3.1 | What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `session_id` | int32 | **required** |  | Session ID. |
 | `probe_id` | int32 | nullable |  | Probe ID. |
-| `clock_id` | int32 | **required** | R38 §2.2 | Clock the run's spike ticks are counted on. |
 | `sorter_name` | string | nullable |  | Sorter name. |
 | `sorter_version` | string | nullable |  | Sorter version. |
 | `processing_run_id` | int32 | nullable | R41 §2.1 | The run that produced this record, where provenance is recorded. |
-| `amplitude_unit` | string | nullable | R11 §2 | Unit of core.spike_events.amplitude for this run, e.g. uV, adc. |
 | `parameters` | json_string | optional |  | Sorter parameters. |
 | `input_array_asset_id` | int32 | nullable |  | Input array asset. |
 | `started_at` | timestamp | nullable |  | Start time. |
@@ -803,15 +801,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 **References**
 
-- `clock_id` → `core.clocks` (`clock_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `session_id` → `core.sessions` (`session_id`)
 - `probe_id` → `core.probes` (`probe_id`)
 - `input_array_asset_id` → `core.array_assets` (`array_asset_id`)
-
-**Tier 2 rules** — 1
-
-- `core.sorting_runs.amplitude_unit_declared` — error: spikes carry amplitudes but the sorting run declares no amplitude_unit
 
 ### `core.source_files`
 
@@ -834,9 +827,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** |  | Session ID. |
 | `unit_id` | int32 | **required** |  | Unit ID. |
-| `t_tick` | int64 | **required** |  | Spike tick. |
-| `clock_id` | int32 | **required** |  | Clock ID. |
-| `amplitude` | float32 | nullable |  | Spike amplitude if available. |
+| `t_tick` | int64 | **required** | R96 §3.3 | Spike tick. |
+| `amplitude` | float32 | nullable | R96 §3.3 | Spike amplitude if available. |
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `session_id`, `unit_id`, `t_tick`  
@@ -844,7 +836,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 **References**
 
 - `session_id` → `core.sessions` (`session_id`)
-- `clock_id` → `core.clocks` (`clock_id`)
 - `unit_id` → `core.units` (`unit_id`)
 
 **Tier 2 rules** — 2
@@ -926,16 +917,14 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | R18 §2 | Session ID. |
 | `unit_id` | int32 | **required** | R18 §2 | Unit ID. |
-| `start_tick` | int64 | **required** | R18 §2 | First tick, inclusive. |
-| `stop_tick` | int64 | **required** | R18 §2 | Last tick, inclusive. |
-| `clock_id` | int32 | **required** | R18 §2 | Clock for the interval bounds. |
+| `start_tick` | int64 | **required** | R96 §3.4 | First tick, inclusive. |
+| `stop_tick` | int64 | **required** | R96 §3.4 | Last tick, inclusive. |
 
 **Primary key** — `session_id`, `unit_id`, `start_tick`  
 
 **References**
 
 - `unit_id` → `core.units` (`unit_id`)
-- `clock_id` → `core.clocks` (`clock_id`)
 - `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 2
@@ -979,6 +968,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `curation_id` | int32 | **required** |  | Curation ID. |
 | `local_unit_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `quality_label` | string | nullable | R11 §3-4 | Quality label. |
+| `amplitude_unit` | string | nullable | R96 §3.1 | Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. Open (R11 §2). |
+| `clock_id` | int32 | **required** | R96 §3.2 | The clock every tick of this unit is counted on. |
 | `quality_label_source` | string | nullable | R16 §2-3 | Which core.unit_quality_labels source the designated label came from. |
 | `firing_rate_hz` | float64 | nullable |  | Firing rate if known. |
 | `n_spikes` | int64 | nullable | R5 | Total spikes for this unit in this context. |
@@ -994,10 +985,12 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `probe_id` → `core.probes` (`probe_id`)
 - `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
 - `curation_id` → `core.curation_versions` (`curation_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 4
+**Tier 2 rules** — 5
 
 - `core.units.spike_summary_consistent` — error: n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events
 - `core.units.designated_label_is_recorded` — error: the designated quality label is not among the recorded ones
 - `core.units.designated_label_pair_complete` — error: quality_label and quality_label_source must be present together
 - `core.units.observation_declared` — info *(advisory, R26)*: units carry no observation intervals and their clock declares none, so no rate over them has a denominator
+- `core.units.amplitude_unit_declared` — error: a unit's spikes carry an amplitude and the unit declares no amplitude_unit (R96 §3.5)

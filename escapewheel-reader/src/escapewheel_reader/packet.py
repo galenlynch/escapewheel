@@ -680,6 +680,16 @@ class Packet:
             found = self._narrowed(self.on_clock(found, clock), t_tick)
         return self.seconds(found, session_id=session_id) if seconds else found
 
+    def _unit_clocks(self, keys: Sequence[str], **narrow: Any) -> dict[tuple[Any, ...], Any]:
+        """Map a unit's key to the clock its ticks are counted on (R96 §3.2).
+
+        `core.spike_events` carried `clock_id` until R96 §3.4 struck it: the fact belongs to the
+        unit, and a spike reaches it through the reference it already declares. A tick still
+        travels with its clock out of this accessor, which is what the column was for.
+        """
+        rows = self.table("core.units", columns=[*keys, "clock_id"], **narrow).to_pylist()
+        return {tuple(r[k] for k in keys): r["clock_id"] for r in rows}
+
     def spike_times(
         self,
         unit_id: str | None = None,
@@ -760,13 +770,16 @@ class Packet:
         if unit_id is not None:
             found = self.table(
                 "core.spike_events",
-                columns=["t_tick", "clock_id"],
+                columns=["t_tick"],
                 unit_id=unit_id,
                 session_id=session_id,
                 sorting_run_id=sorting_run_id,
                 curation_id=curation_id,
                 t_tick=self._span(t_tick, clock),
             )
+            clocks = self._unit_clocks(["unit_id"], unit_id=unit_id, session_id=session_id)
+            found = found.append_column(
+                "clock_id", pa.array([clocks.get((unit_id,))] * found.num_rows))
             if clock != STORED:
                 found = self._narrowed(self.on_clock(found, clock), t_tick)
             if seconds:
@@ -796,7 +809,15 @@ class Packet:
             wanted = wanted & test
         if (pushed := self._span(t_tick, clock)) is not None:
             wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
-        found = self.scan("core.spike_events").to_table(columns=["t_tick", "clock_id"], filter=wanted)
+        # R96 §3.4 struck `core.spike_events.clock_id`: a tick reaches its clock through its
+        # unit now, so the column comes from the caller's `units` rather than from the scan.
+        # A tick still travels with its clock, which is what this accessor exists to guarantee.
+        found = self.scan("core.spike_events").to_table(columns=["t_tick", *keys], filter=wanted)
+        clocks = self._unit_clocks(keys, session_id=session_id)
+        found = found.append_column(
+            "clock_id",
+            pa.array([clocks.get(tuple(r[k] for k in keys)) for r in found.select(keys).to_pylist()]))
+        found = found.select(["t_tick", "clock_id"])
         if clock != STORED:
             found = self._narrowed(self.on_clock(found, clock), t_tick)
         return self.seconds(found, session_id=session_id) if seconds else found

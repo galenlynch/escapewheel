@@ -98,7 +98,8 @@
       "R92",
       "R93",
       "R94",
-      "R95"
+      "R95",
+      "R96"
     ]
   },
   "tables": {
@@ -3534,15 +3535,6 @@
           "identity": "assigned"
         },
         {
-          "name": "clock_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Clock the run's spike ticks are counted on.",
-          "identity": "assigned",
-          "since": "R38 \u00a72.2"
-        },
-        {
           "name": "sorter_name",
           "type": "string",
           "presence": "nullable",
@@ -3564,15 +3556,6 @@
           "description": "The run that produced this record, where provenance is recorded.",
           "identity": "assigned",
           "since": "R41 \u00a72.1"
-        },
-        {
-          "name": "amplitude_unit",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Unit of core.spike_events.amplitude for this run, e.g. uV, adc.",
-          "since": "R11 \u00a72",
-          "vocabulary": "open"
         },
         {
           "name": "parameters",
@@ -3617,15 +3600,6 @@
       "references": [
         {
           "columns": [
-            "clock_id"
-          ],
-          "resource": "core.clocks",
-          "resource_columns": [
-            "clock_id"
-          ]
-        },
-        {
-          "columns": [
             "processing_run_id"
           ],
           "resource": "core.processing_runs",
@@ -3661,14 +3635,7 @@
           ]
         }
       ],
-      "rules": [
-        {
-          "id": "core.sorting_runs.amplitude_unit_declared",
-          "level": "error",
-          "message": "spikes carry amplitudes but the sorting run declares no amplitude_unit",
-          "sql": "SELECT DISTINCT r.sorting_run_id FROM core_spike_events s JOIN core_units u USING (unit_id) JOIN core_sorting_runs r USING (sorting_run_id) WHERE s.amplitude IS NOT NULL AND r.amplitude_unit IS NULL"
-        }
-      ]
+      "rules": []
     },
     "core.source_files": {
       "columns": [
@@ -3761,22 +3728,18 @@
           "type": "int64",
           "presence": "required",
           "role": "coordinate",
-          "description": "Spike tick."
-        },
-        {
-          "name": "clock_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Clock ID.",
-          "identity": "assigned"
+          "description": "Spike tick.",
+          "clock_from": "core.units.clock_id",
+          "since": "R96 \u00a73.3"
         },
         {
           "name": "amplitude",
           "type": "float32",
           "presence": "nullable",
           "role": "data",
-          "description": "Spike amplitude if available."
+          "description": "Spike amplitude if available.",
+          "unit_from": "core.units.amplitude_unit",
+          "since": "R96 \u00a73.3"
         },
         {
           "name": "metadata",
@@ -3803,15 +3766,6 @@
         },
         {
           "columns": [
-            "clock_id"
-          ],
-          "resource": "core.clocks",
-          "resource_columns": [
-            "clock_id"
-          ]
-        },
-        {
-          "columns": [
             "unit_id"
           ],
           "resource": "core.units",
@@ -3825,13 +3779,13 @@
           "id": "core.spike_events.ticks_within_clock_span",
           "level": "warning",
           "message": "negative ticks on a clock with no absolute reference",
-          "sql": "SELECT s.session_id, s.clock_id, MIN(s.t_tick) AS min_tick FROM core_spike_events s JOIN core_clocks c USING (clock_id) WHERE s.t_tick < 0 AND c.tick_zero_utc IS NULL GROUP BY s.session_id, s.clock_id"
+          "sql": "SELECT u.session_id, u.clock_id, MIN(s.t_tick) AS min_tick FROM core_spike_events s JOIN core_units u USING (unit_id) JOIN core_clocks c ON c.clock_id = u.clock_id WHERE s.t_tick < 0 AND c.tick_zero_utc IS NULL GROUP BY u.session_id, u.clock_id"
         },
         {
           "id": "core.spike_events.within_observation",
           "level": "warning",
           "message": "spikes fall outside the observation window in force for their unit",
-          "sql": "WITH unit_windows AS ( SELECT o.unit_id, o.start_tick, o.stop_tick FROM core_unit_observation_intervals o UNION ALL SELECT u.unit_id, c.start_tick, c.stop_tick FROM core_units u JOIN core_sorting_runs r ON u.session_id = r.session_id AND u.sorting_run_id = r.sorting_run_id JOIN core_clock_observation_intervals c ON c.session_id = r.session_id AND c.clock_id = r.clock_id WHERE NOT EXISTS ( SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id ) ), observed AS ( SELECT DISTINCT unit_id FROM unit_windows ) SELECT s.session_id, s.unit_id, s.t_tick FROM core_spike_events s JOIN observed k ON s.unit_id = k.unit_id LEFT JOIN unit_windows w ON s.unit_id = w.unit_id AND s.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"
+          "sql": "WITH unit_windows AS ( SELECT o.unit_id, o.start_tick, o.stop_tick FROM core_unit_observation_intervals o UNION ALL SELECT u.unit_id, c.start_tick, c.stop_tick FROM core_units u JOIN core_clock_observation_intervals c ON c.session_id = u.session_id AND c.clock_id = u.clock_id WHERE NOT EXISTS ( SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id ) ), observed AS ( SELECT DISTINCT unit_id FROM unit_windows ) SELECT s.session_id, s.unit_id, s.t_tick FROM core_spike_events s JOIN observed k ON s.unit_id = k.unit_id LEFT JOIN unit_windows w ON s.unit_id = w.unit_id AND s.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"
         }
       ]
     },
@@ -4160,7 +4114,8 @@
           "presence": "required",
           "role": "coordinate",
           "description": "First tick, inclusive.",
-          "since": "R18 \u00a72"
+          "since": "R96 \u00a73.4",
+          "clock_from": "core.units.clock_id"
         },
         {
           "name": "stop_tick",
@@ -4168,16 +4123,8 @@
           "presence": "required",
           "role": "coordinate",
           "description": "Last tick, inclusive.",
-          "since": "R18 \u00a72"
-        },
-        {
-          "name": "clock_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Clock for the interval bounds.",
-          "identity": "assigned",
-          "since": "R18 \u00a72"
+          "since": "R96 \u00a73.4",
+          "clock_from": "core.units.clock_id"
         }
       ],
       "primary_key": [
@@ -4193,15 +4140,6 @@
           "resource": "core.units",
           "resource_columns": [
             "unit_id"
-          ]
-        },
-        {
-          "columns": [
-            "clock_id"
-          ],
-          "resource": "core.clocks",
-          "resource_columns": [
-            "clock_id"
           ]
         },
         {
@@ -4397,6 +4335,24 @@
           "since": "R11 \u00a73-4"
         },
         {
+          "name": "amplitude_unit",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. Open (R11 \u00a72).",
+          "since": "R96 \u00a73.1",
+          "vocabulary": "open"
+        },
+        {
+          "name": "clock_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The clock every tick of this unit is counted on.",
+          "identity": "assigned",
+          "since": "R96 \u00a73.2"
+        },
+        {
           "name": "quality_label_source",
           "type": "string",
           "presence": "nullable",
@@ -4427,8 +4383,7 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "Lowest t_tick for this unit.",
-          "since": "R5",
-          "clock_from": "core.sorting_runs.clock_id"
+          "since": "R5"
         },
         {
           "name": "last_spike_tick",
@@ -4436,8 +4391,7 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "Highest t_tick for this unit.",
-          "since": "R5",
-          "clock_from": "core.sorting_runs.clock_id"
+          "since": "R5"
         },
         {
           "name": "metadata",
@@ -4486,6 +4440,15 @@
           "resource_columns": [
             "curation_id"
           ]
+        },
+        {
+          "columns": [
+            "clock_id"
+          ],
+          "resource": "core.clocks",
+          "resource_columns": [
+            "clock_id"
+          ]
         }
       ],
       "rules": [
@@ -4512,7 +4475,13 @@
           "level": "info",
           "advisory": true,
           "message": "units carry no observation intervals and their clock declares none, so no rate over them has a denominator",
-          "sql": "SELECT u.session_id, u.unit_id FROM core_units u JOIN core_sorting_runs r ON u.sorting_run_id = r.sorting_run_id WHERE NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = u.session_id AND c.clock_id = r.clock_id)"
+          "sql": "SELECT u.session_id, u.unit_id FROM core_units u WHERE NOT EXISTS (SELECT 1 FROM core_unit_observation_intervals o WHERE o.unit_id = u.unit_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = u.session_id AND c.clock_id = u.clock_id)"
+        },
+        {
+          "id": "core.units.amplitude_unit_declared",
+          "level": "error",
+          "message": "a unit's spikes carry an amplitude and the unit declares no amplitude_unit (R96 \u00a73.5)",
+          "sql": "SELECT DISTINCT u.unit_id FROM core_spike_events s JOIN core_units u USING (unit_id) WHERE s.amplitude IS NOT NULL AND u.amplitude_unit IS NULL"
         }
       ]
     }

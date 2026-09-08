@@ -124,6 +124,8 @@ def _registry():
                     _col("sorting_run_id", "int32", "required"),
                     _col("curation_id", "int32", "required"),
                     _col("quality_label", "string", "nullable", enum=["sua", "mua", "noise"]),
+                    # R96 §3.2: the unit names the clock its ticks are counted on.
+                    _col("clock_id", "int32", "required"),
                 ],
                 "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
                 "references": [
@@ -230,6 +232,7 @@ def packet_root(tmp_path):
             "sorting_run_id": pa.array([SORTING_RUN] * 2, type=i32),
             "curation_id": pa.array([CURATION] * 2, type=i32),
             "quality_label": pa.array(["sua", "mua"]),
+            "clock_id": pa.array([CLOCK_PROBE] * 2, type=i32),
         }
     )
     event_streams = pa.table(
@@ -255,7 +258,6 @@ def packet_root(tmp_path):
             "sorting_run_id": pa.array([SORTING_RUN] * 5, type=i32),
             "curation_id": pa.array([CURATION] * 5, type=i32),
             "t_tick": pa.array([30000, 39000, 48000, 45000, 66000], type=pa.int64()),
-            "clock_id": pa.array([CLOCK_PROBE] * 5, type=i32),
         }
     )
     resources = [

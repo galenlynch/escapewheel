@@ -189,7 +189,6 @@ def _spike_batch(n, unit, first_tick):
             "session_id": pa.array(["s001"] * n),
             "unit_id": pa.array([unit] * n),
             "t_tick": pa.array(range(first_tick, first_tick + n), type=pa.int64()),
-            "clock_id": pa.array(["harp_s001"] * n),
             "amplitude": pa.array([-50.0] * n, type=pa.float32()),
         }
     )
@@ -197,13 +196,12 @@ def _spike_batch(n, unit, first_tick):
 
 def _add_spike_context(writer):
     """The rows core.spike_events references, so a commit can validate."""
-    writer.add(
-        "core.sorting_runs",
-        # R38 2.2: a run names the clock its spikes are counted on.
-        [{"sorting_run_id": "sort_1", "session_id": "s001", "clock_id": "harp_s001", "amplitude_unit": "uV"}],
-    )  # R11 2: spikes carry amplitudes
+    writer.add("core.sorting_runs", [{"sorting_run_id": "sort_1", "session_id": "s001"}])
     writer.add("core.curation_versions", [{"curation_id": "cur_1", "sorting_run_id": "sort_1", "session_id": "s001"}])
-    writer.add("core.units", [{"session_id": "s001", "unit_id": 1, "sorting_run_id": "sort_1", "curation_id": "cur_1"}])
+    # R96 §3: the unit names the clock its ticks are counted on and the unit of measure its
+    # amplitudes are in, and a spike reaches both in one hop.
+    writer.add("core.units", [{"session_id": "s001", "unit_id": 1, "sorting_run_id": "sort_1",
+                               "curation_id": "cur_1", "clock_id": "harp_s001", "amplitude_unit": "uV"}])
 
 
 def test_batches_reach_the_packet(tmp_path, registry, minimal):
@@ -651,7 +649,6 @@ def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
             # streamed batch's identifiers are numbered, so this builds them already numbered.
             "session_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
             "unit_id": pa.repeat(pa.scalar(1, pa.int32()), rows),
-            "clock_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
             "t_tick": pa.array(range(rows), type=pa.int64()),
         }
     )

@@ -1781,3 +1781,45 @@ note = "core.clocks.tick_rate_one_form refuses both forms; the writer emits the 
 [clause."R95 §3.3"]
 disposition = "implementation"
 note = "escapewheel_validator._check_duplication, at info; bounded by row-group statistics, 2,126 pairs to 51"
+
+[clause."R96 §2.1"]
+disposition = "rationale"
+note = "the hop R56 admits, and why a spike needs two"
+
+[clause."R96 §2.2"]
+disposition = "rationale"
+note = "three declared paths from a spike to its run, so two hops would be ambiguous"
+
+[clause."R96 §2.3"]
+disposition = "rationale"
+note = "every reader of the run's clock is asking what clock a unit is on; 0 of 6,781 units span two"
+
+[clause."R96 §2.4"]
+disposition = "rationale"
+note = "neither storage nor query time justifies the copy on the spike"
+
+[clause."R96 §2.5"]
+disposition = "rationale"
+note = "the rule spelling the join the schema could not declare"
+
+[clause."R96 §3.1"]
+disposition = "registry"
+where = "core.units.amplitude_unit, struck from core.sorting_runs"
+note = "also stated in 02_core_logical_schemas.md §12.1"
+
+[clause."R96 §3.2"]
+disposition = "registry"
+where = "core.units.clock_id and its reference to core.clocks, struck from core.sorting_runs"
+note = "also stated in 02_core_logical_schemas.md §12.1; the CONTEXT entries for first_spike_tick and last_spike_tick go with it"
+
+[clause."R96 §3.3"]
+disposition = "registry"
+where = "core.spike_events.t_tick clock_from and amplitude unit_from, both core.units.*"
+
+[clause."R96 §3.4"]
+disposition = "registry"
+where = "clock_id struck from core.spike_events and core.unit_observation_intervals"
+
+[clause."R96 §5"]
+disposition = "rationale"
+note = "consequence; its MUST is the rebuild R87 §2.1 and R88 §2 already require"

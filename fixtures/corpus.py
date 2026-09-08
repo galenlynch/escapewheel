@@ -25,7 +25,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "bad_interval": ("error", "core.intervals.interval_valid"),
     "unspecialised_interval": ("error", "core.intervals.interval_kind.dynamic_foraging_trials_is_specialised"),
     "stale_summary": ("error", "core.units.spike_summary_consistent"),
-    "missing_amplitude_unit": ("error", "core.sorting_runs.amplitude_unit_declared"),
+    "missing_amplitude_unit": ("error", "core.units.amplitude_unit_declared"),
     "half_transform": ("error", "core.clocks.transform_pair_complete"),
     "unsorted_spikes": ("error", "core.spike_events.physical_order"),
     "inconsistent_projection": ("error", "core.unit_quality_labels.projection_is_consistent"),

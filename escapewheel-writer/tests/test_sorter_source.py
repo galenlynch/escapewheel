@@ -252,21 +252,21 @@ def test_batches_are_bounded_by_the_requested_size(source):
 
 def test_amplitudes_arrive_with_their_unit(source):
     """R11 §2: the unit belongs to the sorting context, not the spike."""
-    assert rows_of(source, "core.sorting_runs")[0]["amplitude_unit"] == "uV"
+    assert rows_of(source, "core.units")[0]["amplitude_unit"] == "uV"
     assert "amplitude" in next(source.spike_batches()).schema.names
 
 
 def test_adc_counts_are_declared_as_such(tmp_path):
     sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=[(0, 1)], return_in_uv=False)
     source = SorterSource(tmp_path, session_id=SESSION)
-    assert source.sorting_runs()[0]["amplitude_unit"] == "adc"
+    assert source.units()[0]["amplitude_unit"] == "adc"
 
 
 def test_without_an_analyzer_there_are_no_amplitudes_and_no_unit(tmp_path):
     """Which is consistent: `amplitude_unit_declared` binds only where amplitudes exist."""
     sorterfixture.build(tmp_path, analyzer=False)
     source = SorterSource(tmp_path, session_id=SESSION, experiment="experiment1")
-    assert source.sorting_runs()[0]["amplitude_unit"] is None
+    assert source.units()[0]["amplitude_unit"] is None
     assert "amplitude" not in next(source.spike_batches()).schema.names
 
 

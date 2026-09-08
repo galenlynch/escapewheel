@@ -422,12 +422,8 @@ class SorterSource:
                     # R41 §2.1: the sorting is reachable from the provenance graph, which is
                     # what lets a packet carrying two of them say which to read.
                     "processing_run_id": self._run_id(stream, "spike_sorting"),
-                    # R38 §2.2: a unit reaches its clock through its run, so a rule can see the
-                    # link the string convention below only implied.
-                    "clock_id": self._clock_id(stream),
                     "sorter_name": log.get("sorter_name") or params.get("sorter_name"),
                     "sorter_version": log.get("sorter_version"),
-                    "amplitude_unit": self._amplitude_unit(stream),
                     "parameters": params.get("sorter_params"),
                     "metadata": {
                         "spikeinterface_version": info.get("version"),
@@ -696,6 +692,10 @@ class SorterSource:
                     "local_unit_label": str(int(label)),
                     "quality_label": PROJECTION.get(raw) if raw is not None else None,
                     "quality_label_source": DESIGNATED if raw is not None else None,
+                    # R96 §3: both belong to the sorting run and a spike cannot reach it, so the
+                    # unit carries them and `core.spike_events` resolves each in one hop.
+                    "amplitude_unit": self._amplitude_unit(stream),
+                    "clock_id": self._clock_id(stream),
                     "n_spikes": int(counts[offset]),
                     "first_spike_tick": int(first[offset]) if counts[offset] else None,
                     "last_spike_tick": int(last[offset]) if counts[offset] else None,
@@ -873,17 +873,16 @@ class SorterSource:
             # Dictionary-encoded, so `number_batch` maps a few hundred names rather than a
             # million strings a batch: the indices are already what `index` holds.
             unit_names = pa.array([self._unit_id(stream, int(label), width) for label in ids], type=pa.string())
-            clock = self._clock_id(stream)
             for start in range(0, order.size, batch_rows):
                 selected = order[start : start + batch_rows]
                 rows = selected.size
-                # `pa.repeat` for the two columns that are constant within a stream: a
-                # million-element Python list per column would cost more than the spikes.
+                # `pa.repeat` for `session_id`, which is constant within a stream: a
+                # million-element Python list would cost more than the spikes. R96 §3.4 struck
+                # `clock_id` here, the tick reaching its clock through the unit instead.
                 columns = {
                     "session_id": pa.repeat(pa.scalar(self.session_id, pa.string()), rows),
                     "unit_id": pa.DictionaryArray.from_arrays(pa.array(index[selected], type=pa.int32()), unit_names),
                     "t_tick": pa.array(tick[selected], type=pa.int64()),
-                    "clock_id": pa.repeat(pa.scalar(clock, pa.string()), rows),
                 }
                 if amplitude is not None:
                     columns["amplitude"] = pa.array(amplitude[selected], type=pa.float32())

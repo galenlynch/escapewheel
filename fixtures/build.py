@@ -141,7 +141,8 @@ def preassign(tables: dict[str, list[dict]]) -> None:
 
 
 def spikes(unit, run, cur, clock, ticks):
-    return [{"session_id": "s001", "unit_id": unit, "t_tick": int(t), "clock_id": clock,
+    # R96 §3.4: the tick reaches its clock through the unit, so the spike carries none.
+    return [{"session_id": "s001", "unit_id": unit, "t_tick": int(t),
              "amplitude": float(-80 - (i % 7) * 3)} for i, t in enumerate(ticks)]
 
 
@@ -261,10 +262,9 @@ def content() -> dict[str, list[dict]]:
             {"session_id": "s001", "stream_id": "stim_off", "t_tick": 6200}],
         "core.sorting_runs": [
             {"sorting_run_id": "sort_ks4_001", "session_id": "s001", "probe_id": "probe0",
-             # R38 §2.2: the clock a unit reaches through its run.
-             "clock_id": "imec_ap_s001",
+             # R96 §3: the clock and the unit of measure moved to the units this run produced.
              "sorter_name": "kilosort4", "sorter_version": "4.0.16",
-             "amplitude_unit": "uV", "started_at": START + timedelta(hours=2),
+             "started_at": START + timedelta(hours=2),
              "ended_at": START + timedelta(hours=3)}],
         "core.curation_versions": [
             {"curation_id": "curation_001", "sorting_run_id": "sort_ks4_001",
@@ -276,12 +276,14 @@ def content() -> dict[str, list[dict]]:
              "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
              "local_unit_label": "17", "quality_label": "sua",
              "quality_label_source": "decoder",
+             "clock_id": "imec_ap_s001", "amplitude_unit": "uV",
              "firing_rate_hz": len(u1) / (300_000 / AP_HZ),
              "n_spikes": len(u1), "first_spike_tick": u1[0], "last_spike_tick": u1[-1]},
             {"session_id": "s001", "unit_id": 2, "probe_id": "probe0",
              "sorting_run_id": "sort_ks4_001", "curation_id": "curation_001",
              "local_unit_label": "42", "quality_label": "mua",
              "quality_label_source": "decoder",
+             "clock_id": "imec_ap_s001", "amplitude_unit": "uV",
              "firing_rate_hz": len(u2) / (300_000 / AP_HZ),
              "n_spikes": len(u2), "first_spike_tick": u2[0], "last_spike_tick": u2[-1]}],
         "core.unit_quality_labels": [
@@ -414,7 +416,8 @@ def variants():
     def stale_summary(c):
         c["core.units"][0]["n_spikes"] += 5
     def missing_amplitude_unit(c):
-        c["core.sorting_runs"][0]["amplitude_unit"] = None
+        # R96 §3.1 moved the unit of measure onto the unit that its spikes belong to.
+        c["core.units"][0]["amplitude_unit"] = None
     def half_transform(c):
         # By name, not position: which row is which changed when the clocks were reordered into
         # the name order R53 numbers them in, and an index silently picked the wrong clock.

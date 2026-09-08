@@ -383,6 +383,15 @@ A table keyed on a unit carries `unit_id` and not the run or the curation (R81 �
 consumer relating a unit to anything outside the packet uses `(sorting_run_id, local_unit_label)`
 (R81 §2.5).
 
+`core.units` also declares what its spikes are counted on and measured in: `clock_id`, required,
+and `amplitude_unit`, nullable and open (R96 §3.1, §3.2). Both are facts of the sorting run, and a
+spike cannot reach the run — §8.4 admits one hop and spike → unit → run is two — so they live on
+the table a spike references directly. `core.spike_events.t_tick` therefore declares
+`clock_from: core.units.clock_id` and `amplitude` declares `unit_from: core.units.amplitude_unit`
+(R96 §3.3), and neither `core.spike_events` nor `core.unit_observation_intervals` carries a
+`clock_id` of its own (R96 §3.4). The run still determines both values, since a unit names its run
+in a reference it MUST carry.
+
 ### 12.2 Channel indices in a sorting run
 
 A sorting drops bad channels before it runs, so a channel index a source emits counts the channels
