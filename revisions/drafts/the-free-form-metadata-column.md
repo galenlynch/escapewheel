@@ -173,6 +173,19 @@ knows what it put in the bag.
 
 A fact required to interpret the data therefore belongs in a column, never in a key.
 
+**Prose belongs in a prose column where the table has one.** A `metadata` value is for a fact with
+structure the standard does not model; a human-readable string has no structure to preserve, so
+wrapping it in a JSON envelope costs a writer a serialisation, puts the value where no rule reads
+it and no filter uses it (R66 §1.4), and buys none of the otherwise-unavailable access §3.3's
+exception requires. A writer **SHOULD** put prose in the column and not in the bag.
+
+The registry is short of such columns — three across 38 tables, `core.calibrations.description`,
+`core.curation_versions.notes` and `core.sessions.session_description` — and the shortage already
+shows. `sources/aind.py:417` writes a calibration's `notes` into `metadata` because `description`
+carries the source's description field and there is nowhere else for the second string to go. That
+argues for a prose column on `core.calibrations` rather than against the ones that exist, and
+adding a column is not this part's subject.
+
 ### 3.4 The column's description and its tier
 
 Every declaration's description is replaced by one text: what the source stated about this row that
@@ -197,9 +210,10 @@ for it, holding tier 3 or tier 4 content that no rule reads.
   is filled in 0 of 1 rows in both packets and is nonetheless written: `sources/nwb.py` maps it and
   `session.json` carries it, so the column is empty because the source's field is. R62 strikes what
   is written by nothing *and* read by nothing, and this fails the first half.
-  `core.curation_versions.notes` — 0 of 12 and 0 of 10 — meets both halves, and striking it is a
-  decision about `core.curation_versions` rather than about free-form columns; §6 records that one
-  alone.
+  `core.curation_versions.notes` — 0 of 12 and 0 of 10 — meets both halves and is kept anyway:
+  §3.3 makes a prose column the place prose goes, and striking the only one on that table would
+  leave `metadata` as the answer, which is the trade `sources/aind.py:417` already makes for want
+  of a column. Unwritten is not the same as unwanted where the alternative is worse.
 - **`core.electrodes` keeps two of its four `ccf_*` keys.** R59 §2 declined to model `ccf_name` and
   `ccf_structure_id_path`, so the column is where they belong.
 - **`core.events.payload` stays.** R91 §3.3 keeps it as the only home a per-event value has until an
@@ -229,11 +243,6 @@ gains a row, and twenty-one descriptions become one.
 
 ## 6. Open
 
-- **Whether `core.curation_versions.notes` should be struck.** Nothing writes it and nothing reads
-  it, which is what R62 struck a file on, and it sits beside a `metadata` column filled on 12 of 12
-  rows — the same shape one level down. §4 leaves it because the decision is about that table
-  rather than about free-form columns, and because typed prose beside a bag is a distinction worth
-  someone stating deliberately rather than by omission here.
 - **Whether `core.events.payload` should be struck.** §4 leaves it because R91 §3.3 does, and R91
   §6 says what would settle it: an extension declaring a mark table through
   `core.event_streams.detail_kind` gives a per-event value a typed home and makes the strike free.
