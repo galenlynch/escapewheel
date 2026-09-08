@@ -14,6 +14,7 @@ This part defines how much metadata core requires, where richer metadata belongs
 | 2 | facts needed to interpret, validate, join, or reproduce | core tables |
 | 3 | domain-rich, lab-specific facts | an extension's tables |
 | 4 | human-readable context | `docs/` sidecars |
+| 3-4 | such facts stated about one row, in the source's own vocabulary | that table's `metadata` column (R97 §3.4) |
 
 ## 3. Core inclusion rule
 

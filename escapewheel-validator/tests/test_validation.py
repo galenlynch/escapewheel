@@ -137,6 +137,37 @@ def test_nullable_foreign_keys_are_guarded(packet_root):
     assert "IS NOT NULL" in check.sql
 
 
+def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
+    """R97 §3.1, at `info`. The column may be absent from the file, so this can never fail."""
+    path = packet_root / "schemas" / "logical_schemas.json"
+    registry = json.loads(path.read_text())
+    registry["tables"]["core.trials"]["columns"].append(
+        {"name": "metadata", "type": "json_string", "presence": "optional", "role": "data",
+         "description": "metadata"}
+    )
+    path.write_text(json.dumps(registry))
+    report = validate(open_packet(packet_root))
+    assert report.passed
+    finding = next(f for f in report.findings if f.check == "core.trials.metadata_unfilled")
+    assert finding.level == "info"
+
+
+def test_a_filled_metadata_column_is_not_reported(packet_root):
+    """The other side: one non-null value in the packet is enough, so the report cannot nag."""
+    path = packet_root / "schemas" / "logical_schemas.json"
+    registry = json.loads(path.read_text())
+    registry["tables"]["core.trials"]["columns"].append(
+        {"name": "metadata", "type": "json_string", "presence": "optional", "role": "data",
+         "description": "metadata"}
+    )
+    path.write_text(json.dumps(registry))
+    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
+    filled = trials.append_column("metadata", pa.array(['{"a": 1}', None]))
+    _rewrite(packet_root, "trials", filled)
+    report = validate(open_packet(packet_root))
+    assert not [f for f in report.findings if f.check == "core.trials.metadata_unfilled"]
+
+
 def test_required_codecs_must_equal_the_union(packet_root):
     path = packet_root / "packet.json"
     entry = json.loads(path.read_text())

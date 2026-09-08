@@ -124,3 +124,10 @@ def test_unparseable_settings_are_noted_rather_than_raised(tmp_path):
     source = OpenEphysSource(tmp_path, session_id="s001")
     assert source.devices() == []
     assert "not parseable as XML" in source.notes[0]
+
+
+def test_the_metadata_bag_does_not_restate_the_port(source):
+    """R97 §3.3. `parent_port` holds the port, so the bag carrying it too would restate a column."""
+    rows = by_name(source.devices())
+    assert rows["headstage.slot3.port2"]["metadata"] == {"slot": "3"}
+    assert rows["connect_board.slot3"]["metadata"] == {"slot": "3"}

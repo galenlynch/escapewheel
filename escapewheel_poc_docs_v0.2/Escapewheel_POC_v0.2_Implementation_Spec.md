@@ -712,7 +712,7 @@ string  int32  int64  float32  float64  bool  timestamp  date  json_string
 
 This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps a native reader viable in a language without an embedded SQL engine.
 
-A writer SHOULD NOT fill a `json_string` column routinely. Doing so defeats that guarantee in practice: a column present on every row forces a parse on every row, in exactly the table where a consumer works. A value that varies per row and is queried belongs in a typed column of a specialising resource; a value constant across the table belongs once, on the table that owns the whole.
+A value that varies per row and is queried belongs in a typed column of a specialising resource; a value constant across the table belongs once, on the table that owns the whole. What may go in a `json_string` column is §8.6.
 
 ### 5.3 Fixed representations
 
@@ -864,6 +864,24 @@ A column MAY declare `determined_by`, naming the columns whose values fix its ow
 
 It is a statement about values and holds under any profile. What a profile does with it is the profile's: `03` §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows (R92 §2.3), because a wrong one waives a check rather than failing one.
 
+### 8.6 Free-form metadata
+
+A column named `metadata` is a `json_string` holding what a source stated about a row that this standard does not model, carried in the source's own vocabulary and read by no rule (R97 §3.4). Every declaration carries that description and no other.
+
+A table's registry entry MUST declare `metadata` where its primary key includes an `identifier` column that is not part of a declared reference, MUST NOT declare one where every key column is part of a declared reference, and MAY declare one otherwise (R97 §3.1). An identifier of the table's own is what makes a row a thing rather than a statement about other things; a key made entirely of other tables' identifiers makes it a relationship, and nothing can be said about a relationship that is not a fact about one of its ends. Seventeen core tables fall in the first band and three in the second. Both bounds are decidable from the registry with no packet in hand, and `registry/check.py` enforces both against core and against every extension.
+
+A `metadata` column MUST be declared `optional`, which is what makes R94 §3's prohibition sound: that check matches the bare column name, and so holds only while every column called `metadata` may be absent from the file.
+
+A validator SHOULD report, at `info`, a declared `metadata` column that no row of the packet fills. Where the key neither requires the column nor forbids it, declaring one is a judgement, and this is the evidence against which it is revisited: `core.spike_events` carried the column on 286,896,563 rows that no adapter ever filled.
+
+A writer MAY fill `metadata` on every row of a table that declares it (R97 §3.2). Parquet reads the columns a query projects and no others, so the column costs a consumer who does not ask for it 1.9 kB of extra footer over 5,000,000 rows, and one who does 394.6 ms against 29.6 ms.
+
+A writer MUST NOT emit a `metadata` key holding a fact that a column of the logical schema holds, unless the duplication buys access that is otherwise unavailable, and MUST NOT emit one that contradicts such a column under any circumstance (R97 §3.3). The exception is R3 §3.0's, on the same terms, so the bag is exactly as strict as the schema around it; a contradiction takes no exception, since it buys nothing by definition. A fact required to interpret the data belongs in a column, never in a key.
+
+No rule checks either half and none is added. The content is schemaless by design, so a constraint on it is unenforceable in principle rather than merely in practice, and an adapter names a key in the source's vocabulary where core names a column in its own — across both packaged sessions, zero of the 20 distinct keys share a name with any column in the registry. The obligation binds the writer, which is the only party that knows what it put in the bag.
+
+A writer SHOULD put prose in a prose column where the table has one, and not in `metadata`. A human-readable string has no structure to preserve, so a JSON envelope costs a serialisation, puts the value where no rule reads it and no filter uses it, and buys none of the otherwise-unavailable access the exception above requires.
+
 ## 9. The registry
 
 ### 9.1 The schema is one document
@@ -898,7 +916,7 @@ A scorer's own `label` is open, because aggregating over scorers is incompatible
 
 ### 9.4 Provenance of a declaration
 
-A table and a column SHOULD each carry `since`, naming the revision that introduced or last changed it (R77 §2.3). The registry stamps both: 15 tables and 172 columns carry one.
+A table and a column SHOULD each carry `since`, naming the revision that introduced or last changed it (R77 §2.3). The registry stamps both: 19 tables and 213 columns carry one.
 
 A column whose role is declared SHOULD NOT restate its base in its description (R48 §2.5). The role carries it, and prose repeating it is a second statement that can disagree with the first.
 
@@ -1935,6 +1953,8 @@ An adapter's return type is records, not a path. That is what lets adapters be t
 
 An adapter carries two static declarations, both readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4), and `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2). For each name in `STATES` the adapter exposes the value it holds. Both are class attributes here; the requirements in Part 05 are on what a build can determine, not on how an implementation stores it.
 
+A build reports a `metadata` key whose value equals a column of the same row, which is how 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the one R95 §3.3 already makes between two columns, over a key and a column instead, and three keys in the packaged sessions were restating a column a revision had promoted (R97 §2.3).
+
 ## 5. Phases
 
 | phase | scope | state |
@@ -2122,6 +2142,7 @@ This part defines how much metadata core requires, where richer metadata belongs
 | 2 | facts needed to interpret, validate, join, or reproduce | core tables |
 | 3 | domain-rich, lab-specific facts | an extension's tables |
 | 4 | human-readable context | `docs/` sidecars |
+| 3-4 | such facts stated about one row, in the source's own vocabulary | that table's `metadata` column (R97 §3.4) |
 
 ## 3. Core inclusion rule
 

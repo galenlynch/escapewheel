@@ -99,7 +99,8 @@
       "R93",
       "R94",
       "R95",
-      "R96"
+      "R96",
+      "R97"
     ]
   },
   "tables": {
@@ -222,8 +223,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata.",
-          "since": "R20 \u00a75"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -625,7 +626,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -756,13 +758,6 @@
           "role": "data",
           "description": "Multiply stored values by this before offset.",
           "since": "R19 \u00a72"
-        },
-        {
-          "name": "metadata",
-          "type": "json_string",
-          "presence": "optional",
-          "role": "data",
-          "description": "Additional metadata."
         }
       ],
       "primary_key": [
@@ -1249,8 +1244,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this calibration that no column above models. Only the calibration declares one: its key holds an identifier of its own, where both child tables are keyed by other tables' identifiers (R89 \u00a72.6).",
-          "since": "R89 \u00a72.1"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -1567,7 +1562,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -1741,7 +1737,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -1873,7 +1870,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -2107,7 +2105,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -2292,8 +2291,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Free-form metadata.",
-          "since": "R23 \u00a72-3"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -2387,7 +2386,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -2481,7 +2481,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional trial metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -2596,7 +2597,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -2698,13 +2700,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Dropped-frame flag."
-        },
-        {
-          "name": "metadata",
-          "type": "json_string",
-          "presence": "optional",
-          "role": "data",
-          "description": "Additional metadata."
         }
       ],
       "primary_key": [
@@ -2940,7 +2935,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -3157,7 +3153,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -3350,7 +3347,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional session metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         },
         {
           "name": "t_zero_tick",
@@ -3591,7 +3589,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -3696,7 +3695,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -3740,13 +3740,6 @@
           "description": "Spike amplitude if available.",
           "unit_from": "core.units.amplitude_unit",
           "since": "R96 \u00a73.3"
-        },
-        {
-          "name": "metadata",
-          "type": "json_string",
-          "presence": "optional",
-          "role": "data",
-          "description": "Additional metadata."
         }
       ],
       "primary_key": [
@@ -3847,7 +3840,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional subject metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [
@@ -4398,7 +4392,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "Additional metadata."
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [

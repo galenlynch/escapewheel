@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | `02` §5.2 (the clause against filling a `json_string` routinely), `09` §2 (the tier table), the 21 registry declarations of `metadata` and their descriptions |
 | **Depends on** | R48 (a column declares its role), R46 (the references that make "its own" decidable), R53 (identity), R2 §5 (three-state presence), R91 §3.3 (what `core.events.payload` is for), R94 §3 (which asks this part for the presence rule) |
 | **Profile** | `escapewheel-portable-v0.1` |
@@ -127,8 +127,10 @@ exposure and names this part as the one that closes it.
 
 Both bounds are decidable from the registry with no packet in hand, as R56 §2.4's is, so
 `registry/check.py` enforces them: a table owing a `metadata` column and lacking one is a build
-error, and so is a relationship table carrying one. What lies between is a declaration each table
-makes, which is the part that is a judgement and should be.
+error, and so is a relationship table carrying one. An extension is a registry document in the
+same format (R17 §2), so both bounds bind one as they bind core, and the check runs against all
+four. What lies between is a declaration each table makes, which is the part that is a judgement
+and should be.
 
 A judgement can still be reported against evidence. A validator **SHOULD** report, at `info`, a
 declared `metadata` column filled in no row of the packet — the same level and shape as R95 §3.3's
@@ -237,6 +239,11 @@ Three keys stop being written: `ccf_id` and `ccf_acronym` in the NWB adapter's e
 `port` in the Open Ephys adapter's device rows. Those are writer changes and they land in the
 rebuild R87 §2.1 and R88 §2 already require, forcing none of their own. After
 them, `metadata` across both packets falls from 8,230 rows to **166**.
+
+Two extension tables owe a column and declare none: `aind_opto.stimulations`, keyed on a carried
+`epoch_id`, and `dynamic_foraging.blocks`, on an assigned `block_id`. Both gain one. Nothing
+regenerates an extension registry, which is why §3.1's check runs against all four rather than
+against core alone.
 
 `registry/check.py` gains the §3.1 check, `build.py` emits the column from the primary key, `09` §2
 gains a row, and twenty-one descriptions become one.

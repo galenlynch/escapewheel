@@ -125,6 +125,29 @@ def structural(tables, universe, prefix=""):
     c_("source labels are strings",
        [(n, c["name"], c["type"]) for n, t in tables.items() for c in t["columns"]
         if c["name"].endswith("_label") and c["type"] != "string"])
+    # R97 §3.1. Which tables declare `metadata` is bounded at both ends by the primary key, and
+    # both bounds are decidable here with no packet in hand. A key holding an identifier of its
+    # own -- one not part of a declared reference -- makes the row a thing, which may carry what
+    # its source said about it; a key made entirely of other tables' identifiers makes the row a
+    # relationship, and nothing can be said about one that is not a fact about an end. Between
+    # them the declaration is a judgement and nothing is checked.
+    #
+    # `build.py` emits the column from the key for core, so this fails only on an extension, which
+    # nothing regenerates -- which is the case it exists for.
+    own_key = {n: [k for k in (t["primary_key"] or [])
+                   if cols[n].get(k, {}).get("role") == "identifier"
+                   and k not in {c for r in t["references"] for c in r["columns"]}]
+               for n, t in tables.items()}
+    c_("a table keyed by an identifier of its own declares `metadata` (R97 §3.1)",
+       [n for n, t in tables.items() if own_key[n] and "metadata" not in cols[n]])
+    c_("a table keyed only by other tables' identifiers declares no `metadata` (R97 §3.1)",
+       [n for n, t in tables.items() if t["primary_key"] and not own_key[n] and "metadata" in cols[n]
+        and all(k in {c for r in t["references"] for c in r["columns"]} for k in t["primary_key"])])
+    # R97 §3.1 again: R94 §3's check matches a bare column name, which is sound only while every
+    # column called `metadata` is optional.
+    c_("every `metadata` column is optional (R97 §3.1)",
+       [n for n, t in tables.items()
+        if "metadata" in cols[n] and cols[n]["metadata"]["presence"] != "optional"])
 
 
 structural(T, T)

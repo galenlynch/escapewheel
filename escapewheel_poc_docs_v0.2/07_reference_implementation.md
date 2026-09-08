@@ -55,6 +55,8 @@ An adapter's return type is records, not a path. That is what lets adapters be t
 
 An adapter carries two static declarations, both readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4), and `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2). For each name in `STATES` the adapter exposes the value it holds. Both are class attributes here; the requirements in Part 05 are on what a build can determine, not on how an implementation stores it.
 
+A build reports a `metadata` key whose value equals a column of the same row, which is how 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the one R95 §3.3 already makes between two columns, over a key and a column instead, and three keys in the packaged sessions were restating a column a revision had promoted (R97 §2.3).
+
 ## 5. Phases
 
 | phase | scope | state |

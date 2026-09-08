@@ -145,7 +145,9 @@ class OpenEphysSource:
                     "parent_device_id": _identity(parent, probe) if parent else None,
                     # R85 §2.1: and where the file coordinates that link, which port of it.
                     "parent_port": probe.get(port) if port else None,
-                    "metadata": {k: probe[k] for k in key if k in probe} or None,
+                    # R97 §3.3: what the key states and no column holds. `port` is excluded
+                    # because `parent_port` above is the column that holds it.
+                    "metadata": {k: probe[k] for k in key if k in probe and k != port} or None,
                 }
         return [rows[name] for name in sorted(rows)]
 

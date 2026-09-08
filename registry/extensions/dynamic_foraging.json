@@ -319,6 +319,14 @@
           "role": "data",
           "description": "Right reward probability across the block.",
           "unit": "1"
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "role": "data",
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.1"
         }
       ],
       "primary_key": [

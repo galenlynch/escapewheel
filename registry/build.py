@@ -1461,6 +1461,42 @@ def build() -> dict:
     for _bound in ("start_tick", "stop_tick"):
         amend("core.unit_observation_intervals", _bound, clock_from="core.units.clock_id")
 
+    # ---- R97 §3 : the free-form metadata column -----------------------------------------------
+    # Which tables declare `metadata` follows from the primary key rather than from a hand
+    # declaration (R97 §3.1). A key holding an identifier of its own -- one that is not part of a
+    # declared reference -- makes the row a thing, and a thing may carry what its source said about
+    # it; a key made entirely of other tables' identifiers makes the row a relationship, and
+    # nothing can be said about a relationship that is not a fact about one of its ends. Between
+    # them the declaration stays a judgement, so this pass neither adds nor removes.
+    #
+    # Runs after every key change above, since the key is what it reads.
+    SINCE[0] = "R97 §3.1"
+    # Three columns no adapter writes and no consumer asks for, all in the band where declaring
+    # one is a judgement rather than an obligation (R97 §5).
+    for _resource in ("core.spike_events", "core.media_frames", "core.array_channels"):
+        drop_col(_resource, "metadata")
+
+    METADATA = ("What the source stated about this row that the standard does not model, carried "
+                "in the source's own vocabulary and read by no rule.")
+    for resource, spec in tables.items():
+        referenced = {c for r in spec["references"] for c in r["columns"]}
+        roles = {c["name"]: c["role"] for c in spec["columns"]}
+        key = spec["primary_key"] or []
+        own = [k for k in key if roles.get(k) == "identifier" and k not in referenced]
+        has = any(c["name"] == "metadata" for c in spec["columns"])
+        if own and not has:
+            add_col(resource, col("metadata", "json_string", "optional", METADATA))
+        elif key and not own and all(k in referenced for k in key) and has:
+            drop_col(resource, "metadata")
+
+    # §3.4: one text for every declaration, replacing the sixteen reading "Additional metadata."
+    # and the four naming their own table. R2 §5's third presence state is what §3.2 spends, so
+    # every one of them is `optional` and a build may not leave one otherwise.
+    SINCE[0] = "R97 §3.4"
+    for resource, spec in tables.items():
+        if any(c["name"] == "metadata" for c in spec["columns"]):
+            amend(resource, "metadata", presence="optional", description=METADATA)
+
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
     # expand against the key, and R7 above is what settles three of them.

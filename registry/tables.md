@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-38 tables, 324 columns, 94 references, 70 Tier 2 rules
+38 tables, 321 columns, 94 references, 70 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97
 ```
 
 ## Contents
@@ -40,7 +40,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `unit` | string | nullable | R20 §5 | Physical unit. |
 | `conversion` | float64 | nullable | R20 §5 | Multiply stored values by this before offset. |
 | `offset` | float64 | nullable | R20 §5 | Add after conversion. |
-| `metadata` | json_string | optional | R20 §5 | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `array_asset_id`  
 
@@ -121,7 +121,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `unit` | string | nullable |  | Physical unit. |
 | `conversion` | float64 | nullable |  | Multiply stored values by this before offset. |
 | `offset` | float64 | nullable |  | Add after conversion. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `array_asset_id`  
 
@@ -150,7 +150,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `unit` | string | nullable | R19 §2 | Physical unit of the converted value. |
 | `offset` | float64 | nullable | R19 §2 | Add after conversion. |
 | `conversion` | float64 | nullable | R19 §2 | Multiply stored values by this before offset. |
-| `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `array_asset_id`, `channel_index`  
 
@@ -257,7 +256,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `output_unit` | string | nullable | R89 §2.1 | The unit of measure of `core.calibration_points.output_value`. |
 | `array_asset_id` | int32 | nullable | R89 §2.1 | The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics (R89 §2.4). |
 | `detail_kind` | string | nullable | R89 §2.1 | A table carrying a calibration shape core does not define, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (R89 §2.5). |
-| `metadata` | json_string | optional | R89 §2.1 | What the source stated about this calibration that no column above models. Only the calibration declares one: its key holds an identifier of its own, where both child tables are keyed by other tables' identifiers (R89 §2.6). |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `calibration_id`  
 
@@ -336,7 +335,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `transform_slope` | float64 | nullable | R3 §3.4 | Parent ticks per this clock's tick, as measured. |
 | `transform_offset` | float64 | nullable | R3 §3.4 | Parent-clock tick at this clock's tick 0. |
 | `transform_to_parent` | json_string | optional |  | Clock alignment transform. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `clock_id`  
 
@@ -372,7 +371,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `parent_curation_id` | int32 | nullable |  | Parent curation. |
 | `created_at` | timestamp | nullable |  | Creation time. |
 | `notes` | string | nullable |  | Notes. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `curation_id`  
 
@@ -397,7 +396,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `serial_number` | string | nullable |  | Serial number. |
 | `parent_device_id` | int32 | nullable | R67 §2.1 | The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it. |
 | `parent_port` | string | nullable | R85 §2.1 | Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (R85 §2.3). |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `device_id`  
 
@@ -447,7 +446,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `local_electrode_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `local_channel_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `impedance_ohm` | float64 | nullable |  | Impedance. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `electrode_id`  
 
@@ -493,7 +492,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `device_id` | int32 | nullable | R23 §2-3 | The device that produced it, where one is identified. |
 | `clock_id` | int32 | **required** | R23 §2-3 | The clock its events are timed on. |
 | `processing_run_id` | int32 | nullable | R23 §2-3 | The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 §4: the manifest records outputs per resource and cannot distinguish streams within one table. |
-| `metadata` | json_string | optional | R23 §2-3 | Free-form metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `event_stream_id`  
 
@@ -516,7 +515,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `stream_id` | int32 | **required** | R23 §2-3 | The stream this event belongs to. |
 | `t_tick` | int64 | **required** |  | Event tick. |
 | `payload` | json_string | optional |  | Event payload. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `session_id`, `stream_id`, `t_tick`  
 
@@ -539,7 +538,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `start_tick` | int64 | **required** | R45 §2.4 | First tick of the trial, inclusive, on `clock_id`. |
 | `stop_tick` | int64 | **required** | R45 §2.4 | Last tick of the trial, inclusive, on `clock_id`. |
 | `clock_id` | int32 | **required** |  | Clock for start/stop ticks. |
-| `metadata` | json_string | optional |  | Additional trial metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `session_id`, `interval_kind`, `interval_id`  
 
@@ -565,7 +564,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `pts_rate_num` | int64 | nullable | R70 §2.1 | Presentation timestamps per second in this asset's container: numerator. |
 | `pts_rate_den` | int64 | nullable | R70 §2.1 | Presentation timestamps per second in this asset's container: denominator. |
 | `clock_id` | int32 | nullable |  | Clock for frame timing. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `media_asset_id`  
 
@@ -591,7 +590,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `clock_id` | int32 | **required** |  | Clock ID. |
 | `pts` | int64 | nullable | R68 §2.1 | Container presentation timestamp, verbatim in the container's own time base. |
 | `dropped` | bool | nullable |  | Dropped-frame flag. |
-| `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `media_asset_id`, `frame_index`  
 
@@ -646,7 +644,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `serial_number` | string | nullable |  | Serial number. |
 | `insertion_name` | string | nullable |  | Insertion label. |
 | `target_region` | string | nullable |  | Intended target. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `probe_id`  
 
@@ -691,7 +689,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `started_at` | timestamp | nullable |  | Start time. |
 | `ended_at` | timestamp | nullable |  | End time. |
 | `status` | string | **required** | R8 §3-4 | succeeded, failed, partial, etc. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `processing_run_id`  
 
@@ -739,7 +737,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `institution` | string | nullable |  | Institution/lab. |
 | `task_name` | string | nullable |  | Task/protocol name. |
 | `source_session_id` | int32 | nullable |  | Source-system session ID if different. |
-| `metadata` | json_string | optional |  | Additional session metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 | `t_zero_tick` | int64 | nullable | R39 §2.2 | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
 
 **Primary key** — `session_id`  
@@ -795,7 +793,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `input_array_asset_id` | int32 | nullable |  | Input array asset. |
 | `started_at` | timestamp | nullable |  | Start time. |
 | `ended_at` | timestamp | nullable |  | End time. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `sorting_run_id`  
 
@@ -817,7 +815,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `sha256` | string | nullable |  | Checksum. |
 | `size_bytes` | int64 | nullable |  | Size. |
 | `modified_at` | timestamp | nullable |  | Modification time if known. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `source_file_id`  
 
@@ -829,7 +827,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `unit_id` | int32 | **required** |  | Unit ID. |
 | `t_tick` | int64 | **required** | R96 §3.3 | Spike tick. |
 | `amplitude` | float32 | nullable | R96 §3.3 | Spike amplitude if available. |
-| `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `session_id`, `unit_id`, `t_tick`  
 
@@ -854,7 +851,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `sex` | string | nullable |  | Sex if recorded. |
 | `date_of_birth` | date | nullable |  | Date of birth if known. |
 | `genotype` | string | nullable |  | Genotype summary. |
-| `metadata` | json_string | optional |  | Additional subject metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `subject_id`  
 
@@ -975,7 +972,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `n_spikes` | int64 | nullable | R5 | Total spikes for this unit in this context. |
 | `first_spike_tick` | int64 | nullable | R5 | Lowest t_tick for this unit. |
 | `last_spike_tick` | int64 | nullable | R5 | Highest t_tick for this unit. |
-| `metadata` | json_string | optional |  | Additional metadata. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `unit_id`  
 

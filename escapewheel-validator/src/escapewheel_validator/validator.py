@@ -1162,6 +1162,39 @@ def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], re
                        f"{a} and {b} hold equal values in every row")
 
 
+def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
+    """R97 §3.1. A declared `metadata` column that no row of the packet fills, at `info`.
+
+    Whether a table in R97 §3.1's middle band declares one is a judgement, and this is the
+    evidence against which it is revisited: `core.spike_events` carried the column on
+    286,896,563 rows that no adapter ever filled. Never a failure — R2 §5 makes an optional
+    column's absence conforming, and a source with nothing unmodelled to say is the ordinary case.
+
+    Bounded by the footer. A null count per row group is what Parquet already records, so no
+    value is read.
+    """
+    for resource_id, handle in present.items():
+        if not any(c["name"] == "metadata" for c in tables[resource_id]["columns"]):
+            continue
+        try:
+            meta = pq.ParquetFile(handle.path).metadata
+            index = meta.schema.names.index("metadata") if "metadata" in meta.schema.names else None
+        except (OSError, pa.ArrowException):
+            continue
+        if index is None:
+            report.add("info", f"{resource_id}.metadata_unfilled", "metadata is declared and the file omits it")
+            continue
+        nulls = 0
+        for group in range(meta.num_row_groups):
+            stats = meta.row_group(group).column(index).statistics
+            if stats is None or stats.null_count is None:
+                break
+            nulls += stats.null_count
+        else:
+            if meta.num_rows and nulls == meta.num_rows:
+                report.add("info", f"{resource_id}.metadata_unfilled", "metadata is null in every row")
+
+
 def _check_ordering(
     tables: Mapping[str, Any],
     present: Mapping[str, Any],
@@ -1713,6 +1746,7 @@ def validate(
     present = _check_schemas(packet, effective["tables"], report)
     unsound = _check_ordering(effective["tables"], present, report, scan)
     _check_duplication(present, effective["tables"], report)
+    _check_unfilled_metadata(present, effective["tables"], report)
     _run_rules(packet, effective, present, report, advisory, limits, unsound, recheck)
     return report
 

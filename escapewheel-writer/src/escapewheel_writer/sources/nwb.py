@@ -563,7 +563,10 @@ class NWBSource(Compensates):
         columns = self._table("general/extracellular_ephys/electrodes")
         if not columns:
             return []
-        carried = ("ccf_acronym", "ccf_name", "ccf_structure_id_path", "ccf_id")
+        # R97 §3.3: `ccf_id` and `ccf_acronym` are excluded because R59 §2 promoted both to
+        # columns of `core.electrode_coordinates`. The other two stay: R59 §2 declined to
+        # model them, so the bag is where they belong.
+        carried = ("ccf_name", "ccf_structure_id_path")
         if "inter_sample_shift" in columns:
             self.notes.append(
                 "electrodes/inter_sample_shift: not emitted; R19 puts it on core.array_channels "

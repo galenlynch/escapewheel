@@ -1823,3 +1823,30 @@ where = "clock_id struck from core.spike_events and core.unit_observation_interv
 [clause."R96 §5"]
 disposition = "rationale"
 note = "consequence; its MUST is the rebuild R87 §2.1 and R88 §2 already require"
+
+[clause."R97 §2.1"]
+disposition = "rationale"
+note = "\"Additional metadata.\" on 16 of 21 declarations, restating the name"
+
+[clause."R97 §2.2"]
+disposition = "rationale"
+note = "8,230 rows hold a value across both packets; 8,064 of them are core.electrodes"
+
+[clause."R97 §2.3"]
+disposition = "rationale"
+note = "three keys restating a column a revision promoted; 0 of 20 distinct keys share a name with any column, so no name test finds them"
+
+[clause."R97 §2.4"]
+disposition = "rationale"
+note = "1.9 kB of footer unprojected, 11.95x projected, over 5,000,000 rows shaped after core.electrodes"
+
+[clause."R97 §3.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.6"
+note = "the key decides both bounds; build.py emits the column from it and check.py enforces it against core and every extension, which added one to aind_opto.stimulations and dynamic_foraging.blocks. The info report is escapewheel_validator._check_unfilled_metadata"
+
+[clause."R97 §3.3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.6"
+note = "no rule checks it; the writer-side comparison is 07 §4, and the two keys the NWB adapter restated and the one the Open Ephys adapter did are no longer written"
+

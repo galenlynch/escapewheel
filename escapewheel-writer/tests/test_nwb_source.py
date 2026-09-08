@@ -267,6 +267,15 @@ def test_coordinates_are_rows_per_frame_not_a_padded_triple(source):
     assert (ccf["x_um"], ccf["y_um"], ccf["z_um"]) == (100.0, 200.0, 300.0)
 
 
+def test_an_electrodes_bag_carries_only_what_no_column_holds(source):
+    """R97 §3.3. R59 §2 promoted `ccf_id` and `ccf_acronym` to columns, so both leave the bag."""
+    bag = only(source.records()["core.electrodes"], electrode_id="probeA.CH0")["metadata"]
+    assert bag == {"ccf_name": "Field CA1", "ccf_structure_id_path": "/997/8/567/"}
+    ccf = only(source.records()["core.electrode_coordinates"], electrode_id="probeA.CH0",
+               coordinate_frame="ccf")
+    assert (ccf["region_id"], ccf["region_label"]) == (382, "CA1")
+
+
 def test_an_unregistered_electrode_gets_no_ccf_row(source):
     """An absent frame is an absent row, which is the whole point of R19's shape."""
     assert not [
