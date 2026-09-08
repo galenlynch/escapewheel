@@ -210,8 +210,24 @@ touches.
    nothing for two revisions. A meta-schema change is the case that fails loudly, since
    `registry.schema.json` sets `additionalProperties: false`; a missing reference or a forgotten
    role fails quietly, which is why this is a step rather than something `verify.py` catches.
-5. **The v0.2 parts the revision amends**, which is what `Amends` named. A concept goes in `01`
-   §3 and is appended rather than inserted, since the numbering is cited throughout.
+5. **The v0.2 parts the revision amends**, which is what `Amends` named. **Place a clause by its
+   subject, never by what is last.** Every section of a part names a subject — in `02`, §8 is
+   column semantics, §11 the resource index, §12 rules for particular resources, §13 stored
+   layout — so a clause goes in the section whose subject it is, as a new subsection at the end of
+   *that* section where none of the existing ones fits. A subsection appended inside a section
+   renumbers nothing.
+
+   A new concept is the exception, with a rule of its own: append it to `01` §3 as the next
+   number, because that section is a flat list of concepts and inserting one renumbers the
+   concepts every later part cites. That rule is about `01` §3 and no other section.
+
+   Appending to whichever section comes last is what this prevents, and it had already happened
+   three times. R81, R83 and R89 each added to `02` §12, so a section titled "Ordering" came to
+   hold unit identity, channel indices and calibration, with 40 of its 44 lines about none of
+   them, in the one section of Part 02 that had no subsections to place them in. Where a clause
+   genuinely fits no section, add a section at the **end of the part** — appending after the last
+   one renumbers nothing either — rather than filing it under a heading that does not describe
+   it.
 6. **`escapewheel_poc_docs_v0.2/applied.toml`**, one entry per clause. `ledger.py` demands a
    disposition for every §2 subsection and for any other section carrying a MUST or a SHOULD, and
    fails equally on an entry naming a clause that no longer exists.
