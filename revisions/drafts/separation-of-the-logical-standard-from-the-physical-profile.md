@@ -61,9 +61,16 @@ Part 02 **MUST NOT** name a storage technology, a file format, an encoding, or a
 of a stored resource, except to place such a rule outside its own scope. Every clause of Part 02
 **MUST** hold unchanged under any physical profile.
 
-`02` §13 is struck whole — ordering and partitioning are its only two subsections; R92 §2.2
-carries the ordering rule and `03` §5.2 already carries the partitioning rules. `02` §5.3's
-sentence forbidding `INT96` is struck; `03` §5.5 already states it.
+`02` §13 is struck whole — ordering and partitioning are its only two subsections. R92 §2.2 carries
+the ordering rule and `03` §5.3 the override that `02` §13.1 points at, so nothing is lost there.
+`03` §5.2 carries the partitioning rules, and its SHOULD is the narrower and better statement: it
+recommends partitioning a large **multi-session** table where `02` §13.2 recommends it for any
+large table, and partitioning a single-session table by `session_id` yields one partition. Striking
+`02` §13.2 therefore corrects the recommendation rather than moving it.
+
+`02` §5.3's prohibition on `INT96` is struck, which is a clause and not a sentence: it reads
+"Wall-clock columns MUST be `timestamp` with microsecond precision in UTC, and MUST NOT use
+INT96", and only the second half goes. `03` §5.5 already states it.
 
 `02` §5.3's remaining requirements stay, because a tick being `int64` and a wall clock being a
 microsecond UTC timestamp are statements about the value rather than about its storage.
@@ -71,7 +78,12 @@ microsecond UTC timestamp are statements about the value rather than about its s
 ### 3.2 The physical profile
 
 Part 03 is normative for a packet whose manifest declares its `profile_id`, and binds no other
-packet. It is the only part that names a storage technology.
+packet. It is the only part whose **rules may depend on** a storage technology.
+
+Naming one is not the test, and could not be: `00` names Iceberg across fifteen lines and `01`
+names Parquet, Zarr and Iceberg to disclaim dependence on any of them, as §2 counts `02` doing
+three times with a rule turning on only one. What Part 03 alone may do is make a rule that holds
+because of one.
 
 No clause of Part 01 or Part 02 **MAY** depend on a clause of Part 03. A logical rule discharged by
 a physical property is the defect R92 §2.1 repairs, and this states the general form of it so a
@@ -83,7 +95,7 @@ later revision does not reintroduce one.
 to Part 01 or Part 02; where one would be needed, the defect is in those parts rather than in the
 profile.
 
-Today §7.3's only binding sentence about a second profile is that no implementation may be required
+Today `00` §7.3's only binding sentence about a second profile is that no implementation may be required
 to support one, which is a portability guarantee and says nothing about how to write one. Keeping
 the prohibition and adding the requirements makes a profile something a reader can attempt rather
 than only something they may decline.
