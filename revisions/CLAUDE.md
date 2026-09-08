@@ -154,8 +154,11 @@ the ones a tool can settle are cheaper than the ones only a reader can.
 - **Every column declares a type, a presence and a role.** R48 §2.2 gives a role no default, so a
   column named in prose but not declared is a build error rather than a guess. R89 gave one table a
   full declaration and two others as tuples, leaving eight columns without a type.
-- **Every citation resolves to the section that says it.** R89 §2.3 cited R56 §2.2 for the one-hop
-  `resource.column` form, which R56 §2.3 defines; §2.2 is `clock_from`. Open the cited section.
+- **Every citation resolves to the section that says it.** `python revisions/check_citations.py`
+  does this and `verify.py` runs it, so a broken `R<n> §<x>` or a part citation in a draft fails
+  the build. It cannot check that the cited section *says* what the citing sentence claims, which
+  is still a read: R89 §2.3 cited R56 §2.2 for the one-hop `resource.column` form, which R56 §2.3
+  defines and §2.2 does not. Open the cited section.
 - **No section contradicts another.** R89 §1.2 argued a calibration is reported as in force
   *rather than as having happened*, and §2.5 then said a row records that it happened. Read the
   Decision against the Motivation it rests on, and read §3's bullets against the Decision.

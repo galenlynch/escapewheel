@@ -193,8 +193,8 @@ not a calibration, and R66 §1.4 refuses a field that records nothing.
 
 ### 2.6 Only the calibration itself declares a free-form column
 
-`core.calibrations` declares `metadata` and the two child tables **MUST NOT**, which is R95 §3.1's
-rule applied where it decides: a table's key holds an identifier of its own, so the row is a thing
+`core.calibrations` declares `metadata` and the two child tables **MUST NOT**. The rule that
+decides it is identity: a table's key holds an identifier of its own, so the row is a thing
 rather than a statement about other things, and `core.calibrations` is the only one of the three
 whose key does. A source states more about a calibration than the ten typed columns above model —
 the fit a curve was reduced to, the standard it was measured against, who performed it — and none

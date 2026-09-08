@@ -178,10 +178,10 @@ projection covers all 33 session-scoped tables rather than 25.
   instead. What remains open is a genuine processing run owned by a rig rather than a session, which
   R49 §2.2 anticipates one field over and no packet holds.
 - **Whether `analysis.array_dimensions.coordinate_array_asset_id` is a seventeenth missing
-  reference.** Settled by R93 §2.4, which declares it. Unpacking it found a second defect in the
-  same two columns that this revision's scope would have hidden: `coordinate_resource` holds a
-  dotted resource ID in **25 rows across the two packets** and carries R48 role `data`, so nothing
-  checks the value R55 §2.1 added a role for.
+  reference.** It is, and declaring it is left to a later revision. Unpacking it found a second
+  defect in the same two columns that this revision's scope would have hidden:
+  `coordinate_resource` holds a dotted resource ID in **25 rows across the two packets** and
+  carries R48 role `data`, so nothing checks the value R55 §2.1 added a role for.
 - **Whether `registry/check.py` should enforce §2.1 both ways.** It already computes scope and
   reports the 33 and the 2, so both halves of §2.1 are checkable there rather than left to review.
   Doing it is implementation and needs no clause; recording that it was the intent does.

@@ -38,7 +38,7 @@ NWB has the same shape and the same consequence. `NWBFile` can hold many `TimeIn
 So in practice a second interval set is either crammed into `trials` as columns that are null for
 every row of the other kind, or added as a `TimeIntervals` nothing knows to look for.
 
-Both outcomes are already named in this specification. The first is R43 §143's table of
+Both outcomes are already named in this specification. The first is R43 §3's table of
 *"mostly-null columns whose meaning depends on which pipeline wrote it"*. The second is what R17
 §1 measured in NWB and rejected: *most columns in that file conform to nothing*.
 
@@ -63,7 +63,7 @@ foraging session this format was built from:
 | interval | closed | `[start_time, stop_time)`, **half-open** |
 | "choice" | `choice` ∈ left/right/none — a **string** | `has_choice` — a **bool** |
 | "reward" | `rewarded` — a bool | `has_reward` + `reward_amount` + `reward_probability` |
-| condition | a derived label | **none**; R43 §136 records it has no condition and no go cue |
+| condition | a derived label | **none**; R43 §3 records it has no condition and no go cue |
 | nesting | blocks | site → patch → block, eleven index columns |
 
 No outcome column agrees even by type. `inventory/vr-foraging-packaging.md:104` reached the same

@@ -38,6 +38,8 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     ("root: the documents' counts are current", ROOT, [sys.executable, "facts.py"]),
     ("registry: structural checks", ROOT / "registry",
      ["uv", "run", "--project", str(TOOLS), "python", "check.py"]),
+    ("revisions: every citation resolves", ROOT / "revisions",
+     [sys.executable, "check_citations.py", "--quiet"]),
     # A ratchet: the backlog of undisposed clauses may shrink and must not grow. Adding a
     # revision fails this until someone records where each of its clauses went, which is the
     # property two independent audits of the compiled spec found missing.

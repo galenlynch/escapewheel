@@ -48,7 +48,7 @@ case needing two hops would be evidence §2.3 is drawn too tight."*
 R81 §2.3 then narrowed every unit reference to `unit_id` alone and struck `sorting_run_id` from six
 tables, `core.spike_events` among them, removing the reference with the column. `build.py` drops
 the `unit_from` rather than leave it naming a hop that cannot be followed, and R81 §5 recorded the
-loss as *"the same shape as the gap R70 §5 left."*
+loss as *"the same shape as the gap R70 §4 left."*
 
 Of the seven columns declaring a `unit_from` today, all seven name a column of their own table.
 Five `clock_from` declarations do use the one-hop form — `core.clock_anchors.parent_tick` through
@@ -67,7 +67,7 @@ references run from `core.spike_events` to `core.sorting_runs`:
 | the same, through `parent_curation_id` → `core.curation_versions` first | 4 |
 
 A rule admitting two hops must choose among them, and `registry/check.py` has no ground to prefer
-one — which is what R56 §6 anticipated in warning that "the reference to use is not the only one".
+one — which is what R56 §4 anticipated in warning that "the reference to use is not the only one".
 Relaxing the rule trades a gap that is honest for a resolution that is ambiguous.
 
 ### 2.3 What asks for the run's clock
@@ -196,7 +196,7 @@ from a unit to its clock; `core.spike_events.ticks_within_clock_span` gains one,
   of values are non-integral, so unlike `core.media_frames.pts` before R68 this is not an integer
   wearing a float type.
 - **R56 §2.3 is not widened.** §2.2 measures why — two hops are ambiguous here, which is the
-  opposite of the evidence R56 §6 said would justify relaxing the rule.
+  opposite of the evidence R56 §4 said would justify relaxing the rule.
 - **The clock is still a property of the run's recording.** A sorting run consumes one probe's
   recording and its outputs are counted on that recording's clock. §3.2 changes where the fact is
   written down, not what determines it.
