@@ -43,6 +43,10 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     # property two independent audits of the compiled spec found missing.
     ("spec: every revision clause has a disposition", ROOT / "escapewheel_poc_docs_v0.2",
      [sys.executable, "ledger.py", "--summary"]),
+    # Before the rendering, since a part's column tables come from the registry: a stale one
+    # would otherwise be concatenated into the single file and look authoritative.
+    ("spec: the column tables come from the registry", ROOT / "escapewheel_poc_docs_v0.2",
+     [sys.executable, "columns.py", "--check"]),
     ("spec: the single-file rendering is current", ROOT / "escapewheel_poc_docs_v0.2",
      [sys.executable, "combine.py", "--check"]),
     ("prototype: write packets", ROOT / "prototype/registry-codegen",

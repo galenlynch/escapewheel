@@ -235,6 +235,12 @@ touches.
 8. **`python verify.py`.** Every stage but the three clean-tree ones must pass before committing;
    those compare against the committed state and so clear only on the commit itself.
 
+A part's column tables are **generated**: mark the resource with
+`<!-- columns: core.foo -->` / `<!-- /columns -->` and run
+`python escapewheel_poc_docs_v0.2/columns.py`. Never retype a column list. `06` §4's kept
+`sorting_run_id` and `curation_id` for four revisions after R81 §2.3 removed them, and nothing
+could see it: the ledger records where a clause landed, not whether the prose still agrees.
+
 Three traps, each of which cost time here:
 
 - **`CONTEXT` and the R53 §2.3.1 name block are consumed before a late block runs**, so a table

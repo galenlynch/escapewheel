@@ -37,12 +37,15 @@ Core keeps each spike on the clock of the probe that measured it, sorted unit-ma
 
 `analysis.spike_events` is core's spikes mapped onto the reference clock and bucketed by time, sorted by unit within each bucket, so that a time filter and a unit filter both prune (R30 §2).
 
-| column | purpose |
-|---|---|
-| `session_id`, `unit_id`, `sorting_run_id`, `curation_id` | unit identity |
-| `t_tick` | the spike, on the reference clock |
-| `clock_id` | the reference clock |
-| `time_bucket_tick` | the bucket this row lies in |
+<!-- columns: analysis.spike_events -->
+| column | type | presence | |
+|---|---|---|---|
+| `session_id` | `int32` | required | Session ID. |
+| `unit_id` | `int32` | required | Unit ID. |
+| `t_tick` | `int64` | required | Spike tick on clock_id, mapped through core.clock_anchors. |
+| `clock_id` | `int32` | required | The clock these ticks are on, normally the session's reference. |
+| `time_bucket_tick` | `int64` | required | First tick of the bucket this spike falls in, on clock_id. |
+<!-- /columns -->
 
 A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data and is therefore recorded in the producing run's parameters.
 
