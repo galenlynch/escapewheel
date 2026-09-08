@@ -35,10 +35,10 @@ Informative.
 | R72 §2.1–§2.3 (accepted) | R55 §2.4 | a required discriminator implies a reverse anti-join, shared key only |
 | this part | R55 §2.1, §2.3 | which table carries the column, which column is not one, and a third resolution shape |
 
-R55 §2.3 says "two shapes exist" and there are three. The third was found by
-`checking-the-tables-an-array-axis-names`, which met a column resolving by neither: that draft
-stated the shape itself until this part took the mechanism, and now applies §3.5's third rather
-than declaring a fourth amendment to the same clause.
+R55 §2.3 says "two shapes exist" and there are three. The third was found in
+`core.array_dimensions.coordinate_resource`, which names a resource whose **rows are the
+positions** its sibling column indexes — neither a key join nor a value-to-key join, and a column
+R55 predates.
 
 R55 §2.1 says what a discriminator holds and not where it sits. Neither statement is wrong where it
 was written; both are incomplete where a reader arrives.
@@ -150,7 +150,7 @@ nothing reads is a free-form name with extra steps, which is the observed fate o
 - **By position.** The named resource's **rows are the positions** the discriminated column
   indexes, located by a column that resource declares. Resolution is neither a key join nor a
   value-to-key join, so §3.6's joinability rules do not apply and **MUST NOT** be read as applying.
-  `checking-the-tables-an-array-axis-names` §2.1 is the case; how the named resource's rows are
+  `core.array_dimensions.coordinate_resource` is the case; how the named resource's rows are
   narrowed to one axis is that resource's own business.
 
 A discriminator declares which shape it uses by declaring `discriminates` or not (§3.7), except

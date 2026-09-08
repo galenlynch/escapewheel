@@ -28,6 +28,12 @@ RFC 2119 keywords.
 **Number sections and cite revisions inline**, as the v0.2 parts do: the rule, then `(R30 §2)`.
 The citation belongs beside the clause it supports rather than in a paragraph about provenance.
 
+**An accepted revision cites no draft.** A draft has no number, may never be accepted, and may say
+something else tomorrow, so a citation of one is a dangling reference the moment it is written.
+State the substance instead: name the column, the measurement or the rule rather than the document
+that will carry it. The reverse is fine — a draft cites accepted revisions freely, and records its
+own debt to them.
+
 **Never cite a `CLAUDE.md`.** These files are guidance for whoever is working, not part of the
 specification, and a normative document citing process documentation makes the process normative by
 accident — a reader implementing a revision months from now has the spec and the revisions, and

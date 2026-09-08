@@ -117,8 +117,8 @@ consumer filters on them without parsing anything.
 `sources/nwb.py:963` fills it, so removing it before any extension declares a mark table would take
 a capability away and leave §3.4's route existing but unused. What one event carries is also a
 different subject from this part's: everything above is about facts constant across a stream.
-`the-free-form-metadata-column` §5 strikes `payload` on its own ground — a second free-form column
-on a table entitled to one — and that argument needs nothing from here.
+Whether a second free-form column belongs on a table that already has `metadata` is a question
+about free-form columns, and it is answerable without anything here.
 
 ### 3.4 Where structured detail lives
 
@@ -149,14 +149,14 @@ event to the stream carrying its kind.
   window is a property of the stream and was already there.
 - **A task's shape stays out of core.** Which spout a lick was on is one experiment's distinction,
   and R43 §3 and R54 §2.3 send it to an extension — reached here by §3.4 rather than by a column.
-- **`core.events.metadata` stays.** Its key is not made entirely of other tables' identifiers, so
-  the free-form column has somewhere to be under `the-free-form-metadata-column` §3.1.
+- **`core.events.metadata` stays.** Its key holds a coordinate and another table's identifier
+  rather than being made of identifiers alone, so an unmodelled per-event fact still has a home.
 - **`core.event_streams.metadata` stays, and is where a per-stream fact already goes.** It is
   written on 10 of 10 streams in both packets, holding the source's own description of the signal.
   With §3.1 and §3.4 the stream now carries three tiers: typed columns for what the standard models,
   `detail_kind` for what an extension does, and `metadata` for what nobody does.
-- **`core.events.payload` stays.** §3.3 says why, and `the-free-form-metadata-column` §5 is where
-  it is struck.
+- **`core.events.payload` stays.** §3.3 says why; striking it is a separate question about what a
+  free-form column is for.
 
 ## 5. Consequence
 
@@ -170,13 +170,6 @@ Two Tier 2 rules on `core.events` are touched. `clock_matches_stream` becomes va
 `within_observation` stands and is rewritten, its projection selecting `(session_id, stream_id,
 t_tick)` where it selected `event_id` — the rule is unchanged, the rows it returns are named by the
 new key. Rules go from 70 to **69**.
-
-Two other drafts touch what this one moves. `what-a-reserved-value-is-for` names
-`core.events.event_type` five times, including a section heading, and after this part that column
-is `core.event_streams.event_type`; `columns-that-hold-one-value` strikes the stream's generated
-name and renames the other, so the stream ends at nine columns rather than ten if both are
-accepted. Whichever lands second re-measures and repoints, as the pre-acceptance checks require of
-every count.
 
 **Both packets must be rebuilt.** The table's key, its columns and its stream's columns all change.
 R87 §2.1 and R88 §2 already require that rebuild, so this adds none of its own. R61 §3 makes a
