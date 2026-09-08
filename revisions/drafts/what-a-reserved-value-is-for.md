@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | R11 §4 (strikes `core.events.event_type`'s reserved set), R8 §4 (states the test a reservation must pass), the registry declarations of `kind` and `event_type` |
-| **Depends on** | R8 (open vocabularies and reserved values), R11 (the reserved event types), R43 §3 and R54 §2.3 (a task's shape is not the format's) |
+| **Amends** | R11 §4 (strikes `event_type`'s reserved set), R8 §4 (states the test a reservation must pass), the registry declarations of `kind` and `event_type` |
+| **Depends on** | R8 (open vocabularies and reserved values), R11 (the reserved event types), R91 §3.1 (which table declares `event_type`), R43 §3 and R54 §2.3 (a task's shape is not the format's) |
 | **Profile** | all |
 
 Normative, except §2 and §5, which are informative.
@@ -30,7 +30,8 @@ Informative.
 ### 2.1 Two sets, one recorded
 
 R8 §4 reserved four values for `core.array_assets.kind` — `raw`, `ap`, `lfp`, `waveform` — with
-declared meanings, and R11 §4 reserved six for `core.events.event_type`. The registry received one:
+declared meanings, and R11 §4 reserved six for `event_type`, which R91 §3.1 has since moved onto
+`core.event_streams`. The registry received one of the two sets:
 of its **24** open vocabularies, `event_type` is the only column carrying a `reserved_values`
 array, and `kind` — the column the mechanism was invented for — carries none.
 
@@ -53,8 +54,10 @@ its LFP asks one question and gets a comparable answer.
 
 ### 2.3 What the packets write, and why
 
-Both packets use seven event types: `delay_start`, `go_cue`, `reward_outcome`, `left_lick`,
-`right_lick`, `left_reward_delivery`, `right_reward_delivery`.
+Both packets declare seven kinds of event: `delay_start`, `go_cue`, `reward_outcome`,
+`left_lick`, `right_lick`, `left_reward_delivery`, `right_reward_delivery`. Since R91 §3.1 each is
+a stream's `event_type` rather than a column on every event, which changes where the value is
+written and nothing about what it says.
 
 Four of them name something the reserved set describes, so R11 §4 read literally forbids them —
 and reading it as intended does not help, because the adapter is not inventing a synonym. It is
@@ -83,9 +86,10 @@ comparable arrays from packets built by different labs.
 matching the string returns rows a consumer cannot use and suggests an alignment that is not there.
 A task's shape is not the format's (R43 §3, R54 §2.3), and its vocabulary is not either.
 
-### 3.2 `core.events.event_type` reserves nothing
+### 3.2 `event_type` reserves nothing
 
-R11 §4's reserved set is **struck**, and `core.events.event_type` declares no `reserved_values`.
+R11 §4's reserved set is **struck**, and `core.event_streams.event_type` declares no
+`reserved_values`.
 The column stays required and its vocabulary stays open, so a validator still **MUST NOT** reject
 any value.
 
@@ -133,7 +137,7 @@ comply.
 ## 5. Consequence
 
 `core.array_assets.kind` and `analysis.array_assets.kind` gain a `reserved_values` array,
-`core.events.event_type` loses one, and a validator gains §3.4's report. `registry/check.py` gains
+`core.event_streams.event_type` loses one, and a validator gains §3.4's report. `registry/check.py` gains
 a check that a declared set is snake_case and free of duplicates.
 
 Nothing else. No table, column, reference or rule changes, no packet is invalidated, and no rebuild

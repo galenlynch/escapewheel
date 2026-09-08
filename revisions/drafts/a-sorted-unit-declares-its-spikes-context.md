@@ -205,9 +205,10 @@ from a unit to its clock; `core.spike_events.ticks_within_clock_span` gains one,
   false in the registry since R81. It is true again.
 - **Spike identity is not restored.** R81's narrowing stands; a consumer reaches the run through the
   unit rather than through columns returned to 418 million rows.
-- **`analysis.spike_events.clock_id` and `core.events.clock_id` stay.** The first holds the
-  session's *reference* clock and is declared `determined_by: ["session_id"]`; the second belongs to
-  a stream, which R23 gives its own clock.
+- **`analysis.spike_events.clock_id` stays.** It holds the session's *reference* clock and is
+  declared `determined_by: ["session_id"]`, where §3.2 moves the column holding a probe's own.
+- **`core.events` has already made this move.** R91 §3.2 struck its `clock_id` and resolved
+  `t_tick` through the stream in one hop, which is the shape §3.2 gives a spike through its unit.
 
 ## 5. Consequence
 

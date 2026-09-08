@@ -26,7 +26,7 @@ Dependencies run downward: a draft depends on the ones above it and on nothing b
 | 6 | `the-free-form-metadata-column` | which tables declare `metadata`, and what may go in one; strikes `core.events.payload` |
 | 7 | `the-alignment-keys-in-a-runs-parameters` | three keys a reader reads and no document states |
 | 8 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
-| — | `what-a-reserved-value-is-for` | outside the order, but repoint `core.events.event_type` to `core.event_streams` first (R91) |
+| — | `what-a-reserved-value-is-for` | outside the order; it amends R11 §4 alone and depends on nothing here |
 
 Five through eight are independent of each other and of one through four; their order is a
 convenience, not a constraint. One through four is a chain: each is cheaper before the next than

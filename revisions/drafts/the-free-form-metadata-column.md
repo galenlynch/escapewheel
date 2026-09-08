@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `02` §5.2 (the clause against filling a `json_string` routinely), `09` §2 (the tier table), the 20 registry declarations of `metadata` and their descriptions |
-| **Depends on** | R48 (a column declares its role), R46 (the references that make "its own" decidable), R53 (identity), R2 §5 (three-state presence) |
+| **Amends** | `02` §5.2 (the clause against filling a `json_string` routinely), `09` §2 (the tier table), the 21 registry declarations of `metadata` and their descriptions |
+| **Depends on** | R48 (a column declares its role), R46 (the references that make "its own" decidable), R53 (identity), R2 §5 (three-state presence), R91 §3.3 (what `core.events.payload` is for) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 Normative, except §2 and §6, which are informative.
@@ -14,7 +14,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 ## 1. Scope
 
 `metadata` is an optional `json_string` column carrying what a source stated about a row that the
-standard does not model. Twenty of the registry's 35 tables declare one.
+standard does not model. Twenty-one of the registry's 38 tables declare one.
 
 Nothing says which tables should declare it, what may go in one, or what must not, and each gap has
 produced a defect: a column on a 286,896,563-row table that nothing could usefully fill, a
@@ -37,8 +37,8 @@ them, and an adapter author learns nothing.
 
 ### 2.2 What the packets carry
 
-The writer omits the column outright on ten of the twenty tables declaring it, and two of the twenty
-exist in neither packet. The eight that are written are entity tables of 10 to 4,608 rows:
+The writer omits the column outright on ten of the twenty-one tables declaring it, and three of the
+twenty-one exist in neither packet. The eight that are written are entity tables of 10 to 4,608 rows:
 `core.electrodes`, `core.processing_runs`, `core.devices`, `core.array_assets`,
 `core.curation_versions`, `core.probes`, `core.sorting_runs`, `core.event_streams`.
 
@@ -98,7 +98,7 @@ where every key column is part of a declared reference. Between those it **MAY**
 where a source has something to put in it.
 
 The **MUST** rests on identity: an identifier of the table's own is what makes the row a thing
-rather than a statement about other things. Seventeen of 35 tables have one — `unit_id`,
+rather than a statement about other things. Seventeen of 38 tables have one — `unit_id`,
 `device_id`, `interval_id`, `probe_id` among them — and **all seventeen already declare `metadata`,
 none missing**.
 
@@ -115,7 +115,7 @@ relationship that is not a fact about one of its ends.
 Everything between is a measurement — another table's identifier plus a coordinate (`t_tick`,
 `start_tick`) or a structural index (`frame_index`, `channel_index`) — and a measurement **may**
 carry attributes of its own. A frame has a coding type, a channel a note about how it was
-calibrated, an event a value. So the four columns §5 strikes are struck on the evidence that no
+calibrated, an event a value. So the three columns §5 strikes are struck on the evidence that no
 adapter writes them and no consumer asks, which is the standard R62 struck a file on, and not
 because the shape of the key forbids them.
 
@@ -159,22 +159,27 @@ for it, holding tier 3 or tier 4 content that no rule reads.
 ## 4. What this does not change
 
 - **No reference and no Tier 2 rule.** `registry/rules.json` names neither `metadata` nor `payload`,
-  so the 90 references and 68 rules are untouched.
+  so the 96 references and 69 rules are untouched.
 - **No packet is invalidated.** The validator walks the registry's columns and asks whether each is
   present in the file; nothing looks for columns the registry does not declare, so striking one
   cannot fail a packet that still carries it. None does.
 - **`core.intervals` keeps its `metadata`.** `interval_id` is an identifier of its own, so a new
-  interval kind may record a few unmodelled facts without an extension. R55's shared-key detail
-  table stays the path for facts needing structure rather than becoming the only path.
+  interval kind may record a few unmodelled facts without an extension. R90 §3.5's shared-key
+  detail table stays the path for facts needing structure rather than becoming the only path.
 - **The two unwritten prose columns stay.** `core.curation_versions.notes` is filled in 0 of 12 and
   0 of 10 rows, `core.sessions.session_description` in 0 of 1 in both. They are typed prose rather
   than free-form bags, so striking them is a decision about those two tables; §6 records it.
 - **`core.electrodes` keeps two of its four `ccf_*` keys.** R59 §2 declined to model `ccf_name` and
   `ccf_structure_id_path`, so the column is where they belong.
+- **`core.events.payload` stays.** R91 §3.3 keeps it as the only home a per-event value has until an
+  extension declares a mark table through `core.event_streams.detail_kind`, and forbids a writer
+  putting a mark in `core.events.metadata` — so this part has nowhere to move the NWB adapter's
+  `{"value": …}` object to. That leaves one table carrying two free-form columns where §3.1 requires
+  one, which §6 records.
 
 ## 5. Consequence
 
-Four columns are struck and 316 becomes **312**. None is forbidden by §3.1 — all four sit in its
+Three columns are struck and 333 becomes **330**. None is forbidden by §3.1 — all three sit in its
 **MAY** band — so each is struck on the same evidence: no adapter writes it and no consumer asks.
 
 | struck | rows in the packets | state today |
@@ -182,14 +187,6 @@ Four columns are struck and 316 becomes **312**. None is forbidden by §3.1 — 
 | `core.spike_events.metadata` | 286,896,563 / 131,396,535 | omitted by the writer |
 | `core.media_frames.metadata` | — / 7,570,450 | omitted |
 | `core.array_channels.metadata` | 1,152 / 960 | omitted |
-| `core.events.payload` | 5,485 / 6,256 | omitted |
-
-`core.events.payload` is the one that costs something. It is a second free-form column on a table
-§3.1 already permits one, and the NWB adapter fills it: `sources/nwb.py:963` writes `{"value": …}` for
-an acquisition `TimeSeries` whose data varies. It is absent from both packets because the marker is
-constant on every stream there, not because nothing writes it. That object goes into `metadata`
-instead, so the capability moves rather than ending, and a per-event value wanting a type wants
-R55's shared-key detail table reached through `event_type`.
 
 Three keys stop being written: `ccf_id` and `ccf_acronym` in the NWB adapter's electrode rows, and
 `port` in the Open Ephys adapter's device rows. Those are writer changes and they land in the
@@ -197,7 +194,7 @@ rebuild R87 §2.1 and R88 §2 already require, forcing none of their own. After
 them, `metadata` across both packets falls from 8,230 rows to **166**.
 
 `registry/check.py` gains the §3.1 check, `build.py` emits the column from the primary key, `09` §2
-gains a row, and twenty descriptions become one.
+gains a row, and twenty-one descriptions become one.
 
 ## 6. Open
 
@@ -213,11 +210,14 @@ gains a row, and twenty descriptions become one.
   `STATES` rather than in a normative part, and needs a guard against one constant column matching
   another by accident.
 - **Whether a measurement table should be told when to declare one.** §3.1 leaves the middle band
-  to each table's judgement, which is where the four struck columns came from: someone declared a
+  to each table's judgement, which is where the three struck columns came from: someone declared a
   `metadata` on `core.spike_events` because the shape allowed it, and 286,896,563 rows carried a
   column no adapter ever filled. The bound that would have caught it is evidence rather than
   structure — a column no writer fills is a column to strike (R62) — and nothing runs that check
   on its own.
-- **Whether `core.events` needs a typed per-event value.** Striking `payload` leaves an event's
-  value in a column no rule reads, which is where it already was. `event_type` is open and R90 §3.5 gives
-  the shape a structured answer would take; nothing yet measures how often a real packet needs one.
+- **Whether `core.events.payload` should be struck.** §4 leaves it because R91 §3.3 does, and R91
+  §6 says what would settle it: an extension declaring a mark table through
+  `core.event_streams.detail_kind` gives a per-event value a typed home and makes the strike free.
+  Until one exists, striking `payload` removes the only place such a value may go, R91 §3.3 having
+  forbidden `core.events.metadata` as its substitute. It is the one column this part would
+  otherwise reach that another document has already reasoned about.

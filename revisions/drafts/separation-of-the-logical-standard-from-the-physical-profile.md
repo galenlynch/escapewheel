@@ -31,8 +31,10 @@ place, and two of them have already drifted apart from their copies.
 
 **Ordering is stated in both parts, differently.** `02` §12 gives `core.events` the order
 `session_id, clock_id, t_tick, event_type` and `03` §5.4 gives it `session_id, clock_id, t_tick`.
-The registry follows `02`. `02` §12 also says one table overrides the default where `03` §5.4
-lists two, and nothing compares the documents, so `verify.py` passes on both errors.
+Both name columns R91 §3.2 struck, so `a-tables-stored-order-is-determined-by-its-key` §3 strikes
+the statements; what they demonstrate is that two documents held one rule and drifted. `02` §12
+also says one table overrides the default where `03` §5.4 lists two, and nothing compares the
+documents, so `verify.py` passes on both errors.
 
 **Partitioning is stated in `02` §12.** Partitioning is `03` §5.2's subject, and `02`'s copy
 carries the same two rules.
@@ -193,9 +195,10 @@ Informative.
 - **No table, column, reference or rule.** Every change is to which document holds a sentence.
 - **No part is renumbered.** §3.5 records why: the sequence cannot express Part 06, and the
   identifiers 52 citations depend on are worth more than a tidy order.
-- **No packet is invalidated.** The moved clauses say the same things in their new homes, and
-  `03` §5.4's `core.events` order is corrected to agree with the registry rather than the registry
-  being changed to agree with it.
+- **No packet is invalidated.** The moved clauses say the same things in their new homes, and the
+  one statement that disagreed with the registry is gone before this part runs —
+  `a-tables-stored-order-is-determined-by-its-key` §3 strikes `03` §5.4's `core.events` entry, so
+  there is no order here to reconcile.
 - **Part 07 §7 is unmoved.** Its performance notes are the reference implementation's and stay
   informative where they are; §3.4 divides Part 10 from it rather than merging the two.
 - **Part 03 stays normative.** A profile that were merely described could not be validated, and

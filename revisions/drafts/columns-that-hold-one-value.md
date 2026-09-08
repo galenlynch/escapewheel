@@ -145,8 +145,8 @@ and it puts the observation in the report without letting it fail a build.
 
 ## 5. Consequence
 
-335 columns become **328**: seven generated names struck, and seven `name` columns renamed rather
-than removed. Tier 2 rules go from 70 to **71**, and references are unchanged.
+333 columns become **326**: seven generated names struck, and seven `name` columns renamed rather
+than removed. Tier 2 rules go from 69 to **70**, and references are unchanged.
 
 `registry/build.py` skips its R53 §2.3.1 pass for a table declaring `name`, and renames that column
 in the same block. `registry/check.py` gains §3.3's check. The writer stops emitting the duplicated

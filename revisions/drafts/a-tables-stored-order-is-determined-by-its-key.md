@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | `02` §12 (the override table), `03` §5.3 and §5.4, R10 §3 |
-| **Depends on** | R10 (sort by primary key), R30 (`analysis.spike_events` layout), R81 (a table's sort following its key) |
+| **Depends on** | R10 (sort by primary key), R30 (`analysis.spike_events` layout), R81 (a table's sort following its key), R91 §3.2 (`core.events`' key) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 Normative, except §2 and §8, which are informative.
@@ -13,13 +13,17 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Scope
 
-Two tables are stored in an order other than their primary key. One can be brought into line by
-striking a surrogate nothing uses; the other cannot, because its order is what justified
-materialising it.
+`analysis.spike_events` is stored in an order other than its primary key, and cannot be brought
+into line, because that order is what justified materialising it. It is now the only such table.
+
+`core.events` was the other, and R91 §3.2 settled it from the far end: the surrogate its key was
+built on is struck, and the key is now three columns the table is already stored by. What survives
+is three documents declaring the old order, all of them naming a column the table no longer has.
 
 This part settles what constrains a table's stored order, raises the level at which a departure is
-reported, and leaves both primary keys as they are. Where that order is declared is `separation-of-the-logical-standard-from-the-physical-profile` §3.3's
-question, which depends on the rule stated here.
+reported, strikes those three statements, and leaves every primary key as it is. Where that order
+is declared is `separation-of-the-logical-standard-from-the-physical-profile` §3.3's question,
+which depends on the rule stated here.
 
 Measurements are from the two packaged sessions: **`ecephys_776259`**, twelve probes and 6,781
 sorted units, and **`ecephys_786867`**, ten probes and 4,505.
@@ -28,8 +32,10 @@ sorted units, and **`ecephys_786867`**, ten probes and 4,505.
 
 Informative.
 
-Every table in both packets is stored in primary-key order except the two the registry declares an
-override for.
+Both packets were built before R88 §2 and R91 §3.2, and §7's rebuild is owed whatever this part
+decides, so what they measure is a writer's habit rather than the registry's present state: every
+table in both is stored in primary-key order except the two the registry declared an override for
+when each was written.
 
 | packet | tables present | in primary-key order | registry declares no sort |
 |---|---:|---:|---:|
@@ -38,35 +44,33 @@ override for.
 
 The nine and ten tables the registry says nothing about are in primary-key order too. `build.py`
 fills `sort` from the primary key in a single pass inside its R10 block, so a table a later block
-adds carries `sort: null` unless that block sets one — thirteen of thirty-eight do, among them
+adds carries `sort: null` unless that block sets one — **13 of 38** do not, among them
 `core.unit_electrodes`, `core.processing_runs` and `core.electrode_coordinates`. The validator
 skips a table with no declared sort, so R10 §2 has never been checked on any of them; the writer
 sorts them regardless.
 
 Parquet records the order and has no notion of a key. `RowGroup.sorting_columns` is part of the
-format, and this writer fills it: four columns for `core.events`, three for `core.spike_events`,
-five for `analysis.spike_events`. What a key means here is therefore what `02` §2 and §7 say it
-means — a uniqueness claim a validator checks after the fact, and the target a foreign key resolves
-against — and not anything the storage layer enforces.
+format, and this writer fills it from the registry's `sort`: three columns for `core.events` since
+R91 §3.2, three for `core.spike_events`, five for `analysis.spike_events`. What a key means here is
+therefore what `02` §2 and §7 say it means — a uniqueness claim a validator checks after the fact,
+and the target a foreign key resolves against — and not anything the storage layer enforces.
 
 ## 3. `core.events`
 
-`core.events` is keyed `(session_id, event_id)` and stored in `(session_id, clock_id, t_tick,
-event_type)` order, which R10 §3 records as an override for pruning by time. Key order and stored
-order disagree on 5,483 of 5,485 rows in `ecephys_776259` and 6,255 of 6,256 in `ecephys_786867`,
-so §5 cannot be satisfied while a surrogate is the key.
+`core.events` is keyed `(session_id, stream_id, t_tick)` and stored in that order, R91 §3.2 having
+struck both the surrogate the key was built on and the columns the override sorted by. Three
+documents still declare that override: `03` §5.4 as `(session_id, clock_id, t_tick)`, and `02` §12
+and R10 §3 as `(session_id, clock_id, t_tick, event_type)`. All three name `clock_id`, which the
+table no longer has, and the longer form names `event_type`, which the stream declares instead
+(R91 §3.1).
 
-R91 strikes `event_id`, `event_name`, `event_type` and
-`clock_id` — the first two unread, the last two the stream's — and keys the table on
-`(session_id, stream_id, t_tick)`, measured unique in both packets. This part depends on that: with
-it, `core.events` is stored in its key's order, every table in both packets satisfies §5, and both
-override statements are struck.
-
-They disagree, which is a second reason to strike them: `03` §5.4 gives the order as three columns
-where `02` §12 and R10 §3 give four, and three is not unique —
-R91 §2 measures 5,480 distinct triples against 5,485 rows. The
-disagreement is moot once neither statement exists, and the order the key now gives — stream, then
-tick — prunes the query the override was written for, since a stream is one kind of event.
+All three are **struck**, and nothing is lost with them. The key's own order prunes what the
+override was written for: a stream emits one kind of event (R91 §3.1), so a query for one kind
+over a time range reads a contiguous run, where the override reached the same rows through
+`clock_id`. `registry/build.py` sorts the table by its key already — its R91 block rewrites the
+`sort` its R10 block filled from `OVERRIDE` — so these statements are the last place the old order
+survives. That they also disagreed with each other, three columns against four, is moot once none
+of them exists.
 
 ## 4. `analysis.spike_events`
 
@@ -80,9 +84,9 @@ what a common clock buys is the layout, which core cannot have because its spike
 probes' own clocks. So the order is not decoration on a derived table; it is what R30 weighed the
 table's existence on.
 
-Renumbering cannot reconcile key and order as it does for `core.events`: `unit_id` is shared with
-core, and `t_tick` here is a coordinate converted from a measurement, so neither may be reassigned
-to suit a layout.
+Neither a strike nor a renumbering reconciles key and order here as R91 §3.2 did for
+`core.events`: `unit_id` is shared with core, and `t_tick` is a coordinate converted from a
+measurement, so neither may be reassigned to suit a layout, and both are load-bearing in the sort.
 
 Widening the key to the stored order is the other obvious repair, and it is **rejected**. Measured
 over all 286,876,859 rows of `ecephys_776259`, `clock_id` holds **one** distinct value and
@@ -114,7 +118,7 @@ than of the logical standard.
 
 The level is the substantive change. `03` §5.3 makes ordering a SHOULD reported at **warning**, on
 the ground that a mis-sorted packet is readable and slower rather than wrong — but `02` §10.3
-waives the uniqueness query for any table whose stored order settles its key, which is 23 of 38
+waives the uniqueness query for any table whose stored order settles its key, which is 25 of 38
 today and all 38 under this part. A waiver may not rest on a property nothing requires, and that is
 the whole argument: a MUST discharged by a SHOULD is the defect.
 
@@ -130,14 +134,14 @@ neighbours. A packet reaching that path has already failed.
 
 ## 6. What this does not change
 
-- **No packet's rows move.** `core.events` is already stored in the order §3.1 makes its key, so
-  every table in both packets already satisfies §5; what changes for `core.events` is two columns,
-  not a row's position.
+- **No packet's rows move.** The thirteen tables §2 counts are already stored in primary-key
+  order, so §5's MUST rewrites nothing. Both packets are rebuilt for R87 §2.1, R88 §2 and R91 §5,
+  and the writer takes its order from the registry.
 - **`analysis.spike_events` keeps the three-column key it has**, and no table or reference is
   added anywhere.
-- **An event stays addressable.** Should an extension ever record per-event detail, R90 §3.5's
-  shared-key shape carries the four key columns rather than two. That is the cost of the strike,
-  and it is paid only by a table that does not exist.
+- **No column is struck here.** R91 §3.2 already struck the four that made `core.events`' key
+  disagree with its stored order; what is left is the rule and three documents restating an order
+  the registry no longer holds.
 - **R30's layout and its MUST both stand.** Bucketing by time and sorting by unit within a bucket
   is why the table exists, and §5 accommodates it rather than requiring it be argued away.
 - **`03` §5.2's partitioning rules are untouched.** A partitioned table's order across files is
@@ -148,24 +152,23 @@ neighbours. A packet reaching that path has already failed.
 
 ## 7. Consequence
 
-`registry/build.py` loses `core.events` from its `OVERRIDE` table and fills `sort` from the primary
-key for every table declaring none, in a pass at the **end** of the build: the thirteen nulls of §2
-are a table added after that pass ran, and a pass that runs last cannot be outrun by a later block.
+No column, reference or rule changes: R91 §3.2 struck what made the one disagreement this part
+could have resolved by renumbering, leaving the rule, the level it is reported at, and three stale
+statements.
+
+`registry/build.py` loses `core.events` from its `OVERRIDE` table — dead since the R91 block
+rewrote the same field, so striking it removes a contradiction between two blocks rather than a
+behaviour — and fills `sort` from the primary key for every table declaring none, in a pass at the
+**end** of the build: the thirteen nulls of §2 are tables added after that pass ran, and a pass
+that runs last cannot be outrun by a later block.
 `escapewheel_validator.generate.adjacency_settles_uniqueness` is unchanged, §5 being that function
 stated as a rule rather than left as an optimisation the validator happens to make.
 
-Tier 1 uniqueness goes from 14 generated `GROUP BY` checks to none on a conforming packet —
-thirteen from the filled sorts, and the fourteenth because §3.1 makes `core.events` keyed on the
-order it is stored in. Ordering scans go from 25 tables to all 38.
+Tier 1 uniqueness goes from **13** generated `GROUP BY` checks to none on a conforming packet, all
+thirteen from the filled sorts. Ordering scans go from 25 tables to all 38.
 
-335 columns become **333**: `core.events` loses `event_id` and `event_name`. References stay at 97,
-since neither column carried one, and the Tier 2 rules are unchanged.
-`escapewheel_reader.alignment` selects the event's tick where it selected its identifier, and the
-NWB adapter stops composing `f"{name}:{offset}"` for a column that no longer exists.
-
-**Both packets must be rebuilt.** Striking a required column leaves a file the registry no longer
-describes. R61 §3 makes a correction a rebuild, and this one re-reads no external resource; R87
-§2.1 and R88 §2 already require it, so this adds no build of its own.
+**No rebuild is owed here.** The thirteen tables are already in primary-key order in both packets,
+so §5 fails on neither; R87 §2.1, R88 §2 and R91 §5 require the rebuild in any case.
 
 ## 8. Open
 
@@ -177,8 +180,8 @@ describes. R61 §3 makes a correction a rebuild, and this one re-reads no extern
   declaration would close it, at one aggregate over the declaring table.
 - **Whether the remaining assigned identifiers are numbered usefully.** An assigned identifier may
   be numbered in any order a rebuild reproduces, and what that order is decides the layout of every
-  table keyed on it. §3.1 removes one such choice by removing the identifier; of the **14** that
-  remain, deciding the order of **33 of 38** tables, exactly one has been made deliberately —
+  table keyed on it. R91 §3.2 removed one such choice by removing the identifier; of the **14**
+  that remain, deciding the order of **34 of 38** tables, exactly one has been made deliberately —
   `unit_id` run-major (R81 §2.2). Most of the rest are too small for it to matter (12 probes, 12
   sorting runs, 26 processing runs), but `electrode_id` orders 4,608 electrodes, 8,832 coordinates,
   171,280 `core.unit_electrodes` rows and 29,568 quality labels, and no revision says what its
