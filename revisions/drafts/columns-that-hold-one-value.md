@@ -139,7 +139,7 @@ behalf (R66 §2.1).
 Both packets fail the new rule today, all 24 clock rows carrying both forms. The writer keeps
 the rational and stops emitting the float, `tick_rate_den` being 1 in every row of both.
 
-### 3.3 The check that finds the class
+### 3.3 Two equal columns are reported, never failed
 
 A validator **SHOULD** report, at `info`, two columns of one table holding equal values in every
 row where that value is not constant. It **MUST NOT** report a failure: §2.3 measures why, since
