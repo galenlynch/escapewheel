@@ -61,6 +61,9 @@ def facts() -> dict[str, str]:
         number = int(re.match(r"R(\d+)", path.name).group(1))
         head = path.read_text()[:400]
         (accepted if "**Accepted**" in head else withdrawn if "withdrawn" in head.lower() else proposed).add(number)
+    # A draft carries no number until it is accepted, so the numbered space reads in the order
+    # revisions were applied rather than written. `revisions/drafts/README.md` holds the order.
+    drafts = [p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"]
 
     extensions = sorted(p.stem for p in (ROOT / "registry/extensions").glob("*.json"))
     corpus = len(re.findall(r'^\s+"', (ROOT / "fixtures/corpus.py").read_text().split("EXPECTED")[1].split("}")[0], re.MULTILINE))
@@ -70,8 +73,10 @@ def facts() -> dict[str, str]:
                      f"{len(rules)} Tier 2 rules ({advisory} advisory)"),
         "revisions": (f"{_revision_span(accepted)} accepted. "
                       + (f"{_revision_span(withdrawn)} withdrawn. " if withdrawn else "")
-                      + (f"{_revision_span(proposed)} proposed and not binding." if proposed
-                         else "Nothing is proposed.")),
+                      + (f"{_revision_span(proposed)} proposed and not binding. " if proposed else "")
+                      + (f"{len(drafts)} drafts are open in revisions/drafts/, none of them binding "
+                         "and none numbered until accepted." if drafts
+                         else "No draft is open.")),
         "tier1": (f"{not_null} not-null, {references} foreign-key, {vocabulary} closed-vocabulary "
                   f"and {2 * discriminators} discriminator checks, plus one uniqueness check per "
                   f"table whose sort does not begin with its primary key"),

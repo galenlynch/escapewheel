@@ -1,8 +1,8 @@
-# R95 — The Free-Form Metadata Column
+# The Free-Form Metadata Column
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | Draft |
 | **Amends** | `02` §5.2 (the clause against filling a `json_string` routinely), `09` §2 (the tier table), the 20 registry declarations of `metadata` and their descriptions |
 | **Depends on** | R48 (a column declares its role), R46 (the references that make "its own" decidable), R53 (identity), R2 §5 (three-state presence) |
 | **Profile** | `escapewheel-portable-v0.1` |
@@ -93,26 +93,36 @@ presence state compounds it: `optional` lets a writer omit the column entirely, 
 ### 3.1 Which tables declare `metadata`
 
 A table's registry entry **MUST** declare `metadata` where its primary key includes a column whose
-R48 role is `identifier` and which is not part of a declared reference, and **MUST NOT** declare one
-otherwise.
+R48 role is `identifier` and which is not part of a declared reference. It **MUST NOT** declare one
+where every key column is part of a declared reference. Between those it **MAY**, and declares one
+where a source has something to put in it.
 
-That column is what makes the row a thing rather than a statement about other things. Seventeen of
-35 tables have one — `unit_id`, `device_id`, `interval_id`, `event_id`, `probe_id` among them — and
-**all seventeen already declare `metadata`, none missing**. Every other table is keyed from other
-tables' identifiers plus a coordinate (`t_tick`, `start_tick`), a structural index (`frame_index`,
-`channel_index`, `axis_index`), or nothing further at all.
+The **MUST** rests on identity: an identifier of the table's own is what makes the row a thing
+rather than a statement about other things. Seventeen of 35 tables have one — `unit_id`,
+`device_id`, `interval_id`, `probe_id` among them — and **all seventeen already declare `metadata`,
+none missing**.
 
-Whether the identifier is `assigned` or `carried` (R53 §2.3) does not matter, and both occur:
-`core.events.event_id` is assigned where `core.intervals.interval_id` is carried from the source's
-own trial number. What matters is that the table holds an identity rather than borrowing one.
+Whether that identifier is `assigned` or `carried` (R53 §2.3) does not matter, and both occur:
+`core.devices.device_id` is assigned where `core.intervals.interval_id` is carried from the
+source's own trial number. What matters is that the table holds an identity rather than borrowing
+one.
 
-A row identified only by other tables' identifiers is a statement about those things, so whatever is
-unmodelled about it belongs on whichever of them it is about. Nothing can be said about one spike
-that is not either data or a fact about its unit.
+The **MUST NOT** rests on something narrower, and reaches three tables: `core.unit_electrodes`,
+`core.processing_run_inputs` and `core.calibration_devices`, whose keys are made entirely of other
+tables' identifiers. A row like that is a relationship, and nothing can be said about a
+relationship that is not a fact about one of its ends.
 
-The rule is decidable from the registry with no packet in hand, as R56 §2.4's is, so
-`registry/check.py` enforces it and `build.py` emits the column from the primary key rather than
-each revision remembering to declare one.
+Everything between is a measurement — another table's identifier plus a coordinate (`t_tick`,
+`start_tick`) or a structural index (`frame_index`, `channel_index`) — and a measurement **may**
+carry attributes of its own. A frame has a coding type, a channel a note about how it was
+calibrated, an event a value. So the four columns §5 strikes are struck on the evidence that no
+adapter writes them and no consumer asks, which is the standard R62 struck a file on, and not
+because the shape of the key forbids them.
+
+Both bounds are decidable from the registry with no packet in hand, as R56 §2.4's is, so
+`registry/check.py` enforces them: a table owing a `metadata` column and lacking one is a build
+error, and so is a relationship table carrying one. What lies between is a declaration each table
+makes, which is the part that is a judgement and should be.
 
 ### 3.2 Routine filling
 
@@ -164,7 +174,8 @@ for it, holding tier 3 or tier 4 content that no rule reads.
 
 ## 5. Consequence
 
-Four columns are struck and 316 becomes **312**:
+Four columns are struck and 316 becomes **312**. None is forbidden by §3.1 — all four sit in its
+**MAY** band — so each is struck on the same evidence: no adapter writes it and no consumer asks.
 
 | struck | rows in the packets | state today |
 |---|---|---|
@@ -174,7 +185,7 @@ Four columns are struck and 316 becomes **312**:
 | `core.events.payload` | 5,485 / 6,256 | omitted |
 
 `core.events.payload` is the one that costs something. It is a second free-form column on a table
-§3.1 entitles to one, and the NWB adapter fills it: `sources/nwb.py:963` writes `{"value": …}` for
+§3.1 already permits one, and the NWB adapter fills it: `sources/nwb.py:963` writes `{"value": …}` for
 an acquisition `TimeSeries` whose data varies. It is absent from both packets because the marker is
 constant on every stream there, not because nothing writes it. That object goes into `metadata`
 instead, so the capability moves rather than ending, and a per-event value wanting a type wants
@@ -182,7 +193,7 @@ R55's shared-key detail table reached through `event_type`.
 
 Three keys stop being written: `ccf_id` and `ccf_acronym` in the NWB adapter's electrode rows, and
 `port` in the Open Ephys adapter's device rows. Those are writer changes and they land in the
-rebuild R87 §2.1, R88 §2, R90 §3.1 and R94 §5 already require, forcing none of their own. After
+rebuild R87 §2.1 and R88 §2 already require, forcing none of their own. After
 them, `metadata` across both packets falls from 8,230 rows to **166**.
 
 `registry/check.py` gains the §3.1 check, `build.py` emits the column from the primary key, `09` §2
@@ -201,6 +212,12 @@ gains a row, and twenty descriptions become one.
   would cost nothing to run, 8,230 rows holding the column at all. That belongs in `07` §4 beside
   `STATES` rather than in a normative part, and needs a guard against one constant column matching
   another by accident.
+- **Whether a measurement table should be told when to declare one.** §3.1 leaves the middle band
+  to each table's judgement, which is where the four struck columns came from: someone declared a
+  `metadata` on `core.spike_events` because the shape allowed it, and 286,896,563 rows carried a
+  column no adapter ever filled. The bound that would have caught it is evidence rather than
+  structure — a column no writer fills is a column to strike (R62) — and nothing runs that check
+  on its own.
 - **Whether `core.events` needs a typed per-event value.** Striking `payload` leaves an event's
-  value in a column no rule reads, which is where it already was. `event_type` is open and R55 §2.3 gives
+  value in a column no rule reads, which is where it already was. `event_type` is open and R90 §3.5 gives
   the shape a structured answer would take; nothing yet measures how often a real packet needs one.

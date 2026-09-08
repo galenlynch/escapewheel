@@ -28,6 +28,13 @@ RFC 2119 keywords.
 **Number sections and cite revisions inline**, as the v0.2 parts do: the rule, then `(R30 §2)`.
 The citation belongs beside the clause it supports rather than in a paragraph about provenance.
 
+**Never cite a `CLAUDE.md`.** These files are guidance for whoever is working, not part of the
+specification, and a normative document citing process documentation makes the process normative by
+accident — a reader implementing a revision months from now has the spec and the revisions, and
+should need nothing else. Where something written here bears on a decision, state the reasoning or
+cite the revision that established it: R67 §2.4 for a requirement no rule can observe, R3 §3.0 for
+duplication that buys nothing, R62 for striking what nothing writes and nothing reads.
+
 **A title names what the revision settles.** Still declarative, still not an imperative and not an
 aphorism, but a subject a reader can recognise before they open it: "Primary-Key Order for Every
 Table" over "A Table Sorts Itself the Way It Is Keyed".
@@ -112,6 +119,17 @@ Brevity is never worth an implementer's question. Never cut:
 
 A revision that is short because it dropped a number is incomplete, not concise.
 
+## A draft carries no number
+
+`revisions/drafts/` holds work that is not accepted, named by slug and with a status line of
+`Draft`. The `R<N>` space is history: accepted and withdrawn only.
+
+An `R<N>` is permanent once accepted — `applied.toml` keys on it, `build.py` stamps it into every
+column's `since`, `derived_from` lists it, and the compiled spec cites it — so numbering at
+drafting time would force the application order to match the drafting order. Drafts are reordered
+by editing `revisions/drafts/README.md`, which carries the intended order and why each draft sits
+where it does. A draft cites another by its file name in backticks, since it has no number to cite.
+
 ## Checks before acceptance
 
 Run these against the document before the status line moves. Each has caught a real defect, and
@@ -155,8 +173,21 @@ Only the user moves a revision to Accepted. What follows is one sequence, in thi
 `python verify.py` is what says it is complete. `DEVELOPING.md` §4 is the machinery each step
 touches.
 
-1. **The status line** becomes `**Accepted** <YYYY-MM-DD>`. Until it does, `ledger.py` skips the
-   revision and `check.py` refuses the `derived_from` entry a build block creates.
+1. **The draft is numbered and moved.** It takes the next free `R<N>`, moves from
+   `revisions/drafts/` to `revisions/R<N>-<slug>.md`, and its status line becomes
+   `**Accepted** <YYYY-MM-DD>`. Every citation of it — in other drafts and in this one's own text —
+   becomes `R<N> §<x>`; `grep` the slug to find them. Until the file is numbered and accepted,
+   `ledger.py` skips it and `check.py` refuses the `derived_from` entry a build block creates.
+   Reorder `revisions/drafts/README.md` if accepting this one changed what should come next.
+
+   **Where it supersedes a clause, repoint every citation of the superseded clause too**, in every
+   other draft and in the compiled spec — not only in the documents the supersession was written
+   against. A citation into a superseded section names a statement that is no longer the one of
+   record, and nothing checks it: `ledger.py` sees that the clause has a disposition, and a
+   citation sweep sees a section that still exists. `declaring-and-resolving-a-discriminator`
+   restated R55 §2 and left **nine** citations of R55 §2.1, §2.2, §2.3, §2.3.2, §2.4 and §2.6
+   across two other drafts, each of them pointing at prose the restatement had replaced. Grep the
+   superseded section numbers, not just the slug.
 2. **`registry/build.py`.** Register every new column name in `ROLES`, every new identifier in
    `IDENTITY`, and every new discriminator in `DISCRIMINATOR` — each refuses an unclassified name
    with a `SystemExit` naming the choice. Then add the block, stamped `SINCE[0] = "R<N> §<x>"`,
@@ -165,6 +196,14 @@ touches.
 3. **`registry/rules.json`** for each Tier 2 rule, whose query returns offending rows (R2 §7.3).
 4. **`conformance/spec-sweep/tables.py`** for a table added or withdrawn, or `check.py` fails
    against the R9 §2 ledger.
+4a. **`registry/extensions/*.json`.** An extension is a registry document in the same format
+   (R17 §2), so a rule about what a table declares binds one as much as it binds core — and the
+   four here drift, because nothing regenerates them. Check every extension against the rule the
+   revision states, not only against the rule it changes: R88 §2.1 required a session-scoped table
+   to declare its reference and the three `aind_unit_qc` tables carried `session_id` validated by
+   nothing for two revisions. A meta-schema change is the case that fails loudly, since
+   `registry.schema.json` sets `additionalProperties: false`; a missing reference or a forgotten
+   role fails quietly, which is why this is a step rather than something `verify.py` catches.
 5. **The v0.2 parts the revision amends**, which is what `Amends` named. A concept goes in `01`
    §3 and is appended rather than inserted, since the numbering is cited throughout.
 6. **`escapewheel_poc_docs_v0.2/applied.toml`**, one entry per clause. `ledger.py` demands a

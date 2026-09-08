@@ -1,10 +1,10 @@
-# R91 — Separation of the Logical Standard from the Physical Profile
+# Separation of the Logical Standard from the Physical Profile
 
 | | |
 |---|---|
-| **Status** | Proposed |
-| **Amends** | `00` §2 (the three-level vocabulary), `02` §5.3 and §12, `03` §1 and §5, `07` §7 (its boundary with Part 10); adds a contents table to `00` and adds Part 10 |
-| **Depends on** | R90 (primary-key order, which removes the duplicated ordering clauses) |
+| **Status** | Draft |
+| **Amends** | `00` §2 (the three-level vocabulary), `02` §5.3 and §12, `03` §1 and §5, `07` §7 (its boundary with Part 10), R2 §6 and `registry.schema.json` (the `sort` field); adds a contents table to `00` and adds Part 10 |
+| **Depends on** | `a-tables-stored-order-is-determined-by-its-key` (which removes the duplicated ordering clauses) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
@@ -42,7 +42,8 @@ tables another way cannot satisfy or violate the clause.
 
 **A per-table `sort` field sits in the registry**, which is the logical standard's machine form,
 while `registry.schema.json` describes the field as "Physical ordering a writer SHOULD apply.
-Performance, not correctness." R90 removes it.
+Performance, not correctness." It is declared on 25 of 38 tables and null on the other 13, so a
+reader cannot tell a table with no override from one a later block forgot.
 
 Part 03 crosses in the other direction. "A table MUST be a valid Parquet file" and "100,000 to
 1,000,000 rows is a starting point to be adjusted by profiling" sit two lines apart, and only the
@@ -58,7 +59,7 @@ Part 02 **MUST NOT** name a storage technology, a file format, an encoding, or a
 of a stored resource, except to place such a rule outside its own scope. Every clause of Part 02
 **MUST** hold unchanged under any physical profile.
 
-`02` §12's ordering and partitioning paragraphs are struck; R90 §5 carries the ordering rule and
+`02` §12's ordering and partitioning paragraphs are struck; `a-tables-stored-order-is-determined-by-its-key` §5 carries the ordering rule and
 `03` §5.2 already carries the partitioning rules. `02` §5.3's sentence forbidding `INT96` is
 struck; `03` §5.5 already states it.
 
@@ -71,10 +72,35 @@ Part 03 is normative for a packet whose manifest declares its `profile_id`, and 
 packet. It is the only part that names a storage technology.
 
 No clause of Part 01 or Part 02 **MAY** depend on a clause of Part 03. A logical rule discharged
-by a physical property is the defect R90 §5 repairs, and this states the general form of it so a
+by a physical property is the defect `a-tables-stored-order-is-determined-by-its-key` §5 repairs, and this states the general form of it so a
 later revision does not reintroduce one.
 
-### 3.3 Part 10, performance notes
+### 3.3 The registry declares no stored order
+
+The `sort` field is removed from `registry.schema.json` and from every table of
+`logical_schemas.json`. A table's stored order is its primary key's, unless `03` §5.4 names another
+for it, and a named override **MUST** satisfy
+`a-tables-stored-order-is-determined-by-its-key` §5.
+
+Every registry document drops the field, an extension's (R17 §2) as much as core's, since the
+amended meta-schema admits no property it does not declare; all eleven extension tables carrying a
+`sort` already sort by their own primary key, so none changes but its declaration.
+
+`determined_by` stays in the registry. That `analysis.spike_events.time_bucket_tick` is a function
+of `t_tick` is a statement about values, true under any profile, and it is what lets `03` §5.4's
+one remaining override coexist with a minimal key.
+
+The validator holds the override list, since a physical rule is the shim's rather than SQL's
+(R12 §4), and **MUST** refuse an override that does not satisfy
+`a-tables-stored-order-is-determined-by-its-key` §5 — a check made with no
+packet in hand, as R56 §2.4's is. That is what `aind_unit_qc` needed when it went on sorting by two
+columns R81 had removed, which no packet could satisfy and no rule could see.
+
+The thirteen tables carrying `sort: null` stop being a category rather than getting filled in: with
+no field there is no null, and a table with no override is in key order by rule rather than by a
+value someone remembered to write.
+
+### 3.4 Part 10, performance notes
 
 Part 10 is added, wholly **informative**. It carries what a packet's bytes make true under this
 profile: the encoding and compression comparisons, row-group sizing, the object-store request rate
@@ -86,7 +112,7 @@ a rule, the rule stays where it binds and Part 10 carries the reading.
 Part 10 is not a substitute for `conformance/`, which holds the probes that produced the numbers.
 Part 10 says what they mean.
 
-### 3.4 Part 07 keeps the measurements that are its own
+### 3.5 Part 07 keeps the measurements that are its own
 
 Part 07 §7 already holds performance notes and already opens by saying they are *"properties of
 the reference implementation, not requirements"*. Part 10 does not absorb it, and **MUST NOT**
@@ -103,7 +129,7 @@ Part 10; its **1.02x** projection against a **2.22x** join is one planner's and 
 07 §7 already records it. R43's query timings split the same way and stay in `06`, since what they
 justify is a materialization rule rather than a storage choice.
 
-### 3.5 `00` lists the parts and what each one binds
+### 3.6 `00` lists the parts and what each one binds
 
 `00` **MUST** carry a table of every part, its subject, and its conformance status. Each part
 **MUST** continue to state its own status at its head, and where the two disagree the part's
@@ -185,11 +211,18 @@ Informative.
 Three sentences move out of `02`, one is corrected in `03`, and Part 10 is written from material
 that currently sits in accepted revisions and in `conformance/`.
 
-`00` gains §3.5's table, eleven rows restating a line each part already carries.
+§3.3 removes one field from the registry's meta-schema and from every document written against it:
+25 declarations across core and 11 across the four extensions, none of which changes a stored
+order. `registry/build.py` loses its `OVERRIDE` table and its fill pass, `registry/render.py` loses
+the `**Sort**` line that would otherwise print the same sentence 38 times, and
+`escapewheel_validator` gains the profile's override list and the check over it. No packet's rows
+move, and no packet is invalidated: the field was never written into one.
+
+`00` gains §3.6's table, eleven rows restating a line each part already carries.
 `escapewheel_poc_docs_v0.2/combine.py` gains Part 10 in its concatenation, and the ledger gains
 its clauses. The generated `Escapewheel_POC_v0.2_Implementation_Spec.md` grows by Part 10's length
 and by nothing else. Part 07 §7 keeps every line it has, one of which — R86 §2.4's projection
-measurement — §3.4 confirms belongs to it rather than to Part 10.
+measurement — §3.5 confirms belongs to it rather than to Part 10.
 
 ## 8. Open
 

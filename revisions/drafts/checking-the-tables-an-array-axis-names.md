@@ -1,9 +1,9 @@
-# R93 — Checking the Tables an Array Axis Names
+# Checking the Tables an Array Axis Names
 
 | | |
 |---|---|
-| **Status** | Proposed |
-| **Amends** | `02` §8.3 (what a discriminator is), R20 §2.3 (the labelled axis), R55 §2.3 (its two resolution shapes) |
+| **Status** | Draft |
+| **Amends** | `02` §8.3 (what a discriminator is), R20 §2.3 (the labelled axis) |
 | **Depends on** | R46 (the references the registry never declared), R55 (a discriminated reference), R88 (the reference count this starts from) |
 | **Profile** | all |
 
@@ -31,7 +31,7 @@ Neither is checked, in different ways and for different reasons.
 is a dotted resource ID, that the packet declares that resource, or that it is a table at all. It
 could hold an empty string and validate clean.
 
-That is the state R55 was written to end. R55 §2.1 added `discriminator` as a sixth role precisely
+That is the state R55 was written to end. R90 §3.1 makes `discriminator` a role precisely
 for a column a consumer resolves to a **table**, so that something finally checks the value; §2.4
 generates the resolution check from the structure rather than leaving it hand-written per site.
 Three columns carry the role today — `core.intervals.interval_kind`, and `scope_kind` on
@@ -70,12 +70,19 @@ both.
 ### 2.1 `coordinate_resource` is a discriminator
 
 `coordinate_resource` **MUST** carry R48 role `discriminator` on `core.array_dimensions` and on
-`analysis.array_dimensions`, declaring `resolves: required` (R55 §2.2). A row that names a resource
+`analysis.array_dimensions`, declaring `resolves: required` (R90 §3.4). A row that names a resource
 the packet does not declare is a defect rather than a fact: the axis has no positions, so the row
-is uninterpretable, which is the test R55 §2.2 gives for `required`.
+is uninterpretable, which is the test R90 §3.4 gives for `required`.
 
-It carries no paired value, so it declares no `discriminates` (R55 §2.3.2). The positions are the
-named resource's **rows**, not one identifier in its key space.
+It carries no paired value, so it declares no `discriminates`
+(R90 §3.7). The positions are the named resource's **rows**,
+not one identifier in its key space.
+
+Its description is replaced with one saying what it holds: a dotted resource ID naming the table
+whose rows are this axis's positions. What it says today — "Resource whose rows are this axis's
+positions (labelled axis)" — names a resource without stating that the column holds a resource ID,
+which is why a sweep of the registry's descriptions for such columns does not find it and a sweep
+of the packets' values does.
 
 The name stays. `registry/check.py` requires a discriminator to be named `_kind`, and this one is
 declared an exception with its reason: `_kind` reads as a category, and every column carrying it
@@ -95,17 +102,17 @@ returns **0 of 53 rows** today.
 one: both real values are `channel_index`, `int64` and `structural_index` in each of the two tables
 that carry it.
 
-### 2.3 A labelled axis resolves by rows, which is a third shape
+### 2.3 A labelled axis resolves by position
 
-R55 §2.3 states that two shapes exist — a shared key, and a paired value — and a labelled axis is
-neither. The named resource's **rows are the positions**, located by the column §2.2 names, so
-resolution is neither a key join nor a value-to-key join.
+`coordinate_resource` resolves by R90 §3.5's third shape: the
+named resource's **rows are the positions**, located by the column §2.2 names, so resolution is
+neither a key join nor a value-to-key join. That part's joinability rules for the other two shapes
+therefore do not apply here, and **MUST NOT** be read as applying.
 
-R55 §2.3.1's joinability rules therefore do not apply, and **MUST NOT** be read as applying.
-`core.array_channels` happens to declare `(array_asset_id, axis_index)` → `core.array_dimensions`,
-which ties its rows to the axis explicitly; `core.unit_electrodes` declares no such reference and
-cannot, because it carries neither column — its rows are a waveform array's electrode axis, reached
-through the unit that another axis of the same array identifies.
+The two cases show why. `core.array_channels` happens to declare `(array_asset_id, axis_index)` →
+`core.array_dimensions`, which ties its rows to the axis explicitly; `core.unit_electrodes`
+declares no such reference and cannot, because it carries neither column — its rows are a waveform
+array's electrode axis, reached through the unit that another axis of the same array identifies.
 
 What a consumer may rely on is what §2.1 and §2.2 require: the resource is declared, and the column
 named holds the position. How the rows of that resource are narrowed to one axis is the resource's
@@ -130,13 +137,13 @@ which is R46 §4's result on its sixteen.
 - **No packet is invalidated.** All 25 rows carrying a `coordinate_resource` name a resource their
   packet declares, and all 25 name `channel_index`, so every rule this adds passes on both packets
   as they stand.
-- **The discriminator is not a reference.** R55 §2.6's rule holds: a discriminator **names** without
+- **The discriminator is not a reference.** R90 §3.9's rule holds: a discriminator **names** without
   depending, which is why `core.array_dimensions` may name a resource an extension supplies.
 
 ## 4. Consequence
 
 Two columns gain a role and a `resolves`, so Tier 1's discriminator checks go from 6 to **10** (two
-per discriminator, R55 §2.4), and references go from 90 to **91**. One Tier 2 rule is added for
+per discriminator, R90 §3.8), and references go from 90 to **91**. One Tier 2 rule is added for
 §2.2's pair, on both tables. No table, no column, and no packet's rows change.
 
 `registry/check.py` gains two entries in `NAMING_EXCEPTIONS`, each with §2.1's reason, and its
@@ -150,7 +157,7 @@ Neither packet is rebuilt. Both already satisfy every rule this adds.
 - **Whether the position column should be checked against the registry.** §2.2 requires
   `coordinate_position_column` to name a `structural_index` column of the named resource, and
   nothing generates that check: it compares a value in a row against a role in the registry, which
-  no Tier 2 SQL can see and no structural check can reach without the packet. R55 §2.4's resolution
+  no Tier 2 SQL can see and no structural check can reach without the packet. R90 §3.8's resolution
   check is the model, and building it is more than declaring the rule.
 - **Whether a labelled axis should say how its rows are narrowed.** §2.3 declines to generalise from
   two cases: `core.array_channels` ties its rows to one axis by a declared reference and

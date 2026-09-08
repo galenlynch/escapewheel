@@ -1,8 +1,8 @@
-# R92 — The Alignment Keys in a Run's Parameters
+# The Alignment Keys in a Run's Parameters
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | Draft |
 | **Amends** | `02` (`core.processing_runs.parameters`) |
 | **Depends on** | R9 (provenance is light and optional), R37 (bounding alignment by error), R40 (a tolerance that gates on quality) |
 | **Profile** | all |
@@ -102,7 +102,7 @@ A writer with nothing to record writes no key: no `alignment_bound` where the ma
 within R27 §5.3's default, no `withheld_anchors` where no clock was aligned, and no
 `phase_discontinuities` where none was found. A consumer **MUST** take the default named in §2.1
 to §2.3 rather than refuse the packet, which is what R37 §3.3 means when it says a packet that
-says nothing is unchanged by that revision. An absent key is a fact and not a defect (R55 §2.2).
+says nothing is unchanged by that revision. An absent key is a fact and not a defect (R90 §3.4).
 
 ## 3. What this does not change
 
