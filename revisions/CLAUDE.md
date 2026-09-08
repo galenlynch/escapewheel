@@ -125,6 +125,18 @@ Brevity is never worth an implementer's question. Never cut:
 
 A revision that is short because it dropped a number is incomplete, not concise.
 
+**The converse is not "keep everything else".** Prose earns its place by what a reader needs in
+order to understand the decision, and a section reporting the *absence* of content is not content.
+An `Open` section reading "Nothing" costs a heading, a line in the contents and a disposition in
+`applied.toml`, and tells a reader what they would have concluded from its absence. Strike the
+section rather than writing `None` in it; the same goes for a "does not change" bullet listing
+something no reader would have assumed, and for a paragraph restating the section above it.
+
+**Striking a section is not free: the cost is a pointer.** The line at the head names sections by
+number, and so may a cross-reference several sections up. `columns-that-hold-one-value` lost its §6
+and went on saying "Normative, except §2 and §6", which promises a section that is not there and
+makes every unnamed section normative by implication. Grep the number after removing the heading.
+
 ## A draft carries no number
 
 `revisions/drafts/` holds work that is not accepted, named by slug and with a status line of
