@@ -69,7 +69,7 @@ against.
 
 R91 §3.2 settled it: `event_id`, `event_name`, `event_type` and `clock_id` are struck and the key
 is `(session_id, stream_id, t_tick)`, the order the table is already stored in. Accepting it
-amended the documents as well — `02` §12 now records that no core table overrides the default, and
+amended the documents as well — `02` §13.1 now records that no core table overrides the default, and
 `03` §5.3 and §5.4 name only `analysis.spike_events` — so no statement of the old order survives
 where a reader would look for one. R10 §3's override table still lists it, and a revision is the
 record of a decision rather than a statement of current law.

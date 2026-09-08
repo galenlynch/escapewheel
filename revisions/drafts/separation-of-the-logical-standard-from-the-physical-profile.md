@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `00` §2 (the three-level vocabulary), `02` §5.3 and §12, `03` §1 and §5, `07` §7 (its boundary with Part 10), R2 §6 and `registry.schema.json` (the `sort` field); adds a contents table to `00` and adds Part 10 |
+| **Amends** | `00` §2 (the three-level vocabulary), `02` §5.3 and §13, `03` §1 and §5, `07` §7 (its boundary with Part 10), R2 §6 and `registry.schema.json` (the `sort` field); adds a contents table to `00` and adds Part 10 |
 | **Depends on** | `a-tables-stored-order-is-determined-by-its-key` (which removes the duplicated ordering clauses) |
 | **Profile** | all |
 
@@ -29,14 +29,14 @@ Part 02 names a storage technology twice in 344 lines, so the leak is narrow rat
 and Part 01 states its own independence and keeps it. Four clauses are nevertheless in the wrong
 place, and two of them have already drifted apart from their copies.
 
-**Ordering is stated in both parts, differently.** `02` §12 gives `core.events` the order
+**Ordering is stated in both parts, differently.** `02` §13.1 gives `core.events` the order
 `session_id, clock_id, t_tick, event_type` and `03` §5.4 gives it `session_id, clock_id, t_tick`.
 Both name columns R91 §3.2 struck, so `a-tables-stored-order-is-determined-by-its-key` §3 strikes
-the statements; what they demonstrate is that two documents held one rule and drifted. `02` §12
+the statements; what they demonstrate is that two documents held one rule and drifted. `02` §13.1
 also says one table overrides the default where `03` §5.4 lists two, and nothing compares the
 documents, so `verify.py` passes on both errors.
 
-**Partitioning is stated in `02` §12.** Partitioning is `03` §5.2's subject, and `02`'s copy
+**Partitioning is stated in `02` §13.2.** Partitioning is `03` §5.2's subject, and `02`'s copy
 carries the same two rules.
 
 **`02` §5.3 forbids `INT96`.** No such encoding exists outside Parquet, so a profile storing
@@ -61,7 +61,7 @@ Part 02 **MUST NOT** name a storage technology, a file format, an encoding, or a
 of a stored resource, except to place such a rule outside its own scope. Every clause of Part 02
 **MUST** hold unchanged under any physical profile.
 
-`02` §12's ordering and partitioning paragraphs are struck; `a-tables-stored-order-is-determined-by-its-key` §5 carries the ordering rule and
+`02` §13 is struck whole — ordering and partitioning are its only two subsections; `a-tables-stored-order-is-determined-by-its-key` §5 carries the ordering rule and
 `03` §5.2 already carries the partitioning rules. `02` §5.3's sentence forbidding `INT96` is
 struck; `03` §5.5 already states it.
 
@@ -181,7 +181,7 @@ repository's code were replaced is Part 07's, and one that would survive that re
 
 `00` §7.3 says Iceberg is a later profile that MUST NOT be required by an implementation, and `00`
 §2 says a physical profile says how the logical resources of Part 02 are stored. Neither is
-satisfiable today: an Iceberg profile would inherit `02` §12's ordering rules, which its compaction
+satisfiable today: an Iceberg profile would inherit `02` §13.1's ordering rules, which its compaction
 does not preserve, and `02` §5.3's prohibition on an encoding it does not have.
 
 This part does not add that profile and makes no claim that it is close. What it establishes is
