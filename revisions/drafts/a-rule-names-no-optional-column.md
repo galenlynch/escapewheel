@@ -51,10 +51,22 @@ compared against a column. That is exact enough without parsing a SQL dialect th
 otherwise never parses, and it keeps the check off DuckDB, which `check.py` treats as optional and
 which a rule-execution check is already gated behind.
 
-A hit is a true positive by construction today, because each of the four names is optional wherever
-it appears: `metadata` on all twenty-one tables declaring it, `parameters` on both,
-`core.events.payload` and `core.clocks.transform_to_parent`. Only 4 of the 69 rules contain a
-string literal at all, and none of those literals contains any of the four.
+A hit is a true positive because each of the four names is optional wherever it appears: `metadata`
+on all twenty-one tables declaring it, `parameters` on both, `core.events.payload` and
+`core.clocks.transform_to_parent`. Only 4 of the 69 rules contain a string literal at all, and none
+of those literals contains any of the four.
+
+**That invariant is what the check rests on, and no clause states it.** Qualifying the match by
+table is not the repair: **40** of the 69 rules name a single table, where a bare column resolves
+to the rule's own, and **7** more qualify every reference — but the remainder join while leaving
+some references bare, and resolving those needs the parser this part has just declined. So a
+qualified match would cover most rules and fail exactly where ambiguity makes it necessary.
+
+The repair is to require the presence rather than to qualify the reference: a column named
+`metadata` is optional because that is what the column is for, and a revision governing the
+free-form column should say so, at which point this check is sound by construction rather than by
+observation. That revision is not this one — a naming-to-presence rule belongs with the column it
+names — and until it exists, §6 records the exposure.
 
 A rule that wants to constrain an optional column has two ways out, and this part prescribes
 neither: the column can be made `nullable`, which is a declaration that it is always present and
@@ -81,8 +93,10 @@ order, so whichever of the two is accepted second re-measures the count this par
 
 ## 6. Open
 
-- **Whether a hit should be qualified by table.** §3's match is unqualified, which is sound only
-  while every column bearing one of the four names is optional. A later revision declaring a
-  **required** `metadata` — an R17 extension could — would make a rule naming that column a false
-  positive, and the repair is to match `table.column` rather than the bare name. Nothing needs it
-  yet, and building it now would be a mechanism for a case that does not exist.
+- **What happens if one of the four names is ever declared required.** §3's match is unqualified
+  and sound only while they are all optional, which nothing requires. A **required** `metadata` —
+  an R17 extension could declare one — would make a rule naming that column a false positive, and
+  a false positive here is a build error against a rule that is correct. The failure is loud and
+  lands on whoever declared the column, which is why this part ships the check rather than waiting:
+  §3 says what closes the exposure, and it is a clause in a different revision rather than a
+  mechanism in this one.
