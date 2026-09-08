@@ -149,7 +149,15 @@ guarantee true in practice rather than only in form.
 ### 3.3 Content
 
 A writer **MUST NOT** emit a `metadata` key holding a fact that a column of the logical schema
-holds, and **MUST NOT** emit one that contradicts such a column.
+holds, unless the duplication buys access that is otherwise unavailable, and **MUST NOT** emit one
+that contradicts such a column under any circumstance.
+
+The exception is R3 §3.0's, inherited rather than invented: that clause forbids a table restating
+what the data it describes declares, on the same terms, so the bag is exactly as strict as the
+schema around it and no stricter. It is also what keeps the prohibition satisfiable — a writer with
+a reason may keep the key and say why, where a writer that never noticed is the defect §2.3
+measures three of. The second half takes no exception, since a contradiction buys nothing by
+definition.
 
 **No rule checks this and none is added.** The content is schemaless by design, so a constraint on
 it is unenforceable in principle rather than merely in practice, and §2.3 measures that names carry
@@ -159,7 +167,9 @@ constant, and bounds itself by row-group statistics. The same comparison over a 
 a column is what would have caught all three of §2.3, and it belongs in `07` §4 beside `STATES`
 rather than in a normative part. The obligation binds the writer, as R67 §2.4's prohibition on inferring
 attachment from a device's name binds a consumer, and for the same reason: a named actor can comply
-where no validator can observe them.
+where no validator can observe them. Uncheckable is not unsatisfiable, and the two are distinct
+defects — a requirement naming no actor binds nothing, where this one names the only party that
+knows what it put in the bag.
 
 A fact required to interpret the data therefore belongs in a column, never in a key.
 
