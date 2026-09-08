@@ -7,7 +7,7 @@
 | **Depends on** | R53 (an identifier is an integer, and its owner carries a name), R33 (a rational rate), R13 (one alignment model, the same shape), R81 (the same defect, found the same way) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
-Normative, except §2 and §6, which are informative.
+§3 is normative; every other section is informative.
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
