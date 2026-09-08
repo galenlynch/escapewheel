@@ -195,6 +195,15 @@
           "resource_columns": [
             "unit_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
         }
       ],
       "sort": [
@@ -360,6 +369,15 @@
           "resource_columns": [
             "unit_id"
           ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
         }
       ],
       "sort": [
@@ -421,6 +439,15 @@
           "resource": "core.units",
           "resource_columns": [
             "unit_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
           ]
         }
       ],
