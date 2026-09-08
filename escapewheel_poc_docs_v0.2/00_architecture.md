@@ -72,7 +72,7 @@ A packet is divided into layers by namespace prefix.
 | `analysis` | derived products, reproducible from the canonical resources | no |
 | `nwb` | deferred compatibility projection | no |
 
-A layer MAY reference a layer beneath it and MUST NOT reference one above (R20 §5.1). Core does not reference analysis, and neither references an extension — a discriminator names without referencing, which is why core is allowed that one (R55 §2.6).
+A layer MAY reference a layer beneath it and MUST NOT reference one above (R20 §5.1). Core does not reference analysis, and neither references an extension — a discriminator names without referencing, which is why core is allowed that one (R90 §3.9).
 
 A packet's **canonical** resources are its canonical core resources together with its canonical
 extension resources (R71 §2.1). Core is not the whole of what is canonical: R54 sends a task's own

@@ -207,7 +207,7 @@ A packet is divided into layers by namespace prefix.
 | `analysis` | derived products, reproducible from the canonical resources | no |
 | `nwb` | deferred compatibility projection | no |
 
-A layer MAY reference a layer beneath it and MUST NOT reference one above (R20 §5.1). Core does not reference analysis, and neither references an extension — a discriminator names without referencing, which is why core is allowed that one (R55 §2.6).
+A layer MAY reference a layer beneath it and MUST NOT reference one above (R20 §5.1). Core does not reference analysis, and neither references an extension — a discriminator names without referencing, which is why core is allowed that one (R90 §3.9).
 
 A packet's **canonical** resources are its canonical core resources together with its canonical
 extension resources (R71 §2.1). Core is not the whole of what is canonical: R54 sends a task's own
@@ -714,7 +714,7 @@ Carrying the column without the reference is what the rule forbids: Tier 1 gener
 
 ### 8.1 Role
 
-Every column MUST declare exactly one role, from a closed vocabulary with no default (R48 §2.1, R55 §2.1):
+Every column MUST declare exactly one role, from a closed vocabulary with no default (R48 §2.1, R90 §3.1):
 
 | role | meaning |
 |---|---|
@@ -747,35 +747,67 @@ An assigned identifier's `*_name` MUST be unique within its packet (R85 §2.2) �
 
 ### 8.3 Discriminator
 
-A `discriminator` column MUST hold a dotted resource identifier, and MUST declare `resolves` as `required` or `optional` (R55 §2.2):
+A `discriminator` column MUST be a `string` holding a dotted resource identifier — a namespace and
+a table name, each lowercase snake_case — naming a table in the packet's registry or in one of its
+extensions (R90 §3.1).
+
+**Which column carries it.** A discriminator MAY be declared on the table whose rows it
+specialises, or on a table those rows reach through one declared reference. Where it is not on the
+specialised table it MUST declare `discriminates_via`, holding the referencing column as a dotted
+`resource.column`; one reference and no more (R90 §3.2).
+
+A column carrying a discriminator's value as part of a shared key is **not** a discriminator and
+MUST NOT declare the role: it resolves nothing a consumer of that row does not already know. Such a
+column is `data`, and a reference relating it to the discriminator it copies is the one role
+mismatch a reference may carry (R90 §3.3).
+
+**Whether it must resolve.** A discriminator MUST declare `resolves`, required and with no default:
 
 | `resolves` | an unresolvable value is |
 |---|---|
 | `required` | a defect: the row is uninterpretable |
 | `optional` | a fact: the packet does not hold that resource |
 
-A reader SHOULD offer the resolution: read the kind, take that resource's key from the registry,
-join (R55 §2.3). A discriminator nothing reads is a free-form name with extra steps, which is the
-observed fate of the mechanism this one replaces.
-
 Where a discriminator is paired with a value column, both are nullable and the two MUST agree — a
 row declares both or neither (R49 §2.4). A row declaring neither is **undeterminable**, which a
 consumer MUST report apart from a row whose value resolves to nothing: the fix for one is to record
 the missing half, and for the other to correct what it names.
 
-Resolution takes one of two shapes, and a discriminator declares which by whether it names a paired column.
+**How it resolves.** A reader SHOULD offer the resolution: read the kind, take that resource's key
+from the registry, join. A discriminator nothing reads is a free-form name with extra steps, which
+is the observed fate of the mechanism this one replaces. Three shapes exist (R90 §3.5):
 
-**Shared key.** The discriminated row and the named resource share a key, so the join is on that key. A resource a shared-key discriminator may name MUST declare a reference back to the discriminated table, and that reference MUST cover the discriminated table's **whole key**. A reference on part of it targets a set that is not unique — it identifies a row of some kind, which is not a foreign key, and the generated anti-join passes while resolving to several rows.
+- **Shared key.** The discriminated row and the named resource share a key, so the join is on that
+  key. A resource a shared-key discriminator may name MUST declare a reference back to the
+  discriminated table, and that reference MUST cover the discriminated table's **whole key**. A
+  reference on part of it targets a set that is not unique — it identifies a row of some kind,
+  which is not a foreign key, and the generated anti-join passes while resolving to several rows.
+  A detail table therefore carries the discriminator's value as a constant column, restating in
+  every row what its own identity implies; a column holding one value costs almost nothing once
+  encoded, and what it buys is a reference that identifies a row. The reference runs extension →
+  core, so a discriminator names downward while the integrity constraint points upward.
+- **Paired value.** A separate column holds an identifier in the named resource's key space, and
+  the discriminator MUST declare `discriminates` naming that column. A paired value holds one
+  identifier, so the named resource's primary key MUST be a single column, and the value MUST be a
+  `string` matching that key where it is `carried` or its `*_name` where it is `assigned`.
+- **By position.** The named resource's rows are the positions the discriminated column indexes,
+  located by a column that resource declares. Resolution is neither a key join nor a value-to-key
+  join, so the joinability rules above do not apply and MUST NOT be read as applying.
 
-The checks a discriminator implies MUST be generated over **every resource the packet declares, extensions included** (R55 §2.5). Building them over core alone is the defect R55 was written for: an extension kind matched no branch and passed in silence, which is the one case the mechanism exists to cover.
+**What is generated.** Where `resolves` is `required`, two checks follow from the structure: a
+forward anti-join against the resources the manifest declares, and a reverse check per named kind
+returning every row of the discriminating table whose key has no counterpart in the resource its
+discriminator names, both at **error**. The reverse check is generated over the kinds a packet's
+rows actually name, and applies to the shared-key shape alone. Where `resolves` is `optional`,
+neither is generated and an unresolvable value is reported as `info` (R90 §3.8).
 
-A detail table therefore carries the discriminator as a constant column, restating in every row what its own identity implies. A column holding one value costs almost nothing once encoded, and what it buys is a reference that identifies a row.
+Every generated check MUST be built over **every resource the packet declares, extensions
+included**. Building them over core alone is the defect R55 was written for: an extension kind
+matched no branch and passed in silence, which is the one case the mechanism exists to cover.
 
-The reference runs extension → core, so a discriminator names downward while the integrity constraint points upward.
-
-**Paired value.** A separate column holds an identifier in the named resource's key space, and the discriminator MUST declare `discriminates` naming that column. A paired value holds one identifier, so the named resource's primary key MUST be a single column, and the value MUST be a `string` matching that key where it is `carried` or its `*_name` where it is `assigned`.
-
-Core MAY name an extension's resource through a discriminator. It MUST NOT reference one (R55 §5): naming does not create a dependency.
+Core MAY name an extension's resource through a discriminator. It MUST NOT reference one: naming
+does not create a dependency, so core stays checkable alone, an absent target is a reportable fact,
+and no integrity constraint couples the versions (R90 §3.9).
 
 ### 8.4 Unit and clock
 

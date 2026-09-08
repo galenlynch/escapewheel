@@ -19,10 +19,9 @@
           "name": "interval_kind",
           "type": "string",
           "presence": "required",
-          "role": "discriminator",
-          "resolves": "required",
-          "description": "Always `dynamic_foraging.trials`. Restates in every row what this table's identity implies, so the reference to `core.intervals` covers its whole key (R55 \u00a72.3.1). A constant column run-length encodes to nothing.",
-          "since": "R54 \u00a72.1"
+          "role": "data",
+          "description": "Always `dynamic_foraging.trials`. Carries `core.intervals.interval_kind` as part of R90 \u00a73.5's shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know (R90 \u00a73.3).",
+          "since": "R90 \u00a73.3"
         },
         {
           "name": "trial_id",

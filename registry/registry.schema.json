@@ -247,6 +247,11 @@
           "description": "R56 \u00a72.2. The column holding the `clock_id` these ticks are on. Absent, the clock is the table's own `clock_id` where it has one. Coordinates only.",
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)?$"
+        },
+        "discriminates_via": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+          "description": "Where a discriminator sits a reference away from the rows it specialises, the referencing column as `resource.column` (R90 \u00a73.2)."
         }
       },
       "not": {

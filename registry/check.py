@@ -106,10 +106,14 @@ def structural(tables, universe, prefix=""):
     # side and not the other would break the join. Both sides sharing a role is what makes
     # converting every structural_index column join-preserving by construction.
     role = {(n, c["name"]): c["role"] for n, t in universe.items() for c in t["columns"]}
+    # R90 §3.3 exempts one pair: a shared-key column carrying a discriminator's value is `data`
+    # where the column it references is the `discriminator`. Nothing converts either side, so
+    # R48 §2.3's reason does not reach it.
     c_("a reference relates columns of the same role",
        [(n, a, r["resource"], b) for n, t in tables.items() for r in t["references"]
         for a, b in zip(r["columns"], r["resource_columns"])
-        if role.get((n, a)) != role.get((r["resource"], b))])
+        if role.get((n, a)) != role.get((r["resource"], b))
+        and (role.get((n, a)), role.get((r["resource"], b))) != ("data", "discriminator")])
     # R53 §2.3 with R48 §2.3's reasoning: `number` resolves an assigned identifier through its
     # target's map and coerces a carried one, so a reference across the two numbers each side
     # differently and resolves to nothing. Decidable here, and invisible until a packet is built.
@@ -212,6 +216,11 @@ NAMING_EXCEPTIONS = {
     "aind_unit_qc.metrics.rp_violations": "the sorter's own metric name; a count of violations",
     "aind_unit_qc.waveform_metrics.num_negative_peaks": "the sorter's own metric name; a count of peaks",
     "aind_unit_qc.waveform_metrics.num_positive_peaks": "as num_negative_peaks",
+    # R90 §3.3: each carries `core.intervals.interval_kind` as part of the shared key, so it holds
+    # a discriminator's value without being one -- and the name must match the parent's column for
+    # the composite reference to read.
+    "dynamic_foraging.trials.interval_kind": "carries core.intervals.interval_kind as a shared-key column, not a discriminator (R90 §3.3)",
+    "vr_foraging.sites.interval_kind": "as dynamic_foraging.trials.interval_kind",
 }
 
 NAMING = {
@@ -338,6 +347,30 @@ for _r, _t in ALL.items():
             if _paired not in _names:
                 _disc.append(f"{_r}.{_c['name']}: discriminates {_paired}, which is not a column here")
 check("a discriminator declares what it resolves to", sorted(_disc))
+
+# R90 §3.2: a discriminator may sit on the table whose rows it specialises, or one declared
+# reference away. Where it is away, `discriminates_via` names the *referencing* column as
+# `resource.column` -- a reference carries no identifier of its own, so there is nothing else to
+# name, and naming the referencing side settles the direction by construction.
+_via = []
+for _r, _t in ALL.items():
+    for _c in _t["columns"]:
+        if (_path := _c.get("discriminates_via")) is None:
+            continue
+        if _c.get("role") != "discriminator":
+            _via.append(f"{_r}.{_c['name']}: declares discriminates_via and is not a discriminator")
+            continue
+        _parts = _path.split(".")
+        if len(_parts) != 3:
+            _via.append(f"{_r}.{_c['name']}: discriminates_via {_path} is not a resource.column")
+            continue
+        _from, _col = f"{_parts[0]}.{_parts[1]}", _parts[2]
+        if _from not in ALL:
+            _via.append(f"{_r}.{_c['name']}: discriminates_via names no resource {_from}")
+        elif not any(_col in ref["columns"] and ref["resource"] == _r
+                     for ref in ALL[_from]["references"]):
+            _via.append(f"{_r}.{_c['name']}: {_from}.{_col} is no declared reference to {_r}")
+check("a discriminator away from its rows names the reference", sorted(_via))
 
 # R55 §2.3.3. A paired value is a string, and not by accident: one column resolves against
 # several kinds, and an assigned key is matched by its `*_name` where a carried one is matched by

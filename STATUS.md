@@ -4,7 +4,7 @@ Tracking document for Escapewheel POC v0.1. Records what exists, what passes val
 which phase is in progress. Design decisions live in `revisions/`, not here.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R89 accepted. R42 and R73 withdrawn. R90–R95 proposed and not binding.
+R1–R41, R43–R72 and R74–R90 accepted. R42 and R73 withdrawn. 10 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 38 tables, 335 columns, 97 references, 70 Tier 2 rules (2 advisory)
