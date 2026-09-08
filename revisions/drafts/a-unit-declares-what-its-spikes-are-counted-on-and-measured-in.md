@@ -1,4 +1,4 @@
-# A Sorted Unit Declares Its Spikes' Context
+# A Unit Declares What Its Spikes Are Counted On and Measured In
 
 | | |
 |---|---|
@@ -17,13 +17,13 @@ of measure** is what `amplitude_unit` holds: microvolts, or ADC counts.
 ## 1. Scope
 
 A row of `core.spike_events` carries two numbers that mean nothing on their own. `amplitude` is a
-height, and what it is measured in is `core.sorting_runs.amplitude_unit`; `t_tick` is a count, and
-which clock counted it is `core.sorting_runs.clock_id`. Both facts belong to the run, and a spike
-cannot reach the run: R56 §2.3 admits one hop, and spike → unit → run is two.
+height in the unit of measure `core.sorting_runs.amplitude_unit` names; `t_tick` is a count on the
+clock `core.sorting_runs.clock_id` names. Both facts belong to the run, and a spike cannot reach
+the run: R56 §2.3 admits one hop, and spike → unit → run is two.
 
-The two columns have taken opposite ways out. `amplitude` declares no unit of measure at all, so
-418,293,098 spikes carry a number nothing interprets. `t_tick` gets a copy of `clock_id` on every
-row, so 286,896,563 of them carry a value twelve rows already hold.
+The two columns fail differently. `amplitude` declares no unit of measure at all, so 418,293,098
+spikes carry a number nothing interprets. `t_tick` takes a copy of `clock_id` on every row, so
+286,896,563 of them repeat a value twelve rows already hold.
 
 This part moves both facts to `core.units`, which a spike references directly, and declares the
 hops that then resolve.
@@ -35,14 +35,14 @@ recorded 2025-04-09) and **`ecephys_786867`** (ten probes, 4,505 units, recorded
 
 Informative.
 
-### 2.1 The hop R56 admits
+### 2.1 R56 admits one hop; a spike reaches its run in two
 
 R56 §2.1 gave a column a machine-readable unit and §2.2 a machine-readable clock, and §2.3 admits
 two forms for each: a column of the same table, or `resource.column` resolved through a reference
 **that table declares**. One hop, because "a path of two would be a query language".
 
 `core.spike_events` reached `core.sorting_runs` only through `core.units`, so R56 declared a direct
-reference for the purpose. Its §6 recorded the strain: *"One hop was nearly not enough… A second
+reference from the spike to the run and resolved both columns across it. Its §6 recorded the strain: *"One hop was nearly not enough… A second
 case needing two hops would be evidence §2.3 is drawn too tight."*
 
 R81 §2.3 then narrowed every unit reference to `unit_id` alone and struck `sorting_run_id` from six
@@ -54,10 +54,10 @@ Nine columns declare a `unit_from` today and **two** use the one-hop form:
 `core.calibration_points.input_value` and `output_value`, each reaching its calibration's declared
 unit of measure (R89 §2.3). Six `clock_from` declarations use it too —
 `core.clock_anchors.parent_tick` through `core.clocks.parent_clock_id`, `core.events.t_tick`
-through its stream (R91 §3.2), and four more. So the form this part needs for a spike is one the
-registry already resolves in both halves, which is what makes §3.3 a use rather than a first.
+through its stream (R91 §3.2), and four more. The form §3.3 needs for a spike is therefore one the
+registry already resolves in both halves, on a calibration's values and on an event's tick.
 
-### 2.2 Reference paths from a spike to its run
+### 2.2 Three declared paths run from a spike to its run
 
 Widening §2.3 to two hops would not resolve either column, because three paths of declared
 references run from `core.spike_events` to `core.sorting_runs`:
@@ -72,7 +72,7 @@ A rule admitting two hops must choose among them, and `registry/check.py` has no
 one — which is what R56 §4 anticipated in warning that "the reference to use is not the only one".
 Relaxing the rule trades a gap that is honest for a resolution that is ambiguous.
 
-### 2.3 What asks for the run's clock
+### 2.3 Every reader of the run's clock is asking what clock a unit is on
 
 R38 §3 added `core.sorting_runs.clock_id`, "since a unit's clock was a string convention no rule
 could see". Every consumer it has acquired since asks the same question:
@@ -92,7 +92,7 @@ It is nevertheless determined at the run's granularity and stays so: 12 runs and
 6,781 units, with **0 of 6,781 units** having spikes on more than one clock. That follows by
 construction, since `core.units.sorting_run_id` is required and a run names one clock.
 
-### 2.4 What the copy on the spike costs
+### 2.4 Neither storage nor query time justifies the copy
 
 | packet | spikes | `clock_id` compressed | share of the table |
 |---|---:|---:|---:|
@@ -114,11 +114,11 @@ third, which nobody runs. The first is the shape a real analysis takes — a spi
 alongside the unit table it is keyed by — and there not projecting a column out of a 287 M-row file
 saves more than joining a 12-row table costs.
 
-What the copy buys is therefore a **declaration** rather than access: `t_tick` declares no
-`clock_from` because R56 §2.2 resolves a coordinate to its own table's `clock_id`, and striking the
-column with the clock still on the run would leave the tick with no clock at all.
+The copy therefore buys a declaration rather than access. `t_tick` declares no `clock_from`,
+because R56 §2.2 resolves a coordinate to its own table's `clock_id`, so striking the column while
+the clock stayed on the run would leave the tick with no clock at all.
 
-### 2.5 The rule that writes the join out
+### 2.5 One rule spells the join the schema cannot declare
 
 `core.sorting_runs.amplitude_unit_declared` fires where a spike carries an amplitude and its run
 declares no unit of measure. Unable to state the path, it spells it:
@@ -145,17 +145,16 @@ nullable, vocabulary open as R11 §2 made it, holding the unit of measure of
 `core.sorting_runs.clock_id` is **struck**. `core.units` gains `clock_id`, `int32`, **required**,
 referencing `core.clocks`, holding the clock every tick of that unit is counted on.
 
-Both are moves rather than copies: one fact keeps one home, so nothing can disagree and no check is
-needed to find out (R3 §3.0). `core.units.sorting_run_id` stays required, so each value is still
-determined by the run wherever it was determined before — R11 §2's reasoning and R38 §3's both
-survive the move rather than being overturned, since a unit names its sorting context in a
-reference it MUST carry.
+Both are moves rather than copies: one fact keeps one home, so nothing can disagree and no check
+finds out (R3 §3.0). The run still determines both values, because `core.units.sorting_run_id`
+stays required — so R11 §2's reasoning and R38 §3's survive the move rather than being overturned:
+a unit names its sorting context in a reference it MUST carry.
 
-`core.units.first_spike_tick` and `last_spike_tick` then declare **nothing**: their `clock_from` is
+`core.units.first_spike_tick` and `last_spike_tick` then declare nothing. Their `clock_from` is
 struck, because R56 §2.2 resolves a coordinate to its own table's `clock_id` and the table now has
 one. The registry's `CONTEXT` block carries entries only where that default does not apply.
 
-### 3.3 What a spike then declares
+### 3.3 A spike resolves both facts in one hop
 
 `core.spike_events.amplitude` **MUST** declare `unit_from: "core.units.amplitude_unit"`, and
 `core.spike_events.t_tick` **MUST** declare `clock_from: "core.units.clock_id"`.
@@ -164,7 +163,7 @@ one-hop `resource.column` form resolving through a reference the table already h
 R89 §2.3 first used for a unit of measure and R91 §3.2 for a clock, resolved here for the largest
 table either packet holds.
 
-### 3.4 The copies that are struck
+### 3.4 Two copies of the clock are struck
 
 `core.spike_events.clock_id` is **struck**, §3.3 having given `t_tick` a hop that resolves without
 it. `core.unit_observation_intervals.clock_id` is **struck** on the same ground, its `start_tick`
@@ -172,7 +171,7 @@ and `stop_tick` declaring `clock_from: "core.units.clock_id"`: a table keyed on 
 unit's clock in one hop, so the rule is uniform rather than applying to the large table and not the
 small one. Nothing is measured for the second, which is unwritten in both packets.
 
-### 3.5 The rules that change
+### 3.5 Four rules change
 
 `core.sorting_runs.amplitude_unit_declared` refiles as `core.units.amplitude_unit_declared` and
 loses a join:
