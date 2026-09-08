@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | `00` §2 (the three-level vocabulary), `02` §5.3 and §13, `03` §1 and §5, `07` §7 (its boundary with Part 10), R2 §6 and `registry.schema.json` (the `sort` field); adds a contents table to `00` and adds Part 10 |
-| **Depends on** | `a-tables-stored-order-is-determined-by-its-key` (which removes the duplicated ordering clauses) |
+| **Depends on** | `a-tables-stored-order-is-determined-by-its-key` (which states the ordering rule this part relocates) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
@@ -29,12 +29,11 @@ Part 02 names a storage technology twice in 344 lines, so the leak is narrow rat
 and Part 01 states its own independence and keeps it. Four clauses are nevertheless in the wrong
 place, and two of them have already drifted apart from their copies.
 
-**Ordering is stated in both parts, differently.** `02` §13.1 gives `core.events` the order
-`session_id, clock_id, t_tick, event_type` and `03` §5.4 gives it `session_id, clock_id, t_tick`.
-Both name columns R91 §3.2 struck, so `a-tables-stored-order-is-determined-by-its-key` §3 strikes
-the statements; what they demonstrate is that two documents held one rule and drifted. `02` §13.1
-also says one table overrides the default where `03` §5.4 lists two, and nothing compares the
-documents, so `verify.py` passes on both errors.
+**Ordering is stated in both parts.** `02` §13.1 and `03` §5.3 each say a writer SHOULD sort every
+table by its primary key, and each names `analysis.spike_events` as the one override. One rule,
+written twice, in the part that must hold under any profile and in the part that describes one
+profile's storage. Nothing compares them, so `verify.py` passes however far they drift — and they
+have: until R91 §3.2 was accepted the two gave `core.events` orders of four columns and three.
 
 **Partitioning is stated in `02` §13.2.** Partitioning is `03` §5.2's subject, and `02`'s copy
 carries the same two rules.
@@ -61,7 +60,8 @@ Part 02 **MUST NOT** name a storage technology, a file format, an encoding, or a
 of a stored resource, except to place such a rule outside its own scope. Every clause of Part 02
 **MUST** hold unchanged under any physical profile.
 
-`02` §13 is struck whole — ordering and partitioning are its only two subsections; `a-tables-stored-order-is-determined-by-its-key` §5 carries the ordering rule and
+`02` §13 is struck whole — ordering and partitioning are its only two subsections;
+`a-tables-stored-order-is-determined-by-its-key` §2.2 carries the ordering rule and
 `03` §5.2 already carries the partitioning rules. `02` §5.3's sentence forbidding `INT96` is
 struck; `03` §5.5 already states it.
 
@@ -74,15 +74,15 @@ Part 03 is normative for a packet whose manifest declares its `profile_id`, and 
 packet. It is the only part that names a storage technology.
 
 No clause of Part 01 or Part 02 **MAY** depend on a clause of Part 03. A logical rule discharged
-by a physical property is the defect `a-tables-stored-order-is-determined-by-its-key` §5 repairs, and this states the general form of it so a
-later revision does not reintroduce one.
+by a physical property is the defect `a-tables-stored-order-is-determined-by-its-key` §2.1
+repairs, and this states the general form of it so a later revision does not reintroduce one.
 
 ### 3.3 The registry declares no stored order
 
 The `sort` field is removed from `registry.schema.json` and from every table of
 `logical_schemas.json`. A table's stored order is its primary key's, unless `03` §5.4 names another
 for it, and a named override **MUST** satisfy
-`a-tables-stored-order-is-determined-by-its-key` §5.
+`a-tables-stored-order-is-determined-by-its-key` §2.2.
 
 Every registry document drops the field, an extension's (R17 §2) as much as core's, since the
 amended meta-schema admits no property it does not declare; all eleven extension tables carrying a
@@ -94,7 +94,7 @@ one remaining override coexist with a minimal key.
 
 The validator holds the override list, since a physical rule is the shim's rather than SQL's
 (R12 §4), and **MUST** refuse an override that does not satisfy
-`a-tables-stored-order-is-determined-by-its-key` §5 — a check made with no
+`a-tables-stored-order-is-determined-by-its-key` §2.2 — a check made with no
 packet in hand, as R56 §2.4's is. That is what `aind_unit_qc` needed when it went on sorting by two
 columns R81 had removed, which no packet could satisfy and no rule could see.
 
@@ -195,10 +195,9 @@ Informative.
 - **No table, column, reference or rule.** Every change is to which document holds a sentence.
 - **No part is renumbered.** §3.5 records why: the sequence cannot express Part 06, and the
   identifiers 52 citations depend on are worth more than a tidy order.
-- **No packet is invalidated.** The moved clauses say the same things in their new homes, and the
-  one statement that disagreed with the registry is gone before this part runs —
-  `a-tables-stored-order-is-determined-by-its-key` §3 strikes `03` §5.4's `core.events` entry, so
-  there is no order here to reconcile.
+- **No packet is invalidated.** The moved clauses say the same things in their new homes, and
+  `03` §5.4 names one override where it once named two, R91 §3.2 having removed `core.events`',
+  so there is no disagreement left here to reconcile.
 - **Part 07 §7 is unmoved.** Its performance notes are the reference implementation's and stay
   informative where they are; §3.4 divides Part 10 from it rather than merging the two.
 - **Part 03 stays normative.** A profile that were merely described could not be validated, and
