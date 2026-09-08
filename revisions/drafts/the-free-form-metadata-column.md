@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | `02` §5.2 (the clause against filling a `json_string` routinely), `09` §2 (the tier table), the 21 registry declarations of `metadata` and their descriptions |
-| **Depends on** | R48 (a column declares its role), R46 (the references that make "its own" decidable), R53 (identity), R2 §5 (three-state presence), R91 §3.3 (what `core.events.payload` is for) |
+| **Depends on** | R48 (a column declares its role), R46 (the references that make "its own" decidable), R53 (identity), R2 §5 (three-state presence), R91 §3.3 (what `core.events.payload` is for), R94 §3 (which asks this part for the presence rule) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 Normative, except §2 and §6, which are informative.
@@ -119,6 +119,12 @@ calibrated, an event a value. So the three columns §5 strikes are struck on the
 adapter writes them and no consumer asks, which is the standard R62 struck a file on, and not
 because the shape of the key forbids them.
 
+A `metadata` column **MUST** be declared `optional`. All 21 already are, so nothing changes in the
+registry; what changes is that R94 §3's check becomes sound by construction rather than by
+observation. That check refuses a Tier 2 rule naming an optional column and matches the bare name,
+which is correct only while every column called `metadata` is optional — R94 §3 records the
+exposure and names this part as the one that closes it.
+
 Both bounds are decidable from the registry with no packet in hand, as R56 §2.4's is, so
 `registry/check.py` enforces them: a table owing a `metadata` column and lacking one is a build
 error, and so is a relationship table carrying one. What lies between is a declaration each table
@@ -158,8 +164,9 @@ for it, holding tier 3 or tier 4 content that no rule reads.
 
 ## 4. What this does not change
 
-- **No reference and no Tier 2 rule.** `registry/rules.json` names neither `metadata` nor `payload`,
-  so the 96 references and 69 rules are untouched.
+- **No reference and no Tier 2 rule.** `registry/rules.json` names neither `metadata` nor
+  `payload` — R94 §3's check is what now keeps it so — and the 94 references and 70 rules are
+  untouched.
 - **No packet is invalidated.** The validator walks the registry's columns and asks whether each is
   present in the file; nothing looks for columns the registry does not declare, so striking one
   cannot fail a packet that still carries it. None does.
@@ -179,7 +186,7 @@ for it, holding tier 3 or tier 4 content that no rule reads.
 
 ## 5. Consequence
 
-Three columns are struck and 333 becomes **330**. None is forbidden by §3.1 — all three sit in its
+Three columns are struck and 324 becomes **321**. None is forbidden by §3.1 — all three sit in its
 **MAY** band — so each is struck on the same evidence: no adapter writes it and no consumer asks.
 
 | struck | rows in the packets | state today |
