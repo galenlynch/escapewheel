@@ -32,9 +32,8 @@ names any of them**.
 The convention is therefore real and unwritten, which is how it has held: every rule author so far
 has written against a column that is present. Nothing would have told them otherwise. The writer
 omits `metadata` on ten of the twenty-one tables declaring it and `payload` on both packets, so a
-rule naming one of those would have failed on the first packet built rather than on some later
-one —
-which is the accident that has kept the class closed rather than a rule that closed it.
+rule naming one of those would have failed on the first packet built rather than on some later one
+— which is the accident that has kept the class closed rather than a rule that closed it.
 
 ## 3. Decision
 
@@ -51,16 +50,15 @@ compared against a column. That is exact enough without parsing a SQL dialect th
 otherwise never parses, and it keeps the check off DuckDB, which `check.py` treats as optional and
 which a rule-execution check is already gated behind.
 
-A hit is a true positive because each of the four names is optional wherever it appears: `metadata`
-on all twenty-one tables declaring it, `parameters` on both, `core.events.payload` and
-`core.clocks.transform_to_parent`. Only 4 of the 69 rules contain a string literal at all, and none
-of those literals contains any of the four.
+A hit is a true positive because each of the four names §2 lists is optional on every table
+carrying it. Only 4 of the 69 rules contain a string literal at all, and none of those literals
+holds any of the four.
 
 **That invariant is what the check rests on, and no clause states it.** Qualifying the match by
 table is not the repair. **42** of the 69 rules read one relation, where a bare column resolves to
 it without ambiguity; the other **27** read two to five, and a bare column in any of those cannot
 be resolved without the parser this part has just declined. So a qualified match would cover the
-easy majority and fail on the rules whose ambiguity is what would make it necessary.
+easy majority and fail on exactly the rules that need it.
 
 The repair is to require the presence rather than to qualify the reference: a column named
 `metadata` is optional because that is what the column is for, and a revision governing the
@@ -89,7 +87,8 @@ sometimes empty, or the constraint can move to the shim, where R12 §4 puts what
 revalidated differently.
 
 `columns-that-hold-one-value` takes Tier 2 rules from 69 to 70 and is next in the application
-order, so whichever of the two is accepted second re-measures the count this part states twice.
+order, so whichever of the two is accepted second re-measures the rule count, which this part uses
+as a denominator in §2, §3 and §4.
 
 ## 6. Open
 
