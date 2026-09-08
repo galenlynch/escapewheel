@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `02` §10.1 (the uniqueness obligation, losing its physical condition), `03` §5.3 (the ordering rule and the level a departure is reported at) |
+| **Amends** | `02` §10.1 (the uniqueness obligation, losing its physical condition), `02` §8 (a new §8.5 defining `determined_by`), `03` §5.3 (the ordering rule and the level a departure is reported at), `06` §4 (when `analysis.spike_events` is not materialised) |
 | **Depends on** | R10 §2 (sort by primary key), R30 §3.2 (`analysis.spike_events`' layout), R81 §2.4 (that layout narrowed to five columns), R75 §2.1 (an assigned identifier is reproducible), R91 §3.2 (`core.events`' key) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -24,9 +24,10 @@ wrong. A correctness check is skipped on the strength of a recommendation.
 §2 puts the obligation and the means on opposite sides of that line. `02` §10.1 keeps the
 requirement that uniqueness be established and loses the condition; `03` §5.3 gains the ordering
 rule as a **MUST** reported at **error**, shaped so that it admits `analysis.spike_events`, whose
-layout is what justified materialising it; and the one declaration that rule leans on is verified
-by the scan rather than believed. No column, reference or Tier 2 rule changes, and no packet's rows
-move.
+layout is what justified materialising it; `determined_by`, the declaration that shaping leans on,
+is defined in `02` §8 and verified against rows by the scan rather than believed; and `06` §4 says
+what a writer does when the conversion that table performs collides two spikes onto one tick. No
+column, reference or Tier 2 rule changes, and no packet's rows move.
 
 Measurements are from the two packaged sessions: **`ecephys_776259`**, twelve probes and 6,781
 sorted units, and **`ecephys_786867`**, ten probes and 4,505.
@@ -47,6 +48,13 @@ every table, which is the opposite of what the waiver permitted, so one subsecti
 itself.
 
 ### 2.2 A table is stored in an order that settles its key
+
+A column **MAY** declare `determined_by`, naming the columns whose values fix its own: two rows
+agreeing on every column named agree on this one, and an empty list declares a constant. The
+declaration is structural, decidable from the registry with no packet in hand, and §2.3 is what
+verifies it against rows. It belongs in `02` §8 as a new §8.5, beside role, identity, discriminator
+and unit — a statement about values holds under any profile, where the rule below consuming it does
+not.
 
 A table under `escapewheel-portable-v0.1` **MUST** be stored in an order that settles its primary
 key by adjacency: every key column appears in the sort, and every sort column up to and including
@@ -76,6 +84,19 @@ difference as an **error**.
 A wrong declaration otherwise **waives** a check rather than failing one, which is silent, where
 every other structural declaration that can be wrong fails loudly: a wrong reference generates an
 anti-join, and a wrong `clock_from` is refused by R56 §2.4 with no packet in hand.
+
+### 2.4 A conversion that collides is not materialised
+
+`analysis.spike_events` is keyed on the converted tick (R30 §3.2, `06` §4), and a conversion
+preserves distinctness only where it expands. A writer that finds two spikes of one unit landing on
+one reference tick **MUST NOT** materialise the table, and **MUST** record the reason in the
+producing run's parameters, as R40 §2.3 requires of an omitted row.
+
+Refusing costs the packet nothing it can use. `06` §4 justifies the table on a ten-second
+population window costing 0.025 s against 7.7 s, and a histogram built on collapsed spikes
+undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table
+the wrong instrument rather than a broken one — and `06` §2 already contemplates its not being
+built. Carrying the probe tick instead, and keying on that, is rejected on the cost §3.3 measures.
 
 ## 3. Why the rule takes this shape
 
@@ -115,7 +136,31 @@ Renumbering is not available either: `unit_id` is shared with core and `t_tick` 
 converted from a measurement, so neither may be reassigned to suit a layout, and both are
 load-bearing in the sort.
 
-### 3.3 The aggregate the waiver avoids costs nine seconds
+### 3.3 The converted tick is distinct only because the reference clock is faster
+
+`core.spike_events` keys a spike by its tick on the probe's clock, where the sorter guarantees
+distinctness. `analysis.spike_events` inherits that key on the converted tick — R30 §3.2 says
+"below the bucket the key is `core.spike_events`'s own, unchanged" — and nothing states the premise
+that makes inheriting it safe.
+
+In both packets the premise holds by rate. Every probe clock is **30,000 Hz** and the session's
+reference clock, `harp`, is **31,250 Hz**, so the map expands by 1.0417 and two distinct probe
+ticks cannot meet: **0** duplicate keys over 286,876,859 rows.
+
+Physiology does not supply the premise. The smallest gap between consecutive spikes of one unit is
+**7 probe ticks**, 233 µs, and **16,181,534** gaps are under a millisecond, so the sorter emits ISI
+violations freely and nothing forbids a one-tick gap — which collapses under any reference clock
+slower than the source. The clock graph does not supply it either: R27 requires a well-founded
+parent chain and bounds the alignment error, and says nothing about rate, so a rig syncing 30 kHz
+probes to a 1 kHz clock is conforming.
+
+Carrying the probe tick as a column would key the table on `core.spike_events`' own key — three
+natural columns, no surrogate, and R46 §2 admits a composite reference. It is rejected on cost:
+`t_tick` is **487.1 MB** of this table's 494.1 MB at 13.6 bits a row, and a source tick costs what
+core's does at 12.9, taking the table to about **955 MB, 1.93x**, to gain a key no reference
+targets.
+
+### 3.4 The aggregate the waiver avoids costs nine seconds
 
 Cost does not decide the level. Re-measured on `core.spike_events`'s 286,896,563 rows under a 4 GB
 memory limit, the aggregate runs in **8.8 s** and returns 0 duplicate keys. The 26 GB the validator
@@ -124,10 +169,10 @@ three integers, so what the waiver saves today is nine seconds on the largest ta
 holds — against the 25 tables §3.1 counts whose uniqueness rests on a recommendation, and all 38
 under §2.2.
 
-### 3.4 Verifying the declaration as a query would cost what it saves
+### 3.5 Verifying the declaration as a query would cost what it saves
 
 Measured on `analysis.spike_events`' 286,876,859 rows, the aggregate that checks `time_bucket_tick`
-is a function of `t_tick` runs in **8.5 s**, against §3.3's 8.8 s for the uniqueness aggregate the
+is a function of `t_tick` runs in **8.5 s**, against §3.4's 8.8 s for the uniqueness aggregate the
 declaration waives. A rule per declaration would spend the saving to protect it, where the scan
 already compares each row with its predecessor and §2.3 is one more equality on a pass being made
 anyway — in the shim, where R12 §4 puts what SQL cannot observe.
@@ -135,7 +180,7 @@ anyway — in the shim, where R12 §4 puts what SQL cannot observe.
 Two columns declare `determined_by` today, both on `analysis.spike_events`: `clock_id` on
 `session_id`, `time_bucket_tick` on `t_tick`. Both hold, at **0** offending rows each.
 
-### 3.5 Every table but one is already stored in key order
+### 3.6 Every table but one is already stored in key order
 
 Both packets predate R88 §2 and R91 §3.2, so what they measure is the writer's habit rather than
 the registry's present state.
@@ -163,6 +208,8 @@ R91 §5 already requires is what clears it.
   added anywhere.
 - **R30's layout and its MUST both stand.** Bucketing by time and sorting by unit within a bucket
   is why the table exists, and §2.2 accommodates it rather than requiring it be argued away.
+- **Neither packet is invalidated by §2.4.** The conversion collides in neither, so the table
+  stays materialisable in both; §3.3 measures why.
 - **No extension is invalidated.** All **11** tables across `aind_opto`, `aind_unit_qc`,
   `dynamic_foraging` and `vr_foraging` sort by their primary key outright, so §2.2 holds for each
   of them without a `determined_by` declaration.
@@ -193,6 +240,8 @@ No column, reference or Tier 2 rule changes, so `registry/build.py` gains no blo
 recorded in its `UNSTAMPED` tuple. It loses `core.events` from the `OVERRIDE` table its R10 block
 reads, dead since the R91 block rewrites the same field afterwards.
 
+`06` §4 gains §2.4's clause beside its "Rows are not preserved" paragraph, and `02` §8 gains §8.5.
+The writer compares the two ticks at conversion, which is one comparison in a loop it already runs.
 `escapewheel_validator.generate.adjacency_settles_uniqueness` gains one line, reading a table's
 primary key where it declares no sort; today it returns `False` for those thirteen and the
 validator checks nothing about their order. The ordering scan gains §2.3's comparison. Nothing else
@@ -203,7 +252,7 @@ thirteen from the tables that declare no sort. Ordering scans go from 25 tables 
 `RowGroup.sorting_columns` is unaffected: `writer.py` stamps it for a table declaring an order, and
 §2.2 adds no declaration.
 
-**No rebuild is owed by this part.** §3.5 records the one table that fails §2.2 in the committed
+**No rebuild is owed by this part.** §3.6 records the one table that fails §2.2 in the committed
 packets, and the rebuild R87 §2.1, R88 §2 and R91 §5 already require is what clears it.
 
 ## 6. Open
