@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `02` §10.1 (the condition the uniqueness waiver rests on), `03` §5.3 (the level a departure is reported at) |
+| **Amends** | `02` §10.1 (the uniqueness obligation, losing its physical condition), `03` §5.3 (the ordering rule and the level a departure is reported at) |
 | **Depends on** | R10 §2 (sort by primary key), R30 §3.2 (`analysis.spike_events`' layout), R81 §2.4 (that layout narrowed to five columns), R75 §2.1 (an assigned identifier is reproducible), R91 §3.2 (`core.events`' key) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -13,17 +13,22 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Scope
 
-`02` §10.1 waives the primary-key uniqueness query for a table whose stored order settles its key,
-which on `core.spike_events`' 286,896,563 rows is what replaced an aggregate that spilled 26 GB.
-The waiver rests on a property no clause requires: `03` §5.3 makes ordering a SHOULD and reports a
-departure at **warning**, on the ground that a mis-sorted packet is readable and slower rather than
-wrong. A validator therefore skips a correctness check on the strength of a property a conforming
-packet is free not to have.
+`02` §10.1 lets a validator skip the primary-key uniqueness query "where a table's physical sort
+begins with its primary key", since duplicates are then adjacent and the ordering scan settles
+them. Uniqueness is a logical fact and stored order is a physical one, so the logical standard is
+discharging its own MUST with a property only a profile can promise — and `03` §5.3 promises
+nothing, making ordering a SHOULD reported at **warning** on the ground that a mis-sorted packet is
+readable and slower rather than wrong.
 
-This part raises that level to a MUST reported at error, restates the condition so that it admits
-`analysis.spike_events`, whose layout is what justified materialising it, and requires the one
-declaration the condition leans on to be verified rather than believed. No column, reference or
-rule is added, and no packet's rows move.
+Two defects follow. A correctness check is skipped on the strength of a recommendation. And the
+clause that skips it sits in the part that must hold under every profile, though an Iceberg
+compaction reorders rows and would make it false.
+
+This part puts the obligation and the means on opposite sides of that line. `02` §10.1 keeps the
+requirement that uniqueness be established and loses the condition; `03` §5.3 gains the ordering
+rule as a **MUST** reported at **error**, stated so that it admits `analysis.spike_events`, whose
+layout is what justified materialising it. The one declaration the rule leans on is verified rather
+than believed. No column, reference or rule is added, and no packet's rows move.
 
 Measurements are from the two packaged sessions: **`ecephys_776259`**, twelve probes and 6,781
 sorted units, and **`ecephys_786867`**, ten probes and 4,505.
@@ -76,7 +81,7 @@ edit could resolve the wrong way, and §7 removes it.
 
 Both committed packets still hold the old order, so `core.events` is **1,293** rows out of its
 current key order in `ecephys_776259` and **1,001** in `ecephys_786867`. That is the one place
-§5.1 fails today, and the rebuild R91 §5 already requires is what clears it.
+§5.2 fails today, and the rebuild R91 §5 already requires is what clears it.
 
 ## 4. `analysis.spike_events`
 
@@ -110,7 +115,18 @@ them checkable rather than conventional.
 
 ## 5. Ordering under the portable profile
 
-### 5.1 The order a table is stored in
+### 5.1 The obligation and the means
+
+`02` §10.1's sentence waiving the uniqueness query is **struck**. What the logical standard requires
+is the fact alone: a validator **MUST** establish that a table's primary key is unique, by query or
+by any means a physical profile defines as establishing it. That clause holds under every profile,
+which is what a clause of Part 02 has to do.
+
+How it is established under `escapewheel-portable-v0.1` is §5.2, and Part 03 is where a rule
+belongs that would change if the profile changed. An Iceberg compaction rewrites files and
+preserves no order across them, so a table's stored order is exactly such a rule.
+
+### 5.2 The order a table is stored in
 
 A table under `escapewheel-portable-v0.1` **MUST** be stored in an order that settles its primary
 key by adjacency: every key column appears in the sort, and every sort column up to and including
@@ -119,26 +135,26 @@ subset of the key. A validator **MUST** report a departure as an **error**.
 
 Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a
 column that is a function of the key takes the same value in both. So the scan that establishes
-order settles uniqueness in the same pass.
+order settles uniqueness in the same pass, which is the means §5.1 leaves to the profile to supply.
 
-This replaces the condition `02` §10.1 states, which is that the sort **begin with** the primary
-key. That is a prefix test, and `analysis.spike_events` fails it — its sort opens with `clock_id`
-and `time_bucket_tick`, two columns the key does not contain — so the waiver as written has never
-covered the one table that most needs it. `02` §10.1's literal text reaches **24 of 38** tables
-where `escapewheel_validator.generate.adjacency_settles_uniqueness` waives **25**, and the extra
-one is `analysis.spike_events`, whose 286,876,859-row aggregate the validator is already skipping
-without authority. The adjacency form authorises it and still
-excludes what should be excluded: a sort of `(a, x, b)` under key `(a, b)` lets `x` order
-duplicates apart, and there the aggregate is the only correct check.
+Adjacency is what the condition should have said. `02` §10.1 required the sort to **begin with** the
+primary key, which is a prefix test, and `analysis.spike_events` fails it — its sort opens with
+`clock_id` and `time_bucket_tick`, two columns the key does not contain — so the waiver as written
+never covered the one table that most needs it. `02` §10.1's literal text reaches **24 of 38**
+tables where `escapewheel_validator.generate.adjacency_settles_uniqueness` waives **25**, and the
+extra one is `analysis.spike_events`, whose 286,876,859-row aggregate the validator is already
+skipping without authority. The adjacency form authorises it and still excludes what should be
+excluded: a sort of `(a, x, b)` under key `(a, b)` lets `x` order duplicates apart, and there the
+aggregate is the only correct check.
 
 A reader **MUST NOT** depend on stored order for correctness. Establishing the order is the
 validator's work, and a reader that assumed it would be trusting a property of the profile rather
 than of the logical standard.
 
-### 5.2 The level a departure is reported at
+### 5.3 What the level costs
 
 `03` §5.3's SHOULD becomes a **MUST**, and its **warning** an **error**. The uniqueness query is
-skipped for 25 of 38 tables today and for all 38 under §5.1, so the level decides whether that many
+skipped for 25 of 38 tables today and for all 38 under §5.2, so the level decides whether that many
 correctness checks rest on a requirement or on a recommendation.
 
 Cost does not decide it. Re-measured on `core.spike_events`'s 286,896,563 rows under a 4 GB memory
@@ -149,11 +165,11 @@ either packet holds.
 
 The fallback stays. Where the scan finds a departure, uniqueness **MUST** be settled by aggregate
 rather than by adjacency, since a duplicate anywhere but beside its twin is invisible to a scan of
-neighbours. A packet reaching that path has already failed §5.1.
+neighbours. A packet reaching that path has already failed §5.2.
 
-### 5.3 A `determined_by` declaration is verified by the scan
+### 5.4 A `determined_by` declaration is verified by the scan
 
-Where §5.1 lets a `determined_by` declaration stand in for a key column, the ordering scan **MUST**
+Where §5.2 lets a `determined_by` declaration stand in for a key column, the ordering scan **MUST**
 verify it: of two adjacent rows sharing a primary key, every sort column declared `determined_by` a
 subset of that key **MUST** hold the same value in both, and a validator **MUST** report a
 difference as an **error**.
@@ -168,26 +184,30 @@ pass being made anyway, and it belongs in the shim where R12 §4 puts what SQL c
 The failure it catches is a silent one. A wrong `determined_by` **waives** a check rather than
 failing one, where every other structural declaration that can be wrong fails loudly: a wrong
 reference generates an anti-join, and a wrong `clock_from` is refused by R56 §2.4 with no packet in
-hand. Two columns declare `determined_by` today, both on
-`analysis.spike_events` — `clock_id` on `session_id`, `time_bucket_tick` on `t_tick` — and both
-hold, at **0** offending rows each.
+hand. Two columns declare `determined_by` today, both on `analysis.spike_events` — `clock_id` on
+`session_id`, `time_bucket_tick` on `t_tick` — and both hold, at **0** offending rows each.
 
 ## 6. What this does not change
 
 - **No packet's rows move for this part.** The thirteen tables declaring no sort are already in
-  primary-key order in both packets, so §5.1 asks nothing new of them, and the writer takes its
+  primary-key order in both packets, so §5.2 asks nothing new of them, and the writer takes its
   order from the registry.
 - **`analysis.spike_events` keeps its three-column key**, and no table, column, reference or rule
   is added anywhere.
 - **R30's layout and its MUST both stand.** Bucketing by time and sorting by unit within a bucket
-  is why the table exists, and §5.1 accommodates it rather than requiring it be argued away.
+  is why the table exists, and §5.2 accommodates it rather than requiring it be argued away.
 - **No extension is invalidated.** All **11** tables across `aind_opto`, `aind_unit_qc`,
-  `dynamic_foraging` and `vr_foraging` sort by their primary key outright, so §5.1 holds for each
+  `dynamic_foraging` and `vr_foraging` sort by their primary key outright, so §5.2 holds for each
   of them without a `determined_by` declaration.
+- **The general form of this belongs to another part.**
+  `separation-of-the-logical-standard-from-the-physical-profile` §3.1 and §3.2 state that no clause
+  of Part 02 may name a physical property or depend on a clause of Part 03, and sweep the crossings
+  this part does not touch. §5.1 repairs only the one clause this part was already rewriting,
+  rather than leaving a physical condition in the logical standard for a later part to move.
 - **`03` §5.2's partitioning rules are untouched.** A partitioned table's order across files is
-  still undefined by the profile, and §5.1 is a statement about a table's contents rather than
+  still undefined by the profile, and §5.2 is a statement about a table's contents rather than
   about file boundaries.
-- **An assigned identifier's numbering is already constrained.** §5.1 leans on a rebuild
+- **An assigned identifier's numbering is already constrained.** §5.2 leans on a rebuild
   reproducing the order a table is stored in, which R75 §2.1 requires of every assigned identifier:
   the same recipe and sources produce the same numbers, never wall-clock time or iteration order.
   Which order each is numbered in beyond that is an optimisation, deliberate once — R81 §2.2 chose
@@ -204,21 +224,21 @@ No column, reference or rule changes.
 `registry/build.py` loses `core.events` from its `OVERRIDE` table, and fills `sort` from the
 primary key for every table declaring none, in a pass at the **end** of the build: the thirteen
 nulls of §2 are tables added after that pass ran, and a pass that runs last cannot be outrun by a
-later block. `escapewheel_validator.generate.adjacency_settles_uniqueness` is unchanged, §5.1 being
+later block. `escapewheel_validator.generate.adjacency_settles_uniqueness` is unchanged, §5.2 being
 that function stated as a rule rather than left as an optimisation the validator happens to make;
-the ordering scan gains §5.3's comparison.
+the ordering scan gains §5.4's comparison.
 
 Tier 1 uniqueness goes from **13** generated `GROUP BY` checks to none on a conforming packet, all
 thirteen from the filled sorts. Ordering scans go from 25 tables to all 38, and the writer stamps
 `RowGroup.sorting_columns` on 38 rather than 25, since `writer.py` writes it for a table that
 declares an order.
 
-**No rebuild is owed by this part.** §3 records the one table that fails §5.1 in the committed
+**No rebuild is owed by this part.** §3 records the one table that fails §5.2 in the committed
 packets, and the rebuild R87 §2.1, R88 §2 and R91 §5 already require is what clears it.
 
 ## 8. Open
 
-- **Whether an amendment may append.** §5.1 requires a table to be in an order its key settles, and
+- **Whether an amendment may append.** §5.2 requires a table to be in an order its key settles, and
   no case exists yet: R32's amendment writes new resources rather than appending to existing ones,
   and R14 §2.3 forbids mutating packet-owned bytes at all. Neither answer is obvious. Read per
   file, a later batch would be ordered within itself but forbidden from re-entering an earlier
