@@ -1712,3 +1712,37 @@ note = "why the condition is adjacency and not a prefix; quotes R30 §3.2's MUST
 [clause."R92 §4"]
 disposition = "rationale"
 note = "what the part leaves alone; its MUST is R30 §3.2's, restated as standing"
+
+[clause."R93 §3.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §5.3, and §13 struck"
+note = "Part 02 names no storage technology except to place a rule outside its own scope; ordering and partitioning go to 03, INT96 was already in 03 §5.5"
+
+[clause."R93 §3.2"]
+disposition = "applied"
+where = "00_architecture.md §2.3 and §7.3, 03_portable_physical_profile.md §1"
+note = "what a profile is, what a second one must satisfy, and that no Part 01 or 02 clause may depend on one"
+
+[clause."R93 §3.3"]
+disposition = "registry"
+where = "the sort field, removed from registry.schema.json, logical_schemas.json and the four extensions"
+note = "03 §5.4 is an override's only statement; escapewheel_reader.ordering holds the machine copy the writer and validator both read"
+
+[clause."R93 §3.4"]
+disposition = "applied"
+where = "10_performance_notes.md"
+note = "Part 10 added, informative, versioned; each measurement records its date and says where the toolchain was not kept"
+
+[clause."R93 §3.5"]
+disposition = "applied"
+where = "07_reference_implementation.md §7"
+note = "the boundary with Part 10: a number that would change with this implementation stays in 07"
+
+[clause."R93 §3.6"]
+disposition = "applied"
+where = "00_architecture.md §9"
+note = "the contents table, appended so no part or section identifier moves"
+
+[clause."R93 §2"]
+disposition = "rationale"
+note = "where the boundary is crossed; informative, and its SHOULDs are the ones it quotes from 02 §13.1 and 03 §5.3"

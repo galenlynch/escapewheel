@@ -206,10 +206,6 @@
           ]
         }
       ],
-      "sort": [
-        "session_id",
-        "unit_id"
-      ],
       "rules": [
         {
           "id": "aind_unit_qc.metrics.presence_ratio_is_bounded",
@@ -380,10 +376,6 @@
           ]
         }
       ],
-      "sort": [
-        "session_id",
-        "unit_id"
-      ],
       "rules": [
         {
           "id": "aind_unit_qc.waveform_metrics.a_width_is_positive",
@@ -450,11 +442,6 @@
             "session_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id",
-        "unit_id",
-        "synchrony_size"
       ],
       "rules": [
         {

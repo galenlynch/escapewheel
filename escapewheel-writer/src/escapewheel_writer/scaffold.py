@@ -128,7 +128,6 @@ def draft(extension_id: str, tables: dict[str, Path], *, logical_standard_versio
             # R17 §2 lets an extension reference core, and R55 §2.3.1 needs it to where a
             # discriminator names this table. Nothing here can know which.
             "references": [],
-            "sort": None,
             "rules": [],
         }
         decisions.append(f"{resource}: primary_key is null; declare it or say why not (R7)")

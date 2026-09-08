@@ -95,7 +95,8 @@
       "R89",
       "R90",
       "R91",
-      "R92"
+      "R92",
+      "R93"
     ]
   },
   "tables": {
@@ -262,9 +263,6 @@
           ]
         }
       ],
-      "sort": [
-        "array_asset_id"
-      ],
       "rules": [],
       "since": "R20 \u00a75"
     },
@@ -422,10 +420,6 @@
           ]
         }
       ],
-      "sort": [
-        "array_asset_id",
-        "axis_index"
-      ],
       "rules": [],
       "since": "R20 \u00a75"
     },
@@ -510,13 +504,6 @@
             "session_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id",
-        "clock_id",
-        "time_bucket_tick",
-        "unit_id",
-        "t_tick"
       ],
       "rules": [
         {
@@ -685,9 +672,6 @@
           ]
         }
       ],
-      "sort": [
-        "array_asset_id"
-      ],
       "rules": [
         {
           "id": "core.array_assets.one_scaling_level",
@@ -827,10 +811,6 @@
             "session_id"
           ]
         }
-      ],
-      "sort": [
-        "array_asset_id",
-        "channel_index"
       ],
       "rules": [
         {
@@ -1004,10 +984,6 @@
           ]
         }
       ],
-      "sort": [
-        "array_asset_id",
-        "axis_index"
-      ],
       "rules": [
         {
           "id": "core.array_dimensions.axis_index_contiguous",
@@ -1117,10 +1093,6 @@
           ]
         }
       ],
-      "sort": [
-        "calibration_id",
-        "device_id"
-      ],
       "rules": [],
       "since": "R89 \u00a72.2"
     },
@@ -1194,10 +1166,6 @@
             "calibration_id"
           ]
         }
-      ],
-      "sort": [
-        "calibration_id",
-        "point_index"
       ],
       "rules": [],
       "since": "R89 \u00a72.3"
@@ -1320,9 +1288,6 @@
           ]
         }
       ],
-      "sort": [
-        "calibration_id"
-      ],
       "rules": [
         {
           "id": "core.calibrations.unit_pair_complete",
@@ -1409,7 +1374,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.clock_anchors.requires_parent",
@@ -1500,7 +1464,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.clock_observation_intervals.interval_valid",
@@ -1648,9 +1611,6 @@
             "clock_id"
           ]
         }
-      ],
-      "sort": [
-        "clock_id"
       ],
       "rules": [
         {
@@ -1838,9 +1798,6 @@
           ]
         }
       ],
-      "sort": [
-        "curation_id"
-      ],
       "rules": []
     },
     "core.devices": {
@@ -1961,9 +1918,6 @@
             "session_id"
           ]
         }
-      ],
-      "sort": [
-        "device_id"
       ],
       "rules": [
         {
@@ -2107,7 +2061,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [],
       "since": "R19 \u00a73"
     },
@@ -2200,9 +2153,6 @@
           ]
         }
       ],
-      "sort": [
-        "electrode_id"
-      ],
       "rules": []
     },
     "core.event_stream_observation_intervals": {
@@ -2268,7 +2218,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.event_stream_observation_intervals.interval_valid",
@@ -2416,7 +2365,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.event_streams.observation_declared",
@@ -2494,11 +2442,6 @@
             "event_stream_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id",
-        "stream_id",
-        "t_tick"
       ],
       "rules": [
         {
@@ -2593,11 +2536,6 @@
             "clock_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id",
-        "interval_kind",
-        "interval_id"
       ],
       "rules": [
         {
@@ -2719,7 +2657,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.media_assets.pts_rate_pair_complete",
@@ -2838,10 +2775,6 @@
           ]
         }
       ],
-      "sort": [
-        "media_asset_id",
-        "frame_index"
-      ],
       "rules": [
         {
           "id": "core.media_frames.frame_index_contiguous",
@@ -2946,7 +2879,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.preferred_runs.activity_matches_run",
@@ -3076,9 +3008,6 @@
           ]
         }
       ],
-      "sort": [
-        "probe_id"
-      ],
       "rules": []
     },
     "core.processing_run_inputs": {
@@ -3143,10 +3072,6 @@
             "session_id"
           ]
         }
-      ],
-      "sort": [
-        "processing_run_id",
-        "source_file_id"
       ],
       "rules": [],
       "since": "R9"
@@ -3300,7 +3225,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.processing_runs.no_failed_runs",
@@ -3380,10 +3304,6 @@
             "session_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id",
-        "experimenter"
       ],
       "rules": [],
       "since": "R3 \u00a73.1-3.3"
@@ -3507,9 +3427,6 @@
           ]
         }
       ],
-      "sort": [
-        "session_id"
-      ],
       "rules": [
         {
           "id": "core.sessions.manifest_sessions_match",
@@ -3608,11 +3525,6 @@
             "session_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id",
-        "sorting_run_id",
-        "channel_index"
       ],
       "rules": [
         {
@@ -3792,9 +3704,6 @@
           ]
         }
       ],
-      "sort": [
-        "sorting_run_id"
-      ],
       "rules": [
         {
           "id": "core.sorting_runs.amplitude_unit_declared",
@@ -3870,7 +3779,6 @@
         "source_file_id"
       ],
       "references": [],
-      "sort": null,
       "rules": []
     },
     "core.spike_events": {
@@ -3955,11 +3863,6 @@
           ]
         }
       ],
-      "sort": [
-        "session_id",
-        "unit_id",
-        "t_tick"
-      ],
       "rules": [
         {
           "id": "core.spike_events.ticks_within_clock_span",
@@ -4040,9 +3943,6 @@
         "subject_id"
       ],
       "references": [],
-      "sort": [
-        "subject_id"
-      ],
       "rules": []
     },
     "core.unit_coordinates": {
@@ -4172,7 +4072,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [],
       "since": "R28 \u00a72-4"
     },
@@ -4256,7 +4155,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.unit_electrodes.one_primary",
@@ -4359,7 +4257,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.unit_observation_intervals.interval_valid",
@@ -4461,7 +4358,6 @@
           ]
         }
       ],
-      "sort": null,
       "rules": [
         {
           "id": "core.unit_quality_labels.projection_is_consistent",
@@ -4634,9 +4530,6 @@
             "curation_id"
           ]
         }
-      ],
-      "sort": [
-        "unit_id"
       ],
       "rules": [
         {

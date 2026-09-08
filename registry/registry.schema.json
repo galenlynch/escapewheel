@@ -101,21 +101,6 @@
             "$ref": "#/$defs/reference"
           }
         },
-        "sort": {
-          "description": "Physical ordering a writer SHOULD apply (R2 \u00a76). Performance, not correctness.",
-          "oneOf": [
-            {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "rules": {
           "type": "array",
           "items": {

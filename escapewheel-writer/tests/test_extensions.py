@@ -49,7 +49,6 @@ EXTENSION = {
                     "resource_columns": ["session_id", "interval_kind", "interval_id"],
                 }
             ],
-            "sort": ["session_id", "trial_id"],
             "rules": [],
         }
     },
@@ -378,7 +377,6 @@ def _vrf_registry():
                 "references": [
                     {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
                 ],
-                "sort": ["session_id", "site_id"],
                 "rules": [],
             }
         },

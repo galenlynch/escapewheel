@@ -60,7 +60,7 @@ def main() -> int:
 
     tables = json.loads(REGISTRY.read_text())["tables"]
     stale, written = [], 0
-    for path in sorted(HERE.glob("0*.md")):
+    for path in sorted(HERE.glob("[0-9][0-9]_*.md")):
         old = path.read_text()
         new = render(old, tables)
         if new == old:

@@ -59,7 +59,6 @@ def _registry():
                 ],
                 "primary_key": ["session_id"],
                 "references": [],
-                "sort": ["session_id"],
                 "rules": [
                     {
                         "id": "core.sessions.manifest_sessions_match",
@@ -88,7 +87,6 @@ def _registry():
                         "resource_columns": ["session_id"],
                     }
                 ],
-                "sort": ["session_id", "trial_id"],
                 "rules": [
                     {
                         "id": "core.trials.interval_valid",
@@ -108,7 +106,6 @@ def _registry():
                 ],
                 "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
                 "references": [],
-                "sort": ["session_id", "unit_id"],
                 "rules": [],
             },
             "core.events": {
@@ -121,7 +118,6 @@ def _registry():
                 ],
                 "primary_key": ["session_id", "event_id"],
                 "references": [],
-                "sort": ["session_id", "event_id"],
                 "rules": [],
             },
             "core.spike_events": {
@@ -141,7 +137,6 @@ def _registry():
                         "resource_columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
                     }
                 ],
-                "sort": ["session_id", "unit_id", "t_tick"],
                 "rules": [],
             },
         },

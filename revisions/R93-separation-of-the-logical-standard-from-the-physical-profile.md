@@ -1,8 +1,8 @@
-# Separation of the Logical Standard from the Physical Profile
+# R93 — Separation of the Logical Standard from the Physical Profile
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | `00` §2 (the three-level vocabulary), `00` §7.3 (what a second profile must satisfy), `02` §5.3 and §13, `03` §1 and §5, `07` §7 (its boundary with Part 10), R2 §6 and `registry.schema.json` (the `sort` field); adds a contents table to `00` and adds Part 10 |
 | **Depends on** | R92 (which states the ordering rule this part relocates) |
 | **Profile** | all |

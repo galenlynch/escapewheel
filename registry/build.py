@@ -82,7 +82,7 @@ SINCE = _Since([None])
 #: R42 is withdrawn and so is not here.
 UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34, 35, 36, 37, 40,
              43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69, 71, 72, 74, 75, 76, 77, 78, 79,
-             80, 82, 84, 86, 87, 90, 92)
+             80, 82, 84, 86, 87, 90, 92, 93)
 
 
 #: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a
@@ -398,7 +398,6 @@ def build() -> dict:
             "references": [{"columns": r["columns"], "resource": r["resource"],
                             "resource_columns": r["resource_columns"] or r["columns"]}
                            for r in t["references"]],
-            "sort": None,
             "rules": [],
         }
 
@@ -443,14 +442,14 @@ def build() -> dict:
                     col("experimenter", "string", "required", "One experimenter.")],
         "primary_key": ["session_id", "experimenter"],
         "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]}], "sort": None, "rules": [], "since": SINCE[0]}
+                        "resource_columns": ["session_id"]}], "rules": [], "since": SINCE[0]}
     tables["core.trial_tags"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("trial_id", "string", "required", "Trial ID."),
                     col("tag", "string", "required", "Tag value.")],
         "primary_key": ["session_id", "trial_id", "tag"],
         "references": [{"columns": ["session_id", "trial_id"], "resource": "core.trials",
-                        "resource_columns": ["session_id", "trial_id"]}], "sort": None, "rules": [], "since": SINCE[0]}
+                        "resource_columns": ["session_id", "trial_id"]}], "rules": [], "since": SINCE[0]}
     tables["core.array_dimensions"] = {
         "columns": [col("array_asset_id", "string", "required", "Array asset ID."),
                     col("axis_index", "int64", "required",
@@ -458,7 +457,7 @@ def build() -> dict:
                     col("dimension_name", "string", "required", "Axis name.")],
         "primary_key": ["array_asset_id", "axis_index"],
         "references": [{"columns": ["array_asset_id"], "resource": "core.array_assets",
-                        "resource_columns": ["array_asset_id"]}], "sort": None, "rules": [], "since": SINCE[0]}
+                        "resource_columns": ["array_asset_id"]}], "rules": [], "since": SINCE[0]}
 
     # ---- R3 §3.4 : typed clock transform ------------------------------------------------
     SINCE[0] = "R3 §3.4"
@@ -554,18 +553,11 @@ def build() -> dict:
         "references": [{"columns": ["processing_run_id"], "resource": "core.processing_runs",
                         "resource_columns": ["processing_run_id"]},
                        {"columns": ["source_file_id"], "resource": "core.source_files",
-                        "resource_columns": ["source_file_id"]}], "sort": None, "rules": [], "since": SINCE[0]}
+                        "resource_columns": ["source_file_id"]}], "rules": [], "since": SINCE[0]}
 
-    # ---- R10 : sort by primary key unless overridden -----------------------------------------
-    SINCE[0] = "R10"
-    OVERRIDE = {                                                          # R10 §3, from 03
-        "core.spike_events": ["session_id", "sorting_run_id", "curation_id",
-                              "unit_id", "t_tick"],
-        # R91 §3.2 keyed `core.events` on the order it is stored in, so its entry here became a
-        # second, contradicting statement that the R91 block overwrote; R92 §5 strikes it.
-    }
-    for n, t in tables.items():
-        t["sort"] = OVERRIDE.get(n) or t["primary_key"]                   # R10 §2, §6
+    # R10 §2's ordering rule is R92 §2.2's, and R93 §3.3 removed the `sort` field it was
+    # declared through: a table's stored order is its primary key's unless `03` §5.4 names
+    # another, and that list is `escapewheel_reader`'s rather than the registry's.
 
     # ---- R18 §2 : units drift in and out of a recording -----------------------------------------
     SINCE[0] = "R18 §2"
@@ -586,7 +578,7 @@ def build() -> dict:
                                              "curation_id"]},
                        {"columns": ["clock_id"], "resource": "core.clocks",
                         "resource_columns": ["clock_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
 
     # ---- R19 §2 : scaling and sample timing are per channel --------------------------------------
     SINCE[0] = "R19 §2"
@@ -633,7 +625,7 @@ def build() -> dict:
                         "resource_columns": ["electrode_id"]},
                        {"columns": ["processing_run_id"], "resource": "core.processing_runs",
                         "resource_columns": ["processing_run_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
 
     # ---- R59 §2.1 : the atlas annotation belongs to the position, not the electrode ------------
     SINCE[0] = "R59 §2.1"
@@ -692,7 +684,7 @@ def build() -> dict:
                         "resource_columns": ["session_id"]},
                        {"columns": ["clock_id"], "resource": "core.clocks",
                         "resource_columns": ["clock_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
 
     # A unit finds its clock through its sorting run. Without this the only route is the string
     # convention `{sorting_run_id}.samples`, which the adapters agree on and no rule can see.
@@ -738,7 +730,7 @@ def build() -> dict:
                         "resource": "core.units",
                         "resource_columns": ["session_id", "unit_id", "sorting_run_id",
                                              "curation_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
     add_col("core.units", dict(col("quality_label_source", "string", "nullable",
             "Which core.unit_quality_labels source the designated label came from."),
             vocabulary="open"), after="quality_label")
@@ -769,7 +761,7 @@ def build() -> dict:
                         "resource_columns": ["clock_id"]},
                        {"columns": ["processing_run_id"], "resource": "core.processing_runs",
                         "resource_columns": ["processing_run_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
     add_col("core.events", col("stream_id", "string", "required",
                                "The stream this event belongs to."), after="event_id")
     T("core.events")["references"].append(
@@ -789,7 +781,7 @@ def build() -> dict:
         # joining to its stream anyway, so repeating it buys nothing (R25 2.1).
         "references": [{"columns": ["event_stream_id"], "resource": "core.event_streams",
                         "resource_columns": ["event_stream_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
     add_col("core.sessions", col("session_end_time", "timestamp", "nullable",
             "When the session ended, UTC. Metadata, not derived from the tables (R25 5)."),
             after="session_start_time")
@@ -817,7 +809,7 @@ def build() -> dict:
         "primary_key": ["clock_id", "anchor_index"],
         "references": [{"columns": ["clock_id"], "resource": "core.clocks",
                         "resource_columns": ["clock_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
 
     # ---- R28 §2-4 : a unit sits on many electrodes, and somewhere -----------------------------
     SINCE[0] = "R28 §2-4"
@@ -842,7 +834,7 @@ def build() -> dict:
         "references": [unit_ref,
                        {"columns": ["electrode_id"], "resource": "core.electrodes",
                         "resource_columns": ["electrode_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
     tables["core.unit_coordinates"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("unit_id", "string", "required", "Unit ID."),
@@ -871,7 +863,7 @@ def build() -> dict:
         "references": [unit_ref,
                        {"columns": ["processing_run_id"], "resource": "core.processing_runs",
                         "resource_columns": ["processing_run_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
     # The one link between a dense array's channels and the electrodes they came from, which
     # until now nothing validated.
     T("core.array_channels")["references"].append(
@@ -980,8 +972,6 @@ def build() -> dict:
                                              "curation_id"]},
                        {"columns": ["clock_id"], "resource": "core.clocks",
                         "resource_columns": ["clock_id"]}],
-        "sort": ["session_id", "clock_id", "time_bucket_tick", "sorting_run_id", "curation_id",
-                 "unit_id", "t_tick"],
         "rules": []}
 
     # ---- R7 : every table declares a key ---------------------------------------------------
@@ -1044,7 +1034,7 @@ def build() -> dict:
                         "resource_columns": ["session_id"]},
                        {"columns": ["processing_run_id"], "resource": "core.processing_runs",
                         "resource_columns": ["processing_run_id"]}],
-        "sort": None, "rules": [], "since": SINCE[0]}
+        "rules": [], "since": SINCE[0]}
 
     # What the run is about, so `core.preferred_runs` has something to join to. Without it the
     # ambiguity rule groups by activity while the preference is keyed by activity and scope, and
@@ -1175,8 +1165,6 @@ def build() -> dict:
     # R54 §2.2: the kind is a key column, so it is a sort column too -- each kind is then a
     # contiguous run and filtering to one prunes row groups. `rename` moves columns and not the
     # sort, so a sort naming the old column would survive it and name nothing.
-    if T("core.trials").get("sort"):
-        T("core.trials")["sort"] = ["session_id", "interval_kind", "interval_id"]
     tables["core.intervals"] = tables.pop("core.trials")
     # R54 §2.3: the one place this format let meaning accrete without a schema, which R17 §3
     # exists to refuse. An extension needing a multi-valued attribute declares a typed child.
@@ -1189,8 +1177,6 @@ def build() -> dict:
     SINCE[0] = "R81 §2"
     one = ["unit_id"]
     T("core.units")["primary_key"] = one
-    if T("core.units").get("sort"):
-        T("core.units")["sort"] = one
     # R81 §2.7: `core.unit_electrodes.is_primary` already names the peak electrode, and this
     # column is null in every row of every packet because the adapter that knows the extremum
     # does not own this table.
@@ -1218,10 +1204,7 @@ def build() -> dict:
     # (run, curation, label) makes ascending unit_id run-major, so the clustering is unchanged
     # and the key, the sort and the uniqueness check finally agree -- R47 §2's outcome.
     T("core.spike_events")["primary_key"] = ["session_id", "unit_id", "t_tick"]
-    T("core.spike_events")["sort"] = ["session_id", "unit_id", "t_tick"]
     T("analysis.spike_events")["primary_key"] = ["session_id", "unit_id", "t_tick"]
-    T("analysis.spike_events")["sort"] = ["session_id", "clock_id", "time_bucket_tick",
-                                          "unit_id", "t_tick"]
     # R81 §5: `amplitude` named its unit through `core.sorting_runs.amplitude_unit`, which was one
     # hop while the spike carried `sorting_run_id`. It is now two -- spike to unit to run -- and
     # R56 §2.2 permits one, so the declaration is dropped rather than made to name a hop that
@@ -1248,7 +1231,6 @@ def build() -> dict:
                         "resource_columns": ["sorting_run_id"]},
                        {"columns": ["electrode_id"], "resource": "core.electrodes",
                         "resource_columns": ["electrode_id"]}],
-        "sort": ["session_id", "sorting_run_id", "channel_index"],
         "rules": [], "since": SINCE[0]}
 
     # ---- R85 §2.1 : a device declares the port it attached to -----------------------------------
@@ -1346,7 +1328,6 @@ def build() -> dict:
                         "resource_columns": ["session_id"]},
                        {"columns": ["array_asset_id"], "resource": "core.array_assets",
                         "resource_columns": ["array_asset_id"]}],
-        "sort": ["calibration_id"],
         "rules": [], "since": SINCE[0]}
 
     # R89 §2.2: the devices a calibration covers are a repeated value, so a child table and not a
@@ -1365,7 +1346,6 @@ def build() -> dict:
                         "resource_columns": ["calibration_id"]},
                        {"columns": ["device_id"], "resource": "core.devices",
                         "resource_columns": ["device_id"]}],
-        "sort": ["calibration_id", "device_id"],
         "rules": [], "since": SINCE[0]}
 
     # R89 §2.3: the measured curve, where `rig.json` holds two parallel JSON lists R3 §3.0 forbids.
@@ -1390,7 +1370,6 @@ def build() -> dict:
                         "resource_columns": ["session_id"]},
                        {"columns": ["calibration_id"], "resource": "core.calibrations",
                         "resource_columns": ["calibration_id"]}],
-        "sort": ["calibration_id", "point_index"],
         "rules": [], "since": SINCE[0]}
 
     # ---- R91 §3 : an event is an occurrence on a stream ---------------------------------------
@@ -1423,7 +1402,6 @@ def build() -> dict:
     T("core.events")["references"] = [r for r in T("core.events")["references"]
                                       if r["resource"] != "core.clocks"]
     T("core.events")["primary_key"] = ["session_id", "stream_id", "t_tick"]
-    T("core.events")["sort"] = ["session_id", "stream_id", "t_tick"]
     # R56 §2.3's one-hop form: with no `clock_id` on the row, §2.2's default no longer applies.
     next(c for c in T("core.events")["columns"]
          if c["name"] == "t_tick")["clock_from"] = "core.event_streams.clock_id"

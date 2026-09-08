@@ -115,10 +115,6 @@
           ]
         }
       ],
-      "sort": [
-        "session_id",
-        "epoch_id"
-      ],
       "rules": [
         {
           "id": "aind_opto.stimulations.pulsing_needs_a_frequency",
@@ -204,11 +200,6 @@
             "device_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id",
-        "epoch_id",
-        "device_id"
       ],
       "rules": []
     }

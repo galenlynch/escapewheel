@@ -216,10 +216,6 @@
           ]
         }
       ],
-      "sort": [
-        "session_id",
-        "trial_id"
-      ],
       "rules": [
         {
           "id": "dynamic_foraging.trials.the_cue_follows_the_delay",
@@ -348,10 +344,6 @@
             "clock_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id",
-        "block_id"
       ],
       "rules": [
         {
@@ -625,9 +617,6 @@
             "session_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id"
       ],
       "rules": [
         {

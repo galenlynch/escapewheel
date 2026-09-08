@@ -76,7 +76,7 @@ Run it after changing the registry, the generator, or any rule.
 
 ## 7. Performance notes
 
-These are properties of the reference implementation, not requirements.
+These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section MUST NOT repeat it (R93 §3.5).
 
 - **Never convert a column to host objects inside a per-batch loop.** Every performance defect found in the reference writer has been this.
 - **Read a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.

@@ -30,6 +30,8 @@ import pyarrow.parquet as pq
 from escapewheel_reader import Packet, PacketError, ResourceUnreadableError, sql_name
 from escapewheel_reader.location import SOURCES_FILENAME
 
+from escapewheel_reader.ordering import stored_order
+
 from .generate import adjacency_settles_uniqueness, concerns, generate
 from .stores import StoreUnreachable, digest, listing, read_member
 
@@ -1143,10 +1145,10 @@ def _check_ordering(
 
 def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], report: Report) -> bool:
     """One table's ordering scan. True where uniqueness must fall back to the aggregate."""
-    # R92 §2.2 makes a missing declaration mean the primary key's own order, so every table is
-    # scanned rather than the 25 that declare a sort.
-    keys = spec.get("sort") or spec["primary_key"]
-    unique = spec["primary_key"] if adjacency_settles_uniqueness(spec) else None
+    # R92 §2.2 puts every table in its key's order unless `03` §5.4 overrides it, and R93 §3.3
+    # moved that list out of the registry, so both come from `escapewheel_reader.ordering`.
+    keys = stored_order(resource_id, spec)
+    unique = spec["primary_key"] if adjacency_settles_uniqueness(resource_id, spec) else None
     # R92 §2.3: the declarations this table's adjacency argument leans on.
     determined = [c["name"] for c in spec.get("columns", ())
                   if c["name"] in keys and "determined_by" in c

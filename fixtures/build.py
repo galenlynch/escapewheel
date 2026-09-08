@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pyarrow as pa
+from escapewheel_reader.ordering import stored_order
 import pyarrow.parquet as pq
 
 HERE = Path(__file__).resolve().parent
@@ -326,7 +327,7 @@ def sort_rows(resource: str, rows: list[dict]) -> list[dict]:
     before that rule the thirteen tables with `sort: null` were written in insertion order and
     the validator scanned none of them.
     """
-    keys = SPECS[resource].get("sort") or SPECS[resource].get("primary_key")
+    keys = stored_order(resource, SPECS[resource])
     if not keys:
         return rows
     return sorted(rows, key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in keys))

@@ -10,7 +10,7 @@ otherwise answerable only by reading a frozen document and then every amendment 
 ```text
 38 tables, 333 columns, 96 references, 69 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93
 ```
 
 ## Contents
@@ -44,7 +44,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional | R20 §5 | Additional metadata. |
 
 **Primary key** — `array_asset_id`  
-**Sort** — `array_asset_id`
 
 **References**
 
@@ -74,7 +73,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `clock_id` | int32 | nullable | R20 §5 | Clock the ticks are counted on (regular tick axis). |
 
 **Primary key** — `array_asset_id`, `axis_index`  
-**Sort** — `array_asset_id`, `axis_index`
 
 **References**
 
@@ -93,7 +91,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `time_bucket_tick` | int64 | **required** | R30 §3.1 | First tick of the bucket this spike falls in, on clock_id. |
 
 **Primary key** — `session_id`, `unit_id`, `t_tick`  
-**Sort** — `session_id`, `clock_id`, `time_bucket_tick`, `unit_id`, `t_tick`
 
 **References**
 
@@ -129,7 +126,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `array_asset_id`  
-**Sort** — `array_asset_id`
 
 **References**
 
@@ -159,7 +155,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `array_asset_id`, `channel_index`  
-**Sort** — `array_asset_id`, `channel_index`
 
 **References**
 
@@ -193,7 +188,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `clock_id` | int32 | nullable | R20 §2 | Clock the ticks are counted on (regular tick axis). |
 
 **Primary key** — `array_asset_id`, `axis_index`  
-**Sort** — `array_asset_id`, `axis_index`
 
 **References**
 
@@ -223,7 +217,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `device_id` | int32 | **required** | R89 §2.2 | A device the calibration covers. |
 
 **Primary key** — `calibration_id`, `device_id`  
-**Sort** — `calibration_id`, `device_id`
 
 **References**
 
@@ -244,7 +237,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `output_value` | float64 | **required** | R89 §2.3 | What the instrument then delivered. |
 
 **Primary key** — `calibration_id`, `point_index`  
-**Sort** — `calibration_id`, `point_index`
 
 **References**
 
@@ -270,7 +262,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional | R89 §2.1 | What the source stated about this calibration that no column above models. Only the calibration declares one: its key holds an identifier of its own, where both child tables are keyed by other tables' identifiers (R89 §2.6). |
 
 **Primary key** — `calibration_id`  
-**Sort** — `calibration_id`
 
 **References**
 
@@ -295,7 +286,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `parent_tick` | int64 | **required** | R13 §3 | The corresponding tick on parent_clock_id. |
 
 **Primary key** — `clock_id`, `anchor_index`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -321,7 +311,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `stop_tick` | int64 | **required** | R38 §2.1 | Last tick observed, on `clock_id` itself. |
 
 **Primary key** — `session_id`, `clock_id`, `start_tick`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -353,7 +342,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `clock_id`  
-**Sort** — `clock_id`
 
 **References**
 
@@ -389,7 +377,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `curation_id`  
-**Sort** — `curation_id`
 
 **References**
 
@@ -416,7 +403,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `device_id`  
-**Sort** — `device_id`
 
 **References**
 
@@ -446,7 +432,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `z_um` | float64 | nullable | R19 §3 | Z in micrometres. |
 
 **Primary key** — `electrode_id`, `coordinate_frame`, `coordinate_basis`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -468,7 +453,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `electrode_id`  
-**Sort** — `electrode_id`
 
 **References**
 
@@ -487,7 +471,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `stop_tick` | int64 | **required** | R25 §2 | Last observed tick, on the stream's clock. |
 
 **Primary key** — `event_stream_id`, `start_tick`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -517,7 +500,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional | R23 §2-3 | Free-form metadata. |
 
 **Primary key** — `event_stream_id`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -541,7 +523,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `session_id`, `stream_id`, `t_tick`  
-**Sort** — `session_id`, `stream_id`, `t_tick`
 
 **References**
 
@@ -565,7 +546,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional trial metadata. |
 
 **Primary key** — `session_id`, `interval_kind`, `interval_id`  
-**Sort** — `session_id`, `interval_kind`, `interval_id`
 
 **References**
 
@@ -593,7 +573,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `media_asset_id`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -620,7 +599,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `media_asset_id`, `frame_index`  
-**Sort** — `media_asset_id`, `frame_index`
 
 **References**
 
@@ -648,7 +626,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `reason` | string | nullable | R41 §2.3 | Why, in one line. |
 
 **Primary key** — `session_id`, `activity_type`, `scope_kind`, `scope`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -678,7 +655,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `probe_id`  
-**Sort** — `probe_id`
 
 **References**
 
@@ -696,7 +672,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `source_file_id` | int32 | **required** | R9 | A source file the run consumed. |
 
 **Primary key** — `processing_run_id`, `source_file_id`  
-**Sort** — `processing_run_id`, `source_file_id`
 
 **References**
 
@@ -725,7 +700,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `processing_run_id`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -752,7 +726,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `experimenter` | string | **required** | R3 §3.1-3.3 | One experimenter. |
 
 **Primary key** — `session_id`, `experimenter`  
-**Sort** — `session_id`, `experimenter`
 
 **References**
 
@@ -776,7 +749,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `t_zero_tick` | int64 | nullable | R39 §2.2 | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
 
 **Primary key** — `session_id`  
-**Sort** — `session_id`
 
 **References**
 
@@ -802,7 +774,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `electrode_id` | int32 | **required** | R83 §2.1 | The contact at that position. |
 
 **Primary key** — `session_id`, `sorting_run_id`, `channel_index`  
-**Sort** — `session_id`, `sorting_run_id`, `channel_index`
 
 **References**
 
@@ -835,7 +806,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `sorting_run_id`  
-**Sort** — `sorting_run_id`
 
 **References**
 
@@ -863,7 +833,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `source_file_id`  
-**Sort** — the primary key (R10 §2)
 
 ### `core.spike_events`
 
@@ -877,7 +846,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `session_id`, `unit_id`, `t_tick`  
-**Sort** — `session_id`, `unit_id`, `t_tick`
 
 **References**
 
@@ -904,7 +872,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional subject metadata. |
 
 **Primary key** — `subject_id`  
-**Sort** — `subject_id`
 
 ### `core.unit_coordinates`
 
@@ -924,7 +891,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `z_um` | float64 | nullable | R28 §2-4 | Z in micrometres. |
 
 **Primary key** — `session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -945,7 +911,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `is_primary` | bool | nullable | R28 §2-4 | Whether this is the unit's peak electrode. |
 
 **Primary key** — `session_id`, `unit_id`, `electrode_id`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -972,7 +937,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `clock_id` | int32 | **required** | R18 §2 | Clock for the interval bounds. |
 
 **Primary key** — `session_id`, `unit_id`, `start_tick`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -999,7 +963,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `confidence` | float64 | nullable | R16 §2-3 | The source's confidence, where it reports one. |
 
 **Primary key** — `session_id`, `unit_id`, `source`  
-**Sort** — the primary key (R10 §2)
 
 **References**
 
@@ -1030,7 +993,6 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `metadata` | json_string | optional |  | Additional metadata. |
 
 **Primary key** — `unit_id`  
-**Sort** — `unit_id`
 
 **References**
 

@@ -79,7 +79,6 @@ def _registry():
                 ],
                 "primary_key": ["session_id"],
                 "references": [],
-                "sort": ["session_id"],
                 "rules": [
                     {
                         "id": "core.sessions.manifest_sessions_match",
@@ -109,7 +108,6 @@ def _registry():
                         "resource_columns": ["session_id"],
                     }
                 ],
-                "sort": ["session_id", "interval_kind", "interval_id"],
                 "rules": [
                     {
                         "id": "core.intervals.interval_valid",
@@ -135,7 +133,6 @@ def _registry():
                         "resource_columns": ["session_id"],
                     }
                 ],
-                "sort": ["session_id", "unit_id"],
                 "rules": [],
             },
             # R91 §3.2: an event is a tick on a stream. The kind and the clock are the stream's.
@@ -155,7 +152,6 @@ def _registry():
                         "resource_columns": ["session_id"],
                     }
                 ],
-                "sort": ["event_stream_id"],
                 "rules": [],
             },
             "core.events": {
@@ -177,7 +173,6 @@ def _registry():
                         "resource_columns": ["event_stream_id"],
                     },
                 ],
-                "sort": ["session_id", "stream_id", "t_tick"],
                 "rules": [],
             },
             "core.spike_events": {
@@ -197,7 +192,6 @@ def _registry():
                         "resource_columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
                     }
                 ],
-                "sort": ["session_id", "unit_id", "t_tick"],
                 "rules": [],
             },
         },

@@ -148,7 +148,7 @@ def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> dict[
     if delta := _delta_columns(resource_id, out):
         options["use_dictionary"] = [n for n in out.names if n not in delta]
         options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
-    keys = sort_key(spec) or []
+    keys = sort_key(resource_id, spec) or []
     if columns := [pq.SortingColumn(out.names.index(k)) for k in keys if k in out.names]:
         options["sorting_columns"] = columns
     return options
@@ -241,8 +241,8 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
         # comparison overlaps the Parquet encoding rather than adding to it. `commit` tells the
         # validator which resources this settled; a validator handed an unknown packet still
         # reads every one.
-        keys = sort_key(spec) or []
-        unique = spec["primary_key"] if keys and adjacency_settles_uniqueness(spec) else None
+        keys = sort_key(resource_id, spec) or []
+        unique = spec["primary_key"] if keys and adjacency_settles_uniqueness(resource_id, spec) else None
         # Three stages, not two: building a batch, comparing it and encoding it cost 2.5 s,
         # 2.2 s and 2.6 s on a 23 M-spike stream, so folding the comparison into the producer
         # made it the bottleneck and gave back exactly what skipping the re-read saved. A queue
@@ -844,10 +844,10 @@ class PacketWriter:
             path.parent.mkdir(parents=True, exist_ok=True)
             if resource_id in self._batches:
                 self.rows_written[resource_id] = _write_stream(spec, self._batches[resource_id], path, resource_id)
-                if sort_key(spec):
+                if sort_key(resource_id, spec):
                     self._ordered.add(resource_id)
             else:
-                table = build(spec, self._tables[resource_id], self.keys)
+                table = build(resource_id, spec, self._tables[resource_id], self.keys)
                 self.rows_written[resource_id] = table.num_rows
                 # No `row_group_size`: pyarrow's default is min(rows, 2**20), which puts each
                 # of these tables in one row group, and that is the right answer — they are

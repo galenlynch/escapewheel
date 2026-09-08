@@ -51,8 +51,6 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
 
     key = spec.get("primary_key")
     out.append(f"**Primary key** — {_code(key) if key else 'none declared (R7)'}  ")
-    sort = spec.get("sort")
-    out.append(f"**Sort** — {_code(sort) if sort else 'the primary key (R10 §2)'}")
     out.append("")
 
     if references := spec.get("references"):

@@ -18,18 +18,17 @@ Dependencies run downward: a draft depends on the ones above it and on nothing b
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `separation-of-the-logical-standard-from-the-physical-profile` | moves ordering, partitioning and the `sort` field to where each belongs; R92 §2.2 is the rule it relocates |
-| 2 | `a-rule-names-no-optional-column` | the presence constraint 3 turns on |
-| 3 | `columns-that-hold-one-value` | strikes seven duplicated names, makes the two clock-rate forms exclusive |
-| 4 | `a-sorted-unit-declares-its-spikes-context` | moves `amplitude_unit` and `clock_id` to `core.units` |
-| 5 | `the-free-form-metadata-column` | which tables declare `metadata`, and what may go in one; strikes `core.events.payload` |
-| 6 | `the-alignment-keys-in-a-runs-parameters` | three keys a reader reads and no document states |
-| 7 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
+| 1 | `a-rule-names-no-optional-column` | the presence constraint 2 turns on |
+| 2 | `columns-that-hold-one-value` | strikes seven duplicated names, makes the two clock-rate forms exclusive |
+| 3 | `a-sorted-unit-declares-its-spikes-context` | moves `amplitude_unit` and `clock_id` to `core.units` |
+| 4 | `the-free-form-metadata-column` | which tables declare `metadata`, and what may go in one; strikes `core.events.payload` |
+| 5 | `the-alignment-keys-in-a-runs-parameters` | three keys a reader reads and no document states |
+| 6 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
 | — | `what-a-reserved-value-is-for` | outside the order; it amends R11 §4 alone and depends on nothing here |
 
-Four through seven are independent of each other and of one through three; their order is a
-convenience, not a constraint. One through three is a chain: each is cheaper before the next than
-after it.
+Three through six are independent of each other and of one and two; their order is a convenience,
+not a constraint. One and two are a chain: the presence constraint is cheaper before the strikes
+that lean on it.
 
 Three of them change the registry's column count, each measured against the registry as it stood
 when it was drafted. Whichever is accepted second re-measures — which the pre-acceptance checks in

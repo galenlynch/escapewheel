@@ -236,10 +236,6 @@
           ]
         }
       ],
-      "sort": [
-        "session_id",
-        "site_id"
-      ],
       "rules": [
         {
           "id": "vr_foraging.sites.site_index_in_patch_counts_what_it_says",
@@ -397,11 +393,6 @@
           ]
         }
       ],
-      "sort": [
-        "session_id",
-        "site_id",
-        "odor_channel_index"
-      ],
       "rules": [
         {
           "id": "vr_foraging.site_odors.every_site_gets_every_channel",
@@ -489,9 +480,6 @@
             "session_id"
           ]
         }
-      ],
-      "sort": [
-        "session_id"
       ],
       "rules": [
         {

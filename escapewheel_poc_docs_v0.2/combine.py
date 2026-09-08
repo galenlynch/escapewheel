@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 
 #: The order the parts are published in. `README` first, because it carries the conformance
 #: clauses and the version identifiers every other part is read against.
-ORDER = ("README.md", *(sorted(p.name for p in HERE.glob("0*.md"))))
+ORDER = ("README.md", *(sorted(p.name for p in HERE.glob("[0-9][0-9]_*.md"))))
 
 OUT = HERE / "Escapewheel_POC_v0.2_Implementation_Spec.md"
 

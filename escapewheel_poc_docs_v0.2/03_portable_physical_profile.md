@@ -6,6 +6,8 @@ Normative. Profile identifier: `escapewheel-portable-v0.1`.
 
 This part defines how the logical resources of Part 02 are stored in the portable profile. A packet under this profile MUST be readable without a server.
 
+This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology (R93 §3.2). Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's (R93 §3.4).
+
 ## 2. Required technologies
 
 | resource kind | format |
@@ -67,7 +69,7 @@ A packet root MAY itself be an object-store prefix rather than a directory, in w
 
 A table MUST be a valid Parquet file. Compression SHOULD be Zstandard where available.
 
-A large table SHOULD use row groups sized for analytical scans; 100,000 to 1,000,000 rows is a starting point to be adjusted by profiling.
+A large table SHOULD use row groups sized for analytical scans. Part 10 carries the sizes measured for one (R93 §3.4).
 
 An identifier column is `int32`, or `int64` where its range requires it (Part 02 §5.3) and MUST NOT be dictionary-encoded in a way that requires unification across row groups before it can be compared.
 

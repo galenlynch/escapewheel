@@ -152,7 +152,6 @@ def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
             ],
             "primary_key": ["subject_id"],
             "references": [],
-            "sort": ["subject_id"],
             "rules": [],
         }
         (root / "schemas/logical_schemas.json").write_text(json.dumps(registry))
@@ -280,7 +279,6 @@ def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_roo
         ],
         "primary_key": ["clock_id", "anchor_index"],
         "references": [{"columns": ["clock_id"], "resource": "core.units", "resource_columns": ["unit_id"]}],
-        "sort": ["clock_id"],
         "rules": [],
     }
     (root / "schemas/logical_schemas.json").write_text(json.dumps(registry))

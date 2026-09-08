@@ -334,7 +334,6 @@ TASK_EXTENSION = {
             "references": [{"columns": ["session_id", "interval_kind", "interval_id"],
                             "resource": "core.intervals",
                             "resource_columns": ["session_id", "interval_kind", "interval_id"]}],
-            "sort": ["session_id", "interval_id"],
             "rules": [],
         }
     },

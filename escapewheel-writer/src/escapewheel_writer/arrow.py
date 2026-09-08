@@ -14,6 +14,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import pyarrow as pa
+from escapewheel_reader.ordering import stored_order
 
 
 class NaiveTimestamp(ValueError):
@@ -196,7 +197,7 @@ def schema(spec: Mapping[str, Any], present: set[str]) -> pa.Schema:
     )
 
 
-def sort_key(spec: Mapping[str, Any]) -> list[str] | None:
+def sort_key(resource: str, spec: Mapping[str, Any]) -> list[str] | None:
     """Return the columns this table is physically ordered by, or None.
 
     R10 §2 sorts every table by its primary key unless the registry overrides it, which
@@ -212,8 +213,7 @@ def sort_key(spec: Mapping[str, Any]) -> list[str] | None:
     list of str or None
         Sort columns, or None if the table declares no key.
     """
-    keys = spec.get("sort")
-    return list(keys) if keys else (list(spec["primary_key"]) if spec.get("primary_key") else None)
+    return stored_order(resource, spec) or None
 
 
 class CarriedNotAnInteger(ValueError):
@@ -341,7 +341,8 @@ def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> p
     return pa.RecordBatch.from_arrays(list(columns.values()), names=list(columns))
 
 
-def build(spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]], keys: Any = None) -> pa.Table:
+def build(resource: str, spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]],
+          keys: Any = None) -> pa.Table:
     """Build a sorted Arrow table for one resource.
 
     Parameters
@@ -369,7 +370,7 @@ def build(spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]], keys: A
         # Before the sort, not after: R10 §2 orders by the primary key, and the key is the
         # number. Sorting the names would order `unit_10` between `unit_1` and `unit_2`.
         number(spec, rows, keys)
-    if order := sort_key(spec):
+    if order := sort_key(resource, spec):
         # None sorts first and consistently; a nullable sort column is legal.
         rows.sort(key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in order))
 

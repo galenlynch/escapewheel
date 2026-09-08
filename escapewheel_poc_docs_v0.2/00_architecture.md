@@ -31,7 +31,9 @@ A **physical profile** defines how logical resources are stored. Two are contemp
 | portable | Parquet | Zarr | JSON manifest |
 | lakehouse | Iceberg over Parquet | Zarr | JSON manifest plus Iceberg catalog references |
 
-Only the portable profile, `escapewheel-portable-v0.1`, is specified. It is Part 03.
+Only the portable profile, `escapewheel-portable-v0.1`, is specified. It is Part 03, which is
+normative for a packet whose manifest declares its `profile_id` and binds no other packet, and is
+the only part whose rules may depend on a storage technology (R93 §3.2).
 
 ### 2.4 Packet
 
@@ -144,6 +146,8 @@ Externalizing a table costs more than externalizing an array, because a table's 
 
 Iceberg is a later table-management profile, useful for table snapshots, schema and partition evolution, concurrent writers, catalog integration, and reproducible release tags. It MUST NOT be required by an implementation of this specification.
 
+A physical profile — Iceberg's or any other — MUST declare a `profile_id` that a packet's manifest names, MUST bind only the packets declaring it, and MUST say how each logical resource of Part 02 is stored. It MUST NOT require an amendment to Part 01 or Part 02; where one would be needed, the defect is in those parts rather than in the profile (R93 §3.2). No clause of Part 01 or Part 02 may depend on a clause of Part 03.
+
 `packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A rewrite of rows MUST NOT increment `packet_version` (R61 §4).
 
 ## 8. Implementation thesis
@@ -157,3 +161,29 @@ The first implementation is not a generic NWB backend. It is:
 5. a small access library querying tables and arrays with standard engines.
 
 An import succeeds only when validation succeeds (Part 05 §1).
+
+## 9. The parts, and what each one binds
+
+A reader learns what binds them here rather than by opening ten files and reading the third line of
+each. Each part continues to state its own status at its head, and where the two disagree the
+part's statement governs (R93 §3.6).
+
+| part | subject | status |
+|---|---|---|
+| 00 | architecture and the three-level vocabulary | normative |
+| 01 | semantic standard | normative |
+| 02 | core logical schemas | normative |
+| 03 | portable physical profile | normative |
+| 04 | packet catalog | normative |
+| 05 | validation and import | normative |
+| 06 | analysis layer | informative, except §2 and §5 |
+| 07 | reference implementation and plan | informative |
+| 08 | example packet | informative |
+| 09 | metadata minimalism and extensions | normative |
+| 10 | performance notes | informative |
+
+Position is not the signal and is not made into one: Part 09 is normative and follows two
+informative parts, and no arrangement could fix that in general, since Part 06 is normative in two
+sections and informative in the rest. The table is appended rather than inserted for the same
+reason the sequence is not renumbered — 119 citations across the accepted revisions and the parts
+depend on part and section identifiers both.

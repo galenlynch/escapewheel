@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from escapewheel_reader import quote, sql_name
+from escapewheel_reader.ordering import stored_order
 
 
 @dataclass(frozen=True)
@@ -59,7 +60,7 @@ def concerns(check: Check, written: Collection[str]) -> bool:
     return any(sql_name(resource) in check.sql for resource in written)
 
 
-def adjacency_settles_uniqueness(table: Mapping[str, Any]) -> bool:
+def adjacency_settles_uniqueness(resource: str, table: Mapping[str, Any]) -> bool:
     """Whether a table's sort order puts duplicate primary keys next to each other.
 
     Two rows sharing a key are neighbours when nothing in the sort can order between them. That
@@ -79,11 +80,10 @@ def adjacency_settles_uniqueness(table: Mapping[str, Any]) -> bool:
     the only correct check.
     """
     key = table.get("primary_key")
-    # R92 §2.2: a table declaring no sort is required to be in its primary key's order, so the
-    # absence is a declaration rather than a gap. Before it, thirteen tables returned False here
-    # and the validator checked nothing about their order.
-    sort = table.get("sort") or key
-    if not key:
+    # R92 §2.2: a table with no override is in its primary key's order. R93 §3.3 removed the
+    # registry field that used to say so, and `03` §5.4's list says it instead.
+    sort = stored_order(resource, table)
+    if not key or not sort:
         return False
     determined = {c["name"]: set(c["determined_by"]) for c in table.get("columns", []) if "determined_by" in c}
     positions = [sort.index(k) for k in key if k in sort]
@@ -279,7 +279,7 @@ def generate(
                 continue
             checks.extend(_discriminator(resource, name, table, column, kinds, included, specialises))
 
-        by_scan = adjacency_settles_uniqueness(table) and resource not in (aggregate or set())
+        by_scan = adjacency_settles_uniqueness(resource, table) and resource not in (aggregate or set())
         if (key := table.get("primary_key")) and not by_scan:
             columns = ", ".join(quote(k) for k in key)
             checks.append(

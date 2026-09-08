@@ -74,7 +74,7 @@ A writer SHOULD NOT fill a `json_string` column routinely. Doing so defeats that
 
 A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. A conversion whose result would fall outside the declared type MUST fail before the value is written, naming the column and the value (R76 §2.1). A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
 
-Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC, and MUST NOT use INT96. Identifier columns MUST be `int32` (R53 §2.1), except where the number of distinct values may exceed `int32`, where the column MUST be `int64` (R53 §2.4). No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
+Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC. Identifier columns MUST be `int32` (R53 §2.1), except where the number of distinct values may exceed `int32`, where the column MUST be `int64` (R53 §2.4). No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
 
 ## 6. Presence
 
@@ -421,16 +421,3 @@ as absent (R89 §2.5). A source stating that no calibration was performed gets n
 
 `core.calibrations` declares `metadata` and the two child tables MUST NOT, because its key holds an
 identifier of its own where theirs are keyed by other tables' identifiers (R89 §2.6).
-
-## 13. Stored layout
-
-### 13.1 Ordering
-
-A writer SHOULD sort every table by its primary key (R10 §2). No core table overrides this: R81
-§2.4 removed the spike table's override by numbering `unit_id` run-major, and R91 §3.2 removed
-`core.events`' by keying the table on the order it is stored in. `analysis.spike_events` overrides
-it under a MUST, specified in `03` §5.4.
-
-### 13.2 Partitioning
-
-A large table SHOULD be partitioned by `session_id`. A table MUST NOT be partitioned by `unit_id`.

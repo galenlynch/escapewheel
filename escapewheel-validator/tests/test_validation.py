@@ -534,34 +534,42 @@ def test_a_column_determined_by_the_key_cannot_separate_duplicates():
     """
     from escapewheel_validator.generate import adjacency_settles_uniqueness
 
+    # R93 §3.3 took the order out of the registry, so the resource names it: `03` §5.4's entry
+    # for this one is what puts two non-key columns ahead of the key.
     table = {
-        "primary_key": ["session_id", "t_tick"],
-        "sort": ["session_id", "clock_id", "time_bucket_tick", "t_tick"],
+        "primary_key": ["session_id", "unit_id", "t_tick"],
         "columns": [
-            {"name": "clock_id", "type": "string", "presence": "required", "determined_by": ["session_id"]},
+            {"name": "clock_id", "type": "int32", "presence": "required", "determined_by": ["session_id"]},
             {"name": "time_bucket_tick", "type": "int64", "presence": "required", "determined_by": ["t_tick"]},
         ],
     }
-    assert adjacency_settles_uniqueness(table)
+    assert adjacency_settles_uniqueness("analysis.spike_events", table)
 
 
 def test_a_column_determined_by_a_non_key_still_refuses():
     """The dependency must be on the key: anything else can order duplicates apart."""
+    from unittest.mock import patch
+
+    from escapewheel_reader.ordering import OVERRIDES
     from escapewheel_validator.generate import adjacency_settles_uniqueness
 
     table = {
         "primary_key": ["a", "b"],
-        "sort": ["a", "x", "b"],
         "columns": [{"name": "x", "type": "string", "presence": "required", "determined_by": ["c"]}],
     }
-    assert not adjacency_settles_uniqueness(table)
+    with patch.dict(OVERRIDES, {"x.y": ("a", "x", "b")}):
+        assert not adjacency_settles_uniqueness("x.y", table)
 
 
 def test_an_undeclared_column_ahead_of_the_key_refuses():
+    from unittest.mock import patch
+
+    from escapewheel_reader.ordering import OVERRIDES
     from escapewheel_validator.generate import adjacency_settles_uniqueness
 
-    table = {"primary_key": ["a", "b"], "sort": ["a", "x", "b"], "columns": [{"name": "x"}]}
-    assert not adjacency_settles_uniqueness(table)
+    table = {"primary_key": ["a", "b"], "columns": [{"name": "x"}]}
+    with patch.dict(OVERRIDES, {"x.y": ("a", "x", "b")}):
+        assert not adjacency_settles_uniqueness("x.y", table)
 
 
 def test_a_dictionary_column_satisfies_a_string_declaration():
@@ -987,7 +995,6 @@ def _extension(root, *, tables=None, mutate=None):
                 "primary_key": ["session_id", "trial_id"],
                 "references": [{"columns": ["session_id", "trial_id"], "resource": "core.trials",
                                 "resource_columns": ["session_id", "trial_id"]}],
-                "sort": ["session_id", "trial_id"],
                 "rules": [],
             }
         },
