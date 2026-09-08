@@ -186,11 +186,11 @@ the ones a tool can settle are cheaper than the ones only a reader can.
 - **A measurement stated twice.** Adding a section to one that already carries a number leaves the
   number in both. State it where the rule it supports lives.
 - **"What this does not change" listing the unassumed.** The commonest place a revision pads. A
-  bullet earns its place only if you can name the sentence in the Motivation or the Decision that
-  would make a reader fear it — if nothing in the document raises the question, the bullet answers
-  one nobody asked. Measured over the accepted revisions: **299 bullets across 75**, a mean of 4,
-  and the recent ones run 7 to 9, so a section past the mean is worth re-reading rather than
-  trusting.
+  bullet earns its place only where some sentence in the Motivation or the Decision invites the
+  inference it denies: name that sentence, and say what a reader would conclude from it. Where
+  nothing in the document invites the conclusion, the bullet is denying something nobody was going
+  to think. Measured over the accepted revisions: **299 bullets across 75**, a mean of 4, and the
+  recent ones run 7 to 9, so a section past the mean is worth re-reading rather than trusting.
 
   Three things collect there that are not what the revision declines to do, and each has a home:
   a settled question belongs in the body, a composition note about another revision belongs in
