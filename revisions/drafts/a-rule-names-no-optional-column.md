@@ -40,10 +40,21 @@ which is the accident that has kept the class closed rather than a rule that clo
 
 A Tier 2 rule's SQL **MUST NOT** reference a column whose presence is `optional`.
 
-`registry/check.py` enforces it: for each rule, the columns its SQL names are matched against the
-registry's optional columns, and a hit is a build error. The check is structural — decidable with
-no packet in hand, as R56 §2.4's is — because whether a column may be absent is a property of the
-declaration and not of any file.
+`registry/check.py` enforces it: for each rule, the identifiers its SQL names are matched against
+the registry's optional columns, and a hit is a build error. The check is structural — decidable
+with no packet in hand, as R56 §2.4's is — because whether a column may be absent is a property of
+the declaration and not of any file.
+
+The match is on **identifiers, not text**: string literals and comments are stripped first, and a
+name matches only whole. `some_metadata_key` is therefore not a hit, and neither is `'metadata'`
+compared against a column. That is exact enough without parsing a SQL dialect this repository
+otherwise never parses, and it keeps the check off DuckDB, which `check.py` treats as optional and
+which a rule-execution check is already gated behind.
+
+A hit is a true positive by construction today, because each of the four names is optional wherever
+it appears: `metadata` on all twenty-one tables declaring it, `parameters` on both,
+`core.events.payload` and `core.clocks.transform_to_parent`. Only 4 of the 69 rules contain a
+string literal at all, and none of those literals contains any of the four.
 
 A rule that wants to constrain an optional column has two ways out, and this part prescribes
 neither: the column can be made `nullable`, which is a declaration that it is always present and
@@ -70,8 +81,8 @@ order, so whichever of the two is accepted second re-measures the count this par
 
 ## 6. Open
 
-- **Whether the column-name match should be exact.** The check reads a rule's SQL as text, so a
-  column name appearing inside a string literal or as another table's column of the same name would
-  be a false positive. `metadata` and `payload` are distinctive enough that neither occurs today; a
-  parser rather than a substring match would settle it, at the cost of a SQL dialect this
-  repository does not otherwise need to parse.
+- **Whether a hit should be qualified by table.** §3's match is unqualified, which is sound only
+  while every column bearing one of the four names is optional. A later revision declaring a
+  **required** `metadata` — an R17 extension could — would make a rule naming that column a false
+  positive, and the repair is to match `table.column` rather than the bare name. Nothing needs it
+  yet, and building it now would be a mechanism for a case that does not exist.
