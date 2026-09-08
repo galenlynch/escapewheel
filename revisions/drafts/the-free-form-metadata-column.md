@@ -130,6 +130,12 @@ Both bounds are decidable from the registry with no packet in hand, as R56 §2.4
 error, and so is a relationship table carrying one. What lies between is a declaration each table
 makes, which is the part that is a judgement and should be.
 
+A judgement can still be reported against evidence. A validator **SHOULD** report, at `info`, a
+declared `metadata` column filled in no row of the packet — the same level and shape as R95 §3.3's
+duplication report, and R62's standard mechanised. It is what would have found the three columns §5
+strikes: someone declared one on `core.spike_events` because the middle band allowed it, and
+286,896,563 rows carried a column no adapter ever filled.
+
 ### 3.2 Routine filling
 
 `02` §5.2's sentence forbidding routine filling is **struck**. A writer **MAY** fill `metadata` on
@@ -147,7 +153,11 @@ holds, and **MUST NOT** emit one that contradicts such a column.
 
 **No rule checks this and none is added.** The content is schemaless by design, so a constraint on
 it is unenforceable in principle rather than merely in practice, and §2.3 measures that names carry
-no signal to check against. The obligation binds the writer, as R67 §2.4's prohibition on inferring
+no signal to check against. A writer-side test can still report it, and the shape is settled: R95
+§3.3 compares two columns of one table for equal values in every row, excluding a pair that is
+constant, and bounds itself by row-group statistics. The same comparison over a `metadata` key and
+a column is what would have caught all three of §2.3, and it belongs in `07` §4 beside `STATES`
+rather than in a normative part. The obligation binds the writer, as R67 §2.4's prohibition on inferring
 attachment from a device's name binds a consumer, and for the same reason: a named actor can comply
 where no validator can observe them.
 
@@ -173,9 +183,13 @@ for it, holding tier 3 or tier 4 content that no rule reads.
 - **`core.intervals` keeps its `metadata`.** `interval_id` is an identifier of its own, so a new
   interval kind may record a few unmodelled facts without an extension. R90 §3.5's shared-key
   detail table stays the path for facts needing structure rather than becoming the only path.
-- **The two unwritten prose columns stay.** `core.curation_versions.notes` is filled in 0 of 12 and
-  0 of 10 rows, `core.sessions.session_description` in 0 of 1 in both. They are typed prose rather
-  than free-form bags, so striking them is a decision about those two tables; §6 records it.
+- **The two unwritten prose columns stay, for different reasons.** `core.sessions.session_description`
+  is filled in 0 of 1 rows in both packets and is nonetheless written: `sources/nwb.py` maps it and
+  `session.json` carries it, so the column is empty because the source's field is. R62 strikes what
+  is written by nothing *and* read by nothing, and this fails the first half.
+  `core.curation_versions.notes` — 0 of 12 and 0 of 10 — meets both halves, and striking it is a
+  decision about `core.curation_versions` rather than about free-form columns; §6 records that one
+  alone.
 - **`core.electrodes` keeps two of its four `ccf_*` keys.** R59 §2 declined to model `ccf_name` and
   `ccf_structure_id_path`, so the column is where they belong.
 - **`core.events.payload` stays.** R91 §3.3 keeps it as the only home a per-event value has until an
@@ -205,23 +219,11 @@ gains a row, and twenty-one descriptions become one.
 
 ## 6. Open
 
-- **Whether the two unwritten prose columns should be struck.** R62 struck a file on this evidence —
-  written by nothing, read by nothing — and `core.curation_versions.notes` beside a `metadata`
-  column filled on 12 of 12 rows is the same shape one level down. It is a decision about
-  `core.curation_versions` and `core.sessions` rather than about free-form columns, so it is not
-  taken here.
-- **Whether a writer-side test should compare values rather than names.** §3.3 is unenforceable by a
-  rule, but the reference implementation could compare each `metadata` value against the columns its
-  table reaches and report a key agreeing on every row. It would have caught all three of §2.3 and
-  would cost nothing to run, 8,230 rows holding the column at all. That belongs in `07` §4 beside
-  `STATES` rather than in a normative part, and needs a guard against one constant column matching
-  another by accident.
-- **Whether a measurement table should be told when to declare one.** §3.1 leaves the middle band
-  to each table's judgement, which is where the three struck columns came from: someone declared a
-  `metadata` on `core.spike_events` because the shape allowed it, and 286,896,563 rows carried a
-  column no adapter ever filled. The bound that would have caught it is evidence rather than
-  structure — a column no writer fills is a column to strike (R62) — and nothing runs that check
-  on its own.
+- **Whether `core.curation_versions.notes` should be struck.** Nothing writes it and nothing reads
+  it, which is what R62 struck a file on, and it sits beside a `metadata` column filled on 12 of 12
+  rows — the same shape one level down. §4 leaves it because the decision is about that table
+  rather than about free-form columns, and because typed prose beside a bag is a distinction worth
+  someone stating deliberately rather than by omission here.
 - **Whether `core.events.payload` should be struck.** §4 leaves it because R91 §3.3 does, and R91
   §6 says what would settle it: an extension declaring a mark table through
   `core.event_streams.detail_kind` gives a per-event value a typed home and makes the strike free.
