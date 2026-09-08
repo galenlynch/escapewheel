@@ -260,3 +260,112 @@ def test_the_extent_spans_every_stream(source):
     windows = source.streams()
     assert start == min(w.start for w in windows) and stop == max(w.stop for w in windows)
     assert start.tzinfo is not None and stop > start
+
+
+# -- calibrations (R89) --------------------------------------------------------------
+
+TRANSFORM = "behavior/calibration_info_np2_2025_04_09T10_00_00.npy"
+CALIBRATED = "2025-04-09T10:00:00+00:00"
+
+#: One `rig.json` water calibration, in the shape the two packaged sessions carry it: two
+#: parallel lists under labels naming the quantity and its unit of measure.
+WATER = {
+    "device_name": "Lick spout Left",
+    "calibration_date": "2024-11-27T00:00:00-08:00",
+    "description": "Water calibration for Lick spout Left.",
+    "input": {"valve open time (s):": [0.02, 0.03, 0.04]},
+    "output": {"water volume (ul):": [2.35, 3.1, 4.0]},
+    "notes": None,
+}
+
+
+def rig(asset, calibrations):
+    (asset / "rig.json").write_text(json.dumps({"calibrations": calibrations}))
+    return SessionSource(asset, zone=PACIFIC)
+
+
+def modules(*names, transform=TRANSFORM, date=CALIBRATED):
+    """One stream whose modules all cite one calibration, as six of them do in `ecephys_776259`."""
+    return [{
+        "stream_start_time": EPHYS_START,
+        "stream_end_time": EPHYS_STOP,
+        "ephys_modules": [{"assembly_name": n, "coordinate_transform": transform,
+                           "calibration_date": date} for n in names],
+    }]
+
+
+def test_a_water_calibration_becomes_a_row_with_both_units(asset):
+    row, = rig(asset, [WATER]).calibrations()
+    assert row["calibration_name"] == "Lick spout Left"
+    assert (row["input_unit"], row["output_unit"]) == ("s", "ul")
+    # Open (R8 §4): the type is what the source called the quantity it measured.
+    assert row["calibration_type"] == "water_volume"
+    assert row["calibrated_at"] == datetime(2024, 11, 27, 8, tzinfo=timezone.utc)
+
+
+def test_the_curve_becomes_points_in_the_order_stated(asset):
+    points = rig(asset, [WATER]).calibration_points()
+    assert [p["point_index"] for p in points] == [0, 1, 2]
+    assert [p["input_value"] for p in points] == [0.02, 0.03, 0.04]
+    assert [p["output_value"] for p in points] == [2.35, 3.1, 4.0]
+    assert {p["calibration_id"] for p in points} == {"Lick spout Left"}
+
+
+def test_a_series_with_unequal_sides_is_refused(asset):
+    """A point needs both halves, and truncating one would invent a curve nothing measured."""
+    lopsided = WATER | {"output": {"water volume (ul):": [2.35]}}
+    with pytest.raises(SourceDefect, match="a point needs both sides"):
+        rig(asset, [lopsided]).calibration_points()
+
+
+def test_six_modules_citing_one_file_are_one_calibration(tmp_path):
+    """R89 §1.4. A `device_id` on the calibration would record six where the rig performed one."""
+    asset = build(tmp_path, streams=modules("46100", "46122", "50209", "46113", "45883", "46116"))
+    source = SessionSource(asset, zone=PACIFIC)
+    row, = source.calibrations()
+    assert row["calibration_type"] == "manipulator_transform"
+    assert row["calibrated_at"] == datetime(2025, 4, 9, 10, tzinfo=timezone.utc)
+    covered = source.calibration_devices()
+    assert [d["device_id"] for d in covered] == ["46100", "46122", "50209", "46113", "45883", "46116"]
+    assert {d["calibration_id"] for d in covered} == {TRANSFORM}
+
+
+def test_an_array_calibration_records_that_its_content_is_elsewhere(tmp_path):
+    """R89 §2.5: this adapter does not read the `.npy`, so the row is unrecorded, not absent."""
+    source = SessionSource(build(tmp_path, streams=modules("46100")), zone=PACIFIC)
+    row, = source.calibrations()
+    assert (row["array_asset_id"], row["detail_kind"], row["metadata"]) == (None, None, None)
+    assert source.calibration_points() == []
+
+
+def test_a_module_stating_no_transform_yields_no_calibration(tmp_path):
+    source = SessionSource(build(tmp_path, streams=modules("46100", transform=None)), zone=PACIFIC)
+    assert source.calibrations() == [] and source.calibration_devices() == []
+
+
+def test_a_transform_with_no_date_is_null_rather_than_invented(tmp_path):
+    """R66 §2.1. Three `stick_microscopes` state a calibration and no date for it."""
+    source = SessionSource(build(tmp_path, streams=modules("46100", date=None)), zone=PACIFIC)
+    assert source.calibrations()[0]["calibrated_at"] is None
+
+
+def test_an_asset_with_no_rig_document_states_no_calibration(source):
+    """A packet holding none is conforming (R89 §3), so an absent file is not a defect."""
+    assert source.calibrations() == [] and source.calibration_points() == []
+
+
+def test_the_calibration_resources_are_omitted_when_empty(source):
+    """A resource staged with no rows is a manifest entry the packet cannot answer for."""
+    got = source.records(at_tick=FIRST_SPIKE_TICK, clock_id="harp", tick_rate_num=HARP_TICK_RATE_HZ)
+    assert not [r for r in got if r.startswith("core.calibration")]
+
+
+def test_the_calibration_resources_are_staged_when_present(tmp_path):
+    asset = build(tmp_path, streams=modules("46100", "46122"))
+    source = rig(asset, [WATER])
+    got = source.records(at_tick=FIRST_SPIKE_TICK, clock_id="harp", tick_rate_num=HARP_TICK_RATE_HZ)
+    assert len(got["core.calibrations"]) == 2
+    assert len(got["core.calibration_points"]) == 3
+    assert len(got["core.calibration_devices"]) == 2
+    assert source.offers() == {"core.calibrations": 2, "core.calibration_points": 3,
+                               "core.calibration_devices": 2}

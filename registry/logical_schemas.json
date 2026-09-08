@@ -91,7 +91,8 @@
       "R85",
       "R86",
       "R87",
-      "R88"
+      "R88",
+      "R89"
     ]
   },
   "tables": {
@@ -1049,6 +1050,291 @@
         }
       ],
       "since": "R3 \u00a73.1-3.3"
+    },
+    "core.calibration_devices": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R89 \u00a72.2"
+        },
+        {
+          "name": "calibration_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The calibration this row names a device for.",
+          "identity": "assigned",
+          "since": "R89 \u00a72.2"
+        },
+        {
+          "name": "device_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "A device the calibration covers.",
+          "identity": "assigned",
+          "since": "R89 \u00a72.2"
+        }
+      ],
+      "primary_key": [
+        "calibration_id",
+        "device_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "calibration_id"
+          ],
+          "resource": "core.calibrations",
+          "resource_columns": [
+            "calibration_id"
+          ]
+        },
+        {
+          "columns": [
+            "device_id"
+          ],
+          "resource": "core.devices",
+          "resource_columns": [
+            "device_id"
+          ]
+        }
+      ],
+      "sort": [
+        "calibration_id",
+        "device_id"
+      ],
+      "rules": [],
+      "since": "R89 \u00a72.2"
+    },
+    "core.calibration_points": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R89 \u00a72.3"
+        },
+        {
+          "name": "calibration_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The calibration this point belongs to.",
+          "identity": "assigned",
+          "since": "R89 \u00a72.3"
+        },
+        {
+          "name": "point_index",
+          "type": "int64",
+          "presence": "required",
+          "role": "structural_index",
+          "description": "0-based position in the curve's own order. The key is not `input_value` even though the inputs are distinct: an equality join on a float64 is not safe, which is why R47 could strike `interval_index` and this stays.",
+          "since": "R89 \u00a72.3"
+        },
+        {
+          "name": "input_value",
+          "type": "float64",
+          "presence": "required",
+          "role": "data",
+          "description": "The setting the point was measured at.",
+          "since": "R89 \u00a72.3",
+          "unit_from": "core.calibrations.input_unit"
+        },
+        {
+          "name": "output_value",
+          "type": "float64",
+          "presence": "required",
+          "role": "data",
+          "description": "What the instrument then delivered.",
+          "since": "R89 \u00a72.3",
+          "unit_from": "core.calibrations.output_unit"
+        }
+      ],
+      "primary_key": [
+        "calibration_id",
+        "point_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "calibration_id"
+          ],
+          "resource": "core.calibrations",
+          "resource_columns": [
+            "calibration_id"
+          ]
+        }
+      ],
+      "sort": [
+        "calibration_id",
+        "point_index"
+      ],
+      "rules": [],
+      "since": "R89 \u00a72.3"
+    },
+    "core.calibrations": {
+      "columns": [
+        {
+          "name": "calibration_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Stable calibration ID.",
+          "identity": "assigned",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "calibration_name",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since R85 \u00a72.2 makes two calibrations sharing a name one row.",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "calibration_type",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open (R8 \u00a74). Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 \u00a72.1), and this holds a value that resolves to no table.",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "calibrated_at",
+          "type": "timestamp",
+          "presence": "nullable",
+          "role": "data",
+          "description": "When the calibration was measured, which is not when it was in force: R89 \u00a71.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (R66 \u00a72.1).",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What the source said the calibration was.",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "input_unit",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The unit of measure of `core.calibration_points.input_value`. On the calibration because it varies per calibration -- seconds for water, volts for opto -- so no literal unit can sit on the value column (R89 \u00a72.3).",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "output_unit",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The unit of measure of `core.calibration_points.output_value`.",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "array_asset_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics (R89 \u00a72.4).",
+          "identity": "assigned",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "detail_kind",
+          "type": "string",
+          "presence": "nullable",
+          "role": "discriminator",
+          "description": "A table carrying a calibration shape core does not define, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (R89 \u00a72.5).",
+          "resolves": "optional",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "role": "data",
+          "description": "What the source stated about this calibration that no column above models. Only the calibration declares one: its key holds an identifier of its own, where both child tables are keyed by other tables' identifiers (R89 \u00a72.6).",
+          "since": "R89 \u00a72.1"
+        }
+      ],
+      "primary_key": [
+        "calibration_id"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "array_asset_id"
+          ],
+          "resource": "core.array_assets",
+          "resource_columns": [
+            "array_asset_id"
+          ]
+        }
+      ],
+      "sort": [
+        "calibration_id"
+      ],
+      "rules": [
+        {
+          "id": "core.calibrations.unit_pair_complete",
+          "level": "error",
+          "message": "a calibration declares one unit of measure and not the other; the pair is what makes a point readable (R89 \u00a72.3)",
+          "sql": "SELECT calibration_id, input_unit, output_unit FROM core_calibrations WHERE (input_unit IS NULL) <> (output_unit IS NULL)"
+        },
+        {
+          "id": "core.calibrations.points_declare_units",
+          "level": "error",
+          "message": "a calibration carries points and declares no units, so nothing says what its values are measured in (R89 \u00a72.3)",
+          "sql": "SELECT DISTINCT c.calibration_id FROM core_calibrations c JOIN core_calibration_points p USING (calibration_id) WHERE c.input_unit IS NULL OR c.output_unit IS NULL"
+        }
+      ],
+      "since": "R89 \u00a72.1"
     },
     "core.clock_anchors": {
       "columns": [

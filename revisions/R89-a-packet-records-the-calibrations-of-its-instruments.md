@@ -2,19 +2,20 @@
 
 | | |
 |---|---|
-| **Status** | Proposed |
+| **Status** | **Accepted** 2026-09-07 |
 | **Amends** | `01` (adds Calibration as a semantic concept), `02` (adds three core resources) |
 | **Depends on** | R55 (a discriminated reference), R56 (a column declares its context), R65 (an array names the instrument that made it), R88 (a session-scoped table names the session of every row) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
-A **calibration** measures what an instrument does with its setting: how many microlitres a valve
-delivers when held open for 30 ms, how much light a fibre emits at a given drive, where a
-manipulator's coordinates sit in the rig. Nothing in this specification records one. Measured on
-the two packaged sessions, **`ecephys_776259`** (twelve probes, 6,781 sorted units, recorded
-2025-04-09) and **`ecephys_786867`** (ten probes, 4,505 units, recorded 2025-09-25), whose AIND
-`rig.json` and `session.json` documents hold ten calibration records between them.
+A **calibration** is what someone measured about an instrument so that its numbers can be
+interpreted: how many microlitres a valve delivers when held open for 30 ms, how much light a fibre
+emits at a given drive, where a manipulator's own coordinates sit in the rig, where a camera is
+mounted. Nothing in this specification records one. Measured on the two packaged sessions,
+**`ecephys_776259`** (twelve probes, 6,781 sorted units, recorded 2025-04-09) and
+**`ecephys_786867`** (ten probes, 4,505 units, recorded 2025-09-25), whose AIND `rig.json` and
+`session.json` documents hold ten calibration records between them.
 
 ## 1. Motivation
 
@@ -74,18 +75,26 @@ claiming four probes where the session had one physical object.
 
 `core.calibrations` is added, keyed on `calibration_id` alone as R81 §2.1 keys a unit:
 
-| column | type | presence | |
-|---|---|---|---|
-| `calibration_id` | `int32` | required | identifier, `assigned` |
-| `session_id` | `int32` | required | R88 §2.1; the session the calibration was in force for |
-| `calibration_name` | `string` | required | R53 §2.3.1's name for an assigned identifier |
-| `calibration_kind` | `string` | required | **open** (R8 §4): `water_volume`, `light_power`, `manipulator_transform` |
-| `calibrated_at` | `TIMESTAMP(MICROS, UTC)` | nullable | when it was measured |
-| `description` | `string` | nullable | what the source said it was |
-| `input_unit` | `string` | nullable | §2.3 |
-| `output_unit` | `string` | nullable | §2.3 |
-| `array_asset_id` | `int32` | nullable | §2.4 |
-| `detail_kind` | `string` | nullable | §2.5; R48 role `discriminator` |
+| column | type | presence | role | |
+|---|---|---|---|---|
+| `calibration_id` | `int32` | required | identifier | `assigned` (R53 §2.3) |
+| `session_id` | `int32` | required | identifier | R88 §2.1; the session the calibration was in force for |
+| `calibration_name` | `string` | required | data | R53 §2.3.1's name for an assigned identifier |
+| `calibration_type` | `string` | required | data | **open** (R8 §4): `water_volume`, `light_power`, `manipulator_transform` |
+| `calibrated_at` | `TIMESTAMP(MICROS, UTC)` | nullable | data | when it was measured |
+| `description` | `string` | nullable | data | what the source said it was |
+| `input_unit` | `string` | nullable | data | §2.3 |
+| `output_unit` | `string` | nullable | data | §2.3 |
+| `array_asset_id` | `int32` | nullable | identifier | §2.4 |
+| `detail_kind` | `string` | nullable | discriminator | §2.5; `resolves: optional` |
+| `metadata` | `json_string` | optional | data | §2.6 |
+
+Two references are declared: `session_id` to `core.sessions` and `array_asset_id` to
+`core.array_assets`.
+
+The vocabulary is named `calibration_type` rather than `calibration_kind` because a `_kind` column
+is a discriminator (R55 §2.1), which `registry/check.py` enforces both ways; this one holds a value
+and resolves to no table, so it takes the suffix `event_type` and `activity_type` already use.
 
 `session_id` says which session the calibration applied to and `calibrated_at` says when it was
 measured, and the two **MUST NOT** be read as one fact: §1.2 measures 133 and 302 days between
@@ -98,10 +107,15 @@ invented.
 
 ### 2.2 A calibration names the devices it covers
 
-`core.calibration_devices(session_id, calibration_id, device_id)` is added, keyed on
-`(calibration_id, device_id)`. The devices a calibration covers are a repeated value, so they are
-a child table and not a column (R3 §3.0). That is what keeps §1.4's manipulator calibration one
-row instead of six.
+`core.calibration_devices` is added, keyed on `(calibration_id, device_id)`. The devices a
+calibration covers are a repeated value, so they are a child table and not a column (R3 §3.0). That
+is what keeps §1.4's manipulator calibration one row instead of six.
+
+| column | type | presence | role | |
+|---|---|---|---|---|
+| `session_id` | `int32` | required | identifier | R88 §2.1; references `core.sessions` |
+| `calibration_id` | `int32` | required | identifier | references `core.calibrations` |
+| `device_id` | `int32` | required | identifier | references `core.devices` |
 
 A calibration covering a device the packet does not hold gets no row in that table, and its
 absence is a fact rather than a defect (R49 §2.2): `core.devices` holds 20 rows in `ecephys_776259` and
@@ -111,14 +125,24 @@ row, so a writer that records the calibration SHOULD record the device it names 
 
 ### 2.3 A calibration's paired series is a child table
 
-`core.calibration_points(session_id, calibration_id, point_index, input_value, output_value)` is
-added, keyed on `(calibration_id, point_index)`. Seven rows hold the measured water curve, where
-`rig.json` holds two parallel JSON lists that R3 §3.0 forbids.
+`core.calibration_points` is added, keyed on `(calibration_id, point_index)`. Seven rows hold the
+measured water curve, where `rig.json` holds two parallel JSON lists that R3 §3.0 forbids.
+
+| column | type | presence | role | |
+|---|---|---|---|---|
+| `session_id` | `int32` | required | identifier | R88 §2.1; references `core.sessions` |
+| `calibration_id` | `int32` | required | identifier | references `core.calibrations` |
+| `point_index` | `int64` | required | structural_index | 0-based (R3 §6), as every other index is |
+| `input_value` | `float64` | required | data | `unit_from: core.calibrations.input_unit` |
+| `output_value` | `float64` | required | data | `unit_from: core.calibrations.output_unit` |
+
+A point with one side missing states nothing, so both values are required and a calibration with no
+points has no rows rather than empty ones.
 
 The unit varies per calibration — seconds to microlitres for water, volts to milliwatts for opto —
 so no literal `unit` can be declared on a value column. `input_value` declares
 `unit_from: core.calibrations.input_unit` and `output_value` declares
-`unit_from: core.calibrations.output_unit`, which is R56 §2.2's one-hop `resource.column` form and
+`unit_from: core.calibrations.output_unit`, which is R56 §2.3's one-hop `resource.column` form and
 the first use of it for a unit rather than a clock. `registry/check.py` already resolves that form
 and requires the declared reference to exist.
 
@@ -145,7 +169,7 @@ calibration is not one.
 ### 2.5 A calibration with no recorded content is still a calibration
 
 A row of `core.calibrations` with no points, no `array_asset_id` and no `detail_kind` records that
-the calibration happened and that the packet holds nothing further. That is the state
+the calibration was in force and that the packet holds nothing further. That is the state
 `ecephys_776259`'s manipulator calibration would be in if its `.npy` could not be read, and a
 consumer **MUST** read such a row as *unrecorded* rather than as *absent*.
 
@@ -167,6 +191,18 @@ shape it does not gets the escape hatch.
 A source stating that no calibration was performed gets no row. The absence of a calibration is
 not a calibration, and R66 §1.4 refuses a field that records nothing.
 
+### 2.6 Only the calibration itself declares a free-form column
+
+`core.calibrations` declares `metadata` and the two child tables **MUST NOT**, which is R95 §3.1's
+rule applied where it decides: a table's key holds an identifier of its own, so the row is a thing
+rather than a statement about other things, and `core.calibrations` is the only one of the three
+whose key does. A source states more about a calibration than the ten typed columns above model —
+the fit a curve was reduced to, the standard it was measured against, who performed it — and none
+of that is sayable about one of its points.
+
+A point's own unmodelled facts belong on the calibration, and a device's on `core.devices`, which
+declares `metadata` already; §5 measures how much of it a packet fills.
+
 ## 3. What this does not change
 
 - **No existing table, column or rule.** Three resources are added and nothing is amended;
@@ -174,16 +210,17 @@ not a calibration, and R66 §1.4 refuses a field that records nothing.
   definitions and gain something to resolve against.
 - **No packet becomes invalid.** No existing table gains a column, so a packet carrying none of
   the three is conforming. Both measured packets are, and stay so until they are rebuilt.
-- **`core.devices.metadata` is not where this goes.** A seven-point curve inside a JSON string is
-  invisible to a rule, which is R66 §1.4's and R70 §2's argument, and two parallel lists are what
-  R3 §3.0 forbids by name.
+- **A curve does not become a JSON string.** `core.devices.metadata` would hide the seven points
+  from every rule, which is R66 §1.4's and R70 §2's argument, and two parallel lists are what R3
+  §3.0 forbids by name. What does belong there is §2.6's remainder: what a source says about a
+  device that no column models.
 - **No calibration is required.** A packet holding none is conforming. `09`'s metadata minimalism
   makes core carry what is needed to interpret, and a session with no calibrated quantity needs
   none.
 
 ## 4. Consequence
 
-35 tables become **38**, 308 columns become **326**, and 76 references become **83**. Two Tier 2
+35 tables become **38**, 316 columns become **335**, and 90 references become **97**. Two Tier 2
 rules are added, both on `core.calibrations`. Tier 1 gains the checks those references and required
 columns imply, none hand-written.
 
@@ -206,10 +243,11 @@ is a rebuild, and this one re-reads no external resource.
 
 - **Where a source's statement that it did not calibrate should go.** §2.5 writes no row, and
   `stick_microscopes` carries the note *"Did not record arc or module angles, did not calibrate"* —
-  real information about a session that this revision drops. It is a fact about a device rather
-  than about a calibration, and `core.devices` has no free-text field for it, so recording it wants
-  a decision about device notes rather than about calibrations.
-- **Whether a calibration should declare what it maps to what.** `calibration_kind` says
+  real information about a session that this revision drops. It is a fact about a device rather than
+  about a calibration, so its home is `core.devices.metadata`, filled on 13 of 20 device rows in
+  `ecephys_776259` and 20 of 21 in `ecephys_786867`. What stays open is whether an adapter should
+  record a note that asserts no calibration, which is a question about the device adapter.
+- **Whether a calibration should declare what it maps to what.** `calibration_type` says
   `water_volume` and the units say seconds to microlitres, and nothing says the input is a valve
   open time rather than a pressure. The source states it only in `description`, which is prose, and
   a typed answer would need a vocabulary of physical quantities this specification has no other use

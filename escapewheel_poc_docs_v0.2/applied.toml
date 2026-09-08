@@ -1555,3 +1555,32 @@ note = "each of the eight is one hop from a parent that holds the session"
 [clause."R88 §2.4"]
 disposition = "implementation"
 note = "a run whose results reach several sessions is recorded once per session"
+
+[clause."R89 §2.1"]
+disposition = "registry"
+where = "core.calibrations, with unit_pair_complete and points_declare_units"
+note = "also stated in 02_core_logical_schemas.md §12 and 01_semantic_standard.md §3.23"
+
+[clause."R89 §2.2"]
+disposition = "registry"
+where = "core.calibration_devices"
+note = "the SHOULD on a writer recording the devices it names is in 02_core_logical_schemas.md §12"
+
+[clause."R89 §2.3"]
+disposition = "registry"
+where = "core.calibration_points, whose value columns declare unit_from onto core.calibrations"
+
+[clause."R89 §2.4"]
+disposition = "registry"
+where = "core.calibrations.array_asset_id, referencing core.array_assets"
+note = "also stated in 02_core_logical_schemas.md §12"
+
+[clause."R89 §2.5"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §12"
+note = "the consumer MUST read an empty calibration as unrecorded; also 01_semantic_standard.md §3.23"
+
+[clause."R89 §2.6"]
+disposition = "registry"
+where = "core.calibrations.metadata, absent from both child tables"
+note = "also stated in 02_core_logical_schemas.md §12"

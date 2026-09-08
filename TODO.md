@@ -9,10 +9,10 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R88 accepted. R42 and R73 withdrawn. R89–R93 proposed and not binding.
+R1–R41, R43–R72 and R74–R89 accepted. R42 and R73 withdrawn. R90–R95 proposed and not binding.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
-35 tables, 316 columns, 90 references, 68 Tier 2 rules (2 advisory)
+38 tables, 335 columns, 97 references, 70 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
 27 conformance packets

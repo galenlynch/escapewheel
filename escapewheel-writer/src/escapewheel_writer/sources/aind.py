@@ -33,6 +33,7 @@ is nothing to re-localize a date to.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -46,6 +47,7 @@ from .store import source_root
 
 #: `session.json`'s own name for the file, used to accept either it or its directory.
 SESSION_JSON = "session.json"
+RIG_JSON = "rig.json"
 
 
 @dataclass(frozen=True)
@@ -109,6 +111,9 @@ class SessionSource(Compensates):
     #: therefore needs the data.
     PRODUCES = frozenset(
         {
+            "core.calibration_devices",
+            "core.calibration_points",
+            "core.calibrations",
             "core.clocks",
             "core.event_stream_observation_intervals",
         }
@@ -130,6 +135,7 @@ class SessionSource(Compensates):
         self.notes: list[str] = []
         self._streams: list[AcquisitionStream] | None = None
         self._document: dict[str, Any] = json.loads(self.path.read_text())
+        self._rig_document: dict[str, Any] | None = None
         self.session_id = session_id or self.path.parent.name
 
     @property
@@ -359,6 +365,148 @@ class SessionSource(Compensates):
             max(w.stop for w in windows).astimezone(timezone.utc),
         )
 
+    # -- calibrations (R89) -----------------------------------------------------------
+
+    @property
+    def _rig(self) -> dict[str, Any]:
+        """The `rig.json` beside this `session.json`, or an empty document where there is none.
+
+        Absent is not a defect: a packet holding no calibration is conforming (R89 §3), and the
+        rig document is a separate file that an asset may not carry.
+        """
+        if self._rig_document is None:
+            path = self.path.parent / RIG_JSON
+            self._rig_document = json.loads(path.read_text()) if path.is_file() else {}
+        return self._rig_document
+
+    def _modules(self) -> list[dict[str, Any]]:
+        """Every `ephys_module` of every stream, in file order."""
+        return [m for s in self._document.get("data_streams", []) or []
+                for m in s.get("ephys_modules", []) or []]
+
+    def calibrations(self) -> list[dict[str, Any]]:
+        """`core.calibrations`: what was measured about an instrument so its numbers can be read.
+
+        Two shapes, because a source states a calibration more than one way (R89 §1.3). A
+        `rig.json` entry is a curve, and its type is the quantity its own output label names --
+        the vocabulary is open (R8 §4), so the source's word for what it measured is a value
+        rather than something to map onto a closed set. An `ephys_module` states a manipulator
+        transform, one calibration cited by every module sharing its file and timestamp (R89
+        §1.4), whose content is an array this adapter does not read: the row records that the
+        calibration was in force and that the packet holds nothing further (R89 §2.5).
+        """
+        rows: list[dict[str, Any]] = []
+        for entry in self._rig.get("calibrations", []) or []:
+            name = _clean(entry.get("device_name"))
+            if name is None:
+                continue
+            output = _label(entry.get("output"))
+            rows.append({
+                "calibration_id": name,
+                "session_id": self.session_id,
+                "calibration_name": name,
+                "calibration_type": _quantity(output) or "unknown",
+                "calibrated_at": self._calibrated_at(entry.get("calibration_date"), name),
+                "description": _clean(entry.get("description")),
+                "input_unit": _unit(_label(entry.get("input"))),
+                "output_unit": _unit(output),
+                "array_asset_id": None,
+                "detail_kind": None,
+                # R89 §2.6: what the source said that no column above models. The note is not
+                # `description`, which carries the source's own description field.
+                "metadata": _bag(notes=_clean(entry.get("notes"))),
+            })
+        for transform, when in self._transforms().items():
+            rows.append({
+                "calibration_id": transform,
+                "session_id": self.session_id,
+                "calibration_name": transform,
+                "calibration_type": "manipulator_transform",
+                "calibrated_at": self._calibrated_at(when, transform),
+                "description": None,
+                "input_unit": None,
+                "output_unit": None,
+                # R89 §2.4 wants the array asset; this adapter does not read the `.npy`, so the
+                # content is unrecorded (R89 §2.5). The path is `calibration_name`, which is the
+                # identifier the source used for it, so nothing repeats it in `metadata`.
+                "array_asset_id": None,
+                "detail_kind": None,
+                "metadata": None,
+            })
+        return rows
+
+    def calibration_points(self) -> list[dict[str, Any]]:
+        """`core.calibration_points`: the paired series of each calibration that is a curve.
+
+        `rig.json` holds two parallel JSON lists, which R3 §3.0 forbids as a column; a series of
+        unequal lengths is a defect in the source rather than something to truncate.
+        """
+        rows: list[dict[str, Any]] = []
+        for entry in self._rig.get("calibrations", []) or []:
+            name = _clean(entry.get("device_name"))
+            if name is None:
+                continue
+            inputs, outputs = _series(entry.get("input")), _series(entry.get("output"))
+            if len(inputs) != len(outputs):
+                raise SourceDefect(
+                    f"calibration {name!r} states {len(inputs)} inputs against {len(outputs)} "
+                    "outputs; a point needs both sides (R89 §2.3)"
+                )
+            rows.extend(
+                {"session_id": self.session_id, "calibration_id": name, "point_index": index,
+                 "input_value": float(x), "output_value": float(y)}
+                for index, (x, y) in enumerate(zip(inputs, outputs, strict=True))
+            )
+        return rows
+
+    def calibration_devices(self) -> list[dict[str, Any]]:
+        """`core.calibration_devices`: the devices each calibration covers.
+
+        The assembly name is the device name the acquisition chain gives the same probe, and the
+        writer numbers both from that name (R53 §2.5), so the reference resolves without this
+        adapter seeing `core.devices`. A calibration covering a device the packet does not hold
+        gets no row, which is a fact rather than a defect (R89 §2.2) -- which is why the lick
+        spouts of a water calibration appear here only if some source built them.
+        """
+        rows = []
+        for module in self._modules():
+            transform = _clean(module.get("coordinate_transform"))
+            device = _clean(module.get("assembly_name"))
+            if transform is not None and device is not None:
+                rows.append({"session_id": self.session_id,
+                             "calibration_id": transform, "device_id": device})
+        return rows
+
+    def _transforms(self) -> dict[str, str | None]:
+        """Each distinct `coordinate_transform` the modules cite, to the date they state for it."""
+        found: dict[str, str | None] = {}
+        for module in self._modules():
+            transform = _clean(module.get("coordinate_transform"))
+            if transform is not None:
+                found.setdefault(transform, _clean(module.get("calibration_date")))
+        return found
+
+    def _calibrated_at(self, raw: str | None, label: str) -> datetime | None:
+        """When the calibration was measured, in UTC, or None where the source states none.
+
+        Null rather than invented (R66 §2.1). A stated offset is kept here where `_instant`
+        discards one: a calibration is dated to the day and its offset is the rig's own, where
+        `session_start_time` carries an offset this schema gets wrong often enough to distrust.
+        A value with no offset falls back to the declared zone.
+        """
+        if raw is None:
+            return None
+        parsed = datetime.fromisoformat(raw)
+        if parsed.tzinfo is None:
+            parsed = self._instant(raw, f"calibration {label}")
+        return parsed.astimezone(timezone.utc)
+
+    def offers(self) -> dict[str, int]:
+        """`05` Stage 1: how many rows of each calibration resource this root holds."""
+        return {"core.calibrations": len(self.calibrations()),
+                "core.calibration_points": len(self.calibration_points()),
+                "core.calibration_devices": len(self.calibration_devices())}
+
     def records(
         self,
         *,
@@ -404,10 +552,63 @@ class SessionSource(Compensates):
         )
         if epoch is None:
             self.compensate("aind.tick_zero_from_stream_start")
+        calibrations = {
+            "core.calibrations": self.calibrations(),
+            "core.calibration_devices": self.calibration_devices(),
+            "core.calibration_points": self.calibration_points(),
+        }
         return {
             "core.clocks": [built.record()],
             "core.event_stream_observation_intervals": self.observation_intervals(built, list(event_stream_ids or [])),
+            # An asset carrying no calibration is conforming (R89 §3), so the resources are
+            # omitted rather than staged empty -- a manifest entry a packet cannot answer for.
+            **{resource: rows for resource, rows in calibrations.items() if rows},
         }
 
 
-__all__ = ["SESSION_JSON", "AcquisitionStream", "SessionSource"]
+def _clean(value: Any) -> str | None:
+    """Return a stated string, or None where the source wrote nothing or its word for nothing.
+
+    This schema writes the string `None` where a field is unset, so a truthiness test keeps it.
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    return None if text in {"", "None", "null"} else text
+
+
+def _label(side: Any) -> str | None:
+    """Return the single key naming one side of a calibration's series."""
+    return next(iter(side), None) if isinstance(side, dict) and len(side) == 1 else None
+
+
+def _series(side: Any) -> list[float]:
+    """Return the values of one side of a calibration's series, in file order."""
+    return list(next(iter(side.values()))) if isinstance(side, dict) and len(side) == 1 else []
+
+
+def _unit(label: str | None) -> str | None:
+    """Return the unit of measure a series label states in parentheses, as in `water volume (ul):`."""
+    found = re.search(r"\(([^)]*)\)", label or "")
+    return found.group(1).strip() or None if found else None
+
+
+def _quantity(label: str | None) -> str | None:
+    """Return a series label's quantity as a vocabulary value: `water volume (ul):` to `water_volume`.
+
+    The vocabulary is open (R8 §4), so what the source called the quantity it measured is a value
+    rather than something to map onto a closed set this specification does not have.
+    """
+    if label is None:
+        return None
+    bare = re.sub(r"\([^)]*\)", "", label).strip().strip(":").strip()
+    return re.sub(r"[^a-z0-9]+", "_", bare.lower()).strip("_") or None
+
+
+def _bag(**stated: str | None) -> str | None:
+    """Return what the source stated that no column models, as JSON, or None where it stated none."""
+    kept = {key: value for key, value in stated.items() if value is not None}
+    return json.dumps(kept, sort_keys=True) if kept else None
+
+
+__all__ = ["RIG_JSON", "SESSION_JSON", "AcquisitionStream", "SessionSource"]

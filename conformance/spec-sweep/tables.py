@@ -42,6 +42,12 @@ STEPS = [
     # R83 §2.1: a channel index a source emits counts the channels its run kept, and nothing
     # held that list, so no packet could resolve one.
     ("R83 §2.1 + core.sorting_run_channels",   set(), {"core.sorting_run_channels"}),
+    # R89 §2: a calibration is what someone measured about an instrument so that its numbers can
+    # be interpreted, and nothing in the specification recorded one. Three resources, because the
+    # devices a calibration covers and the points of its curve are both repeated values (R3 §3.0).
+    ("R89 §2.1 + core.calibrations",           set(), {"core.calibrations"}),
+    ("R89 §2.2 + core.calibration_devices",    set(), {"core.calibration_devices"}),
+    ("R89 §2.3 + core.calibration_points",     set(), {"core.calibration_points"}),
 ]
 
 if not PARSED.exists():

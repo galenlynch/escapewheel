@@ -118,7 +118,7 @@ WITHDRAWN = {
 ROLES: dict[str, str] = dict.fromkeys(TRANSIENT, "data") | WITHDRAWN
 for _role, _names in {
     "identifier": (
-        "array_asset_id", "clock_id", "condition_id", "coordinate_array_asset_id", "curation_id",
+        "array_asset_id", "calibration_id", "clock_id", "condition_id", "coordinate_array_asset_id", "curation_id",
         "default_electrode_id", "device_id", "electrode_id", "event_id", "event_stream_id",
         "input_array_asset_id", "media_asset_id", "parent_clock_id", "parent_curation_id", "probe_id",
         "processing_run_id", "reference_clock_id", "region_id", "session_id", "sorting_run_id",
@@ -131,7 +131,7 @@ for _role, _names in {
         "t_tick", "t_zero_tick", "time_bucket_tick",
     ),
     "structural_index": (
-        "axis_index", "channel_index", "frame_index",
+        "axis_index", "channel_index", "frame_index", "point_index",
     ),
     "sequence_position": (
         "anchor_index",
@@ -139,20 +139,22 @@ for _role, _names in {
     # R55 §2.1. A column a consumer resolves to a table, which `data` said nothing about -- so
     # nothing checked that `scope_kind` held a resource ID at all.
     "discriminator": (
-        "interval_kind", "scope_kind",
+        "detail_kind", "interval_kind", "scope_kind",
     ),
     "data": (
-        "activity_type", "amplitude", "amplitude_unit", "channel_label", "choice",
+        "activity_type", "amplitude", "amplitude_unit", "calibrated_at", "calibration_name",
+        "calibration_type", "channel_label", "choice",
         "chosen_at", "code_uri", "confidence", "conversion", "coordinate_frame",
         "coordinate_basis", "coordinate_position_column", "coordinate_resource", "coordinate_unit",
-        "created_at", "region_label",
+        "created_at", "description", "region_label",
         "curation_tool", "curation_tool_version", "curator", "date_of_birth", "dimension_name", "dropped",
         "ended_at", "event_type", "experimenter", "firing_rate_hz", "firmware_version", "format",
-        "genotype", "hardware_version", "impedance_ohm",
+        "genotype", "hardware_version", "impedance_ohm", "input_unit", "input_value",
         "insertion_name", "institution", "inter_sample_shift", "is_primary", "kind", "label",
         "local_channel_label", "local_electrode_label", "local_unit_label", "manufacturer", "metadata",
         "model", "modified_at", "n_spikes", "name", "normalized_label", "notes", "offset", "origin",
-        "origin_value", "parameters", "parent_port", "payload", "probe_type", "pts", "pts_rate_den",
+        "origin_value", "output_unit", "output_value", "parameters", "parent_port", "payload",
+        "probe_type", "pts", "pts_rate_den",
         "pts_rate_num", "quality_label",
         "quality_label_source", "reason", "rewarded", "sample_rate_hz", "scope",
         "semantic_type", "serial_number", "session_description", "session_end_time", "session_start_time",
@@ -185,6 +187,7 @@ IDENTITY: dict[str, str] = {
     "default_electrode_id": "assigned",
     # Assigned -- this format chose the number, and something must record what it stands for.
     "array_asset_id": "assigned",
+    "calibration_id": "assigned",
     "clock_id": "assigned",
     "condition_id": "assigned",
     "coordinate_array_asset_id": "assigned",
@@ -226,6 +229,11 @@ DISCRIMINATOR: dict[str, dict[str, str]] = {
     # span exists and nothing says what it was. R55 §2.3's shared-key shape, so no
     # `discriminates`: the detail table joins on the whole key rather than on a paired value.
     "interval_kind": {"resolves": "required"},
+    # R89 §2.5: a calibration whose shape core does not define points at the table that does. A
+    # kind naming a table the packet does not carry says the content is unrecorded rather than
+    # that the row is wrong, which is R49 §2.2's judgement. Shared-key, so no `discriminates`:
+    # a detail table is keyed by its calibration and so has a composite key (R55 §2.3.1).
+    "detail_kind": {"resolves": "optional"},
 }
 
 
@@ -1288,6 +1296,101 @@ def build() -> dict:
     for resource in ("core.devices", "core.processing_runs"):
         # `02` hedged these as "if session-scoped", written before anything could compute scope.
         amend(resource, "session_id", presence="required")
+
+    # ---- R89 §2 : a packet records the calibrations of its instruments ------------------------
+    # A calibration is what someone measured about an instrument so that its numbers can be
+    # interpreted, and nothing recorded one: two extensions carry a calibrated quantity
+    # (`aind_opto.emissions.power_mw`, `dynamic_foraging.sessions.reward_size_left`) and neither
+    # could say what calibrated it. Not a `core.processing_runs` row -- both packets cite water
+    # curves measured 133 and 302 days before the session, and a run is what produced resources in
+    # this packet (R89 §1.2).
+    SINCE[0] = "R89 §2.1"
+    tables["core.calibrations"] = {
+        "columns": [
+            col("calibration_id", "int32", "required", "Stable calibration ID."),
+            col("session_id", "int32", "required", "Session ID."),
+            col("calibration_name", "string", "required",
+                "What `calibration_id` stands for: the identifier a source or an earlier packet "
+                "used for this calibration. Required, and composed by the writer where the source "
+                "names none, since R85 §2.2 makes two calibrations sharing a name one row."),
+            col("calibration_type", "string", "required",
+                "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open "
+                "(R8 §4). Named `_type` rather than `_kind` because a `_kind` column is a "
+                "discriminator (R55 §2.1), and this holds a value that resolves to no table."),
+            col("calibrated_at", "timestamp", "nullable",
+                "When the calibration was measured, which is not when it was in force: R89 §1.2 "
+                "measures 133 and 302 days between them. Null where the source states none, since "
+                "what a source did not say is not invented (R66 §2.1)."),
+            col("description", "string", "nullable", "What the source said the calibration was."),
+            col("input_unit", "string", "nullable",
+                "The unit of measure of `core.calibration_points.input_value`. On the calibration "
+                "because it varies per calibration -- seconds for water, volts for opto -- so no "
+                "literal unit can sit on the value column (R89 §2.3)."),
+            col("output_unit", "string", "nullable",
+                "The unit of measure of `core.calibration_points.output_value`."),
+            col("array_asset_id", "int32", "nullable",
+                "The array holding this calibration where its content is one rather than a curve: "
+                "a manipulator transform, a camera's intrinsics (R89 §2.4)."),
+            col("detail_kind", "string", "nullable",
+                "A table carrying a calibration shape core does not define, as a dotted resource "
+                "ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records "
+                "that the content is elsewhere rather than that the row is wrong (R89 §2.5)."),
+            col("metadata", "json_string", "optional",
+                "What the source stated about this calibration that no column above models. Only "
+                "the calibration declares one: its key holds an identifier of its own, where both "
+                "child tables are keyed by other tables' identifiers (R89 §2.6)."),
+        ],
+        "primary_key": ["calibration_id"],
+        "references": [{"columns": ["session_id"], "resource": "core.sessions",
+                        "resource_columns": ["session_id"]},
+                       {"columns": ["array_asset_id"], "resource": "core.array_assets",
+                        "resource_columns": ["array_asset_id"]}],
+        "sort": ["calibration_id"],
+        "rules": [], "since": SINCE[0]}
+
+    # R89 §2.2: the devices a calibration covers are a repeated value, so a child table and not a
+    # column (R3 §3.0). One `device_id` on the calibration would record six calibrations of the
+    # rig's manipulators where it performed one -- R67 §3's defect with its multiplicity reversed.
+    SINCE[0] = "R89 §2.2"
+    tables["core.calibration_devices"] = {
+        "columns": [col("session_id", "int32", "required", "Session ID."),
+                    col("calibration_id", "int32", "required",
+                        "The calibration this row names a device for."),
+                    col("device_id", "int32", "required", "A device the calibration covers.")],
+        "primary_key": ["calibration_id", "device_id"],
+        "references": [{"columns": ["session_id"], "resource": "core.sessions",
+                        "resource_columns": ["session_id"]},
+                       {"columns": ["calibration_id"], "resource": "core.calibrations",
+                        "resource_columns": ["calibration_id"]},
+                       {"columns": ["device_id"], "resource": "core.devices",
+                        "resource_columns": ["device_id"]}],
+        "sort": ["calibration_id", "device_id"],
+        "rules": [], "since": SINCE[0]}
+
+    # R89 §2.3: the measured curve, where `rig.json` holds two parallel JSON lists R3 §3.0 forbids.
+    SINCE[0] = "R89 §2.3"
+    _points = [col("session_id", "int32", "required", "Session ID."),
+               col("calibration_id", "int32", "required", "The calibration this point belongs to."),
+               col("point_index", "int64", "required",
+                   "0-based position in the curve's own order. The key is not `input_value` even "
+                   "though the inputs are distinct: an equality join on a float64 is not safe, "
+                   "which is why R47 could strike `interval_index` and this stays."),
+               col("input_value", "float64", "required", "The setting the point was measured at."),
+               col("output_value", "float64", "required", "What the instrument then delivered.")]
+    # Declared here rather than in CONTEXT, which is consumed above -- these columns do not exist
+    # when that block runs. R56 §2.3's one-hop `resource.column` form, resolved through the
+    # reference to `core.calibrations` below, and its first use for a unit rather than a clock.
+    _points[3]["unit_from"] = "core.calibrations.input_unit"
+    _points[4]["unit_from"] = "core.calibrations.output_unit"
+    tables["core.calibration_points"] = {
+        "columns": _points,
+        "primary_key": ["calibration_id", "point_index"],
+        "references": [{"columns": ["session_id"], "resource": "core.sessions",
+                        "resource_columns": ["session_id"]},
+                       {"columns": ["calibration_id"], "resource": "core.calibrations",
+                        "resource_columns": ["calibration_id"]}],
+        "sort": ["calibration_id", "point_index"],
+        "rules": [], "since": SINCE[0]}
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates

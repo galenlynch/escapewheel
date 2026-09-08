@@ -282,3 +282,18 @@ A processing run that produced units from a recording, declaring the clock its t
 ### 3.22 Curation version
 
 A named state of a sorting's unit set, optionally derived from a parent curation.
+
+### 3.23 Calibration
+
+What someone measured about an instrument so that its numbers can be interpreted: how many microlitres a valve delivers when held open for 30 ms, how much light a fibre emits at a given drive, where a manipulator's own coordinates sit in the rig, where a camera is mounted (R89).
+
+- MUST have an identifier, a name, and a declared type from an open vocabulary.
+- MUST name the session it was in force for.
+- SHOULD declare when it was measured, where the source states one.
+- MAY name the devices it covers, carry the points of its curve, or name the array holding it.
+
+A calibration is a standing property of an instrument rather than an activity of this packet, so a session reports it as **in force** rather than as having happened, and it is not a Processing run (R89 §1.2). Both packaged sessions cite water calibrations measured 133 and 302 days before the recording, one of them by two sessions six months apart.
+
+One calibration covers many devices — six manipulator modules cite one file and one timestamp between them — so which devices it covers is recorded per device and not as a property of the calibration (R89 §2.2).
+
+A source states a calibration in at least four ways: as a curve, as an array, as a date and nothing else, and as an assertion that none was made (R89 §1.3). A calibration with no recorded content is still a calibration, and a consumer MUST read such a row as **unrecorded** rather than as absent (R89 §2.5). A source stating that no calibration was performed gets no row: the absence of a calibration is not a calibration.

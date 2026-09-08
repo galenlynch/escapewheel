@@ -1,0 +1,206 @@
+# R95 — The Free-Form Metadata Column
+
+| | |
+|---|---|
+| **Status** | Proposed |
+| **Amends** | `02` §5.2 (the clause against filling a `json_string` routinely), `09` §2 (the tier table), the 20 registry declarations of `metadata` and their descriptions |
+| **Depends on** | R48 (a column declares its role), R46 (the references that make "its own" decidable), R53 (identity), R2 §5 (three-state presence) |
+| **Profile** | `escapewheel-portable-v0.1` |
+
+Normative, except §2 and §6, which are informative.
+
+MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
+
+## 1. Scope
+
+`metadata` is an optional `json_string` column carrying what a source stated about a row that the
+standard does not model. Twenty of the registry's 35 tables declare one.
+
+Nothing says which tables should declare it, what may go in one, or what must not, and each gap has
+produced a defect: a column on a 286,896,563-row table that nothing could usefully fill, a
+description that restates the column's name on 16 tables, and three keys holding a fact a typed
+column already holds. This part settles all three — which tables declare the column, whether a
+writer may fill it, and what a key may not hold.
+
+Measured on the two packaged sessions, **`ecephys_776259`** (twelve probes, 6,781 sorted units,
+recorded 2025-04-09) and **`ecephys_786867`** (ten probes, 4,505 units, recorded 2025-09-25).
+
+## 2. Background
+
+Informative.
+
+### 2.1 The column's descriptions
+
+The registry describes it as **"Additional metadata."** on 16 tables, "Free-form metadata." on one,
+and "Additional ⟨table⟩ metadata." on three. A reader learns from that what the name already gave
+them, and an adapter author learns nothing.
+
+### 2.2 What the packets carry
+
+The writer omits the column outright on ten of the twenty tables declaring it, and two of the twenty
+exist in neither packet. The eight that are written are entity tables of 10 to 4,608 rows:
+`core.electrodes`, `core.processing_runs`, `core.devices`, `core.array_assets`,
+`core.curation_versions`, `core.probes`, `core.sorting_runs`, `core.event_streams`.
+
+Across both packets **8,230 rows hold a `metadata` value at all**, and **8,064 of them — 98% — are
+`core.electrodes`**, the one table whose content is a defect.
+
+### 2.3 Keys that restate a column
+
+| key | the column holding the same fact | agreeing rows | promoted by |
+|---|---|---|---|
+| `core.electrodes.metadata.ccf_id` | `core.electrode_coordinates.region_id` | 8,064 / 8,064 | R59 §2 |
+| `core.electrodes.metadata.ccf_acronym` | `core.electrode_coordinates.region_label` | 7,012 / 7,012 | R59 §2 |
+| `core.devices.metadata.port` | `core.devices.parent_port` | 7 headstage rows | R85 §2.1 |
+
+Each arose the same way: a revision moved a fact from the bag into a typed column and nothing
+removed the adapter's copy. The third is visible in one dict literal —
+`sources/openephys.py:147` writes `parent_port` from `probe["port"]`, and line 148 writes
+`{k: probe[k] for k in key}` where `CHAIN` gives a headstage `key = ("slot", "port")`.
+
+Comparing names catches none of it. **Zero of the 20 distinct keys in either packet share a name
+with any column anywhere in the registry**, because an adapter names a key in the source's
+vocabulary — `ccf_id`, `port`, `spikeinterface_version` — and core names a column in its own:
+`region_id`, `parent_port`. That divergence is what the column is for.
+
+A list of retired keys would not close it either, and the same table shows why. `core.electrodes`
+holds four `ccf_*` keys splitting two against two: `ccf_id` and `ccf_acronym` are forbidden, while
+`ccf_name` and `ccf_structure_id_path` must stay, R59 §2 having declined both deliberately — the
+name is derivable from the id, and the ancestry path is a delimited list `03` forbids as a column.
+One JSON object, one prefix, opposite verdicts.
+
+### 2.4 The cost of filling one
+
+`02` §5.2 says a writer SHOULD NOT fill a `json_string` column routinely, because "a column present
+on every row forces a parse on every row, in exactly the table where a consumer works."
+
+Parquet reads the columns a query projects and no others, so the cost falls only on a consumer who
+asks for it. Measured over 5,000,000 rows shaped after `core.electrodes`, with the real CCF payload
+and zstd:
+
+| | file | footer | **bytes read for the four typed columns** | time |
+|---|---|---|---|---|
+| without `metadata` | 61.81 MB | 2.9 kB | **61.81 MB** | 33.0 ms |
+| with `metadata` | 63.68 MB | 4.8 kB | **61.81 MB** | 29.6 ms |
+| with, projecting it | | | 63.68 MB | 394.6 ms (**11.95x**) |
+
+The projected bytes are identical and the whole cost is 1.9 kB of extra footer. R2 §5's third
+presence state compounds it: `optional` lets a writer omit the column entirely, which it does on
+`core.spike_events` at 286,896,563 rows.
+
+## 3. Decision
+
+### 3.1 Which tables declare `metadata`
+
+A table's registry entry **MUST** declare `metadata` where its primary key includes a column whose
+R48 role is `identifier` and which is not part of a declared reference, and **MUST NOT** declare one
+otherwise.
+
+That column is what makes the row a thing rather than a statement about other things. Seventeen of
+35 tables have one — `unit_id`, `device_id`, `interval_id`, `event_id`, `probe_id` among them — and
+**all seventeen already declare `metadata`, none missing**. Every other table is keyed from other
+tables' identifiers plus a coordinate (`t_tick`, `start_tick`), a structural index (`frame_index`,
+`channel_index`, `axis_index`), or nothing further at all.
+
+Whether the identifier is `assigned` or `carried` (R53 §2.3) does not matter, and both occur:
+`core.events.event_id` is assigned where `core.intervals.interval_id` is carried from the source's
+own trial number. What matters is that the table holds an identity rather than borrowing one.
+
+A row identified only by other tables' identifiers is a statement about those things, so whatever is
+unmodelled about it belongs on whichever of them it is about. Nothing can be said about one spike
+that is not either data or a fact about its unit.
+
+The rule is decidable from the registry with no packet in hand, as R56 §2.4's is, so
+`registry/check.py` enforces it and `build.py` emits the column from the primary key rather than
+each revision remembering to declare one.
+
+### 3.2 Routine filling
+
+`02` §5.2's sentence forbidding routine filling is **struck**. A writer **MAY** fill `metadata` on
+every row of a table that declares it.
+
+§2.4 measures why: an unprojected column is not read, and an optional one need not be written at
+all. `02` §5.2's ban on `list`, `struct` and `map` stands, and so does R3 §2.1's guarantee that a
+conforming reader satisfies every required column without a JSON parser. §3.3 is what keeps that
+guarantee true in practice rather than only in form.
+
+### 3.3 Content
+
+A writer **MUST NOT** emit a `metadata` key holding a fact that a column of the logical schema
+holds, and **MUST NOT** emit one that contradicts such a column.
+
+**No rule checks this and none is added.** The content is schemaless by design, so a constraint on
+it is unenforceable in principle rather than merely in practice, and §2.3 measures that names carry
+no signal to check against. The obligation binds the writer, as R67 §2.4's prohibition on inferring
+attachment from a device's name binds a consumer, and for the same reason: a named actor can comply
+where no validator can observe them.
+
+A fact required to interpret the data therefore belongs in a column, never in a key.
+
+### 3.4 The column's description and its tier
+
+Every declaration's description is replaced by one text: what the source stated about this row that
+the standard does not model, carried in the source's own vocabulary and read by no rule.
+
+`09` §2's tiers place a fact in the catalog, in a core table, in an extension's tables, or in a
+`docs/` sidecar, and never place a `json_string` column inside a core table. The table gains a row
+for it, holding tier 3 or tier 4 content that no rule reads.
+
+## 4. What this does not change
+
+- **No reference and no Tier 2 rule.** `registry/rules.json` names neither `metadata` nor `payload`,
+  so the 90 references and 68 rules are untouched.
+- **No packet is invalidated.** The validator walks the registry's columns and asks whether each is
+  present in the file; nothing looks for columns the registry does not declare, so striking one
+  cannot fail a packet that still carries it. None does.
+- **`core.intervals` keeps its `metadata`.** `interval_id` is an identifier of its own, so a new
+  interval kind may record a few unmodelled facts without an extension. R55's shared-key detail
+  table stays the path for facts needing structure rather than becoming the only path.
+- **The two unwritten prose columns stay.** `core.curation_versions.notes` is filled in 0 of 12 and
+  0 of 10 rows, `core.sessions.session_description` in 0 of 1 in both. They are typed prose rather
+  than free-form bags, so striking them is a decision about those two tables; §6 records it.
+- **`core.electrodes` keeps two of its four `ccf_*` keys.** R59 §2 declined to model `ccf_name` and
+  `ccf_structure_id_path`, so the column is where they belong.
+
+## 5. Consequence
+
+Four columns are struck and 316 becomes **312**:
+
+| struck | rows in the packets | state today |
+|---|---|---|
+| `core.spike_events.metadata` | 286,896,563 / 131,396,535 | omitted by the writer |
+| `core.media_frames.metadata` | — / 7,570,450 | omitted |
+| `core.array_channels.metadata` | 1,152 / 960 | omitted |
+| `core.events.payload` | 5,485 / 6,256 | omitted |
+
+`core.events.payload` is the one that costs something. It is a second free-form column on a table
+§3.1 entitles to one, and the NWB adapter fills it: `sources/nwb.py:963` writes `{"value": …}` for
+an acquisition `TimeSeries` whose data varies. It is absent from both packets because the marker is
+constant on every stream there, not because nothing writes it. That object goes into `metadata`
+instead, so the capability moves rather than ending, and a per-event value wanting a type wants
+R55's shared-key detail table reached through `event_type`.
+
+Three keys stop being written: `ccf_id` and `ccf_acronym` in the NWB adapter's electrode rows, and
+`port` in the Open Ephys adapter's device rows. Those are writer changes and they land in the
+rebuild R87 §2.1, R88 §2, R90 §3.1 and R94 §5 already require, forcing none of their own. After
+them, `metadata` across both packets falls from 8,230 rows to **166**.
+
+`registry/check.py` gains the §3.1 check, `build.py` emits the column from the primary key, `09` §2
+gains a row, and twenty descriptions become one.
+
+## 6. Open
+
+- **Whether the two unwritten prose columns should be struck.** R62 struck a file on this evidence —
+  written by nothing, read by nothing — and `core.curation_versions.notes` beside a `metadata`
+  column filled on 12 of 12 rows is the same shape one level down. It is a decision about
+  `core.curation_versions` and `core.sessions` rather than about free-form columns, so it is not
+  taken here.
+- **Whether a writer-side test should compare values rather than names.** §3.3 is unenforceable by a
+  rule, but the reference implementation could compare each `metadata` value against the columns its
+  table reaches and report a key agreeing on every row. It would have caught all three of §2.3 and
+  would cost nothing to run, 8,230 rows holding the column at all. That belongs in `07` §4 beside
+  `STATES` rather than in a normative part, and needs a guard against one constant column matching
+  another by accident.
+- **Whether `core.events` needs a typed per-event value.** Striking `payload` leaves an event's
+  value in a column no rule reads, which is where it already was. `event_type` is open and R55 §2.3 gives
+  the shape a structured answer would take; nothing yet measures how often a real packet needs one.

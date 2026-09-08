@@ -81,6 +81,20 @@
         "sql": "SELECT array_asset_id, axis_index, step_tick_den FROM core_array_dimensions WHERE step_tick_den IS NOT NULL AND step_tick_den <= 0"
       }
     ],
+    "core.calibrations": [
+      {
+        "id": "core.calibrations.unit_pair_complete",
+        "level": "error",
+        "message": "a calibration declares one unit of measure and not the other; the pair is what makes a point readable (R89 \u00a72.3)",
+        "sql": "SELECT calibration_id, input_unit, output_unit FROM core_calibrations WHERE (input_unit IS NULL) <> (output_unit IS NULL)"
+      },
+      {
+        "id": "core.calibrations.points_declare_units",
+        "level": "error",
+        "message": "a calibration carries points and declares no units, so nothing says what its values are measured in (R89 \u00a72.3)",
+        "sql": "SELECT DISTINCT c.calibration_id FROM core_calibrations c JOIN core_calibration_points p USING (calibration_id) WHERE c.input_unit IS NULL OR c.output_unit IS NULL"
+      }
+    ],
     "core.clock_anchors": [
       {
         "id": "core.clock_anchors.requires_parent",

@@ -582,6 +582,21 @@ A processing run that produced units from a recording, declaring the clock its t
 
 A named state of a sorting's unit set, optionally derived from a parent curation.
 
+### 3.23 Calibration
+
+What someone measured about an instrument so that its numbers can be interpreted: how many microlitres a valve delivers when held open for 30 ms, how much light a fibre emits at a given drive, where a manipulator's own coordinates sit in the rig, where a camera is mounted (R89).
+
+- MUST have an identifier, a name, and a declared type from an open vocabulary.
+- MUST name the session it was in force for.
+- SHOULD declare when it was measured, where the source states one.
+- MAY name the devices it covers, carry the points of its curve, or name the array holding it.
+
+A calibration is a standing property of an instrument rather than an activity of this packet, so a session reports it as **in force** rather than as having happened, and it is not a Processing run (R89 §1.2). Both packaged sessions cite water calibrations measured 133 and 302 days before the recording, one of them by two sessions six months apart.
+
+One calibration covers many devices — six manipulator modules cite one file and one timestamp between them — so which devices it covers is recorded per device and not as a property of the calibration (R89 §2.2).
+
+A source states a calibration in at least four ways: as a curve, as an array, as a date and nothing else, and as an assertion that none was made (R89 §1.3). A calibration with no recorded content is still a calibration, and a consumer MUST read such a row as **unrecorded** rather than as absent (R89 §2.5). A source stating that no calibration was performed gets no row: the absence of a calibration is not a calibration.
+
 <!-- END 01_semantic_standard.md -->
 
 <!-- BEGIN 02_core_logical_schemas.md -->
@@ -853,6 +868,9 @@ The core layer comprises the following resources. Column definitions are in the 
 | `core.probes` | devices carrying electrodes |
 | `core.electrodes` | recording contacts |
 | `core.electrode_coordinates` | a contact's position per frame and basis |
+| `core.calibrations` | what was measured about an instrument so its numbers can be read |
+| `core.calibration_devices` | the devices each calibration covers |
+| `core.calibration_points` | the paired series of a calibration that is a curve |
 
 ### 11.3 Time
 
@@ -930,6 +948,25 @@ it as a position in `core.electrodes`; where the run declares no channels the in
 unresolvable, and the consumer MUST report that rather than resolve it against the contact list
 (R83 §2.3). Where a run declares its channels, every `core.unit_electrodes` row for one of its
 units MUST name an electrode among them (R83 §2.4).
+
+A calibration is a standing property of an instrument rather than an activity of this packet, so
+`core.calibrations` records the session it was **in force** for and, separately, when it was
+measured; a consumer MUST NOT read the two as one fact (R89 §2.1). A calibration in force for
+several sessions is recorded once per session, as R88 §2.4 requires of any row whose results reach
+more than one. The devices a calibration covers are a child table, since one calibration of the
+rig's manipulators is cited by six probes (R89 §2.2); a calibration covering a device the packet
+does not hold gets no row there, which is a fact rather than a defect, and a writer that records
+the calibration SHOULD record the devices it names. A paired series is carried as
+`core.calibration_points`, whose two value columns take their units of measure from the
+calibration, since the unit varies per calibration and so cannot be a literal on either column
+(R89 §2.3). Content that is an array rather than a curve names the array asset holding it (R89
+§2.4).
+
+A row with no points, no array asset and no detail kind records that the calibration was in force
+and that the packet holds nothing further, which a consumer MUST read as **unrecorded** rather than
+as absent (R89 §2.5). A source stating that no calibration was performed gets no row at all.
+`core.calibrations` declares `metadata` and the two child tables MUST NOT, because its key holds an
+identifier of its own where theirs are keyed by other tables' identifiers (R89 §2.6).
 
 A writer SHOULD sort every table by its primary key (R10 §2). One table overrides this:
 

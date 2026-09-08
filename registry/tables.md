@@ -8,16 +8,16 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-35 tables, 316 columns, 90 references, 68 Tier 2 rules
+38 tables, 335 columns, 97 references, 70 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89
 ```
 
 ## Contents
 
 **analysis** (3) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.spike_events`](#analysisspike_events)
 
-**core** (32) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
+**core** (35) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.calibration_devices`](#corecalibration_devices) · [`core.calibration_points`](#corecalibration_points) · [`core.calibrations`](#corecalibrations) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
 
 ## `analysis`
 
@@ -211,6 +211,76 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.array_dimensions.labelled_axis_complete` — error: coordinate_resource and coordinate_position_column must be present together
 - `core.array_dimensions.coordinate_resource_is_core` — error: a core axis points outward at a non-core resource (R20 §5.1)
 - `core.array_dimensions.step_denominator_positive` — error: a step denominator is not positive, so the step it defines is meaningless
+
+### `core.calibration_devices`
+
+*Introduced by R89 §2.2 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R89 §2.2 | Session ID. |
+| `calibration_id` | int32 | **required** | R89 §2.2 | The calibration this row names a device for. |
+| `device_id` | int32 | **required** | R89 §2.2 | A device the calibration covers. |
+
+**Primary key** — `calibration_id`, `device_id`  
+**Sort** — `calibration_id`, `device_id`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `calibration_id` → `core.calibrations` (`calibration_id`)
+- `device_id` → `core.devices` (`device_id`)
+
+### `core.calibration_points`
+
+*Introduced by R89 §2.3 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R89 §2.3 | Session ID. |
+| `calibration_id` | int32 | **required** | R89 §2.3 | The calibration this point belongs to. |
+| `point_index` | int64 | **required** | R89 §2.3 | 0-based position in the curve's own order. The key is not `input_value` even though the inputs are distinct: an equality join on a float64 is not safe, which is why R47 could strike `interval_index` and this stays. |
+| `input_value` | float64 | **required** | R89 §2.3 | The setting the point was measured at. |
+| `output_value` | float64 | **required** | R89 §2.3 | What the instrument then delivered. |
+
+**Primary key** — `calibration_id`, `point_index`  
+**Sort** — `calibration_id`, `point_index`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `calibration_id` → `core.calibrations` (`calibration_id`)
+
+### `core.calibrations`
+
+*Introduced by R89 §2.1 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `calibration_id` | int32 | **required** | R89 §2.1 | Stable calibration ID. |
+| `session_id` | int32 | **required** | R89 §2.1 | Session ID. |
+| `calibration_name` | string | **required** | R89 §2.1 | What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since R85 §2.2 makes two calibrations sharing a name one row. |
+| `calibration_type` | string | **required** | R89 §2.1 | What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open (R8 §4). Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 §2.1), and this holds a value that resolves to no table. |
+| `calibrated_at` | timestamp | nullable | R89 §2.1 | When the calibration was measured, which is not when it was in force: R89 §1.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (R66 §2.1). |
+| `description` | string | nullable | R89 §2.1 | What the source said the calibration was. |
+| `input_unit` | string | nullable | R89 §2.1 | The unit of measure of `core.calibration_points.input_value`. On the calibration because it varies per calibration -- seconds for water, volts for opto -- so no literal unit can sit on the value column (R89 §2.3). |
+| `output_unit` | string | nullable | R89 §2.1 | The unit of measure of `core.calibration_points.output_value`. |
+| `array_asset_id` | int32 | nullable | R89 §2.1 | The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics (R89 §2.4). |
+| `detail_kind` | string | nullable | R89 §2.1 | A table carrying a calibration shape core does not define, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (R89 §2.5). |
+| `metadata` | json_string | optional | R89 §2.1 | What the source stated about this calibration that no column above models. Only the calibration declares one: its key holds an identifier of its own, where both child tables are keyed by other tables' identifiers (R89 §2.6). |
+
+**Primary key** — `calibration_id`  
+**Sort** — `calibration_id`
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `array_asset_id` → `core.array_assets` (`array_asset_id`)
+
+**Tier 2 rules** — 2
+
+- `core.calibrations.unit_pair_complete` — error: a calibration declares one unit of measure and not the other; the pair is what makes a point readable (R89 §2.3)
+- `core.calibrations.points_declare_units` — error: a calibration carries points and declares no units, so nothing says what its values are measured in (R89 §2.3)
 
 ### `core.clock_anchors`
 
