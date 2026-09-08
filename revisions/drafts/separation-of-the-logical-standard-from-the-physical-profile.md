@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | `00` §2 (the three-level vocabulary), `02` §5.3 and §13, `03` §1 and §5, `07` §7 (its boundary with Part 10), R2 §6 and `registry.schema.json` (the `sort` field); adds a contents table to `00` and adds Part 10 |
-| **Depends on** | `a-tables-stored-order-is-determined-by-its-key` (which states the ordering rule this part relocates) |
+| **Depends on** | `a-tables-uniqueness-is-established-by-its-stored-order` (which states the ordering rule this part relocates) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
@@ -61,7 +61,7 @@ of a stored resource, except to place such a rule outside its own scope. Every c
 **MUST** hold unchanged under any physical profile.
 
 `02` §13 is struck whole — ordering and partitioning are its only two subsections;
-`a-tables-stored-order-is-determined-by-its-key` §2.2 carries the ordering rule and
+`a-tables-uniqueness-is-established-by-its-stored-order` §2.2 carries the ordering rule and
 `03` §5.2 already carries the partitioning rules. `02` §5.3's sentence forbidding `INT96` is
 struck; `03` §5.5 already states it.
 
@@ -74,7 +74,7 @@ Part 03 is normative for a packet whose manifest declares its `profile_id`, and 
 packet. It is the only part that names a storage technology.
 
 No clause of Part 01 or Part 02 **MAY** depend on a clause of Part 03. A logical rule discharged
-by a physical property is the defect `a-tables-stored-order-is-determined-by-its-key` §2.1
+by a physical property is the defect `a-tables-uniqueness-is-established-by-its-stored-order` §2.1
 repairs, and this states the general form of it so a later revision does not reintroduce one.
 
 ### 3.3 The registry declares no stored order
@@ -82,7 +82,7 @@ repairs, and this states the general form of it so a later revision does not rei
 The `sort` field is removed from `registry.schema.json` and from every table of
 `logical_schemas.json`. A table's stored order is its primary key's, unless `03` §5.4 names another
 for it, and a named override **MUST** satisfy
-`a-tables-stored-order-is-determined-by-its-key` §2.2.
+`a-tables-uniqueness-is-established-by-its-stored-order` §2.2.
 
 Every registry document drops the field, an extension's (R17 §2) as much as core's, since the
 amended meta-schema admits no property it does not declare; all eleven extension tables carrying a
@@ -94,7 +94,7 @@ one remaining override coexist with a minimal key.
 
 The validator holds the override list, since a physical rule is the shim's rather than SQL's
 (R12 §4), and **MUST** refuse an override that does not satisfy
-`a-tables-stored-order-is-determined-by-its-key` §2.2 — a check made with no
+`a-tables-uniqueness-is-established-by-its-stored-order` §2.2 — a check made with no
 packet in hand, as R56 §2.4's is. That is what `aind_unit_qc` needed when it went on sorting by two
 columns R81 had removed, which no packet could satisfy and no rule could see.
 

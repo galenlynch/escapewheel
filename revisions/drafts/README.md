@@ -18,7 +18,7 @@ Dependencies run downward: a draft depends on the ones above it and on nothing b
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `a-tables-stored-order-is-determined-by-its-key` | states the ordering rule, which 2 moves into the profile |
+| 1 | `a-tables-uniqueness-is-established-by-its-stored-order` | states the ordering rule, which 2 moves into the profile |
 | 2 | `separation-of-the-logical-standard-from-the-physical-profile` | moves ordering, partitioning and the `sort` field to where each belongs |
 | 3 | `a-rule-names-no-optional-column` | the presence constraint 4 turns on |
 | 4 | `columns-that-hold-one-value` | strikes seven duplicated names, makes the two clock-rate forms exclusive |

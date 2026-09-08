@@ -1,4 +1,4 @@
-# A Table's Stored Order Is Determined by Its Key
+# A Table's Uniqueness Is Established by Its Stored Order
 
 | | |
 |---|---|
@@ -47,7 +47,7 @@ Both sentences move together. Striking the waiver alone would leave the list req
 every table, which is the opposite of what the waiver permitted, so one subsection would contradict
 itself.
 
-### 2.2 A table is stored in an order that settles its key
+### 2.2 The order a table is stored in
 
 A column **MAY** declare `determined_by`, naming the columns whose values fix its own: two rows
 agreeing on every column named agree on this one, and an empty list declares a constant. The
