@@ -179,6 +179,28 @@ merged = {r["id"] for t_ in T.values() for r in t_["rules"]}
 authored = {r["id"] for r in authored_rules}
 check("every authored rule reached the registry", sorted(authored - merged))
 check("the registry carries no rule rules.json does not author", sorted(merged - authored))
+# R94 §3. `optional` lets a column be absent from the file, and a Tier 2 rule is SQL run against
+# that file -- so a rule naming one does not miss a check, it fails to parse, and the run meant to
+# find defects reports an error of its own. The match is on identifiers rather than text: string
+# literals and comments are stripped, and a name matches only whole, so `some_metadata_key` and a
+# quoted 'metadata' are not hits. R94 §3 records what this rests on -- every column bearing one of
+# these names is optional -- and R94 §6 what would break it.
+_OPTIONAL = {c["name"] for t_ in (*T.values(), *EXT_T.values())
+             for c in t_["columns"] if c["presence"] == "optional"}
+
+
+def _identifiers(sql):
+    """Every whole word in `sql`, with string literals and comments removed."""
+    body = re.sub(r"'[^']*'", " ", sql)
+    body = re.sub(r"--[^\n]*", " ", body)
+    return set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", body))
+
+
+check("no Tier 2 rule names an optional column (R94 §3)",
+      sorted({(r["id"], c) for t_ in (*T.values(), *EXT_T.values()) for r in t_["rules"]
+              for c in _OPTIONAL & _identifiers(r["sql"])}),
+      lambda b: f"{b[0]} names {b[1]}, which is optional and may be absent from the file")
+
 ids = [r["id"] for r in authored_rules] + [r["id"] for t_ in EXT_T.values() for r in t_["rules"]]
 check("rule ids are unique across core and every extension",
       sorted({i for i in ids if ids.count(i) > 1}))

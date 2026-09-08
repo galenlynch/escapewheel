@@ -1,8 +1,8 @@
-# A Tier 2 Rule Names No Optional Column
+# R94 — A Tier 2 Rule Names No Optional Column
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | R2 §5 (what `optional` permits), R2 §7.2 (what a Tier 2 rule may reference) |
 | **Depends on** | R2 (the registry format and three-state presence) |
 | **Profile** | all |
@@ -86,9 +86,9 @@ sometimes empty, or the constraint can move to the shim, where R12 §4 puts what
 `registry/check.py` gains one check. No table, column, reference or rule changes, and no packet is
 revalidated differently.
 
-`columns-that-hold-one-value` takes Tier 2 rules from 69 to 70 and is next in the application
-order, so whichever of the two is accepted second re-measures the rule count, which this part uses
-as a denominator in §2, §3 and §4.
+The next revision in the application order adds a Tier 2 rule, taking the count to 70, so whichever
+of the two lands second re-measures the rule count this part uses as a denominator in §2, §3 and
+§4.
 
 ## 6. Open
 

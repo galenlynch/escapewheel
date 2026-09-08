@@ -1746,3 +1746,12 @@ note = "the contents table, appended so no part or section identifier moves"
 [clause."R93 §2"]
 disposition = "rationale"
 note = "where the boundary is crossed; informative, and its SHOULDs are the ones it quotes from 02 §13.1 and 03 §5.3"
+
+[clause."R94 §3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §10.2"
+note = "also enforced in registry/check.py, which matches identifiers with literals and comments stripped"
+
+[clause."R94 §2"]
+disposition = "rationale"
+note = "what the registry does today; informative, and its SHOULD is R2 §5's quoted rather than a new one"

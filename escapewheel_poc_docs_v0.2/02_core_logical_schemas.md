@@ -270,6 +270,8 @@ A validator MUST establish that a table's primary key is unique, by query or by 
 
 A rule the structure cannot imply is declared as SQL returning offending rows, or as a named template the registry build expands (R24 §2).
 
+A rule's SQL MUST NOT reference a column whose presence is `optional` (R94 §3). A rule is executed against the file, and `optional` permits the column to be absent from it (§6), so a rule naming one does not miss a check — the query fails to parse, and the run meant to find defects reports an error of its own. A constraint that wants an optional column either makes it `nullable`, which declares it always present and sometimes empty, or moves to the shim of §10.3.
+
 The execution contract is the whole protocol: **a check's query returns offending rows; empty is a pass, non-empty is a failure, and the returned rows are the finding.**
 
 A rule declares a level of `error`, `warning`, or `info`. A rule MAY be `advisory`, in which case
