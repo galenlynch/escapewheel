@@ -182,10 +182,17 @@ A column declaring `vocabulary: open` **MUST** carry a `description`, and where 
 nomenclature fixes how its values are spelled, that description **MUST** name it.
 
 Measured across the 39 columns §3.1 classifies as open, this is where the registry is thinnest.
-Every one carries a description and **12 of them state no form** — ten restate the column's own
-name (`Species.`, `Manufacturer.`, `Physical unit.`, `Strain/background.`, `Origin description.`)
-and two give a single example (`e.g. mp4.`). A writer reading those learns nothing about whether to
-write `Mus musculus` or `mouse`, which is the only question a species column raises.
+Every one carries a description and **25 state no form**: they restate the column's own name
+(`Species.`, `Manufacturer.`, `Physical unit.`), give one example (`e.g. mp4.`), or say what the
+value is the unit *of* rather than how it is written. A writer reading those learns nothing about
+whether to write `Mus musculus` or `mouse`, which is the only question a species column raises.
+
+Four descriptions still contain the word **"etc."**, which is the construction R8 §4 was written
+to remove — *"'etc.' implied a closed set existed and had merely been elided"* — and which it
+struck from `02` while the registry kept it. Three are open columns. The fourth is
+`core.processing_runs.status`, whose `enum` admits `succeeded`, `failed` and `partial` and whose
+description reads "succeeded, failed, partial, etc.": a closed set whose prose says it is open,
+with nothing in the registry comparing the two.
 
 - `core.subjects.species` states the **scientific name** of the organism the subject derives
   from, as NCBI Taxonomy spells it. Null where it derives from none: `01` §3.4 makes a subject
@@ -198,6 +205,9 @@ write `Mus musculus` or `mouse`, which is the only question a species column rai
   structure's acronym **in the atlas `coordinate_frame` names** (R59 §2.2).
 - `coordinate_frame` on both tables states the **space** a triple is in, and the atlas where that
   space is one. What it does not state is which way the axes point, which §6 records.
+
+A **closed** column's description **MUST NOT** imply the set is open. Its `enum` is the whole
+vocabulary, so an "etc." or an "e.g." there contradicts what a validator enforces.
 
 A writer **MUST** spell a value as the named nomenclature does, and **MUST NOT** recase or
 re-punctuate one to fit a house style: values are compared exactly, so `mouse`, `Mus Musculus` and
@@ -352,8 +362,9 @@ Two columns carry `reserved_values`, the first the registry has ever held, and e
 `authority` — `core.subjects.species`, `core.subjects.strain`, `core.subjects.sex`, and the eight
 columns holding a physical unit, which name UCUM. The writer's `volts` becomes `V` on 22 array
 assets, `uV` already conforming on 3. `build.py` loses the line setting `reserved_values`
-on `core.events.event_type`, a column R91 §3.2 struck, and **12 descriptions** are rewritten,
-being the open columns that state no form.
+on `core.events.event_type`, a column R91 §3.2 struck, and **26 descriptions** are rewritten:
+the 25 open columns that state no form, and `core.processing_runs.status`, whose prose says its
+closed set is open.
 
 Tier 1's closed-vocabulary checks go from 3 to **4**, and `registry/check.py` from 19 structural
 invariants to **25**: a string column that is not a discriminator declares a vocabulary and one
@@ -409,7 +420,14 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   extension's work, keyed through `event_type` in R90 §3.5's shared-key shape; nothing has asked
   for it, and `dynamic_foraging.trials` already carries the seven `_left`/`_right` pairs this task
   needs.
-- **Whether the four array kinds are the right four.** R8 §4 took `raw`, `ap`, `lfp` and
-  `waveform` from `02`'s examples rather than from a survey of what acquisition systems emit, and
-  §3.8 records them unexamined. §2.5 is the reason to ask: the one packet-borne value outside the
-  set was another vocabulary's, not a fifth kind, so nothing yet says whether four is enough.
+- **What `kind` is, as distinct from `semantic_type`.** Both are required, open, on
+  `core.array_assets`, and neither description says what separates them — which is why "are the
+  four values right" cannot be answered here. The packets hold both possible relationships:
+  `semantic_type` `ElectricalSeries` with `kind` `lfp` is complementary, where `waveform_mean`
+  with `waveform` would be one fact twice (R3 §3.0). The four also mix two things as R11 §4's six
+  did — `raw`, `ap` and `lfp` are bands of one signal and `waveform` is a derived product — so
+  reading `kind` as the band strikes the fourth value and leaves the column, which is **required**,
+  with nothing for the photometry or respiration array that R65 §1 and `01` §3.17 make core's
+  business. Three reserved bands and a nullable column is the likely shape, and it is a schema
+  change. §3.5 forces this part to rewrite the description meanwhile, which it does minimally:
+  the four values and their openness, without the "etc.".
