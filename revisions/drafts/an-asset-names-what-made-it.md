@@ -28,7 +28,7 @@ which hold 25 array assets and 4 videos between them.
 
 Informative.
 
-### 2.1 An array's route to its run
+### 2.1 An array has no route to its run
 
 `core.event_streams` has carried a `processing_run_id` since R23 §2, and `core.sorting_runs`,
 `core.curation_versions`, `core.electrode_coordinates` and `core.unit_coordinates` have carried
@@ -50,7 +50,7 @@ run and R82 §2.1 made an undeclared currency a mandatory **error**, so a packet
 arrays from two sortings must declare which is current and has no column to declare it through.
 Neither packet holds that case, and R82 §2.1's rule is unenforceable for arrays the moment one does.
 
-### 2.2 The device column a media asset lacks
+### 2.2 Media assets lack a device column
 
 R65 §2.1 gave `core.array_assets` a `device_id` and gave `core.media_assets` none, so R65 §1's
 rule — which signal an asset holds is answered by the device — reaches one asset table and not
@@ -130,7 +130,7 @@ second is measured again. All three columns are nullable, so Tier 1's not-null c
 at 154, and no Tier 2 rule changes.
 
 `02`'s column tables are generated, so they follow from the registry. What is written is in `01`:
-§3.17 gains §3.1's rule, §3.18 gains §3.2's, and §3.5 gains §3.3's, each beside the device rules
+`01` §3.17 gains §3.1's rule, `01` §3.18 gains §3.2's, and `01` §3.5 gains §3.3's, each beside the rules
 R66, R67 and R85 already put there.
 
 The NWB adapter names the sorting run on the three waveform arrays, which both packets already

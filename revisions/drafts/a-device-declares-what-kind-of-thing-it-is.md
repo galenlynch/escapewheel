@@ -29,7 +29,7 @@ Measured on **`ecephys_786867`** (ten probes, 4,505 units, recorded 2025-09-25),
 
 Informative.
 
-### 2.1 Devices are the one table with no specialisation
+### 2.1 Specialisation in the registry
 
 R54 §2 gave `core.intervals` an `interval_kind` in its key and per-kind detail tables sharing it,
 and R90 §3.5 named that the **shared key** — the class-table-inheritance mapping — and made
@@ -43,7 +43,7 @@ references the device, because `01` §3.6 makes a probe "a device that carries e
 which is why `core.electrodes`, `core.sorting_runs` and `core.units` reference it and not
 `core.devices`. `core.calibration_devices` is a link table of `(calibration_id, device_id)`.
 
-### 2.2 What a camera states and where it would go
+### 2.2 What a camera states
 
 A camera is the first instrument to arrive whose facts `core.devices` cannot hold. `rig.json` for
 `ecephys_786867` declares two assemblies, and beyond the manufacturer, model and serial that
@@ -55,7 +55,7 @@ apply to two of 21 rows.
 one, holding prose such as `{"description":"Neuropixels 2.0 single shank probe with cap"}`. What
 `metadata` cannot do is be read by a rule (R66 §1.4), which is the whole of the difference.
 
-### 2.3 Core names no instruments, and one exception proves the rule
+### 2.3 Which instruments core models
 
 `01` §3.17 states the position: an array asset holds any sampled quantity, "this standard names
 the concepts it defines … and it does not enumerate instruments", which R65 §1 rests on when it
@@ -68,30 +68,31 @@ because electrodes are, not because it is an instrument. A camera carries nothin
 
 ## 3. Decision
 
-### 3.1 A device may name the table holding its kind-specific facts
+### 3.1 `device_kind`
 
 `core.devices` gains **`device_kind`**, a `string` with R48 role `discriminator`, nullable, and
 `resolves: optional` (R55 §2.2): it holds the dotted resource ID of the table carrying this
 device's kind-specific facts.
 
 `optional` because most devices have none. A headstage that declares no `device_kind`, or one
-whose value names a resource the packet does not carry, is a **fact** and not a defect — the
-instrument had nothing more to say, or the extension that would say it is not present.
+whose value names a resource the packet does not carry, states a fact: the instrument had nothing
+further to say, or the extension that would say it is absent. Neither is a defect (R55 §2.2).
 
 The detail table shares `core.devices`' key: its primary key **MUST** begin `device_id`, so
 resolution is R90 §3.5's shared-key join and needs no second column.
 
-### 3.2 Core declares no detail table
+### 3.2 Where a detail table lives
 
 Core **MUST NOT** declare a device detail table. `01` §3.17 makes this standard name no
-instruments, and a `core.camera_devices` would name one — with a thermistor, a respiration sensor
-and a heart-rate monitor, the three `01` §3.17 lists, arriving behind it.
+instruments, and a `core.camera_devices` would name one; behind it would come tables for the
+thermistor, the respiration sensor and the heart-rate monitor that `01` §3.17 lists by name.
 
 An R17 §2 extension declares them instead, which is what a discriminator makes possible: R55 §2.6
 records that core may name an extension's table without depending on it, because the value is a
-name and not a reference. `aind_opto` is the shape — a rig's own facts in a rig's own registry.
+name and not a reference. `aind_opto` already has that shape, holding a rig's own facts in a rig's
+own registry.
 
-### 3.3 A writer states the kind or says nothing
+### 3.3 What a writer sets
 
 A writer **MUST** set `device_kind` where it writes a detail row, and **MUST NOT** set it
 otherwise. A value naming a table the packet does not carry is permitted (§3.1) and is what a
@@ -99,25 +100,23 @@ packet built without an extension looks like; a value naming a table the packet 
 it does not write is a dangling kind, which Tier 1's discriminator checks catch (R55 §2.4).
 
 A fact that no detail table models stays in `metadata`, where 20 of 21 devices already keep one.
-Promoting a fact out of `metadata` is what a detail table is for, and what justifies one is a rule
-or a query needing to read it (R66 §1.4).
+A detail table exists to promote a fact out of `metadata`; what justifies writing one is a rule or
+a query that has to read the fact (R66 §1.4).
 
 ## 4. What this does not change
 
 - **No table is added.** One column is added to `core.devices`; the tables it names are an
   extension's to declare.
-- **`core.probes` is unaffected.** §2.3 records why it is not a device subtype, and nothing here
-  makes it one.
 - **`metadata` keeps its job.** R97 §3.3 puts what a source stated and the standard does not
   model, and §3.3 leaves it there until something needs to query it.
 
 ## 5. Consequence
 
-330 columns become **331** and no reference is added, a discriminator naming without referencing
-(R55 §2.6). Tier 1 gains the two checks a discriminator implies (R55 §2.4) — the value is a dotted
-resource ID, and it resolves where the packet carries the resource — taking discriminator checks
-from 14 to **16**. `02` §8.3 gains the clause §3.1 states. No packet is invalidated: the column is
-nullable and both packets pass with it unset.
+330 columns become **331**, and no reference is added: a discriminator names without referencing
+(R55 §2.6). Tier 1's discriminator checks go from 14 to **16**, the two a discriminator implies
+(R55 §2.4) being that the value is a dotted resource ID and that it resolves where the packet
+carries the resource. `02` §8.3 gains the clause §3.1 states. No packet is invalidated: the column
+is nullable and both packets pass with it unset.
 
 `check.py` gains the structural check that a table named by a `device_kind` value begins its
 primary key with `device_id`.

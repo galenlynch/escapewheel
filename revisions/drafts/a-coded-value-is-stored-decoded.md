@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `dynamic_foraging.trials.animal_response` (int32 becomes a closed string vocabulary); adds a rule to `02` §9.3 |
+| **Amends** | `dynamic_foraging.trials.animal_response` (int32 becomes a closed string vocabulary); adds a subsection to `02` §8 |
 | **Depends on** | R101 §3.1 (every string column declares its vocabulary), R97 §3.3 (what `metadata` carries), R66 §1.4 (a value a rule cannot read), R17 §5 (an extension versions independently) |
 | **Profile** | all |
 
@@ -18,7 +18,7 @@ description says what the packet does about that: *"what each means is the task'
 restated here."* A consumer therefore needs a document the packet does not contain, and no rule,
 no query and no reader can tell one response from another.
 
-This part stores the decoded value instead, and states the rule the column is the only breach of.
+This part stores the decoded value instead, and states the rule that only this column breaks.
 
 Measured on the two packaged sessions, **`ecephys_776259`** (twelve probes, 6,781 sorted units,
 recorded 2025-04-09) and **`ecephys_786867`** (ten probes, 4,505 units, recorded 2025-09-25),
@@ -28,7 +28,7 @@ which hold **1,158 trials** between them.
 
 Informative.
 
-### 2.1 One column of 491 holds a code
+### 2.1 The coded columns in the registry
 
 The registry declares 330 core columns and 161 across four extensions, and `animal_response` is
 the only one whose values are codes for something the packet does not name. Two columns look like
@@ -43,7 +43,7 @@ is the exception in its own table.
 "`animal_response` in AIND's dynamic-foraging trials, per the column's own description" sits above
 a blank line, attached to nothing. What it was going to annotate is the map this part adds.
 
-### 2.2 The decode is recoverable from the packet
+### 2.2 What the licks say the codes mean
 
 A code whose key is elsewhere is worth writing down only if the key is right, and here the packet
 settles it without consulting anything. `core.events` holds each session's licks on
@@ -64,7 +64,7 @@ So `0` is a left response, `1` a right response and `2` no response — recovera
 1,158 trials, and recoverable only because both packets happen to carry the lick streams. A packet
 carrying the trials and not the licks would hold the code and no way to read it.
 
-### 2.3 The column cannot say what its values mean
+### 2.3 What R101 §3.1 left the column
 
 R101 §3.1 requires a vocabulary of every string column and forbids one on a column of any other
 type, and this column declared `vocabulary: open` on an `int32` — the one place in the registry
@@ -77,20 +77,21 @@ out still, since no amount of reading the packet recovers it.
 
 ## 3. Decision
 
-### 3.1 A column stores what a value means, not a code for it
+### 3.1 What a column stores
 
 A column **MUST NOT** hold a code whose key is not in the packet. Where a source emits one, a
 writer **MUST** store the decoded value, and the vocabulary it decodes onto is declared under
 R101 §3.1 like any other.
 
 A writer that cannot decode a source's code **MUST NOT** give it a typed column. The raw value
-goes to the table's `metadata`, where R97 §3.3 puts what a source stated and the standard does not
-model — visible, unmodelled, and not mistaken for a fact the format defines.
+goes to the table's `metadata`, which R97 §3.3 reserves for what a source stated and the standard
+does not model, so the value stays visible without being mistaken for a fact the format defines.
 
-This is the rule R66 §1.4 states one level in. A value a rule cannot read is a value the packet
-does not hold, whether it is buried in a JSON string or standing in for a meaning kept elsewhere.
+R66 §1.4 refused to let a fact live inside a JSON string because no rule can read one. A code
+whose key is in another repository is further out still: no amount of reading the packet recovers
+what it means.
 
-### 3.2 `animal_response` holds the response
+### 3.2 `animal_response`
 
 `dynamic_foraging.trials.animal_response` becomes a `string` with `vocabulary: closed` and an
 `enum` of:
@@ -102,19 +103,20 @@ no_response    the animal did not respond within the response window
 ```
 
 Closed rather than open, on R8 §3's test: the set is complete, because a two-spout task admits a
-left response, a right response and neither. A task variant with a third spout is a different
-extension version, which R17 §5 already provides for — and closing it is what makes Tier 1
-generate the membership check that would catch a decode the adapter got wrong.
+left response, a right response and neither. Closing it is also what makes Tier 1 generate the
+membership check, which is what would catch an adapter decoding wrongly. A task variant with a
+third spout is a different extension version, which R17 §5 already provides for.
 
-`no_response` rather than `ignored`: what the packet records is that no response arrived inside
-the window, where "ignored" asserts something about the animal that the trial does not measure.
+`no_response` rather than `ignored`: the packet records that no response arrived inside the
+window, where "ignored" asserts something about the animal the trial does not measure.
 
 ## 4. What this does not change
 
 - **No table, column or reference is added or removed.** One column changes type and gains an
   `enum`, and the extension's other 40 columns are untouched.
-- **`core` is untouched.** `animal_response` is a task's fact and lives in a task's extension,
-  which is where R43 §3 sent it.
+- **No core column changes.** §2.1 measures that none holds a code, though §3.1's rule binds them
+  the same; `animal_response` is a task's fact in a task's extension, which is where R43 §3 sent
+  it.
 - **The lick events stay.** §2.2 reads them to prove the decode; it does not make them the
   storage. A response is one value per trial and `core.events` holds every lick, which is a
   different fact at a different grain.
@@ -123,7 +125,8 @@ the window, where "ignored" asserts something about the animal that the trial do
 
 `dynamic_foraging.trials.animal_response` goes from `int32` to `string`, so Tier 1's
 closed-vocabulary checks go from 4 to **5**. The extension's `registry_version` bumps, which R17
-§5 makes independent of core's. `02` §9.3 gains §3.1's rule.
+§5 makes independent of core's. `02` §8 gains a subsection for §3.1's rule, beside `02` §8.6's free-form metadata, which is
+where the rule sends a code it cannot decode.
 
 The NWB adapter gains the map its dangling comment was written for, and both packets are rebuilt —
 which R87 §2.1, R88 §2, R91 §5, R95, R96, R97, R98, R99 and R101 already require. After the

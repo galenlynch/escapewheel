@@ -29,21 +29,21 @@ which hold 25 array assets and 4 videos between them.
 
 Informative.
 
-### 2.1 The table answers the question twice
+### 2.1 What the row already declares
 
 What an array holds is already declared in facts. `device_id` names the instrument (R65 §2.1),
 `clock_id` the time base, and `sample_rate_hz`, `unit`, `conversion` and `offset` the values;
 `core.array_dimensions` gives the axes and their coordinates, and `core.array_channels` maps the
-channels onto electrodes. Beside all of that sit two open strings, and **nothing reads either** —
-no rule in `rules.json`, nothing in `escapewheel-reader`, nothing in `escapewheel-validator`.
+channels onto electrodes. Beside all of that sit two open strings, and searching `rules.json`,
+`escapewheel-reader` and `escapewheel-validator` for either returns **nothing**.
 
-Measured, neither adds anything. Grouped by every fact but the name and `semantic_type`, the
-arrays come to **14 distinct tuples over 14** and **11 over 11**, so no two are told apart by a
-label. `semantic_type` holds `ElectricalSeries` on 22 arrays — a class name whose content, voltage
-per channel over time, `unit`, the channel map and the dimensions already give — and on the three
-waveform arrays it holds `waveform_mean` and `waveform_sd`, **the same strings as their
-`array_asset_name`**. `02` §6 forbids exactly that: "A schema MUST NOT declare a column that
-duplicates what the data already declares."
+Neither adds anything either. Grouped by every fact but the name and `semantic_type`, the arrays
+come to **14 distinct tuples over 14** and **11 over 11**, so no two are told apart by a label.
+On 22 arrays `semantic_type` holds `ElectricalSeries`, a class name for voltage per channel over
+time — which `unit`, the channel map and the dimensions already give. On the three waveform arrays
+it holds `waveform_mean` and `waveform_sd`, **the same strings as their `array_asset_name`**. `02`
+§6 forbids exactly that: "A schema MUST NOT declare a column that duplicates what the data already
+declares."
 
 The columns came from `02`, where naming a class is how NWB says what a thing is. Every revision
 since has moved the other way: R23 §1.1 replaced an acquired-versus-derived vocabulary with a run
@@ -52,12 +52,12 @@ pointer, R55 §2.1 made a discriminator name a table, R59 §2.1 put `region_id` 
 holds with the device, and R83 §3 made an index resolve through a table rather than by guessing.
 These two columns were not revisited.
 
-Composition is what the difference amounts to. NWB expresses "these series are the LFP" by
-wrapping them in an `LFP` container, because HDF5 offers no other way to say it; a row carrying a
-device, a unit, a rate and a channel map needs no wrapper. What the wrapper still says and the row
-does not is which **filter** produced the signal, and that is the whole of what `kind` carries.
+The difference amounts to composition. NWB expresses "these series are the LFP" by wrapping them
+in an `LFP` container, because HDF5 offers no other way to say it; a row carrying a device, a
+unit, a rate and a channel map needs no wrapper. One thing the wrapper says and the row does not
+is which **filter** produced the signal, and carrying that is the whole of what `kind` does.
 
-### 2.2 The four reserved kinds name three different things
+### 2.2 R8 §4's reserved set
 
 R8 §4 reserved four values with declared meanings:
 
@@ -77,7 +77,7 @@ outright — *"Acquired-ness is not a property of a fact but of how one came to 
 belongs in provenance"* — and gave `core.event_streams` a `processing_run_id` instead of a
 categorical value.
 
-### 2.3 A required column with nothing to hold is filled from elsewhere
+### 2.3 The values the writer emits
 
 The three waveform arrays carry `kind` of `dense_array_asset`. That is one of the **manifest's**
 six resource kinds — `table`, `materialized_table`, `dense_array_asset`, `media_asset`,
@@ -92,7 +92,7 @@ rather than types (`waveform_mean`, `waveform_sd`), and two are this implementat
 says "carries no contract" is one a writer must fill with something, and inventing a label is what
 filling it means.
 
-### 2.4 The band is a label because no source records the filter
+### 2.4 What a source states about the filter
 
 Expressing the band as a fact rather than a name would be two columns, a low and a high corner in
 hertz, and it is not available. NWB models exactly this as `ElectricalSeries.filtering`, and the
@@ -110,8 +110,8 @@ for the band and not the band.
 
 `core.array_assets.kind` and `analysis.array_assets.kind` are renamed **`band`**, on R50 §2's
 ground: a column is renamed where its name says less than its declaration, and `kind` is a
-category noun for a thing that has a name. It also claimed more than the column delivers, which is
-what let a manifest resource kind into it.
+category noun for a thing that has a name. A manifest resource kind got into the column because
+the name claimed more than the column delivers.
 
 Three values are reserved:
 
@@ -122,36 +122,36 @@ lfp        local field potential band
 ```
 
 `raw` is renamed **`wideband`**. R8 §4 defined it as "unfiltered wideband extracellular voltage",
-so the band was always what it meant, and `raw` said it by naming a processing stage instead —
-the mixture §2.2 measures, one level down inside the set. No packet writes `raw`.
+so the band was always what it meant; naming a processing stage instead is §2.2's mixture, one
+level down inside the set. No packet writes `raw`.
 
-The value is a **conventional shorthand for a filter the packet does not record**, and the
-column's description says so (R101 §3.5). The vocabulary stays open (R8 §4): a rig whose
+What a value holds is a conventional shorthand for **a filter the packet does not record**, and
+the column's description says so (R101 §3.5). The vocabulary stays open (R8 §4): a rig whose
 acquisition splits a signal differently names its own band and is conforming, and the three
 reserved values are extracellular voltage's because that is the split this specification has seen,
 not because the column is for ephys.
 
-### 3.2 An array with no band declares none
+### 3.2 An array with no band
 
 `band` is **nullable**. An array that was not split into bands declares none, and a consumer
-meeting a null **MUST NOT** infer one — not from `semantic_type`, not from the device, not from
-the sample rate, each of which is evidence and none of which is the statement.
+meeting a null **MUST NOT** infer one from `semantic_type`, from the device or from the sample
+rate. Each of those is evidence and none of them is the statement.
 
-Required is what forced §2.3's value. A photometry trace, a respiration trace and a
-spike-waveform template are all core-owned arrays with no band — R65 §1 and `01` §3.17 make an
-array asset hold "**any** sampled quantity, whatever instrument produced it" — and a column they
-must fill is a column they will fill wrongly.
+Requiring a value is what forced §2.3's. R65 §1 and `01` §3.17 make an array asset hold "**any**
+sampled quantity, whatever instrument produced it", so a photometry trace, a respiration trace and
+a spike-waveform template are all core-owned arrays with no band — and a column they must fill is
+a column they will fill wrongly.
 
-### 3.3 `waveform` leaves the reserved set
+### 3.3 The fourth reserved value
 
 R8 §4's fourth reserved value is **struck**, and a writer **MUST NOT** write it as a `band`. A
 waveform template is computed from sorted spikes rather than split from a signal, so it names no
 band, and `semantic_type` already carries `waveform_mean` and `waveform_sd` on exactly the arrays
-that would have used it. What it was standing in for is a run, which `an-asset-names-what-made-it`
-gives a column of its own — R23 §1.1's disposal of a derived-ness vocabulary, applied where R23
-did not reach.
+that would have used it. The value was standing in for a run, and
+`an-asset-names-what-made-it` gives the run a column of its own — which is R23 §1.1's disposal of
+a derived-ness vocabulary, applied to the table R23 did not reach.
 
-### 3.4 The quantity, where the facts do not carry it
+### 3.4 The quantity
 
 `semantic_type` becomes **nullable** on all three asset tables, and a writer **MUST NOT** fill it
 where the asset's declared facts already say what the asset holds. It is what the facts cannot
@@ -161,9 +161,9 @@ express, and null is the ordinary case.
 one, and a schema MUST NOT declare a column that duplicates what the data already declares.
 Nullable satisfies both, where striking the column would honour the second by breaking the first.
 
-Required is what made it a duplicate. A column that `01` §3.17 says "carries no contract" and that
-every row must fill is a column a writer invents a value for — `signal` and `behavior_video` are
-two of the five values in use, and `ElectricalSeries` is the other kind of filling, a class name
+Requiring it is what made it a duplicate. A column that `01` §3.17 says "carries no contract" and
+that every row must fill is a column a writer invents a value for: `signal` and `behavior_video`
+are two of the five values in use. `ElectricalSeries` is the other kind of filling, a class name
 standing where the row already says voltage, per channel, over time.
 
 Measured, the column goes from **29 of 29 assets filled to 7**. The 22 `ElectricalSeries` become
@@ -172,11 +172,12 @@ null, the three waveform arrays keep `waveform_mean` and `waveform_sd`, and the 
 
 The waveform pair is the case that keeps the column. `waveforms.py` reads both from one analyzer
 group, so a run pointer names one run for each; they share a session, a unit of `uV`, a sample
-rate of 30,000 Hz and their dimensions, and `device_id` is null on both. What separates them
-otherwise is `conversion` — 0.06709875 against 0.06614436 — which says they differ and not which
-is the mean. The difference is a **statistic over one quantity**, and this is the only column that
-can say it portably: both do carry the words in `array_asset_name`, which is `free` (R101 §3.1),
-so its spelling is this packet's where an `open` value is meant to mean the same in two.
+rate of 30,000 Hz and their dimensions, and `device_id` is null on both. Otherwise they are
+separated by `conversion` alone, 0.06709875 against 0.06614436, which says that they differ and
+not which is the mean. What separates them is a **statistic over one quantity**, and only this
+column says it portably. Both arrays do carry the words in `array_asset_name`, which is `free`
+(R101 §3.1): its spelling is this packet's, where an `open` value is meant to mean the same thing
+in the next one.
 
 Nothing checks it. Whether a fact is already declared elsewhere is a judgement no rule can make,
 so this binds a writer and no validator, which is the shape R67 §2.4 has.

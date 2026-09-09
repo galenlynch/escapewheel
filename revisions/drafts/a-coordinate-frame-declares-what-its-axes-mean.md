@@ -31,7 +31,7 @@ positions — in two frames, `ccf` and `probe`.
 
 Informative.
 
-### 2.1 R19 delegated the axis meaning to a document a packet does not carry
+### 2.1 What R19 §3 left to the frame
 
 R19 §3 introduced the three axis columns and settled their naming in one sentence: *"Axes are
 named `x_um`, `y_um`, `z_um` in every frame, and their meaning is the frame's. CCF's `ml`, `ap`,
@@ -39,12 +39,11 @@ named `x_um`, `y_um`, `z_um` in every frame, and their meaning is the frame's. C
 specification."*
 
 Deferring to the frame's definition is the right instinct — a rig frame and an atlas frame have
-nothing in common, so no single mapping could serve both. What the sentence assumes is that a
-frame *has* a definition somewhere a consumer can read, and none of the three reserved names
-carries one. R19 §3 reserved `probe`, `ccf` and `stereotaxic` "with those meanings", and the
+nothing in common, so no single mapping could serve both. The sentence assumes a frame *has* a
+definition somewhere a consumer can read, and none of the three reserved names carries one. R19 §3 reserved `probe`, `ccf` and `stereotaxic` "with those meanings", and the
 meanings it points at are the frames' own.
 
-### 2.2 The order lives in the importer, and guessing it wrong is silent
+### 2.2 Where the axis order is written down
 
 One artifact states the mapping, and it is not in any packet:
 
@@ -54,9 +53,8 @@ CCF_AXES = ("ccf_ml", "ccf_ap", "ccf_dv")
 ```
 
 That is `escapewheel-writer`'s NWB adapter. A second implementation reading these packets has the
-column names, the unit, and nothing else, so it must guess — and the obvious guess is the atlas's
-own volume order, anterior-posterior then dorsal-ventral then medial-lateral, which is what the
-Allen CCFv3 array is indexed by.
+column names, the unit, and nothing else, so it must guess. The obvious guess is the order the
+Allen CCFv3 array is indexed by: anterior-posterior, then dorsal-ventral, then medial-lateral.
 
 Guessing that way is undetectable on the values. Under the adapter's order, `x_um` holds ML and
 runs 1,828–5,780 µm across both packets, and `y_um` holds AP and runs 2,580–9,360; under the
@@ -67,9 +65,9 @@ could write, distinguishes the two readings.
 
 `z_um` is the one column that does not fit either reading: it runs to **−1,607 µm** in
 `ecephys_776259` and **−786** in `ecephys_786867`, against a DV extent starting at zero. A frame
-declaring its axes is what would make that a question a consumer can ask.
+declaring its axes would make that a question a consumer can ask.
 
-### 2.3 A frame name resolves to nothing
+### 2.3 What `coordinate_frame` resolves to
 
 `coordinate_frame` sits in the primary key of both coordinate tables, carries R48 role `data`, and
 declares no reference, so R46 §2's consequence applies unchanged: Tier 1 generates an anti-join
@@ -79,12 +77,12 @@ compares, and R58 §2.1 put the column in the key precisely so that the two rows
 
 The 8,448 `probe` rows show the second half of the problem. Their axes are `rel_x` and `rel_y`
 from the NWB — across the shank and along it — so `z_um` is null in every one of them, and no
-anatomical convention applies at all. A frame's axes are not always three, and not always
-directions of the brain.
+anatomical convention applies at all. A frame may have two axes rather than three, and they need
+not be directions of the brain.
 
 ## 3. Decision
 
-### 3.1 A packet declares every frame its coordinates use
+### 3.1 `core.coordinate_frames`
 
 `core.coordinate_frames` is added:
 
@@ -114,12 +112,12 @@ table keyed by a name: `headstage.slot3.port4` is `hardware_version` **1.8** in 
 **0.1** in the other, so a name two sessions reuse names different things. Two rigs calling their
 frame `stereotaxic` is the same collision one table over.
 
-### 3.2 An axis names what it measures, and an orientation names the convention
+### 3.2 What each axis column holds
 
 `x_axis`, `y_axis` and `z_axis` are open vocabularies naming what each column measures — `ml`,
 `ap`, `dv` for an atlas or stereotaxic frame, `along_shank` and `across_shank` for a probe frame,
 and a lab's own term where neither fits. Two axes of one frame **MUST NOT** name the same thing,
-which one Tier 2 rule checks.
+and one Tier 2 rule checks it.
 
 `orientation` is separate because it answers a different question: an axis name says which
 quantity the column holds, and the orientation says which way each one increases. It holds a
@@ -133,18 +131,18 @@ are not anatomical, so no three-letter code names them, and folding a permutatio
 string that carries a sign convention repeats the conflation R58 §2.1 undid when it separated a
 frame from a basis.
 
-### 3.3 A writer records what the source states and MUST NOT infer an axis
+### 3.3 Where an axis value comes from
 
 A writer **MUST** fill an axis from what its source states, and **MUST NOT** infer one from a
 column's name, from the values' range, or from what the frame is usually taken to mean. This is
-R67 §2.4's rule in a third place, and the reason is R83 §2's: an inference that is right on the
+R67 §2.4's rule in a third place, and R83 §2 gives the reason: an inference that is right on the
 data at hand fixes the wrong convention for every packet built afterwards, and a coordinate is
 where a wrong convention is least visible.
 
 Where the source states nothing, the column is null. A frame declaring no axes is conforming, and
 what it buys over today is that the absence is a value a consumer can test.
 
-### 3.4 A consumer without a declared axis reports the coordinate unusable
+### 3.4 A consumer meeting an undeclared axis
 
 A consumer needing to know which quantity `x_um` holds, for a frame whose `x_axis` is null,
 **MUST** report the coordinate unusable rather than assume a convention. That is R83 §3's rule for
@@ -167,10 +165,13 @@ the wrong place.
 
 ## 5. Consequence
 
-39 tables become **40**, 330 columns become **337**, and 97 references become **99**. One Tier 2
-rule is added — two axes of one frame naming the same thing — taking 76 to **77**. Tier 1 gains
-the anti-joins, the uniqueness check and the not-null checks the new table's structure implies,
-none of them hand-written. Six of the new columns are strings, so R101 §5's counts move with them: 39 open become **44** and 52 free become **53**, over 108 string columns.
+39 tables become **40**, 330 columns become **337**, and 97 references become **99**. Tier 2 rules
+go from 76 to **77**, the new one checking that two axes of one frame do not name the same thing,
+and Tier 1 gains the anti-joins, the uniqueness check and the not-null checks the new table's
+structure implies, none of them hand-written.
+
+Six of the new columns are strings, so R101 §5's counts move with them: 39 open become **44** and
+52 free become **53**, over 108 string columns.
 
 Both packets declare two frames each: `ccf` with `x_axis` `ml`, `y_axis` `ap`, `z_axis` `dv` and
 no orientation, and `probe` with `across_shank`, `along_shank` and null. The NWB adapter reads
@@ -188,14 +189,11 @@ the orphan frame, taking the corpus from 27 packets to **28**.
 
 ## 6. Open
 
-- **Whether a rig frame has anything behind it.** R19 §3 reserved `stereotaxic` and neither
-  packet declares such a frame. The one artifact that could define one declares nothing: the AIND
-  `rig.json` for `ecephys_786867` carries `rig_axes` and `origin` as **null**, so a rig frame
-  would be a name with no axes and no origin, which is what §3.1 requires a row to supply.
-- **Whether `stereotaxic` needs more than an orientation.** R19 §3 reserved the name and both
-  packets declare no such frame. A stereotaxic frame is measured from an animal's own skull
-  landmark, so two sessions' frames of that name differ by where bregma was, and an orientation
-  does not carry an origin. Nothing has asked for it.
+- **What a `stereotaxic` frame would declare.** R19 §3 reserved the name and neither packet uses
+  it. Such a frame is measured from an animal's own skull landmark, so two sessions' frames of
+  that name differ by where bregma was, and §3.1's row carries no origin to record that. The one
+  artifact that could supply one declares nothing either: the AIND `rig.json` for
+  `ecephys_786867` carries `rig_axes` and `origin` as **null**. Nothing has asked for it.
 - **Whether `ccf` should name the atlas version.** R59 §2.2 makes the frame name the atlas, and
   `ccf` does not distinguish CCFv3 from a successor whose structure ids would differ. That is
   R59's question and it reaches `region_id` as much as the axes.
