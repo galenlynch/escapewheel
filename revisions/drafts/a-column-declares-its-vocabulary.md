@@ -179,6 +179,8 @@ write `Mus musculus` or `mouse`, which is the only question a species column rai
   and RGD for rat stocks such as `Long-Evans`.
 - `core.electrode_coordinates.region_label` and `core.unit_coordinates.region_label` state the
   structure's acronym **in the atlas `coordinate_frame` names** (R59 §2).
+- `coordinate_frame` on both tables states the **space** a triple is in, and the atlas where that
+  space is one. What it does not state is which way the axes point, which §6 records.
 
 A writer **MUST** spell a value as the named nomenclature does, and **MUST NOT** recase or
 re-punctuate one to fit a house style: values are compared exactly, so `mouse`, `Mus Musculus` and
@@ -311,6 +313,15 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   `genotype` and `date_of_birth` together, which is the collapse R44 §2 refused for scope. A
   `subject_kind` would separate them; being a column and a writer obligation, it is a revision of
   its own.
+- **Whether a frame declares which way its axes point.** `x_um`, `y_um` and `z_um` are described
+  as micrometres "in that frame" and nothing says whether x runs anterior or posterior, over
+  **16,512 coordinate rows** in the two packets. `coordinate_frame` is the wrong home — it names
+  the space, where RAS and LPS name the convention, and R58 §2.1 already split a frame from a
+  basis for that reason. It is also inapplicable to the 8,448 `probe` rows, whose axes are
+  along-shank and across-shank rather than anatomical. The shape this wants is
+  `core.coordinate_frames`, one row per frame, which would also give `coordinate_frame` the
+  reference it has never had despite sitting in two primary keys — a table, a reference and a
+  writer obligation, so a revision of its own.
 - **Whether a `unit` column should name UCUM.** Eight columns hold a physical unit and §3.6 names
   no nomenclature for them, because the values on hand would not conform: R56 §1 records
   `percentage` and `milliliter` from the VR foraging models where UCUM writes `%` and `mL`. Naming
