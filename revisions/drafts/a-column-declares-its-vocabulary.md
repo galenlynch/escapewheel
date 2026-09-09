@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `02` §9.3 (a vocabulary is declared, not defaulted), `03` §5 (the profile has one null), R8 §4 (the test a reservation must pass), R11 §4 (strikes `event_type`'s reserved set), the registry meta-schema, and every string column's declaration |
+| **Amends** | `02` §8.4 (a unit is a UCUM code), `02` §9.3 (a vocabulary is declared, not defaulted), `03` §5 (the profile has one null), R8 §4 (the test a reservation must pass), R11 §4 (strikes `event_type`'s reserved set), the registry meta-schema, and every string column's declaration |
 | **Depends on** | R8 (open vocabularies and reserved values), R11 (the reserved event types), R22 §3 (a scorer's label and its source), R48 (a column declares its role), R55 §2.1 (a discriminator's value space), R91 §3.1 (which table declares `event_type`) |
 | **Profile** | all |
 
@@ -249,6 +249,13 @@ packet itself measured, so the size of the unit varies per packet and UCUM has n
 No table changes — a declared unit is registry text, so what moves is the registry each packet
 embeds.
 
+Both halves are a **MUST**, and `02` §8.4 gains the statement: a column holding a physical unit
+**MUST** hold a UCUM code, and a column declaring one **MUST** declare a UCUM code or an exception
+the registry declares with a reason. That is what makes §8.4's existing rule operable. It says a
+consumer **MUST NOT** silently compare or combine two columns whose declared units differ (R56
+§2.5), and without one vocabulary `volts` and `V` differ while naming one unit — so the rule
+refuses a legitimate comparison exactly as readily as it catches a wrong one.
+
 `registry/check.py` checks that the description is present, that an authority is an absolute URI,
 that a declared unit is a UCUM code or a declared exception, and that two columns of one name name
 one nomenclature — which is
@@ -391,7 +398,7 @@ name carries one vocabulary and one authority across every table holding it. Tha
 across all 102 columns today, and is what §2.3's drift would have caught.
 
 `core.array_assets.kind` becomes `waveform` on the three arrays §2.5 measures as
-`dense_array_asset`. `03` §5 gains §5.6, stating the profile's single null beside the Parquet floor §5.5 already
+`dense_array_asset`. `02` §8.4 gains the UCUM statement and `03` §5 gains §5.6, stating the profile's single null beside the Parquet floor §5.5 already
 records. `fixtures/build.py` writes `sex` as `male` rather than `M`, so every packet in the corpus changes;
 the NWB adapter gains the mapping §3.9 requires, and both packets are rebuilt, which R87 §2.1,
 R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains §3.11's report.
