@@ -1729,6 +1729,31 @@ def build() -> dict:
     for (_resource, _name), _text in DESCRIPTIONS.items():
         amend(_resource, _name, description=_text)
 
+    # ---- R102 §3 : an asset names what made it -------------------------------------------------
+    # Five core tables carry a row-level `processing_run_id` and the array tables did not, so the
+    # only link from an array to its run was the manifest's per-resource field -- which R9 §4 puts
+    # there precisely so provenance is not per row, and which no rule can therefore join. R41 §2.1
+    # keys currency on the producing run and R82 §2.1 makes an undeclared one an error, so that
+    # error was unenforceable for arrays.
+    SINCE[0] = "R102 §3.1"
+    for _t in ("core.array_assets", "analysis.array_assets"):
+        add_col(_t, col("processing_run_id", "int32", "nullable",
+                        "The run that produced this array. Null means it was acquired rather than "
+                        "computed, which is the reading R23 §2 gives a stream."),
+                after="device_id")
+        T(_t)["references"].append(
+            {"columns": ["processing_run_id"], "resource": "core.processing_runs",
+             "resource_columns": ["processing_run_id"]})
+
+    # §3.2: R65 §2.1 gave the array tables a device and skipped this one, so nothing separated a
+    # behaviour video from a miniscope movie -- both being `mp4` written by a camera.
+    SINCE[0] = "R102 §3.2"
+    add_col("core.media_assets", col("device_id", "int32", "nullable",
+            "The device that recorded this asset. A writer names it where its source states one, "
+            "and MUST NOT infer it from a file name (`01` §3.5)."), after="format")
+    T("core.media_assets")["references"].append(
+        {"columns": ["device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
+
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column
     # by name and no clause of `02` or `03` states an order, so no revision mandates this and the

@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-39 tables, 330 columns, 97 references, 76 Tier 2 rules
+39 tables, 333 columns, 100 references, 76 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99, R100, R101
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99, R100, R101, R102
 ```
 
 ## Contents
@@ -36,6 +36,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `format` | string | **required** | R20 §5 | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable | R20 §5 | Clock for time axis. |
 | `device_id` | int32 | nullable | R20 §5 | The device that produced this array. |
+| `processing_run_id` | int32 | nullable | R102 §3.1 | The run that produced this array. Null means it was acquired rather than computed, which is the reading R23 §2 gives a stream. |
 | `sample_rate_hz` | float64 | nullable | R20 §5 | Sample rate if regularly sampled. |
 | `unit` | string | nullable | R101 §3.5 | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable | R20 §5 | Multiply stored values by this before offset. |
@@ -49,6 +50,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `device_id` → `core.devices` (`device_id`)
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
 ### `analysis.array_dimensions`
 
@@ -122,6 +124,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `format` | string | **required** |  | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable |  | Clock for time axis. |
 | `device_id` | int32 | nullable | R65 §2.1 | The device that produced this array. |
+| `processing_run_id` | int32 | nullable | R102 §3.1 | The run that produced this array. Null means it was acquired rather than computed, which is the reading R23 §2 gives a stream. |
 | `sample_rate_hz` | float64 | nullable |  | Sample rate if regularly sampled. |
 | `unit` | string | nullable | R101 §3.5 | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable |  | Multiply stored values by this before offset. |
@@ -135,6 +138,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `device_id` → `core.devices` (`device_id`)
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
 **Tier 2 rules** — 2
 
@@ -593,6 +597,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `semantic_type` | string | **required** | R101 §3.5 | What quantity the asset holds. Open (R8 §4): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` §3.17). |
 | `uri` | string | **required** |  | Media file URI. |
 | `format` | string | **required** | R101 §3.5 | The container format, as the file extension names it: `mp4`, `avi`. Open. |
+| `device_id` | int32 | nullable | R102 §3.2 | The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (`01` §3.5). |
 | `pts_rate_num` | int64 | nullable | R70 §2.1 | Presentation timestamps per second in this asset's container: numerator. |
 | `pts_rate_den` | int64 | nullable | R70 §2.1 | Presentation timestamps per second in this asset's container: denominator. |
 | `clock_id` | int32 | nullable |  | Clock for frame timing. |
@@ -604,6 +609,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `device_id` → `core.devices` (`device_id`)
 
 **Tier 2 rules** — 3
 

@@ -2004,3 +2004,33 @@ disposition = "implementation"
 where = "validator.py's _check_reserved_values"
 note = "info, never a failure; a synonym stays uncheckable, so R8 §4's prohibition binds a writer and no rule (R67 §2.4)"
 
+
+[clause."R102 §2.1"]
+disposition = "rationale"
+where = "R102 §2.1"
+note = "five core tables carry a row-level run pointer and the array tables did not; the manifest's per-resource field is filled on 1 of 46 resources and cannot be joined, so R82 §2.1's error was unenforceable for arrays"
+
+[clause."R102 §2.2"]
+disposition = "rationale"
+where = "R102 §2.2"
+note = "R65 §2.1 gave core.array_assets a device_id and skipped core.media_assets, so nothing separated a behaviour video from a miniscope movie"
+
+[clause."R102 §2.3"]
+disposition = "rationale"
+where = "R102 §2.3"
+note = "rig.json declares two camera assemblies with serials 23022730 and 23022721 and the packet records no camera at all; one camera has five names across the artifacts, none derivable from another"
+
+[clause."R102 §3.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.17"
+note = "processing_run_id on core.array_assets and analysis.array_assets, int32 nullable, each with its declared reference to core.processing_runs; the manifest's field keeps R9 §4's meaning for resources that are not rows"
+
+[clause."R102 §3.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.18"
+note = "device_id on core.media_assets, int32 nullable, referencing core.devices; null where the source states none, and a consumer reports the instrument unrecorded rather than parsing the asset's name"
+
+[clause."R102 §3.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.5"
+note = "a writer records every instrument its source declares, identity being the serial (R67 §2.2); where a camera was pointed has no column and stays in metadata"

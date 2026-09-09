@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | R8 §4 (renames `raw`, strikes `waveform`, narrows what the column is for), the declarations of `kind` and `semantic_type` on the asset tables |
-| **Depends on** | `an-asset-names-what-made-it` (open draft: an array names the run that produced it), R101 §3.1 (every string column declares `closed`, `open` or `free`), R101 §3.8 (records R8 §4's reserved set), R8 §4 (the four reserved kinds), R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R50 §2 (a column is renamed where its name says less than its declaration), R65 §1 (an array names the device that made it) |
+| **Depends on** | R102 §3.1 (an array names the run that produced it), R101 §3.1 (every string column declares `closed`, `open` or `free`), R101 §3.8 (records R8 §4's reserved set), R8 §4 (the four reserved kinds), R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R50 §2 (a column is renamed where its name says less than its declaration), R65 §1 (an array names the device that made it) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
@@ -148,7 +148,7 @@ R8 §4's fourth reserved value is **struck**, and a writer **MUST NOT** write it
 waveform template is computed from sorted spikes rather than split from a signal, so it names no
 band, and `semantic_type` already carries `waveform_mean` and `waveform_sd` on exactly the arrays
 that would have used it. The value was standing in for a run, and
-`an-asset-names-what-made-it` gives the run a column of its own — which is R23 §1.1's disposal of
+R102 §3.1 gives the run a column of its own — which is R23 §1.1's disposal of
 a derived-ness vocabulary, applied to the table R23 did not reach.
 
 ### 3.4 The quantity

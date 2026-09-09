@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | Adds `device_kind` to `core.devices`; adds a clause to `02` §8.3 |
-| **Depends on** | `an-asset-names-what-made-it` (open draft: a camera is recorded as a device), R54 §2 (a kind in the key, with per-kind detail tables), R55 §2.1 (a discriminator names a table), R55 §2.2 (`resolves` says whether an unmatched value is a defect), R90 §3.5 (the shared-key resolution shape), R17 §2 (an extension is a registry document in the same format) |
+| **Depends on** | R102 §3.3 (a camera is recorded as a device), R54 §2 (a kind in the key, with per-kind detail tables), R55 §2.1 (a discriminator names a table), R55 §2.2 (`resolves` says whether an unmatched value is a defect), R90 §3.5 (the shared-key resolution shape), R17 §2 (an extension is a registry document in the same format) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.

@@ -104,7 +104,8 @@
       "R98",
       "R99",
       "R100",
-      "R101"
+      "R101",
+      "R102"
     ]
   },
   "tables": {
@@ -198,6 +199,15 @@
           "since": "R20 \u00a75"
         },
         {
+          "name": "processing_run_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The run that produced this array. Null means it was acquired rather than computed, which is the reading R23 \u00a72 gives a stream.",
+          "identity": "assigned",
+          "since": "R102 \u00a73.1"
+        },
+        {
           "name": "sample_rate_hz",
           "type": "float64",
           "presence": "nullable",
@@ -273,6 +283,15 @@
           "resource": "core.clocks",
           "resource_columns": [
             "clock_id"
+          ]
+        },
+        {
+          "columns": [
+            "processing_run_id"
+          ],
+          "resource": "core.processing_runs",
+          "resource_columns": [
+            "processing_run_id"
           ]
         }
       ],
@@ -642,6 +661,15 @@
           "since": "R65 \u00a72.1"
         },
         {
+          "name": "processing_run_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The run that produced this array. Null means it was acquired rather than computed, which is the reading R23 \u00a72 gives a stream.",
+          "identity": "assigned",
+          "since": "R102 \u00a73.1"
+        },
+        {
           "name": "sample_rate_hz",
           "type": "float64",
           "presence": "nullable",
@@ -714,6 +742,15 @@
           "resource": "core.clocks",
           "resource_columns": [
             "clock_id"
+          ]
+        },
+        {
+          "columns": [
+            "processing_run_id"
+          ],
+          "resource": "core.processing_runs",
+          "resource_columns": [
+            "processing_run_id"
           ]
         }
       ],
@@ -2797,6 +2834,15 @@
           "since": "R101 \u00a73.5"
         },
         {
+          "name": "device_id",
+          "type": "int32",
+          "presence": "nullable",
+          "role": "identifier",
+          "description": "The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (`01` \u00a73.5).",
+          "identity": "assigned",
+          "since": "R102 \u00a73.2"
+        },
+        {
           "name": "pts_rate_num",
           "type": "int64",
           "presence": "nullable",
@@ -2849,6 +2895,15 @@
           "resource": "core.clocks",
           "resource_columns": [
             "clock_id"
+          ]
+        },
+        {
+          "columns": [
+            "device_id"
+          ],
+          "resource": "core.devices",
+          "resource_columns": [
+            "device_id"
           ]
         }
       ],

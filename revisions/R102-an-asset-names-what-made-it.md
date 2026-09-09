@@ -1,8 +1,8 @@
-# An Asset Names What Made It
+# R102 — An Asset Names What Made It
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-09 |
 | **Amends** | `01` §3.5 (a camera is a device), `01` §3.17 (an array names the run that made it), `01` §3.18 (a media asset names the device that recorded it); adds `processing_run_id` to `core.array_assets` and `analysis.array_assets`, and `device_id` to `core.media_assets` |
 | **Depends on** | R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R41 §2.1 (currency is keyed on the producing run), R65 §1 (an array names the device that made it), R67 §2.2 (a device's identity is the serial the source states), R82 §2.1 (an undeclared currency is an error), R9 §4 (an output is recorded at resource granularity) |
 | **Profile** | all |
@@ -114,10 +114,6 @@ camera points, which §6 records.
 
 ## 4. What this does not change
 
-- **No table is added and no column is removed.** Three columns are added, each nullable, each
-  with its reference.
-- **No manifest field changes.** `writer.py:811` writes a manifest entry's `kind` and
-  `processing_run_id` as R9 §4 defines them.
 - **`core.probes` is unaffected.** A probe is not a device subtype: `01` §3.6 makes it "a device
   that carries electrodes", R67 §3 measures four probes to one quad-base device, and three core
   tables reference it because electrodes do.
@@ -133,11 +129,33 @@ at 154, and no Tier 2 rule changes.
 `01` §3.17 gains §3.1's rule, `01` §3.18 gains §3.2's, and `01` §3.5 gains §3.3's, each beside the rules
 R66, R67 and R85 already put there.
 
-The NWB adapter names the sorting run on the three waveform arrays, which both packets already
-record. `sources/aind.py` reads `rig.json`'s camera assemblies into `core.devices`, taking
-`ecephys_786867` from 21 devices to **23**, and `sources/video.py` names each video's camera —
-three of the four, `clip` being described by no source. Both packets are rebuilt, which R87 §2.1,
-R88 §2, R91 §5, R95, R96, R97, R98, R99 and R101 already require.
+The registry change is the whole of what lands now, because every writer obligation §3 states is
+blocked on something a source does not supply, and each blockage is worth recording.
+
+The column is owed more widely than §2.1 suggested. **12 of 14** array URIs in `ecephys_776259`
+and **10 of 11** in `ecephys_786867` sit under the NWB's `processing/` group rather than
+`acquisition/` — `.../processing/ecephys/LFP/ElectricalSeries45883-1-LFP/data` — so nearly every
+array in both packets was computed by a run neither packet records, and declares null until one
+does.
+
+`waveforms.py` names no run, and none of the twelve sortings produced its arrays: `waveform_mean`
+spans all **6,781 units** of `ecephys_776259` across **12 sorting runs**, so what produced it is an
+extraction over all of them that the packet does not record. `processing_run_id` is null on those
+arrays until it does, which is the column exposing a gap in provenance rather than failing to
+express one.
+
+`sources/aind.py` can read `rig.json`'s two camera assemblies, and emitting them puts
+`core.devices` in its `PRODUCES` and in both recipes' `contributes`, which R63 §2 makes a change to
+the recipe rather than to the adapter.
+
+`sources/video.py` cannot name a camera at all. The video directory holds four `.mp4` files and
+their timing CSVs and nothing else, so the only link from `side_camera_right.mp4` to the Teledyne
+FLIR with serial `23022730` is the file's name — which §3.2 forbids using, and rightly: `clip.mp4`
+matches no assembly, and a rig that renamed its files would silently repoint every video at the
+wrong instrument. `device_id` is null on all four videos until a source states the link.
+
+Both packets are rebuilt for the columns, which R87 §2.1, R88 §2, R91 §5, R95, R96, R97, R98, R99
+and R101 already require.
 
 ## 6. Open
 
@@ -148,6 +166,11 @@ R88 §2, R91 §5, R95, R96, R97, R98, R99 and R101 already require.
   beside them, so a pose column would be the principled shape and empty in every row this rig can
   produce (R66 §1.3). Adding a column to `core.devices` for it would give 21 rows a field that
   applies to two.
+- **Whether a packet should record the run that extracted its waveforms.** §5 measures that
+  `waveform_mean` spans twelve sortings, so the run that produced it is neither of them and is
+  absent from `core.processing_runs`. Recording it would make §3.1's column fillable and would put
+  the twelve sortings in `core.processing_run_inputs` beneath it, which is the shape R9 §4 already
+  provides.
 - **Whether `clip` has a source at all.** `ecephys_786867` holds a fourth video that neither
   `rig.json` nor `session.json` describes, so §3.2 leaves its `device_id` null. Whether that is an
   upstream omission or a file that should not be in the packet is a question for the recipe.

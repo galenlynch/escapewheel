@@ -114,6 +114,8 @@ Both versions are recorded **verbatim** as the source stated them, and MUST NOT 
 
 Each element of an acquisition chain that reports its own versions is its own device. A value the source gives as unknown is recorded as the source gave it, which is distinct from a source that said nothing.
 
+This standard names no kinds of device, so a writer MUST record every instrument its source declares — a camera on the same terms as a headstage — and identity is the serial the source states (R67 §2.2, R102 §3.3). What a device row does not carry is where an instrument was pointed: a camera's target is a fact about the instrument that `core.devices` has no column for, and it stays in `metadata` (R97 §3.3) until something has to read it.
+
 ### 3.6 Probe
 
 A device that carries electrodes.
@@ -261,6 +263,8 @@ An array asset holds **any** sampled quantity, whatever instrument produced it. 
 
 An array asset SHOULD name the device that produced it, where the writer knows which one did (R65 §2.1). A consumer MAY then resolve any array to its instrument without knowing what kind of array it is, and MUST NOT infer an instrument from an asset's `semantic_type`, its name, or its URI: those are labels, and the device is a reference.
 
+An array a processing run produced MUST name that run; an acquired array names none, which is the reading a stream has carried since R23 §2 (R102 §3.1). The manifest records a run per resource as well (R9 §4), and that entry keeps its meaning for resources that are not rows of a table — but it is not per row and no rule can join it, so currency, which R41 §2.1 keys on the producing run and R82 §2.1 makes an error to leave undeclared, is unreachable for an array without the column.
+
 ### 3.18 Media asset
 
 An image or video stored in an ordinary container, with frame timing carried in tables.
@@ -277,6 +281,8 @@ A frame's time is a tick on a declared clock, like every other time in a packet 
 A consumer MAY pass a presentation timestamp verbatim to a container library to seek the frame a row describes, which is the exact route and assumes nothing about ordering (R68 §2.5).
 
 The asset declares the **rate** those timestamps count at, as an exact rational (R70 §2.1) — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have.
+
+A media asset SHOULD name the device that recorded it, where its source states one (R102 §3.2), as an array asset does since R65 §2.1. Nothing else separates two assets of one format: a behaviour video and a movie from a head-mounted microscope are both `mp4` written by a camera, and `semantic_type`, the asset's name and its URI are labels rather than references. Where the source states no device the column is null, and a consumer MUST report the instrument as unrecorded rather than read one out of the asset's name.
 
 ### 3.19 Source file
 
