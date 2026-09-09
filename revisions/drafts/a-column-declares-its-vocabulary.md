@@ -24,7 +24,7 @@ compares across packets, beside `core.curation_versions.notes`, whose value mean
 to whoever wrote it.
 
 Every string column now declares which of three kinds it holds, a reservation gets a test, and
-the two sets reserved so far are settled: one recorded, one struck.
+the three sets reserved so far are settled: one recorded, one struck, one deferred.
 
 Measured on the registry as built at R100, and on the two packaged sessions — **`ecephys_776259`**
 (twelve probes, 6,781 sorted units, recorded 2025-04-09) and **`ecephys_786867`** (ten probes,
@@ -45,12 +45,14 @@ A validator therefore behaves identically on the 15 columns declaring it and the
 which `02` §9.3 guarantees by making open the default. The field is a comment in the shape of a
 declaration, and which columns carry it records which revision remembered.
 
-### 2.2 Two sets were reserved and neither reached the registry
+### 2.2 Three sets were reserved and none reached the registry
 
 R8 §4 reserved four values for `core.array_assets.kind` — `raw`, `ap`, `lfp`, `waveform` — with
-declared meanings, and R11 §4 reserved six for `event_type`. The registry carries **neither**.
+declared meanings, R11 §4 reserved six for `event_type`, and R19 §3 reserved `probe`, `ccf` and
+`stereotaxic` for `coordinate_frame`. The registry carries **none of the three**.
 
-`kind`, the column the mechanism was invented for, never received a set. `event_type` did:
+`kind`, the column the mechanism was invented for, never received a set, and neither did
+`coordinate_frame`. `event_type` did:
 `build.py` sets `reserved_values` on `core.events.event_type`, and R91 §3.1 moved `event_type`
 onto `core.event_streams` and struck the original, taking the reservation with it. The declaration
 was not reconsidered and not restated — it went with the column it was attached to.
@@ -220,10 +222,16 @@ to.
 ### 3.8 `kind` records the four values R8 reserved
 
 `core.array_assets.kind` and `analysis.array_assets.kind` **MUST** declare `reserved_values` of
-`raw`, `ap`, `lfp` and `waveform`, each carrying the meaning R8 §4 declares for it. They are the
-only columns that declare one: `semantic_type`, `activity_type`, `species`, `strain` and every
-other open column declare none, and declaring an empty set and declaring nothing are the same
-claim, so the field stays absent.
+`raw`, `ap`, `lfp` and `waveform`, each carrying the meaning R8 §4 declares for it.
+
+`coordinate_frame`'s three are **deferred**, not recorded. R19 §3 reserved them "with those
+meanings" and the meanings it points at are the frames' own, which no packet states — so what a
+reservation would record is a name whose content is missing, and supplying that content is a table
+rather than a declaration. §6 carries it.
+
+Every other open column declares no set: `semantic_type`, `activity_type`, `species` and `strain`
+draw on nomenclatures §3.5 and §3.6 name instead, and declaring an empty set and declaring nothing
+are the same claim, so the field stays absent.
 
 ### 3.9 `sex` is closed, and a writer normalizes onto it
 
@@ -321,7 +329,9 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   along-shank and across-shank rather than anatomical. The shape this wants is
   `core.coordinate_frames`, one row per frame, which would also give `coordinate_frame` the
   reference it has never had despite sitting in two primary keys — a table, a reference and a
-  writer obligation, so a revision of its own.
+  writer obligation, so a revision of its own — drafted as
+  `a-coordinate-frame-declares-what-its-axes-mean`, which also settles the three names R19 §3
+  reserved and §3.8 defers.
 - **Whether a `unit` column should name UCUM.** Eight columns hold a physical unit and §3.6 names
   no nomenclature for them, because the values on hand would not conform: R56 §1 records
   `percentage` and `milliliter` from the VR foraging models where UCUM writes `%` and `mL`. Naming
