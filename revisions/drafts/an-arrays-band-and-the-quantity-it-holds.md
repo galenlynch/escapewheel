@@ -148,12 +148,13 @@ a column they will fill wrongly.
 
 ### 3.3 `waveform` is no longer a reserved value
 
-R8 §4's fourth reserved value is **struck**, and a writer **MUST NOT** write it as a `band`. A
-waveform template is computed from sorted spikes rather than split from a signal, so it names no
-band, and `semantic_type` already carries `waveform_mean` and `waveform_sd` on exactly the arrays
-that would have used it. The value was standing in for a run, and
-R102 §3.1 gives the run a column of its own — which is R23 §1.1's disposal of
-a derived-ness vocabulary, applied to the table R23 did not reach.
+R8 §4's fourth reserved value - `waveform` - is **struck**, and a writer **MUST
+NOT** write it as a `band`. A waveform template is computed from sorted spikes
+rather than split from a signal, so it names no band, and `semantic_type`
+already carries `waveform_mean` and `waveform_sd` on exactly the arrays that
+would have used it. The value was standing in for a run, and R102 §3.1 gives the
+run a column of its own — which is R23 §1.1's disposal of a derived-ness
+vocabulary, applied to the table R23 did not reach.
 
 ### 3.4 The quantity
 
