@@ -7,3 +7,7 @@ __pycache__/
 
 # Local agent settings, which are per-machine.
 .claude/settings.local.json
+
+# Editor lock files: Emacs writes .#name as a symlink to user@host:pid, which points at
+# nothing and breaks any sweep that follows it.
+.#*
