@@ -317,6 +317,22 @@ def test_without_the_file_the_older_routes_still_apply(tree):
     assert any("no sync_messages.txt" in note for note in source.notes)
 
 
+def test_phase_steps_are_rows_of_their_own_table(source):
+    """R99 §3.3: a step is a row, not a list inside a JSON string keyed by a clock name."""
+    rows = source.phase_steps(clock_id_for=probes_only)
+    assert all(
+        set(r) == {"clock_id", "t_tick", "parent_tick", "shift_seconds", "anchor_interval_span"}
+        for r in rows
+    )
+    # The clock is named the way an anchor row names it, so R53 assigns both the same id.
+    assert {r["clock_id"] for r in rows} <= set(anchors_of(source))
+
+
+def test_the_steps_travel_with_the_other_clock_tables(source):
+    """`records` is what a build adds, so a table absent from it is a table nobody writes."""
+    assert "core.clock_phase_steps" in source.records(clock_id_for=probes_only) or not source.discontinuities
+
+
 # -- phase discontinuities in the parent's alignment ------------------------------------
 
 

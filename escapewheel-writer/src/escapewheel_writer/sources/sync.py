@@ -317,6 +317,7 @@ class SyncSource:
         {
             "core.clock_anchors",
             "core.clock_observation_intervals",
+            "core.clock_phase_steps",
             "core.clocks",
         }
     )
@@ -639,12 +640,28 @@ class SyncSource:
             }
         ]
 
+    def phase_steps(self, *, clock_id_for: Any = None) -> list[dict[str, Any]]:
+        """`core.clock_phase_steps`, one row per step in a clock's alignment (R99 §3.3).
+
+        A step is reported and never corrected. `anchors` is what detects them, and is memoized
+        on the pulses, so asking for it here costs nothing and removes the order dependence
+        between this and the anchor rows.
+        """
+        self.anchors(clock_id_for=clock_id_for)
+        return [
+            {"clock_id": clock, "t_tick": event["t_tick"], "parent_tick": event["parent_tick"],
+             "shift_seconds": event["seconds"], "anchor_interval_span": event["anchor_intervals"]}
+            for clock, events in sorted(self.discontinuities.items())
+            for event in events
+        ]
+
     def records(self, *, clock_id_for: Any = None) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records, keyed by resource ID."""
         built = {
             "core.clocks": [self.clock().record()],
             "core.clock_anchors": self.anchors(clock_id_for=clock_id_for),
             "core.clock_observation_intervals": self.observation_intervals(),
+            "core.clock_phase_steps": self.phase_steps(clock_id_for=clock_id_for),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 

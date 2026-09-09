@@ -944,6 +944,11 @@ def _declare_origin(context: Context, say: Callable[[str], None]) -> None:
     if not (context.observed and context.reference):
         return
     by_clock, bound = context.alignment()
+    # R99 §3.1: a null column is a writer that stayed within R27 §5.3's default, so only a
+    # measured widening is recorded. Set before the origin, which may decline to be stated.
+    if bound != BOUND:
+        context.session_extra["alignment_bound"] = bound
+        say(f"  alignment_bound {bound:g} median anchor intervals (R99 §3.1)")
     origin = _time_origin(context, context.observed, by_clock, bound)
     if origin is None:
         say("  no t_zero_tick: a clock's observation start does not map to the reference (R39 §2.4)")
@@ -963,11 +968,9 @@ def _alignment_parameters(context: Context | None) -> dict[str, Any]:
     # absent key and a recorded zero say different things, and only one of them is checkable.
     if withheld is not None:
         recorded["withheld_anchors"] = withheld
-    if stepped := getattr(sync, "discontinuities", {}):
-        # Reported so a consumer can see them, never corrected -- see SyncSource.discontinuities.
-        recorded["phase_discontinuities"] = stepped
     if context.measured_bound:
-        recorded["alignment_bound"] = context.measured_bound
+        # R99 §3.4: the evidence stays, the bound itself is `core.sessions.alignment_bound`.
+        recorded["alignment_bound"] = {k: v for k, v in context.measured_bound.items() if k != "used"}
     return recorded
 
 

@@ -88,24 +88,26 @@ name columns colliding and excludes `subject_name` explicitly, naming the recipe
 only reason the two packets agree on a value. The rebuild removes the collision and changes
 nothing in the revision.
 
-## 2₀. The writer still records R99's three facts in `parameters`
+## 2₀. The writer still records R99's withheld anchors in `parameters`
 
-R99 §3 moved them to `core.sessions.alignment_bound`, two nullable bools on `core.clocks` and
-`core.clock_phase_steps`, and `escapewheel_reader.clocks.declared_bound` reads the column already.
-The writer does not yet fill any of them: `session._alignment_parameters` still returns the blob,
-so a packet built today is conforming — all three are nullable or an absent table — and violates
-R99 §3.2's MUST, which binds a writer that runs R37 §3.2's test to record both columns.
+Two of R99's three facts are emitted: `core.sessions.alignment_bound` comes from
+`_declare_origin`, which already had the bound in hand, and `core.clock_phase_steps` from
+`SyncSource.phase_steps`, whose rows name a clock the way an anchor row does so R53 assigns both
+the same id. Both left `_alignment_parameters`, which keeps only the measurement R99 §3.4 says it
+should.
 
-The awkward half is `withheld_first_anchor` and `withheld_last_anchor`. The sync source computes
-the withholding and emits only the *reference* clock row; the probe clock rows come from the
-sorter, so stamping a column onto them needs a hook the session layer does not have, of the shape
-`context.session_extra` has for `t_zero_tick`. `alignment_bound` and `core.clock_phase_steps` are
-each straightforward on their own, and doing one without the other would leave a fact in two
-places, which is what R99 exists to stop.
+`withheld_first_anchor` and `withheld_last_anchor` do not, and the obstacle is real rather than
+effort. The sync source computes the withholding and emits only the *reference* clock row; the
+probe clock rows come from the sorter, which `CONSUMES` runs **first**, so by the time the
+withholding is known those rows are already in `PacketWriter._tables`. Stamping them needs either
+an `amend` on the writer or `core.clocks` held until every source has run, and `core.clocks` is
+contributed by four sources, so holding it is the larger change. Until one exists a build violates
+R99 §3.2's MUST, and the packet is otherwise conforming, both columns being nullable.
 
 R98 §3.2 belongs to the same build: the two recipes under `/mnt/Data/*/recipe.toml` declare
 `core.clock_observation_intervals` under `owns` where two sources each hold part, which is what
-kept twelve clocks of thirteen from having a window.
+kept twelve clocks of thirteen from having a window. `SyncSource.PRODUCES` now also names
+`core.clock_phase_steps`, which those recipes narrow away, and R98 §3.3's report will say so.
 
 ## 2a. `registry_version` — still `0.1.0`
 
