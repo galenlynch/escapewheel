@@ -36,7 +36,8 @@ and R90 §3.5 named that the **shared key** — the class-table-inheritance mapp
 resolution generic: read the kind, take that resource's primary key from the registry, join.
 `dynamic_foraging.trials` and `vr_foraging.sites` are the two that exist.
 
-`core.devices` has no discriminator, and **no table in the registry is keyed on `device_id`**.
+`core.devices` has no discriminator, and **no other table in the registry is keyed on
+`device_id`**.
 The two tables that look like specialisations are not. `core.probes` is keyed on `probe_id` and
 references the device, because `01` §3.6 makes a probe "a device that carries electrodes" and R67
 §3 measured four probes to one quad-base device — a different entity at a different cardinality,
@@ -72,7 +73,12 @@ because electrodes are, not because it is an instrument. A camera carries nothin
 
 `core.devices` gains **`device_kind`**, a `string` with R48 role `discriminator`, nullable, and
 `resolves: optional` (R55 §2.2): it holds the dotted resource ID of the table carrying this
-device's kind-specific facts.
+device's kind-specific facts. It declares no vocabulary, which R101 §3.3 requires of a
+discriminator: R55 §2.1 fixes the value space to the resource IDs the registry declares.
+
+Nullable rather than optional, on `02` §6's preference for a present column over an absent one.
+Optional is for a column a reader must be able to skip, which R3 §2.1 confines to `json_string`
+and which every one of the registry's 22 optional columns is.
 
 `optional` because most devices have none. A headstage that declares no `device_kind`, or one
 whose value names a resource the packet does not carry, states a fact: the instrument had nothing
@@ -105,8 +111,10 @@ a query that has to read the fact (R66 §1.4).
 
 ## 4. Consequence
 
-330 columns become **331**, and no reference is added: a discriminator names without referencing
-(R55 §2.6). Tier 1's discriminator checks go from 14 to **16**, the two a discriminator implies
+333 columns become **334**, and no reference is added: a discriminator names without referencing
+(R55 §2.6). The count is measured against the registry as R103 left it, and
+`a-coordinate-frame-declares-what-its-axes-mean` adds seven columns of its own, so whichever of
+the two lands second is measured again. Tier 1's discriminator checks go from 14 to **16**, the two a discriminator implies
 (R55 §2.4) being that the value is a dotted resource ID and that it resolves where the packet
 carries the resource. `02` §8.3 gains the clause §3.1 states. No packet is invalidated: the column
 is nullable and both packets pass with it unset.
