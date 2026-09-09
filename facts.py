@@ -17,15 +17,47 @@ change it.
 
 from __future__ import annotations
 
+import ast
 import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 REGISTRY = ROOT / "registry/logical_schemas.json"
-DOCUMENTS = ("CLAUDE.md", "STATUS.md", "TODO.md")
+DOCUMENTS = ("CLAUDE.md", "STATUS.md", "TODO.md", "DEVELOPING.md")
 
 REGION = re.compile(r"(<!-- BEGIN facts: (\w+) -->\n).*?(<!-- END facts: \2 -->)", re.DOTALL)
+
+
+def _check_counts() -> tuple[int, int]:
+    """How many invariants `registry/check.py` holds, counted from the source that holds them.
+
+    Split the way the file is: `structural` runs once per registry document, so each of its checks
+    binds core and every extension, while the rest run once over the whole set. Counted by parsing
+    rather than by running, since `check.py` needs DuckDB to finish and this must not.
+    """
+    tree = ast.parse((ROOT / "registry/check.py").read_text())
+    structural = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "structural")
+    nested = {id(n) for n in ast.walk(structural)}
+
+    def calls(scope, name, exclude=frozenset()):
+        return sum(1 for n in ast.walk(scope) if isinstance(n, ast.Call)
+                   and getattr(n.func, "id", None) == name and id(n) not in exclude)
+
+    return calls(structural, "c_"), calls(tree, "check", nested)
+
+
+def _clause_count() -> int:
+    """Decision clauses across the accepted revisions, from the ledger that disposes of them.
+
+    Imported rather than recounted: what counts as a clause is `ledger.py`'s judgement, and a
+    second implementation here would be a second answer.
+    """
+    sys.path.insert(0, str(ROOT / "escapewheel_poc_docs_v0.2"))
+    import ledger
+
+    return len(ledger.clauses())
 
 
 def _revision_span(numbers: set[int]) -> str:
@@ -66,6 +98,8 @@ def facts() -> dict[str, str]:
     drafts = [p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"]
 
     extensions = sorted(p.stem for p in (ROOT / "registry/extensions").glob("*.json"))
+    per_document, whole = _check_counts()
+    decision_clauses = _clause_count()
     corpus = len(re.findall(r'^\s+"', (ROOT / "fixtures/corpus.py").read_text().split("EXPECTED")[1].split("}")[0], re.MULTILINE))
 
     return {
@@ -82,6 +116,11 @@ def facts() -> dict[str, str]:
                   f"table whose sort does not begin with its primary key"),
         "extensions": f"{len(extensions)} extension registries: {', '.join(extensions)}",
         "corpus": f"{corpus} conformance packets",
+        "checks": (f"{per_document} structural invariants, each applied to core and to each of the "
+                   f"{len(extensions)} extension registries, and {whole} further checks over the "
+                   f"whole set"),
+        "clauses": (f"`ledger.py` enumerates {decision_clauses} Decision clauses across the "
+                    f"accepted revisions."),
     }
 
 

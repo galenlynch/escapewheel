@@ -91,9 +91,10 @@ the order matters.
    validator would have to learn.
 5. **`build.py`** writes `logical_schemas.json`, then calls `render.py` for `tables.md` and the
    README's regions, then copies the two hand-written schemas into the validator and the reader.
-6. **`check.py`** verifies the result: 19 structural invariants, each applied to core and to every
-   extension registry, then the meta-schema, the naming conventions, and — with DuckDB present —
-   that every Tier 2 rule is executable SQL against empty tables built from the registry.
+6. **`check.py`** verifies the result: the structural invariants, each applied to core and to
+   every extension registry, then the meta-schema, the naming conventions, and — with DuckDB
+   present — that every Tier 2 rule is executable SQL against empty tables built from the
+   registry. Section 7 counts them.
 7. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the
    registry at validation time: not-null from `presence`, uniqueness from `primary_key`,
    anti-joins from `references`, membership from `enum`, and two more from each discriminator.
@@ -144,11 +145,21 @@ should be.
 **A revision clause that never reaches the spec.** Two independent audits found normative clauses
 dropped during compilation of the v0.2 prose — `R53 §2.4`'s `int64` escape, `R21`'s codec floor,
 `R36 §2.2`'s prefix digest reversed into "undefined". A citation sweep cannot see these, because
-the revision is cited for its *other* clauses. `escapewheel_poc_docs_v0.2/ledger.py` enumerates all
-185 Decision clauses and `applied.toml` records where each went; the count of undisposed clauses
-may fall and must not rise.
+the revision is cited for its *other* clauses. `escapewheel_poc_docs_v0.2/ledger.py` is what
+sees them: `applied.toml` records where each clause went, and the count of undisposed ones may
+fall and must not rise.
+
+<!-- BEGIN facts: clauses -->
+`ledger.py` enumerates 436 Decision clauses across the accepted revisions.
+<!-- END facts: clauses -->
 
 ## 7. What each check is for
+
+How many there are is counted from the source that holds them, by `facts.py` parsing `check.py`:
+
+<!-- BEGIN facts: checks -->
+19 structural invariants, each applied to core and to each of the 4 extension registries, and 37 further checks over the whole set
+<!-- END facts: checks -->
 
 | check | catches |
 |---|---|
