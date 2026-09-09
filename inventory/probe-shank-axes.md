@@ -52,5 +52,8 @@ specification rather than the file in front of it.
 - Filling them is a lookup keyed on `probe_part_number`, which is `core.probes.probe_type`
   already. Whether that lookup belongs in an adapter, in an extension, or in a declared authority
   is a schema question this inventory does not settle.
-- The two-column-by-192-row geometry means the *packet* could carry the axes as a measurement, as
-  `core.electrodes` positions rather than as a frame's declaration. Nothing asks for that today.
+- A consumer needs the lookup less than it looks. Across all 22 probes of both packets the two
+  axes carry **2 distinct values against 192**, and on none are the counts equal, so which axis
+  runs along the shank is visible in the data even though a writer may not conclude it. The lookup
+  matters for a probe whose counts do not separate — a square grid, or a multi-shank layout whose
+  shank spacing and contact pitch give similar counts.

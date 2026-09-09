@@ -257,10 +257,20 @@ is a coordinate value on an axis no frame declares, taking the corpus from 27 pa
 
 ## 6. Open
 
-- **Where a probe model's geometry is looked up.** §2.5 measures that no artifact of a session
-  states a shank's axes and that all three state the model. Turning a model into axis names is a
-  lookup someone must own — an adapter, an R17 §2 extension, or a nomenclature named the way R101
-  §3.6 names one — and this part settles only that a packet may not guess.
+- **When a probe's axis names would be worth looking up.** Not yet, and the condition is testable.
+  Across all 22 probes of both packets the probe frame's two axes carry **2 distinct values against
+  192**, and on none of them are the counts equal — so a consumer sees which axis runs along the
+  shank without being told, and the questions that use these coordinates mostly do not ask: a
+  contact layout plots one axis against the other whichever is which, and inter-contact distance
+  is the same either way. What the names decide is which direction is depth, and 2 against 192
+  decides that here.
+
+  The trigger is a probe whose contact counts do not separate its axes — a square grid, or a
+  multi-shank layout whose shank spacing and contact pitch give similar counts. Then §3.4 forbids
+  the writer inferring and the consumer has nothing to count, and turning a model into axis names
+  becomes a lookup someone must own: keyed on `core.probes.probe_type`, which already carries
+  `NP2000`, and held in an adapter, an R17 §2 extension, or a nomenclature named the way R101 §3.6
+  names one.
 - **What a `stereotaxic` frame would declare.** R19 §3 reserved the name and neither packet uses
   it. Such a frame is measured from an animal's own skull landmark, so two sessions' frames of that
   name differ by where bregma was, and §3.1's row carries no origin to record that. The AIND
