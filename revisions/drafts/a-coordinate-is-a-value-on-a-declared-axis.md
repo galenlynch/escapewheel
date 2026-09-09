@@ -99,8 +99,9 @@ name none of them; the only mention outside the writer is `fixtures/build.py` fi
 
 ### 2.5 What a session's artifacts state about a frame
 
-A Stage 1 survey of both frames found that the packet's own sources state neither what a shank's
-axes are nor which atlas a CCF coordinate is in.
+A Stage 1 survey of both frames found that the packet's own sources **name** the field each value
+came from and say nothing about what it means. Neither what a shank's axes measure nor which way
+they run nor which atlas a CCF coordinate is in appears anywhere.
 
 For the shank: the NWB describes `rel_x` as **"rel_x from merged"**, Open Ephys offers
 `<ELECTRODE_XPOS>` and `<ELECTRODE_YPOS>`, and the sorted asset's preprocessed record is a
@@ -176,14 +177,14 @@ somewhere, and §3.4 makes recording where the requirement.
 `core.electrode_coordinate_values` and `core.unit_coordinate_values` are added, one row per axis
 per coordinate:
 
-| column | type | presence | role | description |
-|---|---|---|---|---|
-| `session_id` | `int32` | required | identifier | The session, per R88 §2. |
-| `electrode_id` / `unit_id` | `int32` | required | identifier | The thing positioned. |
-| `coordinate_frame` | `string` | required | data | The frame, with `coordinate_basis` completing the parent's key. |
-| `coordinate_basis` | `string` | required | data | What the coordinate asserts (R58 §2.1). |
-| `axis_index` | `int64` | required | structural_index | Which of the frame's axes this value is on. |
-| `axis_value` | `float64` | required | data | The value. |
+| column | type | presence | role | vocabulary | description |
+|---|---|---|---|---|---|
+| `session_id` | `int32` | required | identifier | — | The session, per R88 §2. |
+| `electrode_id` / `unit_id` | `int32` | required | identifier | — | The thing positioned. |
+| `coordinate_frame` | `string` | required | data | open | The frame, with `coordinate_basis` completing the parent's key. |
+| `coordinate_basis` | `string` | required | data | open | What the coordinate asserts (R58 §2.1). |
+| `axis_index` | `int64` | required | structural_index | — | Which of the frame's axes this value is on. |
+| `axis_value` | `float64` | required | data | — | The value, in the axis's `unit`. |
 
 Each is keyed by its parent's key plus `axis_index`, and the two parents differ:
 `core.electrode_coordinates` is keyed `(electrode_id, coordinate_frame, coordinate_basis)` and
@@ -278,13 +279,14 @@ is a coordinate value on an axis no frame declares, taking the corpus from 27 pa
 
 ## 6. Open
 
-- **When a probe's axis names would be worth looking up.** Not yet, and the condition is testable.
-  Across all 22 probes of both packets the probe frame's two axes carry **2 distinct values against
-  192**, and on none of them are the counts equal — so a consumer sees which axis runs along the
-  shank without being told, and the questions that use these coordinates mostly do not ask: a
-  contact layout plots one axis against the other whichever is which, and inter-contact distance
-  is the same either way. What the names decide is which direction is depth, and 2 against 192
-  decides that here.
+- **When a probe's axes would be worth interpreting.** Not yet, and the condition is testable. The
+  probe frame declares axes named `rel_x` and `rel_y` (§3.4), which say where each value came from
+  and not which runs along the shank. Across all 22 probes of both packets those two axes carry **2
+  distinct values against 192**, and on none of them are the counts equal — so a consumer sees
+  which is the shank without being told, and the questions that use these coordinates mostly do not
+  ask: a contact layout plots one axis against the other whichever is which, and inter-contact
+  distance is the same either way. What an interpretation decides is which direction is depth, and
+  2 against 192 decides that here.
 
   The trigger is a probe whose contact counts do not separate its axes — a square grid, or a
   multi-shank layout whose shank spacing and contact pitch give similar counts. Then §3.4 forbids
