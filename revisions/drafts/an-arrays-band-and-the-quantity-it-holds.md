@@ -172,15 +172,22 @@ one, and a schema MUST NOT declare a column that duplicates what the data alread
 Nullable satisfies both, where striking the column would honour the second by breaking the first.
 
 Requiring it is what made it a duplicate. A column that `01` §3.17 says "carries no contract" and
-that every row must fill is a column a writer invents a value for: `signal` and `behavior_video`
-are two of the five values in use. `ElectricalSeries` is the other kind of filling, a class name
-standing where the row already says voltage, per channel, over time.
+that every row must fill is a column a writer invents a value for. `signal` (`nwb.py:821`) is the
+plainest case, a category noun for what the table already is, and `ElectricalSeries` is the other
+kind of filling, a class name standing where the row already says voltage, per channel, over time.
+Between them they account for every array in both packets.
+
+Not every value is that, which is the distinction nullable draws out: `behavior_video` is the
+adapter's own spelling for a fact nothing else in the row carries, and it survives the rule where
+the other two do not.
 
 Measured, the column goes from **29 of 29 assets filled to 7**. The 22 `ElectricalSeries` become
-null, the three waveform arrays keep `waveform_mean` and `waveform_sd`, and the four videos keep
-`behavior_video`. R102 §3.2 gave a media asset a `device_id` that would displace it, and R102 §5
-measures that no source links a video file to a camera, so those four stay filled until one
-does.
+null, and the seven that remain are correct fills rather than survivals. The three waveform arrays
+keep `waveform_mean` and `waveform_sd`, and the four videos keep `behavior_video`: `format` of
+`mp4` does not separate a behaviour video from a movie off a head-mounted microscope, and R102
+§3.2's `device_id` would not separate them either — a camera is a camera whatever it points at.
+What distinguishes them is where the instrument was aimed, which `core.devices` has no column for
+and which stays in `metadata` (R97 §3.3).
 
 The waveform pair is the case that keeps the column. `waveforms.py` reads both from one analyzer
 group, so a run pointer names one run for each; they share a session, a unit of `uV`, a sample
