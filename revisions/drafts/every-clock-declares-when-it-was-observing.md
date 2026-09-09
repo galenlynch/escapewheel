@@ -115,11 +115,13 @@ declares in `core.clocks`. More than one stays permitted, for an acquisition pau
 One Tier 2 rule, `core.clocks.observation_declared`, returns every clock with no interval. It is an
 anti-join and needs no new column.
 
-A packet that declares the table not at all is outside the rule's reach, since a check cannot run
-against a resource the packet does not carry. Such a packet is stating that it holds no observation
-data, and R39 §2.2 already requires it to declare no `t_zero_tick`, so it is honest about what it
-lacks rather than silently short of it. The defect this part closes is the packet that carries the
-table and most of its rows.
+A packet declaring no `core.clock_observation_intervals` at all fails on every clock. A validator
+creates an empty stand-in for a registry table a packet does not carry, so the rule evaluates
+rather than being skipped, and the anti-join then returns everything. That is the right answer: a
+packet declaring clocks and no windows is this defect at its largest, not an exemption from it.
+
+R39 §2.2 contemplates such a packet, requiring it to declare no `t_zero_tick`. That sentence stands
+and becomes unreachable on a conforming packet, as R82 §2.3 left R41 §2.4.
 
 ### 3.2 A resource several sources supply is declared `contributes`
 
@@ -160,9 +162,11 @@ either is an omission rather than a decision.
 
 70 Tier 2 rules become **71**. No table, column or reference changes.
 
-`fixtures/build.py` writes `core.clock_observation_intervals` for both of its clocks, across the 26
-corpus packets, and one variant is added whose expected finding is a clock without one. The corpus
-gains a `t_zero_tick` it could not previously compute.
+`fixtures/build.py` writes `core.clock_observation_intervals` for both of its clocks across the 26
+corpus packets, which the rule forces rather than invites: every packet in the corpus declares
+clocks and no windows, so all 26 fail until they carry them. One variant is added whose expected
+finding is a clock without one, and the corpus gains a `t_zero_tick` it could not previously
+compute.
 
 The two recipes declare `core.clock_observation_intervals` under `contributes`, and both packets
 are rebuilt — which R87 §2.1, R88 §2, R91 §5, R95, R96 and R97 already require. After the rebuild
