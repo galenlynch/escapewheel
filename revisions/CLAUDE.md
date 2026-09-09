@@ -183,6 +183,14 @@ the ones a tool can settle are cheaper than the ones only a reader can.
   them. R49 §1 found a colliding key this way and R55 §2.3.1 a reference targeting a non-unique
   set; R58 §2.3 asserted two registrations coexist under a key that admits one, and that survived
   acceptance.
+- **A writer obligation nothing can satisfy.** For every **MUST** or **SHOULD** that binds a writer,
+  name the source field it reads, or record that no source states it. This is R66 §1.3's discipline
+  turned on the obligation rather than on the column: a field a producer never fills is not
+  evidence anyone needs it, and an obligation no source can meet is a clause that will be recorded
+  as blocked rather than implemented. R102 §3 bound three and implementation found all three
+  blocked — `waveform_mean` spans twelve sortings so no single run produced it, emitting a camera
+  device needs `core.devices` in an adapter's `PRODUCES` and in every recipe, and no source links a
+  video file to a camera except by its name, which R102 §3.2 itself forbids.
 - **A measurement stated twice.** Adding a section to one that already carries a number leaves the
   number in both. State it where the rule it supports lives.
 - **"What this does not change" listing the unassumed.** Most denials belong in the **body**, where
@@ -211,6 +219,19 @@ the ones a tool can settle are cheaper than the ones only a reader can.
   run 7 to 9. Of R102's three, one survived.
 
 ## After the user accepts
+
+**The sequence tests the revision as much as it applies it, and a step that fails is a result.**
+Where one turns up something the document did not anticipate — an obligation no source can satisfy,
+a count that moved under it, a clause that fits no section — stop and report it rather than
+finishing around it. A correction that leaves the deliverable intact belongs in the document
+mid-sequence, since step 1 already edits it and nothing is fixed until step 8 commits; a correction
+that changes **what the revision delivers** is a different revision from the one that was accepted,
+and goes back to the user with what was found.
+
+R102 is the case to remember. All three of its writer obligations turned out blocked, and rewriting
+its Consequence to record that took "the adapter names the run and the cameras land" to "the
+registry change is the whole of what lands now" — the same rules, a different cost, and the user
+had accepted the first.
 
 Only the user moves a revision to Accepted. What follows is one sequence, in this order, and
 `python verify.py` is what says it is complete. `DEVELOPING.md` §4 is the machinery each step
