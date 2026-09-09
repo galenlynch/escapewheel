@@ -966,12 +966,12 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `local_unit_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `quality_label` | string | nullable | R11 §3-4 | Quality label. |
 | `amplitude_unit` | string | nullable | R96 §3.1 | Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. Open (R11 §2). |
-| `clock_id` | int32 | **required** | R96 §3.2 | The clock every tick of this unit is counted on. |
 | `quality_label_source` | string | nullable | R16 §2-3 | Which core.unit_quality_labels source the designated label came from. |
 | `firing_rate_hz` | float64 | nullable |  | Firing rate if known. |
 | `n_spikes` | int64 | nullable | R5 | Total spikes for this unit in this context. |
 | `first_spike_tick` | int64 | nullable | R5 | Lowest t_tick for this unit. |
 | `last_spike_tick` | int64 | nullable | R5 | Highest t_tick for this unit. |
+| `clock_id` | int32 | **required** | R96 §3.2 | The clock every tick of this unit is counted on. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `unit_id`  

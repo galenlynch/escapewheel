@@ -129,6 +129,22 @@ def structural(tables, universe, prefix=""):
     c_("a table carrying session_id leads with it",
        [n for n, t in tables.items()
         if "session_id" in cols[n] and t["columns"][0]["name"] != "session_id"])
+    # R56 §2.2 resolves a `coordinate` against its own row's `clock_id`, so a reader who has found a
+    # tick needs the clock next to it. Twelve of the thirteen tables carrying one already do that;
+    # `core.units` did not, because R96 §3.2 added the column beside what R96 §3.1 had just added.
+    # A `clock_id` in the primary key leads for that reason instead, and a table with no coordinate
+    # has nothing to sit beside -- both fall out of the condition rather than needing a list.
+    _clocked = []
+    for n, t in tables.items():
+        names = [c["name"] for c in t["columns"]]
+        coords = {c["name"] for c in t["columns"] if c["role"] == "coordinate"}
+        if "clock_id" not in names or not coords or "clock_id" in (t["primary_key"] or []):
+            continue
+        k = names.index("clock_id")
+        if not ({names[k - 1] if k else None, names[k + 1] if k + 1 < len(names) else None} & coords):
+            _clocked.append((n, sorted(coords)))
+    c_("a clock_id outside the key sits beside a coordinate it interprets", _clocked,
+       lambda b: f"{b[0]}: clock_id interprets {b[1]} and sits by neither")
     c_("source labels are strings",
        [(n, c["name"], c["type"]) for n, t in tables.items() for c in t["columns"]
         if c["name"].endswith("_label") and c["type"] != "string"])

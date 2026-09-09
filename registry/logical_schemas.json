@@ -4338,15 +4338,6 @@
           "vocabulary": "open"
         },
         {
-          "name": "clock_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "The clock every tick of this unit is counted on.",
-          "identity": "assigned",
-          "since": "R96 \u00a73.2"
-        },
-        {
           "name": "quality_label_source",
           "type": "string",
           "presence": "nullable",
@@ -4386,6 +4377,15 @@
           "role": "coordinate",
           "description": "Highest t_tick for this unit.",
           "since": "R5"
+        },
+        {
+          "name": "clock_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The clock every tick of this unit is counted on.",
+          "identity": "assigned",
+          "since": "R96 \u00a73.2"
         },
         {
           "name": "metadata",

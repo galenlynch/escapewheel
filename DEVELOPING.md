@@ -68,15 +68,30 @@ the order matters.
 3. **`build.py`** runs the two passes that apply a rule rather than one revision's decision, after
    every block so that both see the final primary keys: R97 §3.1 emits a `metadata` column wherever
    the key decides it and strikes one where the key forbids it, and `session_id` moves to the front
-   of every table carrying it. That second one is a convention of this registry and not a
-   conformance requirement — a validator resolves a column by name and no clause of `02` or `03`
-   states an order — so `check.py` enforces it and the specification says nothing about it.
+   of every table carrying it.
+
+   **Column order is a convention of this registry and not a conformance requirement** — a
+   validator resolves a column by name, and no clause of `02` or `03` states an order — so no
+   revision mandates one and `check.py` is what holds it. Three conventions, each chosen so a
+   reader meets the same shape in every table:
+
+   - `session_id` is the first column, being the coarsest scope a row has. Placed by the pass
+     above, so a revision cannot leave a new table out.
+   - a `clock_id` outside the primary key sits beside the coordinates that resolve against it
+     (R56 §2.2), so a reader who has found a tick has its clock. Not placed automatically: which
+     coordinates a clock interprets is the revision's decision, so `check.py` reports a stranded
+     one rather than guessing where to move it.
+   - `metadata` is last, which follows from the R97 §3.1 pass appending it.
+
+   Each varies only where the rule says it may — a `clock_id` in the key leads because it is key,
+   and a table with no coordinate has nothing to sit beside — so a placement that looks odd is
+   one the rule accounts for rather than one nobody decided.
 4. **`build.py`** merges `rules.json`, expanding any R24 template invocation into plain SQL —
    templates are a build-time device, so the registry a packet embeds carries no vocabulary a
    validator would have to learn.
 5. **`build.py`** writes `logical_schemas.json`, then calls `render.py` for `tables.md` and the
    README's regions, then copies the two hand-written schemas into the validator and the reader.
-6. **`check.py`** verifies the result: 18 structural invariants, each applied to core and to every
+6. **`check.py`** verifies the result: 19 structural invariants, each applied to core and to every
    extension registry, then the meta-schema, the naming conventions, and — with DuckDB present —
    that every Tier 2 rule is executable SQL against empty tables built from the registry.
 7. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the

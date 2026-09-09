@@ -1434,9 +1434,13 @@ def build() -> dict:
     drop_col("core.sorting_runs", "clock_id")
     T("core.sorting_runs")["references"] = [r for r in T("core.sorting_runs")["references"]
                                             if r["resource"] != "core.clocks"]
+    # After the ticks it interprets rather than beside `amplitude_unit`, which is only where the
+    # clause above happened to leave off: a `clock_id` outside the primary key sits next to the
+    # coordinates that resolve against it (R56 §2.2), as it does on `core.intervals`,
+    # `core.media_frames` and both `array_dimensions`.
     add_col("core.units", col("clock_id", "int32", "required",
                               "The clock every tick of this unit is counted on."),
-            after="amplitude_unit")
+            after="last_spike_tick")
     T("core.units")["references"].append({"columns": ["clock_id"], "resource": "core.clocks",
                                           "resource_columns": ["clock_id"]})
 
