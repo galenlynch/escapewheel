@@ -191,14 +191,9 @@ vocabularies, so no authority covers the column either (R101 §3.6).
 
 ## 4. What this does not change
 
-- **No table, column or reference is added or removed, and no Tier 2 rule.** One column is renamed
-  and changes presence; one changes presence.
-- **`band` stays open.** Three values are reserved where four were, and a validator still **MUST
-  NOT** reject an unrecognised one.
-- **The device still answers which signal.** R65 §2.1's `device_id` identifies a respiration
-  trace, and §3.2 makes a null `band` say so rather than leaving a value to be invented.
-- **No manifest field changes.** `writer.py:811` writes `dense_array_asset` into a manifest entry
-  correctly, and §2.3's defect is one table row copying it.
+- **The device still answers which signal.** Both name columns become nullable, so an array may
+  carry neither. R65 §1 put the answer in `device_id` and this part leaves it there: a respiration
+  trace is identified by the instrument that made it.
 
 ## 5. Consequence
 
