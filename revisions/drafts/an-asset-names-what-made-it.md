@@ -28,7 +28,7 @@ which hold 25 array assets and 4 videos between them.
 
 Informative.
 
-### 2.1 An array cannot reach the run that made it
+### 2.1 An array's route to its run
 
 `core.event_streams` has carried a `processing_run_id` since R23 §2, and `core.sorting_runs`,
 `core.curation_versions`, `core.electrode_coordinates` and `core.unit_coordinates` have carried
@@ -50,7 +50,7 @@ run and R82 §2.1 made an undeclared currency a mandatory **error**, so a packet
 arrays from two sortings must declare which is current and has no column to declare it through.
 Neither packet holds that case, and R82 §2.1's rule is unenforceable for arrays the moment one does.
 
-### 2.2 A media asset cannot name its device
+### 2.2 The device column a media asset lacks
 
 R65 §2.1 gave `core.array_assets` a `device_id` and gave `core.media_assets` none, so R65 §1's
 rule — which signal an asset holds is answered by the device — reaches one asset table and not
@@ -60,7 +60,7 @@ the other.
 and `clock_id`, and none of them separates a behaviour video from a miniscope movie, both of which
 are `mp4` written by a camera.
 
-### 2.3 The cameras are stated and unrecorded
+### 2.3 What the rig states about its cameras
 
 The packet's 21 devices are seven probes, a `SniffDetector` and the Open Ephys chain —
 basestations, connect boards, headstages — and **no cameras**, while `ecephys_786867` holds four
@@ -80,7 +80,7 @@ statement.
 
 ## 3. Decision
 
-### 3.1 The run that made an array
+### 3.1 An array's producing run
 
 `core.array_assets` and `analysis.array_assets` gain **`processing_run_id`**, `int32` nullable,
 referencing `core.processing_runs`. An array a run produced **MUST** name it; an acquired array
@@ -92,7 +92,7 @@ link is invisible to SQL; R41 §2.1 keys currency on the producing run and R82 �
 undeclared one an error, so a rule must be able to join an array to its run. The manifest's field
 keeps R9 §4's meaning, for resources that are not rows of a table.
 
-### 3.2 The device that made a media asset
+### 3.2 A media asset's device
 
 `core.media_assets` gains **`device_id`**, `int32` nullable, referencing `core.devices` — the
 column R65 §2.1 gave the array table and not this one.
@@ -101,7 +101,7 @@ A writer **MUST** name the device where its source states one, and **MUST NOT** 
 file name (`01` §3.5). Where the source states none the column is null, and a consumer **MUST**
 report the instrument as unrecorded rather than read one out of the asset's name.
 
-### 3.3 A camera is a device
+### 3.3 Which instruments get a device row
 
 A writer **MUST** record an instrument its source declares as a `core.devices` row, whatever kind
 of instrument it is, and identity is the serial the source states (R67 §2.2). `01` §3.5 defines a
