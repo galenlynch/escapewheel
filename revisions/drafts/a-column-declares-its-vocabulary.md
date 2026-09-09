@@ -316,7 +316,8 @@ on `core.events.event_type`, a column R91 §3.2 struck, and **12 descriptions** 
 being the open columns that state no form.
 
 Tier 1's closed-vocabulary checks go from 3 to **4**, and `registry/check.py` from 19 structural
-invariants to **25**: a string `data` column declares a vocabulary and a discriminator does not,
+invariants to **25**: a string column that is not a discriminator declares a vocabulary and one
+that is does not,
 `closed` holds exactly where `enum` does, `reserved_values` appears only under `open`, an
 authority is an absolute URI, an `open` column carries a description, and one column
 name carries one vocabulary and one authority across every table holding it. That last check holds
