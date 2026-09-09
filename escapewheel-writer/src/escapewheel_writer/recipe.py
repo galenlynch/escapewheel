@@ -59,7 +59,8 @@ PREFERRED = {
 
 #: Resources several sources each supply *part* of, which `owns` refuses and `contributes` is for.
 #: A defaulted source contributes to these rather than owning them.
-SHARED = frozenset({"core.clocks", "core.array_assets", "core.array_dimensions", "core.devices"})
+SHARED = frozenset({"core.clocks", "core.clock_anchors", "core.clock_observation_intervals",
+                    "core.array_assets", "core.array_dimensions", "core.devices"})
 
 
 def states(kind: str) -> Mapping[str, str]:

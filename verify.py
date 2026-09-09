@@ -55,7 +55,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
      ["uv", "run", "--project", str(TOOLS), "python", "fixture.py"]),
     ("prototype: conforming packet is clean", ROOT / "prototype/registry-codegen",
      ["uv", "run", "--project", str(TOOLS), "python", "validate.py", "packets/valid"]),
-    ("corpus: write 26 packets", ROOT / "fixtures",
+    ("corpus: write every packet", ROOT / "fixtures",
      ["uv", "run", "--project", str(TOOLS), "python", "build.py"]),
     ("corpus: every packet behaves as specified", ROOT / "fixtures",
      ["uv", "run", "--project", str(TOOLS), "python", "corpus.py"]),

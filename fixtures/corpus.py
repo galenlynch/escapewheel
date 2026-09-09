@@ -43,6 +43,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "unit_off_the_run": ("error", "core.unit_electrodes.electrode_is_a_run_channel"),
     "undeclared_currency": ("error", "core.processing_runs.undeclared_currency"),
     "unscoped_runs": ("error", "core.processing_runs.scope_undeclared"),
+    "clock_without_window": ("error", "core.clocks.observation_declared"),
 }
 
 #: Packets whose expected finding is advisory (R26 §3). Advisory rules are off by default --

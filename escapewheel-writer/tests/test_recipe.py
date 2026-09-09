@@ -188,7 +188,7 @@ class Noted:
 def test_a_produced_resource_no_source_claims_is_noted(tmp_path):
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
     source = Noted()
-    _note_unclaimed(recipe, recipe.sources[0], source, {"core.units": 4, "core.unit_quality_labels": 19_061})
+    _note_unclaimed(recipe.sources[0], source, {"core.units": 4, "core.unit_quality_labels": 19_061})
     assert len(source.notes) == 1
     assert "core.unit_quality_labels (19,061 rows)" in source.notes[0]
     assert "discarded" in source.notes[0]
@@ -203,14 +203,14 @@ def test_a_resource_another_source_claims_is_not_noted(tmp_path):
     source = Noted()
     # The sorter offers core.probes too; cli.PREFERRED gives it to the NWB, so losing it here
     # is the design rather than an omission.
-    _note_unclaimed(recipe, recipe.sources[0], source, {"core.units": 4, "core.probes": 10})
+    _note_unclaimed(recipe.sources[0], source, {"core.units": 4, "core.probes": 10})
     assert source.notes == []
 
 
 def test_an_empty_unclaimed_resource_is_not_noted(tmp_path):
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
     source = Noted()
-    _note_unclaimed(recipe, recipe.sources[0], source, {"core.units": 4, "core.unit_quality_labels": 0})
+    _note_unclaimed(recipe.sources[0], source, {"core.units": 4, "core.unit_quality_labels": 0})
     assert source.notes == []
 
 
@@ -218,7 +218,29 @@ def test_what_the_recipe_itself_supplies_is_not_noted(tmp_path):
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
     source = Noted()
     # RECIPE_SUPPLIES: the recipe writes these, so a source producing them loses to it by design.
-    _note_unclaimed(recipe, recipe.sources[0], source, {"core.processing_runs": 2, "core.sessions": 1})
+    _note_unclaimed(recipe.sources[0], source, {"core.processing_runs": 2, "core.sessions": 1})
+    assert source.notes == []
+
+
+def test_rows_another_source_owns_are_noted_without_a_preference(tmp_path):
+    """R98 §3.3. Two sources holding disjoint parts of one resource; `owns` keeps one silently."""
+    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
+                                        'owns = ["core.units"]\n'
+                                        '\n[[source]]\nkind = "sync"\nroot = "y"\n'
+                                        'owns = ["core.clock_observation_intervals"]\n'))
+    source = Noted()
+    _note_unclaimed(recipe.sources[0], source, {"core.clock_observation_intervals": 12})
+    assert any("core.clock_observation_intervals" in n for n in source.notes)
+
+
+def test_a_preference_is_what_makes_a_discard_silent(tmp_path):
+    """The other side: `core.clocks` names a winner, so the loser's copy is redundant by design."""
+    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
+                                        'owns = ["core.units"]\n'
+                                        '\n[[source]]\nkind = "sync"\nroot = "y"\n'
+                                        'owns = ["core.clocks"]\n'))
+    source = Noted()
+    _note_unclaimed(recipe.sources[0], source, {"core.clocks": 12})
     assert source.notes == []
 
 
@@ -226,7 +248,7 @@ def test_a_source_that_could_supply_the_subject_is_noted(tmp_path):
     """R87 §2.8: `core.subjects` left the recipe-supplied set, so R63 §2.3's warning finally sees it."""
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
     source = Noted()
-    _note_unclaimed(recipe, recipe.sources[0], source, {"core.subjects": 1})
+    _note_unclaimed(recipe.sources[0], source, {"core.subjects": 1})
     assert any("core.subjects" in n for n in source.notes)
 
 

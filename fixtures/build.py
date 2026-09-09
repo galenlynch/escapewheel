@@ -295,6 +295,11 @@ def content() -> dict[str, list[dict]]:
                 (2, "decoder", "mua", "mua", 0.71),
                 # non_soma has no honest projection, so it is null rather than forced (R22 3).
                 (2, "bombcell", "non_soma", None, None))],
+        # R98 §3.1: a clock anything is timestamped on says when it was observing. Each window
+        # contains the per-thing windows below, which R38 §2.3 narrows it with rather than adding to.
+        "core.clock_observation_intervals": [
+            {"session_id": "s001", "clock_id": "imec_ap_s001", "start_tick": 0, "stop_tick": 300_000},
+            {"session_id": "s001", "clock_id": "behavior_s001", "start_tick": 0, "stop_tick": 12_000}],
         "core.unit_observation_intervals": [
             {"session_id": "s001", "unit_id": u, "start_tick": lo, "stop_tick": hi, "clock_id": "imec_ap_s001"}
             for u, windows in ((1, [(0, 300_000)]),
@@ -477,6 +482,12 @@ def variants():
             {"session_id": "s001", "clock_id": "behavior_s001", "anchor_index": i,
              "t_tick": t, "parent_tick": t * 30}
             for i, t in enumerate([0, 1000, 2000, 3000, 23_000, 24_000, 25_000])]
+    def clock_without_window(c):
+        # R98 §3.1: the reference clock declares no observation interval, so nothing timestamped
+        # on it has a window to inherit and the session's origin has nothing to be a minimum over.
+        c["core.clock_observation_intervals"] = [
+            r for r in c["core.clock_observation_intervals"] if r["clock_id"] != "imec_ap_s001"]
+
     def undeclared_currency(c):
         # One probe sorted twice with nothing saying which to read (R41 §2.4). Both runs carry
         # a scope, so the packet says enough to know they compete -- which is what separates
@@ -515,7 +526,8 @@ def variants():
             "unreachable_clock": unreachable_clock, "unaligned_clock": unaligned_clock,
             "wide_anchor_gap": wide_anchor_gap, "two_primaries": two_primaries,
             "gapped_ordinal": gapped_ordinal, "unit_off_the_run": unit_off_the_run,
-            "undeclared_currency": undeclared_currency, "unscoped_runs": unscoped_runs}
+            "undeclared_currency": undeclared_currency, "unscoped_runs": unscoped_runs,
+            "clock_without_window": clock_without_window}
 
 
 def main():

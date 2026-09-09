@@ -1850,3 +1850,34 @@ disposition = "applied"
 where = "02_core_logical_schemas.md §8.6"
 note = "no rule checks it; the writer-side comparison is 07 §4, and the two keys the NWB adapter restated and the one the Open Ephys adapter did are no longer written"
 
+[clause."R98 §2.1"]
+disposition = "rationale"
+note = "13 clocks and 11, 12 and 10 anchored, 1 windowed each, 0 with both"
+
+[clause."R98 §2.2"]
+disposition = "rationale"
+note = "the recipe says owns where two sources hold disjoint parts; SHARED lists neither table and is read only for a source that declares no owns"
+
+[clause."R98 §2.3"]
+disposition = "rationale"
+note = "the bound has never been measured, R38 §2.3's inheritance is empty for 12 clocks of 13, and R39's origin is a minimum over one"
+
+[clause."R98 §2.4"]
+disposition = "rationale"
+note = "the corpus writes both refinement tables across 26 packets and never the window they refine"
+
+[clause."R98 §3.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §12.5"
+note = "core.clocks.observation_declared checks the anchored and reference branches; a clock aligned by transform_slope alone is reached by the obligation and not by the rule"
+
+[clause."R98 §3.2"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.3"
+note = "recipe.SHARED gains core.clock_observation_intervals and core.clock_anchors, and both recipes declare the first under contributes"
+
+[clause."R98 §3.3"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.4"
+note = "session._note_unclaimed compares against declared preferences rather than against every source's claims"
+

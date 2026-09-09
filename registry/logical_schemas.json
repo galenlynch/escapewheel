@@ -100,7 +100,8 @@
       "R94",
       "R95",
       "R96",
-      "R97"
+      "R97",
+      "R98"
     ]
   },
   "tables": {
@@ -1643,6 +1644,12 @@
           "level": "error",
           "message": "a non-reference clock declares no alignment, so it cannot be converted (R27 4)",
           "sql": "SELECT c.clock_id FROM core_clocks c JOIN core_sessions s USING (session_id) WHERE s.reference_clock_id IS NOT NULL AND c.clock_id <> s.reference_clock_id AND c.transform_slope IS NULL AND NOT EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.clock_id = c.clock_id)"
+        },
+        {
+          "id": "core.clocks.observation_declared",
+          "level": "error",
+          "message": "a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit (R98 3.1)",
+          "sql": "SELECT c.session_id, c.clock_id FROM core_clocks c LEFT JOIN core_clock_observation_intervals o ON o.session_id = c.session_id AND o.clock_id = c.clock_id WHERE o.clock_id IS NULL AND (EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id) OR EXISTS (SELECT 1 FROM core_sessions s WHERE s.session_id = c.session_id AND s.reference_clock_id = c.clock_id))"
         }
       ]
     },

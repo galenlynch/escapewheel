@@ -18,15 +18,12 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `a-clock-declares-when-it-was-observing` | a clock anything is timestamped on declares its own observation window, which nothing required and one clock in thirteen carries |
-| 2 | `a-packet-records-its-clock-alignment-in-columns` | three facts a reader needs to place a tick leave `core.processing_runs.parameters` for columns and a table |
-| 3 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
+| 1 | `a-packet-records-its-clock-alignment-in-columns` | three facts a reader needs to place a tick leave `core.processing_runs.parameters` for columns and a table |
+| 2 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
 | — | `what-a-reserved-value-is-for` | outside the order; it amends R11 §4 alone and depends on nothing here |
 
-The first two are ordered rather than independent: the alignment bound cannot be measured until
-every clock declares a window, so accepting the second first would add a column no writer can fill
-for a reason the packet does not record.
+These are independent of each other; the order is a convenience, not a constraint.
 
-Two of them change a registry count — the first a rule, the second columns, references and a table
-— each measured against the registry as it stood when it was drafted. Whichever is accepted second
-re-measures, which the pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
+One of them changes the registry's column, reference and table counts, measured against the
+registry as it stood when it was drafted. Whichever is accepted second re-measures, which the
+pre-acceptance checks in `../CLAUDE.md` require of every number anyway.

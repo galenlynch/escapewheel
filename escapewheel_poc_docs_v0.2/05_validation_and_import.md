@@ -55,6 +55,8 @@ Each source declares its resources as `owns` or `contributes`.
 
 `contributes` exists because some resources genuinely have several suppliers. Without the distinction, the last adapter to run wins silently.
 
+A recipe MUST NOT declare `owns` for a resource that more than one of its sources produces rows for, unless it declares a preference between them (R98 §3.2). Exclusivity is for a resource one source is responsible for; where two sources each hold part, `owns` discards the part the owner does not hold, and no check sees it because the resource is claimed.
+
 ### 3.4 What a source can produce
 
 Every source adapter MUST declare `PRODUCES`, the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
@@ -62,6 +64,8 @@ Every source adapter MUST declare `PRODUCES`, the set of resource identifiers it
 A source entry that declares no `owns` MUST be read as owning every resource in its adapter's `PRODUCES` that no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
 
 Where two sources default to the same resource and no preference is declared, the recipe MUST be refused naming both.
+
+A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them (R98 §3.3). That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. R63 §2.3's warning covers the neighbouring case, a resource *no* source claims, refused before a byte is read.
 
 A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for (R87 §2.2). What that declaration is called and where it lives is Part 07 §4's.
 

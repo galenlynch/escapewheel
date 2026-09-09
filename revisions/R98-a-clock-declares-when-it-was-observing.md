@@ -1,8 +1,8 @@
-# A Clock Declares When It Was Observing
+# R98 — A Clock Declares When It Was Observing
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | `05` §3.3 (ownership), `05` §3.4 (what a source can produce); adds one Tier 2 rule on `core.clocks` |
 | **Depends on** | R38 (observation belongs to the clock), R39 (the session's time origin), R63 (default ownership when a recipe omits `owns`) |
 | **Profile** | all |
@@ -178,14 +178,15 @@ either is an omission rather than a decision.
 
 70 Tier 2 rules become **71**. No table, column or reference changes.
 
-`fixtures/build.py` writes `core.clock_observation_intervals` for both of its clocks across the 26
-corpus packets, which the rule forces rather than invites: `imec_ap_s001` is the session's
-reference clock and declares no window, so all 26 fail until they carry one. The other clock,
+`fixtures/build.py` writes `core.clock_observation_intervals` for both of its clocks, which the
+rule forces rather than invites: `imec_ap_s001` is the session's reference clock and declares no
+window, so every packet in the corpus fails until it carries one. The other clock,
 `behavior_s001`, is aligned by `transform_slope` in the base packet and by anchors in the
 `clock_cycle` variant, so it falls outside the rule in one and inside it in the other — §3.1's
-narrowing, visible in the corpus. One variant is added whose expected
-finding is a clock without one, and the corpus gains a `t_zero_tick` it could not previously
-compute.
+narrowing, visible in the corpus. A `clock_without_window` variant is added whose expected finding
+is `core.clocks.observation_declared`, taking the corpus from **26 packets to 27**. The corpus also
+gains a `t_zero_tick` it could not previously compute, R39 §2.2 having required it to declare none
+while it carried no observation intervals.
 
 The two recipes declare `core.clock_observation_intervals` under `contributes`, and both packets
 are rebuilt — which R87 §2.1, R88 §2, R91 §5, R95, R96 and R97 already require. After the rebuild

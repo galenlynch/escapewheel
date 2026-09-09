@@ -454,3 +454,9 @@ identifier of its own where theirs are keyed by other tables' identifiers (R89 �
 ### 12.4 A clock's rate
 
 A clock MUST NOT declare both `tick_rate_hz` and a rational rate (R95 §3.2); `core.clocks.tick_rate_declared` already requires at least one, so exactly one is present. The float is for a source that measured its rate rather than stating an exact one, and forcing a rational on it would make a writer invent a denominator — a rounding decision this specification does not make on a source's behalf (R66 §2.1).
+
+### 12.5 A clock's observation window
+
+A packet MUST declare at least one row of `core.clock_observation_intervals` for every clock any of its rows is timestamped on (R98 §3.1). More than one is permitted, for an acquisition paused and resumed (R38 §2.1). A clock that exists only as a parent declares none: R27 §3 requires the chain to be well founded, so such a clock is declared, and nothing is observed on it for R38 §2.3's inheritance to reach.
+
+`core.clocks.observation_declared` checks the part of that a query can see — a clock that has anchors, or that a session names as its `reference_clock_id`, and declares no interval. A clock aligned by `transform_slope` alone carries data and has no anchors, so the obligation reaches it and the rule does not; the obligation binds the writer, which knows what it timestamped.

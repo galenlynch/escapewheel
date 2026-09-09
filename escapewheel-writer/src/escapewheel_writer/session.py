@@ -36,7 +36,7 @@ from escapewheel_reader.clocks import BOUND, align
 from numpy.typing import NDArray
 
 from .extensions import load as load_extension
-from .recipe import RECIPE_SUPPLIES, Recipe, SourceSpec, states
+from .recipe import PREFERRED, RECIPE_SUPPLIES, Recipe, SourceSpec, states
 from .sources import SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
@@ -776,7 +776,7 @@ def build(
 
         produced = _add_records(writer, spec, source, context, counts)
         produced.update(_add_batches(writer, spec, source, counts))
-        _note_unclaimed(recipe, spec, source, produced)
+        _note_unclaimed(spec, source, produced)
         # Any adapter may stage arrays, not only the waveform one. A source that has them says
         # so by defining `staged_arrays`; the kind it happens to be is not the question.
         for staged in getattr(source, "staged_arrays", lambda: ())():
@@ -911,7 +911,7 @@ def _add_records(
     return produced
 
 
-def _note_unclaimed(recipe: Recipe, spec: SourceSpec, source: Any, produced: Mapping[str, int]) -> None:
+def _note_unclaimed(spec: SourceSpec, source: Any, produced: Mapping[str, int]) -> None:
     """Note what a source produced that nothing in the recipe claims.
 
     `owns` is exclusive and discards in silence, so rows every source produces and none claims
@@ -921,13 +921,17 @@ def _note_unclaimed(recipe: Recipe, spec: SourceSpec, source: Any, produced: Map
     (`Recipe.check`); this one needs the source to say what it holds, so it is a note, and
     `--strict` refuses on it.
 
-    A resource some *other* source claims is not reported: `cli.PREFERRED` exists because two
-    sources offer the same rows and the one that knows more about them wins, which makes the
-    loser's copy discarded by design rather than by omission.
+    A resource some *other* source claims is reported unless a preference names the winner (R98
+    §3.3). `PREFERRED` exists because two sources offer the same rows and the one that knows more
+    about them wins, which makes the loser's copy discarded by design; without one they are
+    producing *different* rows, which is how twelve of thirteen clocks lost their observation
+    window to a recipe that said `owns`.
     """
-    claimed = {resource for entry in recipe.sources for resource in entry.claims}
-    claimed.update(RECIPE_SUPPLIES)
-    dropped = {resource: rows for resource, rows in produced.items() if resource not in claimed and rows}
+    # Discarded by design: the recipe writes these itself, or a preference names the winner.
+    # Everything else this source produced and does not claim is discarded by omission.
+    by_design = set(RECIPE_SUPPLIES) | {r for r in produced if PREFERRED.get(r) is not None}
+    dropped = {resource: rows for resource, rows in produced.items()
+               if rows and resource not in spec.claims and resource not in by_design}
     notes = getattr(source, "notes", None)
     if not dropped or notes is None:
         return

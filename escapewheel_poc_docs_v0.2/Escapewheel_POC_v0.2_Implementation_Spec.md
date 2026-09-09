@@ -1099,6 +1099,12 @@ identifier of its own where theirs are keyed by other tables' identifiers (R89 �
 
 A clock MUST NOT declare both `tick_rate_hz` and a rational rate (R95 §3.2); `core.clocks.tick_rate_declared` already requires at least one, so exactly one is present. The float is for a source that measured its rate rather than stating an exact one, and forcing a rational on it would make a writer invent a denominator — a rounding decision this specification does not make on a source's behalf (R66 §2.1).
 
+### 12.5 A clock's observation window
+
+A packet MUST declare at least one row of `core.clock_observation_intervals` for every clock any of its rows is timestamped on (R98 §3.1). More than one is permitted, for an acquisition paused and resumed (R38 §2.1). A clock that exists only as a parent declares none: R27 §3 requires the chain to be well founded, so such a clock is declared, and nothing is observed on it for R38 §2.3's inheritance to reach.
+
+`core.clocks.observation_declared` checks the part of that a query can see — a clock that has anchors, or that a session names as its `reference_clock_id`, and declares no interval. A clock aligned by `transform_slope` alone carries data and has no anchors, so the obligation reaches it and the rule does not; the obligation binds the writer, which knows what it timestamped.
+
 <!-- END 02_core_logical_schemas.md -->
 
 <!-- BEGIN 03_portable_physical_profile.md -->
@@ -1625,6 +1631,8 @@ Each source declares its resources as `owns` or `contributes`.
 
 `contributes` exists because some resources genuinely have several suppliers. Without the distinction, the last adapter to run wins silently.
 
+A recipe MUST NOT declare `owns` for a resource that more than one of its sources produces rows for, unless it declares a preference between them (R98 §3.2). Exclusivity is for a resource one source is responsible for; where two sources each hold part, `owns` discards the part the owner does not hold, and no check sees it because the resource is claimed.
+
 ### 3.4 What a source can produce
 
 Every source adapter MUST declare `PRODUCES`, the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
@@ -1632,6 +1640,8 @@ Every source adapter MUST declare `PRODUCES`, the set of resource identifiers it
 A source entry that declares no `owns` MUST be read as owning every resource in its adapter's `PRODUCES` that no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
 
 Where two sources default to the same resource and no preference is declared, the recipe MUST be refused naming both.
+
+A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them (R98 §3.3). That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. R63 §2.3's warning covers the neighbouring case, a resource *no* source claims, refused before a byte is read.
 
 A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for (R87 §2.2). What that declaration is called and where it lives is Part 07 §4's.
 
