@@ -14,11 +14,11 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-Dependencies run downward: a draft depends on the ones above it and on nothing below.
+Dependencies run downward: a draft may depend on the ones above it and on nothing below.
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `the-alignment-keys-in-a-runs-parameters` | three keys a reader reads and no document states |
+| 1 | `a-packet-records-its-clock-alignment-in-columns` | three facts a reader needs to place a tick leave `core.processing_runs.parameters` for columns and a table |
 | 2 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
 | — | `what-a-reserved-value-is-for` | outside the order; it amends R11 §4 alone and depends on nothing here |
 
