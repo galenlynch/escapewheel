@@ -190,12 +190,18 @@ A writer **MUST** spell a value as the named nomenclature does, and **MUST NOT**
 re-punctuate one to fit a house style: values are compared exactly, so `mouse`, `Mus Musculus` and
 `mus_musculus` are three ways of failing to name one animal.
 
-### 3.6 An open column may name the nomenclature its values come from
+### 3.6 A column may name the nomenclature its values come from
 
 Where one nomenclature covers a whole column, the registry says so as a value rather than as
-prose. A column declaring `vocabulary: open` **MAY** declare `authority`, an array of absolute
-URIs naming the nomenclatures its values are drawn from — `species` names NCBI Taxonomy, `strain`
-names MGI and RGD. Identity, not a fetch instruction: a validator **MUST NOT** dereference one
+prose. A column **MAY** declare `authority`, an array of absolute URIs naming the nomenclatures
+its values are drawn from — `species` names NCBI Taxonomy, `strain` names MGI and RGD, and `sex`
+names HL7 FHIR.
+
+Any vocabulary may carry one, closed included. Drawn from is not equal to: a closed column's
+`enum` is the set a validator enforces, and its authority says where that set's spelling came
+from, which is what lets `sex` name FHIR while adding `hermaphrodite` and carrying `unknown` as
+null. Barring it from a closed column would leave the provenance in prose, which is what §2.3
+indicts. Identity, not a fetch instruction: a validator **MUST NOT** dereference one
 (R14 §2.3.2) and **MUST NOT** reject a value for being absent from it, which is R57 §2.2's rule for
 `$schema` one level down. An array rather than a scalar because a column's values may honestly
 come from two registries, as a strain's do from mouse and from rat.
@@ -205,8 +211,8 @@ name the atlas, so its authority varies **per row**, which no column-level field
 is why the description obligation stays — a URI is an identity where "the scientific name, not the
 common name" is an instruction.
 
-`registry/check.py` checks that the description is present, that an authority is an absolute URI
-declared only on an open column, and that two columns of one name name one nomenclature — which is
+`registry/check.py` checks that the description is present, that an authority is an absolute URI,
+and that two columns of one name name one nomenclature — which is
 §2.3's drift caught mechanically, where the description alone leaves it to review.
 
 ### 3.7 `event_type` reserves nothing
@@ -241,10 +247,10 @@ are the same claim, so the field stays absent.
 becoming core's fourth closed vocabulary.
 
 Three of those are HL7 FHIR's `AdministrativeGender` — `male`, `female`, `other`, `unknown` —
-whose fourth this set carries as null rather than as a code, since a null column and a column
-saying `unknown` would be one fact spelled two ways (R3 §3.0). The spelling is FHIR's because it
-is published and lowercase; ISO/IEC 5218 is numeric and PATO is a set of IRIs, so neither is a
-code a column could hold.
+which the column names as its `authority` under §3.6, and whose fourth value this set carries as
+null rather than as a code, since a null column and a column saying `unknown` would be one fact
+spelled two ways (R3 §3.0). The spelling is FHIR's because it is published and lowercase; ISO/IEC
+5218 is numeric and PATO is a set of IRIs, so neither is a code a column could hold.
 
 `hermaphrodite` is the addition, and it names a determinate sex rather than a residue:
 *Caenorhabditis elegans* is hermaphrodite or male and has no females, so `other` would collapse
@@ -303,16 +309,16 @@ The 24 newly open are a few vocabularies spread thin: seven `unit` columns, four
 `origin`, `calibration_type`, `probe_type`, `event_type`, `activity_type`, `coordinate_frame` and
 the seven subject and device columns.
 
-Two columns carry `reserved_values`, the first the registry has ever held, and two carry an
-`authority` — `core.subjects.species` and `core.subjects.strain`, with the eight `unit` columns
-following if §6's UCUM question resolves yes. `build.py` loses the line setting `reserved_values`
+Two columns carry `reserved_values`, the first the registry has ever held, and three carry an
+`authority` — `core.subjects.species`, `core.subjects.strain` and `core.subjects.sex`, with the
+eight `unit` columns following if §6's UCUM question resolves yes. `build.py` loses the line setting `reserved_values`
 on `core.events.event_type`, a column R91 §3.2 struck, and **12 descriptions** are rewritten,
 being the open columns that state no form.
 
 Tier 1's closed-vocabulary checks go from 3 to **4**, and `registry/check.py` from 19 structural
 invariants to **25**: a string `data` column declares a vocabulary and a discriminator does not,
-`closed` holds exactly where `enum` does, `reserved_values` and `authority` appear only under
-`open`, an authority is an absolute URI, an `open` column carries a description, and one column
+`closed` holds exactly where `enum` does, `reserved_values` appears only under `open`, an
+authority is an absolute URI, an `open` column carries a description, and one column
 name carries one vocabulary and one authority across every table holding it. That last check holds
 across all 102 columns today, and is what §2.3's drift would have caught.
 
