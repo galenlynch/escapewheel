@@ -108,9 +108,11 @@ Primary key `(session_id, coordinate_frame)`; sorted by it (R10 §2).
 undeclared frame is an orphan Tier 1 reports. A packet carrying coordinates **MUST** declare every
 frame they name.
 
-Session-scoped, because a frame's definition is a session's: R85 §2.2 made `core.devices`
-session-scoped on finding eleven device names shared between two packets meaning different
-hardware, and two rigs calling their frame `stereotaxic` is the same collision one table over.
+Session-scoped, because a frame's definition is a session's. R88 §2 scopes a table by whether it
+reaches `core.sessions`, and R85 §1.3 measured why that is right rather than incidental for a
+table keyed by a name: `headstage.slot3.port4` is `hardware_version` **1.8** in one session and
+**0.1** in the other, so a name two sessions reuse names different things. Two rigs calling their
+frame `stereotaxic` is the same collision one table over.
 
 ### 3.2 An axis names what it measures, and an orientation names the convention
 
