@@ -203,10 +203,17 @@ source states `rel_x` and `rel_y`, which name a relative position and not an acr
 probe coordinates become coordinates whose axes are undeclared, which is what they have been all
 along and what §3.4 now makes a consumer say.
 
-Filling them is adapter work rather than a gap in the format: a probe's geometry is stated by the
-tools that produce it, and no Stage 1 inventory has asked which of them says what a shank's axes
-are. Both packets are rebuilt, which R87 §2.1, R88 §2, R91 §5, R95, R96, R97, R98, R99, R101 and
-R103 already require.
+A Stage 1 survey says that is not the adapter's oversight. The NWB describes `rel_x` as "rel_x
+from merged", `settings.xml` offers `ELECTRODE_XPOS` and `ELECTRODE_YPOS`, and the sorted asset's
+preprocessed record carries none of ProbeInterface's `ndim`, `si_units` or `contact_positions` —
+three artifacts, three spellings of x and y, and no sentence saying which way either runs. What
+all three do state is the probe model, `NP2000` and `Neuropixels 2.0 - Single Shank`, whose
+geometry imec's specification fixes; so a probe frame's axes are held outside the packet, as a
+species name is held by NCBI Taxonomy. Filling them is a lookup keyed on what
+`core.probes.probe_type` already carries.
+
+Both packets are rebuilt, which R87 §2.1, R88 §2, R91 §5, R95, R96, R97, R98, R99, R101 and R103
+already require.
 
 `fixtures/build.py` gains the two tables and a `frame_without_axes` variant whose expected finding
 is the orphan frame, taking the corpus from 27 packets to **28**.
@@ -222,6 +229,10 @@ is the orphan frame, taking the corpus from 27 packets to **28**.
   three-dimensional Cartesian frame that §2.4 measures 31% of coordinate rows not to have. A name
   saying which they are — `axis_0_value` and its fellows — would claim nothing, and would touch
   every row of both coordinate tables.
+- **Where a probe model's geometry is looked up.** §5 measures that no artifact of a session
+  states a shank's axes and that all three state the model. Turning a model into axes is a lookup
+  someone must own — an adapter, an R17 §2 extension, or a nomenclature named the way R101 §3.6
+  names one — and this part settles only that the packet may not guess.
 - **What a `stereotaxic` frame would declare.** R19 §3 reserved the name and neither packet uses
   it. Such a frame is measured from an animal's own skull landmark, so two sessions' frames of that
   name differ by where bregma was, and §3.1's rows carry no origin to record that. The one artifact
