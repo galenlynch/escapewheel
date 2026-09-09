@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `02` §8.3 (what a discriminator is), R20 §2.3 (the labelled axis) |
+| **Amends** | `02` §8.3 (what a discriminator is), R20 §2.4 (the labelled axis), R90 §3.5 (the third shape becomes declared) |
 | **Depends on** | R46 (the references the registry never declared), R55 (a discriminated reference), R88 (the reference count this starts from) |
 | **Profile** | all |
 
@@ -34,8 +34,9 @@ could hold an empty string and validate clean.
 That is the state R55 was written to end. R90 §3.1 makes `discriminator` a role precisely
 for a column a consumer resolves to a **table**, so that something finally checks the value; §2.4
 generates the resolution check from the structure rather than leaving it hand-written per site.
-Three columns carry the role today — `core.intervals.interval_kind`, and `scope_kind` on
-`core.preferred_runs` and `core.processing_runs`. `coordinate_resource` and its `analysis` copy are
+Five columns carry the role today — `core.intervals.interval_kind`, `scope_kind` on
+`core.preferred_runs` and `core.processing_runs`, and `detail_kind` on `core.calibrations`
+(R89 §2.5) and `core.event_streams` (R91 §3.3). `coordinate_resource` and its `analysis` copy are
 the only other string columns in the registry shaped like a resource, and R55's sweep did not reach
 them.
 
@@ -102,17 +103,37 @@ returns **0 of 53 rows** today.
 one: both real values are `channel_index`, `int64` and `structural_index` in each of the two tables
 that carry it.
 
-### 2.3 A labelled axis resolves by position
+### 2.3 A by-position discriminator declares that it is one
 
-`coordinate_resource` resolves by R90 §3.5's third shape: the
-named resource's **rows are the positions**, located by the column §2.2 names, so resolution is
-neither a key join nor a value-to-key join. That part's joinability rules for the other two shapes
-therefore do not apply here, and **MUST NOT** be read as applying.
+`coordinate_resource` resolves by R90 §3.5's third shape, and R90 excludes that shape from the
+reverse check twice — §3.5 says §3.6's joinability rules "**MUST NOT** be read as applying", and
+§3.8 says the reverse check "does not apply to §3.5's third shape, which has no key correspondence
+at all". Neither is implementable. Nothing records which shape a discriminator uses:
+`discriminates` separates a paired value from the other two, and by-position and shared-key are
+indistinguishable without it, so `escapewheel_validator.generate` treats every discriminator
+without a paired value as shared-key. The rule is unambiguous and the generator cannot obey it.
 
-The two cases show why. `core.array_channels` happens to declare `(array_asset_id, axis_index)` →
-`core.array_dimensions`, which ties its rows to the axis explicitly; `core.unit_electrodes`
-declares no such reference and cannot, because it carries neither column — its rows are a waveform
-array's electrode axis, reached through the unit that another axis of the same array identifies.
+A discriminator resolving by position therefore **MUST** declare `positions_in`, naming the column
+of its own table whose value is the position column in the named resource. `coordinate_resource`
+declares `positions_in: coordinate_position_column` on both tables. A discriminator **MUST NOT**
+declare both `positions_in` and `discriminates`; they are different shapes. R90 §3.5's clause that
+the third is reached "only by naming a resource whose rows are positions" is struck — it says the
+shape is self-evident, which is what left it undeclared — and §3.8's exclusion stands, becoming
+enforceable rather than advisory.
+
+Tier 1 **MUST NOT** generate R90 §3.8's reverse check for a discriminator declaring
+`positions_in`. Without the declaration it does, because `core.array_channels` declares
+`(array_asset_id, axis_index)` → `core.array_dimensions`, which is R55 §2.3.1's whole-key test — so
+the generator reads it as a shared-key specialisation and requires every axis row naming
+`core.array_channels` to have a channel row on that key. It returns **0 of 12 and 0 of 10 rows**
+across the two packets, so the check passes today and is checking something the standard says does
+not apply.
+
+The other case is why it must not. `core.unit_electrodes` declares no such reference and cannot,
+carrying neither column — its rows are a waveform array's electrode axis, reached through the unit
+that another axis of the same array identifies. A packet whose channel axis names
+`core.array_channels` without a row per axis is conforming and would fail a check R90 §3.5 says it
+is not subject to.
 
 What a consumer may rely on is what §2.1 and §2.2 require: the resource is declared, and the column
 named holds the position. How the rows of that resource are narrowed to one axis is the resource's
@@ -142,9 +163,17 @@ which is R46 §4's result on its sixteen.
 
 ## 4. Consequence
 
-Two columns gain a role and a `resolves`, so Tier 1's discriminator checks go from 6 to **10** (two
-per discriminator, R90 §3.8), and references go from 90 to **91**. One Tier 2 rule is added for
-§2.2's pair, on both tables. No table, no column, and no packet's rows change.
+Two columns gain a role, a `resolves` and a `positions_in`, so Tier 1's discriminator checks go
+from 10 to **14** (two per discriminator, R90 §3.8, and §2.3 is what keeps it two rather than
+three), and references go from 96 to **97**. One Tier 2 rule is added for §2.2's pair, on each of
+the two tables. No table, no column, and no packet's rows change.
+
+`registry.schema.json` gains `positions_in`, since it sets `additionalProperties: false` and a
+field it does not know is a build error rather than a field it ignores. `registry/check.py` checks
+that the named column exists on the same table and that no discriminator declares both it and
+`discriminates`, and `escapewheel_validator.generate` skips R90 §3.8's reverse branch where it is
+present. That branch is wrong for a by-position discriminator today and has never fired on one,
+there being none; this part creates the first, which is why it carries the fix.
 
 `registry/check.py` gains two entries in `NAMING_EXCEPTIONS`, each with §2.1's reason, and its
 existing check that every declared exception still breaks a convention is what keeps them from going
