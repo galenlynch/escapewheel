@@ -18,7 +18,7 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `an-arrays-band-and-the-quantity-it-holds` | §3.3 strikes `waveform` because R102 §3.1 gives the run a column of its own, and §3.4 lets a video's `semantic_type` empty once R102 §3.2's `device_id` is filled |
+| 1 | `an-arrays-band-and-the-quantity-it-holds` | its `waveform` strike rests on R102 §3.1 giving the run a column of its own, and its nullable `semantic_type` empties for a video once R102 §3.2's `device_id` is filled |
 | 2 | `a-device-declares-what-kind-of-thing-it-is` | the camera it specialises is only a `core.devices` row after R102 §3.3 |
 | 3 | `a-coordinate-frame-declares-what-its-axes-mean` | adds a table whose six string columns need R101 §3.1's declaration, and gives `coordinate_frame` the reference R101 §6 records it lacking |
 | 4 | `a-coded-value-is-stored-decoded` | rests on R101 §3.1 having forbidden a vocabulary on an integer, which is what left the column unable to say what its codes mean |
