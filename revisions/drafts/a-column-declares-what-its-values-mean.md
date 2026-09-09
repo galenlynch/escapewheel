@@ -241,32 +241,33 @@ R56's `unit` field follows UCUM too, by a different mechanism. The eight columns
 as a **value**, so a packet's rows are what conform and an `authority` is the declaration. The
 fifteen columns that *declare* one hold it as registry text, which `registry/check.py` checks as
 it checks a column's name against `02` §4 — a property of the registry rather than of any packet's
-rows, so exceptions are declared with a reason and checked to still be needed.
+rows.
 
 Eleven of the fifteen conform already: `Hz` on four columns, `um` on six, `s` on one. Two are
 spellings — `core.electrodes.impedance_ohm` declares `ohm` where UCUM writes `Ohm`, and
-`core.source_files.size_bytes` declares `byte` where it writes `By`. Two are one exception:
-`core.clock_phase_steps.anchor_interval_span` declares `anchor intervals` and
-`core.sessions.alignment_bound` declares `median anchor intervals`, each counting a quantity the
-packet itself measured, so the size of the unit varies per packet and UCUM has no form for it.
+`core.source_files.size_bytes` declares `byte` where it writes `By`. The last two need no
+exemption, because UCUM already has the form: an annotation in curly braces is a valid unit and is
+dimensionless, so `core.clock_phase_steps.anchor_interval_span` declares `{anchor_interval}` and
+`core.sessions.alignment_bound` declares `{median_anchor_interval}`.
 
-Neither is a unit, which is why no form is missing. `alignment_bound` of 3 is a duration divided
-by a duration, so the quantity is dimensionless and the string records the **normalizer** rather
-than a unit of measure. What a consumer needs is that normalizer's definition, and R37 §3.1 gives
-it while `core.clock_anchors` holds what computes it — so the exception carries the citation in
-its description, and no field is added for two columns that do not measure anything.
+That is the right expression rather than a workaround. An alignment bound of 3 is a duration
+divided by a duration, so the quantity is dimensionless and what the string carries is the
+**normalizer** — which is what a UCUM annotation is for. The normalizer's own definition stays
+where R37 §3.1 put it, and `core.clock_anchors` holds what computes it, so all fifteen
+declarations are UCUM codes and no column is exempt.
+
 No table changes — a declared unit is registry text, so what moves is the registry each packet
 embeds.
 
 Both halves are a **MUST**, and `02` §8.4 gains the statement: a column holding a physical unit
-**MUST** hold a UCUM code, and a column declaring one **MUST** declare a UCUM code or an exception
-the registry declares with a reason. That is what makes §8.4's existing rule operable. It says a
+**MUST** hold a UCUM code, and a column declaring one **MUST** declare a UCUM code, an annotation
+being one. That is what makes §8.4's existing rule operable. It says a
 consumer **MUST NOT** silently compare or combine two columns whose declared units differ (R56
 §2.5), and without one vocabulary `volts` and `V` differ while naming one unit — so the rule
 refuses a legitimate comparison exactly as readily as it catches a wrong one.
 
 `registry/check.py` checks that the description is present, that an authority is an absolute URI,
-that a declared unit is a UCUM code or a declared exception, and that two columns of one name name
+that a declared unit is a UCUM code, and that two columns of one name name
 one nomenclature — which is
 §2.3's drift caught mechanically, where the description alone leaves it to review.
 
@@ -406,8 +407,9 @@ authority is an absolute URI, an `open` column carries a description, and one co
 name carries one vocabulary and one authority across every table holding it. That last check holds
 across all 102 columns today, and is what §2.3's drift would have caught.
 
-`core.array_assets.kind` becomes `waveform` on the three arrays §2.5 measures as
-`dense_array_asset`. `02` §8.4 gains the UCUM statement and `03` §5 gains §5.6, stating the profile's single null beside the Parquet floor §5.5 already
+`core.array_assets.kind` carries a reserved set for the first time, so §2.5's three arrays draw
+§3.11's `info` report rather than passing unremarked; which value replaces `dense_array_asset` is
+settled by `an-array-declares-which-band-it-holds`, not here. `02` §8.4 gains the UCUM statement and `03` §5 gains §5.6, stating the profile's single null beside the Parquet floor §5.5 already
 records. `fixtures/build.py` writes `sex` as `male` rather than `M`, so every packet in the corpus changes;
 the NWB adapter gains the mapping §3.9 requires, and both packets are rebuilt, which R87 §2.1,
 R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains §3.11's report.
@@ -448,10 +450,8 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   `core.array_assets`, and neither description says what separates them — which is why "are the
   four values right" cannot be answered here. The packets hold both possible relationships:
   `semantic_type` `ElectricalSeries` with `kind` `lfp` is complementary, where `waveform_mean`
-  with `waveform` would be one fact twice (R3 §3.0). The four also mix two things as R11 §4's six
-  did — `raw`, `ap` and `lfp` are bands of one signal and `waveform` is a derived product — so
-  reading `kind` as the band strikes the fourth value and leaves the column, which is **required**,
-  with nothing for the photometry or respiration array that R65 §1 and `01` §3.17 make core's
-  business. Three reserved bands and a nullable column is the likely shape, and it is a schema
-  change. §3.5 forces this part to rewrite the description meanwhile, which it does minimally:
-  the four values and their openness, without the "etc.".
+  with `waveform` would be one fact twice (R3 §3.0). Settled in
+  `an-array-declares-which-band-it-holds`, which reads the column as the band a signal was split
+  into, renames it, and makes it nullable — a schema change this part does not carry. §3.5 forces
+  this part to rewrite the description meanwhile, which it does minimally: the four values R8 §4
+  reserved and their openness, without the "etc.".
