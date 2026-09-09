@@ -100,9 +100,13 @@ Stage 1 inventory found it **empty for all 3,840 electrodes** of one session and
 the other, recording that "nothing records the actual filter". That is R66 §1.3's control case: a
 field a producer models and never fills is not evidence anyone needs it.
 
-`sample_rate_hz` is not a substitute and is also absent — null on all 22 LFP arrays. A signal can
-be decimated without being filtered and filtered without being decimated, so the rate is a proxy
-for the band and not the band.
+The sampling rate is not a substitute, and knowing it exactly does not help. It is declared: the
+time axis of every LFP array carries `step_tick_num` 24 over `step_tick_den` 1 on a clock whose
+tick rate is 30,000, so the rate is **30000 / 24 = 1250 Hz** as an exact rational (R20 §2.1) —
+which is also why `core.array_assets.sample_rate_hz` is filled on 2 of 14 arrays and 1 of 11, a
+column restating what the axis already declares (R3 §3.0). What 1250 Hz gives is a Nyquist bound
+of 625 Hz and neither corner, so every lowpass below it is consistent with what the packet holds.
+A signal can be decimated without being filtered and filtered without being decimated.
 
 ## 3. Decision
 

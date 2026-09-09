@@ -185,17 +185,30 @@ the ones a tool can settle are cheaper than the ones only a reader can.
   acceptance.
 - **A measurement stated twice.** Adding a section to one that already carries a number leaves the
   number in both. State it where the rule it supports lives.
-- **"What this does not change" listing the unassumed.** The commonest place a revision pads. A
-  bullet earns its place only where some sentence in the Motivation or the Decision invites the
-  inference it denies: name that sentence, and say what a reader would conclude from it. Where
-  nothing in the document invites the conclusion, the bullet is denying something nobody was going
-  to think. Measured over the accepted revisions: **299 bullets across 75**, a mean of 4, and the
-  recent ones run 7 to 9, so a section past the mean is worth re-reading rather than trusting.
+- **"What this does not change" listing the unassumed.** Most denials belong in the **body**, where
+  the clause they qualify is; this section is for the ones that fit nowhere else, which is why it
+  is the commonest place a revision pads. A bullet earns its place by passing three tests, and it
+  must pass all three.
 
-  Three things collect there that are not what the revision declines to do, and each has a home:
-  a settled question belongs in the body, a composition note about another revision belongs in
-  Consequence, and an implementation note belongs in Consequence. A bullet running to a paragraph
-  is usually one of the three.
+  **Does the body already answer it?** R102's "no manifest field changes" was invited by its §2.1
+  and already answered by the last sentence of its §3.1, so the bullet said a second time what the
+  Decision had settled. A settled question belongs where it was settled; a composition note about
+  another revision and an implementation note both belong in Consequence. A bullet running to a
+  paragraph is usually one of those three.
+
+  **Does anything invite it?** Name the sentence in the Motivation or the Decision that invites the
+  inference, and say what a reader would conclude from it. Where nothing does, the bullet denies
+  what nobody was going to think: R102's "no table is added and no column is removed" denied what
+  its own `Amends` line and its Consequence had each already stated outright.
+
+  **Is it true?** The first two tests ask whether a denial is wanted, never whether the document
+  supports it. Read each bullet against the Decision's clauses and not only against the Motivation
+  that invited it — `a-coded-value-is-stored-decoded` said "core is untouched" while its §3.1 laid
+  down a rule binding every column in the registry. Such a bullet looks sound in isolation, so the
+  check starts from the rule and asks which denials it falsifies, not from the bullet.
+
+  Measured over the accepted revisions: **299 bullets across 75**, a mean of 4, and the recent ones
+  run 7 to 9. Of R102's three, one survived.
 
 ## After the user accepts
 
