@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | R19 §3 (the axis meaning, and the three reserved frame names); adds `core.coordinate_frames` and the reference `coordinate_frame` has never had |
-| **Depends on** | `a-column-declares-its-vocabulary` (open draft: every string column declares `closed`, `open` or `free`), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R58 §2.1 (a frame and a basis are two facts), R59 §2 (the frame names the atlas), R83 §3 (report unresolvable rather than resolve), R88 §2 (session scope) |
+| **Depends on** | `a-column-declares-its-vocabulary` (open draft: every string column declares `closed`, `open` or `free`), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R58 §2.1 (a frame and a basis are two facts), R59 §2.2 (the frame names the atlas), R83 §3 (report unresolvable rather than resolve), R88 §2 (session scope) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
@@ -160,7 +160,7 @@ the wrong place.
 - **`coordinate_basis` is untouched.** R58 §2.1 and R64 §2 settled what a coordinate asserts;
   this part settles what its axes measure, which is the other half of the same question and a
   separate column for R58 §2.1's reason.
-- **The atlas version stays out.** R59 §2 makes `coordinate_frame` name the atlas, and whether
+- **The atlas version stays out.** R59 §2.2 makes `coordinate_frame` name the atlas, and whether
   `ccf` should distinguish CCFv3 from a successor is R59's question, recorded in §6.
 
 ## 5. Consequence
@@ -191,7 +191,7 @@ the orphan frame, taking the corpus from 27 packets to **28**.
   packets declare no such frame. A stereotaxic frame is measured from an animal's own skull
   landmark, so two sessions' frames of that name differ by where bregma was, and an orientation
   does not carry an origin. Nothing has asked for it.
-- **Whether `ccf` should name the atlas version.** R59 §2 makes the frame name the atlas, and
+- **Whether `ccf` should name the atlas version.** R59 §2.2 makes the frame name the atlas, and
   `ccf` does not distinguish CCFv3 from a successor whose structure ids would differ. That is
   R59's question and it reaches `region_id` as much as the axes.
 - **Whether a frame should declare its extent.** §2.2's `z_um` of −1,607 µm falls outside the DV
