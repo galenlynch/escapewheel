@@ -18,8 +18,10 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| — | `what-a-reserved-value-is-for` | outside the order; it amends R11 §4 alone and depends on nothing accepted since |
+| 1 | `an-array-declares-which-band-it-holds` | amends R101 §3.8's reserved set and R8 §4; renames a column and changes its presence, so it moves the counts R101 §5 records |
+| 2 | `a-coordinate-frame-declares-what-its-axes-mean` | adds a table whose six string columns need R101 §3.1's declaration, and gives `coordinate_frame` the reference R101 §6 records it lacking |
 
-One draft is open, so there is no order to state. Its numbers were measured against the registry
-as it stood when it was drafted and are re-measured at acceptance, which the pre-acceptance checks
+Either order works between the two — neither touches the other's tables — but both must follow
+R101, whose classification their new and renamed columns are measured against. Their numbers were
+measured when they were drafted and are re-measured at acceptance, which the pre-acceptance checks
 in `../CLAUDE.md` require of every number anyway.

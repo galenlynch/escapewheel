@@ -1,8 +1,8 @@
-# A Column Declares What Its Values Mean
+# R101 — A Column Declares What Its Values Mean
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-09 |
 | **Amends** | `02` §8.4 (a unit is a UCUM code), `02` §9.3 (a vocabulary is declared, not defaulted), `03` §5 (the profile has one null), R8 §4 (the test a reservation must pass), R11 §4 (strikes `event_type`'s reserved set), the registry meta-schema, and every string column's declaration |
 | **Depends on** | R8 (open vocabularies and reserved values), R11 (the reserved event types), R22 §3 (a scorer's label and its source), R48 (a column declares its role), R55 §2.1 (a discriminator's value space), R91 §3.1 (which table declares `event_type`) |
 | **Profile** | all |
@@ -261,7 +261,7 @@ embeds.
 
 Both halves are a **MUST**, and `02` §8.4 gains the statement: a column holding a physical unit
 **MUST** hold a UCUM code, and a column declaring one **MUST** declare a UCUM code, an annotation
-being one. That is what makes §8.4's existing rule operable. It says a
+being one. That is what makes `02` §8.4's existing rule operable. It says a
 consumer **MUST NOT** silently compare or combine two columns whose declared units differ (R56
 §2.5), and without one vocabulary `volts` and `V` differ while naming one unit — so the rule
 refuses a legitimate comparison exactly as readily as it catches a wrong one.
@@ -400,16 +400,18 @@ the 25 open columns that state no form, and `core.processing_runs.status`, whose
 closed set is open.
 
 Tier 1's closed-vocabulary checks go from 3 to **4**, and `registry/check.py` from 19 structural
-invariants to **26**: a string column that is not a discriminator declares a vocabulary and one
-that is does not,
-`closed` holds exactly where `enum` does, `reserved_values` appears only under `open`, an
-authority is an absolute URI, an `open` column carries a description, and one column
-name carries one vocabulary and one authority across every table holding it. That last check holds
-across all 102 columns today, and is what §2.3's drift would have caught.
+invariants to **28**, each applied to core and to every extension: a string column that is not a
+discriminator declares a vocabulary, a discriminator declares none, no column of another type
+declares one, `closed` holds exactly where `enum` does, `reserved_values` appears only under
+`open`, an authority is an absolute URI, a declared unit is a UCUM code, an `open` column carries
+a description, and one column name carries one vocabulary and one authority across every table
+holding it. That last one holds across all 102 columns today, and is what §2.3's drift would have
+caught; the third caught `dynamic_foraging.trials.animal_response`, an `int32` declaring
+`vocabulary: open` that nothing had been able to see.
 
 `core.array_assets.kind` carries a reserved set for the first time, so §2.5's three arrays draw
-§3.11's `info` report rather than passing unremarked; which value replaces `dense_array_asset` is
-settled by `an-array-declares-which-band-it-holds`, not here. `02` §8.4 gains the UCUM statement and `03` §5 gains §5.6, stating the profile's single null beside the Parquet floor §5.5 already
+§3.11's `info` report rather than passing unremarked. Which value replaces `dense_array_asset` is
+not settled here: §6 records why it cannot be. `02` §8.4 gains the UCUM statement and `03` §5 gains a subsection stating the profile's single null beside the Parquet floor `03` §5.5 already
 records. `fixtures/build.py` writes `sex` as `male` rather than `M`, so every packet in the corpus changes;
 the NWB adapter gains the mapping §3.9 requires, and both packets are rebuilt, which R87 §2.1,
 R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains §3.11's report.
@@ -437,10 +439,9 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   basis for that reason. It is also inapplicable to the 8,448 `probe` rows, whose axes are
   along-shank and across-shank rather than anatomical. The shape this wants is
   `core.coordinate_frames`, one row per frame, which would also give `coordinate_frame` the
-  reference it has never had despite sitting in two primary keys — a table, a reference and a
-  writer obligation, so a revision of its own — drafted as
-  `a-coordinate-frame-declares-what-its-axes-mean`, which also settles the three names R19 §3
-  reserved and §3.8 defers.
+  reference it has never had despite sitting in two primary keys. A table, a reference and a
+  writer obligation is a revision of its own, and the same one would settle the three frame names
+  R19 §3 reserved and §3.8 defers.
 - **Whether an extension should make a refinement structural.** §3.7 leaves `lick_left` or
   `left_lick` a string a consumer filters on and cannot join. Making the spout structural is an
   extension's work, keyed through `event_type` in R90 §3.5's shared-key shape; nothing has asked
@@ -450,8 +451,7 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   `core.array_assets`, and neither description says what separates them — which is why "are the
   four values right" cannot be answered here. The packets hold both possible relationships:
   `semantic_type` `ElectricalSeries` with `kind` `lfp` is complementary, where `waveform_mean`
-  with `waveform` would be one fact twice (R3 §3.0). Settled in
-  `an-array-declares-which-band-it-holds`, which reads the column as the band a signal was split
-  into, renames it, and makes it nullable — a schema change this part does not carry. §3.5 forces
-  this part to rewrite the description meanwhile, which it does minimally: the four values R8 §4
-  reserved and their openness, without the "etc.".
+  with `waveform` would be one fact twice (R3 §3.0). Reading the column as the band a signal was
+  split into answers it, and costs a rename and a change of presence — a schema change this part
+  does not carry. §3.5 forces the description to be rewritten meanwhile, which it does minimally:
+  the four values R8 §4 reserved and their openness, without the "etc.".

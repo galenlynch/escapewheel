@@ -103,7 +103,8 @@
       "R97",
       "R98",
       "R99",
-      "R100"
+      "R100",
+      "R101"
     ]
   },
   "tables": {
@@ -133,25 +134,32 @@
           "presence": "required",
           "role": "data",
           "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R95 \u00a73.1"
+          "since": "R95 \u00a73.1",
+          "vocabulary": "free"
         },
         {
           "name": "semantic_type",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Semantic type, e.g. ElectricalSeries.",
+          "description": "What quantity the asset holds. Open (R8 \u00a74): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` \u00a73.17).",
           "vocabulary": "open",
-          "since": "R20 \u00a75"
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "kind",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "`raw`, `ap`, `lfp`, `waveform`, etc.",
+          "description": "Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the meanings R8 \u00a74 declares. Open, so an unrecognised value is conforming -- but a value outside the set MUST NOT be used for data the set describes (R8 \u00a74).",
           "vocabulary": "open",
-          "since": "R20 \u00a75"
+          "since": "R101 \u00a73.5",
+          "reserved_values": [
+            "raw",
+            "ap",
+            "lfp",
+            "waveform"
+          ]
         },
         {
           "name": "uri",
@@ -159,7 +167,8 @@
           "presence": "required",
           "role": "data",
           "description": "URI/path to array store.",
-          "since": "R20 \u00a75"
+          "since": "R20 \u00a75",
+          "vocabulary": "free"
         },
         {
           "name": "format",
@@ -167,7 +176,8 @@
           "presence": "required",
           "role": "data",
           "description": "`zarr_v3` for portable profile.",
-          "since": "R20 \u00a75"
+          "since": "R20 \u00a75",
+          "vocabulary": "open"
         },
         {
           "name": "clock_id",
@@ -201,8 +211,12 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Physical unit.",
-          "since": "R20 \u00a75"
+          "description": "The physical unit of the array's values, as a UCUM code.",
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open",
+          "authority": [
+            "https://ucum.org/ucum.html"
+          ]
         },
         {
           "name": "conversion",
@@ -299,7 +313,8 @@
           "presence": "required",
           "role": "data",
           "description": "Axis name.",
-          "since": "R20 \u00a75"
+          "since": "R20 \u00a75",
+          "vocabulary": "free"
         },
         {
           "name": "coordinate_position_column",
@@ -307,7 +322,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Which column of that resource holds the 0-based position.",
-          "since": "R20 \u00a75"
+          "since": "R20 \u00a75",
+          "vocabulary": "free"
         },
         {
           "name": "coordinate_resource",
@@ -333,8 +349,12 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Unit of the numeric coordinate values.",
-          "since": "R20 \u00a75"
+          "description": "The physical unit of this axis's coordinate values, as a UCUM code.",
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open",
+          "authority": [
+            "https://ucum.org/ucum.html"
+          ]
         },
         {
           "name": "step_value",
@@ -561,39 +581,48 @@
           "presence": "required",
           "role": "data",
           "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R95 \u00a73.1"
+          "since": "R95 \u00a73.1",
+          "vocabulary": "free"
         },
         {
           "name": "semantic_type",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Semantic type, e.g. ElectricalSeries.",
+          "description": "What quantity the asset holds. Open (R8 \u00a74): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` \u00a73.17).",
           "vocabulary": "open",
-          "since": "R8 \u00a73-4"
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "kind",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "`raw`, `ap`, `lfp`, `waveform`, etc.",
+          "description": "Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the meanings R8 \u00a74 declares. Open, so an unrecognised value is conforming -- but a value outside the set MUST NOT be used for data the set describes (R8 \u00a74).",
           "vocabulary": "open",
-          "since": "R8 \u00a73-4"
+          "since": "R101 \u00a73.5",
+          "reserved_values": [
+            "raw",
+            "ap",
+            "lfp",
+            "waveform"
+          ]
         },
         {
           "name": "uri",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "URI/path to array store."
+          "description": "URI/path to array store.",
+          "vocabulary": "free"
         },
         {
           "name": "format",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "`zarr_v3` for portable profile."
+          "description": "`zarr_v3` for portable profile.",
+          "vocabulary": "open"
         },
         {
           "name": "clock_id",
@@ -625,7 +654,12 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Physical unit."
+          "description": "The physical unit of the array's values, as a UCUM code.",
+          "vocabulary": "open",
+          "authority": [
+            "https://ucum.org/ucum.html"
+          ],
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "conversion",
@@ -745,7 +779,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Human-readable channel label."
+          "description": "Human-readable channel label.",
+          "vocabulary": "free"
         },
         {
           "name": "inter_sample_shift",
@@ -760,8 +795,12 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Physical unit of the converted value.",
-          "since": "R19 \u00a72"
+          "description": "The physical unit of the converted value, as a UCUM code.",
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open",
+          "authority": [
+            "https://ucum.org/ucum.html"
+          ]
         },
         {
           "name": "offset",
@@ -859,7 +898,8 @@
           "presence": "required",
           "role": "data",
           "description": "Axis name.",
-          "since": "R3 \u00a73.1-3.3"
+          "since": "R3 \u00a73.1-3.3",
+          "vocabulary": "free"
         },
         {
           "name": "coordinate_position_column",
@@ -867,7 +907,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Which column of that resource holds the 0-based position.",
-          "since": "R20 \u00a72"
+          "since": "R20 \u00a72",
+          "vocabulary": "free"
         },
         {
           "name": "coordinate_resource",
@@ -893,8 +934,12 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Unit of the numeric coordinate values.",
-          "since": "R20 \u00a72"
+          "description": "The physical unit of this axis's coordinate values, as a UCUM code.",
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open",
+          "authority": [
+            "https://ucum.org/ucum.html"
+          ]
         },
         {
           "name": "step_value",
@@ -1208,7 +1253,8 @@
           "presence": "required",
           "role": "data",
           "description": "What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since R85 \u00a72.2 makes two calibrations sharing a name one row.",
-          "since": "R89 \u00a72.1"
+          "since": "R89 \u00a72.1",
+          "vocabulary": "free"
         },
         {
           "name": "calibration_type",
@@ -1216,7 +1262,8 @@
           "presence": "required",
           "role": "data",
           "description": "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open (R8 \u00a74). Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 \u00a72.1), and this holds a value that resolves to no table.",
-          "since": "R89 \u00a72.1"
+          "since": "R89 \u00a72.1",
+          "vocabulary": "open"
         },
         {
           "name": "calibrated_at",
@@ -1232,23 +1279,32 @@
           "presence": "nullable",
           "role": "data",
           "description": "What the source said the calibration was.",
-          "since": "R89 \u00a72.1"
+          "since": "R89 \u00a72.1",
+          "vocabulary": "free"
         },
         {
           "name": "input_unit",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The unit of measure of `core.calibration_points.input_value`. On the calibration because it varies per calibration -- seconds for water, volts for opto -- so no literal unit can sit on the value column (R89 \u00a72.3).",
-          "since": "R89 \u00a72.1"
+          "description": "The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column (R89 \u00a72.3).",
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open",
+          "authority": [
+            "https://ucum.org/ucum.html"
+          ]
         },
         {
           "name": "output_unit",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The unit of measure of `core.calibration_points.output_value`.",
-          "since": "R89 \u00a72.1"
+          "description": "The unit of `core.calibration_points.output_value`, as a UCUM code.",
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open",
+          "authority": [
+            "https://ucum.org/ucum.html"
+          ]
         },
         {
           "name": "array_asset_id",
@@ -1545,7 +1601,7 @@
           "role": "data",
           "description": "How many consecutive anchor intervals the step spans.",
           "since": "R99 \u00a73.3",
-          "unit": "anchor intervals"
+          "unit": "{anchor_interval}"
         }
       ],
       "primary_key": [
@@ -1606,7 +1662,8 @@
           "presence": "required",
           "role": "data",
           "description": "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R95 \u00a73.1"
+          "since": "R95 \u00a73.1",
+          "vocabulary": "free"
         },
         {
           "name": "tick_rate_hz",
@@ -1635,7 +1692,9 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Origin description."
+          "description": "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (R45 \u00a72.4). Open.",
+          "vocabulary": "open",
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "tick_zero_utc",
@@ -1817,7 +1876,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R53 \u00a72.3.1",
+          "vocabulary": "free"
         },
         {
           "name": "sorting_run_id",
@@ -1832,21 +1892,24 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Curator."
+          "description": "Curator.",
+          "vocabulary": "free"
         },
         {
           "name": "curation_tool",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Tool."
+          "description": "Tool.",
+          "vocabulary": "free"
         },
         {
           "name": "curation_tool_version",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Tool version."
+          "description": "Tool version.",
+          "vocabulary": "free"
         },
         {
           "name": "processing_run_id",
@@ -1877,7 +1940,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Notes."
+          "description": "Notes.",
+          "vocabulary": "free"
         },
         {
           "name": "metadata",
@@ -1956,21 +2020,25 @@
           "presence": "required",
           "role": "data",
           "description": "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R95 \u00a73.1"
+          "since": "R95 \u00a73.1",
+          "vocabulary": "free"
         },
         {
           "name": "manufacturer",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Manufacturer."
+          "description": "The manufacturer's own name for itself, as the source states it. Open, and compared exactly, so two spellings are two manufacturers.",
+          "vocabulary": "open",
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "model",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Model."
+          "description": "Model.",
+          "vocabulary": "free"
         },
         {
           "name": "firmware_version",
@@ -1978,7 +2046,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "The firmware the instrument was running, verbatim as its source stated it.",
-          "since": "R66 \u00a72.1"
+          "since": "R66 \u00a72.1",
+          "vocabulary": "free"
         },
         {
           "name": "hardware_version",
@@ -1986,14 +2055,16 @@
           "presence": "nullable",
           "role": "data",
           "description": "The instrument's hardware revision, verbatim as its source stated it.",
-          "since": "R66 \u00a72.1"
+          "since": "R66 \u00a72.1",
+          "vocabulary": "free"
         },
         {
           "name": "serial_number",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Serial number."
+          "description": "Serial number.",
+          "vocabulary": "free"
         },
         {
           "name": "parent_device_id",
@@ -2010,7 +2081,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (R85 \u00a72.3).",
-          "since": "R85 \u00a72.1"
+          "since": "R85 \u00a72.1",
+          "vocabulary": "open"
         },
         {
           "name": "metadata",
@@ -2084,8 +2156,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "The frame these coordinates are in.",
-          "since": "R19 \u00a73",
+          "description": "The space these coordinates are in, and the atlas where that space is one (R59 \u00a72.2). Open. Which way the axes point is stated nowhere.",
+          "since": "R101 \u00a73.5",
           "vocabulary": "open"
         },
         {
@@ -2213,7 +2285,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R53 \u00a72.3.1",
+          "vocabulary": "free"
         },
         {
           "name": "probe_id",
@@ -2229,7 +2302,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
-          "since": "R8 \u00a72"
+          "since": "R8 \u00a72",
+          "vocabulary": "free"
         },
         {
           "name": "local_channel_label",
@@ -2237,7 +2311,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
-          "since": "R8 \u00a72"
+          "since": "R8 \u00a72",
+          "vocabulary": "free"
         },
         {
           "name": "impedance_ohm",
@@ -2245,7 +2320,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "Impedance.",
-          "unit": "ohm"
+          "unit": "Ohm"
         },
         {
           "name": "metadata",
@@ -2386,7 +2461,8 @@
           "presence": "required",
           "role": "data",
           "description": "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R95 \u00a73.1"
+          "since": "R95 \u00a73.1",
+          "vocabulary": "free"
         },
         {
           "name": "event_type",
@@ -2394,7 +2470,8 @@
           "presence": "required",
           "role": "data",
           "description": "What kind of event this stream emits. Open (R8 \u00a74); a stream emits one kind, so a source emitting several on one channel is written as several streams.",
-          "since": "R91 \u00a73.1"
+          "since": "R91 \u00a73.1",
+          "vocabulary": "open"
         },
         {
           "name": "detail_kind",
@@ -2690,30 +2767,34 @@
           "presence": "required",
           "role": "data",
           "description": "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R95 \u00a73.1"
+          "since": "R95 \u00a73.1",
+          "vocabulary": "free"
         },
         {
           "name": "semantic_type",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "e.g. BehaviorVideo.",
+          "description": "What quantity the asset holds. Open (R8 \u00a74): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` \u00a73.17).",
           "vocabulary": "open",
-          "since": "R8 \u00a73-4"
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "uri",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Media file URI."
+          "description": "Media file URI.",
+          "vocabulary": "free"
         },
         {
           "name": "format",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "e.g. mp4."
+          "description": "The container format, as the file extension names it: `mp4`, `avi`. Open.",
+          "vocabulary": "open",
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "pts_rate_num",
@@ -2914,7 +2995,8 @@
           "presence": "required",
           "role": "data",
           "description": "Which kind of output this preference is about. Open, as R9 \u00a76 leaves it.",
-          "since": "R41 \u00a72.3"
+          "since": "R41 \u00a72.3",
+          "vocabulary": "open"
         },
         {
           "name": "scope_kind",
@@ -2932,7 +3014,8 @@
           "presence": "required",
           "role": "data",
           "description": "What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide.",
-          "since": "R41 \u00a72.3"
+          "since": "R41 \u00a72.3",
+          "vocabulary": "free"
         },
         {
           "name": "processing_run_id",
@@ -2957,7 +3040,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Why, in one line.",
-          "since": "R41 \u00a72.3"
+          "since": "R41 \u00a72.3",
+          "vocabulary": "free"
         }
       ],
       "primary_key": [
@@ -3032,7 +3116,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R95 \u00a73.1"
+          "since": "R95 \u00a73.1",
+          "vocabulary": "free"
         },
         {
           "name": "device_id",
@@ -3047,35 +3132,43 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Probe type, e.g. Neuropixels 1.0."
+          "description": "The probe's model, as the manufacturer names it: `Neuropixels 1.0`. Open.",
+          "vocabulary": "open",
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "manufacturer",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Manufacturer."
+          "description": "The manufacturer's own name for itself, as the source states it. Open, and compared exactly, so two spellings are two manufacturers.",
+          "vocabulary": "open",
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "serial_number",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Serial number."
+          "description": "Serial number.",
+          "vocabulary": "free"
         },
         {
           "name": "insertion_name",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Insertion label."
+          "description": "Insertion label.",
+          "vocabulary": "free"
         },
         {
           "name": "target_region",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Intended target."
+          "description": "The structure the probe was aimed at, as an atlas acronym where the source gives one. Open, and not resolvable: no column here names the atlas, which R59 \u00a72.2 does only beside a coordinate.",
+          "vocabulary": "open",
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "metadata",
@@ -3202,16 +3295,17 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R53 \u00a72.3.1",
+          "vocabulary": "free"
         },
         {
           "name": "activity_type",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "import, validation, sorting, curation, materialization, etc.",
+          "description": "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, `materialization`. Open (R9 \u00a76), so a pipeline names its own.",
           "vocabulary": "open",
-          "since": "R8 \u00a73-4"
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "scope",
@@ -3219,7 +3313,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Open, as activity_type is.",
-          "since": "R44 \u00a72.1"
+          "since": "R44 \u00a72.1",
+          "vocabulary": "free"
         },
         {
           "name": "scope_kind",
@@ -3245,21 +3340,24 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Software name."
+          "description": "Software name.",
+          "vocabulary": "free"
         },
         {
           "name": "software_version",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Software version."
+          "description": "Software version.",
+          "vocabulary": "free"
         },
         {
           "name": "code_uri",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Code reference."
+          "description": "Code reference.",
+          "vocabulary": "free"
         },
         {
           "name": "parameters",
@@ -3287,13 +3385,14 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "succeeded, failed, partial, etc.",
+          "description": "Whether the run completed: `succeeded`, `failed` or `partial`, with the meanings R8 \u00a73 declares. Closed -- a validator rejects any other value.",
           "enum": [
             "succeeded",
             "failed",
             "partial"
           ],
-          "since": "R8 \u00a73-4"
+          "since": "R101 \u00a73.5",
+          "vocabulary": "closed"
         },
         {
           "name": "metadata",
@@ -3389,7 +3488,8 @@
           "presence": "required",
           "role": "data",
           "description": "One experimenter.",
-          "since": "R3 \u00a73.1-3.3"
+          "since": "R3 \u00a73.1-3.3",
+          "vocabulary": "free"
         }
       ],
       "primary_key": [
@@ -3426,7 +3526,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R53 \u00a72.3.1",
+          "vocabulary": "free"
         },
         {
           "name": "subject_id",
@@ -3465,21 +3566,24 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Human-readable session description."
+          "description": "Human-readable session description.",
+          "vocabulary": "free"
         },
         {
           "name": "institution",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Institution/lab."
+          "description": "Institution/lab.",
+          "vocabulary": "free"
         },
         {
           "name": "task_name",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Task/protocol name."
+          "description": "Task/protocol name.",
+          "vocabulary": "free"
         },
         {
           "name": "source_session_id",
@@ -3513,7 +3617,7 @@
           "role": "data",
           "description": "How far past its anchors the writer mapped, in median anchor intervals (R27 \u00a75.3). Null means the default of one.",
           "since": "R99 \u00a73.1",
-          "unit": "median anchor intervals"
+          "unit": "{median_anchor_interval}"
         }
       ],
       "primary_key": [
@@ -3684,7 +3788,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R53 \u00a72.3.1",
+          "vocabulary": "free"
         },
         {
           "name": "probe_id",
@@ -3699,14 +3804,16 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Sorter name."
+          "description": "Sorter name.",
+          "vocabulary": "free"
         },
         {
           "name": "sorter_version",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Sorter version."
+          "description": "Sorter version.",
+          "vocabulary": "free"
         },
         {
           "name": "processing_run_id",
@@ -3814,28 +3921,33 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R53 \u00a72.3.1",
+          "vocabulary": "free"
         },
         {
           "name": "uri",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Source URI/path."
+          "description": "Source URI/path.",
+          "vocabulary": "free"
         },
         {
           "name": "format",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Source format."
+          "description": "The file's format in the producer's own terms, which this specification does not constrain. Open.",
+          "vocabulary": "open",
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "sha256",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Checksum."
+          "description": "Checksum.",
+          "vocabulary": "free"
         },
         {
           "name": "size_bytes",
@@ -3843,7 +3955,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "Size.",
-          "unit": "byte"
+          "unit": "By"
         },
         {
           "name": "modified_at",
@@ -3960,28 +4072,51 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R53 \u00a72.3.1",
+          "vocabulary": "free"
         },
         {
           "name": "species",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Species."
+          "description": "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- `01` \u00a73.4 admits a preparation, and a phantom or a simulation has no species.",
+          "vocabulary": "open",
+          "authority": [
+            "https://www.ncbi.nlm.nih.gov/taxonomy"
+          ],
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "strain",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Strain/background."
+          "description": "The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks such as `Long-Evans`.",
+          "vocabulary": "open",
+          "authority": [
+            "https://www.informatics.jax.org/",
+            "https://rgd.mcw.edu/"
+          ],
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "sex",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Sex if recorded."
+          "description": "The subject's sex. Null where the source states none, states it unknown, or describes a preparation that has none.",
+          "vocabulary": "closed",
+          "enum": [
+            "male",
+            "female",
+            "hermaphrodite",
+            "other"
+          ],
+          "since": "R101 \u00a73.6",
+          "authority": [
+            "https://hl7.org/fhir/valueset-administrative-gender.html"
+          ]
         },
         {
           "name": "date_of_birth",
@@ -3995,7 +4130,9 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Genotype summary."
+          "description": "The genotype as the source states it, in MGI allele nomenclature where it uses one.",
+          "vocabulary": "open",
+          "since": "R101 \u00a73.5"
         },
         {
           "name": "metadata",
@@ -4037,8 +4174,9 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "The frame these coordinates are in. Open, as R19 \u00a73 left it.",
-          "since": "R28 \u00a72-4"
+          "description": "The space these coordinates are in, and the atlas where that space is one (R59 \u00a72.2). Open. Which way the axes point is stated nowhere.",
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open"
         },
         {
           "name": "coordinate_basis",
@@ -4373,7 +4511,8 @@
             "sua",
             "mua",
             "noise"
-          ]
+          ],
+          "vocabulary": "closed"
         },
         {
           "name": "confidence",
@@ -4443,7 +4582,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
-          "since": "R53 \u00a72.3.1"
+          "since": "R53 \u00a72.3.1",
+          "vocabulary": "free"
         },
         {
           "name": "probe_id",
@@ -4475,7 +4615,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
-          "since": "R8 \u00a72"
+          "since": "R8 \u00a72",
+          "vocabulary": "free"
         },
         {
           "name": "quality_label",
@@ -4488,7 +4629,8 @@
             "mua",
             "noise"
           ],
-          "since": "R11 \u00a73-4"
+          "since": "R11 \u00a73-4",
+          "vocabulary": "closed"
         },
         {
           "name": "amplitude_unit",
@@ -4496,8 +4638,11 @@
           "presence": "nullable",
           "role": "data",
           "description": "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. Open (R11 \u00a72).",
-          "since": "R96 \u00a73.1",
-          "vocabulary": "open"
+          "since": "R101 \u00a73.6",
+          "vocabulary": "open",
+          "authority": [
+            "https://ucum.org/ucum.html"
+          ]
         },
         {
           "name": "quality_label_source",

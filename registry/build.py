@@ -259,7 +259,8 @@ def discriminator_of(name: str) -> dict[str, str]:
 #: new column carrying one cannot be added without it by forgetting -- the discipline `role_of`
 #: and `identity_of` apply to role and identity. A unit that varies row to row is not here; it
 #: is `unit_from`, which names the column carrying it and must be declared at the call site.
-UNIT_SUFFIX = {"_um": "um", "_hz": "Hz", "_ohm": "ohm", "_bytes": "byte"}
+#: R101 §3.6: a declared unit is a UCUM code, so `Ohm` and `By` rather than the words.
+UNIT_SUFFIX = {"_um": "um", "_hz": "Hz", "_ohm": "Ohm", "_bytes": "By"}
 
 
 def unit_of(name: str) -> str | None:
@@ -278,6 +279,130 @@ def identity_of(name: str) -> str:
         raise SystemExit(
             f"identifier {name!r} declares no identity; add it to IDENTITY (R53 §2.3). "
             "The choice is carried (the source's own value) or assigned (a number we chose)."
+        ) from None
+
+
+#: R101 §3.1. Which of three vocabularies a string column's values are drawn from. Keyed by
+#: column name, because R101 §3.6 requires one name to carry one vocabulary in every table that
+#: holds it -- which is the drift R101 §2.3 measured, `coordinate_frame` open on one table and
+#: undeclared on the other. A discriminator declares none: R55 §2.1 fixes its value space.
+VOCABULARY: dict[str, str] = {}
+for _vocab, _names in {
+    "closed": ("normalized_label", "quality_label", "sex", "status"),
+    "open": (
+        "activity_type", "amplitude_unit", "calibration_type", "coordinate_basis",
+        "coordinate_frame", "coordinate_unit", "event_type", "format", "genotype", "input_unit",
+        "kind", "label", "manufacturer", "origin", "output_unit", "parent_port", "probe_type",
+        "quality_label_source", "region_label", "semantic_type", "source", "species", "strain",
+        "target_region", "unit",
+    ),
+    "free": (
+        "array_asset_name", "calibration_name", "channel_label", "clock_name", "code_uri",
+        "coordinate_position_column", "curation_name", "curation_tool", "curation_tool_version",
+        "curator", "description", "device_name", "dimension_name", "electrode_name",
+        "event_stream_name", "experimenter", "firmware_version", "hardware_version",
+        "insertion_name", "institution", "local_channel_label", "local_electrode_label",
+        "local_unit_label", "media_asset_name", "model", "notes", "probe_name",
+        "processing_run_name", "reason", "scope", "serial_number", "session_description",
+        "session_name", "sha256", "software_name", "software_version", "sorter_name",
+        "sorter_version", "sorting_run_name", "source_file_name", "subject_name", "task_name",
+        "unit_name", "uri",
+    ),
+}.items():
+    VOCABULARY |= dict.fromkeys(_names, _vocab)
+
+#: R101 §3.6. Where a column's values are spelled, never what they may be: a validator MUST NOT
+#: dereference one (R14 §2.3.2) nor reject a value for being absent from it. An array because a
+#: strain is drawn from two registries, MGI for mouse and RGD for rat.
+UCUM = "https://ucum.org/ucum.html"
+AUTHORITY: dict[str, tuple[str, ...]] = {
+    "species": ("https://www.ncbi.nlm.nih.gov/taxonomy",),
+    "strain": ("https://www.informatics.jax.org/", "https://rgd.mcw.edu/"),
+    "sex": ("https://hl7.org/fhir/valueset-administrative-gender.html",),
+    "unit": (UCUM,), "coordinate_unit": (UCUM,), "input_unit": (UCUM,),
+    "output_unit": (UCUM,), "amplitude_unit": (UCUM,),
+}
+
+
+#: R101 §3.5. An open column's description states the **form** its values take, and names the
+#: nomenclature where one fixes the spelling. What these replaced restated the column's own name
+#: ("Species.", "Manufacturer."), gave one example ("e.g. mp4."), or said "etc." of a set R8 §4
+#: closed -- none of which tells a writer whether to write `Mus musculus` or `mouse`.
+_SEMANTIC = ("What quantity the asset holds. Open (R8 §4): a value this standard does not define "
+             "is a label and carries no contract, the meaning living in the device rather than in "
+             "the format (`01` §3.17).")
+_KIND = ("Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the "
+         "meanings R8 §4 declares. Open, so an unrecognised value is conforming -- but a value "
+         "outside the set MUST NOT be used for data the set describes (R8 §4).")
+_FRAME = ("The space these coordinates are in, and the atlas where that space is one (R59 §2.2). "
+          "Open. Which way the axes point is stated nowhere.")
+_MANUF = ("The manufacturer's own name for itself, as the source states it. Open, and compared "
+          "exactly, so two spellings are two manufacturers.")
+DESCRIPTIONS: dict[tuple[str, str], str] = {
+    ("core.array_assets", "semantic_type"): _SEMANTIC,
+    ("analysis.array_assets", "semantic_type"): _SEMANTIC,
+    ("core.media_assets", "semantic_type"): _SEMANTIC,
+    ("core.array_assets", "kind"): _KIND,
+    ("analysis.array_assets", "kind"): _KIND,
+    ("core.array_assets", "unit"): "The physical unit of the array's values, as a UCUM code.",
+    ("analysis.array_assets", "unit"): "The physical unit of the array's values, as a UCUM code.",
+    ("core.array_channels", "unit"): "The physical unit of the converted value, as a UCUM code.",
+    ("core.array_dimensions", "coordinate_unit"):
+        "The physical unit of this axis's coordinate values, as a UCUM code.",
+    ("analysis.array_dimensions", "coordinate_unit"):
+        "The physical unit of this axis's coordinate values, as a UCUM code.",
+    ("core.calibrations", "input_unit"):
+        "The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration "
+        "because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit "
+        "can sit on the value column (R89 §2.3).",
+    ("core.calibrations", "output_unit"):
+        "The unit of `core.calibration_points.output_value`, as a UCUM code.",
+    ("core.clocks", "origin"):
+        "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is "
+        "sample 0, and a writer MUST NOT re-base a source's index (R45 §2.4). Open.",
+    ("core.devices", "manufacturer"): _MANUF,
+    ("core.probes", "manufacturer"): _MANUF,
+    ("core.electrode_coordinates", "coordinate_frame"): _FRAME,
+    ("core.unit_coordinates", "coordinate_frame"): _FRAME,
+    ("core.media_assets", "format"):
+        "The container format, as the file extension names it: `mp4`, `avi`. Open.",
+    ("core.source_files", "format"):
+        "The file's format in the producer's own terms, which this specification does not "
+        "constrain. Open.",
+    ("core.probes", "probe_type"):
+        "The probe's model, as the manufacturer names it: `Neuropixels 1.0`. Open.",
+    ("core.probes", "target_region"):
+        "The structure the probe was aimed at, as an atlas acronym where the source gives one. "
+        "Open, and not resolvable: no column here names the atlas, which R59 §2.2 does only "
+        "beside a coordinate.",
+    ("core.subjects", "species"):
+        "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells "
+        "it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- "
+        "`01` §3.4 admits a preparation, and a phantom or a simulation has no species.",
+    ("core.subjects", "strain"):
+        "The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain "
+        "letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks "
+        "such as `Long-Evans`.",
+    ("core.subjects", "genotype"):
+        "The genotype as the source states it, in MGI allele nomenclature where it uses one.",
+    ("core.processing_runs", "activity_type"):
+        "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, "
+        "`materialization`. Open (R9 §6), so a pipeline names its own.",
+    ("core.processing_runs", "status"):
+        "Whether the run completed: `succeeded`, `failed` or `partial`, with the meanings R8 §3 "
+        "declares. Closed -- a validator rejects any other value.",
+}
+
+
+def vocabulary_of(name: str) -> str:
+    """Return a string column's vocabulary, refusing one nobody has classified (R101 §3.2)."""
+    try:
+        return VOCABULARY[name]
+    except KeyError:
+        raise SystemExit(
+            f"string column {name!r} declares no vocabulary; add it to VOCABULARY (R101 §3.1). "
+            "The choice is closed (an enum a validator enforces), open (values comparable between "
+            "packets) or free (a name, a description, a digest -- not a vocabulary at all)."
         ) from None
 
 
@@ -541,9 +666,7 @@ def build() -> dict:
     # ---- R11 §3-4 : declared-open vocabularies ------------------------------------------------
     SINCE[0] = "R11 §3-4"
     amend("core.units", "quality_label", enum=["sua", "mua", "noise"])          # R11 §3
-    amend("core.events", "event_type", vocabulary="open",
-          reserved_values=["stimulus_onset", "reward", "lick",
-                           "threshold_crossing", "ttl_edge", "sync_pulse"])
+    amend("core.events", "event_type", vocabulary="open")
 
     # ---- R9 : provenance simplification ----------------------------------------------------
     SINCE[0] = "R9"
@@ -1537,7 +1660,7 @@ def build() -> dict:
     add_col("core.sessions", col("alignment_bound", "float64", "nullable",
                                  "How far past its anchors the writer mapped, in median anchor "
                                  "intervals (R27 §5.3). Null means the default of one."))
-    amend("core.sessions", "alignment_bound", unit="median anchor intervals")
+    amend("core.sessions", "alignment_bound", unit="{median_anchor_interval}")
 
     SINCE[0] = "R99 §3.2"
     for _end in ("first", "last"):
@@ -1567,7 +1690,44 @@ def build() -> dict:
     # block this late runs. `core.clock_anchors.parent_tick` carries the same pair of clocks.
     amend("core.clock_phase_steps", "parent_tick", clock_from="core.clocks.parent_clock_id")
     amend("core.clock_phase_steps", "shift_seconds", unit="s")
-    amend("core.clock_phase_steps", "anchor_interval_span", unit="anchor intervals")
+    amend("core.clock_phase_steps", "anchor_interval_span", unit="{anchor_interval}")
+
+    # ---- R101 §3 : a column declares what its values mean --------------------------------------
+    # `02` §9.3 made a vocabulary open unless a column declared an `enum`, so 84 of 102 string
+    # columns said nothing and a column nobody had classified read exactly like one deliberately
+    # left open. Set directly rather than through `amend`: what a column's values are drawn from
+    # has not changed, only whether the registry says so, and restamping 95 columns would erase
+    # which revision introduced each, which is what R29 §2 put `since` there for.
+    for _spec in tables.values():
+        for _c in _spec["columns"]:
+            if _c["type"] == "string" and _c["role"] != "discriminator":
+                _c["vocabulary"] = vocabulary_of(_c["name"])
+
+    # §3.9: `sex` closes. NWB writes `M`/`F`/`U`/`O` and a writer maps onto these, `U` becoming
+    # null -- three of the four are HL7 FHIR's `AdministrativeGender`, whose `unknown` this set
+    # carries as null. `hermaphrodite` names a determinate sex: C. elegans has no females.
+    SINCE[0] = "R101 §3.9"
+    amend("core.subjects", "sex",
+          enum=["male", "female", "hermaphrodite", "other"], vocabulary="closed",
+          description="The subject's sex. Null where the source states none, states it unknown, "
+                      "or describes a preparation that has none.")
+
+    # §3.8: R8 §4 reserved four kinds with declared meanings and the registry never received them.
+    SINCE[0] = "R101 §3.8"
+    for _t in ("core.array_assets", "analysis.array_assets"):
+        amend(_t, "kind", reserved_values=["raw", "ap", "lfp", "waveform"])
+
+    SINCE[0] = "R101 §3.6"
+    for _name, _uris in AUTHORITY.items():
+        for _resource, _spec in tables.items():
+            if any(_c["name"] == _name for _c in _spec["columns"]):
+                amend(_resource, _name, authority=list(_uris))
+
+    # §3.5: 25 open columns described themselves by restating their own name or giving one
+    # example, and `core.processing_runs.status` said "etc." of a closed set.
+    SINCE[0] = "R101 §3.5"
+    for (_resource, _name), _text in DESCRIPTIONS.items():
+        amend(_resource, _name, description=_text)
 
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column

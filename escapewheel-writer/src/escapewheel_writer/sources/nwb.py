@@ -104,6 +104,22 @@ TRIAL_MAPPED = frozenset(
 CCF_AXES = ("ccf_ml", "ccf_ap", "ccf_dv")
 
 
+#: R101 §3.9. `core.subjects.sex` closes to `male`, `female`, `hermaphrodite` and `other`, and NWB
+#: writes `M`/`F`/`U`/`O`. `U` is unknown, which becomes null rather than `other`: recording it as
+#: `other` asserts a sex the source never claimed, where a null column says the source did not say.
+_SEX = {
+    "m": "male", "male": "male",
+    "f": "female", "female": "female",
+    "h": "hermaphrodite", "hermaphrodite": "hermaphrodite",
+    "o": "other", "other": "other",
+}
+
+
+def _sex(stated: str | None) -> str | None:
+    """Map a source's spelling onto R101 §3.9's four values, or None where it states none."""
+    return _SEX.get(stated.strip().lower()) if stated else None
+
+
 class SourceDefect(ValueError):
     """The NWB is missing something an importer cannot proceed without."""
 
@@ -398,7 +414,7 @@ class NWBSource(Compensates):
         row: dict[str, Any] = {
             "subject_id": columns.get("subject_id") or self.session_id,
             "species": columns.get("species"),
-            "sex": columns.get("sex"),
+            "sex": _sex(columns.get("sex")),
             "genotype": columns.get("genotype"),
             # A date of birth is a calendar date (R4 §3.3): the local date as written is the
             # fact, and converting it through UTC could move it by a day.

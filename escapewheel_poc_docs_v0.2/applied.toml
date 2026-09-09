@@ -1933,3 +1933,74 @@ disposition = "registry"
 where = "analysis.array_dimensions.coordinate_array_asset_id -> analysis.array_assets"
 note = "the reference core.array_dimensions already declared; 96 references become 97"
 
+
+[clause."R101 §2.1"]
+disposition = "rationale"
+where = "R101 §2.1"
+note = "the measurement that nothing read `vocabulary`: generate.py builds the membership check from `enum` alone, render.py counts only closed ones, check.py had no check, build.py was the sole writer"
+
+[clause."R101 §2.2"]
+disposition = "rationale"
+where = "R101 §2.2"
+note = "three reserved sets and none in the registry; R19 §3's three frame names stay deferred, so §3.8 records two columns and not four"
+
+[clause."R101 §2.3"]
+disposition = "rationale"
+where = "R101 §2.3"
+note = "the drift the §3.6 name-consistency check now catches: unit 8 columns/1 declared, coordinate_frame 2/1, activity_type 2/1, semantic_type 3/3"
+
+[clause."R101 §2.4"]
+disposition = "rationale"
+where = "R101 §2.4"
+note = "why left_lick refines rather than renames: the side is in no other column, and event_stream_name is a source field name this specification does not constrain"
+
+[clause."R101 §2.5"]
+disposition = "rationale"
+where = "R101 §2.5"
+note = "core.array_assets.kind held dense_array_asset, a manifest resource kind written by waveforms.py:300; the reserved set makes it an info finding, and which value replaces it is not settled here"
+
+[clause."R101 §3.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.3"
+note = "build.py's VOCABULARY and vocabulary_of refuse an unclassified name; registry.schema.json requires the field of every string column but a discriminator and forbids it elsewhere; 4 closed, 39 open, 52 free, 7 discriminators declaring none"
+
+[clause."R101 §3.3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.3"
+note = "check.py refuses a discriminator declaring a vocabulary; R55 §2.1 fixes the value space to the declared resource IDs"
+
+[clause."R101 §3.5"]
+disposition = "registry"
+where = "26 descriptions in build.py's DESCRIPTIONS"
+note = "25 open columns stating no form, plus core.processing_runs.status whose prose said etc. of a closed set; check.py requires a description on an open column"
+
+[clause."R101 §3.6"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.4 and §9.3"
+note = "authority in registry.schema.json and build.py's AUTHORITY, on species, strain, sex and the eight unit columns; UNIT_SUFFIX gives Ohm and By, and the two packet-relative units become UCUM annotations; check.py checks the URI, the UCUM code and one-name-one-vocabulary"
+
+[clause."R101 §3.7"]
+disposition = "registry"
+where = "build.py's R11 block"
+note = "the reserved_values argument is removed from the amend of core.events.event_type, a column R91 §3.2 struck; R11 §4's six stay in R11 as examples"
+
+[clause."R101 §3.8"]
+disposition = "registry"
+where = "core.array_assets.kind and analysis.array_assets.kind"
+note = "raw, ap, lfp, waveform with R8 §4's meanings; coordinate_frame's three deferred, their meanings being the frames' own and no packet stating them"
+
+[clause."R101 §3.9"]
+disposition = "implementation"
+where = "core.subjects.sex; nwb.py's _sex; fixtures/build.py"
+note = "enum male/female/hermaphrodite/other with FHIR as authority, unknown carried as null; the adapter maps M/F/U/O and the corpus writes male where it wrote M"
+
+[clause."R101 §3.10"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §5.6"
+note = "one null and no second marker, NaN a value rather than an absence on 30 of 330 columns, and no sentinel meaning absent"
+
+[clause."R101 §3.11"]
+disposition = "implementation"
+where = "validator.py's _check_reserved_values"
+note = "info, never a failure; a synonym stays uncheckable, so R8 §4's prohibition binds a writer and no rule (R67 §2.4)"
+

@@ -221,7 +221,9 @@ A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit
 
 `clock_from` names a column of the same table or a one-hop `resource.column`. A consumer resolves it rather than guessing, because converting on the wrong clock fails silently.
 
-A consumer MAY label a quantity with its declared unit, and MUST NOT silently compare or combine two columns whose declared units differ (R56 §2.5).
+A column holding a physical unit MUST hold a UCUM code, and a column declaring one MUST declare a UCUM code — an annotation in curly braces is one, and is dimensionless, which is what a quantity normalised by something the packet measured is (R101 §3.6).
+
+A consumer MAY label a quantity with its declared unit, and MUST NOT silently compare or combine two columns whose declared units differ (R56 §2.5). One vocabulary is what makes that rule run: `volts` and `V` differ while naming one unit, so without it the rule refuses a legitimate comparison exactly as readily as it catches a wrong one.
 
 ### 8.5 Functional dependence
 
@@ -267,17 +269,28 @@ extension's schema, and the same reasoning applies one level up.
 
 ### 9.3 Vocabularies
 
-A vocabulary is open unless the column declares `enum`. A validator MUST reject a value outside a declared `enum`, and MUST NOT reject an unrecognized value from an open one (R8 §4).
+Every `string` column declares a `vocabulary`, whatever its role, except a discriminator, whose value space R55 §2.1 fixes; a column of any other type declares none (R101 §3.1). There is no default, so an absent declaration is a defect rather than a claim of openness.
 
-Three columns are closed:
+| value | what it says |
+|---|---|
+| `closed` | the column also declares `enum`, and a validator MUST reject a value outside it |
+| `open` | the values name kinds of thing, comparable between packets; a validator MUST NOT reject an unrecognized one, and the column MAY declare `reserved_values` |
+| `free` | not a vocabulary — a name, a description, a URI, a digest, a version string, a person; nothing may be reserved and no report is due |
+
+Four columns are closed:
 
 | column | values |
 |---|---|
 | `core.processing_runs.status` | `succeeded`, `failed`, `partial` |
 | `core.units.quality_label` | `sua`, `mua`, `noise` |
 | `core.unit_quality_labels.normalized_label` | `sua`, `mua`, `noise` |
+| `core.subjects.sex` | `male`, `female`, `hermaphrodite`, `other` |
 
 A scorer's own `label` is open, because aggregating over scorers is incompatible with one closed set (R22 §1).
+
+A value MAY be reserved only where it is read **whole**: where a consumer comparing two packets learns something from the value alone, without knowing what either packet was doing (R101 §3.4). Where an external nomenclature defines the values instead, the registry names it rather than copying it, which R3 §3.0 requires of any set the standard does not itself define. A validator SHOULD report a value outside a reserved set at `info`, and MUST NOT fail on one.
+
+An `open` column MUST carry a description stating the form its values take, and that description MUST name the nomenclature where one fixes the spelling (R101 §3.5). The column MAY also declare `authority`, naming that nomenclature as an absolute URI — identity, not a fetch instruction: a validator MUST NOT dereference one and MUST NOT reject a value for being absent from it (R101 §3.6). A writer MUST spell a value as the named nomenclature does.
 
 ### 9.4 Provenance of a declaration
 

@@ -117,6 +117,14 @@ than either encoding alone.
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
 precision; `INT96` MUST NOT be used. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
 
+### 5.6 One null
+
+Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null (R101 §3.10).
+
+NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches 30 of the registry's 330 columns and none of the rest, and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
+
+A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null. Where the reason for the absence matters, core records the fact that distinguishes it rather than encoding the reason in the value: R44 §2.3 gave a run a `scope` so an undeterminable one is distinguishable from an unambiguous one, and R22 §3 nulls `normalized_label` where a source's label has no honest projection.
+
 ## 6. Array storage
 
 ### 6.1 Version

@@ -28,7 +28,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What the light was for, in the rig's own words. Open: tagging and inactivation are the same measurement differently parameterised."
+          "description": "What the light was for, in the rig's own words. Open: tagging and inactivation are the same measurement differently parameterised.",
+          "vocabulary": "open"
         },
         {
           "name": "duration_s",
@@ -83,7 +84,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The rig's own condition label. Open."
+          "description": "The rig's own condition label. Open.",
+          "vocabulary": "open"
         },
         {
           "name": "condition_probability",
@@ -179,7 +181,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Where this emitter delivered, in the rig's own words."
+          "description": "Where this emitter delivered, in the rig's own words.",
+          "vocabulary": "open"
         }
       ],
       "primary_key": [

@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | R19 §3 (the axis meaning, and the three reserved frame names); adds `core.coordinate_frames` and the reference `coordinate_frame` has never had |
-| **Depends on** | `a-column-declares-what-its-values-mean` (open draft: every string column declares `closed`, `open` or `free`), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R58 §2.1 (a frame and a basis are two facts), R59 §2.2 (the frame names the atlas), R83 §3 (report unresolvable rather than resolve), R88 §2 (session scope) |
+| **Depends on** | R101 §3.1 (every string column declares `closed`, `open` or `free`), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R58 §2.1 (a frame and a basis are two facts), R59 §2.2 (the frame names the atlas), R83 §3 (report unresolvable rather than resolve), R88 §2 (session scope) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
@@ -168,8 +168,7 @@ the wrong place.
 39 tables become **40**, 330 columns become **337**, and 97 references become **99**. One Tier 2
 rule is added — two axes of one frame naming the same thing — taking 76 to **77**. Tier 1 gains
 the anti-joins, the uniqueness check and the not-null checks the new table's structure implies,
-none of them hand-written. Six of the new columns are strings, so the vocabulary draft's counts
-move with them: 39 open become **44** and 52 free become **53**, over 108 string columns.
+none of them hand-written. Six of the new columns are strings, so R101 §5's counts move with them: 39 open become **44** and 52 free become **53**, over 108 string columns.
 
 Both packets declare two frames each: `ccf` with `x_axis` `ml`, `y_axis` `ap`, `z_axis` `dv` and
 no orientation, and `probe` with `across_shank`, `along_shank` and null. The NWB adapter reads

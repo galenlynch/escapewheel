@@ -159,7 +159,7 @@ def content() -> dict[str, list[dict]]:
                            "institution": "Example Institute", "task_name": "two_choice",
                            # R27 2: the behavior clock hangs off this one, so it is the root.
                            "reference_clock_id": "imec_ap_s001"}],
-        "core.subjects": [{"subject_id": "m001", "species": "Mus musculus", "sex": "M",
+        "core.subjects": [{"subject_id": "m001", "species": "Mus musculus", "sex": "male",
                            "date_of_birth": (START - timedelta(days=120)).date(),
                            "genotype": "wt", "strain": "C57BL/6J"}],
         "core.session_experimenters": [

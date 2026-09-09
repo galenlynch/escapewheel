@@ -10,7 +10,7 @@ otherwise answerable only by reading a frozen document and then every amendment 
 ```text
 39 tables, 330 columns, 97 references, 76 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99, R100
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99, R100, R101
 ```
 
 ## Contents
@@ -30,14 +30,14 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** | R20 §5 | Session ID. |
 | `array_asset_id` | int32 | **required** | R20 §5 | Stable array asset ID. |
 | `array_asset_name` | string | **required** | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `semantic_type` | string | **required** | R20 §5 | Semantic type, e.g. ElectricalSeries. |
-| `kind` | string | **required** | R20 §5 | `raw`, `ap`, `lfp`, `waveform`, etc. |
+| `semantic_type` | string | **required** | R101 §3.5 | What quantity the asset holds. Open (R8 §4): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` §3.17). |
+| `kind` | string | **required** | R101 §3.5 | Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the meanings R8 §4 declares. Open, so an unrecognised value is conforming -- but a value outside the set MUST NOT be used for data the set describes (R8 §4). |
 | `uri` | string | **required** | R20 §5 | URI/path to array store. |
 | `format` | string | **required** | R20 §5 | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable | R20 §5 | Clock for time axis. |
 | `device_id` | int32 | nullable | R20 §5 | The device that produced this array. |
 | `sample_rate_hz` | float64 | nullable | R20 §5 | Sample rate if regularly sampled. |
-| `unit` | string | nullable | R20 §5 | Physical unit. |
+| `unit` | string | nullable | R101 §3.5 | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable | R20 §5 | Multiply stored values by this before offset. |
 | `offset` | float64 | nullable | R20 §5 | Add after conversion. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -63,7 +63,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `coordinate_position_column` | string | nullable | R20 §5 | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | R100 §2.1 | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 §2.4). |
 | `coordinate_array_asset_id` | int32 | nullable | R20 §5 | A 1-D array holding one value per position (irregular axis). |
-| `coordinate_unit` | string | nullable | R20 §5 | Unit of the numeric coordinate values. |
+| `coordinate_unit` | string | nullable | R101 §3.5 | The physical unit of this axis's coordinate values, as a UCUM code. |
 | `step_value` | float64 | nullable | R20 §5 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §5 | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | R20 §5 | Ticks advanced per position (numerator). |
@@ -116,14 +116,14 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** |  | Session ID. |
 | `array_asset_id` | int32 | **required** |  | Stable array asset ID. |
 | `array_asset_name` | string | **required** | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `semantic_type` | string | **required** | R8 §3-4 | Semantic type, e.g. ElectricalSeries. |
-| `kind` | string | **required** | R8 §3-4 | `raw`, `ap`, `lfp`, `waveform`, etc. |
+| `semantic_type` | string | **required** | R101 §3.5 | What quantity the asset holds. Open (R8 §4): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` §3.17). |
+| `kind` | string | **required** | R101 §3.5 | Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the meanings R8 §4 declares. Open, so an unrecognised value is conforming -- but a value outside the set MUST NOT be used for data the set describes (R8 §4). |
 | `uri` | string | **required** |  | URI/path to array store. |
 | `format` | string | **required** |  | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable |  | Clock for time axis. |
 | `device_id` | int32 | nullable | R65 §2.1 | The device that produced this array. |
 | `sample_rate_hz` | float64 | nullable |  | Sample rate if regularly sampled. |
-| `unit` | string | nullable |  | Physical unit. |
+| `unit` | string | nullable | R101 §3.5 | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable |  | Multiply stored values by this before offset. |
 | `offset` | float64 | nullable |  | Add after conversion. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -152,7 +152,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `electrode_id` | int32 | nullable |  | Electrode ID. |
 | `channel_label` | string | nullable |  | Human-readable channel label. |
 | `inter_sample_shift` | float64 | nullable | R19 §2 | Acquisition time offset within one sample period, in sample periods. |
-| `unit` | string | nullable | R19 §2 | Physical unit of the converted value. |
+| `unit` | string | nullable | R101 §3.5 | The physical unit of the converted value, as a UCUM code. |
 | `offset` | float64 | nullable | R19 §2 | Add after conversion. |
 | `conversion` | float64 | nullable | R19 §2 | Multiply stored values by this before offset. |
 
@@ -181,7 +181,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `coordinate_position_column` | string | nullable | R20 §2 | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | R100 §2.1 | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 §2.4). |
 | `coordinate_array_asset_id` | int32 | nullable | R20 §2 | A 1-D array holding one value per position (irregular axis). |
-| `coordinate_unit` | string | nullable | R20 §2 | Unit of the numeric coordinate values. |
+| `coordinate_unit` | string | nullable | R101 §3.5 | The physical unit of this axis's coordinate values, as a UCUM code. |
 | `step_value` | float64 | nullable | R20 §2 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §2 | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | R20 §2 | Ticks advanced per position (numerator). |
@@ -258,8 +258,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `calibration_type` | string | **required** | R89 §2.1 | What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open (R8 §4). Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 §2.1), and this holds a value that resolves to no table. |
 | `calibrated_at` | timestamp | nullable | R89 §2.1 | When the calibration was measured, which is not when it was in force: R89 §1.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (R66 §2.1). |
 | `description` | string | nullable | R89 §2.1 | What the source said the calibration was. |
-| `input_unit` | string | nullable | R89 §2.1 | The unit of measure of `core.calibration_points.input_value`. On the calibration because it varies per calibration -- seconds for water, volts for opto -- so no literal unit can sit on the value column (R89 §2.3). |
-| `output_unit` | string | nullable | R89 §2.1 | The unit of measure of `core.calibration_points.output_value`. |
+| `input_unit` | string | nullable | R101 §3.5 | The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column (R89 §2.3). |
+| `output_unit` | string | nullable | R101 §3.5 | The unit of `core.calibration_points.output_value`, as a UCUM code. |
 | `array_asset_id` | int32 | nullable | R89 §2.1 | The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics (R89 §2.4). |
 | `detail_kind` | string | nullable | R89 §2.1 | A table carrying a calibration shape core does not define, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (R89 §2.5). |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -357,7 +357,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `tick_rate_hz` | float64 | nullable |  | Tick rate as float, required unless exact tick rate provided. |
 | `tick_rate_num` | int64 | nullable |  | Exact rational numerator. |
 | `tick_rate_den` | int64 | nullable |  | Exact rational denominator. |
-| `origin` | string | **required** |  | Origin description. |
+| `origin` | string | **required** | R101 §3.5 | Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (R45 §2.4). Open. |
 | `tick_zero_utc` | timestamp | nullable | R6 §2 | Wall-clock instant of tick 0 on this clock. |
 | `parent_clock_id` | int32 | nullable |  | Parent/reference clock. |
 | `transform_slope` | float64 | nullable | R3 §3.4 | Parent ticks per this clock's tick, as measured. |
@@ -421,7 +421,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** | R88 §2.1 | Session if device record is session-scoped. |
 | `device_id` | int32 | **required** |  | Stable device ID. |
 | `device_name` | string | **required** | R95 §3.1 | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `manufacturer` | string | nullable |  | Manufacturer. |
+| `manufacturer` | string | nullable | R101 §3.5 | The manufacturer's own name for itself, as the source states it. Open, and compared exactly, so two spellings are two manufacturers. |
 | `model` | string | nullable |  | Model. |
 | `firmware_version` | string | nullable | R66 §2.1 | The firmware the instrument was running, verbatim as its source stated it. |
 | `hardware_version` | string | nullable | R66 §2.1 | The instrument's hardware revision, verbatim as its source stated it. |
@@ -450,7 +450,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `electrode_id` | int32 | **required** | R19 §3 | Electrode ID. |
-| `coordinate_frame` | string | **required** | R19 §3 | The frame these coordinates are in. |
+| `coordinate_frame` | string | **required** | R101 §3.5 | The space these coordinates are in, and the atlas where that space is one (R59 §2.2). Open. Which way the axes point is stated nowhere. |
 | `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
 | `region_id` | int32 | nullable | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
@@ -590,9 +590,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** |  | Session ID. |
 | `media_asset_id` | int32 | **required** |  | Stable media asset ID. |
 | `media_asset_name` | string | **required** | R95 §3.1 | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `semantic_type` | string | **required** | R8 §3-4 | e.g. BehaviorVideo. |
+| `semantic_type` | string | **required** | R101 §3.5 | What quantity the asset holds. Open (R8 §4): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` §3.17). |
 | `uri` | string | **required** |  | Media file URI. |
-| `format` | string | **required** |  | e.g. mp4. |
+| `format` | string | **required** | R101 §3.5 | The container format, as the file extension names it: `mp4`, `avi`. Open. |
 | `pts_rate_num` | int64 | nullable | R70 §2.1 | Presentation timestamps per second in this asset's container: numerator. |
 | `pts_rate_den` | int64 | nullable | R70 §2.1 | Presentation timestamps per second in this asset's container: denominator. |
 | `clock_id` | int32 | nullable |  | Clock for frame timing. |
@@ -671,11 +671,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `probe_id` | int32 | **required** |  | Stable probe ID. |
 | `probe_name` | string | nullable | R95 §3.1 | What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `device_id` | int32 | nullable |  | Associated device. |
-| `probe_type` | string | nullable |  | Probe type, e.g. Neuropixels 1.0. |
-| `manufacturer` | string | nullable |  | Manufacturer. |
+| `probe_type` | string | nullable | R101 §3.5 | The probe's model, as the manufacturer names it: `Neuropixels 1.0`. Open. |
+| `manufacturer` | string | nullable | R101 §3.5 | The manufacturer's own name for itself, as the source states it. Open, and compared exactly, so two spellings are two manufacturers. |
 | `serial_number` | string | nullable |  | Serial number. |
 | `insertion_name` | string | nullable |  | Insertion label. |
-| `target_region` | string | nullable |  | Intended target. |
+| `target_region` | string | nullable | R101 §3.5 | The structure the probe was aimed at, as an atlas acronym where the source gives one. Open, and not resolvable: no column here names the atlas, which R59 §2.2 does only beside a coordinate. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `probe_id`  
@@ -710,7 +710,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** | R88 §2.1 | Session ID if session-scoped. |
 | `processing_run_id` | int32 | **required** |  | Stable processing run ID. |
 | `processing_run_name` | string | nullable | R53 §2.3.1 | What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `activity_type` | string | **required** | R8 §3-4 | import, validation, sorting, curation, materialization, etc. |
+| `activity_type` | string | **required** | R101 §3.5 | What kind of work the run did: `import`, `validation`, `sorting`, `curation`, `materialization`. Open (R9 §6), so a pipeline names its own. |
 | `scope` | string | nullable | R44 §2.1 | What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Open, as activity_type is. |
 | `scope_kind` | string | nullable | R49 §2.1 | The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. Open (R8 §4); a value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
 | `supersedes_run_id` | int32 | nullable | R50 §2 | The run this one replaces, if any. |
@@ -720,7 +720,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `parameters` | json_string | optional |  | Parameters. |
 | `started_at` | timestamp | nullable |  | Start time. |
 | `ended_at` | timestamp | nullable |  | End time. |
-| `status` | string | **required** | R8 §3-4 | succeeded, failed, partial, etc. |
+| `status` | string | **required** | R101 §3.5 | Whether the run completed: `succeeded`, `failed` or `partial`, with the meanings R8 §3 declares. Closed -- a validator rejects any other value. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `processing_run_id`  
@@ -845,7 +845,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `source_file_id` | int32 | **required** |  | Stable source file ID. |
 | `source_file_name` | string | nullable | R53 §2.3.1 | What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `uri` | string | **required** |  | Source URI/path. |
-| `format` | string | nullable |  | Source format. |
+| `format` | string | nullable | R101 §3.5 | The file's format in the producer's own terms, which this specification does not constrain. Open. |
 | `sha256` | string | nullable |  | Checksum. |
 | `size_bytes` | int64 | nullable |  | Size. |
 | `modified_at` | timestamp | nullable |  | Modification time if known. |
@@ -880,11 +880,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `subject_id` | int32 | **required** |  | Stable subject ID. |
 | `subject_name` | string | nullable | R53 §2.3.1 | What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `species` | string | nullable |  | Species. |
-| `strain` | string | nullable |  | Strain/background. |
-| `sex` | string | nullable |  | Sex if recorded. |
+| `species` | string | nullable | R101 §3.5 | The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- `01` §3.4 admits a preparation, and a phantom or a simulation has no species. |
+| `strain` | string | nullable | R101 §3.5 | The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks such as `Long-Evans`. |
+| `sex` | string | nullable | R101 §3.6 | The subject's sex. Null where the source states none, states it unknown, or describes a preparation that has none. |
 | `date_of_birth` | date | nullable |  | Date of birth if known. |
-| `genotype` | string | nullable |  | Genotype summary. |
+| `genotype` | string | nullable | R101 §3.5 | The genotype as the source states it, in MGI allele nomenclature where it uses one. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `subject_id`  
@@ -897,7 +897,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | R28 §2-4 | Session ID. |
 | `unit_id` | int32 | **required** | R28 §2-4 | Unit ID. |
-| `coordinate_frame` | string | **required** | R28 §2-4 | The frame these coordinates are in. Open, as R19 §3 left it. |
+| `coordinate_frame` | string | **required** | R101 §3.5 | The space these coordinates are in, and the atlas where that space is one (R59 §2.2). Open. Which way the axes point is stated nowhere. |
 | `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
 | `region_id` | int32 | nullable | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
@@ -999,7 +999,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `curation_id` | int32 | **required** |  | Curation ID. |
 | `local_unit_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `quality_label` | string | nullable | R11 §3-4 | Quality label. |
-| `amplitude_unit` | string | nullable | R96 §3.1 | Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. Open (R11 §2). |
+| `amplitude_unit` | string | nullable | R101 §3.6 | Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. Open (R11 §2). |
 | `quality_label_source` | string | nullable | R16 §2-3 | Which core.unit_quality_labels source the designated label came from. |
 | `firing_rate_hz` | float64 | nullable |  | Firing rate if known. |
 | `n_spikes` | int64 | nullable | R5 | Total spikes for this unit in this context. |

@@ -186,8 +186,12 @@
           "uniqueItems": true
         },
         "vocabulary": {
-          "description": "Declared open (R8 \u00a74). A validator MUST NOT reject unrecognized values.",
-          "const": "open"
+          "description": "Which vocabulary the values are drawn from (R101 \u00a73.1). closed: the column also declares `enum` and a validator MUST reject anything outside it. open: the values name kinds of thing, comparable between packets, and a validator MUST NOT reject an unrecognised one. free: not a vocabulary at all -- a name, a description, a URI, a digest. Required on every string column but a discriminator, whose value space R55 \u00a72.1 fixes.",
+          "enum": [
+            "closed",
+            "open",
+            "free"
+          ]
         },
         "reserved_values": {
           "description": "Values with fixed meanings within an open vocabulary (R11 \u00a74). Not a closed set.",
@@ -242,61 +246,90 @@
           "description": "R100 \u00a72.3. On a by-position discriminator, the column of this table whose value is the position column in the named resource. Absent on the other two shapes, and never beside `discriminates`.",
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "authority": {
+          "description": "The nomenclatures this column's values are spelled by (R101 \u00a73.6). Identity, not a fetch instruction: a validator MUST NOT dereference one (R14 \u00a72.3.2) and MUST NOT reject a value for being absent from it. An array because a column's values may be drawn from more than one registry.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
         }
-      },
-      "not": {
-        "required": [
-          "enum",
-          "vocabulary"
-        ]
       },
       "allOf": [
         {
           "if": {
-            "properties": {
-              "role": {
-                "const": "identifier"
-              }
-            },
             "required": [
+              "type",
               "role"
-            ]
+            ],
+            "properties": {
+              "type": {
+                "const": "string"
+              },
+              "role": {
+                "not": {
+                  "const": "discriminator"
+                }
+              }
+            }
           },
           "then": {
             "required": [
-              "identity"
-            ]
-          },
-          "else": {
-            "not": {
-              "required": [
-                "identity"
-              ]
-            }
-          }
-        },
-        {
-          "not": {
-            "required": [
-              "unit",
-              "unit_from"
+              "vocabulary"
             ]
           }
         },
         {
           "if": {
             "required": [
-              "clock_from"
+              "enum"
             ]
           },
           "then": {
             "properties": {
-              "role": {
-                "const": "coordinate"
+              "vocabulary": {
+                "const": "closed"
               }
             },
             "required": [
-              "role"
+              "vocabulary"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "vocabulary"
+            ],
+            "properties": {
+              "vocabulary": {
+                "const": "closed"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "enum"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "reserved_values"
+            ]
+          },
+          "then": {
+            "properties": {
+              "vocabulary": {
+                "const": "open"
+              }
+            },
+            "required": [
+              "vocabulary"
             ]
           }
         }

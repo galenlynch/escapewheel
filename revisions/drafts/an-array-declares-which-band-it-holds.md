@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | R8 §4 (renames `raw`, strikes `waveform`, and narrows what the column is for), the declarations of `kind` and `semantic_type` on both array tables |
-| **Depends on** | `a-column-declares-what-its-values-mean` (open draft: records R8 §4's reserved set and rewrites both descriptions), R8 §4 (the four reserved kinds), R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R50 §2 (a column is renamed where its name says less than its declaration), R65 §1 (an array names the device that made it) |
+| **Depends on** | R101 §3.8 (records R8 §4's reserved set) and R101 §3.5 (rewrites both descriptions), R8 §4 (the four reserved kinds), R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R50 §2 (a column is renamed where its name says less than its declaration), R65 §1 (an array names the device that made it) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.

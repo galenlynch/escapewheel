@@ -21,7 +21,8 @@
           "presence": "required",
           "role": "data",
           "description": "Always `dynamic_foraging.trials`. Carries `core.intervals.interval_kind` as part of R90 \u00a73.5's shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know (R90 \u00a73.3).",
-          "since": "R90 \u00a73.3"
+          "since": "R90 \u00a73.3",
+          "vocabulary": "open"
         },
         {
           "name": "trial_id",
@@ -44,8 +45,7 @@
           "type": "int32",
           "presence": "nullable",
           "role": "data",
-          "description": "The response the task recorded. The source emits 0, 1 and 2 as a float; what each means is the task's and is not restated here.",
-          "vocabulary": "open"
+          "description": "The response the task recorded. The source emits 0, 1 and 2 as a float; what each means is the task's and is not restated here."
         },
         {
           "name": "rewarded_history_left",
@@ -278,7 +278,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The block's own name, where the source has one."
+          "description": "The block's own name, where the source has one.",
+          "vocabulary": "free"
         },
         {
           "name": "clock_id",
@@ -579,7 +580,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "That curriculum's version.",
-          "vocabulary": "open"
+          "vocabulary": "free"
         },
         {
           "name": "auto_train_curriculum_schema_version",
@@ -587,7 +588,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "The schema version that curriculum was written to.",
-          "vocabulary": "open"
+          "vocabulary": "free"
         },
         {
           "name": "auto_train_stage",

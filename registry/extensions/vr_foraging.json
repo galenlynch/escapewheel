@@ -21,7 +21,8 @@
           "presence": "required",
           "role": "data",
           "description": "Always `vr_foraging.sites`. Carries `core.intervals.interval_kind` as part of R90 \u00a73.5's shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know (R90 \u00a73.3).",
-          "since": "R90 \u00a73.3"
+          "since": "R90 \u00a73.3",
+          "vocabulary": "open"
         },
         {
           "name": "site_id",
@@ -36,14 +37,16 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What kind of site this is, in the task's own words (RewardSite, InterSite, ...). Open."
+          "description": "What kind of site this is, in the task's own words (RewardSite, InterSite, ...). Open.",
+          "vocabulary": "open"
         },
         {
           "name": "patch_label",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Patch type this site belongs to. Open."
+          "description": "Patch type this site belongs to. Open.",
+          "vocabulary": "open"
         },
         {
           "name": "start_position",
@@ -429,21 +432,24 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Schema version the session's task logic declared."
+          "description": "Schema version the session's task logic declared.",
+          "vocabulary": "free"
         },
         {
           "name": "data_contract_version",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Version of the data-contract library that read the session."
+          "description": "Version of the data-contract library that read the session.",
+          "vocabulary": "free"
         },
         {
           "name": "packaging_version",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Version of the packaging library that produced these tables."
+          "description": "Version of the packaging library that produced these tables.",
+          "vocabulary": "free"
         },
         {
           "name": "curriculum_enabled",
@@ -457,14 +463,16 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Curriculum the trainer state named."
+          "description": "Curriculum the trainer state named.",
+          "vocabulary": "open"
         },
         {
           "name": "curriculum_stage_name",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Stage the trainer state named."
+          "description": "Stage the trainer state named.",
+          "vocabulary": "open"
         }
       ],
       "primary_key": [

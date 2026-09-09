@@ -70,7 +70,8 @@
           "name": "name",
           "type": "string",
           "presence": "required",
-          "role": "data"
+          "role": "data",
+          "vocabulary": "free"
         },
         {
           "name": "tick_rate_hz",
@@ -83,7 +84,8 @@
           "name": "origin",
           "type": "string",
           "presence": "required",
-          "role": "data"
+          "role": "data",
+          "vocabulary": "open"
         },
         {
           "name": "parent_clock_id",

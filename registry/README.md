@@ -91,7 +91,7 @@ declares, and therefore what a generator has to work with:
 154 required column, not null
 97  reference, resolves
 39  primary key, unique
-3   closed vocabulary, member of
+4   closed vocabulary, member of
 7   discriminator, resolvable
 ```
 <!-- END generated: structure -->

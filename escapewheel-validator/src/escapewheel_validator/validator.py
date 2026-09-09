@@ -1195,6 +1195,38 @@ def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, An
                 report.add("info", f"{resource_id}.metadata_unfilled", "metadata is null in every row")
 
 
+def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
+    """R101 §3.11. A value outside a column's reserved set, at `info`.
+
+    Never a failure: the vocabulary is open (R8 §4) and an unrecognised value is exactly what
+    openness admits. What the report is for is the case R101 §2.5 measured — `core.array_assets`
+    carried `dense_array_asset`, a manifest resource kind, in the column reserving `raw`, `ap`,
+    `lfp` and `waveform`, and nothing could see it because no column declared a set.
+
+    Whether a value is a *synonym* for a reserved one stays uncheckable, so R8 §4's prohibition
+    binds a writer and no rule (R67 §2.4).
+    """
+    for resource_id, handle in present.items():
+        for column in tables[resource_id]["columns"]:
+            reserved = column.get("reserved_values")
+            if not reserved:
+                continue
+            name = column["name"]
+            try:
+                table = pq.read_table(handle.path, columns=[name])
+            except (OSError, pa.ArrowException, KeyError):
+                continue
+            outside = sorted({v for v in table.column(name).to_pylist()
+                              if v is not None and v not in set(reserved)})
+            if outside:
+                report.add(
+                    "info", f"{resource_id}.{name}.outside_reserved_set",
+                    f"{len(outside)} value(s) outside the reserved set: "
+                    f"{', '.join(repr(v) for v in outside[:5])}"
+                    + (" ..." if len(outside) > 5 else ""),
+                )
+
+
 def _check_ordering(
     tables: Mapping[str, Any],
     present: Mapping[str, Any],
@@ -1747,6 +1779,7 @@ def validate(
     unsound = _check_ordering(effective["tables"], present, report, scan)
     _check_duplication(present, effective["tables"], report)
     _check_unfilled_metadata(present, effective["tables"], report)
+    _check_reserved_values(present, effective["tables"], report)
     _run_rules(packet, effective, present, report, advisory, limits, unsound, recheck)
     return report
 

@@ -16,7 +16,7 @@ def registry():
 def minimal():
     """The smallest set of records that validates: one session, one subject, one clock."""
     return {
-        "core.subjects": [{"subject_id": "m001", "species": "Mus musculus", "sex": "M"}],
+        "core.subjects": [{"subject_id": "m001", "species": "Mus musculus", "sex": "male"}],
         "core.sessions": [
             {
                 "session_id": "s001",

@@ -80,7 +80,7 @@ def test_a_failing_packet_is_not_committed(tmp_path, registry, minimal):
 
 def test_tables_are_written_in_the_registry_order(tmp_path, registry, minimal):
     """R10 §2: sorted by the primary key, whatever order the adapter emitted."""
-    out_of_order = [{"subject_id": s, "species": "Mus musculus", "sex": "M"} for s in ("m004", "m002", "m003")]
+    out_of_order = [{"subject_id": s, "species": "Mus musculus", "sex": "male"} for s in ("m004", "m002", "m003")]
     root = tmp_path / "s001"
     _write(root, registry, {**minimal, "core.subjects": out_of_order + minimal["core.subjects"]})
     written = open_packet(root).table("core.subjects")
@@ -93,7 +93,7 @@ def test_tables_are_written_in_the_registry_order(tmp_path, registry, minimal):
 def test_a_packet_without_sessions_is_refused(tmp_path, registry):
     """R1 §6: the manifest's session inventory may not be empty."""
     writer = PacketWriter(registry, packet_id="p")
-    writer.add("core.subjects", [{"subject_id": "m001", "species": "Mus musculus", "sex": "M"}])
+    writer.add("core.subjects", [{"subject_id": "m001", "species": "Mus musculus", "sex": "male"}])
     with pytest.raises(ValueError, match="at least one session"):
         writer.commit(tmp_path / "p")
 

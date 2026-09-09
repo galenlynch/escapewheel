@@ -121,7 +121,7 @@ def build(root, *, based):
     extensions = [detail("dynamic_foraging", "trials", TASK_COLUMNS, based=based),
                   detail("optotagging", "pulses", OPTO_COLUMNS, based=based)]
     writer = PacketWriter(registry, packet_id=root.name, extensions=extensions)
-    writer.add("core.subjects", [{"subject_id": "m776259", "species": "Mus musculus", "sex": "M"}])
+    writer.add("core.subjects", [{"subject_id": "m776259", "species": "Mus musculus", "sex": "male"}])
     writer.add("core.sessions", [{"session_id": SESSION, "subject_id": "m776259",
                                   "session_start_time": "2026-04-09T17:25:12Z",
                                   "reference_clock_id": "harp"}])

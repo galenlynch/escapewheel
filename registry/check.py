@@ -57,6 +57,12 @@ check("a since names a revision",
       [(n, v) for n, t in T.items()
        for v in [t.get("since"), *(c.get("since") for c in t["columns"])]
        if v is not None and not re.fullmatch(r"R\d+(?: §[\d.\-]+)?", v)])
+#: R101 §3.6. A UCUM code is printable ASCII without spaces; an annotation in curly
+#: braces is one and is dimensionless. This rejects the prose that was declared --
+#: "median anchor intervals", "byte" -- rather than parsing the grammar.
+_UCUM = re.compile(r"[!-~]+")
+
+
 def structural(tables, universe, prefix=""):
     """The invariants that hold of any registry document, core's or an extension's.
 
@@ -178,6 +184,48 @@ def structural(tables, universe, prefix=""):
     c_("every `metadata` column is optional (R97 §3.1)",
        [n for n, t in tables.items()
         if "metadata" in cols[n] and cols[n]["metadata"]["presence"] != "optional"])
+
+    # ---- R101 §3 : what a column says about its values ---------------------------------------
+    # `02` §9.3 made open the default, so nothing distinguished a column deliberately left open
+    # from one nobody had classified, and the marker rode on a column rather than on the
+    # vocabulary -- `coordinate_frame` open on one table and undeclared on the other.
+    _strings = [(n, c) for n, t in tables.items() for c in t["columns"] if c["type"] == "string"]
+    c_("every string column but a discriminator declares a vocabulary (R101 §3.1)",
+       [(n, c["name"]) for n, c in _strings
+        if c["role"] != "discriminator" and "vocabulary" not in c])
+    c_("a discriminator declares no vocabulary (R101 §3.3)",
+       [(n, c["name"]) for n, c in _strings
+        if c["role"] == "discriminator" and "vocabulary" in c],
+       lambda x: f"{x[0]}.{x[1]}: R55 §2.1 fixes the value space to the declared resource IDs")
+    c_("no column of another type declares one (R101 §3.1)",
+       [(n, c["name"]) for n, t in tables.items() for c in t["columns"]
+        if c["type"] != "string" and "vocabulary" in c])
+    c_("`closed` holds exactly where `enum` does (R101 §3.1)",
+       [(n, c["name"]) for n, c in _strings
+        if (c.get("vocabulary") == "closed") != ("enum" in c)])
+    c_("`reserved_values` appears only under `open` (R101 §3.4)",
+       [(n, c["name"]) for n, c in _strings
+        if "reserved_values" in c and c.get("vocabulary") != "open"])
+    c_("an authority is an absolute URI (R101 §3.6)",
+       [(n, c["name"], u) for n, t in tables.items() for c in t["columns"]
+        for u in c.get("authority", []) if not u.startswith(("http://", "https://"))])
+    c_("a declared unit is a UCUM code (R101 §3.6)",
+       [(n, c["name"], c["unit"]) for n, t in tables.items() for c in t["columns"]
+        if c.get("unit") and not _UCUM.fullmatch(c["unit"])],
+       lambda x: f"{x[0]}.{x[1]} declares {x[2]!r}; an annotation in curly braces is a UCUM unit "
+                 f"and is dimensionless, which is what a packet-relative quantity is")
+    c_("an open column carries a description (R101 §3.5)",
+       [(n, c["name"]) for n, c in _strings
+        if c.get("vocabulary") == "open" and not c.get("description")])
+    # §3.6: the drift caught mechanically. A name declared two ways in two tables is what
+    # §2.3 measured on `coordinate_frame`, `activity_type` and the eight unit columns.
+    _by_name: dict[str, set] = {}
+    for n, c in _strings:
+        if "vocabulary" in c:
+            _by_name.setdefault(c["name"], set()).add(
+                (c["vocabulary"], tuple(c.get("authority", ()))))
+    c_("one column name carries one vocabulary and one authority (R101 §3.6)",
+       sorted(k for k, v in _by_name.items() if len(v) > 1))
 
 
 structural(T, T)
