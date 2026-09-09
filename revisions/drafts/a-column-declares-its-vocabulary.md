@@ -237,10 +237,20 @@ are the same claim, so the field stays absent.
 
 ### 3.9 `sex` is closed, and a writer normalizes onto it
 
-`core.subjects.sex` **MUST** declare an `enum` of `male`, `female` and `other`, becoming core's
-fourth closed vocabulary.
+`core.subjects.sex` **MUST** declare an `enum` of `male`, `female`, `hermaphrodite` and `other`,
+becoming core's fourth closed vocabulary.
 
-A writer **MUST** map the source's spelling onto one of the three. Where the source states an
+Three of those are HL7 FHIR's `AdministrativeGender` — `male`, `female`, `other`, `unknown` —
+whose fourth this set carries as null rather than as a code, since a null column and a column
+saying `unknown` would be one fact spelled two ways (R3 §3.0). The spelling is FHIR's because it
+is published and lowercase; ISO/IEC 5218 is numeric and PATO is a set of IRIs, so neither is a
+code a column could hold.
+
+`hermaphrodite` is the addition, and it names a determinate sex rather than a residue:
+*Caenorhabditis elegans* is hermaphrodite or male and has no females, so `other` would collapse
+the sex of every worm in every packet into the value reserved for what cannot be classified.
+
+A writer **MUST** map the source's spelling onto one of the four. Where the source states an
 unknown sex, states none, or describes a preparation that has none, the column **MUST** be null:
 NWB writes `U` for unknown, and recording that as `other` asserts a sex the source never claimed.
 Null therefore carries three readings, which §6 records rather than settles.
