@@ -18,11 +18,17 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `what-an-array-asset-declares-about-its-signal` | amends R101 §3.8's reserved set and R8 §4; renames a column, changes three columns' presence and adds two, so it moves the counts R101 §5 records |
-| 2 | `a-coordinate-frame-declares-what-its-axes-mean` | adds a table whose six string columns need R101 §3.1's declaration, and gives `coordinate_frame` the reference R101 §6 records it lacking |
-| 3 | `a-coded-value-is-stored-decoded` | rests on R101 §3.1 having forbidden a vocabulary on an integer, which is what left the column unable to say what its codes mean |
+| 1 | `an-asset-names-what-made-it` | adds the run pointer and the media device reference the two below rest on; depends on nothing unaccepted |
+| 2 | `an-arrays-band-and-the-quantity-it-holds` | §3.3 strikes `waveform` because #1 gives the run a column of its own, and §3.4 lets a video's `semantic_type` empty once #1's `device_id` is filled |
+| 3 | `a-device-declares-what-kind-of-thing-it-is` | the camera it specialises is only a `core.devices` row after #1 §3.3 |
+| 4 | `a-coordinate-frame-declares-what-its-axes-mean` | adds a table whose six string columns need R101 §3.1's declaration, and gives `coordinate_frame` the reference R101 §6 records it lacking |
+| 5 | `a-coded-value-is-stored-decoded` | rests on R101 §3.1 having forbidden a vocabulary on an integer, which is what left the column unable to say what its codes mean |
 
-Either order works between the two — neither touches the other's tables — but both must follow
-R101, whose classification their new and renamed columns are measured against. Their numbers were
-measured when they were drafted and are re-measured at acceptance, which the pre-acceptance checks
-in `../CLAUDE.md` require of every number anyway.
+Drafts 4 and 5 are independent of 1–3 and of each other; the numbering above is the order they
+would be applied in, not a dependency between them.
+
+**Four of the five move the same counts.** #1 adds three columns and three references, #3 adds one
+column, and #4 adds seven columns and three references, so whichever lands second describes a
+registry the first has already changed. Every number in each is measured against the registry as
+it stood when it was drafted and is re-measured at acceptance, which the pre-acceptance checks in
+`../CLAUDE.md` require of every number anyway.
