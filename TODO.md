@@ -9,10 +9,10 @@ Last checked 2026-09-04, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R98 accepted. R42 and R73 withdrawn. 3 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R99 accepted. R42 and R73 withdrawn. 2 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
-38 tables, 321 columns, 94 references, 71 Tier 2 rules (2 advisory)
+39 tables, 330 columns, 96 references, 74 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
 27 conformance packets
@@ -87,6 +87,25 @@ R86 §2.2 was corrected before acceptance and no longer depends on this: it stat
 name columns colliding and excludes `subject_name` explicitly, naming the recipe defect as the
 only reason the two packets agree on a value. The rebuild removes the collision and changes
 nothing in the revision.
+
+## 2₀. The writer still records R99's three facts in `parameters`
+
+R99 §3 moved them to `core.sessions.alignment_bound`, two nullable bools on `core.clocks` and
+`core.clock_phase_steps`, and `escapewheel_reader.clocks.declared_bound` reads the column already.
+The writer does not yet fill any of them: `session._alignment_parameters` still returns the blob,
+so a packet built today is conforming — all three are nullable or an absent table — and violates
+R99 §3.2's MUST, which binds a writer that runs R37 §3.2's test to record both columns.
+
+The awkward half is `withheld_first_anchor` and `withheld_last_anchor`. The sync source computes
+the withholding and emits only the *reference* clock row; the probe clock rows come from the
+sorter, so stamping a column onto them needs a hook the session layer does not have, of the shape
+`context.session_extra` has for `t_zero_tick`. `alignment_bound` and `core.clock_phase_steps` are
+each straightforward on their own, and doing one without the other would leave a fact in two
+places, which is what R99 exists to stop.
+
+R98 §3.2 belongs to the same build: the two recipes under `/mnt/Data/*/recipe.toml` declare
+`core.clock_observation_intervals` under `owns` where two sources each hold part, which is what
+kept twelve clocks of thirteen from having a window.
 
 ## 2a. `registry_version` — still `0.1.0`
 

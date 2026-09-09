@@ -712,7 +712,7 @@ string  int32  int64  float32  float64  bool  timestamp  date  json_string
 
 This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps a native reader viable in a language without an embedded SQL engine.
 
-A value that varies per row and is queried belongs in a typed column of a specialising resource; a value constant across the table belongs once, on the table that owns the whole. What may go in a `json_string` column is §8.6.
+A value that varies per row and is queried belongs in a typed column of a specialising resource; a value constant across the table belongs once, on the table that owns the whole. What may go in the two `json_string` columns core declares is §8.6 for `metadata` and §12.6 for `core.processing_runs.parameters`.
 
 ### 5.3 Fixed representations
 
@@ -1104,6 +1104,18 @@ A clock MUST NOT declare both `tick_rate_hz` and a rational rate (R95 §3.2); `c
 A packet MUST declare at least one row of `core.clock_observation_intervals` for every clock any of its rows is timestamped on (R98 §3.1). More than one is permitted, for an acquisition paused and resumed (R38 §2.1). A clock that exists only as a parent declares none: R27 §3 requires the chain to be well founded, so such a clock is declared, and nothing is observed on it for R38 §2.3's inheritance to reach.
 
 `core.clocks.observation_declared` checks the part of that a query can see — a clock that has anchors, or that a session names as its `reference_clock_id`, and declares no interval. A clock aligned by `transform_slope` alone carries data and has no anchors, so the obligation reaches it and the rule does not; the obligation binds the writer, which knows what it timestamped.
+
+### 12.6 A clock's alignment record
+
+Three facts about how a packet's clocks were aligned are columns, because a consumer needs them to place a tick and `02` §8.6's line puts such a fact in a column and never in a key (R99 §3).
+
+`core.sessions.alignment_bound` holds how far past its anchors the writer mapped, in median anchor intervals. A writer establishing a bound wider than R27 §5.3's default MUST record it; a consumer reading a null MUST map at that default, which is a fact and not a defect. It is on the session because the bound is a property of the times the packet states, as `t_zero_tick` is (R39 §2.1), so one session declares one bound and no rule is needed to say which run wins. A value below one is refused.
+
+`core.clocks.withheld_first_anchor` and `withheld_last_anchor` record R37 §3.2's terminal-anchor test on that clock, and a writer running it MUST record both. Three states carry what R40 §2.3 asks for: null is a clock the test did not run on, false is a terminal it kept, true is one it withheld — so a silent zero and an untested clock differ structurally rather than by a rule nothing can observe. A clock with no anchors MUST NOT declare either.
+
+`core.clock_phase_steps` holds one row per step in a clock's alignment to its parent, a clock having possibly several (§5.2). A writer detecting a step MUST record it, and a step is reported and never corrected: R13's map is exact at every anchor, so it carries the step faithfully, and subtracting it would need to know whether the step also moved the devices timestamped on that parent, which the packet does not record. A clock whose `parent_clock_id` is null MUST NOT have rows here.
+
+`core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record there what R40 §2.2 requires of a measurement — median, p95 and maximum error, with the distance and the tolerance it judged them against. A consumer needs the bound to place a tick and not the residual that justified it.
 
 <!-- END 02_core_logical_schemas.md -->
 

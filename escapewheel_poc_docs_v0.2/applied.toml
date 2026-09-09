@@ -1881,3 +1881,35 @@ disposition = "applied"
 where = "05_validation_and_import.md §3.4"
 note = "session._note_unclaimed compares against declared preferences rather than against every source's claims"
 
+[clause."R99 §2.1"]
+disposition = "rationale"
+note = "declared_bound reads a key no document names, and 02 §5.2's JSON-free read path gives a different answer"
+
+[clause."R99 §2.2"]
+disposition = "rationale"
+note = "nested, keyed on clock_name in 12 of 12 entries against 0 of 12 for clock_id, and carrying two coordinates with no clock_from"
+
+[clause."R99 §2.3"]
+disposition = "rationale"
+note = "alignment_bound absent from both, withheld_anchors on 12 and 10 clocks, phase_discontinuities 24 steps and none; blobs of 9,479 and 7,100 bytes"
+
+[clause."R99 §3.1"]
+disposition = "registry"
+where = "core.sessions.alignment_bound and core.sessions.alignment_bound_at_least_default"
+note = "also stated in 02_core_logical_schemas.md §12.6"
+
+[clause."R99 §3.2"]
+disposition = "registry"
+where = "core.clocks.withheld_first_anchor, withheld_last_anchor and core.clocks.withheld_needs_anchors"
+note = "the nullable bool is what carries R40 §2.3's untested-versus-kept distinction; also 02 §12.6"
+
+[clause."R99 §3.3"]
+disposition = "registry"
+where = "core.clock_phase_steps and core.clock_phase_steps.step_needs_parent"
+note = "parent_tick declares clock_from inline, CONTEXT being consumed before a block this late runs; also 02 §12.6"
+
+[clause."R99 §3.4"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §12.6"
+note = "parameters keeps the evidence and none of the three facts; 02 §5.2 now names both json_string columns"
+

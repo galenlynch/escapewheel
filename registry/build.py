@@ -150,6 +150,8 @@ for _role, _names in {
         "curation_tool", "curation_tool_version", "curator", "date_of_birth", "dimension_name", "dropped",
         "ended_at", "event_type", "experimenter", "firing_rate_hz", "firmware_version", "format",
         "genotype", "hardware_version", "impedance_ohm", "input_unit", "input_value",
+        "alignment_bound", "anchor_interval_span", "shift_seconds",
+        "withheld_first_anchor", "withheld_last_anchor",
         "insertion_name", "institution", "inter_sample_shift", "is_primary", "kind", "label",
         "local_channel_label", "local_electrode_label", "local_unit_label", "manufacturer", "metadata",
         "model", "modified_at", "n_spikes", "name", "normalized_label", "notes", "offset", "origin",
@@ -1500,6 +1502,47 @@ def build() -> dict:
     for resource, spec in tables.items():
         if any(c["name"] == "metadata" for c in spec["columns"]):
             amend(resource, "metadata", presence="optional", description=METADATA)
+
+    # ---- R99 §3 : a packet records its clock alignment in columns ----------------------------
+    # Three facts a consumer needs to place a tick were content of `core.processing_runs.parameters`,
+    # an untyped `json_string`: a map keyed by `clock_name` whose values carried coordinates on two
+    # clocks. `02` §5.2 forbids that shape as a column and R3 §3.4 already converted
+    # `core.clocks.transform_to_parent` out of it, so they become columns and a table.
+    SINCE[0] = "R99 §3.1"
+    add_col("core.sessions", col("alignment_bound", "float64", "nullable",
+                                 "How far past its anchors the writer mapped, in median anchor "
+                                 "intervals (R27 §5.3). Null means the default of one."))
+    amend("core.sessions", "alignment_bound", unit="median anchor intervals")
+
+    SINCE[0] = "R99 §3.2"
+    for _end in ("first", "last"):
+        add_col("core.clocks", col(f"withheld_{_end}_anchor", "bool", "nullable",
+                                   f"Whether R37 §3.2's terminal-anchor test withheld this clock's "
+                                   f"{_end} anchor. Null means the test did not run."))
+
+    SINCE[0] = "R99 §3.3"
+    tables["core.clock_phase_steps"] = {
+        "columns": [col("session_id", "int32", "required", "Session."),
+                    col("clock_id", "int32", "required", "The clock whose alignment stepped."),
+                    col("t_tick", "int64", "required", "Where the step is, on `clock_id`."),
+                    col("parent_tick", "int64", "required",
+                        "The same instant on the parent clock."),
+                    col("shift_seconds", "float64", "required",
+                        "How far the parent's phase moved. Signed."),
+                    col("anchor_interval_span", "int32", "required",
+                        "How many consecutive anchor intervals the step spans.")],
+        "primary_key": ["session_id", "clock_id", "t_tick"],
+        "references": [{"columns": ["session_id"], "resource": "core.sessions",
+                        "resource_columns": ["session_id"]},
+                       {"columns": ["clock_id"], "resource": "core.clocks",
+                        "resource_columns": ["clock_id"]}],
+        "rules": [],
+    }
+    # R56 §2.3's one-hop form, declared here rather than in CONTEXT, which is consumed before a
+    # block this late runs. `core.clock_anchors.parent_tick` carries the same pair of clocks.
+    amend("core.clock_phase_steps", "parent_tick", clock_from="core.clocks.parent_clock_id")
+    amend("core.clock_phase_steps", "shift_seconds", unit="s")
+    amend("core.clock_phase_steps", "anchor_interval_span", unit="anchor intervals")
 
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column

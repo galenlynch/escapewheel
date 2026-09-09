@@ -8,16 +8,16 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-38 tables, 321 columns, 94 references, 71 Tier 2 rules
+39 tables, 330 columns, 96 references, 74 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99
 ```
 
 ## Contents
 
 **analysis** (3) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.spike_events`](#analysisspike_events)
 
-**core** (35) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.calibration_devices`](#corecalibration_devices) · [`core.calibration_points`](#corecalibration_points) · [`core.calibrations`](#corecalibrations) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
+**core** (36) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.calibration_devices`](#corecalibration_devices) · [`core.calibration_points`](#corecalibration_points) · [`core.calibrations`](#corecalibrations) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clock_phase_steps`](#coreclock_phase_steps) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
 
 ## `analysis`
 
@@ -319,6 +319,28 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.clock_observation_intervals.interval_valid` — error: stop_tick precedes start_tick
 - `core.clock_observation_intervals.non_overlapping` — error: observation windows overlap, which would double-count observed time
 
+### `core.clock_phase_steps`
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R99 §3.3 | Session. |
+| `clock_id` | int32 | **required** | R99 §3.3 | The clock whose alignment stepped. |
+| `t_tick` | int64 | **required** | R99 §3.3 | Where the step is, on `clock_id`. |
+| `parent_tick` | int64 | **required** | R99 §3.3 | The same instant on the parent clock. |
+| `shift_seconds` | float64 | **required** | R99 §3.3 | How far the parent's phase moved. Signed. |
+| `anchor_interval_span` | int32 | **required** | R99 §3.3 | How many consecutive anchor intervals the step spans. |
+
+**Primary key** — `session_id`, `clock_id`, `t_tick`  
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
+
+**Tier 2 rules** — 1
+
+- `core.clock_phase_steps.step_needs_parent` — error: a phase step is recorded on a clock with no parent, and a step is a movement of the parent's phase (R99 3.3)
+
 ### `core.clocks`
 
 | Column | Type | Presence | Since | Description |
@@ -336,6 +358,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `transform_offset` | float64 | nullable | R3 §3.4 | Parent-clock tick at this clock's tick 0. |
 | `transform_to_parent` | json_string | optional |  | Clock alignment transform. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
+| `withheld_first_anchor` | bool | nullable | R99 §3.2 | Whether R37 §3.2's terminal-anchor test withheld this clock's first anchor. Null means the test did not run. |
+| `withheld_last_anchor` | bool | nullable | R99 §3.2 | Whether R37 §3.2's terminal-anchor test withheld this clock's last anchor. Null means the test did not run. |
 
 **Primary key** — `clock_id`  
 
@@ -344,7 +368,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `session_id` → `core.sessions` (`session_id`)
 - `parent_clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 10
+**Tier 2 rules** — 11
 
 - `core.clocks.tick_rate_declared` — error: neither tick_rate_hz nor an exact rational rate is present
 - `core.clocks.tick_rate_one_form` — error: a clock declares both a float rate and a rational one (R95 §3.2)
@@ -356,6 +380,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.clocks.parent_chain_well_founded` — error: a clock is its own ancestor, so walking the chain does not terminate (R27 3)
 - `core.clocks.alignment_declared_for_conversion` — error: a non-reference clock declares no alignment, so it cannot be converted (R27 4)
 - `core.clocks.observation_declared` — error: a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit (R98 3.1)
+- `core.clocks.withheld_needs_anchors` — error: a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it (R99 3.2)
 
 ### `core.curation_versions`
 
@@ -740,6 +765,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `source_session_id` | int32 | nullable |  | Source-system session ID if different. |
 | `t_zero_tick` | int64 | nullable | R39 §2.2 | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
+| `alignment_bound` | float64 | nullable | R99 §3.1 | How far past its anchors the writer mapped, in median anchor intervals (R27 §5.3). Null means the default of one. |
 
 **Primary key** — `session_id`  
 
@@ -748,12 +774,13 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `subject_id` → `core.subjects` (`subject_id`)
 - `reference_clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 4
+**Tier 2 rules** — 5
 
 - `core.sessions.manifest_sessions_match` — error: the manifest's session inventory and core.sessions disagree; the manifest names a session by its session_name, since an assigned session_id means nothing outside the packet that assigned it (R53 §2.3.1)
 - `core.sessions.session_interval_valid` — error: session_end_time precedes session_start_time
 - `core.sessions.reference_clock_declared` — error: a session declaring more than one clock names no reference clock (R27 2)
 - `core.sessions.every_clock_reaches_the_reference` — error: a clock does not reach the session's reference clock, so it cannot be converted to it
+- `core.sessions.alignment_bound_at_least_default` — error: a session declares an alignment bound below R27 5.3's default of one median anchor interval, which reaches no further than declaring nothing (R99 3.1)
 
 ### `core.sorting_run_channels`
 

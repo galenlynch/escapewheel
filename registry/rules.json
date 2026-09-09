@@ -194,6 +194,12 @@
         "level": "error",
         "message": "a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit (R98 3.1)",
         "sql": "SELECT c.session_id, c.clock_id FROM core_clocks c LEFT JOIN core_clock_observation_intervals o ON o.session_id = c.session_id AND o.clock_id = c.clock_id WHERE o.clock_id IS NULL AND (EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id) OR EXISTS (SELECT 1 FROM core_sessions s WHERE s.session_id = c.session_id AND s.reference_clock_id = c.clock_id))"
+      },
+      {
+        "id": "core.clocks.withheld_needs_anchors",
+        "level": "error",
+        "message": "a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it (R99 3.2)",
+        "sql": "SELECT c.session_id, c.clock_id FROM core_clocks c WHERE (c.withheld_first_anchor IS NOT NULL OR c.withheld_last_anchor IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id)"
       }
     ],
     "core.devices": [
@@ -368,6 +374,12 @@
         "level": "error",
         "message": "a clock does not reach the session's reference clock, so it cannot be converted to it",
         "sql": "WITH RECURSIVE up(clock_id, ancestor, depth) AS (SELECT clock_id, clock_id, 0 FROM core_clocks UNION ALL SELECT u.clock_id, c.parent_clock_id, u.depth + 1 FROM up u JOIN core_clocks c ON c.clock_id = u.ancestor WHERE c.parent_clock_id IS NOT NULL AND u.depth < 64) SELECT c.session_id, c.clock_id FROM core_clocks c JOIN core_sessions s USING (session_id) WHERE s.reference_clock_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM up u WHERE u.clock_id = c.clock_id AND u.ancestor = s.reference_clock_id)"
+      },
+      {
+        "id": "core.sessions.alignment_bound_at_least_default",
+        "level": "error",
+        "message": "a session declares an alignment bound below R27 5.3's default of one median anchor interval, which reaches no further than declaring nothing (R99 3.1)",
+        "sql": "SELECT session_id, alignment_bound FROM core_sessions WHERE alignment_bound < 1.0"
       }
     ],
     "core.sorting_run_channels": [
@@ -471,6 +483,14 @@
         "level": "error",
         "message": "a unit's spikes carry an amplitude and the unit declares no amplitude_unit (R96 \u00a73.5)",
         "sql": "SELECT DISTINCT u.unit_id FROM core_spike_events s JOIN core_units u USING (unit_id) WHERE s.amplitude IS NOT NULL AND u.amplitude_unit IS NULL"
+      }
+    ],
+    "core.clock_phase_steps": [
+      {
+        "id": "core.clock_phase_steps.step_needs_parent",
+        "level": "error",
+        "message": "a phase step is recorded on a clock with no parent, and a step is a movement of the parent's phase (R99 3.3)",
+        "sql": "SELECT s.session_id, s.clock_id, s.t_tick FROM core_clock_phase_steps s JOIN core_clocks c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE c.parent_clock_id IS NULL"
       }
     ]
   }

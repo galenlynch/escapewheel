@@ -270,8 +270,14 @@ def test_mapping_uses_the_bound_the_writer_established(two_clock_packet, tmp_pat
     root = tmp_path / "wide"
     shutil.copytree(two_clock_packet, root)
     manifest = json.loads((root / "packet.json").read_text())
-    runs = pa.table({"parameters": pa.array([json.dumps({"alignment_bound": {"used": 3.0}})])})
-    manifest["resources"].append(_resource("core.processing_runs", _write(root, "processing_runs", runs)))
+    # R99 §3.1 puts the bound on the session, so this widens the packet's own session row
+    # rather than standing a new table beside it.
+    import pyarrow.parquet as pq
+
+    entry = next(r for r in manifest["resources"] if r["resource_id"] == "core.sessions")
+    sessions = pq.read_table(root / entry["uri"])
+    sessions = sessions.append_column("alignment_bound", pa.array([3.0] * sessions.num_rows, pa.float64()))
+    pq.write_table(sessions, root / entry["uri"])
     (root / "packet.json").write_text(json.dumps(manifest))
 
     # Two anchor intervals before the first anchor: outside R27 §5.3's default, inside the

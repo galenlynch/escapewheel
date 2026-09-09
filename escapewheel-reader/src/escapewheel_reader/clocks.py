@@ -223,39 +223,27 @@ def declared_bound(packet: Any) -> float:
     """Return the alignment bound the packet's writer established, or `BOUND`.
 
     R37 §3.3 lets a writer map further than one median anchor interval once it has *measured*
-    the estimator at the distance it intends to use, and R37 §4 puts that record in
-    `core.processing_runs.parameters` rather than adding a column. So this is where the number
-    lives, and reading it is what makes a consumer's mapping match the writer's: a packet whose
-    spikes were placed at a bound of two and whose reader maps at one disagrees with itself
-    about which of its own rows have a time.
+    the estimator at the distance it intends to use, and R99 §3.1 puts that bound in
+    `core.sessions.alignment_bound`. Reading it is what makes a consumer's mapping match the
+    writer's: a packet whose spikes were placed at a bound of two and whose reader maps at one
+    disagrees with itself about which of its own rows have a time.
 
-    The largest bound any run measured wins, since a run that widened the bound is the one that
-    wrote the ticks in question. A packet with no such record maps at `BOUND`, which is what
-    R37 §3.3 says a packet that says nothing means.
+    A null column is a packet that stayed within R27 §5.3's default, which is `BOUND`. Where a
+    packet holds several sessions the widest wins, since the reader presents them as one relation
+    (R86) and a tick placed under the wider bound has to stay placed.
 
     Memoised on the packet, for the same reason :func:`anchors` is.
     """
-    import json
-
     cached = getattr(packet, "_bound_cache", None)
     if cached is not None:
         return float(cached)
 
     try:
-        runs = packet.table("core.processing_runs", columns=["parameters"])
+        sessions = packet.table("core.sessions", columns=["alignment_bound"])
     except Exception:  # noqa: BLE001 -- an absent or unreadable table is simply no record
         return BOUND
-    found = [BOUND]
-    for raw in runs.column("parameters").to_pylist():
-        if not raw:
-            continue
-        try:
-            measured = json.loads(raw).get("alignment_bound") or {}
-        except (TypeError, ValueError):
-            continue
-        if isinstance(measured, dict) and isinstance(measured.get("used"), int | float):
-            found.append(float(measured["used"]))
-    widest = max(found)
+    declared = [float(v) for v in sessions.column("alignment_bound").to_pylist() if v is not None]
+    widest = max([BOUND, *declared])
     if hasattr(packet, "_bound_cache"):
         packet._bound_cache = widest
     return widest

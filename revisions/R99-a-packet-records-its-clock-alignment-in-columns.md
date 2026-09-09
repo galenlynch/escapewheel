@@ -1,8 +1,8 @@
-# A Packet Records Its Clock Alignment in Columns
+# R99 — A Packet Records Its Clock Alignment in Columns
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | `02` §5.2 (`core.processing_runs.parameters`), `core.sessions`, `core.clocks`; adds `core.clock_phase_steps` |
 | **Depends on** | R37 (bounding alignment by error), R40 (a tolerance that gates on quality), R56 (a column declares its context), R88 (a session-scoped table names its session), R98 (a clock declares when it was observing) |
 | **Profile** | all |

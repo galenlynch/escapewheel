@@ -179,14 +179,14 @@ def test_too_few_anchors_measure_nothing():
     assert extrapolation_error(ANCHOR_T[:3], ANCHOR_P[:3], 5) == {}
 
 
-# -- reading the bound a writer established (R37 §4) ------------------------------------
+# -- reading the bound a writer established (R99 §3.1) ----------------------------------
 
 
-class _Runs:
+class _Sessions:
     """A packet stub carrying only what `declared_bound` reads."""
 
-    def __init__(self, *parameters):
-        self._table = pa.table({"parameters": pa.array(parameters, pa.string())})
+    def __init__(self, *bounds):
+        self._table = pa.table({"alignment_bound": pa.array(bounds, pa.float64())})
 
     def table(self, resource_id, columns=None):
         del resource_id, columns
@@ -194,22 +194,26 @@ class _Runs:
 
 
 def test_a_packet_that_says_nothing_maps_at_the_default():
-    assert declared_bound(_Runs(json.dumps({"recipe": {}}))) == BOUND
+    """R99 §3.1: a null is a writer that stayed within R27 §5.3's default."""
+    assert declared_bound(_Sessions(None)) == BOUND
 
 
-def test_the_measured_bound_is_read_from_the_run_that_measured_it():
-    """R37 §4 puts it in `parameters` rather than in a column, so this is where it lives."""
-    assert declared_bound(_Runs(json.dumps({"alignment_bound": {"used": 2.0, "distance": 2}}))) == 2.0
+def test_the_declared_bound_is_read_from_the_session():
+    """R99 §3.1 moved it out of `core.processing_runs.parameters`, where no rule could see it."""
+    assert declared_bound(_Sessions(2.0)) == 2.0
 
 
-def test_the_widest_measured_bound_wins():
-    runs = _Runs(json.dumps({"alignment_bound": {"used": 3.0}}), json.dumps({"bound": 1.0}), None)
-    assert declared_bound(runs) == 3.0
+def test_the_widest_declared_bound_wins():
+    """A tick placed under the wider bound stays placed when the packets are read as one (R86)."""
+    assert declared_bound(_Sessions(3.0, 1.0, None)) == 3.0
 
 
-def test_an_unreadable_record_is_no_record():
-    """Free-form JSON someone else wrote must not be able to break a read path."""
-    assert declared_bound(_Runs("not json", json.dumps({"alignment_bound": "nonsense"}))) == BOUND
+def test_an_unreadable_table_is_no_record():
+    class _Broken:
+        def table(self, resource_id, columns=None):
+            raise RuntimeError("no such resource")
+
+    assert declared_bound(_Broken()) == BOUND
 
 
 # -- the free function is the implementation; the method is a delegate --------------------

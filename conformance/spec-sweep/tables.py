@@ -48,6 +48,7 @@ STEPS = [
     ("R89 §2.1 + core.calibrations",           set(), {"core.calibrations"}),
     ("R89 §2.2 + core.calibration_devices",    set(), {"core.calibration_devices"}),
     ("R89 §2.3 + core.calibration_points",     set(), {"core.calibration_points"}),
+    ("R99 §3.3 + core.clock_phase_steps",      set(), {"core.clock_phase_steps"}),
 ]
 
 if not PARSED.exists():

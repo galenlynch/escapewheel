@@ -6,7 +6,7 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 <!-- BEGIN generated: counts -->
 ```
-38 tables, 321 columns, 94 references, 71 Tier 2 rules
+39 tables, 330 columns, 96 references, 74 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -88,9 +88,9 @@ declares, and therefore what a generator has to work with:
 
 <!-- BEGIN generated: structure -->
 ```
-148 required column, not null
-94  reference, resolves
-38  primary key, unique
+154 required column, not null
+96  reference, resolves
+39  primary key, unique
 3   closed vocabulary, member of
 5   discriminator, resolvable
 ```
@@ -113,16 +113,16 @@ inline-versus-sibling open, to be decided when the content was generated; inline
 a table's whole contract is readable in one place.
 
 <!-- BEGIN generated: rules -->
-71 rules over 24 tables: 62 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (R26 §2), off unless asked for.
+74 rules over 25 tables: 65 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (R26 §2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
-| `core.clocks` | 10 |
+| `core.clocks` | 11 |
 | `core.array_dimensions` | 7 |
 | `core.processing_runs` | 7 |
+| `core.sessions` | 5 |
 | `core.units` | 5 |
 | `core.clock_anchors` | 4 |
-| `core.sessions` | 4 |
 | `core.media_assets` | 3 |
 | `core.preferred_runs` | 3 |
 | `core.unit_electrodes` | 3 |
@@ -137,6 +137,7 @@ a table's whole contract is readable in one place.
 | `core.spike_events` | 2 |
 | `core.unit_observation_intervals` | 2 |
 | `core.array_channels` | 1 |
+| `core.clock_phase_steps` | 1 |
 | `core.event_streams` | 1 |
 | `core.events` | 1 |
 | `core.intervals` | 1 |
