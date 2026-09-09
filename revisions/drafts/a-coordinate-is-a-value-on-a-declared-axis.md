@@ -160,9 +160,9 @@ a name two sessions reuse names different things.
 `core.coordinate_frames` and `core.sessions`. A frame declares **as many axis rows as it has
 axes**, which is two for a shank and five for a rendering space.
 
-`axis_name` says which quantity, in the source's own words — `ml`, `ap` and `dv` from an NWB that
-wrote `ccf_ml`, `rel_x` from one that wrote `rel_x`. Two axes of one frame **MUST NOT** carry the
-same name, which one Tier 2 rule checks. `axis_direction` says
+`axis_name` says which quantity, in the source's own words: `ccf_ml` where the NWB's electrodes
+table has a column of that name, `rel_x` where it has one of that. Two axes of one frame **MUST
+NOT** carry the same name, which one Tier 2 rule checks. `axis_direction` says
 which way its values increase — `right`, `anterior`, `superior` and the rest — and is a separate
 column because it is a separate fact, which is what makes an anatomical code like `RAS` three axis
 rows rather than a fourth column on the frame.
@@ -211,14 +211,15 @@ answerable, because a writer necessarily chose: `CCF_AXES = ("ccf_ml", "ccf_ap",
 adapter deciding that axis 0 takes `ccf_ml`'s values, and the packet has been losing that decision
 rather than lacking it.
 
-`axis_name` holds **the source's own name for the quantity, as the source wrote it** — R22 §3's
-rule for a scorer's label, which a writer records verbatim and MUST NOT rewrite. A writer **MUST
-NOT** normalise it, translate it, or replace it with what the quantity is conventionally taken to
-be: `rel_x` names a relative position and an axis named `rel_x` says the packet's axis 0 holds
-what the NWB called `rel_x`, which is a fact, where naming it `across_shank` would be a claim no
-source supports. Where the source's name repeats the frame the row already declares, the writer
-drops that part and nothing else — `ccf_ml` in the `ccf` frame is `ml`, because R3 §3.0 forbids
-restating what the row already carries.
+`axis_name` holds **whatever the source called the field the values came from, verbatim** — the
+source's name becomes a value in the packet, not a column of it. An NWB whose electrodes table has
+a column `ccf_ml` yields an axis row whose `axis_name` is the string `ccf_ml`.
+
+This is R22 §3's rule for a scorer's label: recorded as the source emitted it, never rewritten. A
+writer **MUST NOT** normalise it, translate it, strip part of it, or replace it with what the
+quantity is conventionally taken to be. An axis named `rel_x` says the packet's axis 0 holds what
+the NWB called `rel_x`, which is a fact; naming it `across_shank` would be a claim no source
+supports, and naming it `x` would discard the only trace of where the value came from.
 
 `unit` **MUST** be declared, and a writer knows it by construction: whatever unit it wrote the
 values in, it wrote them. These packets' coordinates are micrometres, which R19 §3 declared in
@@ -265,9 +266,8 @@ The 27,557 coordinate rows keep their annotation and provenance and give up thei
 **74,223 value rows**, 2.69 per coordinate. Nothing reads the struck columns (§2.4), so no consumer
 breaks; `fixtures/build.py` is the only caller and writes the child rows instead.
 
-Both packets declare two frames. `ccf` declares three axis rows named `ml`, `ap` and `dv` — the
-NWB's `ccf_ml`, `ccf_ap` and `ccf_dv` less the prefix the frame already carries — and `probe`
-declares two named `rel_x` and `rel_y`, which is what the adapter read. Both carry `unit` of `um`
+Both packets declare two frames. `ccf` declares three axis rows named `ccf_ml`, `ccf_ap` and
+`ccf_dv`, and `probe` two named `rel_x` and `rel_y` — the NWB columns the adapter read, verbatim. Both carry `unit` of `um`
 and no direction, since no artifact of either session says which way any of the five increases,
 and both leave `atlas` and `atlas_version` **null**, since none names the atlas either. Both
 packets are rebuilt, which R87 §2.1, R88 §2, R91 §5, R95, R96, R97, R98, R99, R101 and R103 already
