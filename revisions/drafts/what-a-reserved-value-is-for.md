@@ -7,7 +7,7 @@
 | **Depends on** | R8 (open vocabularies and reserved values), R11 (the reserved event types), R91 §3.1 (which table declares `event_type`), R43 §3 and R54 §2.3 (a task's shape is not the format's) |
 | **Profile** | all |
 
-Normative, except §2 and §5, which are informative.
+Normative, except §2 and §6, which are informative.
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -30,13 +30,17 @@ Informative.
 ### 2.1 Two sets, one recorded
 
 R8 §4 reserved four values for `core.array_assets.kind` — `raw`, `ap`, `lfp`, `waveform` — with
-declared meanings, and R11 §4 reserved six for `event_type`, which R91 §3.1 has since moved onto
-`core.event_streams`. The registry received one of the two sets:
-of its **24** open vocabularies, `event_type` is the only column carrying a `reserved_values`
-array, and `kind` — the column the mechanism was invented for — carries none.
+declared meanings, and R11 §4 reserved six for `event_type`. The registry carries **neither**.
 
-Nothing reads the field where it is carried. `registry/rules.json` names `reserved_values` **0
-times**, and `check.py`'s three matches for "reserved" are about SQL reserved words.
+`kind`, the column the mechanism was invented for, never received a set. `event_type` did:
+`build.py` sets `reserved_values` on `core.events.event_type`, and R91 §3.1 moved `event_type` onto
+`core.event_streams` and struck the original, taking the reservation with it. The declaration was
+not reconsidered and not restated — it went with the column it was attached to.
+
+So `reserved_values` is a field the meta-schema declares, one build block sets on a column that no
+longer exists, and **no column in the registry carries**. `registry/rules.json` names it **0
+times**, and `check.py`'s five matches for "reserved" are about SQL reserved words. Of the
+**15** columns declaring `vocabulary: open`, none makes a claim about particular values.
 
 ### 2.2 The six are not one kind of thing
 
@@ -63,7 +67,8 @@ Four of them name something the reserved set describes, so R11 §4 read literall
 and reading it as intended does not help, because the adapter is not inventing a synonym. It is
 adding **which spout**, a distinction the reserved vocabulary has no room for. Nor is the side
 carried anywhere else: each of the seven streams holds exactly one event type, but what a stream
-contributes is `core.event_streams.name` holding `left_lick_time`, the source's own field name,
+contributes is `core.event_streams.event_stream_name` holding `left_lick_time`, the source's own
+field name,
 which this specification constrains no more than a device's (R67 §2.4, R85 §2.2). Reading a side
 out of it means parsing a name.
 
@@ -88,10 +93,11 @@ A task's shape is not the format's (R43 §3, R54 §2.3), and its vocabulary is n
 
 ### 3.2 `event_type` reserves nothing
 
-R11 §4's reserved set is **struck**, and `core.event_streams.event_type` declares no
-`reserved_values`.
-The column stays required and its vocabulary stays open, so a validator still **MUST NOT** reject
-any value.
+R11 §4's reserved set is **struck**. The registry already carries none, §2.1's move having
+dropped it, so what this settles is the revision rather than the declaration: `left_lick` becomes
+conforming rather than a breach nothing could see, and `build.py` loses the line that sets a field
+on a struck column. The column stays required and its vocabulary stays open, so a validator still
+**MUST NOT** reject any value.
 
 R11 §4's six stay in that revision as **examples**, which is what `01` offered them as, and what
 `02` should have said instead of "etc." A writer naming an event may use them and is not obliged
@@ -109,7 +115,24 @@ layer down.
 revision has reserved a value for the other two. Declaring an empty set and declaring nothing are
 the same claim, so the field stays absent.
 
-### 3.4 What a validator does
+### 3.4 Two columns say they are open
+
+`core.event_streams.event_type` and `core.preferred_runs.activity_type` **MUST** declare
+`vocabulary: open`. Both are open today by `02` §9.3's default, which makes a vocabulary open
+unless the column declares an `enum`, so nothing behaves differently — what changes is that the
+registry says so where a reader looks.
+
+Each lost the declaration the way §2.1's reservation did, and for the same reason: the marker
+belongs to a column rather than to a vocabulary, so it does not travel. R11 §4 opened `event_type`
+and R91 §3.1 moved the column without restating it. R9 §6 opened `activity_type` on
+`core.processing_runs`, and `core.preferred_runs.activity_type` — the same vocabulary one table
+over, added later — never received it. 15 columns declare `vocabulary: open` where 17 should.
+
+`registry/check.py` checks that a column declaring `reserved_values` also declares
+`vocabulary: open`, since reserving a value from a closed set is a contradiction and reserving one
+from a vocabulary that does not say it is open is a claim about nothing.
+
+### 3.5 What a validator does
 
 A validator **SHOULD** report, at `info`, a value outside the reserved set for any column declaring
 one. It **MUST NOT** report a failure: the vocabulary is open, and an unrecognized value is exactly
@@ -123,8 +146,8 @@ comply.
 
 ## 4. What this does not change
 
-- **No vocabulary closes, and none opens.** All 24 open vocabularies stay open, `event_type`
-  included; what changes is which of them makes a claim about particular values.
+- **No vocabulary closes.** Every open one stays open, `event_type` included; what changes is
+  which of them makes a claim about particular values, and which of them says it is open at all.
 - **No column, table, reference or Tier 2 rule is added or removed.** `reserved_values` is an
   existing registry field, filled on two more columns and emptied on one.
 - **No packet changes and nothing is rebuilt.** `left_lick` and its three companions are conforming
@@ -136,9 +159,13 @@ comply.
 
 ## 5. Consequence
 
-`core.array_assets.kind` and `analysis.array_assets.kind` gain a `reserved_values` array,
-`core.event_streams.event_type` loses one, and a validator gains §3.4's report. `registry/check.py` gains
-a check that a declared set is snake_case and free of duplicates.
+`core.array_assets.kind` and `analysis.array_assets.kind` gain a `reserved_values` array — the
+first the registry has ever carried — and `core.event_streams.event_type` and
+`core.preferred_runs.activity_type` gain `vocabulary: open`, taking the columns declaring it from
+15 to **17**. `build.py` loses the line setting `reserved_values` on `core.events.event_type`, a
+column R91 §3.1 struck. A validator gains §3.5's report, and `registry/check.py` gains two checks:
+that a declared set is snake_case and free of duplicates, and that a column declaring one declares
+its vocabulary open.
 
 Nothing else. No table, column, reference or rule changes, no packet is invalidated, and no rebuild
 is owed — which is the point: the alternative considered was a `<reserved>_<qualifier>` convention
