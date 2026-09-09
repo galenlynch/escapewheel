@@ -90,10 +90,16 @@ held the same pair with the difference recorded in a description — and R56 §2
 Each packet holds one `import` run among 26 and 22 `core.processing_runs` rows, and every sorting
 and curation row carries no parameters at all. The blob is 9,479 and 7,100 bytes.
 
-`alignment_bound` is absent from both, because neither session needed a bound wider than the
-default and a writer that stays within it records nothing. So the fact that most changes how a
-packet is read is the one nothing has yet written, and the reader's parse path for it has never met
-a real packet.
+`alignment_bound` is absent from both, and not because the sessions did not need one. The writer
+measures how far it must reach by comparing each clock's anchors against that clock's observation
+window, and **no clock in either packet has both**: `ecephys_776259` declares 13 clocks, 12 with
+anchors and 1 with a window, and `ecephys_786867` declares 11, 10 and 1. The window in each case
+belongs to the reference clock, which has no anchors of its own. So the comparison runs over an
+empty intersection, the distance needed comes out as zero, and the writer records the default
+without measuring anything.
+
+The fact that most changes how a packet is read is therefore one that no packet has yet stated and
+that the present writer cannot state. Whether either session needs a wider bound is unknown.
 
 ## 3. Decision
 
