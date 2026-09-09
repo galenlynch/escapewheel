@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | `02` §5.2 (`core.processing_runs.parameters`), `core.sessions`, `core.clocks`; adds `core.clock_phase_steps` |
-| **Depends on** | R37 (bounding alignment by error), R40 (a tolerance that gates on quality), R56 (a column declares its context), R88 (a session-scoped table names its session) |
+| **Depends on** | R37 (bounding alignment by error), R40 (a tolerance that gates on quality), R56 (a column declares its context), R88 (a session-scoped table names its session), R98 (a clock declares when it was observing) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
@@ -98,8 +98,10 @@ belongs to the reference clock, which has no anchors of its own. So the comparis
 empty intersection, the distance needed comes out as zero, and the writer records the default
 without measuring anything.
 
-The fact that most changes how a packet is read is therefore one that no packet has yet stated and
-that the present writer cannot state. Whether either session needs a wider bound is unknown.
+The fact that most changes how a packet is read is therefore one that no packet has yet stated,
+and that no writer could state while a clock could decline to say when it was observing. R98 §3.1
+closed that, so a packet built after it is the first that can measure a bound at all. Whether
+either session needs a wider one is still unknown, and answerable only by the rebuild.
 
 ## 3. Decision
 
@@ -193,10 +195,11 @@ the residual that justified it.
 rules are added: a bound below one, a withheld record on a clock with no anchors, and a phase step
 on a clock with no parent.
 
-Both packets are rebuilt, which R87 §2.1, R88 §2, R91 §5, R95, R96 and R97 already require. The
-rebuild moves 12 and 10 withheld records into `core.clocks`, writes 24 and 0 rows of
-`core.clock_phase_steps`, and leaves `alignment_bound` null in both, since neither session needed
-one.
+Both packets are rebuilt, which R87 §2.1, R88 §2, R91 §5, R95, R96, R97 and R98 already require.
+The rebuild moves 12 and 10 withheld records into `core.clocks` and writes 24 and 0 rows of
+`core.clock_phase_steps`. What it leaves in `core.sessions.alignment_bound` is not predictable from
+here: R98 §3.1 gives every clock a window, so the same rebuild measures the bound for the first
+time, and §2.3 says nobody knows yet whether either session needs a wider one.
 
 The writer's `_alignment_parameters` emits columns instead of a blob, and
 `escapewheel_reader.clocks.declared_bound` reads `core.sessions.alignment_bound` instead of parsing
