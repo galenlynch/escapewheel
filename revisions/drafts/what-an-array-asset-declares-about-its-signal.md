@@ -39,6 +39,14 @@ What an array holds is already declared in facts. `device_id` names the instrume
 channels onto electrodes. Beside all of that sit two open strings, and **nothing reads either** —
 no rule in `rules.json`, nothing in `escapewheel-reader`, nothing in `escapewheel-validator`.
 
+Measured, neither adds anything. Grouped by every fact but the name and `semantic_type`, the
+arrays come to **14 distinct tuples over 14** and **11 over 11**, so no two are told apart by a
+label. `semantic_type` holds `ElectricalSeries` on 22 arrays — a class name whose content, voltage
+per channel over time, `unit`, the channel map and the dimensions already give — and on the three
+waveform arrays it holds `waveform_mean` and `waveform_sd`, **the same strings as their
+`array_asset_name`**. `02` §6 forbids exactly that: "A schema MUST NOT declare a column that
+duplicates what the data already declares."
+
 The columns came from `02`, where naming a class is how NWB says what a thing is. Every revision
 since has moved the other way: R23 §1.1 replaced an acquired-versus-derived vocabulary with a run
 pointer, R55 §2.1 made a discriminator name a table, R59 §2.1 put `region_id` beside
@@ -117,6 +125,23 @@ two waveform arrays from two sortings must declare which is current and has no c
 it through. Neither packet holds that case today, and R82 §2's rule is unenforceable for arrays
 the moment one does.
 
+### 2.6 A media asset cannot name its device
+
+R65 §2.1 gave `core.array_assets` a `device_id` and gave `core.media_assets` none, so R65 §1's
+rule — which signal an asset holds is answered by the device — reaches one asset table and not the
+other.
+
+That is why `semantic_type` is not empty everywhere. `core.media_assets` declares
+`media_asset_name`, `uri`, `format`, `pts_rate_num`/`pts_rate_den` and `clock_id`, and none of
+them separates a behaviour video from a miniscope movie, both of which are `mp4` written by a
+camera. The four videos of `ecephys_786867` carry `semantic_type` of `behavior_video`, and it is
+the only statement of what they show.
+
+The device is missing rather than absent. The packet's 21 devices are seven probes, a
+`SniffDetector` and the Open Ephys chain — basestations, connect boards, headstages — and **no
+cameras**, while the camera identity sits in the file stems `bottom_camera`, `side_camera_left`
+and `side_camera_right`, which R67 §2.4 and R85 §2.2 forbid a consumer parsing.
+
 ## 3. Decision
 
 ### 3.1 The band
@@ -162,18 +187,30 @@ band; `semantic_type` already carries `waveform_mean` and `waveform_sd` on exact
 that would have used it; and §3.5 gives the fact it was standing in for a column of its own,
 which is R23 §1.1's disposal of a derived-ness vocabulary applied where R23 did not reach.
 
-### 3.4 The quantity
+### 3.4 The quantity, where the facts do not carry it
 
-`semantic_type` states **what quantity** the asset holds, on every asset table, and becomes
-**nullable**.
+`semantic_type` becomes **nullable** on all three asset tables, and a writer **MUST NOT** fill it
+where the asset's declared facts already say what the asset holds. It is what the facts cannot
+express, and null is the ordinary case.
 
-`01` §3.17 already fixes what an unrecognised value means: "A value this standard does not define
-is a label and carries no contract, which is the honest state of affairs for a quantity whose
-meaning lives in the device rather than in the format." A column that carries no contract and is
-required is one a writer must invent a value for, which §2.3 measures at two of five. Nullable is
-what lets a writer say the source named no type.
+`02` §6 settles the shape in one paragraph: a present nullable column is preferred to an absent
+one, and a schema MUST NOT declare a column that duplicates what the data already declares.
+Nullable satisfies both, where striking the column would honour the second by breaking the first.
 
-It stays `open` (R101 §3.1) and reserves nothing. The values a packet writes are drawn from three
+Required is what made it a duplicate. A column that `01` §3.17 says "carries no contract" and that
+every row must fill is a column a writer invents a value for — `signal` and `behavior_video` are
+two of the five values in use, and `ElectricalSeries` is the other kind of filling, a class name
+standing where the row already says voltage, per channel, over time.
+
+Measured, the column goes from **29 of 29 assets filled to 7**. The 22 `ElectricalSeries` become
+null, the three waveform arrays keep `waveform_mean` and `waveform_sd` — a **statistic over one
+quantity**, which no column carries — and the four videos keep `behavior_video` until §3.6's
+column is filled. Every remaining value is one the facts cannot express, which is the test.
+
+Nothing checks it. Whether a fact is already declared elsewhere is a judgement a rule cannot make,
+so this binds a writer and no validator, which is the shape R67 §2.4 has.
+
+It stays `open` (R101 §3.1) and reserves nothing: the values in use are drawn from three
 vocabularies — an NWB neurodata type, two NWB `Units` column names, two labels invented here — so
 no authority covers the column either (R101 §3.6).
 
@@ -190,6 +227,17 @@ undeclared one an error, so a rule must be able to join an array to its run, and
 is what a rule cannot read. The manifest's field stays as R9 §4 defined it, for resources that
 are not rows of a table.
 
+### 3.6 The device that made it
+
+`core.media_assets` gains **`device_id`**, `int32` nullable, referencing `core.devices` — the
+column R65 §2.1 gave the array table and not this one. A writer **MUST** name the device where its
+source states one, and **MUST NOT** infer it from a file name, which is R67 §2.4's rule in the
+place §2.6 measures it being broken.
+
+Null in both packets on the day this lands, because no camera is recorded in `core.devices` at
+all. What the column changes is that the gap becomes a null a consumer can test rather than a
+label a writer typed in.
+
 ## 4. What this does not change
 
 - **No table or reference is removed, and no Tier 2 rule.** One column is renamed and changes
@@ -203,17 +251,29 @@ are not rows of a table.
 
 ## 5. Consequence
 
-330 columns become **332** and 97 references become **99**. `band` and `semantic_type` go from
-`required` to `nullable` on two and three tables, so Tier 1's not-null checks go from 154 to
-**149**; the reserved set on `band` goes from four values to three, with `raw` renamed `wideband`.
-`02` names neither column, so nothing in the frozen documents changes.
+330 columns become **333** and 97 references become **100**: `processing_run_id` on both array
+tables and `device_id` on `core.media_assets`, each with its reference. `band` and `semantic_type`
+go from `required` to `nullable` on two and three tables, so Tier 1's not-null checks go from 154
+to **149**; the reserved set on `band` goes from four values to three, with `raw` renamed
+`wideband`. No column is struck, no Tier 2 rule changes, and `02` names neither column, so nothing
+in the frozen documents changes.
 
-Both packets keep `band` of `lfp` on 22 arrays and declare it **null** on the three that carry
-`dense_array_asset`, whose `semantic_type` of `waveform_mean` and `waveform_sd` is unchanged;
-those three name the sorting run that produced them, which the packets already record.
-`waveforms.py:300` stops setting the field. Migration is regeneration, as R53 §5 made it for
-identifiers: no packet carries `raw`, and both are rebuilt, which R87 §2.1, R88 §2, R91 §5, R95,
-R96, R97, R98, R99 and R101 already require.
+Both packets keep `band` of `lfp` on 22 arrays and declare it **null** on the three carrying
+`dense_array_asset` today. `semantic_type` goes from 29 of 29 assets filled to **7**: the 22
+`ElectricalSeries` become null, and what remains is what the facts cannot express.
+
+The waveform pair is the case that keeps the column. `waveform_mean` and `waveform_sd` are read
+from one analyzer group by `waveforms.py`, so §3.5's run pointer names one run for both; they
+share a session, a unit of `uV`, a sample rate of 30,000 Hz and their dimensions, and
+`device_id` is null on each. What separates them otherwise is `conversion` — 0.06709875 against
+0.06614436 — which tells a consumer they differ and not which is the mean. The difference is a
+**statistic over one quantity**, and `semantic_type` is the only column that can say it: they also
+carry it in `array_asset_name`, which R67 §2.4 and R85 §2.2 forbid a consumer reading.
+
+`waveforms.py:300` stops setting `kind`, and `video.py:169` stops setting `semantic_type` once a
+camera device is recorded. Migration is regeneration, as R53 §5 made it for identifiers: no packet
+carries `raw`, and both are rebuilt, which R87 §2.1, R88 §2, R91 §5, R95, R96, R97, R98, R99 and
+R101 already require.
 
 ## 6. Open
 
@@ -225,7 +285,11 @@ R96, R97, R98, R99 and R101 already require.
 - **Whether three bands are enough.** `wideband`, `ap` and `lfp` describe a Neuropixels 1.0
   split, and a 2.0 probe emits wideband only. No packet on hand writes either of the first two, so
   the set is still R8 §4's examples rather than a survey.
-- **Whether `semantic_type` earns its place.** Nothing reads it, its values come from three
-  vocabularies, and §3.4 makes it nullable rather than striking it — because it is the only record
-  of what a source called the array, which R62 struck a file for lacking. Whether that is worth a
-  column is a question a second importer would answer.
+- **Whether a statistic should be a column.** §3.4 leaves `waveform_mean` and `waveform_sd`
+  distinguished by a label, where the difference is a statistic over one quantity — a mean and a
+  standard deviation of the same waveform. Two arrays in one packet pair is not evidence for a
+  column (R66 §1.3), and a third statistic, or a consumer needing to select on one, would be.
+- **Whether `semantic_type` empties once media assets name a device.** §3.6 adds the column and
+  both packets leave it null, so the four videos keep `behavior_video` as their only statement.
+  Once a camera is recorded, that value falls to §3.4's own test and the column is null on every
+  asset either packet holds.
