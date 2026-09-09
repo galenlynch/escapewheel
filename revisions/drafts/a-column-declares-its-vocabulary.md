@@ -160,7 +160,7 @@ set the registry carried would be a partial copy that goes stale and implies the
 are less conforming — which §3.1 denies. `raw`, `ap`, `lfp` and `waveform` have no authority to
 defer to, R8 §4 having declared their meanings itself. That is what makes them reservable.
 
-### 3.5 A large vocabulary states its form, not its members
+### 3.5 A large vocabulary states its form in its description
 
 A column declaring `vocabulary: open` **MUST** carry a `description`, and where an external
 nomenclature fixes how its values are spelled, that description **MUST** name it.
@@ -170,24 +170,40 @@ Measured, this is where the registry is thinnest: all 39 open columns carry a de
 `Strain/background.`, `Origin description.` A writer reading those learns nothing about whether to
 write `Mus musculus` or `mouse`, which is the only question a species column raises.
 
-- `core.subjects.species` states the **scientific name**, as NCBI Taxonomy spells it.
+- `core.subjects.species` states the **scientific name** of the organism the subject derives
+  from, as NCBI Taxonomy spells it. Null where it derives from none: `01` §3.4 makes a subject
+  "the animal or preparation recorded from", and a phantom or a simulated recording has no
+  species where a slice or a culture has its donor's.
 - `core.subjects.strain` states the strain in its registry's nomenclature: MGI for mouse, where
   the substrain letter of `C57BL/6J` is what distinguishes it from the *Nnt*-deleted `C57BL/6N`,
   and RGD for rat stocks such as `Long-Evans`.
 - `core.electrode_coordinates.region_label` and `core.unit_coordinates.region_label` state the
-  structure's acronym **in the atlas `coordinate_frame` names** (R59 §2). The authority varies by
-  row, which is why it is described rather than declared.
+  structure's acronym **in the atlas `coordinate_frame` names** (R59 §2).
 
 A writer **MUST** spell a value as the named nomenclature does, and **MUST NOT** recase or
 re-punctuate one to fit a house style: values are compared exactly, so `mouse`, `Mus Musculus` and
 `mus_musculus` are three ways of failing to name one animal.
 
-`registry/check.py` checks that the description is present, which all 39 satisfy today. Whether it
-says anything is not checkable, so this binds the registry's author and no rule — the shape R67
-§2.4 has, and the reason §2.3's openness-in-a-description was a defect while this is not: a
-validator's behaviour depends on the marker and depends on none of this.
+### 3.6 An open column may name the nomenclature its values come from
 
-### 3.6 `event_type` reserves nothing
+Where one nomenclature covers a whole column, the registry says so as a value rather than as
+prose. A column declaring `vocabulary: open` **MAY** declare `authority`, an array of absolute
+URIs naming the nomenclatures its values are drawn from — `species` names NCBI Taxonomy, `strain`
+names MGI and RGD. Identity, not a fetch instruction: a validator **MUST NOT** dereference one
+(R14 §2.2) and **MUST NOT** reject a value for being absent from it, which is R57 §2.2's rule for
+`$schema` one level down. An array rather than a scalar because a column's values may honestly
+come from two registries, as a strain's do from mouse and from rat.
+
+`region_label` declares none, and the reason is the general one: R59 §2 makes `coordinate_frame`
+name the atlas, so its authority varies **per row**, which no column-level field can express. That
+is why the description obligation stays — a URI is an identity where "the scientific name, not the
+common name" is an instruction.
+
+`registry/check.py` checks that the description is present, that an authority is an absolute URI
+declared only on an open column, and that two columns of one name name one nomenclature — which is
+§2.3's drift caught mechanically, where the description alone leaves it to review.
+
+### 3.7 `event_type` reserves nothing
 
 R11 §4's reserved set is **struck**. The registry already carries none, §2.2's move having dropped
 it, so what this settles is the revision rather than the declaration: `left_lick` becomes
@@ -199,7 +215,7 @@ R11 §4's six stay in that revision as **examples**, which is what `01` offered 
 `02` should have said instead of "etc." A writer naming an event may use them and is not obliged
 to.
 
-### 3.7 `kind` records the four values R8 reserved
+### 3.8 `kind` records the four values R8 reserved
 
 `core.array_assets.kind` and `analysis.array_assets.kind` **MUST** declare `reserved_values` of
 `raw`, `ap`, `lfp` and `waveform`, each carrying the meaning R8 §4 declares for it. They are the
@@ -207,14 +223,15 @@ only columns that declare one: `semantic_type`, `activity_type`, `species`, `str
 other open column declare none, and declaring an empty set and declaring nothing are the same
 claim, so the field stays absent.
 
-### 3.8 `sex` is closed, and a writer normalizes onto it
+### 3.9 `sex` is closed, and a writer normalizes onto it
 
 `core.subjects.sex` **MUST** declare an `enum` of `male`, `female` and `other`, becoming core's
 fourth closed vocabulary.
 
 A writer **MUST** map the source's spelling onto one of the three. Where the source states an
-unknown sex, or states none, the column **MUST** be null: NWB writes `U` for unknown, and
-recording that as `other` asserts a sex the source never claimed.
+unknown sex, states none, or describes a preparation that has none, the column **MUST** be null:
+NWB writes `U` for unknown, and recording that as `other` asserts a sex the source never claimed.
+Null therefore carries three readings, which §6 records rather than settles.
 
 Keeping the source's spelling alongside is R22's shape and is not needed here. R22 §2 retains a
 scorer's own `label` beside a closed `normalized_label` because `non_soma` has no honest
@@ -225,7 +242,7 @@ Nothing conforms today. Both packets carry `Male` and `fixtures/build.py` carrie
 packet fails Tier 1's membership check until it is rebuilt — the only clause here that invalidates
 a packet, and the reason §5 owes a corpus change.
 
-### 3.9 What a validator does
+### 3.10 What a validator does
 
 A validator **SHOULD** report, at `info`, a value outside the reserved set of a column declaring
 one. It **MUST NOT** report a failure: the vocabulary is open, and an unrecognized value is exactly
@@ -254,8 +271,8 @@ comply.
 ## 5. Consequence
 
 The meta-schema replaces `vocabulary`'s `const: "open"` with a required three-value enum on a
-string `data` column, which `registry/build.py` vendors into two packages as it does every
-meta-schema change.
+string `data` column and gains `authority`, an optional array of URIs; `registry/build.py` vendors
+both into two packages as it does every meta-schema change.
 
 102 string columns declare one: **4 closed** — `core.processing_runs.status`,
 `core.units.quality_label`, `core.unit_quality_labels.normalized_label` and `core.subjects.sex` —
@@ -264,19 +281,21 @@ The 24 newly open are a few vocabularies spread thin: seven `unit` columns, four
 `origin`, `calibration_type`, `probe_type`, `event_type`, `activity_type`, `coordinate_frame` and
 the seven subject and device columns.
 
-Two columns carry `reserved_values`, the first the registry has ever held, and `build.py` loses
-the line setting it on `core.events.event_type`, a column R91 §3.1 struck. **14 descriptions** are
-rewritten, being the open columns that restate their own name.
+Two columns carry `reserved_values`, the first the registry has ever held, and two carry an
+`authority` — `core.subjects.species` and `core.subjects.strain`, with the eight `unit` columns
+following if §6's UCUM question resolves yes. `build.py` loses the line setting `reserved_values`
+on `core.events.event_type`, a column R91 §3.1 struck, and **14 descriptions** are rewritten,
+being the open columns that restate their own name.
 
 Tier 1's closed-vocabulary checks go from 3 to **4**, and `registry/check.py` from 19 structural
-invariants to **24**: a string `data` column declares a vocabulary and a discriminator does not,
-`closed` holds exactly where `enum` does, `reserved_values` appears only under `open`, an `open`
-column carries a description, and one column name is classified one way across every table
-carrying it — which holds across all 102 today, and is what §2.3's drift would have caught.
+invariants to **25**: a string `data` column declares a vocabulary and a discriminator does not,
+`closed` holds exactly where `enum` does, `reserved_values` and `authority` appear only under
+`open`, an authority is an absolute URI, an `open` column carries a description, and one column
+name is classified one way — vocabulary and authority alike — across every table carrying it — which holds across all 102 today, and is what §2.3's drift would have caught.
 
 `fixtures/build.py` writes `sex` as `male` rather than `M`, so every packet in the corpus changes;
-the NWB adapter gains the mapping §3.8 requires, and both packets are rebuilt, which R87 §2.1,
-R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains §3.9's report.
+the NWB adapter gains the mapping §3.9 requires, and both packets are rebuilt, which R87 §2.1,
+R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains §3.10's report.
 
 ## 6. Open
 
@@ -285,14 +304,21 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   are reserved on `event_type`, where the surrounding values do not. A vocabulary naming what a
   **stream** carries, rather than what an event is, would be the place, and `core.event_streams`
   has no such column.
-- **Whether a `unit` column should name UCUM.** Eight columns hold a physical unit and §3.5 names
+- **Whether a subject declares what kind of thing it is.** `01` §3.4 admits "the animal or
+  preparation recorded from" and `core.subjects` carries an animal's columns alone, so a slice, a
+  culture, an organoid, a phantom and a simulated recording are all subjects and only the first
+  three have a donor species. The distinction collapses onto null, on `species`, `sex`, `strain`,
+  `genotype` and `date_of_birth` together, which is the collapse R44 §2 refused for scope. A
+  `subject_kind` would separate them; being a column and a writer obligation, it is a revision of
+  its own.
+- **Whether a `unit` column should name UCUM.** Eight columns hold a physical unit and §3.6 names
   no nomenclature for them, because the values on hand would not conform: R56 §1 records
   `percentage` and `milliliter` from the VR foraging models where UCUM writes `%` and `mL`. Naming
   it is one line and a rebuild of every array asset's unit.
-- **Whether an extension should make a refinement structural.** §3.6 leaves `lick_left` or
+- **Whether an extension should make a refinement structural.** §3.7 leaves `lick_left` or
   `left_lick` a string a consumer filters on and cannot join. Making the spout structural is an
   extension's work, keyed through `event_type` in R90 §3.5's shared-key shape; nothing has asked
   for it, and `dynamic_foraging.trials` already carries the seven `_left`/`_right` pairs this task
   needs.
 - **Whether the four array kinds are the right four.** R8 §4 took them from `02`'s examples rather
-  than from what sources emit. §3.7 records them and does not revisit them.
+  than from what sources emit. §3.8 records them and does not revisit them.
