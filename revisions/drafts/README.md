@@ -18,11 +18,8 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `checking-the-tables-an-array-axis-names` | `coordinate_resource` becomes a discriminator, resolving by R90 §3.5's third shape |
-| — | `what-a-reserved-value-is-for` | outside the order; it amends R11 §4 alone and depends on nothing here |
+| — | `what-a-reserved-value-is-for` | outside the order; it amends R11 §4 alone and depends on nothing accepted since |
 
-These are independent of each other; the order is a convenience, not a constraint.
-
-One of them changes the registry's column, reference and table counts, measured against the
-registry as it stood when it was drafted. Whichever is accepted second re-measures, which the
-pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
+One draft is open, so there is no order to state. Its numbers were measured against the registry
+as it stood when it was drafted and are re-measured at acceptance, which the pre-acceptance checks
+in `../CLAUDE.md` require of every number anyway.

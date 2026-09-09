@@ -168,6 +168,43 @@ def test_a_filled_metadata_column_is_not_reported(packet_root):
     assert not [f for f in report.findings if f.check == "core.trials.metadata_unfilled"]
 
 
+def test_a_by_position_discriminator_gets_no_reverse_check(packet_root):
+    """R100 §2.3. R90 §3.8 excludes the third shape, and `positions_in` is what says it is one."""
+    registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    trials = registry["tables"]["core.trials"]
+    trials["columns"].append(
+        {"name": "axis_of", "type": "string", "presence": "nullable", "role": "discriminator",
+         "resolves": "required", "positions_in": "axis_column", "description": "d"}
+    )
+    trials["columns"].append(
+        {"name": "axis_column", "type": "string", "presence": "nullable", "role": "data",
+         "description": "d"}
+    )
+    ids = {c.id for c in generate(registry, kinds={"core.units": None})}
+    assert "core.trials.axis_of.is_a_resource_id" in ids
+    assert "core.trials.axis_of.kind_declared" in ids
+    assert not [i for i in ids if i.startswith("core.trials.axis_of.") and "is_specialised" in i]
+
+
+def test_the_position_column_is_checked_against_the_registrys_roles(packet_root):
+    """R100 §2.2. A role is invisible to a query and visible to whatever writes one."""
+    registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    trials = registry["tables"]["core.trials"]
+    trials["columns"] += [
+        {"name": "axis_of", "type": "string", "presence": "nullable", "role": "discriminator",
+         "resolves": "required", "positions_in": "axis_column", "description": "d"},
+        {"name": "axis_column", "type": "string", "presence": "nullable", "role": "data",
+         "description": "d"},
+    ]
+    registry["tables"]["core.units"]["columns"].append(
+        {"name": "seat_index", "type": "int64", "presence": "nullable",
+         "role": "structural_index", "description": "d"}
+    )
+    check = next(c for c in generate(registry, kinds={"core.units": None})
+                 if c.id == "core.trials.axis_of.position_column_indexes")
+    assert "'seat_index'" in check.sql and "core.units" in check.sql
+
+
 def test_required_codecs_must_equal_the_union(packet_root):
     path = packet_root / "packet.json"
     entry = json.loads(path.read_text())

@@ -1913,3 +1913,23 @@ disposition = "applied"
 where = "02_core_logical_schemas.md §12.6"
 note = "parameters keeps the evidence and none of the three facts; 02 §5.2 now names both json_string columns"
 
+[clause."R100 §2.1"]
+disposition = "registry"
+where = "coordinate_resource on core.array_dimensions and analysis.array_dimensions"
+note = "role discriminator, resolves required; the name keeps its two declared NAMING exceptions, _kind reading as a category"
+
+[clause."R100 §2.2"]
+disposition = "registry"
+where = "coordinate_pair_complete on both tables, and the generated position_column_indexes"
+note = "the position check is generatable because positions_in names the column and the registry supplies each kind's structural_index columns as literals"
+
+[clause."R100 §2.3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.3"
+note = "positions_in in registry.schema.json and build.py's DISCRIMINATOR; check.py checks the column exists and is not declared beside discriminates; generate skips R90 §3.8's reverse branch"
+
+[clause."R100 §2.4"]
+disposition = "registry"
+where = "analysis.array_dimensions.coordinate_array_asset_id -> analysis.array_assets"
+note = "the reference core.array_dimensions already declared; 96 references become 97"
+

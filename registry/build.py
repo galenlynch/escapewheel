@@ -236,6 +236,11 @@ DISCRIMINATOR: dict[str, dict[str, str]] = {
     # that the row is wrong, which is R49 §2.2's judgement. Shared-key, so no `discriminates`:
     # a detail table is keyed by its calibration and so has a composite key (R55 §2.3.1).
     "detail_kind": {"resolves": "optional"},
+    # R100 §2.1, §2.3: the axis has no positions where the named resource is absent, so the row
+    # is uninterpretable. R90 §3.5's third shape, which `positions_in` is what declares -- naming
+    # the column whose value is the position column in the named resource, as `discriminates`
+    # names the column whose value is a key.
+    "coordinate_resource": {"resolves": "required", "positions_in": "coordinate_position_column"},
 }
 
 
@@ -1502,6 +1507,26 @@ def build() -> dict:
     for resource, spec in tables.items():
         if any(c["name"] == "metadata" for c in spec["columns"]):
             amend(resource, "metadata", presence="optional", description=METADATA)
+
+    # ---- R100 §2 : an array axis names the table whose rows are its positions -----------------
+    # `coordinate_resource` held a dotted resource ID as role `data`, so nothing checked that the
+    # value was a resource ID, that the packet declared it, or that it was a table -- the state
+    # R55 was written to end, and which its sweep did not reach. 25 rows across the two packets
+    # carry one and every one is right.
+    SINCE[0] = "R100 §2.1"
+    for _table in ("core.array_dimensions", "analysis.array_dimensions"):
+        amend(_table, "coordinate_resource", role="discriminator",
+              description="The table whose rows are this axis's positions, as a dotted resource "
+                          "ID. The column of it holding the 0-based position is "
+                          "`coordinate_position_column` (R20 §2.4).",
+              **discriminator_of("coordinate_resource"))
+
+    # §2.4: `core.array_dimensions` declares this reference and its analysis copy did not, so the
+    # two tables disagreed about one column and Tier 1 generated no anti-join for the second.
+    SINCE[0] = "R100 §2.4"
+    T("analysis.array_dimensions")["references"].append(
+        {"columns": ["coordinate_array_asset_id"], "resource": "analysis.array_assets",
+         "resource_columns": ["array_asset_id"]})
 
     # ---- R99 §3 : a packet records its clock alignment in columns ----------------------------
     # Three facts a consumer needs to place a tick were content of `core.processing_runs.parameters`,

@@ -79,6 +79,12 @@
         "level": "error",
         "message": "a step denominator is not positive, so the step it defines is meaningless",
         "sql": "SELECT array_asset_id, axis_index, step_tick_den FROM core_array_dimensions WHERE step_tick_den IS NOT NULL AND step_tick_den <= 0"
+      },
+      {
+        "id": "core.array_dimensions.coordinate_pair_complete",
+        "level": "error",
+        "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them (R100 2.2)",
+        "sql": "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column FROM core_array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
       }
     ],
     "core.calibrations": [
@@ -491,6 +497,14 @@
         "level": "error",
         "message": "a phase step is recorded on a clock with no parent, and a step is a movement of the parent's phase (R99 3.3)",
         "sql": "SELECT s.session_id, s.clock_id, s.t_tick FROM core_clock_phase_steps s JOIN core_clocks c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE c.parent_clock_id IS NULL"
+      }
+    ],
+    "analysis.array_dimensions": [
+      {
+        "id": "analysis.array_dimensions.coordinate_pair_complete",
+        "level": "error",
+        "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them (R100 2.2)",
+        "sql": "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column FROM analysis_array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
       }
     ]
   }

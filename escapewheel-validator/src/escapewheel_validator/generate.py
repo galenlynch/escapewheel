@@ -106,6 +106,7 @@ def _discriminator(
     kinds: Mapping[str, str | None] | None,
     included: Collection[str],
     specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
+    specs: Mapping[str, Any] | None = None,
 ) -> list[Check]:
     """Build the checks one discriminator column implies (R55 §2.4).
 
@@ -140,6 +141,42 @@ def _discriminator(
             resource,
         )
     )
+
+    # R100 §2.3: the third shape. The named resource's rows *are* the positions, so there is no key
+    # correspondence and R90 §3.8's reverse check does not apply -- which R90 said twice and neither
+    # sentence could be acted on, by-position and shared-key being indistinguishable until
+    # `positions_in` declared the difference. What is checkable instead is that the column named
+    # holds a position: the registry knows each resource's `structural_index` columns, so they
+    # become literals here, as the declared resources do in `kind_declared`.
+    if (positions := column.get("positions_in")) is not None:
+        legal = {
+            kind: sorted(
+                c["name"] for c in (specs or {}).get(kind, {}).get("columns", [])
+                if c.get("role") == "structural_index"
+            )
+            for kind in sorted(kinds)
+        }
+        branches = " OR ".join(
+            f"({col} = '{kind}' AND {quote(positions)} NOT IN ({', '.join(repr(c) for c in cols)}))"
+            for kind, cols in legal.items() if cols
+        )
+        unpositioned = [kind for kind, cols in legal.items() if not cols]
+        if unpositioned:
+            branches = " OR ".join(
+                filter(None, [branches, f"{col} IN ({', '.join(repr(k) for k in unpositioned)})"])
+            )
+        if branches:
+            checks.append(
+                Check(
+                    f"{resource}.{column['name']}.position_column_indexes",
+                    "error",
+                    f"{positions} does not name a structural_index column of the resource "
+                    f"{column['name']} names (R100 §2.2)",
+                    f"SELECT DISTINCT {col}, {quote(positions)} FROM {name} WHERE {branches}",
+                    resource,
+                )
+            )
+        return checks
 
     # A paired value lives in the named table's key space (R55 §2.3), so it resolves value-to-key.
     paired = column.get("discriminates")
@@ -277,7 +314,7 @@ def generate(
         for column in table["columns"]:
             if column.get("role") != "discriminator":
                 continue
-            checks.extend(_discriminator(resource, name, table, column, kinds, included, specialises))
+            checks.extend(_discriminator(resource, name, table, column, kinds, included, specialises, tables))
 
         by_scan = adjacency_settles_uniqueness(resource, table) and resource not in (aggregate or set())
         if (key := table.get("primary_key")) and not by_scan:

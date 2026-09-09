@@ -237,6 +237,11 @@
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
           "description": "Where a discriminator sits a reference away from the rows it specialises, the referencing column as `resource.column` (R90 \u00a73.2)."
+        },
+        "positions_in": {
+          "description": "R100 \u00a72.3. On a by-position discriminator, the column of this table whose value is the position column in the named resource. Absent on the other two shapes, and never beside `discriminates`.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
         }
       },
       "not": {

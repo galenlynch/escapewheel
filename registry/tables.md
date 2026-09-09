@@ -8,9 +8,9 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-39 tables, 330 columns, 96 references, 74 Tier 2 rules
+39 tables, 330 columns, 97 references, 76 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99, R100
 ```
 
 ## Contents
@@ -61,7 +61,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `axis_index` | int64 | **required** | R20 §5 | 0-based axis position in stored order (R3 §5). |
 | `dimension_name` | string | **required** | R20 §5 | Axis name. |
 | `coordinate_position_column` | string | nullable | R20 §5 | Which column of that resource holds the 0-based position. |
-| `coordinate_resource` | string | nullable | R20 §5 | Resource whose rows are this axis's positions (labelled axis). |
+| `coordinate_resource` | string | nullable | R100 §2.1 | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 §2.4). |
 | `coordinate_array_asset_id` | int32 | nullable | R20 §5 | A 1-D array holding one value per position (irregular axis). |
 | `coordinate_unit` | string | nullable | R20 §5 | Unit of the numeric coordinate values. |
 | `step_value` | float64 | nullable | R20 §5 | Increment per position. |
@@ -78,6 +78,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `array_asset_id` → `analysis.array_assets` (`array_asset_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `coordinate_array_asset_id` → `analysis.array_assets` (`array_asset_id`)
+
+**Tier 2 rules** — 1
+
+- `analysis.array_dimensions.coordinate_pair_complete` — error: an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them (R100 2.2)
 
 ### `analysis.spike_events`
 
@@ -174,7 +179,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `axis_index` | int64 | **required** | R3 §3.1-3.3 | 0-based axis position in stored order (R3 §5). |
 | `dimension_name` | string | **required** | R3 §3.1-3.3 | Axis name. |
 | `coordinate_position_column` | string | nullable | R20 §2 | Which column of that resource holds the 0-based position. |
-| `coordinate_resource` | string | nullable | R20 §2 | Resource whose rows are this axis's positions (labelled axis). |
+| `coordinate_resource` | string | nullable | R100 §2.1 | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 §2.4). |
 | `coordinate_array_asset_id` | int32 | nullable | R20 §2 | A 1-D array holding one value per position (irregular axis). |
 | `coordinate_unit` | string | nullable | R20 §2 | Unit of the numeric coordinate values. |
 | `step_value` | float64 | nullable | R20 §2 | Increment per position. |
@@ -193,7 +198,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `coordinate_array_asset_id` → `core.array_assets` (`array_asset_id`)
 - `session_id` → `core.sessions` (`session_id`)
 
-**Tier 2 rules** — 7
+**Tier 2 rules** — 8
 
 - `core.array_dimensions.axis_index_contiguous` — error: axis_index is not contiguous from 0
 - `core.array_dimensions.one_coordinate_form` — error: an axis declares more than one coordinate form
@@ -202,6 +207,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.array_dimensions.labelled_axis_complete` — error: coordinate_resource and coordinate_position_column must be present together
 - `core.array_dimensions.coordinate_resource_is_core` — error: a core axis points outward at a non-core resource (R20 §5.1)
 - `core.array_dimensions.step_denominator_positive` — error: a step denominator is not positive, so the step it defines is meaningless
+- `core.array_dimensions.coordinate_pair_complete` — error: an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them (R100 2.2)
 
 ### `core.calibration_devices`
 

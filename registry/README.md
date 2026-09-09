@@ -6,7 +6,7 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 <!-- BEGIN generated: counts -->
 ```
-39 tables, 330 columns, 96 references, 74 Tier 2 rules
+39 tables, 330 columns, 97 references, 76 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -89,10 +89,10 @@ declares, and therefore what a generator has to work with:
 <!-- BEGIN generated: structure -->
 ```
 154 required column, not null
-96  reference, resolves
+97  reference, resolves
 39  primary key, unique
 3   closed vocabulary, member of
-5   discriminator, resolvable
+7   discriminator, resolvable
 ```
 <!-- END generated: structure -->
 
@@ -113,12 +113,12 @@ inline-versus-sibling open, to be decided when the content was generated; inline
 a table's whole contract is readable in one place.
 
 <!-- BEGIN generated: rules -->
-74 rules over 25 tables: 65 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (R26 §2), off unless asked for.
+76 rules over 26 tables: 67 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (R26 §2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
 | `core.clocks` | 11 |
-| `core.array_dimensions` | 7 |
+| `core.array_dimensions` | 8 |
 | `core.processing_runs` | 7 |
 | `core.sessions` | 5 |
 | `core.units` | 5 |
@@ -136,6 +136,7 @@ a table's whole contract is readable in one place.
 | `core.sorting_run_channels` | 2 |
 | `core.spike_events` | 2 |
 | `core.unit_observation_intervals` | 2 |
+| `analysis.array_dimensions` | 1 |
 | `core.array_channels` | 1 |
 | `core.clock_phase_steps` | 1 |
 | `core.event_streams` | 1 |

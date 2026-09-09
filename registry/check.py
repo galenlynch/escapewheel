@@ -294,6 +294,11 @@ NAMING_EXCEPTIONS = {
     # R90 §3.3: each carries `core.intervals.interval_kind` as part of the shared key, so it holds
     # a discriminator's value without being one -- and the name must match the parent's column for
     # the composite reference to read.
+    # R100 §2.1: `_kind` reads as a category and every column carrying it holds one -- an
+    # interval's kind, a run's scope kind. This holds the table whose rows are the data, and R48
+    # §3 measured that a role says what a name cannot, which is why R55 added the role.
+    "core.array_dimensions.coordinate_resource": "names the table whose rows are the axis's positions, not a kind of thing (R100 §2.1)",
+    "analysis.array_dimensions.coordinate_resource": "as core.array_dimensions.coordinate_resource",
     "dynamic_foraging.trials.interval_kind": "carries core.intervals.interval_kind as a shared-key column, not a discriminator (R90 §3.3)",
     "vr_foraging.sites.interval_kind": "as dynamic_foraging.trials.interval_kind",
 }
@@ -446,6 +451,26 @@ for _r, _t in ALL.items():
             if _paired not in _names:
                 _disc.append(f"{_r}.{_c['name']}: discriminates {_paired}, which is not a column here")
 check("a discriminator declares what it resolves to", sorted(_disc))
+
+# R100 §2.3. Three resolution shapes and only one was declared: `discriminates` separates a paired
+# value from the other two, leaving by-position and shared-key indistinguishable, so `generate`
+# read every discriminator without a paired value as shared-key and emitted R90 §3.8's reverse
+# check for it. `positions_in` is the declaration that was missing.
+_position = []
+for _r, _t in ALL.items():
+    _names = {_c["name"] for _c in _t["columns"]}
+    for _c in _t["columns"]:
+        if (_in := _c.get("positions_in")) is None:
+            continue
+        if _c.get("role") != "discriminator":
+            _position.append(f"{_r}.{_c['name']}: positions_in on a {_c.get('role')}, not a discriminator")
+        if _in not in _names:
+            _position.append(f"{_r}.{_c['name']}: positions_in names {_in}, which is not a column here")
+        if "discriminates" in _c:
+            _position.append(f"{_r}.{_c['name']}: declares both positions_in and discriminates, "
+                             "which are different resolution shapes")
+check("a by-position discriminator names the column holding its position column (R100 §2.3)",
+      sorted(_position))
 
 # R90 §3.2: a discriminator may sit on the table whose rows it specialises, or one declared
 # reference away. Where it is away, `discriminates_via` names the *referencing* column as

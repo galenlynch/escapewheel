@@ -189,7 +189,11 @@ is the observed fate of the mechanism this one replaces. Three shapes exist (R90
   `string` matching that key where it is `carried` or its `*_name` where it is `assigned`.
 - **By position.** The named resource's rows are the positions the discriminated column indexes,
   located by a column that resource declares. Resolution is neither a key join nor a value-to-key
-  join, so the joinability rules above do not apply and MUST NOT be read as applying.
+  join, so the joinability rules above do not apply and MUST NOT be read as applying. The
+  discriminator MUST declare `positions_in`, naming the column of its own table whose value is that
+  position column, and MUST NOT declare it beside `discriminates` (R100 §2.3). Without the
+  declaration this shape and the shared key are indistinguishable, and the exclusion above binds a
+  reader while a generator reads every discriminator without a paired value as shared-key.
 
 **What is generated.** Where `resolves` is `required`, two checks follow from the structure: a
 forward anti-join against the resources the manifest declares, and a reverse check per named kind
@@ -197,6 +201,11 @@ returning every row of the discriminating table whose key has no counterpart in 
 discriminator names, both at **error**. The reverse check is generated over the kinds a packet's
 rows actually name, and applies to the shared-key shape alone. Where `resolves` is `optional`,
 neither is generated and an unresolvable value is reported as `info` (R90 §3.8).
+
+A by-position discriminator gets a third instead of the reverse one: the column `positions_in`
+names MUST hold a column of the named resource whose role is `structural_index`, and the registry
+supplies each named resource's such columns as literals (R100 §2.2). A role is invisible to a
+query and visible to whatever writes one.
 
 Every generated check MUST be built over **every resource the packet declares, extensions
 included**. Building them over core alone is the defect R55 was written for: an extension kind

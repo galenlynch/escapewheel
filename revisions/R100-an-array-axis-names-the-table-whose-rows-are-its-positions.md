@@ -1,8 +1,8 @@
-# Checking the Tables an Array Axis Names
+# R100 — An Array Axis Names the Table Whose Rows Are Its Positions
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-08 |
 | **Amends** | `02` §8.3 (what a discriminator is), R20 §2.4 (the labelled axis), R90 §3.5 (the third shape becomes declared) |
 | **Depends on** | R46 (the references the registry never declared), R55 (a discriminated reference), R88 (the reference count this starts from) |
 | **Profile** | all |
