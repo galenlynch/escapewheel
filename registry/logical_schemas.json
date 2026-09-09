@@ -107,6 +107,15 @@
     "analysis.array_assets": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R20 \u00a75"
+        },
+        {
           "name": "array_asset_id",
           "type": "int32",
           "presence": "required",
@@ -122,15 +131,6 @@
           "role": "data",
           "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R95 \u00a73.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R20 \u00a75"
         },
         {
           "name": "semantic_type",
@@ -519,6 +519,14 @@
     "core.array_assets": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
           "name": "array_asset_id",
           "type": "int32",
           "presence": "required",
@@ -533,14 +541,6 @@
           "role": "data",
           "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R95 \u00a73.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned"
         },
         {
           "name": "semantic_type",
@@ -1156,20 +1156,20 @@
     "core.calibrations": {
       "columns": [
         {
-          "name": "calibration_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Stable calibration ID.",
-          "identity": "assigned",
-          "since": "R89 \u00a72.1"
-        },
-        {
           "name": "session_id",
           "type": "int32",
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R89 \u00a72.1"
+        },
+        {
+          "name": "calibration_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Stable calibration ID.",
           "identity": "assigned",
           "since": "R89 \u00a72.1"
         },
@@ -1466,6 +1466,14 @@
     "core.clocks": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
           "name": "clock_id",
           "type": "int32",
           "presence": "required",
@@ -1480,14 +1488,6 @@
           "role": "data",
           "description": "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R95 \u00a73.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned"
         },
         {
           "name": "tick_rate_hz",
@@ -1649,6 +1649,14 @@
     "core.curation_versions": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
           "name": "curation_id",
           "type": "int32",
           "presence": "required",
@@ -1670,14 +1678,6 @@
           "presence": "required",
           "role": "identifier",
           "description": "Sorting run ID.",
-          "identity": "assigned"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
           "identity": "assigned"
         },
         {
@@ -1787,6 +1787,15 @@
     "core.devices": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session if device record is session-scoped.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
+        {
           "name": "device_id",
           "type": "int32",
           "presence": "required",
@@ -1801,15 +1810,6 @@
           "role": "data",
           "description": "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R95 \u00a73.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session if device record is session-scoped.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
         },
         {
           "name": "manufacturer",
@@ -2045,6 +2045,14 @@
     "core.electrodes": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
           "name": "electrode_id",
           "type": "int32",
           "presence": "required",
@@ -2059,14 +2067,6 @@
           "role": "data",
           "description": "What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R53 \u00a72.3.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned"
         },
         {
           "name": "probe_id",
@@ -2216,6 +2216,15 @@
     "core.event_streams": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned",
+          "since": "R23 \u00a72-3"
+        },
+        {
           "name": "event_stream_id",
           "type": "int32",
           "presence": "required",
@@ -2231,15 +2240,6 @@
           "role": "data",
           "description": "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R95 \u00a73.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R23 \u00a72-3"
         },
         {
           "name": "event_type",
@@ -2522,6 +2522,14 @@
     "core.media_assets": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
           "name": "media_asset_id",
           "type": "int32",
           "presence": "required",
@@ -2536,14 +2544,6 @@
           "role": "data",
           "description": "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R95 \u00a73.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned"
         },
         {
           "name": "semantic_type",
@@ -2864,6 +2864,14 @@
     "core.probes": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
           "name": "probe_id",
           "type": "int32",
           "presence": "required",
@@ -2878,14 +2886,6 @@
           "role": "data",
           "description": "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R95 \u00a73.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned"
         },
         {
           "name": "device_id",
@@ -3033,6 +3033,15 @@
     "core.processing_runs": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID if session-scoped.",
+          "identity": "assigned",
+          "since": "R88 \u00a72.1"
+        },
+        {
           "name": "processing_run_id",
           "type": "int32",
           "presence": "required",
@@ -3047,15 +3056,6 @@
           "role": "data",
           "description": "What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R53 \u00a72.3.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID if session-scoped.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
         },
         {
           "name": "activity_type",
@@ -3501,6 +3501,14 @@
     "core.sorting_runs": {
       "columns": [
         {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session ID.",
+          "identity": "assigned"
+        },
+        {
           "name": "sorting_run_id",
           "type": "int32",
           "presence": "required",
@@ -3515,14 +3523,6 @@
           "role": "data",
           "description": "What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (R53 \u00a72.5).",
           "since": "R53 \u00a72.3.1"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned"
         },
         {
           "name": "probe_id",

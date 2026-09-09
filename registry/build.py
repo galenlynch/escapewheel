@@ -1497,6 +1497,26 @@ def build() -> dict:
         if any(c["name"] == "metadata" for c in spec["columns"]):
             amend(resource, "metadata", presence="optional", description=METADATA)
 
+    # ---- a table carrying `session_id` leads with it -----------------------------------------
+    # A convention of this registry and not a conformance requirement: a validator resolves a column
+    # by name and no clause of `02` or `03` states an order, so no revision mandates this and the
+    # specification says nothing about it (DEVELOPING.md §4). R88 §2.1 settled that the column
+    # exists and left where it goes unsaid, so it went two ways -- 24 tables led with it and 12
+    # placed it after the identifier they own.
+    #
+    # Leading is the reading that moves one column per table. Ordering by the primary key instead
+    # would separate `core.array_channels`' composite reference to `core.array_dimensions` and
+    # `core.event_stream_observation_intervals`' `start_tick` from its `stop_tick`, neither table's
+    # key columns being contiguous.
+    #
+    # Last, so every column any block above added is already in place.
+    for spec in tables.values():
+        cols = spec["columns"]
+        session = next((c for c in cols if c["name"] == "session_id"), None)
+        if session is not None:
+            cols.remove(session)
+            cols.insert(0, session)
+
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates
     # expand against the key, and R7 above is what settles three of them.

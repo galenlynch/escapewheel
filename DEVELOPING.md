@@ -65,19 +65,25 @@ the order matters.
 2. **`build.py`** applies each accepted revision's block, in revision order, to that structure.
    Each block sets `SINCE[0] = "R<N> §<x>"` first, which stamps every column it creates or amends
    (R29) *and* records that the revision was applied, so `derived_from` cannot omit it.
-3. **`build.py`** merges `rules.json`, expanding any R24 template invocation into plain SQL —
+3. **`build.py`** runs the two passes that apply a rule rather than one revision's decision, after
+   every block so that both see the final primary keys: R97 §3.1 emits a `metadata` column wherever
+   the key decides it and strikes one where the key forbids it, and `session_id` moves to the front
+   of every table carrying it. That second one is a convention of this registry and not a
+   conformance requirement — a validator resolves a column by name and no clause of `02` or `03`
+   states an order — so `check.py` enforces it and the specification says nothing about it.
+4. **`build.py`** merges `rules.json`, expanding any R24 template invocation into plain SQL —
    templates are a build-time device, so the registry a packet embeds carries no vocabulary a
    validator would have to learn.
-4. **`build.py`** writes `logical_schemas.json`, then calls `render.py` for `tables.md` and the
+5. **`build.py`** writes `logical_schemas.json`, then calls `render.py` for `tables.md` and the
    README's regions, then copies the two hand-written schemas into the validator and the reader.
-5. **`check.py`** verifies the result: 21 structural invariants, the meta-schema, the naming
-   conventions, and — with DuckDB present — that every Tier 2 rule is executable SQL against
-   empty tables built from the registry.
-6. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the
+6. **`check.py`** verifies the result: 18 structural invariants, each applied to core and to every
+   extension registry, then the meta-schema, the naming conventions, and — with DuckDB present —
+   that every Tier 2 rule is executable SQL against empty tables built from the registry.
+7. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the
    registry at validation time: not-null from `presence`, uniqueness from `primary_key`,
    anti-joins from `references`, membership from `enum`, and two more from each discriminator.
    Changing what Tier 1 means is a code change in `generate.py`, not a data change.
-7. **`fixtures/build.py`** writes the 26-packet conformance corpus against the registry;
+8. **`fixtures/build.py`** writes the 26-packet conformance corpus against the registry;
    `fixtures/corpus.py` runs each through the real validator and checks it produced the finding
    it was built to produce.
 

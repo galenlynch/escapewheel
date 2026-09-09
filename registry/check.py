@@ -122,6 +122,13 @@ def structural(tables, universe, prefix=""):
        [(n, a, r["resource"], b) for n, t in tables.items() for r in t["references"]
         for a, b in zip(r["columns"], r["resource_columns"])
         if role.get((n, a)) == "identifier" and identity.get((n, a)) != identity.get((r["resource"], b))])
+    # A convention of this registry rather than a conformance requirement, so no revision mandates
+    # it and `02` states no column order at all (DEVELOPING.md §4). `build.py` emits it for core; an
+    # extension is a registry document in the same format (R17 §2) and nothing regenerates one,
+    # which is the case this check exists for.
+    c_("a table carrying session_id leads with it",
+       [n for n, t in tables.items()
+        if "session_id" in cols[n] and t["columns"][0]["name"] != "session_id"])
     c_("source labels are strings",
        [(n, c["name"], c["type"]) for n, t in tables.items() for c in t["columns"]
         if c["name"].endswith("_label") and c["type"] != "string"])
@@ -138,8 +145,15 @@ def structural(tables, universe, prefix=""):
                    if cols[n].get(k, {}).get("role") == "identifier"
                    and k not in {c for r in t["references"] for c in r["columns"]}]
                for n, t in tables.items()}
+    # The band reads *declared references*, so a table that forgets one lands here rather than in
+    # the check that would name the real defect: drop `core.unit_quality_labels`' session reference
+    # and `session_id` stops counting as referenced, which reads as an identifier of the table's own
+    # and reports a missing `metadata` column. Adding one satisfies this and leaves the foreign key
+    # undeclared, so the message says which reading to check first.
     c_("a table keyed by an identifier of its own declares `metadata` (R97 §3.1)",
-       [n for n, t in tables.items() if own_key[n] and "metadata" not in cols[n]])
+       [n for n, t in tables.items() if own_key[n] and "metadata" not in cols[n]],
+       lambda n: f"{n} owes one, its key holding {own_key[n]}; where such a column should be part "
+                 f"of a reference, the undeclared reference is the defect and not the column")
     c_("a table keyed only by other tables' identifiers declares no `metadata` (R97 §3.1)",
        [n for n, t in tables.items() if t["primary_key"] and not own_key[n] and "metadata" in cols[n]
         and all(k in {c for r in t["references"] for c in r["columns"]} for k in t["primary_key"])])
@@ -370,6 +384,30 @@ def session_scoped(tables):
 scoped = session_scoped(T)
 carries = {n for n, t in T.items() if any(c["name"] == "session_id" for c in t["columns"])}
 check("every table carrying session_id reaches core.sessions (R86 §2.1)", sorted(carries - scoped))
+# R88 §2.1's two halves, neither of which anything checked. The column and the reference are
+# separate obligations and the second is the one that bites: Tier 1 generates one anti-join per
+# declared reference and nothing from a column's name, so a `session_id` in no reference is a
+# foreign key no rule can see -- which is how 418,618,218 rows came to hold an unvalidated session
+# key. `core.sessions` is the one exemption, having nothing to reference but itself.
+#
+# The second check runs over the extensions too, and is deliberately weaker there than `02` §7.1's
+# letter: it asks that `session_id` be part of *some* declared reference rather than of a direct one
+# to `core.sessions`. Four extension tables carry it inside a composite reference to another
+# session-scoped table, which gives Tier 1 the anti-join `02` §7.1's reasoning asks for while not
+# being the reference `02` §7.1 names. Whether the letter or the reasoning governs is a question for
+# a revision; enforcing the letter here would mean adding a redundant reference to those four.
+check("every session-scoped table carries session_id (R88 §2.1)", sorted(scoped - carries))
+_in_a_reference = {n for n, t in ALL.items()
+                   for r in t["references"] if "session_id" in r["columns"]}
+check("every table carrying session_id declares it in a reference (R88 §2.1)",
+      sorted({n for n, t in ALL.items()
+              if n != "core.sessions" and any(c["name"] == "session_id" for c in t["columns"])}
+             - _in_a_reference))
+_direct = {n for n, t in ALL.items() for r in t["references"]
+           if r["resource"] == "core.sessions" and r["columns"] == ["session_id"]}
+print(f"      {len(_direct)} tables reference core.sessions on session_id directly; "
+      f"{len(_in_a_reference - _direct)} carry it inside a composite reference to another "
+      f"session-scoped table ({', '.join(sorted(_in_a_reference - _direct))})")
 print(f"      {len(scoped)} of {len(T)} core and analysis tables are session-scoped; "
       f"{len(set(T) - scoped)} are not ({', '.join(sorted(set(T) - scoped))}); "
       f"{len(scoped - carries)} reach core.sessions without carrying the column")

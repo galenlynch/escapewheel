@@ -27,9 +27,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R20 §5 | Session ID. |
 | `array_asset_id` | int32 | **required** | R20 §5 | Stable array asset ID. |
 | `array_asset_name` | string | **required** | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** | R20 §5 | Session ID. |
 | `semantic_type` | string | **required** | R20 §5 | Semantic type, e.g. ElectricalSeries. |
 | `kind` | string | **required** | R20 §5 | `raw`, `ap`, `lfp`, `waveform`, etc. |
 | `uri` | string | **required** | R20 §5 | URI/path to array store. |
@@ -108,9 +108,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** |  | Session ID. |
 | `array_asset_id` | int32 | **required** |  | Stable array asset ID. |
 | `array_asset_name` | string | **required** | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** |  | Session ID. |
 | `semantic_type` | string | **required** | R8 §3-4 | Semantic type, e.g. ElectricalSeries. |
 | `kind` | string | **required** | R8 §3-4 | `raw`, `ap`, `lfp`, `waveform`, etc. |
 | `uri` | string | **required** |  | URI/path to array store. |
@@ -246,8 +246,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
-| `calibration_id` | int32 | **required** | R89 §2.1 | Stable calibration ID. |
 | `session_id` | int32 | **required** | R89 §2.1 | Session ID. |
+| `calibration_id` | int32 | **required** | R89 §2.1 | Stable calibration ID. |
 | `calibration_name` | string | **required** | R89 §2.1 | What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since R85 §2.2 makes two calibrations sharing a name one row. |
 | `calibration_type` | string | **required** | R89 §2.1 | What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open (R8 §4). Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 §2.1), and this holds a value that resolves to no table. |
 | `calibrated_at` | timestamp | nullable | R89 §2.1 | When the calibration was measured, which is not when it was in force: R89 §1.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (R66 §2.1). |
@@ -323,9 +323,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** |  | Session ID. |
 | `clock_id` | int32 | **required** |  | Stable clock ID. |
 | `clock_name` | string | **required** | R95 §3.1 | What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** |  | Session ID. |
 | `tick_rate_hz` | float64 | nullable |  | Tick rate as float, required unless exact tick rate provided. |
 | `tick_rate_num` | int64 | nullable |  | Exact rational numerator. |
 | `tick_rate_den` | int64 | nullable |  | Exact rational denominator. |
@@ -360,10 +360,10 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** |  | Session ID. |
 | `curation_id` | int32 | **required** |  | Stable curation ID. |
 | `curation_name` | string | nullable | R53 §2.3.1 | What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (R53 §2.5). |
 | `sorting_run_id` | int32 | **required** |  | Sorting run ID. |
-| `session_id` | int32 | **required** |  | Session ID. |
 | `curator` | string | nullable |  | Curator. |
 | `curation_tool` | string | nullable |  | Tool. |
 | `curation_tool_version` | string | nullable |  | Tool version. |
@@ -386,9 +386,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session if device record is session-scoped. |
 | `device_id` | int32 | **required** |  | Stable device ID. |
 | `device_name` | string | **required** | R95 §3.1 | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** | R88 §2.1 | Session if device record is session-scoped. |
 | `manufacturer` | string | nullable |  | Manufacturer. |
 | `model` | string | nullable |  | Model. |
 | `firmware_version` | string | nullable | R66 §2.1 | The firmware the instrument was running, verbatim as its source stated it. |
@@ -439,9 +439,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** |  | Session ID. |
 | `electrode_id` | int32 | **required** |  | Stable electrode ID. |
 | `electrode_name` | string | nullable | R53 §2.3.1 | What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** |  | Session ID. |
 | `probe_id` | int32 | nullable |  | Probe ID. |
 | `local_electrode_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `local_channel_label` | string | nullable | R8 §2 | Opaque source label; undefined base, not an offset. |
@@ -484,9 +484,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R23 §2-3 | Session ID. |
 | `event_stream_id` | int32 | **required** | R23 §2-3 | Stable ID. |
 | `event_stream_name` | string | **required** | R95 §3.1 | What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** | R23 §2-3 | Session ID. |
 | `event_type` | string | **required** | R91 §3.1 | What kind of event this stream emits. Open (R8 §4); a stream emits one kind, so a source emitting several on one channel is written as several streams. |
 | `detail_kind` | string | nullable | R91 §3.1 | A table specialising this stream's events, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the detail is elsewhere (R90 §3.4). Resolved against `core.events`' key by R90 §3.5's shared key, through the reference `discriminates_via` names. |
 | `device_id` | int32 | nullable | R23 §2-3 | The device that produced it, where one is identified. |
@@ -555,9 +555,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** |  | Session ID. |
 | `media_asset_id` | int32 | **required** |  | Stable media asset ID. |
 | `media_asset_name` | string | **required** | R95 §3.1 | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** |  | Session ID. |
 | `semantic_type` | string | **required** | R8 §3-4 | e.g. BehaviorVideo. |
 | `uri` | string | **required** |  | Media file URI. |
 | `format` | string | **required** |  | e.g. mp4. |
@@ -635,9 +635,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** |  | Session ID. |
 | `probe_id` | int32 | **required** |  | Stable probe ID. |
 | `probe_name` | string | nullable | R95 §3.1 | What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** |  | Session ID. |
 | `device_id` | int32 | nullable |  | Associated device. |
 | `probe_type` | string | nullable |  | Probe type, e.g. Neuropixels 1.0. |
 | `manufacturer` | string | nullable |  | Manufacturer. |
@@ -675,9 +675,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R88 §2.1 | Session ID if session-scoped. |
 | `processing_run_id` | int32 | **required** |  | Stable processing run ID. |
 | `processing_run_name` | string | nullable | R53 §2.3.1 | What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** | R88 §2.1 | Session ID if session-scoped. |
 | `activity_type` | string | **required** | R8 §3-4 | import, validation, sorting, curation, materialization, etc. |
 | `scope` | string | nullable | R44 §2.1 | What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Open, as activity_type is. |
 | `scope_kind` | string | nullable | R49 §2.1 | The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. Open (R8 §4); a value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
@@ -782,9 +782,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 
 | Column | Type | Presence | Since | Description |
 |---|---|:---:|---|---|
+| `session_id` | int32 | **required** |  | Session ID. |
 | `sorting_run_id` | int32 | **required** |  | Stable sorting run ID. |
 | `sorting_run_name` | string | nullable | R53 §2.3.1 | What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `session_id` | int32 | **required** |  | Session ID. |
 | `probe_id` | int32 | nullable |  | Probe ID. |
 | `sorter_name` | string | nullable |  | Sorter name. |
 | `sorter_version` | string | nullable |  | Sorter version. |
