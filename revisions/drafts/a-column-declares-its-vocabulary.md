@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `02` §9.3 (a vocabulary is declared, not defaulted), R8 §4 (the test a reservation must pass), R11 §4 (strikes `event_type`'s reserved set), the registry meta-schema, and every string column's declaration |
+| **Amends** | `02` §9.3 (a vocabulary is declared, not defaulted), `03` §5 (the profile has one null), R8 §4 (the test a reservation must pass), R11 §4 (strikes `event_type`'s reserved set), the registry meta-schema, and every string column's declaration |
 | **Depends on** | R8 (open vocabularies and reserved values), R11 (the reserved event types), R22 §3 (a scorer's label and its source), R48 (a column declares its role), R55 §2.1 (a discriminator's value space), R91 §3.1 (which table declares `event_type`) |
 | **Profile** | all |
 
@@ -277,7 +277,26 @@ Nothing conforms today. Both packets carry `Male` and `fixtures/build.py` carrie
 packet fails Tier 1's membership check until it is rebuilt — the only clause here that invalidates
 a packet, and the reason §5 owes a corpus change.
 
-### 3.10 What a validator does
+### 3.10 The profile has one null
+
+`03` §5 gains a clause, because §3.9 rests on a property of the profile that is written nowhere.
+Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker:
+Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value
+that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive
+as the same null. Julia's DataFrames separate the first two as `nothing` and `missing`, and
+neither survives a write.
+
+NaN is not the exception it looks like. It is a value of a float column rather than an absent one,
+so it reaches **30 of 330** columns and none of the rest, and Parquet's statistics exclude it from
+a page's bounds — a page holding only NaN publishes no min and no max.
+
+A writer therefore **MUST NOT** adopt a sentinel value meaning absent; an absent value is null.
+Where the reason for the absence matters, core records the fact that distinguishes it rather than
+encoding the reason in the value: R44 §2.3 gave a run a `scope`, R22 §3 nulls `normalized_label`
+where a source's label has no honest projection, and §6 proposes `subject_kind` for the five
+subject columns that collapse together today.
+
+### 3.11 What a validator does
 
 A validator **SHOULD** report, at `info`, a value outside the reserved set of a column declaring
 one. It **MUST NOT** report a failure: the vocabulary is open, and an unrecognized value is exactly
@@ -330,9 +349,10 @@ authority is an absolute URI, an `open` column carries a description, and one co
 name carries one vocabulary and one authority across every table holding it. That last check holds
 across all 102 columns today, and is what §2.3's drift would have caught.
 
-`fixtures/build.py` writes `sex` as `male` rather than `M`, so every packet in the corpus changes;
+`03` §5 gains §5.6, stating the profile's single null beside the Parquet floor §5.5 already
+records. `fixtures/build.py` writes `sex` as `male` rather than `M`, so every packet in the corpus changes;
 the NWB adapter gains the mapping §3.9 requires, and both packets are rebuilt, which R87 §2.1,
-R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains §3.10's report.
+R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains §3.11's report.
 
 ## 6. Open
 
