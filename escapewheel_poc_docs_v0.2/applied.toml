@@ -2034,3 +2034,38 @@ note = "device_id on core.media_assets, int32 nullable, referencing core.devices
 disposition = "applied"
 where = "01_semantic_standard.md §3.5"
 note = "a writer records every instrument its source declares, identity being the serial (R67 §2.2); where a camera was pointed has no column and stays in metadata"
+
+[clause."R103 §2.1"]
+disposition = "rationale"
+where = "R103 §2.1"
+note = "the row already declares what an array holds -- device, clock, rate, unit, conversion, dimensions, channels -- and 14 of 14 and 11 of 11 arrays are distinct on those alone, while nothing in rules.json, the reader or the validator reads either name column"
+
+[clause."R103 §2.2"]
+disposition = "rationale"
+where = "R103 §2.2"
+note = "R8 §4's four mixed three things: ap and lfp name a spectrum, raw a processing stage, waveform a thing computed after sorting, which R23 §1.1 had already placed in provenance"
+
+[clause."R103 §2.3"]
+disposition = "rationale"
+where = "R103 §2.3"
+note = "core.array_assets.kind held dense_array_asset on three arrays, a manifest resource kind written by waveforms.py, and semantic_type held five values from three vocabularies"
+
+[clause."R103 §2.4"]
+disposition = "rationale"
+where = "R103 §2.4"
+note = "no source records the filter: ElectricalSeries.filtering is empty for all 3,840 and all 4,608 electrodes, and the rate is exactly declared at 30000/24 = 1250 Hz by the time axis, which bounds the corners at Nyquist and states neither"
+
+[clause."R103 §3.2"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.17"
+note = "band is nullable; a consumer must not infer one from semantic_type, the device or the sample rate, none of which is the statement"
+
+[clause."R103 §3.3"]
+disposition = "registry"
+where = "band's reserved_values on both array tables"
+note = "waveform struck, the set going from four values to three with raw respelled wideband; §3.1's rename of kind to band carries the column, with role data and vocabulary open declared in build.py's ROLES and VOCABULARY because neither has a default"
+
+[clause."R103 §3.4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.17"
+note = "semantic_type nullable on all three asset tables, filled only where the row's declared facts cannot say what the asset holds; nothing checks it, so it binds a writer and no validator (R67 §2.4)"

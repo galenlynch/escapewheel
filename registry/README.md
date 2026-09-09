@@ -88,7 +88,7 @@ declares, and therefore what a generator has to work with:
 
 <!-- BEGIN generated: structure -->
 ```
-154 required column, not null
+149 required column, not null
 100 reference, resolves
 39  primary key, unique
 4   closed vocabulary, member of

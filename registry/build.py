@@ -115,7 +115,7 @@ WITHDRAWN = {
     "brain_region": "data",
 }
 
-ROLES: dict[str, str] = dict.fromkeys(TRANSIENT, "data") | WITHDRAWN
+ROLES: dict[str, str] = dict.fromkeys(TRANSIENT, "data") | WITHDRAWN | {"band": "data"}
 for _role, _names in {
     "identifier": (
         "array_asset_id", "calibration_id", "clock_id", "condition_id", "coordinate_array_asset_id", "curation_id",
@@ -290,7 +290,7 @@ VOCABULARY: dict[str, str] = {}
 for _vocab, _names in {
     "closed": ("normalized_label", "quality_label", "sex", "status"),
     "open": (
-        "activity_type", "amplitude_unit", "calibration_type", "coordinate_basis",
+        "activity_type", "band", "amplitude_unit", "calibration_type", "coordinate_basis",
         "coordinate_frame", "coordinate_unit", "event_type", "format", "genotype", "input_unit",
         "kind", "label", "manufacturer", "origin", "output_unit", "parent_port", "probe_type",
         "quality_label_source", "region_label", "semantic_type", "source", "species", "strain",
@@ -1753,6 +1753,31 @@ def build() -> dict:
             "and MUST NOT infer it from a file name (`01` §3.5)."), after="format")
     T("core.media_assets")["references"].append(
         {"columns": ["device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
+
+    # ---- R103 §3 : an array's band and the quantity it holds -----------------------------------
+    # Two required open strings described what an array holds and nothing read either. `kind` is
+    # the band a signal was split into, so it takes that name (R50 §2) and becomes nullable: a
+    # photometry trace has none, and a column it must fill is one it will fill wrongly -- which is
+    # how a manifest resource kind got into it. `semantic_type` becomes nullable for the same
+    # reason, and is for what a row's declared facts cannot say.
+    SINCE[0] = "R103 §3.1"
+    for _t in ("core.array_assets", "analysis.array_assets"):
+        rename(_t, "kind", "band")
+        amend(_t, "band", presence="nullable",
+              reserved_values=["wideband", "ap", "lfp"],
+              description="Which band of a sampled signal this array holds: `wideband` unfiltered, "
+                          "`ap` the action-potential band, `lfp` the local field potential band, "
+                          "with R8 §4's meanings. A conventional shorthand for a filter the packet "
+                          "does not record. Open, and null where the signal was not split.")
+
+    SINCE[0] = "R103 §3.4"
+    for _t in ("core.array_assets", "analysis.array_assets", "core.media_assets"):
+        amend(_t, "semantic_type", presence="nullable",
+              description="What quantity the asset holds, where the row's declared facts do not "
+                          "already say. Null is the ordinary case: a writer MUST NOT fill it where "
+                          "the device, the unit, the channel map or the dimensions carry the "
+                          "answer. Open (R8 §4): an unrecognised value is a label carrying no "
+                          "contract (`01` §3.17).")
 
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column

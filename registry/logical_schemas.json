@@ -105,7 +105,8 @@
       "R99",
       "R100",
       "R101",
-      "R102"
+      "R102",
+      "R103"
     ]
   },
   "tables": {
@@ -141,25 +142,24 @@
         {
           "name": "semantic_type",
           "type": "string",
-          "presence": "required",
+          "presence": "nullable",
           "role": "data",
-          "description": "What quantity the asset holds. Open (R8 \u00a74): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` \u00a73.17).",
+          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. Open (R8 \u00a74): an unrecognised value is a label carrying no contract (`01` \u00a73.17).",
           "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R103 \u00a73.4"
         },
         {
-          "name": "kind",
+          "name": "band",
           "type": "string",
-          "presence": "required",
+          "presence": "nullable",
           "role": "data",
-          "description": "Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the meanings R8 \u00a74 declares. Open, so an unrecognised value is conforming -- but a value outside the set MUST NOT be used for data the set describes (R8 \u00a74).",
+          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 \u00a74's meanings. A conventional shorthand for a filter the packet does not record. Open, and null where the signal was not split.",
           "vocabulary": "open",
-          "since": "R101 \u00a73.5",
+          "since": "R103 \u00a73.1",
           "reserved_values": [
-            "raw",
+            "wideband",
             "ap",
-            "lfp",
-            "waveform"
+            "lfp"
           ]
         },
         {
@@ -606,25 +606,24 @@
         {
           "name": "semantic_type",
           "type": "string",
-          "presence": "required",
+          "presence": "nullable",
           "role": "data",
-          "description": "What quantity the asset holds. Open (R8 \u00a74): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` \u00a73.17).",
+          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. Open (R8 \u00a74): an unrecognised value is a label carrying no contract (`01` \u00a73.17).",
           "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R103 \u00a73.4"
         },
         {
-          "name": "kind",
+          "name": "band",
           "type": "string",
-          "presence": "required",
+          "presence": "nullable",
           "role": "data",
-          "description": "Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the meanings R8 \u00a74 declares. Open, so an unrecognised value is conforming -- but a value outside the set MUST NOT be used for data the set describes (R8 \u00a74).",
+          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 \u00a74's meanings. A conventional shorthand for a filter the packet does not record. Open, and null where the signal was not split.",
           "vocabulary": "open",
-          "since": "R101 \u00a73.5",
+          "since": "R103 \u00a73.1",
           "reserved_values": [
-            "raw",
+            "wideband",
             "ap",
-            "lfp",
-            "waveform"
+            "lfp"
           ]
         },
         {
@@ -2810,11 +2809,11 @@
         {
           "name": "semantic_type",
           "type": "string",
-          "presence": "required",
+          "presence": "nullable",
           "role": "data",
-          "description": "What quantity the asset holds. Open (R8 \u00a74): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` \u00a73.17).",
+          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. Open (R8 \u00a74): an unrecognised value is a label carrying no contract (`01` \u00a73.17).",
           "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R103 \u00a73.4"
         },
         {
           "name": "uri",

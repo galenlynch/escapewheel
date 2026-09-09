@@ -10,7 +10,7 @@ otherwise answerable only by reading a frozen document and then every amendment 
 ```text
 39 tables, 333 columns, 100 references, 76 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99, R100, R101, R102
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99, R100, R101, R102, R103
 ```
 
 ## Contents
@@ -30,8 +30,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** | R20 §5 | Session ID. |
 | `array_asset_id` | int32 | **required** | R20 §5 | Stable array asset ID. |
 | `array_asset_name` | string | **required** | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `semantic_type` | string | **required** | R101 §3.5 | What quantity the asset holds. Open (R8 §4): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` §3.17). |
-| `kind` | string | **required** | R101 §3.5 | Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the meanings R8 §4 declares. Open, so an unrecognised value is conforming -- but a value outside the set MUST NOT be used for data the set describes (R8 §4). |
+| `semantic_type` | string | nullable | R103 §3.4 | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. Open (R8 §4): an unrecognised value is a label carrying no contract (`01` §3.17). |
+| `band` | string | nullable | R103 §3.1 | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 §4's meanings. A conventional shorthand for a filter the packet does not record. Open, and null where the signal was not split. |
 | `uri` | string | **required** | R20 §5 | URI/path to array store. |
 | `format` | string | **required** | R20 §5 | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable | R20 §5 | Clock for time axis. |
@@ -118,8 +118,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** |  | Session ID. |
 | `array_asset_id` | int32 | **required** |  | Stable array asset ID. |
 | `array_asset_name` | string | **required** | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `semantic_type` | string | **required** | R101 §3.5 | What quantity the asset holds. Open (R8 §4): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` §3.17). |
-| `kind` | string | **required** | R101 §3.5 | Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the meanings R8 §4 declares. Open, so an unrecognised value is conforming -- but a value outside the set MUST NOT be used for data the set describes (R8 §4). |
+| `semantic_type` | string | nullable | R103 §3.4 | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. Open (R8 §4): an unrecognised value is a label carrying no contract (`01` §3.17). |
+| `band` | string | nullable | R103 §3.1 | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 §4's meanings. A conventional shorthand for a filter the packet does not record. Open, and null where the signal was not split. |
 | `uri` | string | **required** |  | URI/path to array store. |
 | `format` | string | **required** |  | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable |  | Clock for time axis. |
@@ -594,7 +594,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** |  | Session ID. |
 | `media_asset_id` | int32 | **required** |  | Stable media asset ID. |
 | `media_asset_name` | string | **required** | R95 §3.1 | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `semantic_type` | string | **required** | R101 §3.5 | What quantity the asset holds. Open (R8 §4): a value this standard does not define is a label and carries no contract, the meaning living in the device rather than in the format (`01` §3.17). |
+| `semantic_type` | string | nullable | R103 §3.4 | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. Open (R8 §4): an unrecognised value is a label carrying no contract (`01` §3.17). |
 | `uri` | string | **required** |  | Media file URI. |
 | `format` | string | **required** | R101 §3.5 | The container format, as the file extension names it: `mp4`, `avi`. Open. |
 | `device_id` | int32 | nullable | R102 §3.2 | The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (`01` §3.5). |

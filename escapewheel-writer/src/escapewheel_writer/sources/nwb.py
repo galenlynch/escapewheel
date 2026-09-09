@@ -834,9 +834,7 @@ class NWBSource(Compensates):
                     # R65 §2.1: which instrument made this array. Read from the same description
                     # `_signal_devices` declares the device from, so the two cannot disagree.
                     "device_id": self._signal_device_id(name),
-                    "semantic_type": "signal",
                     "array_asset_name": str(attrs.get("description") or name),
-                    "kind": "dense_array_asset",
                     "uri": f"arrays/core/{name}.zarr",
                     "format": "zarr_v3",
                     "clock_id": self._dispatch_clock_id(name),

@@ -297,7 +297,6 @@ class WaveformSource:
             "session_id": self.session_id,
             "semantic_type": semantic_type,
             "array_asset_name": name,
-            "kind": "dense_array_asset",
             "uri": uri,
             "format": "zarr_v3",
             "clock_id": clock_id,

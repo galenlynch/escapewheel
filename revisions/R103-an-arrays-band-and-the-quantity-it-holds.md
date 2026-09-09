@@ -1,8 +1,8 @@
-# An Array's Band and the Quantity It Holds
+# R103 — An Array's Band and the Quantity It Holds
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-09 |
 | **Amends** | `01` §3.17 (`semantic_type` becomes nullable and is filled only where the facts cannot say it), R8 §4 (renames `raw`, strikes `waveform`, narrows what the column is for), the declarations of `kind` and `semantic_type` on the asset tables |
 | **Depends on** | R102 §3.1 (an array names the run that produced it), R101 §3.1 (every string column declares `closed`, `open` or `free`), R101 §3.8 (records R8 §4's reserved set), R8 §4 (the four reserved kinds), R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R50 §2 (a column is renamed where its name says less than its declaration), R65 §1 (an array names the device that made it) |
 | **Profile** | all |
@@ -219,8 +219,8 @@ column is added or struck, and no reference and no Tier 2 rule changes.
 
 `02` names neither column and `01` §3.17 names `semantic_type`, so §3.4's rule lands there and
 nothing else in the parts moves. The not-null figure is measured against the registry as R102 left
-it: `a-coordinate-frame-declares-what-its-axes-mean` adds two required columns, so whichever of the
-two lands second is measured again.
+it. A proposed table of coordinate frames adds two required columns of its own, so whichever of
+the two lands second is measured again.
 
 Both packets keep `band` of `lfp` on 22 arrays and declare it **null** on the three carrying
 `dense_array_asset` today; `waveforms.py:300` stops setting the field, and `semantic_type` empties
