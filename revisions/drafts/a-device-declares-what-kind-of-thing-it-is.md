@@ -80,6 +80,12 @@ Nullable rather than optional, on `02` §6's preference for a present column ove
 Optional is for a column a reader must be able to skip, which R3 §2.1 confines to `json_string`
 and which every one of the registry's 22 optional columns is.
 
+A hook with no user is what a hook looks like before its extension exists, and this is the second
+of them rather than the first. R91 §3.1 gave `core.event_streams` a `detail_kind` on the same
+terms, and none of the eleven tables the four extension registries declare specialises a stream,
+so that column has been null in every packet since. What justifies a hook is that core cannot
+supply the table itself (§3.2), not that one is already written.
+
 `optional` because most devices have none. A headstage that declares no `device_kind`, or one
 whose value names a resource the packet does not carry, states a fact: the instrument had nothing
 further to say, or the extension that would say it is absent. Neither is a defect (R55 §2.2).
