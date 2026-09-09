@@ -18,6 +18,33 @@ def _write(root, registry, tables, **kwargs):
     return writer.commit(root)
 
 
+def test_stamp_sets_columns_on_rows_already_added(registry, minimal):
+    """R99 §3.2: the fact arrives after the row it belongs on is staged."""
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    changed = writer.stamp("core.clocks", "clock_id",
+                           {"harp_s001": {"withheld_first_anchor": True,
+                                          "withheld_last_anchor": False}})
+    assert changed == 1
+    (clock,) = writer._tables["core.clocks"]
+    assert clock["withheld_first_anchor"] is True and clock["withheld_last_anchor"] is False
+    assert clock["clock_name"] == "harp"  # the row it was, not a row standing in for it
+
+
+def test_stamp_reports_a_miss_rather_than_raising(registry, minimal):
+    """A count is what lets a caller tell a clock it could not reach from one it stamped."""
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    assert writer.stamp("core.clocks", "clock_id", {"absent": {"withheld_last_anchor": True}}) == 0
+
+
+def test_stamp_refuses_a_resource_the_registry_does_not_define(registry):
+    with pytest.raises(KeyError):
+        PacketWriter(registry, packet_id="s001").stamp("core.nope", "id", {})
+
+
 def test_commits_a_valid_packet(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     report = _write(root, registry, minimal)

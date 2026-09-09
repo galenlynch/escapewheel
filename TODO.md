@@ -88,26 +88,17 @@ name columns colliding and excludes `subject_name` explicitly, naming the recipe
 only reason the two packets agree on a value. The rebuild removes the collision and changes
 nothing in the revision.
 
-## 2₀. The writer still records R99's withheld anchors in `parameters`
+## 2₀. The two recipes still say `owns` where two sources each hold part
 
-Two of R99's three facts are emitted: `core.sessions.alignment_bound` comes from
-`_declare_origin`, which already had the bound in hand, and `core.clock_phase_steps` from
-`SyncSource.phase_steps`, whose rows name a clock the way an anchor row does so R53 assigns both
-the same id. Both left `_alignment_parameters`, which keeps only the measurement R99 §3.4 says it
-should.
+R98 §3.2 refuses that and the recipes under `/mnt/Data/*/recipe.toml` predate it:
+`core.clock_observation_intervals` is declared `owns` on the sync source, which is what kept
+twelve clocks of thirteen from having a window. `SyncSource.PRODUCES` now also names
+`core.clock_phase_steps`, which those recipes narrow away and R98 §3.3's report will say so about.
+Both are edits to a file outside this repository, made when the packets are rebuilt.
 
-`withheld_first_anchor` and `withheld_last_anchor` do not, and the obstacle is real rather than
-effort. The sync source computes the withholding and emits only the *reference* clock row; the
-probe clock rows come from the sorter, which `CONSUMES` runs **first**, so by the time the
-withholding is known those rows are already in `PacketWriter._tables`. Stamping them needs either
-an `amend` on the writer or `core.clocks` held until every source has run, and `core.clocks` is
-contributed by four sources, so holding it is the larger change. Until one exists a build violates
-R99 §3.2's MUST, and the packet is otherwise conforming, both columns being nullable.
-
-R98 §3.2 belongs to the same build: the two recipes under `/mnt/Data/*/recipe.toml` declare
-`core.clock_observation_intervals` under `owns` where two sources each hold part, which is what
-kept twelve clocks of thirteen from having a window. `SyncSource.PRODUCES` now also names
-`core.clock_phase_steps`, which those recipes narrow away, and R98 §3.3's report will say so.
+R99's three facts are all emitted now: `core.sessions.alignment_bound` from `_declare_origin`,
+`core.clock_phase_steps` from `SyncSource.phase_steps`, and the two `withheld_*` columns from
+`_declare_withheld` through `PacketWriter.stamp`.
 
 ## 2a. `registry_version` — still `0.1.0`
 

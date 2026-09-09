@@ -556,6 +556,49 @@ class PacketWriter:
         session = next(iter(declared))
         return [r if r.get("session_id") is not None else {"session_id": session, **r} for r in records]
 
+    def stamp(self, resource_id: str, match: str, values: Mapping[Any, Mapping[str, Any]]) -> int:
+        """Set columns on rows already added, matched on one column's value.
+
+        Named `stamp` rather than `amend` because :meth:`amend` is R32's packet amendment, which
+        is a different operation on a different thing.
+
+        R99 §3.2 is why this exists. The sync source learns which of a clock's terminal anchors
+        it withheld only by reading that clock's pulses, and `session.CONSUMES` runs the sorter
+        first because the sync source needs the sorter's clocks to know which streams to anchor
+        at all -- so the row the fact belongs on is already here when the fact becomes known.
+
+        Adding a second row would collide on the primary key, and holding `core.clocks` back
+        until every source has run would defer a table four adapters contribute to. Setting the
+        columns is the narrow thing.
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID.
+        match : str
+            The column whose value identifies the row to change.
+        values : Mapping
+            Match value to the columns to set on the row carrying it.
+
+        Returns
+        -------
+        int
+            Rows changed, so a caller can tell a hit from a silent miss.
+
+        Raises
+        ------
+        KeyError
+            If the registry does not define this resource.
+        """
+        if self.spec(resource_id) is None:
+            raise KeyError(f"no registry defines a table named {resource_id}")
+        changed = 0
+        for index, row in enumerate(self._tables.get(resource_id, [])):
+            if (setting := values.get(row.get(match))) is not None:
+                self._tables[resource_id][index] = {**row, **setting}
+                changed += 1
+        return changed
+
     def add_batches(self, resource_id: str, batches: Iterable[pa.RecordBatch]) -> None:
         """Add one table as a stream of Arrow record batches, written without buffering.
 

@@ -8,7 +8,13 @@ a consumer derives from it.
 import numpy as np
 import pytest
 
-from escapewheel_writer.session import TOLERANCE, Context, _bound_for, _time_origin
+from escapewheel_writer.session import (
+    TOLERANCE,
+    Context,
+    _bound_for,
+    _declare_withheld,
+    _time_origin,
+)
 
 AP, HARP = 30000, 31250
 
@@ -107,3 +113,61 @@ def test_an_unmappable_window_yields_no_origin():
 def test_a_clock_with_no_anchors_yields_no_origin():
     intervals = [{"clock_id": "elsewhere", "start_tick": 0}]
     assert _time_origin(context_on(), intervals, BY_CLOCK, bound=2.0) is None
+
+
+# -- R99 §3.2: the terminal-anchor test reaches the clock rows the sorter staged ------------
+
+
+class _Sync:
+    def __init__(self, withheld):
+        self.withheld = withheld
+
+
+class _Staged:
+    """A writer stub recording what `stamp` was asked to set."""
+
+    def __init__(self, reach=None):
+        self.calls = []
+        self._reach = reach
+
+    def stamp(self, resource_id, match, values):
+        self.calls.append((resource_id, match, values))
+        return len(values) if self._reach is None else self._reach
+
+
+def _context(withheld):
+    context = Context.__new__(Context)
+    context.sources = {"sync": _Sync(withheld)}
+    context.notes = []
+    return context
+
+
+def test_a_clock_the_test_kept_records_false_not_nothing():
+    """R40 §2.3: a silent absence and a recorded zero are different facts."""
+    writer = _Staged()
+    _declare_withheld(_context({"probeA": {"anchors": [], "n_withheld": 0}}), writer, lambda _: None)
+    (resource, match, values) = writer.calls[0]
+    assert (resource, match) == ("core.clocks", "clock_id")
+    assert values["probeA"] == {"withheld_first_anchor": False, "withheld_last_anchor": False}
+
+
+def test_which_terminal_went_is_what_the_two_columns_say():
+    writer = _Staged()
+    _declare_withheld(_context({"probeA": {"anchors": ["first"], "n_withheld": 1}}), writer, lambda _: None)
+    assert writer.calls[0][2]["probeA"] == {"withheld_first_anchor": True,
+                                            "withheld_last_anchor": False}
+
+
+def test_a_clock_the_test_never_reached_is_not_stamped_at_all():
+    """Null is the third state, so a clock absent from the map keeps both columns null."""
+    writer = _Staged()
+    _declare_withheld(_context({}), writer, lambda _: None)
+    assert writer.calls == []
+
+
+def test_a_clock_the_stamp_could_not_reach_is_noted():
+    """A silent miss would leave the packet saying the test never ran on that clock."""
+    context = _context({"probeA": {"anchors": [], "n_withheld": 0},
+                        "probeB": {"anchors": ["last"], "n_withheld": 1}})
+    _declare_withheld(context, _Staged(reach=1), lambda _: None)
+    assert any("2 clocks and 1 of them are staged" in note for note in context.notes)

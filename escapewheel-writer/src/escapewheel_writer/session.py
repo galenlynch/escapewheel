@@ -799,6 +799,7 @@ def build(
         drained[spec.kind] = _say_notes(spec.kind, source, 0, say, strict)
         applied.extend(getattr(source, "compensations", []))
 
+    _declare_withheld(context, writer, say)
     _declare_origin(context, say)
     for note in context.notes:
         say(f"  note: {note}")
@@ -939,6 +940,34 @@ def _note_unclaimed(spec: SourceSpec, source: Any, produced: Mapping[str, int]) 
     notes.append(f"{spec.kind} produced {listed}, which no source in this recipe claims; discarded")
 
 
+def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None]) -> None:
+    """Put R37 §3.2's terminal-anchor test on each clock it examined (R99 §3.2).
+
+    The sync source computes this and emits only the reference clock's row; the probe clock rows
+    are the sorter's, and `CONSUMES` runs the sorter first, so they are already staged. Three
+    states are the point: a clock the test never reached keeps both columns null, where one it
+    reached and kept records `false` (R40 §2.3).
+    """
+    withheld = getattr(context.sources.get("sync"), "withheld", None)
+    if not withheld:
+        return
+    stamped = writer.stamp(
+        "core.clocks",
+        "clock_id",
+        {clock: {"withheld_first_anchor": "first" in entry["anchors"],
+                 "withheld_last_anchor": "last" in entry["anchors"]}
+         for clock, entry in withheld.items()},
+    )
+    dropped = sum(entry["n_withheld"] for entry in withheld.values())
+    say(f"  terminal-anchor test recorded on {stamped} of {len(withheld)} clocks, "
+        f"{dropped} anchor(s) withheld (R99 §3.2)")
+    if stamped != len(withheld):
+        context.notes.append(
+            f"the terminal-anchor test examined {len(withheld)} clocks and {stamped} of them are "
+            "staged, so the rest carry no record of it"
+        )
+
+
 def _declare_origin(context: Context, say: Callable[[str], None]) -> None:
     """Put R39's time origin on the session, or say why the packet gets none."""
     if not (context.observed and context.reference):
@@ -958,20 +987,16 @@ def _declare_origin(context: Context, say: Callable[[str], None]) -> None:
 
 
 def _alignment_parameters(context: Context | None) -> dict[str, Any]:
-    """Return what a run should record about how it aligned clocks, or nothing."""
-    if context is None:
+    """Return the measurement behind the run's alignment decisions, or nothing.
+
+    R99 §3.4 draws the line: the three facts a consumer needs to place a tick are columns, and
+    what justified them stays here. So this holds the error distribution and the distance it was
+    measured at, and no longer the bound, the withheld anchors or the phase steps.
+    """
+    if context is None or not context.measured_bound:
         return {}
-    sync = context.sources.get("sync")
-    withheld = getattr(sync, "withheld", None)
-    recorded = {}
-    # Recorded whenever a sync source ran, whether or not it withheld anything (R40 §2.3). An
-    # absent key and a recorded zero say different things, and only one of them is checkable.
-    if withheld is not None:
-        recorded["withheld_anchors"] = withheld
-    if context.measured_bound:
-        # R99 §3.4: the evidence stays, the bound itself is `core.sessions.alignment_bound`.
-        recorded["alignment_bound"] = {k: v for k, v in context.measured_bound.items() if k != "used"}
-    return recorded
+    # `used` is `core.sessions.alignment_bound`; the rest is why the writer chose it.
+    return {"alignment_bound": {k: v for k, v in context.measured_bound.items() if k != "used"}}
 
 
 __all__ = [
