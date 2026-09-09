@@ -1,4 +1,4 @@
-# A Column Declares Its Vocabulary
+# A Column Declares What Its Values Mean
 
 | | |
 |---|---|
@@ -23,8 +23,11 @@ string columns of which 84 say nothing — `core.probes.probe_type`, whose value
 compares across packets, beside `core.curation_versions.notes`, whose value means something only
 to whoever wrote it.
 
-Every string column now declares which of three kinds it holds, a reservation gets a test, and
-the three sets reserved so far are settled: one recorded, one struck, one deferred.
+Three things a column can say about its values are settled here: which vocabulary they are drawn
+from, what unit they are in, and what an absent one means. Every string column declares the first,
+a reservation gets a test, the three sets reserved so far are settled — one recorded, one struck,
+one deferred — units become UCUM, and `03` states that the profile has one null and no second
+marker.
 
 Measured on the registry as built at R100, and on the two packaged sessions — **`ecephys_776259`**
 (twelve probes, 6,781 sorted units, recorded 2025-04-09) and **`ecephys_786867`** (ten probes,
@@ -246,6 +249,12 @@ spellings — `core.electrodes.impedance_ohm` declares `ohm` where UCUM writes `
 `core.clock_phase_steps.anchor_interval_span` declares `anchor intervals` and
 `core.sessions.alignment_bound` declares `median anchor intervals`, each counting a quantity the
 packet itself measured, so the size of the unit varies per packet and UCUM has no form for it.
+
+Neither is a unit, which is why no form is missing. `alignment_bound` of 3 is a duration divided
+by a duration, so the quantity is dimensionless and the string records the **normalizer** rather
+than a unit of measure. What a consumer needs is that normalizer's definition, and R37 §3.1 gives
+it while `core.clock_anchors` holds what computes it — so the exception carries the citation in
+its description, and no field is added for two columns that do not measure anything.
 No table changes — a declared unit is registry text, so what moves is the registry each packet
 embeds.
 
@@ -430,11 +439,6 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   writer obligation, so a revision of its own — drafted as
   `a-coordinate-frame-declares-what-its-axes-mean`, which also settles the three names R19 §3
   reserved and §3.8 defers.
-- **Whether a packet-relative unit should be expressible.** §3.6 exempts the two declarations
-  counting a quantity the packet measured, and an exception is a note rather than a form: nothing
-  says how a consumer converts `median anchor intervals` to seconds, though `core.clock_anchors`
-  holds what it would take. R37 §3 and R40 §2 both reason in those terms, so the quantity is real
-  and only its expression is missing.
 - **Whether an extension should make a refinement structural.** §3.7 leaves `lick_left` or
   `left_lick` a string a consumer filters on and cannot join. Making the spout structural is an
   extension's work, keyed through `event_type` in R90 §3.5's shared-key shape; nothing has asked

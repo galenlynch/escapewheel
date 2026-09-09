@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | R19 §3 (the axis meaning, and the three reserved frame names); adds `core.coordinate_frames` and the reference `coordinate_frame` has never had |
-| **Depends on** | `a-column-declares-its-vocabulary` (open draft: every string column declares `closed`, `open` or `free`), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R58 §2.1 (a frame and a basis are two facts), R59 §2.2 (the frame names the atlas), R83 §3 (report unresolvable rather than resolve), R88 §2 (session scope) |
+| **Depends on** | `a-column-declares-what-its-values-mean` (open draft: every string column declares `closed`, `open` or `free`), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R58 §2.1 (a frame and a basis are two facts), R59 §2.2 (the frame names the atlas), R83 §3 (report unresolvable rather than resolve), R88 §2 (session scope) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
