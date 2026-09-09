@@ -1,4 +1,4 @@
-# Every Clock Declares When It Was Observing
+# A Clock Declares When It Was Observing
 
 | | |
 |---|---|
@@ -18,8 +18,8 @@ depend on it: a unit or an event stream is observed during its clock's declared 
 narrow them but never replace them. Nothing says a clock must declare any.
 
 Both packaged packets declare one interval for thirteen and eleven clocks. This part requires one
-per clock, gives the requirement a rule, and closes the two mechanisms that let the rows be dropped
-without a word.
+for every clock anything is timestamped on, gives the requirement a rule, and closes the two
+mechanisms that let the rows be dropped without a word.
 
 Measured on **`ecephys_776259`** (twelve probes, 6,781 sorted units, recorded 2025-04-09) and
 **`ecephys_786867`** (ten probes, 4,505 units, recorded 2025-09-25).
@@ -106,19 +106,35 @@ added, which is why nothing here was caught by the corpus either.
 
 ## 3. Decision
 
-### 3.1 A clock declares at least one interval
+### 3.1 Which clocks declare an interval
 
-A packet **MUST** declare at least one row of `core.clock_observation_intervals` for every clock it
-declares in `core.clocks`. More than one stays permitted, for an acquisition paused and resumed
-(R38 §2.1).
+A packet **MUST** declare at least one row of `core.clock_observation_intervals` for every clock
+any of its rows is timestamped on. More than one stays permitted, for an acquisition paused and
+resumed (R38 §2.1).
 
-One Tier 2 rule, `core.clocks.observation_declared`, returns every clock with no interval. It is an
-anti-join and needs no new column.
+A clock that exists only as a parent declares none. A rig clock offset from a notional UTC clock
+puts that parent in `core.clocks` so R27 §3's chain is well founded, and nothing is observed on it,
+so there is no window to state and R38 §2.3 leaves nothing to inherit one.
 
-A packet declaring no `core.clock_observation_intervals` at all fails on every clock. A validator
+One Tier 2 rule, `core.clocks.observation_declared`, returns every clock that has anchors, or that
+a session names as its `reference_clock_id`, and declares no interval. Both branches say the clock
+is real and used, and a clock that is only a parent satisfies neither. It is an anti-join over
+tables that already exist and needs no new column.
+
+**The rule is narrower than the obligation, deliberately.** A clock aligned by `transform_slope`
+alone (R13) carries data and has no anchors, so the obligation reaches it and the rule does not.
+That is the shape R67 §2.4 has, a named actor able to comply where no validator can observe them,
+and the alternative — enumerating every table carrying a `clock_id` — goes stale the next time one
+is added, which is the drift R46 and R88 each closed once.
+
+Measured, the narrowing costs nothing today: every clock in both packets is anchored or is the
+reference, so **0 of 13 and 0 of 11** fall outside the rule, and it returns the same 12 and 10
+offending clocks the unnarrowed form does.
+
+A packet declaring no `core.clock_observation_intervals` at all fails on every clock the rule
+reaches. A validator
 creates an empty stand-in for a registry table a packet does not carry, so the rule evaluates
-rather than being skipped, and the anti-join then returns everything. That is the right answer: a
-packet declaring clocks and no windows is this defect at its largest, not an exemption from it.
+rather than being skipped, and the anti-join then returns everything it reaches.
 
 R39 §2.2 contemplates such a packet, requiring it to declare no `t_zero_tick`. That sentence stands
 and becomes unreachable on a conforming packet, as R82 §2.3 left R41 §2.4.
@@ -163,8 +179,11 @@ either is an omission rather than a decision.
 70 Tier 2 rules become **71**. No table, column or reference changes.
 
 `fixtures/build.py` writes `core.clock_observation_intervals` for both of its clocks across the 26
-corpus packets, which the rule forces rather than invites: every packet in the corpus declares
-clocks and no windows, so all 26 fail until they carry them. One variant is added whose expected
+corpus packets, which the rule forces rather than invites: `imec_ap_s001` is the session's
+reference clock and declares no window, so all 26 fail until they carry one. The other clock,
+`behavior_s001`, is aligned by `transform_slope` in the base packet and by anchors in the
+`clock_cycle` variant, so it falls outside the rule in one and inside it in the other — §3.1's
+narrowing, visible in the corpus. One variant is added whose expected
 finding is a clock without one, and the corpus gains a `t_zero_tick` it could not previously
 compute.
 
@@ -178,10 +197,6 @@ preferences rather than against every source's claims.
 
 ## 6. Open
 
-- **Whether a clock that is only a parent needs a window.** Every clock in both packets is either
-  observed or is the reference, and the reference declares one, so §3.1 costs nothing here. A
-  packet declaring a purely notional parent — a UTC clock a rig clock is offset from — would have
-  nothing to declare for it, and would need either an exemption or a clock it does not declare.
 - **Whether the bound, once measurable, changes either packet.** §2.3 says the comparison has never
   run. It may find that both sessions sit within one median anchor interval after all, or it may
   widen the bound and place spikes that are dropped today.
