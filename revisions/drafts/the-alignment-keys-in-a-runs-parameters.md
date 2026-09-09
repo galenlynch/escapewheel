@@ -123,7 +123,8 @@ nothing to say, and silence is what it said.
 ## 4. What this does not change
 
 - **No table, column, reference or rule.** All three keys are content of a column that already
-  exists, and R37 §4 declined a column for the first of them. This does not reopen that.
+  exists. R37 §4 declined a table or column for the withheld-anchor record; this does not reopen
+  that, and does not raise it for the other two.
 - **Nothing new must be carried.** Each key is written by a writer that had something to record,
   and R9 §5 leaves provenance a SHOULD, so a packet holding no import run at all is conforming.
 - **No packet is invalidated and this forces no rebuild.** Both packets already spell every key
@@ -132,7 +133,8 @@ nothing to say, and silence is what it said.
   beside these three and no consumer reads either, so only what changes the reading of data is
   named.
 - **No rule can check any of this.** A value inside a JSON string is invisible to SQL (R66 §1.4,
-  R70 §2), which is the cost R37 §4 accepted when it chose the column it did.
+  R70 §2), which is the cost R37 §4 accepted for the one record it placed and this part accepts
+  for the other two.
 
 ## 5. Consequence
 
