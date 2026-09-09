@@ -241,9 +241,10 @@ column R65 §2.1 gave the array table and not this one. A writer **MUST** name t
 source states one, and **MUST NOT** infer it from a file name, which is R67 §2.4's rule in the
 place §2.6 measures it being broken.
 
-Null in both packets on the day this lands, because no camera is recorded in `core.devices` at
-all. What the column changes is that the gap becomes a null a consumer can test rather than a
-label a writer typed in.
+It is fillable today. `rig.json` declares two camera assemblies with distinct serial numbers —
+`23022730` and `23022721`, both Teledyne FLIR Blackfly S — which is what R67 §2.2 makes identity,
+and `sources/aind.py` already opens that file for the rig's time zone. The packet records none of
+it: its 21 devices are seven probes, a `SniffDetector` and the Open Ephys chain.
 
 ## 4. What this does not change
 
@@ -298,6 +299,15 @@ R101 already require.
   distinguished by a label, where the difference is a statistic over one quantity — a mean and a
   standard deviation of the same waveform. Two arrays in one packet pair is not evidence for a
   column (R66 §1.3), and a third statistic, or a consumer needing to select on one, would be.
+- **Where a camera's view lives.** §3.6 gets the camera into `core.devices` as an object and says
+  nothing about where it points, which is what separates `bottom_camera` from `side_camera_left`.
+  A Stage 1 survey of `rig.json` settles what shape the answer takes and not where it goes: the
+  source states the view as a **label** — `camera_target` of `Face side right` and `Face bottom` —
+  and leaves `position` **null** on both assemblies, with `rig_axes` and `origin` null beside them.
+  So a pose column would be the principled shape and empty in every row this rig can produce,
+  which is R66 §1.3's control case, and a label is what there is to carry. Whether it sits beside
+  the device it describes or beside the asset, which a camera repositioned mid-session would
+  force, is what a revision would decide.
 - **Whether `semantic_type` empties once media assets name a device.** §3.6 adds the column and
   both packets leave it null, so the four videos keep `behavior_video` as their only statement.
   Once a camera is recorded, that value falls to §3.4's own test and the column is null on every

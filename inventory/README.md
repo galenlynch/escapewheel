@@ -13,3 +13,4 @@ These are prose inventories of specific datasets. The machine-readable form is
 | [`ecephys_776259_2025-04-09.md`](ecephys_776259_2025-04-09.md) | AIND Neuropixels + behaviour, `aind-open-data` |
 | [`nwb-zarr-776259-2025-04-09.md`](nwb-zarr-776259-2025-04-09.md) | The same session packaged as ephys + behaviour NWB-Zarr |
 | [`nwb-core-schema-comparison.md`](nwb-core-schema-comparison.md) | Core NWB schema versus the core registry |
+| [`behavior-video-cameras.md`](behavior-video-cameras.md) | What `rig.json` and `session.json` state about the cameras behind a packet's videos |

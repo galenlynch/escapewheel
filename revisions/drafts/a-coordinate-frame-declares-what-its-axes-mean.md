@@ -188,6 +188,10 @@ the orphan frame, taking the corpus from 27 packets to **28**.
 
 ## 6. Open
 
+- **Whether a rig frame has anything behind it.** R19 §3 reserved `stereotaxic` and neither
+  packet declares such a frame. The one artifact that could define one declares nothing: the AIND
+  `rig.json` for `ecephys_786867` carries `rig_axes` and `origin` as **null**, so a rig frame
+  would be a name with no axes and no origin, which is what §3.1 requires a row to supply.
 - **Whether `stereotaxic` needs more than an orientation.** R19 §3 reserved the name and both
   packets declare no such frame. A stereotaxic frame is measured from an animal's own skull
   landmark, so two sessions' frames of that name differ by where bregma was, and an orientation
