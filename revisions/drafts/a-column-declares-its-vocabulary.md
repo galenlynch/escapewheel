@@ -234,8 +234,24 @@ name the atlas, so its authority varies **per row**, which no column-level field
 is why the description obligation stays — a URI is an identity where "the scientific name, not the
 common name" is an instruction.
 
+R56's `unit` field follows UCUM too, by a different mechanism. The eight columns above hold a unit
+as a **value**, so a packet's rows are what conform and an `authority` is the declaration. The
+fifteen columns that *declare* one hold it as registry text, which `registry/check.py` checks as
+it checks a column's name against `02` §4 — a property of the registry rather than of any packet's
+rows, so exceptions are declared with a reason and checked to still be needed.
+
+Eleven of the fifteen conform already: `Hz` on four columns, `um` on six, `s` on one. Two are
+spellings — `core.electrodes.impedance_ohm` declares `ohm` where UCUM writes `Ohm`, and
+`core.source_files.size_bytes` declares `byte` where it writes `By`. Two are one exception:
+`core.clock_phase_steps.anchor_interval_span` declares `anchor intervals` and
+`core.sessions.alignment_bound` declares `median anchor intervals`, each counting a quantity the
+packet itself measured, so the size of the unit varies per packet and UCUM has no form for it.
+No table changes — a declared unit is registry text, so what moves is the registry each packet
+embeds.
+
 `registry/check.py` checks that the description is present, that an authority is an absolute URI,
-and that two columns of one name name one nomenclature — which is
+that a declared unit is a UCUM code or a declared exception, and that two columns of one name name
+one nomenclature — which is
 §2.3's drift caught mechanically, where the description alone leaves it to review.
 
 ### 3.7 `event_type` reserves nothing
@@ -367,7 +383,7 @@ the 25 open columns that state no form, and `core.processing_runs.status`, whose
 closed set is open.
 
 Tier 1's closed-vocabulary checks go from 3 to **4**, and `registry/check.py` from 19 structural
-invariants to **25**: a string column that is not a discriminator declares a vocabulary and one
+invariants to **26**: a string column that is not a discriminator declares a vocabulary and one
 that is does not,
 `closed` holds exactly where `enum` does, `reserved_values` appears only under `open`, an
 authority is an absolute URI, an `open` column carries a description, and one column
@@ -407,14 +423,11 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   writer obligation, so a revision of its own — drafted as
   `a-coordinate-frame-declares-what-its-axes-mean`, which also settles the three names R19 §3
   reserved and §3.8 defers.
-- **Whether R56's `unit` field should name UCUM too.** §3.6 names it on the eight columns that
-  *hold* a unit, and leaves the fifteen columns that *declare* one alone. Four of their seven
-  literals are not UCUM — `ohm` for `Ohm`, `byte` for `By`, and `anchor intervals` and **`median
-  anchor intervals`**, the latter on `core.sessions.alignment_bound`. The first two are spellings
-  and would fall to the same rule; the last two are not physical units at all, counting a quantity
-  the packet itself measures, which UCUM has no form for. Naming an authority that a quarter of
-  the values cannot follow is the claim §3.6 says an authority does not make, so the field waits
-  for a revision that decides what a packet-relative unit is.
+- **Whether a packet-relative unit should be expressible.** §3.6 exempts the two declarations
+  counting a quantity the packet measured, and an exception is a note rather than a form: nothing
+  says how a consumer converts `median anchor intervals` to seconds, though `core.clock_anchors`
+  holds what it would take. R37 §3 and R40 §2 both reason in those terms, so the quantity is real
+  and only its expression is missing.
 - **Whether an extension should make a refinement structural.** §3.7 leaves `lick_left` or
   `left_lick` a string a consumer filters on and cannot join. Making the spout structural is an
   extension's work, keyed through `event_type` in R90 §3.5's shared-key shape; nothing has asked
