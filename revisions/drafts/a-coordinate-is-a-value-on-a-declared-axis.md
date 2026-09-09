@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | R19 §3 (the axis columns and the three reserved frame names), R28 §2–4 (the same columns on `core.unit_coordinates`), R59 §2.2 (the frame names a space; which published atlas it is becomes a declared fact); adds four tables and strikes six columns |
+| **Amends** | R19 §3 (the axis columns and the three reserved frame names), R28 §3 (the same columns on `core.unit_coordinates`), R59 §2.2 (the frame names a space; which published atlas it is becomes a declared fact); adds four tables and strikes six columns |
 | **Depends on** | R3 §3.0 (a repeated value is a child table), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R56 §2.3 (a unit resolved one hop away), R58 §2.1 (a frame and a basis are two facts), R83 §3 (report unresolvable rather than resolve), R88 §2 (session scope), R101 §3.1 (every string column declares its vocabulary), R101 §3.4 (a value is spelled as its nomenclature spells it) |
 | **Profile** | all |
 
@@ -184,8 +184,12 @@ per coordinate:
 | `axis_index` | `int64` | required | structural_index | Which of the frame's axes this value is on. |
 | `axis_value` | `float64` | required | data | The value. |
 
-Each references its parent coordinate row, `core.coordinate_frame_axes` on `(session_id,
-coordinate_frame, axis_index)`, and `core.sessions`. `axis_value` declares
+Each is keyed by its parent's key plus `axis_index`, and the two parents differ:
+`core.electrode_coordinates` is keyed `(electrode_id, coordinate_frame, coordinate_basis)` and
+`core.unit_coordinates` on `(session_id, unit_id, coordinate_frame, coordinate_basis)`, so the
+child of each mirrors it rather than imposing a shape of its own. Each references its parent
+coordinate row, `core.coordinate_frame_axes` on `(session_id, coordinate_frame, axis_index)`, and
+`core.sessions`. `axis_value` declares
 `unit_from: "core.coordinate_frame_axes.unit"`, which R56 §2.3's one-hop form resolves through
 that reference — so no column name carries a unit and a frame in millimetres needs no second set
 of columns.
@@ -201,9 +205,17 @@ coordinates' shape cannot disagree.
 
 ### 3.4 Where an axis value comes from
 
-A writer **MUST** fill `axis_name`, `axis_direction` and `unit` from what its source states. **A
-source's own naming of a field is such a statement**: an NWB column called `ccf_ml` says its values
-are ML, and reading it is reading the source rather than guessing.
+A writer **MUST** fill `axis_name` and `axis_direction` from what its source states. **A source's
+own naming of a field is such a statement**: an NWB column called `ccf_ml` says its values are ML,
+and reading it is reading the source rather than guessing.
+
+`unit` is different in kind and **MUST** be declared. A writer knows it by construction: whatever
+unit it wrote the values in, it wrote them, so stating it reports what the writer did rather than
+what it inferred. The two cases separate on how a mistake shows. What an axis measures varies with
+how a file was written and a swap between ML and AP is undetectable on the values (§2.2); a unit
+is a property of the space, and one wrong by a factor of a thousand is not something a reader can
+miss. These packets' coordinates are micrometres, which R19 §3 declared in naming the columns
+`x_um`, `y_um` and `z_um`, and which the adapter carries forward when those names go.
 
 A writer **MUST NOT** infer an axis from the packet's own column, from the values' range, or from
 what a frame is conventionally taken to mean. `rel_x` names a relative position and not an
@@ -228,9 +240,10 @@ wrong place.
 - **No coordinate value changes.** §2.2 is about values being read wrongly, not written wrongly.
   Every number a packet holds it still holds, at the axis its frame declares, and nothing here
   re-bases or reorders one.
-- **The frame stays in the coordinate tables' key.** R58 §2.1 keys them on `(electrode_id,
-  coordinate_frame, coordinate_basis)`, and the new reference does not replace the name with an
-  identifier: a frame name is what the child rows join on.
+- **The frame stays in both coordinate tables' keys.** R58 §2.1 keys `core.electrode_coordinates`
+  on `(electrode_id, coordinate_frame, coordinate_basis)` and R28 §3 keys `core.unit_coordinates`
+  on `(session_id, unit_id, coordinate_frame, coordinate_basis)`, and the new reference replaces
+  neither name with an identifier: a frame name is what the child rows join on.
 
 ## 5. Consequence
 
