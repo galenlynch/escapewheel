@@ -106,6 +106,11 @@ def main() -> int:
 
     paths = sorted(HERE.glob("R*.md"), key=lambda p: int(NUMBER.match(p.name).group(1)))
     paths += sorted((HERE / "drafts").glob("*.md"))
+    # An editor's lock file is a symlink to a target that never existed -- Emacs writes
+    # `.#name.md -> user@host:pid`. Following one raises, so a full `verify.py` would fail for as
+    # long as any tracked document is open. `is_file()` is false for a dangling link and true for
+    # a real one, so this skips the lock and nothing else.
+    paths = [p for p in paths if p.is_file()]
     broken, historical = 0, 0
     for path in paths:
         draft = path.parent.name == "drafts"
