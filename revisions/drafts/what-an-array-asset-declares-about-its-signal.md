@@ -140,7 +140,14 @@ the only statement of what they show.
 The device is missing rather than absent. The packet's 21 devices are seven probes, a
 `SniffDetector` and the Open Ephys chain — basestations, connect boards, headstages — and **no
 cameras**, while the camera identity sits in the file stems `bottom_camera`, `side_camera_left`
-and `side_camera_right`, which R67 §2.4 and R85 §2.2 forbid a consumer parsing.
+and `side_camera_right`.
+
+A consumer may read those; what they cannot do is rely on them. A `*_name` is `free` (R101 §3.1) —
+its spelling is this packet's, and the next rig's videos may be `cam0` and `cam1` with the same
+cameras behind them — and R53 §2.5 gives it the job of identity within a packet rather than
+description. R67 §2.4 is the shape of the fix rather than a prohibition: it gave a device a
+`parent_device_id` so that attachment stopped being inferred from `headstage.slot3.port2`, because
+where a reference states the fact, the reference is the statement.
 
 ## 3. Decision
 
@@ -267,8 +274,10 @@ from one analyzer group by `waveforms.py`, so §3.5's run pointer names one run 
 share a session, a unit of `uV`, a sample rate of 30,000 Hz and their dimensions, and
 `device_id` is null on each. What separates them otherwise is `conversion` — 0.06709875 against
 0.06614436 — which tells a consumer they differ and not which is the mean. The difference is a
-**statistic over one quantity**, and `semantic_type` is the only column that can say it: they also
-carry it in `array_asset_name`, which R67 §2.4 and R85 §2.2 forbid a consumer reading.
+**statistic over one quantity**, and `semantic_type` is the only column that can say it portably.
+Both arrays do carry the words in `array_asset_name`, and a consumer reading this packet may read
+them there; `array_asset_name` is `free` (R101 §3.1), so its spelling is this packet's and the
+next packet's may differ, where an `open` value is meant to mean the same thing in both.
 
 `waveforms.py:300` stops setting `kind`, and `video.py:169` stops setting `semantic_type` once a
 camera device is recorded. Migration is regeneration, as R53 §5 made it for identifiers: no packet
