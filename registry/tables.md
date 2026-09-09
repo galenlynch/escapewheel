@@ -737,8 +737,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `institution` | string | nullable |  | Institution/lab. |
 | `task_name` | string | nullable |  | Task/protocol name. |
 | `source_session_id` | int32 | nullable |  | Source-system session ID if different. |
-| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 | `t_zero_tick` | int64 | nullable | R39 §2.2 | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
+| `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `session_id`  
 

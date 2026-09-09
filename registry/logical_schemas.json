@@ -3343,14 +3343,6 @@
           "identity": "assigned"
         },
         {
-          "name": "metadata",
-          "type": "json_string",
-          "presence": "optional",
-          "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
-        },
-        {
           "name": "t_zero_tick",
           "type": "int64",
           "presence": "nullable",
@@ -3358,6 +3350,14 @@
           "description": "Earliest observed tick, on `reference_clock_id`; the origin seconds count from.",
           "since": "R39 \u00a72.2",
           "clock_from": "reference_clock_id"
+        },
+        {
+          "name": "metadata",
+          "type": "json_string",
+          "presence": "optional",
+          "role": "data",
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
+          "since": "R97 \u00a73.4"
         }
       ],
       "primary_key": [

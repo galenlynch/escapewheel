@@ -748,8 +748,7 @@ def build() -> dict:
                         "The run that produced it. Null means it came off the device as "
                         "recorded. A narrow exception to R9 §4: the manifest records "
                         "outputs per resource and cannot distinguish streams within one "
-                        "table."),
-                    col("metadata", "json_string", "optional", "Free-form metadata.")],
+                        "table.")],
         "primary_key": ["event_stream_id"],
         "references": [{"columns": ["session_id"], "resource": "core.sessions",
                         "resource_columns": ["session_id"]},
@@ -1316,10 +1315,6 @@ def build() -> dict:
                 "A table carrying a calibration shape core does not define, as a dotted resource "
                 "ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records "
                 "that the content is elsewhere rather than that the row is wrong (R89 §2.5)."),
-            col("metadata", "json_string", "optional",
-                "What the source stated about this calibration that no column above models. Only "
-                "the calibration declares one: its key holds an identifier of its own, where both "
-                "child tables are keyed by other tables' identifiers (R89 §2.6)."),
         ],
         "primary_key": ["calibration_id"],
         "references": [{"columns": ["session_id"], "resource": "core.sessions",
@@ -1462,36 +1457,41 @@ def build() -> dict:
         amend("core.unit_observation_intervals", _bound, clock_from="core.units.clock_id")
 
     # ---- R97 §3 : the free-form metadata column -----------------------------------------------
-    # Which tables declare `metadata` follows from the primary key rather than from a hand
-    # declaration (R97 §3.1). A key holding an identifier of its own -- one that is not part of a
-    # declared reference -- makes the row a thing, and a thing may carry what its source said about
-    # it; a key made entirely of other tables' identifiers makes the row a relationship, and
-    # nothing can be said about a relationship that is not a fact about one of its ends. Between
-    # them the declaration stays a judgement, so this pass neither adds nor removes.
+    # Where the primary key decides the column, it is generated rather than declared (R97 §3.1). A
+    # key holding an identifier of its own -- carried or assigned, and not part of a declared
+    # reference -- makes the row a thing, and a thing may carry what its source said about it; a key
+    # made entirely of other tables' identifiers makes the row a relationship, and nothing can be
+    # said about a relationship that is not a fact about one of its ends. Both bands drop whatever
+    # `02` or a revision gave them and take what this pass emits, so a table added later carries the
+    # column without anyone remembering to, and a hand declaration of the wrong type cannot survive.
+    #
+    # Between the bands the declaration is a judgement and is left alone: `core.events` is the one
+    # table that makes it, beside the `payload` R91 §3.3 keeps.
     #
     # Runs after every key change above, since the key is what it reads.
     SINCE[0] = "R97 §3.1"
-    # Three columns no adapter writes and no consumer asks for, all in the band where declaring
-    # one is a judgement rather than an obligation (R97 §5).
+    METADATA = ("What the source stated about this row that the standard does not model, carried "
+                "in the source's own vocabulary and read by no rule.")
+    # Three judgements withdrawn: no adapter writes these and no consumer asks (R97 §5).
     for _resource in ("core.spike_events", "core.media_frames", "core.array_channels"):
         drop_col(_resource, "metadata")
 
-    METADATA = ("What the source stated about this row that the standard does not model, carried "
-                "in the source's own vocabulary and read by no rule.")
     for resource, spec in tables.items():
         referenced = {c for r in spec["references"] for c in r["columns"]}
         roles = {c["name"]: c["role"] for c in spec["columns"]}
         key = spec["primary_key"] or []
         own = [k for k in key if roles.get(k) == "identifier" and k not in referenced]
-        has = any(c["name"] == "metadata" for c in spec["columns"])
-        if own and not has:
+        if not own and not (key and all(k in referenced for k in key)):
+            continue
+        drop_col(resource, "metadata")
+        if own:
             add_col(resource, col("metadata", "json_string", "optional", METADATA))
-        elif key and not own and all(k in referenced for k in key) and has:
-            drop_col(resource, "metadata")
 
     # §3.4: one text for every declaration, replacing the sixteen reading "Additional metadata."
-    # and the four naming their own table. R2 §5's third presence state is what §3.2 spends, so
-    # every one of them is `optional` and a build may not leave one otherwise.
+    # and the four naming their own table. The generated ones carry it already, so what this reaches
+    # is the judgement `core.events` makes; it also stamps every column with the clause that settled
+    # the wording. R2 §5's third presence state is what §3.2 spends, so a `metadata` column is
+    # `optional` and a declaration outside the generated bands may not leave one otherwise.
     SINCE[0] = "R97 §3.4"
     for resource, spec in tables.items():
         if any(c["name"] == "metadata" for c in spec["columns"]):
