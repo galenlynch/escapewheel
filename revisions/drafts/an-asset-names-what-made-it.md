@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Adds `processing_run_id` to `core.array_assets` and `analysis.array_assets`, and `device_id` to `core.media_assets` |
-| **Depends on** | R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R41 §2.1 (currency is keyed on the producing run), R65 §1 (an array names the device that made it), R67 §2.2 (a device's identity is the serial the source states), R82 §2 (an undeclared currency is an error), R9 §4 (an output is recorded at resource granularity) |
+| **Amends** | `01` §3.5 (a camera is a device), `01` §3.17 (an array names the run that made it), `01` §3.18 (a media asset names the device that recorded it); adds `processing_run_id` to `core.array_assets` and `analysis.array_assets`, and `device_id` to `core.media_assets` |
+| **Depends on** | R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R41 §2.1 (currency is keyed on the producing run), R65 §1 (an array names the device that made it), R67 §2.2 (a device's identity is the serial the source states), R82 §2.1 (an undeclared currency is an error), R9 §4 (an output is recorded at resource granularity) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
@@ -32,7 +32,12 @@ Informative.
 
 `core.event_streams` has carried a `processing_run_id` since R23 §2, and `core.sorting_runs`,
 `core.curation_versions`, `core.electrode_coordinates` and `core.unit_coordinates` have carried
-one since R41 §2.1 and R60 §2. `core.array_assets` has none.
+one since R41 §2.1 and R60 §2.1. `core.array_assets` has none.
+
+Those five are the tables whose rows name the run that produced them. Three more columns share the
+name and answer something else: `core.processing_runs.processing_run_id` is the run's own key,
+`core.processing_run_inputs` links a run to its inputs, and `core.preferred_runs` names the run a
+packet prefers (R41 §2.2).
 
 The manifest has the field — R9 §4 records an output at resource granularity, and
 `registry/manifest.schema.json` gives every resource a `processing_run_id` — and **1 of 46**
@@ -41,9 +46,9 @@ outputs there precisely so they are not per row, so no Tier 2 rule and no `Packe
 reaches from an array to the run that produced it.
 
 That is what makes it a defect rather than a preference. R41 §2.1 keys currency on the producing
-run and R82 §2 made an undeclared currency a mandatory **error**, so a packet holding two waveform
+run and R82 §2.1 made an undeclared currency a mandatory **error**, so a packet holding two waveform
 arrays from two sortings must declare which is current and has no column to declare it through.
-Neither packet holds that case, and R82 §2's rule is unenforceable for arrays the moment one does.
+Neither packet holds that case, and R82 §2.1's rule is unenforceable for arrays the moment one does.
 
 ### 2.2 A media asset cannot name its device
 
@@ -83,7 +88,7 @@ declares none, which is the reading R23 §2 gives a stream.
 
 A column rather than the manifest's field, which restates nothing it can reach. R9 §4 records an
 output at resource granularity so that provenance is not per row, and the consequence is that the
-link is invisible to SQL; R41 §2.1 keys currency on the producing run and R82 §2 makes an
+link is invisible to SQL; R41 §2.1 keys currency on the producing run and R82 §2.1 makes an
 undeclared one an error, so a rule must be able to join an array to its run. The manifest's field
 keeps R9 §4's meaning, for resources that are not rows of a table.
 
@@ -119,9 +124,14 @@ camera points, which §6 records.
 
 ## 5. Consequence
 
-330 columns become **333** and 97 references become **100**. All three are nullable, so Tier 1's
-not-null checks are unchanged at 154; no Tier 2 rule changes, and `02` gains the clauses §3.1 and
-§3.2 state.
+330 columns become **333** and 97 references become **100**, measured against the registry as R101
+left it — the other proposed changes to the asset tables move the same counts, and whichever lands
+second is measured again. All three columns are nullable, so Tier 1's not-null checks are unchanged
+at 154, and no Tier 2 rule changes.
+
+`02`'s column tables are generated, so they follow from the registry. What is written is in `01`:
+§3.17 gains §3.1's rule, §3.18 gains §3.2's, and §3.5 gains §3.3's, each beside the device rules
+R66, R67 and R85 already put there.
 
 The NWB adapter names the sorting run on the three waveform arrays, which both packets already
 record. `sources/aind.py` reads `rig.json`'s camera assemblies into `core.devices`, taking
