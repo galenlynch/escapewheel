@@ -152,7 +152,7 @@ a name two sessions reuse names different things.
 | `session_id` | `int32` | required | identifier | — | The session, per R88 §2. |
 | `coordinate_frame` | `string` | required | data | open | The frame these axes belong to. |
 | `axis_index` | `int64` | required | structural_index | — | Which axis, 0-based (R3 §6). |
-| `axis_name` | `string` | nullable | data | open | What this axis measures. |
+| `axis_name` | `string` | required | data | open | The source's own name for what this axis holds. |
 | `axis_direction` | `string` | nullable | data | open | Which way its values increase. |
 | `unit` | `string` | nullable | data | open | The axis's unit, as a UCUM code (R101 §3.6). |
 
@@ -160,15 +160,16 @@ a name two sessions reuse names different things.
 `core.coordinate_frames` and `core.sessions`. A frame declares **as many axis rows as it has
 axes**, which is two for a shank and five for a rendering space.
 
-`axis_name` says which quantity — `ml`, `ap`, `dv`, `along_shank`, a lab's own term. Two axes of
-one frame **MUST NOT** name the same quantity, which one Tier 2 rule checks. `axis_direction` says
+`axis_name` says which quantity, in the source's own words — `ml`, `ap` and `dv` from an NWB that
+wrote `ccf_ml`, `rel_x` from one that wrote `rel_x`. Two axes of one frame **MUST NOT** carry the
+same name, which one Tier 2 rule checks. `axis_direction` says
 which way its values increase — `right`, `anterior`, `superior` and the rest — and is a separate
 column because it is a separate fact, which is what makes an anatomical code like `RAS` three axis
 rows rather than a fourth column on the frame.
 
-Both are **nullable**, and that is what lets a frame state its arity without stating its meaning.
-The probe frame declares two axis rows with null names: how many numbers a contact's position has
-is knowable from the source (§2.5), and what they measure is not.
+`axis_direction` is **nullable**, and that is what lets a frame record its axes without claiming
+to interpret them. `axis_name` is not: a writer that put a value on an axis read it from
+somewhere, and §3.4 makes recording where the requirement.
 
 ### 3.3 A coordinate's values
 
@@ -203,34 +204,40 @@ The reference to the axis row is what makes arity checkable. A coordinate carryi
 axis its frame never declared is an orphan Tier 1 reports, so a frame's axis count and its
 coordinates' shape cannot disagree.
 
-### 3.4 Where an axis value comes from
+### 3.4 What a writer records about an axis
 
-A writer **MUST** fill `axis_name` and `axis_direction` from what its source states. **A source's
-own naming of a field is such a statement**: an NWB column called `ccf_ml` says its values are ML,
-and reading it is reading the source rather than guessing.
+A writer **MUST** record, for each axis, what it read and where it put it. That is always
+answerable, because a writer necessarily chose: `CCF_AXES = ("ccf_ml", "ccf_ap", "ccf_dv")` is the
+adapter deciding that axis 0 takes `ccf_ml`'s values, and the packet has been losing that decision
+rather than lacking it.
 
-`unit` is different in kind and **MUST** be declared. A writer knows it by construction: whatever
-unit it wrote the values in, it wrote them, so stating it reports what the writer did rather than
-what it inferred. The two cases separate on how a mistake shows. What an axis measures varies with
-how a file was written and a swap between ML and AP is undetectable on the values (§2.2); a unit
-is a property of the space, and one wrong by a factor of a thousand is not something a reader can
-miss. These packets' coordinates are micrometres, which R19 §3 declared in naming the columns
-`x_um`, `y_um` and `z_um`, and which the adapter carries forward when those names go.
+`axis_name` holds **the source's own name for the quantity, as the source wrote it** — R22 §3's
+rule for a scorer's label, which a writer records verbatim and MUST NOT rewrite. A writer **MUST
+NOT** normalise it, translate it, or replace it with what the quantity is conventionally taken to
+be: `rel_x` names a relative position and an axis named `rel_x` says the packet's axis 0 holds
+what the NWB called `rel_x`, which is a fact, where naming it `across_shank` would be a claim no
+source supports. Where the source's name repeats the frame the row already declares, the writer
+drops that part and nothing else — `ccf_ml` in the `ccf` frame is `ml`, because R3 §3.0 forbids
+restating what the row already carries.
 
-A writer **MUST NOT** infer an axis from the packet's own column, from the values' range, or from
-what a frame is conventionally taken to mean. `rel_x` names a relative position and not an
-across-shank one, so a source stating only that states no axis name. This is R67 §2.4's rule in a
-third place, and R83 §2 gives the reason: an inference that is right on the data at hand fixes the
-wrong convention for every packet built afterwards, and a coordinate is where a wrong convention is
-least visible.
+`unit` **MUST** be declared, and a writer knows it by construction: whatever unit it wrote the
+values in, it wrote them. These packets' coordinates are micrometres, which R19 §3 declared in
+naming the columns `x_um`, `y_um` and `z_um`, and which the adapter carries forward when those
+names go.
 
-Where the source states nothing, the column is null and the axis row still exists — the frame has
-that axis whether or not anyone can say what it measures.
+`axis_direction` is the one an adapter may not supply. Which way an axis increases is an
+interpretation of the source rather than a report of it, and §2.2 measures why the difference
+matters: a swap between ML and AP is undetectable on the values, so an inference that is right on
+the data at hand fixes the wrong convention for every packet built afterwards (R83 §2). A writer
+**MUST** leave it null where its source does not state it, which is R67 §2.4's rule in a third
+place.
 
 ### 3.5 A consumer meeting an undeclared axis
 
-A consumer needing to know which quantity an axis holds, where its `axis_name` is null, **MUST**
-report the coordinate unusable rather than assume a convention. That is R83 §3's rule for a run
+A consumer needing to know **which way** an axis runs, where its `axis_direction` is null, **MUST**
+report the coordinate unusable for that purpose rather than assume a convention. An `axis_name` is
+the source's word and not an interpretation: `rel_x` tells a consumer where the value came from and
+not whether it runs across the shank. That is R83 §3's rule for a run
 that declares no channels, and it holds here for the same reason: the packet is conforming, so
 failing it would be wrong, and resolving against a default would produce a plausible number in the
 wrong place.
@@ -248,7 +255,7 @@ wrong place.
 ## 5. Consequence
 
 39 tables become **43**, 334 columns become **351** — 23 added and six struck — and 100 references
-become **111**. Tier 1's not-null checks go from 149 to **166**, and Tier 2 rules from 76 to
+become **111**. Tier 1's not-null checks go from 149 to **167**, and Tier 2 rules from 76 to
 **77**, the new one checking that two axes of one frame do not name the same quantity. Twelve of
 the new columns are strings, so R101 §5's counts move with them: 39 open become **50** and 52 free
 become **53**, over 115 string columns. The counts are measured against the registry as R104 left
@@ -258,10 +265,11 @@ The 27,557 coordinate rows keep their annotation and provenance and give up thei
 **74,223 value rows**, 2.69 per coordinate. Nothing reads the struck columns (§2.4), so no consumer
 breaks; `fixtures/build.py` is the only caller and writes the child rows instead.
 
-Both packets declare two frames. `ccf` declares three axis rows — `ml`, `ap` and `dv`, from the NWB
-columns that name them — with `unit` of `um`, no direction, and both `atlas` and `atlas_version`
-**null**, since no artifact of either session names the atlas. `probe` declares two axis rows with
-`unit` of `um` and null names, since `rel_x` and `rel_y` state a count and not a meaning. Both
+Both packets declare two frames. `ccf` declares three axis rows named `ml`, `ap` and `dv` — the
+NWB's `ccf_ml`, `ccf_ap` and `ccf_dv` less the prefix the frame already carries — and `probe`
+declares two named `rel_x` and `rel_y`, which is what the adapter read. Both carry `unit` of `um`
+and no direction, since no artifact of either session says which way any of the five increases,
+and both leave `atlas` and `atlas_version` **null**, since none names the atlas either. Both
 packets are rebuilt, which R87 §2.1, R88 §2, R91 §5, R95, R96, R97, R98, R99, R101 and R103 already
 require.
 
