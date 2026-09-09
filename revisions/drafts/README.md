@@ -18,16 +18,14 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `a-device-declares-what-kind-of-thing-it-is` | the camera it specialises is only a `core.devices` row after R102 §3.3 |
-| 2 | `a-coordinate-frame-declares-what-its-axes-mean` | adds a table whose six string columns need R101 §3.1's declaration, and gives `coordinate_frame` the reference R101 §6 records it lacking |
-| 3 | `a-coded-value-is-stored-decoded` | rests on R101 §3.1 having forbidden a vocabulary on an integer, which is what left the column unable to say what its codes mean |
-| 4 | `a-description-states-what-the-column-declares` | corrects prose R101 §3.3 made wrong; touches no declaration, so it may land at any point after R101 |
+| 1 | `a-coordinate-frame-declares-what-its-axes-mean` | adds a table whose six string columns need R101 §3.1's declaration, and gives `coordinate_frame` the reference R101 §6 records it lacking |
+| 2 | `a-coded-value-is-stored-decoded` | rests on R101 §3.1 having forbidden a vocabulary on an integer, which is what left the column unable to say what its codes mean |
+| 3 | `a-description-states-what-the-column-declares` | corrects prose R101 §3.3 made wrong; touches no declaration, so it may land at any point after R101 |
 
-Drafts 3 and 4 are independent of 1 and 2 and of each other; the numbering above is the order
-they would be applied in, not a dependency between them.
+The three are independent of each other; the numbering above is the order they would be applied
+in, not a dependency between them.
 
-**Two of the three move the same counts.** #1 adds one column, and #2 adds seven columns and
-three references, so whichever lands second describes a
+**One of the three moves the counts.** #1 adds seven columns and three references, so whichever lands second describes a
 registry the first has already changed. Every number in each is measured against the registry as
 it stood when it was drafted and is re-measured at acceptance, which the pre-acceptance checks in
 `../CLAUDE.md` require of every number anyway.

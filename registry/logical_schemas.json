@@ -106,7 +106,8 @@
       "R100",
       "R101",
       "R102",
-      "R103"
+      "R103",
+      "R104"
     ]
   },
   "tables": {
@@ -2119,6 +2120,15 @@
           "description": "Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (R85 \u00a72.3).",
           "since": "R85 \u00a72.1",
           "vocabulary": "open"
+        },
+        {
+          "name": "device_kind",
+          "type": "string",
+          "presence": "nullable",
+          "role": "discriminator",
+          "description": "The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is R90 \u00a73.5's shared-key join. Core declares no such table (R104 \u00a73.2); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (R55 \u00a72.2).",
+          "resolves": "optional",
+          "since": "R104 \u00a73.1"
         },
         {
           "name": "metadata",

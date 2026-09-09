@@ -215,6 +215,14 @@ Core MAY name an extension's resource through a discriminator. It MUST NOT refer
 does not create a dependency, so core stays checkable alone, an absent target is a reportable fact,
 and no integrity constraint couples the versions (R90 §3.9).
 
+A row's kind-specific facts live in a table sharing that row's key, which is R54 §2's shape and
+R90 §3.5's shared-key join: the detail table's primary key MUST begin with the discriminated
+table's own identifier (R104 §3.1). `core.devices` names such a table through `device_kind`, and
+core MUST NOT declare one — `01` §3.17 makes this standard name no instruments, so a camera's
+target or a thermistor's range belongs to an R17 §2 extension (R104 §3.2). A fact no detail table
+models stays in `metadata` (R97 §3.3), and what justifies promoting one out of it is a rule or a
+query that has to read it.
+
 ### 8.4 Unit and clock
 
 A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit_from` naming a column that carries it (R77 §2.2). A `coordinate` column MUST declare `clock_from` where the clock its ticks are on is not the one that row's `clock_id` names, and MUST declare it where the table has no `clock_id` at all (R77 §2.1). Measured across the registry, 6 of 20 coordinates declare one and the other 14 resolve to their own row's clock; none has neither.

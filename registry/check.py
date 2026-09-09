@@ -181,6 +181,14 @@ def structural(tables, universe, prefix=""):
         and all(k in {c for r in t["references"] for c in r["columns"]} for k in t["primary_key"])])
     # R97 §3.1 again: R94 §3's check matches a bare column name, which is sound only while every
     # column called `metadata` is optional.
+    # R104 §3.2: `01` §3.17 makes this standard name no instruments, so a device's kind-specific
+    # facts live in an extension's table and never in core. A core table keyed beginning
+    # `device_id` would be that table, whatever it was called.
+    if not prefix:  # core only: a detail table keyed on `device_id` is what an extension is for
+        c_("no core table but `core.devices` is keyed beginning `device_id` (R104 §3.2)",
+           [n for n, t in tables.items()
+            if n != "core.devices" and t["primary_key"] and t["primary_key"][0] == "device_id"],
+           lambda n: f"{n} is shaped like a device detail table, which an extension declares (R17 §2)")
     c_("every `metadata` column is optional (R97 §3.1)",
        [n for n, t in tables.items()
         if "metadata" in cols[n] and cols[n]["metadata"]["presence"] != "optional"])

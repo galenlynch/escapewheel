@@ -115,7 +115,8 @@ WITHDRAWN = {
     "brain_region": "data",
 }
 
-ROLES: dict[str, str] = dict.fromkeys(TRANSIENT, "data") | WITHDRAWN | {"band": "data"}
+ROLES: dict[str, str] = (dict.fromkeys(TRANSIENT, "data") | WITHDRAWN
+                         | {"band": "data", "device_kind": "discriminator"})
 for _role, _names in {
     "identifier": (
         "array_asset_id", "calibration_id", "clock_id", "condition_id", "coordinate_array_asset_id", "curation_id",
@@ -224,6 +225,11 @@ IDENTITY: dict[str, str] = {
 #: a fact, and which column holds the paired value where the shape is paired rather than shared-key.
 #: Required and with no default, for R48 §2.2's reason.
 DISCRIMINATOR: dict[str, dict[str, str]] = {
+    # R104 §3.1: which table carries this device's kind-specific facts. `optional` because most
+    # devices have none, and because core declares no such table -- an extension does (R104 §3.2),
+    # so a packet built without one names a resource it does not carry, which R55 §2.2 makes a
+    # fact rather than a defect.
+    "device_kind": {"resolves": "optional"},
     # R49 §2.2: a run may be about a rig or a camera the packet does not hold, so a kind naming
     # nothing is what the packet has to say, not a finding against it.
     "scope_kind": {"resolves": "optional", "discriminates": "scope"},
@@ -1778,6 +1784,19 @@ def build() -> dict:
                           "the device, the unit, the channel map or the dimensions carry the "
                           "answer. Open (R8 §4): an unrecognised value is a label carrying no "
                           "contract (`01` §3.17).")
+
+    # ---- R104 §3 : a device declares what kind of thing it is ----------------------------------
+    # `core.devices` is one flat table for a probe, a headstage, a basestation, a sniff detector
+    # and a camera, and a fact true of one kind had nowhere to go. R54 §2 gave `core.intervals` a
+    # kind and per-kind detail tables sharing its key; devices are the one table with no
+    # discriminator and no other table keyed on their id.
+    SINCE[0] = "R104 §3.1"
+    add_col("core.devices", col("device_kind", "string", "nullable",
+            "The table carrying this device's kind-specific facts, as a dotted resource ID. Its "
+            "primary key begins `device_id`, so resolution is R90 §3.5's shared-key join. Core "
+            "declares no such table (R104 §3.2); an extension does, and a value naming a resource "
+            "the packet does not carry is a fact rather than a defect (R55 §2.2)."),
+            after="parent_port")
 
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column

@@ -2069,3 +2069,33 @@ note = "waveform struck, the set going from four values to three with raw respel
 disposition = "applied"
 where = "01_semantic_standard.md §3.17"
 note = "semantic_type nullable on all three asset tables, filled only where the row's declared facts cannot say what the asset holds; nothing checks it, so it binds a writer and no validator (R67 §2.4)"
+
+[clause."R104 §2.1"]
+disposition = "rationale"
+where = "R104 §2.1"
+note = "devices are the one table with no discriminator and no other table keyed on their id; core.probes is keyed on probe_id at a different cardinality (R67 §3) and core.calibration_devices is a link table"
+
+[clause."R104 §2.2"]
+disposition = "rationale"
+where = "R104 §2.2"
+note = "rig.json states a camera_target, a sensor size, a chroma and a maximum frame rate -- four facts on two of 21 device rows -- and metadata already carries prose on 20 of them"
+
+[clause."R104 §2.3"]
+disposition = "rationale"
+where = "R104 §2.3"
+note = "01 §3.17 names no instruments and core.probes is not the counter-example: 01 §3.6 makes a probe a device that carries electrodes, and it is in core because electrodes are"
+
+[clause."R104 §3.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.3"
+note = "device_kind on core.devices, string nullable, role discriminator with resolves optional and no vocabulary (R101 §3.3); the detail table's key begins device_id, so resolution is R90 §3.5's shared-key join"
+
+[clause."R104 §3.2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.3"
+note = "core declares no device detail table; check.py checks that no core table but core.devices is keyed beginning device_id, taking structural invariants from 28 to 29"
+
+[clause."R104 §3.3"]
+disposition = "rationale"
+where = "R104 §3.3"
+note = "a writer sets device_kind where it writes a detail row and not otherwise; a fact no detail table models stays in metadata, and a rule or query needing to read it is what justifies promoting it"

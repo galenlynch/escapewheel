@@ -1,8 +1,8 @@
-# A Device Declares What Kind of Thing It Is
+# R104 — A Device Declares What Kind of Thing It Is
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-09 |
 | **Amends** | Adds `device_kind` to `core.devices`; adds a clause to `02` §8.3 |
 | **Depends on** | R102 §3.3 (a camera is recorded as a device), R54 §2 (a kind in the key, with per-kind detail tables), R55 §2.1 (a discriminator names a table), R55 §2.2 (`resolves` says whether an unmatched value is a defect), R90 §3.5 (the shared-key resolution shape), R17 §2 (an extension is a registry document in the same format) |
 | **Profile** | all |
@@ -119,14 +119,18 @@ a query that has to read the fact (R66 §1.4).
 
 333 columns become **334**, and no reference is added: a discriminator names without referencing
 (R55 §2.6). The count is measured against the registry as R103 left it, and
-`a-coordinate-frame-declares-what-its-axes-mean` adds seven columns of its own, so whichever of
-the two lands second is measured again. Tier 1's discriminator checks go from 14 to **16**, the two a discriminator implies
+a proposed table of coordinate frames adds seven columns of its own, so whichever of the two
+lands second is measured again. Tier 1's discriminator checks go from 14 to **16**, the two a discriminator implies
 (R55 §2.4) being that the value is a dotted resource ID and that it resolves where the packet
 carries the resource. `02` §8.3 gains the clause §3.1 states. No packet is invalidated: the column
 is nullable and both packets pass with it unset.
 
-`check.py` gains the structural check that a table named by a `device_kind` value begins its
-primary key with `device_id`.
+`registry/check.py` gains the check that no core table but `core.devices` is keyed beginning
+`device_id`, taking its structural invariants from 28 to **29**. That is §3.2 rather than §3.1: a
+`device_kind` value lives in a packet row, so no structural check can see one, and the key rule
+§3.1 states binds whoever declares the detail table and is checkable through the reference R55
+§2.3.1 requires of it — which the validator's generator already finds, and skips here because
+`resolves: optional` makes a kind naming nothing a fact rather than a defect.
 
 ## 5. Open
 
