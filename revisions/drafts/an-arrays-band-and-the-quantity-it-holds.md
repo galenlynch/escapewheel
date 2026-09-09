@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | R8 §4 (renames `raw`, strikes `waveform`, narrows what the column is for), the declarations of `kind` and `semantic_type` on the asset tables |
+| **Amends** | `01` §3.17 (`semantic_type` becomes nullable and is filled only where the facts cannot say it), R8 §4 (renames `raw`, strikes `waveform`, narrows what the column is for), the declarations of `kind` and `semantic_type` on the asset tables |
 | **Depends on** | R102 §3.1 (an array names the run that produced it), R101 §3.1 (every string column declares `closed`, `open` or `free`), R101 §3.8 (records R8 §4's reserved set), R8 §4 (the four reserved kinds), R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R50 §2 (a column is renamed where its name says less than its declaration), R65 §1 (an array names the device that made it) |
 | **Profile** | all |
 
@@ -129,6 +129,11 @@ lfp        local field potential band
 so the band was always what it meant; naming a processing stage instead is §2.2's mixture, one
 level down inside the set. No packet writes `raw`.
 
+`band` declares R48 role **`data`** and vocabulary **`open`**, neither of which follows from the
+rename: R48 §2.2 gives a role no default and R101 §3.2 gives a vocabulary none, so a name nothing
+classifies is a build error rather than a guess. The three values above are its `reserved_values`,
+which R101 §3.4 permits only on an open column.
+
 What a value holds is a conventional shorthand for **a filter the packet does not record**, and
 the column's description says so (R101 §3.5). The vocabulary stays open (R8 §4): a rig whose
 acquisition splits a signal differently names its own band and is conforming, and the three
@@ -173,7 +178,9 @@ standing where the row already says voltage, per channel, over time.
 
 Measured, the column goes from **29 of 29 assets filled to 7**. The 22 `ElectricalSeries` become
 null, the three waveform arrays keep `waveform_mean` and `waveform_sd`, and the four videos keep
-`behavior_video` until a media asset can name its device.
+`behavior_video`. R102 §3.2 gave a media asset a `device_id` that would displace it, and R102 §5
+measures that no source links a video file to a camera, so those four stay filled until one
+does.
 
 The waveform pair is the case that keeps the column. `waveforms.py` reads both from one analyzer
 group, so a run pointer names one run for each; they share a session, a unit of `uV`, a sample
@@ -200,12 +207,17 @@ vocabularies, so no authority covers the column either (R101 §3.6).
 
 `band` and `semantic_type` go from `required` to `nullable` on two and three tables, so Tier 1's
 not-null checks go from 154 to **149**; the reserved set on `band` goes from four values to three,
-with `raw` renamed `wideband`. No column is added or struck, no reference and no Tier 2 rule
-changes, and `02` names neither column, so nothing in the frozen documents does either.
+with `raw` renamed `wideband`. `build.py` gains `band` in `ROLES` and in `VOCABULARY` (§3.1). No
+column is added or struck, and no reference and no Tier 2 rule changes.
+
+`02` names neither column and `01` §3.17 names `semantic_type`, so §3.4's rule lands there and
+nothing else in the parts moves. The not-null figure is measured against the registry as R102 left
+it: `a-coordinate-frame-declares-what-its-axes-mean` adds two required columns, so whichever of the
+two lands second is measured again.
 
 Both packets keep `band` of `lfp` on 22 arrays and declare it **null** on the three carrying
-`dense_array_asset` today; `waveforms.py:300` stops setting the field. `semantic_type` goes from
-29 of 29 assets filled to **7**, and what remains is what the facts cannot express. Migration is
+`dense_array_asset` today; `waveforms.py:300` stops setting the field, and `semantic_type` empties
+to what §3.4 measures. Migration is
 regeneration, as R53 §5 made it for identifiers: no packet carries `raw`, and both are rebuilt,
 which R87 §2.1, R88 §2, R91 §5, R95, R96, R97, R98, R99 and R101 already require.
 
