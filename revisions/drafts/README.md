@@ -18,7 +18,7 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `an-array-declares-which-band-it-holds` | amends R101 §3.8's reserved set and R8 §4; renames a column and changes its presence, so it moves the counts R101 §5 records |
+| 1 | `what-an-array-asset-declares-about-its-signal` | amends R101 §3.8's reserved set and R8 §4; renames a column, changes three columns' presence and adds two, so it moves the counts R101 §5 records |
 | 2 | `a-coordinate-frame-declares-what-its-axes-mean` | adds a table whose six string columns need R101 §3.1's declaration, and gives `coordinate_frame` the reference R101 §6 records it lacking |
 | 3 | `a-coded-value-is-stored-decoded` | rests on R101 §3.1 having forbidden a vocabulary on an integer, which is what left the column unable to say what its codes mean |
 
