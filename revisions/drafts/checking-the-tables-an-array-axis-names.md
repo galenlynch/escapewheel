@@ -103,6 +103,12 @@ returns **0 of 53 rows** today.
 one: both real values are `channel_index`, `int64` and `structural_index` in each of the two tables
 that carry it.
 
+Tier 1 generates that check, which `positions_in` (§2.3) is what makes possible: it names the
+column holding the value, and the registry supplies each named resource's `structural_index`
+columns as literals — the shape R90 §3.8's forward check already has, where the resources a packet
+declares become an `IN` list. A role is not visible to a query, but it is visible to whatever
+writes the query. It returns **0 of 25 rows** across both packets.
+
 ### 2.3 A by-position discriminator declares that it is one
 
 `coordinate_resource` resolves by R90 §3.5's third shape, and R90 excludes that shape from the
@@ -152,7 +158,8 @@ which is R46 §4's result on its sixteen.
 
 ## 3. What this does not change
 
-- **No column is added, renamed or struck.** Two columns change role and one reference is declared.
+- **No column is added, renamed or struck.** Two columns change role and gain a `resolves` and a
+  `positions_in`, one reference is declared, and the meta-schema learns one field.
 - **R20 §2's four forms stand.** A labelled axis is still one of them; this says what its two
   columns must satisfy, which R20 left to prose.
 - **No packet is invalidated.** All 25 rows carrying a `coordinate_resource` name a resource their
@@ -164,9 +171,11 @@ which is R46 §4's result on its sixteen.
 ## 4. Consequence
 
 Two columns gain a role, a `resolves` and a `positions_in`, so Tier 1's discriminator checks go
-from 10 to **14** (two per discriminator, R90 §3.8, and §2.3 is what keeps it two rather than
-three), and references go from 96 to **97**. One Tier 2 rule is added for §2.2's pair, on each of
-the two tables. No table, no column, and no packet's rows change.
+from 10 to **14** on `facts.py`'s count of two per discriminator, and references go from 96 to
+**97**. What the two new ones each generate is three: the resource-ID shape, the anti-join against
+declared resources, and §2.2's position column — and **not** R90 §3.8's reverse check, which §2.3
+excludes. One Tier 2 rule is added for §2.2's pair, on each of the two tables. No table, no column,
+and no packet's rows change.
 
 `registry.schema.json` gains `positions_in`, since it sets `additionalProperties: false` and a
 field it does not know is a build error rather than a field it ignores. `registry/check.py` checks
@@ -183,11 +192,6 @@ Neither packet is rebuilt. Both already satisfy every rule this adds.
 
 ## 5. Open
 
-- **Whether the position column should be checked against the registry.** §2.2 requires
-  `coordinate_position_column` to name a `structural_index` column of the named resource, and
-  nothing generates that check: it compares a value in a row against a role in the registry, which
-  no Tier 2 SQL can see and no structural check can reach without the packet. R90 §3.8's resolution
-  check is the model, and building it is more than declaring the rule.
 - **Whether a labelled axis should say how its rows are narrowed.** §2.3 declines to generalise from
   two cases: `core.array_channels` ties its rows to one axis by a declared reference and
   `core.unit_electrodes` cannot. A third case would say whether the tie belongs in the registry or
