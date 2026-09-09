@@ -247,10 +247,17 @@ are the same claim, so the field stays absent.
 becoming core's fourth closed vocabulary.
 
 Three of those are HL7 FHIR's `AdministrativeGender` — `male`, `female`, `other`, `unknown` —
-which the column names as its `authority` under §3.6, and whose fourth value this set carries as
-null rather than as a code, since a null column and a column saying `unknown` would be one fact
-spelled two ways (R3 §3.0). The spelling is FHIR's because it is published and lowercase; ISO/IEC
-5218 is numeric and PATO is a set of IRIs, so neither is a code a column could hold.
+which the column names as its `authority` under §3.6. The spelling is FHIR's because it is
+published and lowercase; ISO/IEC 5218 is numeric and PATO is a set of IRIs, so neither is a code a
+column could hold.
+
+FHIR's fourth value is left out, and **not** because it duplicates null. `unknown` says a subject
+has a sex nobody recorded; null on a phantom says there is none to record. Julia's DataFrames
+separate those as `missing` and `nothing`, and Parquet cannot: a definition level says present or
+absent and offers no second marker, so both arrive as one null. What decides it is reach —
+`unknown` recovers one of null's readings for one column, where §6's `subject_kind` recovers a
+different one across `species`, `strain`, `sex`, `genotype` and `date_of_birth` at once. R44 §2.3
+chose the same way, giving a run without a scope a scope column rather than a sentinel.
 
 `hermaphrodite` is the addition, and it names a determinate sex rather than a residue:
 *Caenorhabditis elegans* is hermaphrodite or male and has no females, so `other` would collapse
