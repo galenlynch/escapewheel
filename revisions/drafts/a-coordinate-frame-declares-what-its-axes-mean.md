@@ -152,16 +152,13 @@ the wrong place.
 
 ## 4. What this does not change
 
-- **No coordinate value changes.** `x_um`, `y_um` and `z_um` hold what they held; what is added is
-  a row saying what they mean.
-- **The frame stays in the key.** R58 §2.1 keys both tables on `(electrode_id, coordinate_frame,
-  coordinate_basis)`, and the new reference does not narrow that — a frame name still appears in
-  every coordinate row, because it is the key and not a repetition the table could drop.
-- **`coordinate_basis` is untouched.** R58 §2.1 and R64 §2 settled what a coordinate asserts;
-  this part settles what its axes measure, which is the other half of the same question and a
-  separate column for R58 §2.1's reason.
-- **The atlas version stays out.** R59 §2.2 makes `coordinate_frame` name the atlas, and whether
-  `ccf` should distinguish CCFv3 from a successor is R59's question, recorded in §6.
+- **No coordinate value changes.** §2.2 is about the values being read wrongly, not written
+  wrongly: `x_um`, `y_um` and `z_um` hold what they held, and nothing here re-bases or reorders
+  one.
+- **The frame stays in the coordinate tables' key.** R58 §2.1 keys both on `(electrode_id,
+  coordinate_frame, coordinate_basis)`, and the new reference does not replace the name with an
+  identifier. A frame name still appears in every coordinate row, because it is the key rather
+  than a repetition the table could drop.
 
 ## 5. Consequence
 

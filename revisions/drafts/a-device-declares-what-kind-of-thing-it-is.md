@@ -7,7 +7,7 @@
 | **Depends on** | R102 §3.3 (a camera is recorded as a device), R54 §2 (a kind in the key, with per-kind detail tables), R55 §2.1 (a discriminator names a table), R55 §2.2 (`resolves` says whether an unmatched value is a defect), R90 §3.5 (the shared-key resolution shape), R17 §2 (an extension is a registry document in the same format) |
 | **Profile** | all |
 
-Normative, except §2 and §6, which are informative.
+Normative, except §2 and §5, which are informative.
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -103,14 +103,7 @@ A fact that no detail table models stays in `metadata`, where 20 of 21 devices a
 A detail table exists to promote a fact out of `metadata`; what justifies writing one is a rule or
 a query that has to read the fact (R66 §1.4).
 
-## 4. What this does not change
-
-- **No table is added.** One column is added to `core.devices`; the tables it names are an
-  extension's to declare.
-- **`metadata` keeps its job.** R97 §3.3 puts what a source stated and the standard does not
-  model, and §3.3 leaves it there until something needs to query it.
-
-## 5. Consequence
+## 4. Consequence
 
 330 columns become **331**, and no reference is added: a discriminator names without referencing
 (R55 §2.6). Tier 1's discriminator checks go from 14 to **16**, the two a discriminator implies
@@ -121,7 +114,7 @@ is nullable and both packets pass with it unset.
 `check.py` gains the structural check that a table named by a `device_kind` value begins its
 primary key with `device_id`.
 
-## 6. Open
+## 5. Open
 
 - **Whether a camera detail table is worth writing.** §3.2 leaves it to an extension and nothing
   declares one. The evidence is four filled facts on two rows of one session — `camera_target`,

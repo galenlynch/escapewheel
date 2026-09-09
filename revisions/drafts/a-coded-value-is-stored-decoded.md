@@ -112,13 +112,14 @@ window, where "ignored" asserts something about the animal the trial does not me
 
 ## 4. What this does not change
 
-- **No table, column or reference is added or removed.** One column changes type and gains an
-  `enum`, and the extension's other 40 columns are untouched.
+- **The column is replaced, not accompanied.** R59 §2.1 kept `region_id` beside `region_label` and
+  R22 §3 keeps a scorer's own label beside a normalized one, so a reader may expect the integer to
+  survive next to the string. It does not: the code carries no meaning the decoded value lacks.
 - **No core column changes.** §2.1 measures that none holds a code, though §3.1's rule binds them
   the same; `animal_response` is a task's fact in a task's extension, which is where R43 §3 sent
   it.
 - **The lick events stay.** §2.2 reads them to prove the decode; it does not make them the
-  storage. A response is one value per trial and `core.events` holds every lick, which is a
+  storage. A response is one value per trial where `core.events` holds every lick, which is a
   different fact at a different grain.
 
 ## 5. Consequence

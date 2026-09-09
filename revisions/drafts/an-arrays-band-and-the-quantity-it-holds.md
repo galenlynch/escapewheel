@@ -146,7 +146,7 @@ sampled quantity, whatever instrument produced it", so a photometry trace, a res
 a spike-waveform template are all core-owned arrays with no band — and a column they must fill is
 a column they will fill wrongly.
 
-### 3.3 The fourth reserved value
+### 3.3 `waveform` is no longer a reserved value
 
 R8 §4's fourth reserved value is **struck**, and a writer **MUST NOT** write it as a `band`. A
 waveform template is computed from sorted spikes rather than split from a signal, so it names no
