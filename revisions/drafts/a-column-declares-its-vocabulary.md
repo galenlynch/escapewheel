@@ -104,6 +104,19 @@ R11 §4's six also mix two vocabularies, which is why no single test admits them
 `lick` name the experiment; `threshold_crossing` names a signal without saying of what or past
 which threshold. `raw`, `ap`, `lfp` and `waveform` are all of the first kind.
 
+### 2.5 One `kind` column is filled from another `kind` vocabulary
+
+`core.array_assets.kind` holds `dense_array_asset` on the three waveform arrays of the two
+packets. That value is not one of R8 §4's four; it is one of the **manifest's** six resource kinds
+— `table`, `materialized_table`, `dense_array_asset`, `media_asset`, `document_asset`, `view` —
+which `registry/manifest.schema.json` declares and `writer.py:811` writes into a manifest entry
+correctly. `waveforms.py:300` writes the same spelling into the table row.
+
+R8 §4 reserves `waveform` for "spike waveform snippets" and forbids any other value "for data the
+reserved set describes", so both packets breach it, and neither the registry nor any rule could
+see it: two vocabularies share the column name `kind`, and neither was declared anywhere a check
+could compare them.
+
 ## 3. Decision
 
 ### 3.1 Every string column declares one of three vocabularies
@@ -194,8 +207,8 @@ re-punctuate one to fit a house style: values are compared exactly, so `mouse`, 
 
 Where one nomenclature covers a whole column, the registry says so as a value rather than as
 prose. A column **MAY** declare `authority`, an array of absolute URIs naming the nomenclatures
-its values are drawn from — `species` names NCBI Taxonomy, `strain` names MGI and RGD, and `sex`
-names HL7 FHIR.
+its values are drawn from — `species` names NCBI Taxonomy, `strain` names MGI and RGD, `sex`
+names HL7 FHIR, and the eight columns holding a physical unit name UCUM.
 
 Any vocabulary may carry one, closed included. Drawn from is not equal to: a closed column's
 `enum` is the set a validator enforces, and its authority says where that set's spelling came
@@ -335,9 +348,10 @@ The 24 newly open are a few vocabularies spread thin: seven `unit` columns, four
 `origin`, `calibration_type`, `probe_type`, `event_type`, `activity_type`, `coordinate_frame` and
 the seven subject and device columns.
 
-Two columns carry `reserved_values`, the first the registry has ever held, and three carry an
-`authority` — `core.subjects.species`, `core.subjects.strain` and `core.subjects.sex`, with the
-eight `unit` columns following if §6's UCUM question resolves yes. `build.py` loses the line setting `reserved_values`
+Two columns carry `reserved_values`, the first the registry has ever held, and eleven carry an
+`authority` — `core.subjects.species`, `core.subjects.strain`, `core.subjects.sex`, and the eight
+columns holding a physical unit, which name UCUM. The writer's `volts` becomes `V` on 22 array
+assets, `uV` already conforming on 3. `build.py` loses the line setting `reserved_values`
 on `core.events.event_type`, a column R91 §3.2 struck, and **12 descriptions** are rewritten,
 being the open columns that state no form.
 
@@ -349,25 +363,28 @@ authority is an absolute URI, an `open` column carries a description, and one co
 name carries one vocabulary and one authority across every table holding it. That last check holds
 across all 102 columns today, and is what §2.3's drift would have caught.
 
-`03` §5 gains §5.6, stating the profile's single null beside the Parquet floor §5.5 already
+`core.array_assets.kind` becomes `waveform` on the three arrays §2.5 measures as
+`dense_array_asset`. `03` §5 gains §5.6, stating the profile's single null beside the Parquet floor §5.5 already
 records. `fixtures/build.py` writes `sex` as `male` rather than `M`, so every packet in the corpus changes;
 the NWB adapter gains the mapping §3.9 requires, and both packets are rebuilt, which R87 §2.1,
 R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains §3.11's report.
 
 ## 6. Open
 
-- **Whether `sync_pulse` and `ttl_edge` should be reserved somewhere.** They pass §3.4's test — a
-  sync pulse means one thing in every rig — and this part strikes them with the rest because they
-  are reserved on `event_type`, where the surrounding values do not. A vocabulary naming what a
-  **stream** carries, rather than what an event is, would be the place, and `core.event_streams`
-  has no such column.
-- **Whether a subject declares what kind of thing it is.** `01` §3.4 admits "the animal or
+- **Whether a stream should say how its events were detected.** `sync_pulse` and `ttl_edge` pass
+  §3.4's test — a sync pulse means one thing in every rig — and are struck with the rest because
+  they sit on `event_type`, where the surrounding values do not. Rehoming them needs a second
+  column rather than a second vocabulary: a stream is physically a TTL edge *and* semantically a
+  go cue, and `event_type` holds one of those. Nothing has asked, and the three streams that would
+  carry it — `FIP_rising_time`, `FIP_falling_time`, `optogenetics_time` — hold no events in either
+  packet.
+- **A subject will declare what kind of thing it is**, in a revision of its own. `01` §3.4 admits "the animal or
   preparation recorded from" and `core.subjects` carries an animal's columns alone, so a slice, a
   culture, an organoid, a phantom and a simulated recording are all subjects and only the first
   three have a donor species. The distinction collapses onto null, on `species`, `sex`, `strain`,
   `genotype` and `date_of_birth` together, which is the collapse R44 §2.3 refused for scope. A
-  `subject_kind` would separate them; being a column and a writer obligation, it is a revision of
-  its own.
+  `subject_kind` separates them, and being a column, a vocabulary and a writer obligation it is
+  not a clause this part can carry.
 - **Whether a frame declares which way its axes point.** `x_um`, `y_um` and `z_um` are described
   as micrometres "in that frame" and nothing says whether x runs anterior or posterior, over
   **16,512 coordinate rows** in the two packets. `coordinate_frame` is the wrong home — it names
@@ -379,14 +396,20 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   writer obligation, so a revision of its own — drafted as
   `a-coordinate-frame-declares-what-its-axes-mean`, which also settles the three names R19 §3
   reserved and §3.8 defers.
-- **Whether a `unit` column should name UCUM.** Eight columns hold a physical unit and §3.6 names
-  no nomenclature for them, because the values on hand would not conform: R77 §1.2 records
-  `percentage` and `milliliter` from a live pipeline, where UCUM writes `%` and `mL`. Naming
-  it is one line and a rebuild of every array asset's unit.
+- **Whether R56's `unit` field should name UCUM too.** §3.6 names it on the eight columns that
+  *hold* a unit, and leaves the fifteen columns that *declare* one alone. Four of their seven
+  literals are not UCUM — `ohm` for `Ohm`, `byte` for `By`, and `anchor intervals` and **`median
+  anchor intervals`**, the latter on `core.sessions.alignment_bound`. The first two are spellings
+  and would fall to the same rule; the last two are not physical units at all, counting a quantity
+  the packet itself measures, which UCUM has no form for. Naming an authority that a quarter of
+  the values cannot follow is the claim §3.6 says an authority does not make, so the field waits
+  for a revision that decides what a packet-relative unit is.
 - **Whether an extension should make a refinement structural.** §3.7 leaves `lick_left` or
   `left_lick` a string a consumer filters on and cannot join. Making the spout structural is an
   extension's work, keyed through `event_type` in R90 §3.5's shared-key shape; nothing has asked
   for it, and `dynamic_foraging.trials` already carries the seven `_left`/`_right` pairs this task
   needs.
-- **Whether the four array kinds are the right four.** R8 §4 took them from `02`'s examples rather
-  than from what sources emit. §3.8 records them and does not revisit them.
+- **Whether the four array kinds are the right four.** R8 §4 took `raw`, `ap`, `lfp` and
+  `waveform` from `02`'s examples rather than from a survey of what acquisition systems emit, and
+  §3.8 records them unexamined. §2.5 is the reason to ask: the one packet-borne value outside the
+  set was another vocabulary's, not a fifth kind, so nothing yet says whether four is enough.
