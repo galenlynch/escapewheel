@@ -119,12 +119,23 @@ as Parquet. Where a raw source needs converting first, a recipe names a **comman
 list run in the source's own root, not a shell line, so an extension isolates its dependencies
 however it likes and a build states no opinion about how.
 
-The registry document reaches a build through the recipe rather than through the command. A recipe
-names extension documents alongside the core registry, and a build loads them before any source
-runs, because it resolves each source's owned resources against them before it performs any I/O
-(R63 §2.1). A document that a command would write therefore does not exist when the build needs it;
-an extension that generates its registry generates it before the build, as its own step. §6 records
-what changing that would take.
+How the document is produced is the extension's business — generated from a schema definition, from
+a spreadsheet, or typed — but an extension **MUST NOT** derive it from the rows it delivers for the
+packet being built. A declaration derived from one packet's data cannot disagree with that data, so
+it declares nothing, and two packets whose extensions each derived one are two relations rather than
+the one R86 §2.1 presents.
+
+`aind_unit_qc.waveform_metrics` measures the difference. It declares **13** columns; the extraction
+in both packaged sessions delivers **10**, and both packets carry 13, with `half_width`,
+`peak_to_valley` and `peak_trough_ratio` null in all 6,781 rows of one and all 4,505 of the other.
+A document derived from either file would declare 10 and assert that this extension **has** no
+`half_width` — where the hand-written one says that this pipeline did not compute one, which is a
+fact about the run rather than about the extension. R2 §5's three presence states are what carry
+that distinction, and deriving the document discards them.
+
+The document therefore reaches a build through the recipe rather than through the command: a build
+loads the documents a recipe names before any source runs, because it resolves each source's owned
+resources against them before it performs any I/O (R63 §2.1).
 
 Rows arrive carrying identifiers as the **names** their source used, and a writer numbers them
 (R53 §2.5), so an extension neither knows nor needs the packet's numbering; two extensions naming
@@ -234,10 +245,3 @@ costs to debug meanwhile: one note in sixty-seven for six of the packet's forty 
   it: both commands read a fixed file and write a fixed table. §3.6's report is where an extension
   would record the inputs that make the question answerable, which is an argument for the field it
   is not an argument for requiring one.
-
-- **Whether an extension may generate its own registry document.** §3.2 records that it cannot
-  today: a build loads the documents the recipe names before any source runs, so a document a
-  command would write does not exist when the build reads it. Allowing it means resolving a
-  recipe's owners after Stage 1 rather than before, which is the check R63 §2.1 deliberately puts
-  first. Neither packaged extension needs it — both ship a document written by hand — and a
-  generated schema is what an extension with many tables would want.
