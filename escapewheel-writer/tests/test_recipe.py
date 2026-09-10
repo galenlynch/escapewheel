@@ -244,13 +244,18 @@ def test_rows_another_source_owns_are_noted_without_a_preference(tmp_path):
 
 
 def test_a_preference_is_what_makes_a_discard_silent(tmp_path):
-    """The other side: `core.clocks` names a winner, so the loser's copy is redundant by design."""
+    """The other side: `core.probes` names a winner, so the loser's copy is redundant by design.
+
+    This was written against `core.clocks`, whose preference was never consulted -- SHARED is
+    checked first and returns -- so the silence came from a dead entry rather than from a
+    preference. `core.probes` is the preference that arbitrates.
+    """
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
                                         'owns = ["core.units"]\n'
-                                        '\n[[source]]\nkind = "sync"\nroot = "y"\n'
-                                        'owns = ["core.clocks"]\n'))
+                                        '\n[[source]]\nkind = "nwb"\nroot = "y"\n'
+                                        'owns = ["core.probes"]\n'))
     source = Noted()
-    _note_unclaimed(recipe.sources[0], source, {"core.clocks": 12})
+    _note_unclaimed(recipe.sources[0], source, {"core.probes": 12})
     assert source.notes == []
 
 

@@ -219,7 +219,8 @@ def order(recipe: Recipe) -> list[SourceSpec]:
 #: Source kinds this package implements. A distribution may register others under
 #: `escapewheel_writer.sources.SOURCE_GROUP`; these are consulted first, so a plugin cannot shadow
 #: one and a recipe naming `sorter` always means this one.
-_KINDS = ("sorter", "sync", "nwb", "session", "waveforms", "lfp", "tables")
+_KINDS = ("harp", "lfp", "nwb", "openephys", "session", "sorter", "sync", "tables",
+          "video", "waveforms")
 
 
 def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
@@ -1023,6 +1024,11 @@ def _note_unclaimed(spec: SourceSpec, source: Any, produced: Mapping[str, int]) 
     about them wins, which makes the loser's copy discarded by design; without one they are
     producing *different* rows, which is how twelve of thirteen clocks lost their observation
     window to a recipe that said `owns`.
+
+    A `SHARED` resource needs no exemption of its own. Where this source contributes one it is in
+    `claims` already, and where a narrowed source produced one it does not claim, the rows really
+    are discarded -- which is R98's own case, twelve of thirteen clock windows lost to a recipe
+    that said `owns`. Adding `SHARED` here silenced exactly that.
     """
     # Discarded by design: the recipe writes these itself, or a preference names the winner.
     # Everything else this source produced and does not claim is discarded by omission.

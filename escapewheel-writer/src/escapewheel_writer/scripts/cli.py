@@ -29,7 +29,12 @@ from ..writer import CommitRefused
 SUPPLIES_NOTE = "the recipe supplies core.sessions, core.subjects and core.processing_runs"
 
 #: Source kinds ``init`` can inspect, and the adapter each names.
-KINDS = ("sorter", "sync", "nwb", "waveforms", "lfp")
+#: Kinds `_open` can construct with nothing but a root, which is what `init` and `inspect`
+#: need. Narrower than the kinds a build accepts: `video` needs a clock, `tables` a table
+#: map, `session` a zone, and `waveforms` the sorting it describes, so none can be opened
+#: on its own. `test_arbitration.py` refuses a kind here that `_open` would turn away, and
+#: one that `session._KINDS` does not know.
+KINDS = ("lfp", "nwb", "sorter", "sync")
 
 #: Options an adapter requires that no inspection can supply, drafted so the recipe builds.
 #: `_build_source` pops these; without them a build dies on a KeyError rather than a finding.

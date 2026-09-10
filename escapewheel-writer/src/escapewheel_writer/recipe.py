@@ -55,10 +55,11 @@ PREFERRED = {
     # declare because R108 §3.1 refuses a build where preferring it drops a fact the NWB stated.
     "core.subjects": "session",
     "core.probes": "nwb",
-    "core.clocks": "sync",
-    "core.array_assets": "nwb",
-    "core.array_dimensions": "nwb",
 }
+# `core.clocks`, `core.array_assets` and `core.array_dimensions` were declared here and struck:
+# `_resolve_ownership` checks `SHARED` first and returns, so a preference for a shared resource is
+# never consulted. R108 §3.4 struck `core.unit_electrodes` for arbitrating nothing; these three
+# arbitrated nothing for the other reason, and `test_arbitration.py` now refuses both shapes.
 
 #: Resources several sources each supply *part* of, which `owns` refuses and `contributes` is for.
 #: A defaulted source contributes to these rather than owning them.
