@@ -18,9 +18,12 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `an-encoding-follows-a-rule-and-its-exceptions` | rests on R68 §3 having put one encoding SHOULD in `03` §5.5, and on R93 having built `10` for the readings |
+| 1 | `a-writer-requires-no-code-of-an-extension` | states the boundary the other one declares across, so accepting it first makes that draft's §3.4 cite a rule rather than argue for one |
+| 2 | `an-encoding-follows-a-rule-and-its-exceptions` | rests on R68 §3 having put one encoding SHOULD in `03` §5.5, and on R93 having built `10` for the readings |
 
-**It moves no count in the generated block.** No table, column, reference, rule or vocabulary
-changes; `03` §5.5 gains two SHOULDs and `10` §2 three subsections. Every number in it is measured
+**Neither moves a count in the generated block.** No table, column, reference, rule or vocabulary
+changes: #1 adds a contract to `09` §5, and #2 adds two SHOULDs to `03` §5.5 and three subsections
+to `10` §2. The order matters only for #2's §3.4, which declares an encoding across the boundary #1
+states. Every number in it is measured
 against the packets as they stood when it was drafted and is re-measured at acceptance, which the
 pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
