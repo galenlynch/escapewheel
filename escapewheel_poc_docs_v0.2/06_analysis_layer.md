@@ -23,9 +23,9 @@ An analysis resource MUST NOT be the only place a fact exists. Anything a consum
 not recomputable from the canonical resources belongs among them (R71 §2.3); which canonical layer
 it belongs to is decided by Part 09 §3's test, not by this rule.
 
-## 3. What justifies materializing
+## 3. A derived product earns its place by layout
 
-A derived product earns its place by **layout**, not by arithmetic. Where the computation is cheap against data already held, a view is the correct answer and a materialized copy is a maintenance liability.
+Arithmetic does not earn it. Where the computation is cheap against data already held, a view is the correct answer and a materialized copy is a maintenance liability.
 
 Measured on a real session, the arithmetic of aligning spikes to an event and a window costs 0.13 to 1.72 s against trains already in memory, while a materialized copy of four alignments comes to 100.6% of the spike table itself (R43 §2). A wide trial table is 708 rows in 7.5 ms.
 

@@ -12,14 +12,28 @@ were written to a house style whose titles and section headings are often hard t
 implementing it months later, and their cost of reading is what the style is chosen to lower.
 
 **A section heading names its subject.** Part 06 numbers its sections `Scope`, `Rules`,
-`What justifies materializing`, `analysis.spike_events`, `Provenance of a materialization` —
-noun phrases a reader locates by, not findings they must absorb in sequence. The older revisions
+`analysis.spike_events`, `Provenance of a materialization` — noun phrases a reader locates by,
+not findings they must absorb in sequence. The older revisions
 put a full-sentence claim in every heading, so a contents list of nine sections is nine
 propositions to hold with nowhere to put them. State the finding in the body, where the stress
 positions carry it.
 
 This overrides the `prose` skill's heading guidance, which is written for a report or an argument.
 A revision is navigated like a specification, by subject.
+
+**A heading SHOULD NOT open on an interrogative** — What, Which, Where, How, Why, When, Whether.
+Such a heading is a **free relative**, a clause fused into a noun phrase, so it satisfies the rule
+above grammatically while stating nothing, which is why that rule has not stopped it: **163 of the
+1,126 numbered headings** in this directory open that way, setting aside the 48 fixed `What this
+does not change`. It is also the heading writable before the section is, so it survives from the
+outline and nothing later reads it against the finished body — and where a section has quietly grown two
+findings, it is what hides them.
+
+Two forms remain. The thing's own name, where the section declares or amends one:
+`animal_response`, `core.coordinate_frames`. Or a declarative clause naming the actor and the rule:
+"Columns store decoded values" over "What a column stores", "A writer records the axis it read"
+over "What a writer records about an axis". `What this does not change` keeps its name, being the
+one fixed structural heading.
 
 **Say which sections are normative, at the top.** Part 06 opens "Informative, except §2 and §5,
 which are normative", and a reader then knows what binds them without inferring it from the

@@ -77,7 +77,7 @@ out still, since no amount of reading the packet recovers it.
 
 ## 3. Decision
 
-### 3.1 What a column stores
+### 3.1 Columns store decoded values
 
 A column **MUST NOT** hold a code whose key is not in the packet. Where a source emits one, a
 writer **MUST** store the decoded value, and the vocabulary it decodes onto is declared under
