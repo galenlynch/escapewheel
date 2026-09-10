@@ -90,6 +90,25 @@ produces bulk** — `sorter`, at 674.2 MB for `core.spike_events` — and every 
 least data, so the exception is narrow and it is about a table's size rather than about who wrote
 the code that makes it.
 
+### 2.5 The ten adapters are three groups, and only two are this format's
+
+What an adapter reads says whose it is. `aind.py` reads `rig.json`, `session.json` and
+`subject.json` — one institute's metadata schema. `sorter` reads `si_folder.json` and
+`curation.json`, SpikeInterface's layout. `openephys` reads `settings.xml` and `sync` reads
+`sample_numbers.npy` and `sync_messages.txt`, both Open Ephys artifacts, and `harp` reads
+`device.yml`.
+
+Two read neither an institute's files nor a tool's. `tables` reads whatever the recipe names, which
+is R109 §3.2's route. `nwb` reads NWB, which is the format this specification exists to interoperate
+with and whose importer is `07` §5's Phase 3; its AIND mentions are a dialect it accommodates —
+`aind-data-schema`'s device string, `ccf_acronym` beside core NWB's `location` — rather than a
+schema it depends on.
+
+The dependency work is the evidence. The NWB adapter decodes Zarr v2 chunks with `numcodecs`
+directly rather than importing `pynwb`, `hdmf-zarr` or `zarr`, which is effort nobody spends on an
+adapter that could live in another distribution and pull what it likes. It was spent because that
+adapter belongs to the writer.
+
 ## 3. Decision
 
 ### 3.1 An adapter declares what a build must supply it
@@ -118,23 +137,28 @@ explicit `owns`, a build **MUST** refuse the recipe naming both sources and the 
 R63 §2.2's rule unchanged — a contradiction is refused before a byte is read — and it replaces a
 built-in winner that no recipe could see.
 
-### 3.3 An adapter reaches a build through files
+### 3.3 An adapter reaches a build through files, and a recipe opts out
 
 Every adapter **MUST** be able to reach a build through files and, where a raw source needs
-converting, a command, on the terms R109 §3.2 gives an extension. That is the baseline and it does
-not depend on who wrote the adapter: a writer **MUST NOT** require any adapter to be importable in
-its own environment.
+converting, a command, on the terms R109 §3.2 gives an extension. A writer **MUST** provide that
+route for every adapter it ships, and **MUST NOT** require any adapter to be importable in its own
+environment.
 
-An adapter **MAY** run in the writer's process where it **adds no requirement the writer does not
-already declare**, and a writer **MAY** refuse to run one in process where it cannot establish that.
-The condition is the closure and not the authorship, because Python resolves one environment per
-process and an adapter that needs one more library makes that resolution harder whoever shipped it
-(§2.4). A writer's own adapters satisfy it today and are not exempt from it.
+A build **MUST** use that route unless the recipe declares that a source runs in the writer's
+process, and a writer **MUST NOT** run one in process where the recipe does not say so.
 
-A writer **MAY** additionally run in process an adapter whose declared output exceeds a size the
-writer states, for which the intermediate file would cost more than the coupling; `core.spike_events`
-at 674.2 MB is the case, and **§6 leaves that threshold unmeasured** rather than naming one this part
-cannot support.
+**The recipe declares it because the recipe author chose the environment.** Python resolves one
+environment per process, so whether a given set of adapters can be installed together is a fact
+about one machine on one day, not a property of any adapter — and the person assembling the recipe
+is the only party who can find out, and the one who carries it when the answer changes. A writer
+deciding for them would be asserting something it cannot know, and §2.4 measures how quickly it
+would go stale: the writer's own closure is five packages today and nothing about shipping with the
+writer keeps it that way.
+
+An adapter adding no requirement the writer already declares is the case where opting in is safe,
+and it is advice to a recipe author rather than a permission a writer grants. A build that cannot
+import an adapter the recipe opted in **MUST** refuse naming the source and the import that failed,
+before any source is opened.
 
 ### 3.4 An identifier crosses the boundary as a name
 
@@ -155,32 +179,43 @@ exceeds a table it staged directly, which is the measurement §6 leaves open.
 
 ## 5. Consequence
 
-`05` §3 gains a preference table and §3.4 gains what an adapter declares; `07` §4 gains what a build
-supplies and how a registered adapter reaches it.
+`05` §3 gains a preference table and an in-process declaration, §3.4 gains what an adapter declares,
+and `07` §4 gains what a build supplies and how an adapter reaches it.
 
 The reference implementation loses four tables that name a kind — `_SHARED_SOURCES`, `SAMPLED`,
-`REQUIRED_OPTIONS` and `PREFERRED` — and gains one declaration per adapter. Both packaged recipes
-gain two lines, `core.probes` to `nwb` and `core.subjects` to `session`, which is what §2.3 measures
-the whole preference table to be. Neither packet's rows change: the same source wins each contest,
-declared where a reader of the recipe can see it.
+`REQUIRED_OPTIONS` and `PREFERRED` — and gains one declaration per adapter. It also gains a command
+it does not have: `escapewheel` runs `inspect`, `init`, `extension`, `verify`, `prune` and `import`,
+and none of them runs one adapter and writes its tables, which is what §3.3's route requires of the
+ten it ships. That command is also the `command` a `tables` source names, so a built-in adapter
+reaches a build through the same door an extension does (R109 §3.2) rather than through a second
+mechanism built for it.
+
+Both packaged recipes gain two preference lines — `core.probes` to `nwb`, `core.subjects` to
+`session` — which is what §2.3 measures the whole preference table to be, and an opt-in for whichever
+sources their author finds installable together. Neither packet's rows change: the same source wins
+each contest, declared where a reader of the recipe can see it.
 
 What §3.3 buys is that the ten adapters this project ships stop being a privileged class. A
 registered adapter today produces resources and cannot reach an object store; after this every
-adapter has the same two routes, and which one it may take turns on whether it adds a requirement
-rather than on who wrote it.
+adapter has the same two routes, and which one a build takes is the recipe's to say.
+
+It also makes §2.5's grouping actionable rather than an observation. An adapter reading one
+institute's metadata schema or one tool's directory layout can live with that institute or that
+tool, reaching a build the way any other source does, and the writer keeps the two that are this
+format's own: `tables`, which is the route itself, and `nwb`, which is the format this
+specification interoperates with. Nothing here requires that split, and nothing after it blocks
+one.
 
 ## 6. Open
 
-- **The size at which a file boundary costs more than the coupling.** §3.3 permits an in-process
-  adapter on that ground and names no number, because none has been measured. What it would take:
+- **What a file boundary costs the one adapter that produces bulk.** §3.3 leaves the choice to a
+  recipe author and gives them no number for the case that matters. What it would take:
   stage `core.spike_events` through a Parquet intermediate and compare, remembering that the rows
   would carry `local_unit_label` rather than the `unit_id` a writer assigns, and that R86 §2.3 puts
   a widened join key at 2.93x over 286,896,563 spikes without measuring it as an intermediate. Until
-  then the second permission in §3.3 rests on an estimate, and the first — an adapter adding no
-  requirement — is the one carrying the weight.
+  then a recipe author opting `sorter` in is doing it on an intuition rather than a measurement.
 
-- **How a writer establishes that an adapter adds no requirement.** §3.3 makes that the condition
-  for running one in process and leaves the mechanism open. A distribution's requirements are
-  readable from its metadata, so the comparison is available; whether a writer must perform it, or
-  may take an adapter's own declaration, is the choice, and it is the difference between a check and
-  a promise.
+- **Whether a build should report what an opt-in bought.** §3.3 makes running an adapter in process
+  the recipe author's call, and gives them nothing to judge it by: a build knows what the file route
+  would have written and what the in-process one did, so the difference is measurable and is not
+  reported. Whether that belongs beside the encoding report (R110 §3.5) or nowhere is unsettled.
