@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `03` §5.5 (two writer SHOULDs beside the tick one); adds three subsections to `10` §2 |
-| **Depends on** | R68 §2.3 (`DELTA_BINARY_PACKED` is defined for `INT32` and `INT64` alone), R68 §3 (the tick SHOULD `03` §5.5 carries), R10 §2 (a table is sorted by its primary key), R53 §2.1 (an identifier is an integer), R93 §3.4 (a measurement supports a rule that lives elsewhere), R93 §3.5 (what survives replacing the reference implementation) |
+| **Amends** | `03` §5.5 (two writer SHOULDs beside the tick one, and what a writer reports); adds three subsections to `10` §2 |
+| **Depends on** | R68 §2.3 (`DELTA_BINARY_PACKED` is defined for `INT32` and `INT64` alone), R68 §3 (the tick SHOULD `03` §5.5 carries), R10 §2 (a table is sorted by its primary key), R53 §2.1 (an identifier is an integer), R93 §3.4 (a measurement supports a rule that lives elsewhere), R93 §3.5 (what survives replacing the reference implementation), R17 §3 (an extension needs no second code path), R53 §2.5 (a writer mints every assigned identifier) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 Normative, except §2, which is informative.
@@ -119,12 +119,42 @@ list that grows by accident and is never read again.
 A writer **SHOULD** refuse an exception naming a column no table declares, which is decidable with
 no packet in hand and is what keeps such a list from going stale.
 
-### 3.4 `10` carries the readings
+### 3.4 An extension declares exceptions for its own tables and no others
+
+A writer's exceptions **MUST** name only tables of the layer that writer implements, and a writer
+**MUST** accept exceptions an extension supplies for the extension's own tables. Core naming an
+extension's table makes the extension unmaintainable by anyone but core: a fourth extension arriving
+tomorrow could declare nothing, and one shipped as a document alone (R17 §2) has no code to patch.
+
+The division costs an extension almost nothing, because the columns where an encoding is worth 37x
+to 79x are not its own. An extension hands the writer Arrow with its identifiers as **names**, and
+R53 §2.5 has the writer mint the integers packet-wide, so `aind_unit_qc.metrics.unit_id` is core's
+column by the time an encoding is chosen for it — which is why §2.1's table includes it at 57x
+without the extension being consulted. What an extension owns is its own measurements, and §3.2
+reaches those by rule.
+
+### 3.5 A writer reports a column a rule guessed wrong about
+
+A writer **SHOULD** report, at `info`, a column whose encoding costs more than **1.5x** the smallest
+available to it, measured over a sample of the rows it wrote. R68 §3's rule and the two above are
+good guesses, and a report is how the author of a table learns that theirs is one the guess misses.
+
+Measured on the two packaged sessions, three columns draw one, all in one extension:
+`aind_unit_qc.metrics.num_spikes_used` at 1.7x, `presence_ratio` and `sliding_rp_violation` at 1.8x.
+That is the mechanism working as intended rather than a defect — those are the columns core stopped
+naming under §3.4, and the report is what tells their owner to declare them.
+
+A report and not a refusal, because `03` §5.5 permits every encoding and a packet is conforming
+whichever it uses. The level is R97 §3.4's, which reports a declared `metadata` column no row fills
+for the same reason: a judgement someone should revisit is not a defect.
+
+### 3.6 `10` carries the readings
 
 R93 §3.4 puts a measurement where it supports a rule that lives elsewhere, so §2.1's table, §2.2's
 count and §2.3's regressions go to `10` §2 beside R68's `pts` measurement. §2.4's 0.4 s is
 `07` §7's instead: it is a property of one implementation's libraries, which R93 §3.5 separates from
-what survives replacing them.
+what survives replacing them. §3.5's tolerance goes to `03` §5.5 with the rule it qualifies, being a
+number a writer acts on rather than a reading.
 
 ## 4. What this does not change
 
@@ -155,9 +185,11 @@ reading that table alone pays.
 
 ## 6. Open
 
-- **Whether a rule should reach an extension's columns.** `aind_unit_qc.metrics.num_spikes_used`
-  climbs with a unit's spike count and wants delta at 1.7x, and no rule here finds it: it is
-  neither a tick nor the first key column of its table. An extension is a registry document in the
-  same format (R17 §2), so the rules apply to one as they apply to core, and the exceptions do
-  too — which means a writer carries exceptions for tables it does not own. Whether an extension
-  should be able to declare its own is not settled here.
+- **Where an extension shipped as a document alone declares an exception.** §3.4 has a writer accept
+  what an extension supplies, which serves a distribution carrying code. An extension that is
+  entirely data — a registry document and Parquet files, which R17 §2 permits and the `tables`
+  source exists for — has nothing to supply it from, so §3.5's report is all it gets. A recipe could
+  carry the declaration, being the per-build document where R87 §2.5 already puts a value someone
+  chose and the reason they chose it, and an encoding is a fact about one packet's values rather
+  than about the schema. Nothing here needs it yet: the three columns §3.5 reports are in an
+  extension that ships an adapter.
