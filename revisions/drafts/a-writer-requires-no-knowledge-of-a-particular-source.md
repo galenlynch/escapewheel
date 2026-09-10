@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `05` §3 (a recipe declares a preference between two sources); `05` §3.4 (what an adapter declares); `07` §4 (what a build supplies an adapter, and how a registered one reaches it) |
+| **Amends** | `05` §3 (a recipe declares a preference between two sources, and whether a source runs in process); `05` §3.4 (what an adapter declares); `07` §4 (what a build supplies an adapter, and the transports it accepts rows over); `09` §5.7 (an extension's rows cross the same boundary by the same transports) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole), R87 §2.2 (an adapter declares which recipe fields it states), R109 §3.1 (a writer requires no code of an extension), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -20,7 +20,8 @@ whether it may be sampled, and which recipe options it cannot be constructed wit
 
 Measured across the writer, **72 occurrences name a particular source kind**, 51 of them in the
 module that drives a build. This part moves each piece to where it can be stated by whoever knows
-it, and says how an adapter nobody in this project wrote reaches a build.
+it, and says how an adapter reaches a build without being imported — which is a process boundary
+rather than a file, and so generalises what R109 §3.2 gave an extension.
 
 ## 2. Background
 
@@ -144,9 +145,16 @@ adapter author **SHOULD** support that route whatever else they support. A write
 require any adapter to be importable in its own environment, and **MUST** provide the route for
 every adapter it ships.
 
-The transport is not fixed to a file. A build **MUST** accept rows as **files the recipe names**,
-which is R109 §3.2's route for an extension, and **SHOULD** accept them as an **Arrow IPC stream**
-read from the command it ran. A writer **MAY** offer another transport and **MUST NOT** require one.
+**What matters is the process boundary; the transport is a choice.** A build **MUST** accept rows as
+**files the recipe names** and **SHOULD** accept them as an **Arrow IPC stream** read from the command
+it ran. A writer **MAY** offer another transport and **MUST NOT** require one.
+
+The same holds for an extension's rows, and R109 §3.2 is narrower than its own reason: it has an
+extension deliver Parquet and names a subprocess for converting a raw source, where the argument it
+rests on — a dependency closure that must not become the writer's — is answered by the boundary
+rather than by the file. An extension **MAY** therefore deliver over any transport this section
+allows an adapter. Nothing R109 permitted is withdrawn: a file the recipe names remains the route
+every implementation must support, and the stream is added beside it.
 
 The stream matters where the file does not fit. A packet's largest table is `core.spike_events` at
 674.2 MB, and an intermediate file for it is a write and a read the build did not otherwise need,
@@ -190,8 +198,8 @@ directly would have, which is the measurement §6 leaves open.
 ## 5. Consequence
 
 `05` §3 gains a preference table and an in-process declaration, `05` §3.4 gains what an adapter
-declares, and `07` §4 gains what a build supplies an adapter and the transports it accepts rows
-over.
+declares, `07` §4 gains what a build supplies an adapter and the transports it accepts rows
+over, and `09` §5.7 gains that an extension may use them too.
 
 The reference implementation loses four tables that name a kind — `_SHARED_SOURCES`, `SAMPLED`,
 `REQUIRED_OPTIONS` and `PREFERRED` — and gains one declaration per adapter. It also gains a command
