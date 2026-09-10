@@ -87,6 +87,41 @@ Two of the five are `add()` against `add_batches()`. The records path and the st
 drifted apart and nothing compares them, which is a sharper statement of §1b than could be written
 before: the pair is where a rule gets implemented once and forgotten once.
 
+## 1₊. Two drafts are open, and what each still owes
+
+Ordered in `revisions/drafts/README.md`: the extension contract first, then the encoding rules,
+because the second declares an encoding *across* the boundary the first states, and an accepted
+revision may not cite a draft.
+
+**`a-writer-requires-no-code-of-an-extension` — appraised, two fixes owed.**
+
+- **§3.3 binds a build to name the extension whose command failed, and a command belongs to a
+  source.** Measured on both recipes: one `tables` source, `command = "python extract.py"`, owning
+  **6 tables across 2 extensions**. Naming either would be a fabrication. The clause should name the
+  source, which is also what a recipe author can act on.
+- **§6 cites R75 §2**, which is `Decision`; the clause is **R75 §2.1**, "Logical determinism is
+  normative". The same parent-section trap as the four `R83 §3` citations, which the citation
+  checker cannot see.
+
+Everything else passes: four extension registries, six extension tables all arriving through a
+`tables` source, zero distributions registered under the entry-point group, and every other citation
+read and confirmed.
+
+**`an-encoding-follows-a-rule-and-its-exceptions` — implemented and exercised, not yet appraised.**
+Its §6 defers to the contract, so once that lands, §6 wants re-reading and probably striking.
+
+## 1₊₊. Structured problems from an extension's command
+
+**Queued, not drafted.** A command that exits non-zero fails a build and says little else. Whether
+the contract should require more — a machine-readable problem list, a summary of what the extension
+staged, a distinction between "this source is absent" and "this source is malformed" — is open, and
+it is the natural extension of §3.3's finding above: naming the source is the floor, not the answer.
+
+Worth weighing against what the boundary is for. A structured report is a format both sides must
+agree on, and every format an extension must implement is a reason not to write one; the `tables`
+source exists because an extension can be a document and some Parquet. Whatever this becomes should
+be optional to produce and useful when present, the way R51's `store_digest` is.
+
 ## 1a. The packets' physical layout and encoding
 
 **Not started.** Several tables have changed shape substantially — R105's four coordinate tables at
