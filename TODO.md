@@ -154,13 +154,25 @@ The second is the sharper statement of the whole item. Every rule this repositor
 how a packet is *written* — encodings, assigned identifiers, session fill, physical order — is
 enforced on a path the corpus does not take, so the corpus can pass forever while the writer drifts.
 
-What would close it is a corpus packet built by the writer from declared sources rather than by hand
-— the same fixtures, reached through `PacketWriter` and one adapter — so that a struck column or a
-renamed one fails a suite instead of a rebuild months later. Worth sizing before committing to:
-`fixtures/build.py` is the artifact any implementation runs to prove it agrees, and a writer-built
-packet is this implementation proving it agrees with itself, which is a different claim and may want
-a different home. The likely shape is a second, smaller corpus beside the conformance one, built by
-the writer and asserted against, so the two claims stay separable.
+**The corpus is not where this gets fixed, and that is settled rather than open.** 29 of its 30
+packets are `valid` deliberately corrupted — `null_required` sets a required column to `None`,
+`orphan_fk` points a row at a clock that does not exist, `unsorted_spikes` swaps two rows out of
+order — and refusing exactly those corruptions is what `PacketWriter` is for: `unsorted_spikes`
+raises `OrderViolation` while staging, and the other two fail Tier 1 at commit. `fixtures/build.py`
+writes Parquet directly because that is the only way to produce a packet the writer would never
+emit. Only `valid` could be built through the writer, and one packet is a test rather than a corpus.
+
+The coverage says where to put that test. `clock.py` is at **95%** and `materialize.py` at **85%**,
+so both modules that broke were covered and broke anyway; `session.py`, which drives a build — the
+source loop, the harvest, the two staging paths — is the least covered module in the package at
+**68%**, and its uncovered lines are that loop. Both bugs were interface mismatches between modules
+that each pass their own tests, which is what an end-to-end test catches and a unit test cannot.
+
+So the work is one test in `escapewheel-writer/tests/`: a small recipe with synthetic sources, run
+through `session.py`, asserting the packet it produces — including that its encodings are the ones
+`03` §5.5 asks for, which is the assertion no corpus packet can make. Sized at an afternoon, not a
+restructuring, and best done after the two open drafts are accepted, since it would assert what they
+define and a test may not cite a draft any more than a revision may.
 
 ## 1a₃. What is left on encodings, after the rule landed
 
