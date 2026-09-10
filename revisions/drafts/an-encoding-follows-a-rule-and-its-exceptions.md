@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `03` §5.5 (two writer SHOULDs beside the tick one, and what a writer reports); `05` §3 (a recipe declares an encoding); adds three subsections to `10` §2 |
-| **Depends on** | R68 §2.3 (`DELTA_BINARY_PACKED` is defined for `INT32` and `INT64` alone), R68 §3 (the tick SHOULD `03` §5.5 carries), R10 §2 (a table is sorted by its primary key), R53 §2.1 (an identifier is an integer), R93 §3.4 (a measurement supports a rule that lives elsewhere), R93 §3.5 (what survives replacing the reference implementation), R17 §3 (an extension needs no second code path), R53 §2.5 (a writer mints every assigned identifier), R109 §3.1 (a writer requires no code of an extension), R109 §3.6 (what an extension may state across the boundary) |
+| **Amends** | `03` §5.5 (two writer SHOULDs beside the tick one, and what a writer reports); `05` §3 (a recipe declares an encoding); adds four subsections to `10` §2 |
+| **Depends on** | R68 §2.3 (`DELTA_BINARY_PACKED` is defined for `INT32` and `INT64` alone), R68 §1.3 (what the tick rule was worth on `pts`), R10 §2 (a table is sorted by its primary key), R53 §2.1 (an identifier is an integer), R93 §3.4 (a measurement supports a rule that lives elsewhere), R93 §3.5 (what survives replacing the reference implementation), R53 §2.5 (a writer mints every assigned identifier), R109 §3.1 (a writer requires no code of an extension), R109 §3.6 (what an extension may state across the boundary) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 Normative, except §2, which is informative.
@@ -15,19 +15,24 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 `03` §5.5 tells a writer one thing about how to encode a column: a tick column takes
 `DELTA_BINARY_PACKED` and not a dictionary, because a dictionary built over millions of distinct
-ticks is abandoned at its size threshold and leaves pages larger than either encoding alone. R68 §3
-established that from `core.media_frames.pts`, which was **96.9%** of its table before the rule.
+ticks is abandoned at its size threshold and leaves pages larger than either encoding alone. That rule is
+original to `03` and predates every revision; R68 §1.3 is what measured it, on
+`core.media_frames.pts`, which was **96.9%** of its table before the rule reached it.
 
 Two more rules hold on the same evidence and are stated nowhere, so the columns they govern were
 encoded by pyarrow's default. Rebuilding both packaged sessions against a registry twenty-one
-revisions newer made that visible: **37 ascending identifier columns carried a dictionary**, where
-delta is 5x to 79x smaller. This part states both rules, records why each must carry exceptions,
+revisions newer made that visible: **28 leading identifier columns carried a dictionary**, fifteen
+distinct columns across the two packets, where delta is 37x to 79x smaller. This part states both rules, records why each must carry exceptions,
 and puts the readings in `10` beside R68's.
 
 Measured on **`ecephys_776259`** (twelve probes, 6,781 sorted units, recorded 2025-04-09) and
-**`ecephys_786867`** (ten probes, 4,505 units, recorded 2025-09-25), over the **75 numeric columns
-above 2 kB** the two hold between them. Every figure is the encoding and its compression together,
-since `03` §5.1 puts Zstandard over whatever the encoding produced.
+**`ecephys_786867`** (ten probes, 4,505 units, recorded 2025-09-25). The population is the **80
+numeric columns that reach 2 kB under pyarrow's default** across the two packets — 48 integer and
+32 float — and it is defined on the default rather than on what the packets now carry, because a
+threshold on compressed size otherwise removes the columns a rule fixed: `core.units.unit_id` is
+26.3 kB dictionary-encoded and **0.5 kB** delta-encoded, so measuring the rules against their own
+result drops it from the very set that justifies them. Every figure is the encoding and its
+compression together, since `03` §5.1 puts Zstandard over whatever the encoding produced.
 
 ## 2. Background
 
@@ -93,10 +98,11 @@ that plateau against, a packet's small tables are **52 MB by default and 27 MB a
 ### 2.4 A declaration-derived rule picks the wrong encoding
 
 What delta exploits is small successive differences and what a dictionary exploits is repetition,
-and the registry declares neither. Deriving the choice from the sort key was measured against all
-138 numeric columns of the two packets and picked worse on **38**:
+and the registry declares neither. Deriving the choice from the sort key — delta for a key column,
+a dictionary for everything else — was measured over the **116 column-and-packet pairs** that reach
+2 kB under either choice, and picked worse on **82**:
 
-- `core.media_frames.pts` **195x worse** and `core.clock_anchors.t_tick` 57x, both climbing
+- `core.media_frames.pts` **188x worse** and `core.clock_anchors.t_tick` 57x, both climbing
   steadily without being key columns at all;
 - `core.unit_electrodes.electrode_id` 1.84x worse, a trailing key component (R28 §2) that climbs
   within each unit and resets, which is a sawtooth neither encoding reads well.
@@ -104,7 +110,7 @@ and the registry declares neither. Deriving the choice from the sort key was mea
 A role says what a column means. It does not say how the values are spread, and a storage choice
 turns on the second.
 
-### 2.5 Measuring every column at write time is affordable and still wrong
+### 2.5 A measured encoding records no reason for itself
 
 Writing each column three ways over a 65,536-row sample and keeping the smallest costs **12 ms for
 four columns**, about **0.4 s** for a whole packet against a 467 s build. Cost is not what refuses
@@ -166,7 +172,7 @@ what §3.5's report exists to prompt.
 ### 3.5 A writer reports when rules guess wrong about columns
 
 A writer **SHOULD** report, at `info`, a column whose encoding costs more than **1.5x** the smallest
-available to it, measured over a sample of the rows it wrote. R68 §3's rule and the two above are
+available to it, measured over a sample of the rows it wrote. `03` §5.5's tick rule and the two above are
 good guesses, and a report is how the author of a table learns that theirs is one the guess misses.
 
 Measured on the two packaged sessions before §3.4's declarations were written, three columns drew
@@ -176,7 +182,7 @@ That is the mechanism working as intended rather than a defect — those are the
 naming under §3.4, and the report is what tells a recipe author which entries to write.
 
 A report and not a refusal, because `03` §5.5 permits every encoding and a packet is conforming
-whichever it uses. The level is R97 §3.4's, which reports a declared `metadata` column no row fills
+whichever it uses. The level is R97 §3.1's, which reports a declared `metadata` column no row fills
 for the same reason: a judgement someone should revisit is not a defect.
 
 ### 3.6 `10` carries the readings
@@ -211,11 +217,11 @@ Both recipes exercise §3.4, and the result is §3.4's argument rather than an i
 `aind_unit_qc.metrics.presence_ratio` is declared `dictionary` in `ecephys_776259` and declared
 nothing in `ecephys_786867`, because it repeats across 6,781 units and not across 4,505; rebuilt,
 the column carries `RLE_DICTIONARY` in the first packet and `PLAIN` in the second. One schema-level
-declaration would have had to be wrong for one of the two. Measured over the 75 columns after the rules and their exceptions: none more than **15%**
+declaration would have had to be wrong for one of the two. Measured over the 80 columns after the rules and their exceptions: none more than **15%**
 off the smallest encoding available to it, the worst being
 `aind_unit_qc.metrics.isi_violations_count` at 1.15x.
 
 What the rules recover is **1.247 MB of the 2.622 MB** a consumer transfers before it can filter
 anything (§2.3), and the largest single number in the exercise is one they **keep**:
-`core.spike_events.amplitude` holds its dictionary under §3.3, **1.85x across 209 MB**, which a
-float rule admitting no exception would have spent.
+`core.spike_events.amplitude` holds the dictionary §2.2 measures, under §3.3's exception, which a
+float rule admitting none would have spent.
