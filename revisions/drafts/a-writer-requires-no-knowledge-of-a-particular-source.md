@@ -209,29 +209,23 @@ that, and a recipe that wants the file says so.
 `09` §5.7 says a command is an argument list run in the source's own root and not a shell line. A
 recipe **MUST** carry it as a list, and a build **MUST NOT** derive one by splitting a string.
 
-A string obliges something to parse it, and a parse is a quoting convention the recipe did not
-declare. The one Python offers does not vary by host: `shlex.split` defaults to POSIX rules on every
-platform and contains no test of what it is running on, so it consumes a backslash wherever it runs
-and turns `C:\Python\python.exe extract.py` into `C:Pythonpython.exe`. **The parse is
-unconditional and the failure is not** — the same corruption is harmless on a host whose paths use
-forward slashes and fatal on one whose paths do not, which is what makes a string the wrong form
-rather than what makes any platform the wrong host.
+A build given a string must parse it, and a parse is a quoting convention the recipe never declared.
+`shlex.split` applies POSIX rules on every host and tests nothing about which one, so it eats a
+backslash everywhere: `C:\Python\python.exe` becomes `C:Pythonpython.exe`. The parse is
+unconditional and the failure is not — harmless where paths use forward slashes, fatal where they do
+not — so the defect is the string and not the host.
 
-A list needs no convention, because the layer below already has one per host: given a list,
-`subprocess` joins it with `list2cmdline` on Windows and passes it to `execv` unchanged elsewhere,
-so `['C:\Python\python.exe', 'a b']` becomes `C:\Python\python.exe "a b"` there and stays two
-arguments here. Carrying a list is what lets that adaptation happen where it is already written,
-rather than in a recipe that would have to name which convention it meant.
+A list needs no convention, because `subprocess` already has one per host: `list2cmdline` on Windows,
+`execv` elsewhere. A list keeps that adaptation where it is already written.
 
 Where rows travel on standard output, they are **bytes**. An adapter **MUST** write the stream to a
-binary handle, and a build **MUST** read one. A platform that translates a line ending in text mode
-corrupts an Arrow IPC stream written through it, which fails as malformed data rather than as an
-encoding error and so is worth stating rather than leaving to be discovered.
+binary handle, and a build **MUST** read one. A platform translating a line ending in text mode
+corrupts the stream, and it fails as malformed data rather than as an encoding error.
 
 A build **MUST** consume standard output and standard error concurrently. A pipe holds tens of
-kilobytes, so a build that reads one to completion before the other deadlocks on any adapter whose
-diagnosis outruns that buffer — which is not a Windows question, though how a build does it is:
-`07` §7 carries that, being a technique that changes with the implementation (R93 §3.5).
+kilobytes, so reading one to completion first deadlocks on any adapter whose diagnosis outruns that
+buffer. How a build does it is `07` §7's, being a technique that changes with the implementation
+(R93 §3.5).
 
 ### 3.5 A recipe opts a source into the writer's process
 
