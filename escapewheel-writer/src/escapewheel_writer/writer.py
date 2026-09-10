@@ -38,6 +38,7 @@ from escapewheel_validator import Report, validate, verify_order
 from escapewheel_validator.generate import adjacency_settles_uniqueness
 
 from .arrow import build, number_batch, schema, sort_key
+from .encoding import encodings, inefficient
 from .keys import Keys
 
 
@@ -89,128 +90,8 @@ PROFILE = "escapewheel-portable-v0.1"
 #: Columns that store better as deltas than as anything pyarrow chooses by itself, beyond the
 #: `_tick` rule below, because measurement says so and their names do not. `anchor_index`
 #: ascends over thousands of anchors per clock; `n_spikes` is a large count with no repeats.
-#: Columns the rules below miss, each with the measurement that justifies it. `test_writer.py`
-#: refuses an entry naming no such column, which is `check.py`'s discipline for a naming exception.
-DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
-    "core.clock_anchors": ("anchor_index",),
-    "core.units": ("n_spikes",),
-    # Contiguous 0..n-1 within one asset, and 2.5 M distinct values per camera: the worst case
-    # for a dictionary, whose entries then outnumber nothing and cost 1.54 B/row where delta
-    # costs 0.01. `pts` is the same shape once R68 §2.1 makes it an integer -- a frame timeline
-    # advancing by a constant step -- and takes the column from 1.50 B/row to 0.006.
-    "core.media_frames": ("frame_index", "pts"),
-    # Ascending without being a key column: a run lists its channels in the order it kept them
-    # (R83 §2.1) and a channel map lists its contacts, so both climb through the contact numbers
-    # with gaps. Measured 11.1x and 7.4x over the dictionary they would otherwise get.
-    "core.sorting_run_channels": ("electrode_id", "channel_index"),
-    "core.array_channels": ("electrode_id",),
-    # An interval's identifier is not in its key -- R47 §2 keys on where it starts and R54 §2.1
-    # on its kind -- so the leading-identifier rule cannot see it, and it still ascends. 5.6x.
-    "core.intervals": ("interval_id",),
-    # A count of the spikes a metric was computed over, one row per unit in unit order, which
-    # climbs with the unit's spike count often enough to pay: 1.7x.
-    "aind_unit_qc.metrics": ("num_spikes_used",),
-}
-
-#: Columns written PLAIN: no dictionary, no delta. Integers only -- a float takes this by rule.
-NO_DICTIONARY: dict[str, tuple[str, ...]] = {
-    # Summaries, not coordinates on a timeline: one row per unit in `unit_id` order, so the ticks
-    # arrive unordered and delta encodes noise while a dictionary of 6,781 distinct ticks pays for
-    # itself twice. Plain is 1.44x both, which is the `_tick` rule being a good guess and no more.
-    "core.units": ("first_spike_tick", "last_spike_tick"),
-    # A trailing key component (R28 §2), so it climbs within each unit and resets: a sawtooth,
-    # which neither delta nor a dictionary reads well. 1.7x.
-    "core.unit_electrodes": ("electrode_id",),
-    # 56 distinct structure ids over 8,832 rows, already run-length friendly; the dictionary is
-    # a second index over what RLE alone encodes. 1.3x.
-    "core.electrode_coordinates": ("region_id",),
-    # One unit per spike and a few hundred distinct per batch, but the derived table is bucketed
-    # by time (R30 §3.2) rather than clustered by unit, so the runs are short. 1.2x.
-    "analysis.spike_events": ("unit_id",),
-}
-
-#: Columns keeping the dictionary the rules would take away, each measured. The float rule below
-#: is the one this mostly answers: a float is plain unless its values repeat.
-DICTIONARY_COLUMNS: dict[str, tuple[str, ...]] = {
-    # Quantised to the sorter's amplitude step, so 287 M rows hold few distinct values and the
-    # dictionary is exactly right. **1.85x on ~200 MB**, the largest single encoding decision in
-    # a packet, and the one a blanket float rule would have got wrong.
-    "core.spike_events": ("amplitude", "unit_id"),
-    # Ratios and medians that repeat across units: bounded, rounded, and few distinct.
-    "aind_unit_qc.metrics": ("presence_ratio", "sliding_rp_violation", "firing_range",
-                             "amplitude_median"),
-}
-
-
-def _leading_identifier(spec: Mapping[str, Any], keys: list[str]) -> str | None:
-    """Return the key column whose values ascend across the whole table, if one does.
-
-    A table is sorted by its key (R10 §2), so the first key column ascends and every later one
-    only ascends *within* the group above it. `session_id` is skipped because a packet holds one
-    session (R1), which makes it constant rather than ascending -- RLE already stores it in
-    0.03 bits/row.
-    """
-    roles = {c["name"]: c.get("role") for c in spec.get("columns", ())}
-    for name in keys:
-        if name == "session_id":
-            continue
-        return name if roles.get(name) == "identifier" else None
-    return None
-
-
-def _encodings(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> tuple[list[str], list[str]]:
-    """Which columns take `DELTA_BINARY_PACKED` and which take no dictionary. Returns `(delta, plain)`.
-
-    Three rules and three lists of exceptions, in the shape `check.py` uses for naming: an
-    exception is declared with the measurement that justifies it, and a test refuses one naming a
-    column that does not exist. pyarrow never picks delta itself and defaults to a dictionary on
-    everything, which is wrong in both directions here.
-
-    **A `*_tick` column takes delta.** A tick is a large integer on a monotonic clock, so its
-    residuals bit-pack far smaller than the eight bytes PLAIN spends. Measured, delta takes
-    `core.clock_anchors.t_tick` from 268.8 KB to 5.2 KB and `core.spike_events.t_tick` from
-    660.9 MB to 462.1 MB.
-
-    **The leading identifier of the key takes delta.** R10 §2 sorts a table by its key, so that
-    column ascends across the whole table where every later key column only ascends within the
-    group above it. Measured: `core.units.unit_id` **57x**, `core.unit_coordinates.unit_id` 53x,
-    `core.electrode_coordinates.electrode_id` 48x, `core.unit_coordinate_values.unit_id` **75x**.
-
-    **A float takes no dictionary.** Of 32 float columns above 2 kB across both packaged sessions,
-    **27 are smaller plain**, by 1.15x to 1.76x: a dictionary over values that barely repeat is an
-    index nobody reads. The five that do repeat are listed, and one of them decides ~200 MB --
-    `core.spike_events.amplitude` is quantised to the sorter's step and is **1.85x** better with
-    the dictionary, which a blanket rule would have thrown away.
-
-    None of the three is monotonicity or cardinality itself, which is what the encodings actually
-    exploit and what nothing declares. Deriving the choice from the sort key alone was measured and
-    refused: it regresses `core.media_frames.pts` **195x** and `core.clock_anchors.t_tick` 57x,
-    both monotone without being key columns. Every column is zstd-compressed on top of its
-    encoding, so each number here is the pair measured end to end.
-    """
-    forced_delta = set(DELTA_COLUMNS.get(resource_id, ()))
-    forced_plain = set(NO_DICTIONARY.get(resource_id, ()))
-    forced_dict = set(DICTIONARY_COLUMNS.get(resource_id, ()))
-    keys = sort_key(resource_id, spec) or list(spec.get("primary_key") or [])
-    leading = _leading_identifier(spec, keys)
-    delta, plain = [], []
-    for field in out:
-        name = field.name
-        integer, floating = pa.types.is_integer(field.type), pa.types.is_floating(field.type)
-        if name in forced_dict or not (integer or floating):
-            continue
-        if name in forced_delta and integer:
-            delta.append(name)
-        elif name in forced_plain:
-            plain.append(name)
-        elif integer and (name.endswith("_tick") or name == leading):
-            delta.append(name)
-        elif floating:
-            plain.append(name)
-    return delta, plain
-
-
-def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> dict[str, Any]:
+def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
+             extra: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Parquet settings for one resource.
 
     **No page index.** `ColumnIndex` and `OffsetIndex` would give per-page bounds and byte
@@ -237,7 +118,7 @@ def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> dict[
     # not declare. Withhold it, and the file reads back as the registry says.
     if any(pa.types.is_dictionary(field.type) for field in out):
         options["store_schema"] = False
-    delta, plain = _encodings(resource_id, spec, out)
+    delta, plain = encodings(resource_id, spec, out, extra)
     if delta or plain:
         options["use_dictionary"] = [n for n in out.names if n not in {*delta, *plain}]
         if delta:
@@ -303,7 +184,9 @@ def _as_held(out: pa.Schema, held: pa.Schema) -> pa.Schema:
     return pa.schema(fields)
 
 
-def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], path: Path, resource_id: str) -> int:
+def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], path: Path,
+                  resource_id: str, extra: Mapping[str, Any] | None = None,
+                  report: list[str] | None = None) -> int:
     """Write batches to Parquet one row group at a time, casting each to the registry schema.
 
     The first batch fixes the schema, exactly as the first record does on the records path:
@@ -344,7 +227,15 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
         for batch in _prefetch(_prefetch(verify_order(batches, keys, unique)) if keys else batches):
             if out is None:
                 out = _as_held(schema(spec, set(batch.schema.names)), batch.schema)
-                writer = pq.ParquetWriter(path, out, **_options(resource_id, spec, out))
+                options = _options(resource_id, spec, out, extra)
+                writer = pq.ParquetWriter(path, out, **options)
+                if report is not None:
+                    report.extend(inefficient(resource_id, pa.Table.from_batches([batch]),
+                                              options.get("column_encoding", {}) and
+                                              list(options["column_encoding"]) or [],
+                                              [n for n in out.names
+                                               if n not in options.get("use_dictionary", out.names)
+                                               and n not in options.get("column_encoding", {})]))
             if extra := sorted(set(batch.schema.names) - set(out.names)):
                 raise ValueError(
                     f"batch carries {extra}, which the first batch did not; the column would be dropped silently"
@@ -536,7 +427,16 @@ class PacketWriter:
         description: str | None = None,
         extensions: Sequence[Mapping[str, Any]] = (),
         session: str | None = None,
+        encoding_exceptions: Mapping[str, Mapping[str, tuple[str, ...]]] | None = None,
     ) -> None:
+        #: Encoding exceptions an extension supplies for its own tables, keyed list-name to
+        #: resource to columns (`encoding.encodings`). Core names no extension table, so this is
+        #: how one says what its measurements do without core being edited to know it exists.
+        self._encoding_exceptions = dict(encoding_exceptions or {})
+        #: What `03` §5.5's rules cost where they guessed wrong, reported at commit. A rule is a
+        #: good guess and an exception is how it is corrected, so a column more than
+        #: `encoding.TOLERANCE` off its best is said aloud rather than silently paid for.
+        self._encoding_notes: list[str] = []
         #: The session every session-scoped table's rows belong to, which `_with_session` fills
         #: from (R88 §2.3). Given rather than read back out of `core.sessions`, because a build adds
         #: that table last: reading it back left every table added before it unfilled, and only the
@@ -1008,7 +908,10 @@ class PacketWriter:
             path = staging / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             if resource_id in self._batches:
-                self.rows_written[resource_id] = _write_stream(spec, self._batches[resource_id], path, resource_id)
+                self.rows_written[resource_id] = _write_stream(
+                    spec, self._batches[resource_id], path, resource_id,
+                    self._encoding_exceptions, self._encoding_notes,
+                )
                 if sort_key(resource_id, spec):
                     self._ordered.add(resource_id)
             else:
@@ -1024,7 +927,14 @@ class PacketWriter:
                 # from `Table.nbytes` is 320x out on a string-heavy table, because Arrow
                 # materialises strings that Parquet stores as dictionary codes. It once split a
                 # 101 KB table three ways.
-                pq.write_table(table, path, **_options(resource_id, spec, table.schema))
+                options = _options(resource_id, spec, table.schema, self._encoding_exceptions)
+                pq.write_table(table, path, **options)
+                delta = list(options.get("column_encoding", {}))
+                kept = set(options.get("use_dictionary", table.schema.names))
+                self._encoding_notes.extend(inefficient(
+                    resource_id, table, delta,
+                    [n for n in table.schema.names if n not in kept and n not in delta],
+                ))
             extension_id = self.extension_of(resource_id)
             entry = {
                 "resource_id": resource_id,

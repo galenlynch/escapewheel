@@ -1,7 +1,6 @@
 """The writer produces packets the validator accepts, and refuses ones it does not."""
 
 import json
-from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -10,7 +9,7 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 
 from escapewheel_writer import CommitRefused, PacketWriter
-from escapewheel_writer.writer import DELTA_COLUMNS, DICTIONARY_COLUMNS, NO_DICTIONARY
+from escapewheel_writer.encoding import DELTA_COLUMNS, DICTIONARY_COLUMNS, NO_DICTIONARY
 
 
 def _write(root, registry, tables, **kwargs):
@@ -917,8 +916,12 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
     and is an integer is decidable here, with no packet in hand.
     """
     tables = dict(registry["tables"])
-    for path in sorted((Path(__file__).resolve().parents[2] / "registry" / "extensions").glob("*.json")):
-        tables.update(json.loads(path.read_text())["tables"])
+    named = [resource
+             for entries in (DELTA_COLUMNS, NO_DICTIONARY, DICTIONARY_COLUMNS)
+             for resource in entries]
+    assert [r for r in named if not r.startswith(("core.", "analysis."))] == [], (
+        "core names an extension's table; an extension supplies its own to PacketWriter"
+    )
     stale = [
         f"{listed}: {resource}.{column}"
         for listed, entries in (("DELTA_COLUMNS", DELTA_COLUMNS),

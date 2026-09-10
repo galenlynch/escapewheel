@@ -199,7 +199,7 @@ class _Buckets:
 
     def __init__(self, root: Path, out: pa.Schema, budget: int = 0,
                  spec: Mapping[str, Any] | None = None) -> None:
-        from .writer import _encodings
+        from .encoding import encodings
 
         self._root = root
         self._out = out
@@ -209,7 +209,7 @@ class _Buckets:
         # 60.9 s, at no cost in memory.
         # No sample: the spill is opened before its first batch exists, so the naming convention
         # stands in. Its bytes have no reader, and the finished table is measured properly.
-        delta, plain = _encodings(RESOURCE, spec or {}, out)
+        delta, plain = encodings(RESOURCE, spec or {}, out)
         self._options: dict[str, Any] = {"compression": "zstd"}
         if delta or plain:
             self._options["use_dictionary"] = [n for n in out.names if n not in {*delta, *plain}]
