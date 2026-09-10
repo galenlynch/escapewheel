@@ -138,12 +138,29 @@ Both are on paths `fixtures/build.py` does not take: it writes rows directly rat
 So the corpus proves that an implementation agrees about the **format** and proves nothing about the
 **writer**, which is where twenty-one revisions of drift accumulated unseen.
 
+**Queued to work on**, and two more instances landed on 2026-09-10, both of the same shape.
+
+- Three test fixtures carried columns the registry does not declare — `core.array_assets` rows with
+  `name` and `kind`, where the table declares `array_asset_name` and no `kind` at all, and a
+  `core.clocks` row with `name` for `clock_name`. `PacketWriter.add` documented such keys as ignored
+  and dropped them, so an array asset went nameless through three tests for as long as they have
+  existed. It refuses them now, and that refusal protects nothing in `fixtures/`.
+- `fixtures/build.py` calls `pq.write_table` directly and never constructs a `PacketWriter`, so no
+  corpus packet passes through the encoding rules at all. Measured: `core.spike_events.t_tick` is
+  `RLE_DICTIONARY` in every corpus packet, which is the encoding R68 §3 wrote its SHOULD against and
+  `03` §5.5 now tells a writer not to use.
+
+The second is the sharper statement of the whole item. Every rule this repository has added about
+how a packet is *written* — encodings, assigned identifiers, session fill, physical order — is
+enforced on a path the corpus does not take, so the corpus can pass forever while the writer drifts.
+
 What would close it is a corpus packet built by the writer from declared sources rather than by hand
 — the same fixtures, reached through `PacketWriter` and one adapter — so that a struck column or a
 renamed one fails a suite instead of a rebuild months later. Worth sizing before committing to:
 `fixtures/build.py` is the artifact any implementation runs to prove it agrees, and a writer-built
 packet is this implementation proving it agrees with itself, which is a different claim and may want
-a different home.
+a different home. The likely shape is a second, smaller corpus beside the conformance one, built by
+the writer and asserted against, so the two claims stay separable.
 
 ## 1a₃. What is left on encodings, after the rule landed
 
