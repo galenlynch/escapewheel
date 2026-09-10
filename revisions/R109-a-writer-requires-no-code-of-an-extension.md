@@ -1,9 +1,9 @@
-# A Writer Requires No Code of an Extension
+# R109 — A Writer Requires No Code of an Extension
 
 | | |
 |---|---|
-| **Status** | Draft |
-| **Amends** | `09` §5 (adds the contract an extension is held to); `05` §3.4 (what a build may require of a source that is an extension, and what it owes when that source's command fails) |
+| **Status** | **Accepted** 2026-09-10 |
+| **Amends** | `09` §5 (adds the contract an extension is held to); `05` §3 (adds §3.7, what a build owes when a source's command fails) |
 | **Depends on** | R17 §2 (an extension is a registry document in `02`'s format), R17 §4 (an extension's verdict is separate), R63 §2.1 (an adapter declares `PRODUCES`), R53 §2.5 (a writer mints every assigned identifier), R79 §2.2 (a packet obligation and an importer obligation are reported apart), R51 §2.2 (a record optional to produce and useful when present), R3 §3.0 (duplication must buy otherwise-unavailable access), R75 §2.1 (logical determinism is normative), R75 §2.2 (byte determinism is a build property), R2 §5 (three presence states) |
 | **Profile** | all |
 
@@ -122,8 +122,8 @@ however it likes and a build states no opinion about how.
 How the document is produced is the extension's business — generated from a schema definition, from
 a spreadsheet, or typed — but an extension **MUST NOT** derive it from the rows it delivers for the
 packet being built. A declaration derived from one packet's data cannot disagree with that data, so
-it declares nothing, and two packets whose extensions each derived one are two relations rather than
-the one R86 §2.1 presents.
+it declares nothing, and two packets whose extensions each derived one no longer share a schema,
+which is what an analysis reading across sessions (R86 §1.1) goes through.
 
 `aind_unit_qc.waveform_metrics` measures the difference. It declares **13** columns; the extraction
 in both packaged sessions delivers **10**, and both packets carry 13, with `half_width`,
@@ -235,15 +235,14 @@ is still worth stating.
 
 ## 4. What this does not change
 
-- **An extension is still a registry document.** R17 §2 is untouched; this part says how the
-  document and its rows reach a build, not what either contains.
-- **No packet is invalidated and no table changes.** This binds a writer and a build, so what
-  changes is what an implementation may demand before it will write one.
+- **An extension is still a registry document in `02`'s format.** R17 §2 is untouched. §3.2
+  constrains where a document may be derived from, which is not a change to what the format admits:
+  a document declaring 13 columns is the same document however it was produced.
 
 ## 5. Consequence
 
-`09` §5 gains the contract as new subsections, and `05` §3.4 gains what a build owes when a source's
-command fails. No table, column, reference, rule or vocabulary changes, and neither packaged packet
+`09` §5 gains three subsections — §5.6, §5.7 and §5.8 — and `05` §3 gains §3.7, what a build owes
+when a source's command fails. No table, column, reference, rule or vocabulary changes, and neither packaged packet
 is rebuilt for this part.
 
 The reference implementation satisfies §3.1 and §3.2 already — a source of kind `tables` reads files
@@ -255,5 +254,5 @@ and neither packaged recipe would set it until an extension writes one. §3.7 co
 packaged commands read a fixed file and write a fixed table.
 
 No packet changes, because §2.2 measures that every extension table already arrives across the
-boundary. What §3.1 buys is that it must keep doing so, and what §2.4 measures is what crossing it
-costs to debug meanwhile: one note in sixty-seven for six of the packet's forty tables.
+boundary. What §3.1 buys is that it must keep doing so, and §2.4 measures what crossing it costs to
+debug meanwhile.

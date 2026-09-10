@@ -2269,3 +2269,59 @@ note = "an [overrides] entry silences §3.1's refusal for the fact it names, a s
 disposition = "applied"
 where = "05_validation_and_import.md §3.3"
 note = "a preference MUST NOT name a resource only one source produces; core.unit_electrodes is struck from recipe.PREFERRED, five entries becoming four, and one test enumerates the table against every adapter's PRODUCES so it cannot go stale again"
+
+[clause."R109 §2.1"]
+disposition = "rationale"
+where = "R109 §2.1"
+note = "four parts hold one piece each and none holds the shape: R17 §2 makes an extension a registry document, 09 §5.2 namespaces it, 09 §5.3 has a packet declare it, 05 §3.4 has an adapter declare PRODUCES, and 09 §5.1 observes no code is needed -- so an implementation resolving an extension only through an installed distribution contradicted no clause"
+
+[clause."R109 §2.2"]
+disposition = "rationale"
+where = "R109 §2.2"
+note = "both recipes supply all six extension tables -- dynamic_foraging.trials, .blocks, .sessions and aind_unit_qc.metrics, .waveform_metrics, .synchrony -- through a source of kind tables, and no distribution registers an extension registry under the entry-point group at all, so the decoupled path carries everything"
+
+[clause."R109 §2.3"]
+disposition = "rationale"
+where = "R109 §2.3"
+note = "an extension running in the writer's process resolves its dependencies against the writer's environment, and two extensions pinning incompatible versions make it unsolvable; solving it out of process costs nothing because R53 §2.5 mints every assigned identifier after an extension has finished"
+
+[clause."R109 §2.4"]
+disposition = "rationale"
+where = "R109 §2.4"
+note = "67 notes in ecephys_776259's build and 49 in ecephys_786867's, of which the tables source supplying six of forty tables contributes one, saying only that the command ran; the command's own output inherits the build's streams and lands unattributed, and a non-zero exit reaches the build as a status alone"
+
+[clause."R109 §3.1"]
+disposition = "applied"
+where = "09_metadata_and_extensions.md §5.6"
+note = "a writer MUST be able to build from a registry document and rows as files alone, and MUST NOT require an extension to be installed, importable or resolvable; code is a MAY that MUST NOT be the ordinary case, which is what makes 09 §5.1's 'needs no code' a promise"
+
+[clause."R109 §3.2"]
+disposition = "applied"
+where = "09_metadata_and_extensions.md §5.7"
+note = "an extension delivers a registry document and Parquet, with a command where a raw source needs converting; identifiers arrive as names (R53 §2.5). An extension MUST NOT derive the document from the rows it delivers -- aind_unit_qc.waveform_metrics declares 13 columns where the extraction delivers 10, and a derived document would assert the extension has no half_width"
+
+[clause."R109 §3.3"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.7"
+note = "a non-zero exit MUST fail the build and the build MUST name the source, not the first missing resource: one tables source's command produces six tables across two extensions in both recipes, so naming an extension would be wrong about half of them"
+
+[clause."R109 §3.4"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.7"
+note = "a build MUST capture both streams and report them with a failure, and SHOULD keep them readable on success; to a file rather than memory, so a long command still streams. Binds the build alone -- §2.4 measures that the account exists and only its custody is missing"
+
+[clause."R109 §3.5"]
+disposition = "applied"
+where = "09_metadata_and_extensions.md §5.8"
+note = "an extension MAY validate its own tables on core's terms (R17 §4) and a build MUST NOT rely on it, its own validation running over every staged resource whatever produced it"
+
+[clause."R109 §3.6"]
+disposition = "applied"
+where = "09_metadata_and_extensions.md §5.8"
+note = "a report is optional to produce and reported when present, R51 §2.2's shape for store_digest; it carries what a build cannot derive -- what the command read, skipped and why -- since rows per table come from the footer at Stage 1. JSON with problems[] at R2 §7.3's levels and read[], and unrecognised keys MUST NOT be refused"
+
+[clause."R109 §3.7"]
+disposition = "applied"
+where = "09_metadata_and_extensions.md §5.7"
+note = "an extension's command MUST be a function of its inputs, splitting determinism as R75 does: §2.1 binds what the program computes, §2.2 leaves pinning the environment a build property no packet is judged on. An extension that cannot be delivers a file produced beforehand. Nothing checks it, which is R67 §2.4's shape"
+

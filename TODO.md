@@ -9,7 +9,7 @@ Last checked 2026-09-09, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R108 accepted. R42 and R73 withdrawn. 2 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R109 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -87,28 +87,17 @@ Two of the five are `add()` against `add_batches()`. The records path and the st
 drifted apart and nothing compares them, which is a sharper statement of §1b than could be written
 before: the pair is where a rule gets implemented once and forgotten once.
 
-## 1₊. Two drafts are open, and what each still owes
+## 1₊. One draft is open, and what it still owes
 
-Ordered in `revisions/drafts/README.md`: the extension contract first, then the encoding rules,
-because the second declares an encoding *across* the boundary the first states, and an accepted
-revision may not cite a draft.
-
-**`a-writer-requires-no-code-of-an-extension` — appraised, fixed, ready to accept.** Both fixes are
-applied: §3.3 names the source whose command failed rather than the extension, measured on both
-recipes at **6 tables across 2 extensions** behind one `command`, and §6 cites R75 §2.1 rather than
-its parent. The command contract that was queued separately is folded in — §2.4 measures what a
-command tells a build today, §3.4 binds a build to keep the streams it currently discards, and §3.6
-makes a report of the run optional to produce and useful when present, with a shape small enough
-that the build's obligation to report one can be met. §3.7 closes the last open question by
-splitting determinism the way R75 already does: an extension's command must be a function of its
-inputs (§2.1), and pinning the environment that runs it is a build property no packet is judged on
-(§2.2). The draft now carries no `Open` section.
-
-**`an-encoding-follows-a-rule-and-its-exceptions` — reframed, not yet appraised.** Its §6 defers to
-the contract, so once that lands, §6 wants re-reading and probably striking. §2.3 now measures the
-rules against what a consumer reads whole rather than against the packet, which is where the
+**`an-encoding-follows-a-rule-and-its-exceptions` — reframed, not yet appraised.** §2.3 now measures
+the rules against what a consumer reads whole rather than against the packet, which is where the
 earlier "1.9 MB of 1.76 GB" was misleading: **1.91x** and **1.80x** over the tables read entire,
-23.94x with `core.media_frames`, and decode unchanged at 15.6 ms against 15.8 ms.
+23.94x with `core.media_frames`, and decode unchanged at 15.6 ms against 15.8 ms. Its §3.4 now cites
+R109 §3.1 and §3.6 rather than arguing the boundary itself, and its `Open` section is struck, R109
+§3.5 and §3.6 having settled what an extension owes across that boundary.
+
+Its pre-acceptance re-measurement is the whole of what is left: every figure was taken against the
+packets as rebuilt, and the packets have not moved since.
 
 ## 1a. The packets' physical layout and encoding
 

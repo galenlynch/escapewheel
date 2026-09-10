@@ -1798,6 +1798,12 @@ The comparison needs the source read, so it happens as each source is built and 
 
 A fact the source **derives** is the source's. `core.sessions.session_start_time` and `session_end_time` come from the session source's declared stream windows, and a writer MUST use the source's value where a session source is present and MUST report a declaration it did not use rather than discarding it silently (R87 §2.7).
 
+### 3.7 When a source runs a command
+
+A command that exits non-zero MUST fail the build, and a build MUST name the source whose command failed together with the resources that source owns, rather than reporting the first resource it then finds missing (R109 §3.3). A command belongs to a source and a source is not an extension: one command may produce tables of several extensions, so a finding naming one of them would be wrong about the rest.
+
+A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
+
 ## 4. Stages 1 to 3
 
 ### 4.1 Discover
@@ -2316,6 +2322,32 @@ An extension is validated on core's terms and its verdict is reported separately
 ### 5.5 Independent versioning
 
 An extension carries its own version, independent of `registry_version` (R17 §5).
+
+### 5.6 A writer requires no code of an extension
+
+A writer MUST be able to build a packet carrying an extension's tables given only the extension's registry document and its rows as files. A writer MUST NOT require an extension to be installed, importable, or resolvable in the writer's own environment (R109 §3.1).
+
+A writer MAY accept an extension that ships code — an adapter registered under an entry-point group, or a registry document loaded from an installed distribution — and MUST NOT treat either as the ordinary case. That is what turns §5.1's "needs no code" from a possibility into a promise.
+
+### 5.7 How an extension's document and rows reach a build
+
+An extension delivers a registry document in the format of Part 02 and, per table it declares, rows as Parquet. Where a raw source needs converting first, a recipe names a command: an argument list run in the source's own root, not a shell line, so an extension isolates its dependencies however it likes and a build states no opinion about how (R109 §3.2).
+
+Rows arrive carrying identifiers as the names their source used, and a writer numbers them (R53 §2.5), so an extension neither knows nor needs the packet's numbering.
+
+How the registry document is produced is the extension's business, but an extension MUST NOT derive it from the rows it delivers for the packet being built. A declaration derived from one packet's data cannot disagree with that data, so it declares nothing, and two packets whose extensions each derived one no longer share a schema. Part 02 §5's three presence states are what carry the difference between a column this run did not compute and one the extension does not have.
+
+An extension's command MUST produce the same rows from the same inputs, and MUST NOT let wall-clock time, an unfixed random seed, or iteration over an unordered collection reach a value it writes (R109 §3.7). Which program the command resolves to is the recipe author's, and R75 §2.2 places it: pinning library versions so two runs agree byte for byte is a build property, and a packet MUST NOT be judged non-conforming for lacking one. An extension that cannot be a function of its inputs delivers a file produced beforehand rather than a command the build runs.
+
+### 5.8 What an extension may state about its own run
+
+An extension MAY validate its own tables before returning them, against its own registry document and on the same terms a validator applies to core (R17 §4). A build MUST NOT rely on its having done so; its own validation runs over every staged resource whatever produced it (R109 §3.5).
+
+An extension MAY write a report of its run at a path the recipe names, and a build MUST report what one contains where it is present. A build MUST NOT require one, and MUST NOT fail a build on a report's contents alone (R109 §3.6).
+
+A report carries what a build cannot derive, and a build SHOULD ignore what it can: rows per table, which tables exist, and whether their schemas conform are each established without asking. What no artifact holds is what the command read, what it skipped and why, and whether a table that is short is legitimately short.
+
+A report is JSON. An optional `problems` array carries an entry per finding, each with a `level` of `error`, `warning` or `info` (R2 §7.3), a `message`, and optionally the `resource` the finding concerns; an optional `read` array names what the command consumed. A build MUST report every problem it is given and MUST NOT refuse a report for carrying keys it does not recognise.
 
 ## 6. Direction of reference
 

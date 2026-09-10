@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | `03` §5.5 (two writer SHOULDs beside the tick one, and what a writer reports); `05` §3 (a recipe declares an encoding); adds three subsections to `10` §2 |
-| **Depends on** | R68 §2.3 (`DELTA_BINARY_PACKED` is defined for `INT32` and `INT64` alone), R68 §3 (the tick SHOULD `03` §5.5 carries), R10 §2 (a table is sorted by its primary key), R53 §2.1 (an identifier is an integer), R93 §3.4 (a measurement supports a rule that lives elsewhere), R93 §3.5 (what survives replacing the reference implementation), R17 §3 (an extension needs no second code path), R53 §2.5 (a writer mints every assigned identifier) |
+| **Depends on** | R68 §2.3 (`DELTA_BINARY_PACKED` is defined for `INT32` and `INT64` alone), R68 §3 (the tick SHOULD `03` §5.5 carries), R10 §2 (a table is sorted by its primary key), R53 §2.1 (an identifier is an integer), R93 §3.4 (a measurement supports a rule that lives elsewhere), R93 §3.5 (what survives replacing the reference implementation), R17 §3 (an extension needs no second code path), R53 §2.5 (a writer mints every assigned identifier), R109 §3.1 (a writer requires no code of an extension), R109 §3.6 (what an extension may state across the boundary) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 Normative, except §2, which is informative.
@@ -33,7 +33,7 @@ since `03` §5.1 puts Zstandard over whatever the encoding produced.
 
 Informative.
 
-### 2.1 The identifier a table sorts by ascends
+### 2.1 Table identifiers are ascending
 
 R10 §2 sorts a table by its primary key, so the first key column climbs across the whole table
 where every later one only climbs within the group above it. An identifier has been an integer
@@ -55,7 +55,7 @@ A dictionary over a near-unique ascending column stores the values once and an i
 again: `core.unit_coordinates.unit_id` cost **30.95 bits a row** for an `int32`, which is almost
 the 32 bits the raw values take.
 
-### 2.2 A dictionary over values that do not repeat
+### 2.2 Float columns with high cardinality and dictionary encoding
 
 Of the **32 float columns** above 2 kB, **27 are smaller written plain**, by 1.15x to 1.76x —
 `axis_value` in both coordinate child tables, `core.unit_quality_labels.confidence`, and most of
@@ -117,7 +117,7 @@ the sampled packet is no longer a faithful preview of the layout the full one ge
 
 ## 3. Decision
 
-### 3.1 An ascending identifier is delta-encoded
+### 3.1 Ascending identifiers are delta-encoded
 
 A writer **SHOULD** encode with `DELTA_BINARY_PACKED`, and **SHOULD NOT** dictionary-encode, the
 first column of a table's sort order whose role is `identifier`. R10 §2 makes that column ascend
@@ -149,13 +149,10 @@ A writer's own exceptions **MUST** name only tables of the layer it implements, 
 them, in an `[encoding]` table keyed `resource.column`, each entry naming one of `delta`, `plain`
 or `dictionary` and the reason it was measured.
 
-The boundary is the requirement, not a fallback. An extension that runs in the writer's process
-puts its dependency closure in the writer's environment, and one badly maintained extension then
-makes that environment unsolvable — which is the failure `ndx-` extensions demonstrate on the read
-path, and which a registered adapter would reproduce on the write path. So an extension reaches a
-build through files and, where the raw source needs converting, a subprocess; anything more coupled
-is an optimisation a writer **MUST NOT** require. Nothing about the boundary costs correctness: a
-subprocess extension may run the same validation over its own tables and fail before returning.
+R109 §3.1 is why the recipe carries them rather than the extension handing them over: a writer may
+require no code of an extension, so a declaration that arrived as a Python object would be one an
+extension could make only by being importable. R109 §3.6 puts what an extension states about its own
+run in a file the recipe names, and an encoding is the same kind of statement one level down.
 
 The recipe is also the right granularity rather than the only reachable one. An encoding is a fact
 about **one packet's values** — `aind_unit_qc.metrics.presence_ratio` repeats often enough to want a
@@ -222,13 +219,3 @@ What the rules recover is **1.247 MB of the 2.622 MB** a consumer transfers befo
 anything (§2.3), and the largest single number in the exercise is one they **keep**:
 `core.spike_events.amplitude` holds its dictionary under §3.3, **1.85x across 209 MB**, which a
 float rule admitting no exception would have spent.
-
-## 6. Open
-
-- **What else an extension may be held to across that boundary.** §3.4 states the boundary for one
-  thing an extension says, and the contract it is part of is stated nowhere whole: R17 §2 makes an
-  extension a registry document, `05` §3.4 has an adapter declare `PRODUCES`, and the `tables`
-  source gives it files and an optional command, but no part says what a writer may require of an
-  extension or what an extension may assume in return. Whether a subprocess extension owes its own
-  validation before returning, and what it owes on failure, belongs with that contract rather than
-  here.
