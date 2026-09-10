@@ -214,10 +214,13 @@ class Clock:
             the float a copy of `tick_rate_num`, since `tick_rate_den` is 1 on every clock
             either packet holds, and left two columns free to disagree with nothing to see it.
         """
+        # No `clock_name`. R95 §3.1 makes it what `clock_id` stands for -- the identifier a source
+        # used, `harp` -- and the numbering fills it from exactly that when the row leaves it
+        # unset. Writing `name` here put a human label in it, `HARP`, so nothing could resolve a
+        # recipe's spelling back to a clock and `analysis.spike_events` could not be materialized.
         row: dict[str, Any] = {
             "clock_id": self.clock_id,
             "session_id": self.session_id,
-            "clock_name": self.name,
             "origin": self.origin,
         }
         if self.tick_rate_num is not None:
@@ -229,8 +232,13 @@ class Clock:
             row["tick_zero_utc"] = self.tick_zero_utc
         if self.parent_clock_id is not None:
             row["parent_clock_id"] = self.parent_clock_id
-        if self.metadata:
-            row["metadata"] = self.metadata
+        # The label has no column of its own, and `core.clocks` declares `metadata` because its
+        # key is an identifier of its own (R97 §3.1), so it travels there rather than being lost.
+        extra = dict(self.metadata) if self.metadata else {}
+        if self.name and self.name != self.clock_id:
+            extra.setdefault("label", self.name)
+        if extra:
+            row["metadata"] = extra
         return row
 
 

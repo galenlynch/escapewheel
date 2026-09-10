@@ -999,7 +999,6 @@ class NWBSource(Compensates):
                 {
                     "clock_id": self._dispatch_clock_id(name),
                     "session_id": self.session_id,
-                    "clock_name": f"{name} dispatch counter",
                     # The float alone (R95 §3.2). This rate is measured from the dispatch
                     # spacing rather than declared, so `round(rate)` invented a rational the
                     # source never stated -- the rounding R95 §3.2 says this format does not
@@ -1007,6 +1006,9 @@ class NWBSource(Compensates):
                     # this: a rate someone measured is recorded as measured.
                     "tick_rate_hz": round(rate, 6) if rate else None,
                     "origin": "the device's first dispatched sample; tick k is sample k",
+                    # `clock_name` is left for the numbering to fill from `clock_id` (R95 §3.1);
+                    # what this counter is travels as a label, having no column of its own.
+                    "metadata": {"label": f"{name} dispatch counter"},
                     "parent_clock_id": self.clock.clock_id,
                 }
             )
