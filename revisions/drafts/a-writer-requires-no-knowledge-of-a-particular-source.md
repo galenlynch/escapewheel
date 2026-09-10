@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `05` §3 (a recipe declares a preference between two sources, and whether a source runs in process); `05` §3.4 (what an adapter declares); `07` §4 (what a build supplies an adapter, and the transports it accepts rows over); `09` §5.7 (an extension's rows cross the same boundary by the same transports) |
+| **Amends** | `05` §3 (a recipe declares a preference between two sources, and whether a source runs in process); `05` §3.4 (what an adapter declares); `07` §4 (what a build supplies an adapter, and the transports it accepts rows over); `05` §3.7 (what a build captures where a command's output carries rows); `09` §5.7 (an extension's rows cross the same boundary by the same transports) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole), R87 §2.2 (an adapter declares which recipe fields it states), R109 §3.1 (a writer requires no code of an extension), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -170,9 +170,27 @@ allocation: R109 §3.1 binds a writer to build from a document and rows, and des
 extension delivers without requiring it of the extension. An adapter is a class and cannot run
 itself out of process; whoever ships it can.
 
-**What matters is the process boundary; the transport is a choice.** A build **MUST** accept rows as
-**files the recipe names** and **SHOULD** accept them as an **Arrow IPC stream** read from the command
-it ran. A writer **MAY** offer another transport and **MUST NOT** require one.
+**What matters is the process boundary; the transport is a choice with a default.** A build **MUST**
+accept rows as an **Arrow IPC stream** on the command's standard output, and **MUST** accept them as
+**files the recipe names**. Absent a declaration the stream is what a build uses. A writer **MAY**
+offer another transport and **MUST NOT** require one.
+
+The stream is the default because it leaves nothing behind. A file is an artifact the build did not
+ask for and does not own: it outlives the build, goes stale against the source it came from, and is
+the shape three copies of one extraction already took in this project. A stream lasts as long as the
+build and is the batches the staging path already consumes, so the largest table costs no write and
+no read.
+
+A recipe declares files where persistence is the point — an extraction expensive enough to reuse
+across builds, or one whose output should still be there to inspect after a failure. That is not a
+lesser route: it is the one R109 §3.2 requires of an extension, and both packaged sessions use it
+today, re-reading a `tables/` directory across several rebuilds without running the extraction again.
+
+Where the stream is used, standard output carries rows and cannot also carry a diagnosis. **`05`
+§3.7 is amended to match**: a build **MUST** capture standard error and report it with a failure, and
+**MUST NOT** report standard output where the recipe put rows on it. R109 §3.4's reason survives
+intact, since the diagnosis a command prints was always the thing worth keeping and stderr is where
+a command that also emits data must print it.
 
 The same holds for an extension's rows, and R109 §3.2 is narrower than its own reason: it has an
 extension deliver Parquet and names a subprocess for converting a raw source, where the argument it
@@ -181,11 +199,10 @@ rather than by the file. An extension **MAY** therefore deliver over any transpo
 allows an adapter. Nothing R109 permitted is withdrawn: a file the recipe names remains the route
 every implementation must support, and the stream is added beside it.
 
-The stream matters where the file does not fit. A packet's largest table is `core.spike_events` at
-674.2 MB, and an intermediate file for it is a write and a read the build did not otherwise need,
-where a stream is the batches the staging path already consumes. Every other adapter produces under
-0.25 MB (§2.4), so the file route costs them nothing and the stream is what keeps the boundary
-usable for the one that matters.
+The default settles the case that would otherwise need an exception. `core.spike_events` is 674.2 MB
+and every other adapter produces under 0.25 MB (§2.4), so a file costs the small ones nothing and the
+large one a write and a read; defaulting to the stream means no adapter needs permission to avoid
+that, and a recipe that wants the file says so.
 
 ### 3.4 A recipe opts a source into the writer's process
 
@@ -243,7 +260,7 @@ a build can make.
 ## 5. Consequence
 
 `05` §3 gains a preference table and an in-process declaration, `05` §3.4 gains what an adapter
-declares, `07` §4 gains what a build supplies an adapter and the transports it accepts rows
+declares, `05` §3.7 gains what a build captures where rows are on standard output, `07` §4 gains what a build supplies an adapter and the transports it accepts rows
 over, `09` §5.7 gains that an extension may use them too, and `07` §4's sentence about a return type gains
 what it does not cover.
 
