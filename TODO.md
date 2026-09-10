@@ -111,6 +111,22 @@ renamed one fails a suite instead of a rebuild months later. Worth sizing before
 packet is this implementation proving it agrees with itself, which is a different claim and may want
 a different home.
 
+## 1a₂. The source cache defaults onto tmpfs
+
+**Found by the rebuild, twice.** `sources/store.py`'s `cache_directory()` returns
+`$TMPDIR/escapewheel-source-cache`, defaulting to `/tmp` — which on this machine is tmpfs, so every
+object fetched from an S3 asset is held in **RAM that a cgroup cap does not bound**. Two builds of
+`ecephys_786867` were killed for system memory pressure while capped at 24 GB and then 8 GB, because
+the cap never applied to the pages that mattered.
+
+The cache itself is right: `store.py` measures that an adapter reads `spikes.npy` twice and that the
+second read costs another 344 MB over the network. What is wrong is where it lands by default, and
+the honouring of `TMPDIR` is what makes the workaround one variable — `TMPDIR=/mnt/Data/tmp`.
+
+Worth deciding whether a default that is RAM on any machine with a tmpfs `/tmp` is the right one, or
+whether the cache should sit beside the packet as the materializer's scratch already does
+(`dir=packet.root.parent`). The two temp locations in one build already disagree.
+
 ## 1b. A code quality audit of the whole project
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
