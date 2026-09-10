@@ -123,6 +123,51 @@ sweep that repoints the 151 clauses onto it. Worth sizing first — the sweep is
 and some of those clauses will turn out to bind two roles at once, which is the finding rather than
 a complication.
 
+## 1₊₊₊. An extension copier template, and the instructions to go with it
+
+**Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
+it: the four here were written by hand, and `registry/extensions/README.md` covers *what to model* —
+what varies belongs on the row, a source's columns are evidence rather than a schema, deriving a
+document from a pydantic model — while saying nothing about how to build and deliver one.
+
+**The template.** Base it on `~/Documents/Code/aind-python-copier-template`, which already carries
+the shape: `_templates_suffix: .jinja`, `_subdirectory: template`, copier ≥ 9.0.0, and conditional
+`_exclude` blocks for docs, notebooks, a CLI and a `CLAUDE.md`.
+`~/Documents/Code/aind-capsule-copier-template` is the other one to read before choosing which to
+fork. What it should generate:
+
+- `registry/<namespace>.json`, a skeleton declaring one table with every attribute a column owes,
+  and a test running it against `registry/registry.schema.json`;
+- an `extract.py` matching the shape a recipe's `command` invokes — an argument list run in the
+  source root, writing Parquet to declared paths;
+- an optional self-validation step against the extension's own document (R109 §3.5) and an
+  optional run report (R109 §3.6);
+- a `[source]` block and an `[encoding]` block to paste into a recipe.
+
+**What the instructions must state**, because each is a rule an author will otherwise break:
+
+- The document is a registry document in `02`'s format, namespaced (R17 §2, `09` §5.2), and the
+  packet declares it in the catalog (`09` §5.3).
+- Every column declares a type, a presence and a role (R2 §5, R48 §2.1); a string column declares
+  its vocabulary (R101 §3.1); an identifier declares `carried` or `assigned` (R53 §2.3); a
+  session-scoped table carries `session_id` and declares the reference (R88 §2.1).
+- Rows arrive with identifiers as the **names** their source used, never numbers: the writer mints
+  those packet-wide (R53 §2.5).
+- The document **MUST NOT** be derived from the rows it delivers (R109 §3.2). Declare the **union**
+  of what the pipeline may emit, as `nullable` — `aind_unit_qc.waveform_metrics` declares 13
+  columns where the extraction delivers 10, and that difference is what says a run did not compute
+  `half_width` rather than that the extension lacks it.
+- The command **MUST** be a function of its inputs (R109 §3.7). Where it cannot be, deliver a file
+  produced beforehand instead.
+- An encoding exception goes in the recipe's `[encoding]`, never in the schema, because it is a
+  fact about one packet's values (R110 §3.4).
+
+**Best practices worth stating beside the rules.** Isolate dependencies however you like — the
+command is an argument list, so `uv run`, a pinned interpreter and a container are all just
+commands, and that freedom is what R109 §3.1 exists to protect. Print for a person on stdout and
+put anything a build should parse in the report file. Do not restate what the build already
+derives: rows per table come from the Parquet footer at `05` Stage 1.
+
 ## 1a. The packets' physical layout and encoding
 
 **Not started.** Several tables have changed shape substantially — R105's four coordinate tables at
