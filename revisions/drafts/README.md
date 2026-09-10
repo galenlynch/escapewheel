@@ -18,9 +18,9 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `a-description-states-what-the-column-declares` | corrects prose R101 §3.3 made wrong; touches no declaration, so it may land at any point after R101 |
+| 1 | `a-declaration-is-not-a-description` | rests on R101 §3.6 having made a nomenclature a field, which is the principle it applies to every field a description restates |
 
-**It moves no count in the generated block.** Six descriptions change and no declaration does.
-Every number in it is measured against the registry as it stood when it was drafted and is
-re-measured at acceptance, which the pre-acceptance checks in `../CLAUDE.md` require of every
-number anyway.
+**It moves no count in the generated block.** 45 descriptions change, `authority` changes shape on
+12 columns, and no table, column, reference, rule or vocabulary moves. Every number in it is
+measured against the registry as it stood when it was drafted and is re-measured at acceptance,
+which the pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
