@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | `09` §5 (adds the contract an extension is held to); `05` §3.4 (what a build may require of a source that is an extension, and what it owes when that source's command fails) |
-| **Depends on** | R17 §2 (an extension is a registry document in `02`'s format), R17 §4 (an extension's verdict is separate), R63 §2.1 (an adapter declares `PRODUCES`), R53 §2.5 (a writer mints every assigned identifier), R79 §2.2 (a packet obligation and an importer obligation are reported apart), R51 §2.2 (a record optional to produce and useful when present), R3 §3.0 (duplication must buy otherwise-unavailable access) |
+| **Depends on** | R17 §2 (an extension is a registry document in `02`'s format), R17 §4 (an extension's verdict is separate), R63 §2.1 (an adapter declares `PRODUCES`), R53 §2.5 (a writer mints every assigned identifier), R79 §2.2 (a packet obligation and an importer obligation are reported apart), R51 §2.2 (a record optional to produce and useful when present), R3 §3.0 (duplication must buy otherwise-unavailable access), R75 §2.1 (logical determinism is normative), R75 §2.2 (byte determinism is a build property), R2 §5 (three presence states) |
 | **Profile** | all |
 
 Normative, except §2, which is informative.
@@ -211,6 +211,28 @@ Optional to produce and useful when present is R51 §2.2's shape for `store_dige
 same reason. Every artifact an extension must produce before its tables are accepted is a reason
 not to write an extension, and `09` §5.1's "needs no code" exists to keep that gradient flat.
 
+### 3.7 An extension's command is a function of its inputs
+
+An extension's command **MUST** produce the same rows from the same inputs, and **MUST NOT** let
+wall-clock time, an unfixed random seed, or iteration over an unordered collection reach a value it
+writes. R75 §2.1 binds a build to produce the same canonical rows, values and assigned identifiers
+for one recipe over the same source bytes, and a build that runs a command has made what the command
+wrote part of what it produced.
+
+Which program the command resolves to is the recipe author's, and R75 §2.2 already places it: pinning
+library versions so two runs agree byte for byte is a build property, and a packet **MUST NOT** be
+judged non-conforming for lacking one. So the split follows R75's own two clauses — an extension
+whose command is a function of its inputs satisfies §2.1 in whatever environment runs it, and an
+environment that resolves differently between runs is §2.2's concern rather than this document's.
+
+An extension that cannot be a function of its inputs — one querying a service whose answer moves —
+delivers a **file** produced beforehand rather than a command the build runs, which is what the
+`tables` source already accepts and what makes the moving answer a source byte the recipe names.
+
+Nothing checks this: running a command twice to compare it doubles a build. It binds a named actor
+to a determinable behaviour, which is R67 §2.4's shape and the reason an unenforceable requirement
+is still worth stating.
+
 ## 4. What this does not change
 
 - **An extension is still a registry document.** R17 §2 is untouched; this part says how the
@@ -229,19 +251,9 @@ after running a command, resolves an extension registry from a path or an instal
 and requires neither — and owes three things. It names the missing resource rather than the source
 when a command fails (§3.3); it keeps nothing of what a command wrote (§3.4); and it reads no report
 (§3.6). The first two are changes to one adapter. The third is a recipe field and a reader for it,
-and neither packaged recipe would set it until an extension writes one.
+and neither packaged recipe would set it until an extension writes one. §3.7 costs nothing: both
+packaged commands read a fixed file and write a fixed table.
 
 No packet changes, because §2.2 measures that every extension table already arrives across the
 boundary. What §3.1 buys is that it must keep doing so, and what §2.4 measures is what crossing it
 costs to debug meanwhile: one note in sixty-seven for six of the packet's forty tables.
-
-## 6. Open
-
-- **What an extension may assume about a rebuild.** R75 §2.1 requires two builds of one recipe over
-  the same source bytes to produce the same rows and the same assigned identifiers, and a command is
-  an argument list a build does not otherwise constrain — so an extension whose command is not
-  deterministic breaks that guarantee without breaking any clause here. Whether determinism is an
-  extension's obligation or a recipe author's is unsettled, and neither packaged session exercises
-  it: both commands read a fixed file and write a fixed table. §3.6's report is where an extension
-  would record the inputs that make the question answerable, which is an argument for the field it
-  is not an argument for requiring one.

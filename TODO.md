@@ -99,7 +99,10 @@ recipes at **6 tables across 2 extensions** behind one `command`, and §6 cites 
 its parent. The command contract that was queued separately is folded in — §2.4 measures what a
 command tells a build today, §3.4 binds a build to keep the streams it currently discards, and §3.6
 makes a report of the run optional to produce and useful when present, with a shape small enough
-that the build's obligation to report one can be met.
+that the build's obligation to report one can be met. §3.7 closes the last open question by
+splitting determinism the way R75 already does: an extension's command must be a function of its
+inputs (§2.1), and pinning the environment that runs it is a build property no packet is judged on
+(§2.2). The draft now carries no `Open` section.
 
 **`an-encoding-follows-a-rule-and-its-exceptions` — reframed, not yet appraised.** Its §6 defers to
 the contract, so once that lands, §6 wants re-reading and probably striking. §2.3 now measures the
