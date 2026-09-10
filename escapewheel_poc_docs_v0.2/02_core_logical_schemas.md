@@ -78,7 +78,7 @@ A value that varies per row and is queried belongs in a typed column of a specia
 
 ### 5.3 Fixed representations
 
-A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. A conversion whose result would fall outside the declared type MUST fail before the value is written, naming the column and the value (R76 §2.1). A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
+A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. Where a conversion's result would fall outside the declared type, it MUST fail before the value is written, naming the column and the value (R76 §2.1). A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
 
 Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC. Identifier columns MUST be `int32` (R53 §2.1), except where the number of distinct values may exceed `int32`, where the column MUST be `int64` (R53 §2.4). No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
 
@@ -159,7 +159,7 @@ specialises, or on a table those rows reach through one declared reference. Wher
 specialised table it MUST declare `discriminates_via`, holding the referencing column as a dotted
 `resource.column`; one reference and no more (R90 §3.2).
 
-A column carrying a discriminator's value as part of a shared key is **not** a discriminator and
+Where a column carries a discriminator's value as part of a shared key, it is **not** a discriminator and
 MUST NOT declare the role: it resolves nothing a consumer of that row does not already know. Such a
 column is `data`, and a reference relating it to the discriminator it copies is the one role
 mismatch a reference may carry (R90 §3.3).
@@ -501,7 +501,7 @@ of measure from the calibration, since the unit varies per calibration and so ca
 on either column (R89 §2.3). Content that is an array rather than a curve names the array asset
 holding it (R89 §2.4).
 
-A row with no points, no array asset and no detail kind records that the calibration was in force
+Where a row has no points, no array asset and no detail kind, it records that the calibration was in force
 and that the packet holds nothing further, which a consumer MUST read as **unrecorded** rather than
 as absent (R89 §2.5). A source stating that no calibration was performed gets no row at all.
 

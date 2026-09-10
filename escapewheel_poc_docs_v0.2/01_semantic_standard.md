@@ -31,7 +31,7 @@ Every event, interval, spike time, dense time axis, and media frame timing recor
 
 Floating-point seconds MUST NOT be the canonical representation. Seconds MAY be derived, and are defined from the session's time origin (R39 §2.1). A consumer lacking that origin MUST refuse to derive seconds rather than assume one.
 
-A writer that cannot map one of its clocks' observation starts onto the reference MUST NOT declare a time origin (R39 §2.4). An origin it could not compute shifts every second a consumer derives.
+Where a writer cannot map one of its clocks' observation starts onto the reference, it MUST NOT declare a time origin (R39 §2.4). An origin it could not compute shifts every second a consumer derives.
 
 A tick is a coordinate, not a label and not a quantity (R45 §3). A writer MUST NOT re-base a source's sample index: for a sample clock, tick 0 is sample 0.
 
@@ -112,7 +112,7 @@ A device is the **physical object**. Where a source presents several recording e
 
 Both versions are recorded **verbatim** as the source stated them, and MUST NOT be normalised, padded, or parsed into components. Neither is ordered: a consumer MAY compare two version strings for equality and MUST NOT compare them for precedence, because different manufacturers' schemes share none.
 
-Each element of an acquisition chain that reports its own versions is its own device. A value the source gives as unknown is recorded as the source gave it, which is distinct from a source that said nothing.
+Where an element of an acquisition chain reports its own versions, it is its own device. A value the source gives as unknown is recorded as the source gave it, which is distinct from a source that said nothing.
 
 This standard names no kinds of device, so a writer MUST record every instrument its source declares — a camera on the same terms as a headstage — and identity is the serial the source states (R67 §2.2, R102 §3.3). What a device row does not carry is where an instrument was pointed: a camera's target is a fact about the instrument that `core.devices` has no column for, and it stays in `metadata` (R97 §3.3) until something has to read it.
 
@@ -152,7 +152,7 @@ A coordinate MAY carry an atlas annotation: the structure the position falls in,
 
 Where the identifier is present the label SHOULD be too, so a consumer without the atlas can still read the annotation. A structure's full name and its ancestry path MUST NOT be carried as columns: both are derivable from the identifier, and an ancestry path is a list, which Part 02 §5.2 forbids in a delimited string.
 
-A validator MUST NOT treat an absent annotation as a finding. A position outside any declared structure, or one no registration covered, is a fact about the session.
+A validator MUST NOT treat an absent annotation as a finding. Where a position falls outside any declared structure, or no registration covered it, the packet records a fact about the session.
 
 A coordinate SHOULD name the processing run that produced it where the writer knows it (R60 §2). That is provenance — which run produced the row that is there — and not a choice between rows.
 

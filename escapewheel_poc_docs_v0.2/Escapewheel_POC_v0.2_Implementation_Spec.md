@@ -360,7 +360,7 @@ Every event, interval, spike time, dense time axis, and media frame timing recor
 
 Floating-point seconds MUST NOT be the canonical representation. Seconds MAY be derived, and are defined from the session's time origin (R39 §2.1). A consumer lacking that origin MUST refuse to derive seconds rather than assume one.
 
-A writer that cannot map one of its clocks' observation starts onto the reference MUST NOT declare a time origin (R39 §2.4). An origin it could not compute shifts every second a consumer derives.
+Where a writer cannot map one of its clocks' observation starts onto the reference, it MUST NOT declare a time origin (R39 §2.4). An origin it could not compute shifts every second a consumer derives.
 
 A tick is a coordinate, not a label and not a quantity (R45 §3). A writer MUST NOT re-base a source's sample index: for a sample clock, tick 0 is sample 0.
 
@@ -441,7 +441,7 @@ A device is the **physical object**. Where a source presents several recording e
 
 Both versions are recorded **verbatim** as the source stated them, and MUST NOT be normalised, padded, or parsed into components. Neither is ordered: a consumer MAY compare two version strings for equality and MUST NOT compare them for precedence, because different manufacturers' schemes share none.
 
-Each element of an acquisition chain that reports its own versions is its own device. A value the source gives as unknown is recorded as the source gave it, which is distinct from a source that said nothing.
+Where an element of an acquisition chain reports its own versions, it is its own device. A value the source gives as unknown is recorded as the source gave it, which is distinct from a source that said nothing.
 
 This standard names no kinds of device, so a writer MUST record every instrument its source declares — a camera on the same terms as a headstage — and identity is the serial the source states (R67 §2.2, R102 §3.3). What a device row does not carry is where an instrument was pointed: a camera's target is a fact about the instrument that `core.devices` has no column for, and it stays in `metadata` (R97 §3.3) until something has to read it.
 
@@ -481,7 +481,7 @@ A coordinate MAY carry an atlas annotation: the structure the position falls in,
 
 Where the identifier is present the label SHOULD be too, so a consumer without the atlas can still read the annotation. A structure's full name and its ancestry path MUST NOT be carried as columns: both are derivable from the identifier, and an ancestry path is a list, which Part 02 §5.2 forbids in a delimited string.
 
-A validator MUST NOT treat an absent annotation as a finding. A position outside any declared structure, or one no registration covered, is a fact about the session.
+A validator MUST NOT treat an absent annotation as a finding. Where a position falls outside any declared structure, or no registration covered it, the packet records a fact about the session.
 
 A coordinate SHOULD name the processing run that produced it where the writer knows it (R60 §2). That is provenance — which run produced the row that is there — and not a choice between rows.
 
@@ -752,7 +752,7 @@ A value that varies per row and is queried belongs in a typed column of a specia
 
 ### 5.3 Fixed representations
 
-A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. A conversion whose result would fall outside the declared type MUST fail before the value is written, naming the column and the value (R76 §2.1). A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
+A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. Where a conversion's result would fall outside the declared type, it MUST fail before the value is written, naming the column and the value (R76 §2.1). A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
 
 Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC. Identifier columns MUST be `int32` (R53 §2.1), except where the number of distinct values may exceed `int32`, where the column MUST be `int64` (R53 §2.4). No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
 
@@ -833,7 +833,7 @@ specialises, or on a table those rows reach through one declared reference. Wher
 specialised table it MUST declare `discriminates_via`, holding the referencing column as a dotted
 `resource.column`; one reference and no more (R90 §3.2).
 
-A column carrying a discriminator's value as part of a shared key is **not** a discriminator and
+Where a column carries a discriminator's value as part of a shared key, it is **not** a discriminator and
 MUST NOT declare the role: it resolves nothing a consumer of that row does not already know. Such a
 column is `data`, and a reference relating it to the discriminator it copies is the one role
 mismatch a reference may carry (R90 §3.3).
@@ -1175,7 +1175,7 @@ of measure from the calibration, since the unit varies per calibration and so ca
 on either column (R89 §2.3). Content that is an array rather than a curve names the array asset
 holding it (R89 §2.4).
 
-A row with no points, no array asset and no detail kind records that the calibration was in force
+Where a row has no points, no array asset and no detail kind, it records that the calibration was in force
 and that the packet holds nothing further, which a consumer MUST read as **unrecorded** rather than
 as absent (R89 §2.5). A source stating that no calibration was performed gets no row at all.
 
@@ -1615,7 +1615,7 @@ A member array is a record, not a resolution rule: a reader hands the prefix to 
 
 Where `members` accompanies R36 §2.2's `sha256`, the listing digested MUST be the declared one, so the enumeration and the digest cannot disagree (R51 §2.1).
 
-A validator asked to verify content **without reading** compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading (R51 §2.3). A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped.
+Where a validator is asked to verify content **without reading**, it compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading (R51 §2.3). A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped.
 
 A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A verification pass MUST report what it skipped for these reasons, and a store-digest pass **MUST NOT** be reported as a checksum verification (R51 §2.4): it establishes something weaker and store-specific, so it gets its own finding.
 
@@ -1642,7 +1642,7 @@ which mirrors a reader can reach is a property of the reader. Structural validat
 require a resolution document.
 
 Resolving through a different document MUST NOT be read as invalidating a recorded `sha256`,
-`size_bytes` or `members`. A reader that verifies a resolved source and finds a mismatch MUST
+`size_bytes` or `members`. Where a reader verifies a resolved source and finds a mismatch, it MUST
 report it against the resource entry, and MUST NOT silently prefer either the recorded digest or
 the bytes it found.
 
@@ -1762,7 +1762,7 @@ Where two sources default to the same resource and no preference is declared, th
 
 A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them (R98 §3.3). That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. R63 §2.3's warning covers the neighbouring case, a resource *no* source claims, reported before a byte is read.
 
-A build MUST refuse where a preference discards a value another source stated: where a passed-over source's row holds a non-null value in a column the preferred source's row leaves null, or does not produce at all (R108 §3.1). A preferred source that produces no rows for the resource while another does is that rule's limiting case. The comparison is over declared columns and not over `metadata`, which §8 of Part 02 makes schemaless by design, so two sources filling it differently is not a difference a build can weigh. That refusal is what makes the exemption above sound: the exemption rests on the loser's copy being redundant, and a preference is declared before either source is opened.
+A build MUST refuse where a preference discards a value another source stated: where a passed-over source's row holds a non-null value in a column the preferred source's row leaves null, or does not produce at all (R108 §3.1). Where a preferred source produces no rows for the resource and another does, that is the rule's limiting case. The comparison is over declared columns and not over `metadata`, which §8 of Part 02 makes schemaless by design, so two sources filling it differently is not a difference a build can weigh. That refusal is what makes the exemption above sound: the exemption rests on the loser's copy being redundant, and a preference is declared before either source is opened.
 
 A build MUST NOT compose a row from more than one source (R108 §3.2). The merged row would be a fact no source stated. A recipe resolves the refusal by naming the fact in `[overrides]` with its reason (R87 §2.5), by preferring the other source, or by correcting the source that states less.
 
@@ -1794,7 +1794,7 @@ Two values are compared at the type the packet will store, both normalized to it
 
 A recipe MAY declare that its own value supersedes the source's, by naming the field in a top-level `[overrides]` table keyed `block.field`. The value MUST be a non-empty reason. Declaring an override is never required: it records a decision and silences the report, and a recipe declaring none is conforming. A build MUST report an override for a field the source agrees with, or that no source states, and MUST NOT refuse on either (R87 §2.5).
 
-The comparison needs the source read, so it happens as each source is built and MUST refuse before any resource is staged (R87 §2.6). A source's statement of a fact is whatever its adapter exposes for that fact; which of several values inside a file it stands behind is the adapter's judgement and not the recipe's.
+The comparison needs the source read, so it happens as each source is built, and a build MUST refuse before any resource is staged (R87 §2.6). A source's statement of a fact is whatever its adapter exposes for that fact; which of several values inside a file it stands behind is the adapter's judgement and not the recipe's.
 
 A fact the source **derives** is the source's. `core.sessions.session_start_time` and `session_end_time` come from the session source's declared stream windows, and a writer MUST use the source's value where a session source is present and MUST report a declaration it did not use rather than discarding it silently (R87 §2.7).
 
@@ -2000,7 +2000,7 @@ A row group lies inside one time bucket, so a window filter prunes at the row-gr
 
 **Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted rather than given an extrapolated value (R30 §4), so this table MAY hold fewer rows than core's. The count omitted MUST be recorded in the producing run's parameters, even when it is zero (R40 §2.3): a derived table one row short otherwise looks exactly like a complete one.
 
-**A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. A writer that finds two spikes of one unit landing on one reference tick MUST NOT materialize the table, and MUST record the reason in the producing run's parameters as R40 §2.3 requires of an omitted row (R92 §2.4). A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
+**A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and MUST record the reason in the producing run's parameters as R40 §2.3 requires of an omitted row (R92 §2.4). A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
 
 Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
 
