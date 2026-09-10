@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -197,7 +197,8 @@ class _Buckets:
     concatenate the files in bucket order, which is a second pass and no comparisons.
     """
 
-    def __init__(self, root: Path, out: pa.Schema, budget: int = 0) -> None:
+    def __init__(self, root: Path, out: pa.Schema, budget: int = 0,
+                 spec: Mapping[str, Any] | None = None) -> None:
         from .writer import _delta_columns
 
         self._root = root
@@ -206,7 +207,9 @@ class _Buckets:
         # but a tick column left to pyarrow's default overflows the dictionary page and falls
         # back to PLAIN mid-column, paying for both: 1,195 MB and 77.4 s against 500 MB and
         # 60.9 s, at no cost in memory.
-        delta = _delta_columns(RESOURCE, out)
+        # No sample: the spill is opened before its first batch exists, so the naming convention
+        # stands in. Its bytes have no reader, and the finished table is measured properly.
+        delta = _delta_columns(RESOURCE, spec or {}, out)
         self._options: dict[str, Any] = {"compression": "zstd"}
         if delta:
             self._options["use_dictionary"] = [n for n in out.names if n not in delta]
@@ -353,7 +356,7 @@ def spike_events(
                        {*columns, "clock_id", "time_bucket_tick"})
 
     root = Path(scratch) if scratch else Path(tempfile.mkdtemp(prefix=".materialize-", dir=packet.root.parent))
-    buckets = _Buckets(root, out, _bytes(memory_budget))
+    buckets = _Buckets(root, out, _bytes(memory_budget), registry["tables"][RESOURCE])
     try:
         reader = pq.ParquetFile(handle.path)
         carry: tuple[int, int] | None = None

@@ -97,25 +97,76 @@ DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     # costs 0.01. `pts` is the same shape once R68 §2.1 makes it an integer -- a frame timeline
     # advancing by a constant step -- and takes the column from 1.50 B/row to 0.006.
     "core.media_frames": ("frame_index", "pts"),
+    # Ascending without being a key column: a run lists its channels in the order it kept them
+    # (R83 §2.1) and a channel map lists its contacts, so both climb through the contact numbers
+    # with gaps. Measured 11.1x and 7.4x over the dictionary they would otherwise get.
+    "core.sorting_run_channels": ("electrode_id", "channel_index"),
+    "core.array_channels": ("electrode_id",),
+    # An interval's identifier is not in its key -- R47 §2 keys on where it starts and R54 §2.1
+    # on its kind -- so the leading-identifier rule cannot see it, and it still ascends. 5.6x.
+    "core.intervals": ("interval_id",),
+}
+
+#: Columns the two rules catch and should not: an exception in the other direction, declared with
+#: its reason for the same purpose. `registry/check.py` refuses an entry naming no such column.
+NOT_DELTA: dict[str, tuple[str, ...]] = {
+    # Summaries, not coordinates on a timeline: one row per unit in `unit_id` order, so the ticks
+    # arrive unordered and delta encodes noise. Measured 1.3x worse than the plain the dictionary
+    # falls back to, which is the `_tick` rule being a good guess and no more.
+    "core.units": ("first_spike_tick", "last_spike_tick"),
 }
 
 
-def _delta_columns(resource_id: str, out: pa.Schema) -> list[str]:
+def _leading_identifier(spec: Mapping[str, Any], keys: list[str]) -> str | None:
+    """Return the key column whose values ascend across the whole table, if one does.
+
+    A table is sorted by its key (R10 §2), so the first key column ascends and every later one
+    only ascends *within* the group above it. `session_id` is skipped because a packet holds one
+    session (R1), which makes it constant rather than ascending -- RLE already stores it in
+    0.03 bits/row.
+    """
+    roles = {c["name"]: c.get("role") for c in spec.get("columns", ())}
+    for name in keys:
+        if name == "session_id":
+            continue
+        return name if roles.get(name) == "identifier" else None
+    return None
+
+
+def _delta_columns(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> list[str]:
     """Integer columns to store as `DELTA_BINARY_PACKED`, which pyarrow never picks itself.
 
-    Every `*_tick` column qualifies by the naming convention alone: a tick is a large integer
-    on a monotonic clock, so its residuals bit-pack far smaller than the eight bytes PLAIN
-    spends, and a high-cardinality tick overflows the dictionary page and falls back to PLAIN
-    anyway. Measured over a real session, delta takes `core.clock_anchors.t_tick` from 268.8 KB
-    to 5.2 KB and `core.spike_events.t_tick` from 660.9 MB to 462.1 MB, and it is no worse than
-    the default on the one tick column that is unordered (`core.units.first_spike_tick`, 0.77x).
+    Two rules and a list of exceptions, in the shape `check.py` uses for naming: an exception is
+    declared with a reason and checked to still be needed, so the list cannot go stale.
 
-    The rule is monotonicity, not integer-ness, which is why it is not simply "every integer
-    column". `core.unit_electrodes.channel_index` cycles 0..25 once per unit, and RLE over a
-    26-entry dictionary beats delta there by 1.38x.
+    **A `*_tick` column.** A tick is a large integer on a monotonic clock, so its residuals
+    bit-pack far smaller than the eight bytes PLAIN spends, and a high-cardinality tick overflows
+    the dictionary page and falls back to PLAIN anyway. Measured over a real session, delta takes
+    `core.clock_anchors.t_tick` from 268.8 KB to 5.2 KB and `core.spike_events.t_tick` from
+    660.9 MB to 462.1 MB.
+
+    **The leading identifier of the key.** R10 §2 sorts a table by its key, so that column ascends
+    across the whole table where every later key column only ascends within the group above it.
+    Measured across both packets: `core.units.unit_id` **57x**, `core.unit_coordinates.unit_id`
+    **53x**, `core.electrode_coordinates.electrode_id` **48x**, and
+    `core.unit_coordinate_values.unit_id` **75x**, every one of them dictionary-encoded before.
+
+    Neither rule is monotonicity itself, which is what delta actually exploits and which nothing
+    declares. `DELTA_COLUMNS` carries the columns the rules miss and `NOT_DELTA` the ones they
+    wrongly catch; both were measured, not guessed, and `registry/check.py` refuses an entry that
+    names no such column.
     """
+    keys = sort_key(resource_id, spec) or list(spec.get("primary_key") or [])
+    leading = _leading_identifier(spec, keys)
     named = set(DELTA_COLUMNS.get(resource_id, ()))
-    return [f.name for f in out if (f.name.endswith("_tick") or f.name in named) and pa.types.is_integer(f.type)]
+    barred = set(NOT_DELTA.get(resource_id, ()))
+    return [
+        f.name
+        for f in out
+        if pa.types.is_integer(f.type)
+        and f.name not in barred
+        and (f.name.endswith("_tick") or f.name == leading or f.name in named)
+    ]
 
 
 def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> dict[str, Any]:
@@ -145,7 +196,7 @@ def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> dict[
     # not declare. Withhold it, and the file reads back as the registry says.
     if any(pa.types.is_dictionary(field.type) for field in out):
         options["store_schema"] = False
-    if delta := _delta_columns(resource_id, out):
+    if delta := _delta_columns(resource_id, spec, out):
         options["use_dictionary"] = [n for n in out.names if n not in delta]
         options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
     keys = sort_key(resource_id, spec) or []
