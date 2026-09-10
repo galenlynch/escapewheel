@@ -47,31 +47,45 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. Rebuilding both packets
+## 1. Both packets are rebuilt, and not yet swapped in
 
-**The goal.** Twenty-one accepted revisions since the last build have made both committed packets
-stale, and neither can be read as evidence for anything until they are rebuilt. What was blocking
-it is cleared:
+Each sits in `packet-rebuilt/` beside the original, which is untouched. Committed with **0 errors
+and 0 warnings**: `ecephys_776259` in 467 s with 286,896,563 spikes, `ecephys_786867` in 296 s with
+7,570,450 media frames. Replacing the originals is a separate decision, governed by R32's amendment
+discipline and `escapewheel prune`.
 
-- **`extract.py` decodes `animal_response`** in both packet directories (R106 §3.1). The staged
-  `trials.parquet` held `int64` where the registry now declares a string closed to `left`, `right`
-  and `no_response`, so a build was refused on the column's type before a rule ran.
-- **Both recipes declare `core.clock_observation_intervals` as `contributes`** rather than `owns`,
-  which is what kept twelve clocks of thirteen from having a window (R98 §3.2), and the sync source
-  now owns `core.clock_phase_steps` (R99 §3.3), which they had narrowed away.
-- **The session source owns `core.subjects`**, so `subject.json`'s `Mus musculus` reaches the
-  packet. `recipe.PREFERRED` names it, which R98 §3.2 requires of a contested resource and R108
-  §3.1 makes safe: preferring it now refuses a build that loses a fact the NWB stated.
-- **Both recipes claim R105's four coordinate tables and R89's three calibration tables**, which
-  `escapewheel import --check` refused them for: a coordinate referencing a frame no source owns is
-  a dangling required key.
-- **`[subject] sex` reads `male`**, not `Male`. R101 §3.9 closed the vocabulary, so the old value
-  would have failed Tier 1 wherever the recipe supplied the table.
+What the rebuild corrected, measured on the committed bytes rather than predicted:
 
-Both recipes now check **sound**. What the rebuild is expected to correct, measured on the committed
-bytes: `core.subjects.subject_name` reads `786867` in **both** packets, which is R87's defect;
-`sex` reads `Male`, outside R101 §3.9's closed set; and `species` and `strain` are null where
-`subject.json` states a species.
+| | before | after |
+|---|---|---|
+| `core.subjects.subject_name` | `786867` in **both** packets (R87 §1) | `776259` and `786867` |
+| `species` | null | `Mus musculus`, from `subject.json` |
+| `sex` | `Male`, outside R101 §3.9's closed set | `male` |
+| clock windows | 1 of 13, and 1 of 11 (R98 §2.1) | 13 of 13, 11 of 11 |
+| `animal_response` | `0`, `1`, `2` with the key elsewhere | left/right/no_response, R106 §5's counts exactly |
+| coordinate frames | — | `ccf` and `probe`, five axes named as R105 §5 said |
+| calibrations | — | 3 from `rig.json`, R89's first real rows |
+
+**R68's prediction is confirmed against real data.** `core.media_frames` is **0.43 MB** against the
+**0.40 MB** R68 §5 predicted, down from 11.73 MB, with `pts` at **0.04 bits/row** on
+`DELTA_BINARY_PACKED`. The 0.03 MB over is R88's `session_id`, which R68 predates.
+
+## 1a₀. Five writer bugs, all one shape
+
+Every blocker the rebuild hit was an accepted revision implemented on **one code path and not the
+other**, and no packet had been built since to notice:
+
+| revision | what drifted |
+|---|---|
+| R95 §3.1 | `Clock.record` wrote a human label into `clock_name`, so no recipe spelling resolved |
+| R96 §3.4 | the materializer read `spike_events.clock_id` after it was struck |
+| R88 §2.3 | the central `session_id` fill read the session out of a table staged last |
+| R98 §3.1 | the sorter never claimed the twelve clock windows only it knows |
+| R88 §2.3 | `add_batches` never applied the fill at all, so a streamed table had nulls |
+
+Two of the five are `add()` against `add_batches()`. The records path and the streaming path have
+drifted apart and nothing compares them, which is a sharper statement of §1b than could be written
+before: the pair is where a rule gets implemented once and forgotten once.
 
 ## 1a. The packets' physical layout and encoding
 
