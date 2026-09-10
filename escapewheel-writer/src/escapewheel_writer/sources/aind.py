@@ -394,9 +394,10 @@ class SessionSource(Compensates):
     def _subject(self) -> dict[str, Any]:
         """The `subject.json` beside this `session.json`, or an empty document where there is none.
 
-        Absent is not a defect, and one of the two packaged sessions has none: `ecephys_786867`
-        carries the document and `ecephys_776259` does not, so a species is read for one animal
-        and stays null for the other.
+        Absent is not a defect: the document is a separate file an asset may not carry, as
+        `rig.json` is. Both packaged sessions' sorted assets carry one and each states
+        `Mus musculus`; a partial copy of an asset may hold the session document without it,
+        which is a fact about the copy and not about the source.
         """
         if self._subject_document is None:
             path = self.path.parent / SUBJECT_JSON
@@ -435,7 +436,7 @@ class SessionSource(Compensates):
         """`core.subjects` from `subject.json`, which states what the NWB does not.
 
         `general/subject` carries no species in either packaged session and this document carries
-        `Mus musculus` with the registry that spells it. Nothing translates: the value already is
+        `Mus musculus` with the registry that spells it, in both. Nothing translates: the value is
         the NCBI Taxonomy name `core.subjects.species` asks for, and a writer that guessed one from
         a common name would be inventing a fact (R101 §3.4).
 
