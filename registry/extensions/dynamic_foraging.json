@@ -1,6 +1,6 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "logical_standard_version": "0.1",
   "extension_id": "dynamic_foraging",
   "extends": "escapewheel-logical-v0.1",
@@ -42,10 +42,17 @@
         },
         {
           "name": "animal_response",
-          "type": "int32",
+          "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The response the task recorded. The source emits 0, 1 and 2 as a float; what each means is the task's and is not restated here."
+          "description": "Which way the animal responded. The source emits 0, 1 and 2; the writer decodes them, because a code whose key is not in the packet leaves no rule, query or reader able to tell one response from another (R106 \u00a73.1).",
+          "vocabulary": "closed",
+          "enum": [
+            "left",
+            "no_response",
+            "right"
+          ],
+          "since": "R106 \u00a73.2"
         },
         {
           "name": "rewarded_history_left",

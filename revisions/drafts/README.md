@@ -18,13 +18,9 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `a-coded-value-is-stored-decoded` | rests on R101 §3.1 having forbidden a vocabulary on an integer, which is what left the column unable to say what its codes mean |
-| 2 | `a-description-states-what-the-column-declares` | corrects prose R101 §3.3 made wrong; touches no declaration, so it may land at any point after R101 |
+| 1 | `a-description-states-what-the-column-declares` | corrects prose R101 §3.3 made wrong; touches no declaration, so it may land at any point after R101 |
 
-The two are independent of each other; the numbering above is the order they would be applied
-in, not a dependency between them.
-
-**Neither moves the registry's counts.** #1 changes one extension column's type and #2 changes six
-descriptions, so the order between them is free. Every number in each is measured against the
-registry as it stood when it was drafted and is re-measured at acceptance, which the pre-acceptance
-checks in `../CLAUDE.md` require of every number anyway.
+**It moves no count in the generated block.** Six descriptions change and no declaration does.
+Every number in it is measured against the registry as it stood when it was drafted and is
+re-measured at acceptance, which the pre-acceptance checks in `../CLAUDE.md` require of every
+number anyway.

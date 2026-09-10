@@ -266,9 +266,11 @@ def content() -> dict[str, list[dict]]:
              "start_tick": 6000, "stop_tick": 10000, "clock_id": "behavior_s001"}],
         KIND: [
             {"session_id": "s001", "interval_kind": KIND, "trial_id": 1,
-             "animal_response": 0, "rewarded_history_left": True, "rewarded_history_right": False},
+             "animal_response": "left", "rewarded_history_left": True,
+             "rewarded_history_right": False},
             {"session_id": "s001", "interval_kind": KIND, "trial_id": 2,
-             "animal_response": 1, "rewarded_history_left": False, "rewarded_history_right": False}],
+             "animal_response": "right", "rewarded_history_left": False,
+             "rewarded_history_right": False}],
         # Three streams: one hardware-detected, one with a processing run behind it, and
         # one emitting two event types -- which is why R23 4.1 keeps event_type on the row.
         # R91 §3.1: a stream emits one kind of event, so the trigger's onset and offset are two.

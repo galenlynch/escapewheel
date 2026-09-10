@@ -225,8 +225,8 @@ the ones a tool can settle are cheaper than the ones only a reader can.
 
   **Is it true?** The first two tests ask whether a denial is wanted, never whether the document
   supports it. Read each bullet against the Decision's clauses and not only against the Motivation
-  that invited it — `a-coded-value-is-stored-decoded` said "core is untouched" while its §3.1 laid
-  down a rule binding every column in the registry. Such a bullet looks sound in isolation, so the
+  that invited it — R106 said "no core column changes" while its §3.1 laid down a rule binding
+  every column in the registry, and the bullet was struck at acceptance. Such a bullet looks sound in isolation, so the
   check starts from the rule and asks which denials it falsifies, not from the bullet.
 
   Measured over the accepted revisions: **299 bullets across 75**, a mean of 4, and the recent ones

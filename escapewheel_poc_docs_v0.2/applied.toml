@@ -2149,3 +2149,28 @@ note = "axis_name is whatever the source called the field, verbatim (R22 §3), s
 disposition = "applied"
 where = "01_semantic_standard.md §3.24"
 note = "a consumer needing an axis's direction where none is declared reports the coordinate unusable rather than assuming a convention, which is R83 §3's rule for a run declaring no channels"
+
+[clause."R106 §2.1"]
+disposition = "rationale"
+where = "R106 §2.1"
+note = "of 351 core and 161 extension columns, animal_response is the only one whose values are codes for something the packet does not name; core.array_dimensions.step_tick_den is a denominator and aind_unit_qc.synchrony.synchrony_size a count of units"
+
+[clause."R106 §2.2"]
+disposition = "rationale"
+where = "R106 §2.2"
+note = "counting licks between go_cue_start_tick and reward_outcome_tick, no trial of the 1,158 contradicts the reading: no 0 trial has a right lick and no left, no 1 trial the reverse, and all 249 of the 2 trials are silent"
+
+[clause."R106 §2.3"]
+disposition = "rationale"
+where = "R106 §2.3"
+note = "the column declared vocabulary open on an int32, the one place in the registry that did, struck at R101's acceptance because an integer's values are not a vocabulary this format can describe"
+
+[clause."R106 §3.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §8.7"
+note = "a writer that can decode MUST store the decoded value; one that cannot stores the token verbatim in a string column declaring an open vocabulary, an integer being unable to declare a vocabulary at all (§9.3). No rule checks either half, nothing structural telling a code from a count"
+
+[clause."R106 §3.2"]
+disposition = "registry"
+where = "dynamic_foraging.trials.animal_response"
+note = "int32 becomes string with vocabulary closed over left/right/no_response, staying nullable and role data; closed on R8 §3's test since a two-spout task admits no fourth outcome, taking Tier 1's closed-vocabulary checks from 4 to 5, and a null is not a no_response. No adapter here writes the table -- a TablesSource reads a Parquet file each session's extract.py produces -- so the type change is what refuses a packet whose codes were never decoded"

@@ -257,6 +257,16 @@ No rule checks either half and none is added. The content is schemaless by desig
 
 A writer SHOULD put prose in a prose column where the table has one, and not in `metadata`. A human-readable string has no structure to preserve, so a JSON envelope costs a serialisation, puts the value where no rule reads it and no filter uses it, and buys none of the otherwise-unavailable access the exception above requires.
 
+### 8.7 Coded values
+
+A writer that can decode a source's code MUST store the decoded value, declaring the vocabulary it decodes onto as §9.3 requires of any other (R106 §3.1). A code is a token standing for something the emitting system names elsewhere, and a packet holding one without the key leaves no rule, query or reader able to tell one value from another.
+
+A writer that cannot decode one stores the code itself, verbatim, in a `string` column declaring an open vocabulary, whose description names where the key lives. An undecoded code is a label carrying no contract, and an open vocabulary is how this standard declares one (`01` §3.17); an integer column declares nothing of the sort, since §9.3 permits a vocabulary on no other type and a code stored as an integer is indistinguishable from a count.
+
+Recording the token rather than dropping it is R22 §3's rule for a scorer's label and §4's for a source-provenance label: a source's own token is a string, kept as the source emitted it, and MUST NOT be used as an offset.
+
+No rule checks either half, and none is added. Nothing structural tells a code from a count, so the obligation binds the writer, which is the party that knows whether it had a key.
+
 ## 9. The registry
 
 ### 9.1 The schema is one document

@@ -150,7 +150,7 @@ sees them: `applied.toml` records where each clause went, and the count of undis
 fall and must not rise.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 497 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 502 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for
