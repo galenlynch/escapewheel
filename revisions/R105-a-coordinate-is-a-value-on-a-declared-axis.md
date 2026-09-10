@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Accepted** 2026-09-09 |
 | **Amends** | R19 §3 (the axis columns and the three reserved frame names), R28 §3 (the same columns on `core.unit_coordinates`), R59 §2.2 (the frame names a space; which published atlas it is becomes a declared fact); adds four tables and strikes six columns |
-| **Depends on** | R3 §3.0 (a repeated value is a child table), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R56 §2.3 (a unit resolved one hop away), R58 §2.1 (a frame and a basis are two facts), R83 §3 (report unresolvable rather than resolve), R88 §2 (session scope), R101 §3.1 (every string column declares its vocabulary), R101 §3.4 (a value is spelled as its nomenclature spells it) |
+| **Depends on** | R3 §3.0 (a repeated value is a child table), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R56 §2.3 (a unit resolved one hop away), R58 §2.1 (a frame and a basis are two facts), R83 §2.3 (report unresolvable rather than resolve), R88 §2 (session scope), R101 §3.1 (every string column declares its vocabulary), R101 §3.4 (a value is spelled as its nomenclature spells it) |
 | **Profile** | all |
 
 Normative, except §2 and §6, which are informative.
@@ -245,7 +245,7 @@ place.
 A consumer needing to know **which way** an axis runs, where its `axis_direction` is null, **MUST**
 report the coordinate unusable for that purpose rather than assume a convention. An `axis_name` is
 the source's word and not an interpretation: `rel_x` tells a consumer where the value came from and
-not whether it runs across the shank. That is R83 §3's rule for a run
+not whether it runs across the shank. That is R83 §2.3's rule for a run
 that declares no channels, and it holds here for the same reason: the packet is conforming, so
 failing it would be wrong, and resolving against a default would produce a plausible number in the
 wrong place.

@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft |
 | **Amends** | `05` §3.3 and `05` §3.4 (what a preference permits and what it exempts); adds one refusal to a build |
-| **Depends on** | R98 §3.2 (a resource several sources supply is `contributes`), R98 §3.3 (a discarded row is reported unless a preference explains it), R87 §2.5 (an override declares the recipe authoritative, and why), R63 §2.2 (silence means the whole of `PRODUCES`), R63 §2.3 (a resource no source claims is refused before any I/O) |
+| **Depends on** | R98 §3.2 (a resource several sources supply is `contributes`), R98 §3.3 (a discarded row is reported unless a preference explains it), R87 §2.5 (an override declares the recipe authoritative, and why), R63 §2.2 (silence means the whole of `PRODUCES`), R63 §2.3 (a resource no source claims is reported as a warning before any I/O) |
 | **Profile** | all |
 
 Normative, except §2, which is informative.
@@ -42,9 +42,10 @@ timezone, where the NWB writes `2024-09-24T00:00:00-07:53`.
 
 Prefer the session adapter and the arrangement is correct until an asset ships without that
 document. Then the preferred source produces no row, the NWB has already lost the resource, nothing
-stages a subject at all, and `core.sessions.subject_id` becomes an orphan — reported against
-`core.sessions`, which is the table that *was* staged. That is the shape R98 §2.2 records of the
-twelve clock windows: the symptom surfaces layers later and against the wrong table.
+stages a subject at all, and `core.sessions.subject_id` becomes an orphan. The finding lands on
+`core.sessions`, which is the table that *was* staged, so what a build reports names neither the
+preference nor the source it named. R98 §2.2 is the same loss one table over: `owns` being
+exclusive, the sorter's twelve clock windows were produced and discarded.
 
 ### 2.2 One preference of five arbitrates anything
 
@@ -91,6 +92,11 @@ passed-over source's row holds a non-null value in a column the preferred source
 or does not produce at all. A preferred source that produces no rows for the resource while another
 does is that rule's limiting case, every value being discarded, and needs no clause of its own.
 
+Comparing means the build holds the passed-over source's rows for the resource rather than
+discarding them as counted. That is bounded by where a preference may be declared: every resource
+one names is metadata-scale — twelve probes, ten, one subject — and the one large contested table,
+`core.clock_anchors` at 754,222 rows (R47 §2.4), carries no preference and is never compared.
+
 The comparison is over **declared columns** and not over `metadata`. A bag is schemaless by design
 (`02` §8.6), so two sources filling it differently is not a difference a build can weigh, and R97
 §3.3 already binds what may go in one.
@@ -104,7 +110,7 @@ to state.
 
 A build **MUST NOT** compose a row from more than one source. The merged row would be a fact no
 source stated, which is the inference this specification refuses everywhere it arises: a writer
-MUST NOT infer a run's channel list from unit support (R83 §3), a consumer MUST NOT infer
+MUST NOT infer a run's channel list from unit support (R83 §2.2), a consumer MUST NOT infer
 attachment from a device's name (R67 §2.4), and a writer MUST leave an axis direction null where
 its source does not state one (R105 §3.4).
 
@@ -136,7 +142,9 @@ recipe layer keeps.
 
 - **A resource several sources supply *part* of keeps `contributes`.** R98 §3.2 governs that case
   and §3.1 does not reach it: where the rows are disjoint there is no passed-over row to compare,
-  and declaring a preference between two sources holding different rows is what R98 §3.2 forbids.
+  so the refusal has nothing to weigh. R98 §3.3 says why a preference is the wrong instrument
+  there — it asserts that two sources offer the same rows — and this part adds no rule about
+  declaring one.
 - **No packet is invalidated and no stored value changes.** This binds a build, so what it changes
   is which builds succeed.
 
@@ -148,8 +156,7 @@ four, of which three are shadowed by `SHARED` for ownership and one arbitrates. 
 exemption it makes sound.
 
 The comparison runs where a source's rows are staged, and costs one pass over the passed-over
-source's rows per contested resource. Both packets' contests are small: `core.subjects` is one row,
-`core.probes` twelve and ten.
+source's rows per preferred resource — §3.1's bound is what keeps that small.
 
 Neither packet changes and neither is rebuilt for this. §2.4 measures that the two sources agree on
 every declared column of `core.subjects` for both animals, and `core.probes` has been arbitrated by

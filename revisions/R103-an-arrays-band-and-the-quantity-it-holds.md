@@ -49,7 +49,7 @@ The columns came from `02`, where naming a class is how NWB says what a thing is
 since has moved the other way: R23 §1.1 replaced an acquired-versus-derived vocabulary with a run
 pointer, R55 §2.1 made a discriminator name a table, R59 §2.1 put `region_id` beside
 `region_label` because the id survives an atlas rename, R65 §1 answered which signal an array
-holds with the device, and R83 §3 made an index resolve through a table rather than by guessing.
+holds with the device, and R83 §2.3 made an index resolve through a table rather than by guessing.
 These two columns were not revisited.
 
 The difference amounts to composition. NWB expresses "these series are the LFP" by wrapping them

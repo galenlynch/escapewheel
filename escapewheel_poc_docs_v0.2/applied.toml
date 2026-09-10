@@ -2148,7 +2148,7 @@ note = "axis_name is whatever the source called the field, verbatim (R22 §3), s
 [clause."R105 §3.5"]
 disposition = "applied"
 where = "01_semantic_standard.md §3.24"
-note = "a consumer needing an axis's direction where none is declared reports the coordinate unusable rather than assuming a convention, which is R83 §3's rule for a run declaring no channels"
+note = "a consumer needing an axis's direction where none is declared reports the coordinate unusable rather than assuming a convention, which is R83 §2.3's rule for a run declaring no channels"
 
 [clause."R106 §2.1"]
 disposition = "rationale"
