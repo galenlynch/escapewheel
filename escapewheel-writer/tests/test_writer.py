@@ -996,7 +996,7 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
 
 
 def test_an_inefficient_encoding_is_reported(tmp_path, registry, minimal):
-    """R68 §3's rule is a good guess, and a column it guesses wrong about is said aloud.
+    """`03` §5.5's rules are good guesses, and a column it guesses wrong about is said aloud.
 
     Collected and never read is how this mechanism failed first: the notes were appended in two
     places and emitted in none, so the report existed and reached nobody. Both halves are pinned

@@ -2491,7 +2491,7 @@ number silently missing the field says nothing at all.
 
 ### 2.1 A tick column is delta-encoded, not dictionary-encoded
 
-`core.media_frames.pts` over 7,570,450 frames, the same rows in the same row groups (R68 §3,
+`core.media_frames.pts` over 7,570,450 frames, the same rows in the same row groups (R68 §1.3,
 2026-09-04; toolchain not kept):
 
 | `pts` as | encoding | `pts` | whole table |
