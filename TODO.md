@@ -125,6 +125,24 @@ renamed one fails a suite instead of a rebuild months later. Worth sizing before
 packet is this implementation proving it agrees with itself, which is a different claim and may want
 a different home.
 
+## 1a₃. What is left on encodings, after the rule landed
+
+The rule and its exceptions catch every large case; **59 columns remain more than 15% off the best
+choice, worth roughly 400 kB across both packets**, and I stopped rather than chase them:
+
+- **High-cardinality floats prefer plain to a dictionary** by 1.3-1.8x — `axis_value` in both
+  coordinate child tables, `unit_quality_labels.confidence`, and most of `aind_unit_qc.metrics`.
+  A blanket rule is measured wrong in the other direction: `metrics.presence_ratio` and
+  `sliding_rp_violation` prefer the dictionary by 1.77x, so this wants either per-column exceptions
+  or a cardinality test, and neither is worth 400 kB yet.
+- **`core.unit_electrodes.electrode_id`** prefers plain to the dictionary by 1.7x, being a trailing
+  key component.
+- **`aind_unit_qc.metrics.num_spikes_used`** wants delta, 1.7x, and no rule reaches an extension's
+  columns.
+
+The reason to record rather than fix: the packet is 1.76 GB and the residual is 0.02% of it. What
+made the first pass worth doing was 37 columns at 5x to 79x, not the tail.
+
 ## 1a₂. The source cache defaults onto tmpfs
 
 **Found by the rebuild, twice.** `sources/store.py`'s `cache_directory()` returns

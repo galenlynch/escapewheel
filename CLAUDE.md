@@ -418,6 +418,24 @@ R48's `role` is what makes it exact — seven of the nine conventions compare a 
 declaration rather than guessing from type. Exceptions are declared with a reason and are
 checked to still be needed, so the list cannot go stale.
 
+**A declaration says what a value means, never how its values are distributed.** R48's `role`
+tells a consumer that a column is an identifier or a coordinate; it does not tell a writer whether
+the values ascend, repeat or scatter, and that is what decides a storage choice. Parquet encodings
+are the case that proves it: deriving them from the sort key regresses `core.media_frames.pts`
+**195x** and `core.clock_anchors.t_tick` **57x**, both monotone without being key columns, while
+`core.unit_electrodes.electrode_id` is a trailing key component that sawtooths and prefers plain.
+So a storage rule is a **good guess with declared exceptions**, each carrying the measurement that
+justifies it and checked to still name a column that exists — `check.py`'s discipline for
+`NAMING_EXCEPTIONS`, which `recipe.PREFERRED` lacked until an entry arbitrating nothing was found
+by hand (R108 §3.4).
+
+**Measure the alternative before preferring one, and keep the number.** Every encoding defect found
+in the first rebuilt packets was invisible because nothing compared the chosen encoding against the
+others: 37 ascending identifier columns had been dictionary-encoded since R53 made them integers.
+`conformance/parquet-probe/layout.py` reports what a committed packet actually got, per column, and
+is the thing to run after a rebuild. Encoding and compression are a pair — every table is zstd on
+top of its encoding — so a number that is not end-to-end is not a number.
+
 **SQL for what the data says; the shim for how it is stored** (R12 §4). Values, keys,
 references, vocabularies, and cross-table agreement go in SQL. Physical order, file presence,
 Parquet types, Zarr rank and codecs, and checksums go in the shim — a query cannot see them,
