@@ -208,10 +208,20 @@ that, and a recipe that wants the file says so.
 
 `09` §5.7 says a command is an argument list run in the source's own root and not a shell line. A
 recipe **MUST** carry it as a list, and a build **MUST NOT** derive one by splitting a string.
-Splitting is a shell convention and the conventions differ: POSIX splitting consumes a backslash, so
-`C:\Python\python.exe extract.py` becomes `C:Pythonpython.exe`, and every Windows path in a command
-is silently corrupted by the very step `09` §5.7 says not to take. A list needs no convention and no
-quoting.
+
+A string obliges something to parse it, and a parse is a quoting convention the recipe did not
+declare. The one Python offers does not vary by host: `shlex.split` defaults to POSIX rules on every
+platform and contains no test of what it is running on, so it consumes a backslash wherever it runs
+and turns `C:\Python\python.exe extract.py` into `C:Pythonpython.exe`. **The parse is
+unconditional and the failure is not** — the same corruption is harmless on a host whose paths use
+forward slashes and fatal on one whose paths do not, which is what makes a string the wrong form
+rather than what makes any platform the wrong host.
+
+A list needs no convention, because the layer below already has one per host: given a list,
+`subprocess` joins it with `list2cmdline` on Windows and passes it to `execv` unchanged elsewhere,
+so `['C:\Python\python.exe', 'a b']` becomes `C:\Python\python.exe "a b"` there and stays two
+arguments here. Carrying a list is what lets that adaptation happen where it is already written,
+rather than in a recipe that would have to name which convention it meant.
 
 Where rows travel on standard output, they are **bytes**. An adapter **MUST** write the stream to a
 binary handle, and a build **MUST** read one. A platform that translates a line ending in text mode
@@ -283,11 +293,12 @@ declares, `05` §3.7 gains what a build captures where rows are on standard outp
 over, `09` §5.7 gains that an extension may use them too, and `07` §4's sentence about a return type gains
 what it does not cover.
 
-The reference implementation also carries the defect §3.4 forbids: `TablesSource` takes `command`
-as a string and splits it with `shlex`, which the module's own docstring calls "a plain argument
-list … **not** a shell". Both packaged recipes say `command = "python extract.py"`, which survives
-splitting because it contains no backslash; a recipe naming a Windows interpreter would not, and
-would fail as a missing executable rather than as a malformed command. The fix is a TOML array.
+The reference implementation carries the defect §3.4 forbids: `TablesSource` takes `command` as a
+string and splits it with `shlex`, which the module's own docstring calls "a plain argument list …
+**not** a shell". Both packaged recipes say `command = "python extract.py"`, which survives the parse
+because it contains no backslash. One naming an interpreter by an absolute Windows path would not,
+and would fail as a missing executable rather than as a malformed command. The fix is a TOML array
+and the deletion of the split.
 
 The reference implementation loses four tables that name a kind — `_SHARED_SOURCES`, `SAMPLED`,
 `REQUIRED_OPTIONS` and `PREFERRED` — and gains one declaration per adapter. It also gains a command
