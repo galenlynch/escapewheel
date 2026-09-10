@@ -244,6 +244,15 @@ the ones a tool can settle are cheaper than the ones only a reader can.
   blocked — `waveform_mean` spans twelve sortings so no single run produced it, emitting a camera
   device needs `core.devices` in an adapter's `PRODUCES` and in every recipe, and no source links a
   video file to a camera except by its name, which R102 §3.2 itself forbids.
+- **A claim whose population is defined by the quantity it measures.** "None of the 80 columns is
+  more than 15% off the best encoding" was measured over columns reaching 2 kB *after* the rules
+  had shrunk them, so every column a rule fixed had left the set that justified it — and three
+  columns over the threshold went unseen. Three claims of the form "none more than X" failed this
+  way in one session, each sound in its own terms and each measured with a filter that excluded
+  part of what it claimed to cover. Ask what defines the population, and whether the change being
+  measured moves anything in or out of it; where it does, state the population against the state
+  *before* the change and say so.
+
 - **A measurement stated twice.** Adding a section to one that already carries a number leaves the
   number in both. State it where the rule it supports lives.
 - **"What this does not change" listing the unassumed.** Most denials belong in the **body**, where
