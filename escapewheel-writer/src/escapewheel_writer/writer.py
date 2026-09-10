@@ -567,6 +567,21 @@ class PacketWriter:
         session = next(iter(declared))
         return [r if r.get("session_id") is not None else {"session_id": session, **r} for r in records]
 
+    def _session_batch(self, spec: Mapping[str, Any], batch: pa.RecordBatch) -> pa.RecordBatch:
+        """Fill `session_id` on a streamed batch, as `_with_session` does for records (R88 §2.3).
+
+        The records path filled it and this one did not, so a table large enough to stream reached
+        validation with nulls in a required column: `core.media_frames` at 7,570,450 rows, on the
+        one packet that carries video. Filled as the session's *name*, so `number_batch` assigns it
+        the same integer every other table's reference to `core.sessions` gets.
+        """
+        if self._session is None or "session_id" in batch.schema.names:
+            return batch
+        wanted = any(c["name"] == "session_id" and c["presence"] == "required" for c in spec.get("columns", ()))
+        if not wanted:
+            return batch
+        return batch.append_column("session_id", pa.array([self._session] * batch.num_rows, type=pa.string()))
+
     def stamp(self, resource_id: str, match: str, values: Mapping[Any, Mapping[str, Any]]) -> int:
         """Set columns on rows already added, matched on one column's value.
 
@@ -651,7 +666,9 @@ class PacketWriter:
             raise ValueError(f"{resource_id} already has batches; concatenate before adding")
         spec = self.spec(resource_id)
         assert spec is not None
-        self._batches[resource_id] = (number_batch(spec, b, self.keys) for b in batches)
+        self._batches[resource_id] = (
+            number_batch(spec, self._session_batch(spec, b), self.keys) for b in batches
+        )
 
     def after_staging(self, report: Callable[[Callable[[str], None]], None]) -> None:
         """Register something to be reported once the packet has been written.
