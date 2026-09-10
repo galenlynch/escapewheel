@@ -50,6 +50,10 @@ RECIPE_MAY_SUPPLY = ("core.subjects",)
 #: knows only the stream, and the waveform source is the only one that can see a unit's channel
 #: support. Held here rather than in the scaffolder, so a draft and a build resolve alike.
 PREFERRED = {
+    # `subject.json` is the record `general/subject` is a projection of: it carries a
+    # `background_strain` key the projection lacks and a date of birth with no timezone. Safe to
+    # declare because R108 §3.1 refuses a build where preferring it drops a fact the NWB stated.
+    "core.subjects": "session",
     "core.probes": "nwb",
     "core.clocks": "sync",
     "core.array_assets": "nwb",

@@ -252,12 +252,19 @@ def test_a_preference_is_what_makes_a_discard_silent(tmp_path):
     assert source.notes == []
 
 
-def test_a_source_that_could_supply_the_subject_is_noted(tmp_path):
-    """R87 §2.8: `core.subjects` left the recipe-supplied set, so R63 §2.3's warning finally sees it."""
+def test_a_preferred_resource_draws_a_refusal_rather_than_a_note(tmp_path):
+    """R108 §3.1 replaces the note for a preferred resource with something stronger.
+
+    R87 §2.8 took `core.subjects` out of the recipe-supplied set so R63 §2.3's warning could see
+    it, and a preference then exempts it from R98 §3.3's report. What makes that sound is not the
+    silence but the refusal: `_refuse_a_discarded_fact` fails the build where the displaced source
+    stated a value the preferred one did not, which a note only mentioned.
+    """
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
     source = Noted()
     _note_unclaimed(recipe.sources[0], source, {"core.subjects": 1})
-    assert any("core.subjects" in n for n in source.notes)
+    assert source.notes == []
+    assert PREFERRED["core.subjects"] == "session"
 
 
 # -- R108: a preference discards no stated fact --------------------------------------------
