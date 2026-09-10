@@ -199,7 +199,7 @@ class _Buckets:
 
     def __init__(self, root: Path, out: pa.Schema, budget: int = 0,
                  spec: Mapping[str, Any] | None = None) -> None:
-        from .writer import _delta_columns
+        from .writer import _encodings
 
         self._root = root
         self._out = out
@@ -209,11 +209,12 @@ class _Buckets:
         # 60.9 s, at no cost in memory.
         # No sample: the spill is opened before its first batch exists, so the naming convention
         # stands in. Its bytes have no reader, and the finished table is measured properly.
-        delta = _delta_columns(RESOURCE, spec or {}, out)
+        delta, plain = _encodings(RESOURCE, spec or {}, out)
         self._options: dict[str, Any] = {"compression": "zstd"}
-        if delta:
-            self._options["use_dictionary"] = [n for n in out.names if n not in delta]
-            self._options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
+        if delta or plain:
+            self._options["use_dictionary"] = [n for n in out.names if n not in {*delta, *plain}]
+            if delta:
+                self._options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
         self._budget = budget
         # Read back as codes, the way they were written. A spill that decoded on the way out
         # would hand the table writer strings it is about to dictionary-encode again.

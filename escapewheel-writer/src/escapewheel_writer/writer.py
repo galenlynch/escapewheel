@@ -89,6 +89,8 @@ PROFILE = "escapewheel-portable-v0.1"
 #: Columns that store better as deltas than as anything pyarrow chooses by itself, beyond the
 #: `_tick` rule below, because measurement says so and their names do not. `anchor_index`
 #: ascends over thousands of anchors per clock; `n_spikes` is a large count with no repeats.
+#: Columns the rules below miss, each with the measurement that justifies it. `test_writer.py`
+#: refuses an entry naming no such column, which is `check.py`'s discipline for a naming exception.
 DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     "core.clock_anchors": ("anchor_index",),
     "core.units": ("n_spikes",),
@@ -105,15 +107,38 @@ DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     # An interval's identifier is not in its key -- R47 §2 keys on where it starts and R54 §2.1
     # on its kind -- so the leading-identifier rule cannot see it, and it still ascends. 5.6x.
     "core.intervals": ("interval_id",),
+    # A count of the spikes a metric was computed over, one row per unit in unit order, which
+    # climbs with the unit's spike count often enough to pay: 1.7x.
+    "aind_unit_qc.metrics": ("num_spikes_used",),
 }
 
-#: Columns the two rules catch and should not: an exception in the other direction, declared with
-#: its reason for the same purpose. `registry/check.py` refuses an entry naming no such column.
-NOT_DELTA: dict[str, tuple[str, ...]] = {
+#: Columns written PLAIN: no dictionary, no delta. Integers only -- a float takes this by rule.
+NO_DICTIONARY: dict[str, tuple[str, ...]] = {
     # Summaries, not coordinates on a timeline: one row per unit in `unit_id` order, so the ticks
-    # arrive unordered and delta encodes noise. Measured 1.3x worse than the plain the dictionary
-    # falls back to, which is the `_tick` rule being a good guess and no more.
+    # arrive unordered and delta encodes noise while a dictionary of 6,781 distinct ticks pays for
+    # itself twice. Plain is 1.44x both, which is the `_tick` rule being a good guess and no more.
     "core.units": ("first_spike_tick", "last_spike_tick"),
+    # A trailing key component (R28 §2), so it climbs within each unit and resets: a sawtooth,
+    # which neither delta nor a dictionary reads well. 1.7x.
+    "core.unit_electrodes": ("electrode_id",),
+    # 56 distinct structure ids over 8,832 rows, already run-length friendly; the dictionary is
+    # a second index over what RLE alone encodes. 1.3x.
+    "core.electrode_coordinates": ("region_id",),
+    # One unit per spike and a few hundred distinct per batch, but the derived table is bucketed
+    # by time (R30 §3.2) rather than clustered by unit, so the runs are short. 1.2x.
+    "analysis.spike_events": ("unit_id",),
+}
+
+#: Columns keeping the dictionary the rules would take away, each measured. The float rule below
+#: is the one this mostly answers: a float is plain unless its values repeat.
+DICTIONARY_COLUMNS: dict[str, tuple[str, ...]] = {
+    # Quantised to the sorter's amplitude step, so 287 M rows hold few distinct values and the
+    # dictionary is exactly right. **1.85x on ~200 MB**, the largest single encoding decision in
+    # a packet, and the one a blanket float rule would have got wrong.
+    "core.spike_events": ("amplitude", "unit_id"),
+    # Ratios and medians that repeat across units: bounded, rounded, and few distinct.
+    "aind_unit_qc.metrics": ("presence_ratio", "sliding_rp_violation", "firing_range",
+                             "amplitude_median"),
 }
 
 
@@ -133,40 +158,56 @@ def _leading_identifier(spec: Mapping[str, Any], keys: list[str]) -> str | None:
     return None
 
 
-def _delta_columns(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> list[str]:
-    """Integer columns to store as `DELTA_BINARY_PACKED`, which pyarrow never picks itself.
+def _encodings(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> tuple[list[str], list[str]]:
+    """Which columns take `DELTA_BINARY_PACKED` and which take no dictionary. Returns `(delta, plain)`.
 
-    Two rules and a list of exceptions, in the shape `check.py` uses for naming: an exception is
-    declared with a reason and checked to still be needed, so the list cannot go stale.
+    Three rules and three lists of exceptions, in the shape `check.py` uses for naming: an
+    exception is declared with the measurement that justifies it, and a test refuses one naming a
+    column that does not exist. pyarrow never picks delta itself and defaults to a dictionary on
+    everything, which is wrong in both directions here.
 
-    **A `*_tick` column.** A tick is a large integer on a monotonic clock, so its residuals
-    bit-pack far smaller than the eight bytes PLAIN spends, and a high-cardinality tick overflows
-    the dictionary page and falls back to PLAIN anyway. Measured over a real session, delta takes
+    **A `*_tick` column takes delta.** A tick is a large integer on a monotonic clock, so its
+    residuals bit-pack far smaller than the eight bytes PLAIN spends. Measured, delta takes
     `core.clock_anchors.t_tick` from 268.8 KB to 5.2 KB and `core.spike_events.t_tick` from
     660.9 MB to 462.1 MB.
 
-    **The leading identifier of the key.** R10 §2 sorts a table by its key, so that column ascends
-    across the whole table where every later key column only ascends within the group above it.
-    Measured across both packets: `core.units.unit_id` **57x**, `core.unit_coordinates.unit_id`
-    **53x**, `core.electrode_coordinates.electrode_id` **48x**, and
-    `core.unit_coordinate_values.unit_id` **75x**, every one of them dictionary-encoded before.
+    **The leading identifier of the key takes delta.** R10 §2 sorts a table by its key, so that
+    column ascends across the whole table where every later key column only ascends within the
+    group above it. Measured: `core.units.unit_id` **57x**, `core.unit_coordinates.unit_id` 53x,
+    `core.electrode_coordinates.electrode_id` 48x, `core.unit_coordinate_values.unit_id` **75x**.
 
-    Neither rule is monotonicity itself, which is what delta actually exploits and which nothing
-    declares. `DELTA_COLUMNS` carries the columns the rules miss and `NOT_DELTA` the ones they
-    wrongly catch; both were measured, not guessed, and `registry/check.py` refuses an entry that
-    names no such column.
+    **A float takes no dictionary.** Of 32 float columns above 2 kB across both packaged sessions,
+    **27 are smaller plain**, by 1.15x to 1.76x: a dictionary over values that barely repeat is an
+    index nobody reads. The five that do repeat are listed, and one of them decides ~200 MB --
+    `core.spike_events.amplitude` is quantised to the sorter's step and is **1.85x** better with
+    the dictionary, which a blanket rule would have thrown away.
+
+    None of the three is monotonicity or cardinality itself, which is what the encodings actually
+    exploit and what nothing declares. Deriving the choice from the sort key alone was measured and
+    refused: it regresses `core.media_frames.pts` **195x** and `core.clock_anchors.t_tick` 57x,
+    both monotone without being key columns. Every column is zstd-compressed on top of its
+    encoding, so each number here is the pair measured end to end.
     """
+    forced_delta = set(DELTA_COLUMNS.get(resource_id, ()))
+    forced_plain = set(NO_DICTIONARY.get(resource_id, ()))
+    forced_dict = set(DICTIONARY_COLUMNS.get(resource_id, ()))
     keys = sort_key(resource_id, spec) or list(spec.get("primary_key") or [])
     leading = _leading_identifier(spec, keys)
-    named = set(DELTA_COLUMNS.get(resource_id, ()))
-    barred = set(NOT_DELTA.get(resource_id, ()))
-    return [
-        f.name
-        for f in out
-        if pa.types.is_integer(f.type)
-        and f.name not in barred
-        and (f.name.endswith("_tick") or f.name == leading or f.name in named)
-    ]
+    delta, plain = [], []
+    for field in out:
+        name = field.name
+        integer, floating = pa.types.is_integer(field.type), pa.types.is_floating(field.type)
+        if name in forced_dict or not (integer or floating):
+            continue
+        if name in forced_delta and integer:
+            delta.append(name)
+        elif name in forced_plain:
+            plain.append(name)
+        elif integer and (name.endswith("_tick") or name == leading):
+            delta.append(name)
+        elif floating:
+            plain.append(name)
+    return delta, plain
 
 
 def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> dict[str, Any]:
@@ -196,9 +237,11 @@ def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema) -> dict[
     # not declare. Withhold it, and the file reads back as the registry says.
     if any(pa.types.is_dictionary(field.type) for field in out):
         options["store_schema"] = False
-    if delta := _delta_columns(resource_id, spec, out):
-        options["use_dictionary"] = [n for n in out.names if n not in delta]
-        options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
+    delta, plain = _encodings(resource_id, spec, out)
+    if delta or plain:
+        options["use_dictionary"] = [n for n in out.names if n not in {*delta, *plain}]
+        if delta:
+            options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
     keys = sort_key(resource_id, spec) or []
     if columns := [pq.SortingColumn(out.names.index(k)) for k in keys if k in out.names]:
         options["sorting_columns"] = columns

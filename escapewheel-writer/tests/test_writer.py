@@ -10,7 +10,7 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 
 from escapewheel_writer import CommitRefused, PacketWriter
-from escapewheel_writer.writer import DELTA_COLUMNS, NOT_DELTA
+from escapewheel_writer.writer import DELTA_COLUMNS, DICTIONARY_COLUMNS, NO_DICTIONARY
 
 
 def _write(root, registry, tables, **kwargs):
@@ -921,11 +921,13 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
         tables.update(json.loads(path.read_text())["tables"])
     stale = [
         f"{listed}: {resource}.{column}"
-        for listed, entries in (("DELTA_COLUMNS", DELTA_COLUMNS), ("NOT_DELTA", NOT_DELTA))
+        for listed, entries in (("DELTA_COLUMNS", DELTA_COLUMNS),
+                                ("NO_DICTIONARY", NO_DICTIONARY),
+                                ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS))
         for resource, columns in entries.items()
         for column in columns
         if resource not in tables
-        or not any(c["name"] == column and c["type"] in {"int32", "int64"}
+        or not any(c["name"] == column and c["type"] in {"int32", "int64", "float32", "float64"}
                    for c in tables[resource]["columns"])
     ]
     assert stale == []
