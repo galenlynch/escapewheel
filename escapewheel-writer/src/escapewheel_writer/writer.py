@@ -441,7 +441,13 @@ class PacketWriter:
         packet_id: str,
         description: str | None = None,
         extensions: Sequence[Mapping[str, Any]] = (),
+        session: str | None = None,
     ) -> None:
+        #: The session every session-scoped table's rows belong to, which `_with_session` fills
+        #: from (R88 §2.3). Given rather than read back out of `core.sessions`, because a build adds
+        #: that table last: reading it back left every table added before it unfilled, and only the
+        #: adapters that happened to emit the column themselves were saved by it.
+        self._session = session
         self._registry = registry
         #: Extension registries this packet carries (R17 §2), by `extension_id`. An extension is a
         #: registry document in R2's format, so everything below resolves a resource against core
@@ -544,13 +550,18 @@ class PacketWriter:
         R67 §2.4 forbids a consumer for the same reason.
 
         Only where the packet holds one session, so a multi-session build cannot be stamped with
-        whichever session went first; there, an adapter states it and this does nothing.
+        whichever session went first; there, an adapter states it and this does nothing. The
+        session is the one the build was given; `core.sessions` is consulted first so a caller
+        that stages it before anything else still governs.
         """
         spec = self.spec(resource_id) or {}
         wanted = any(c["name"] == "session_id" and c["presence"] == "required" for c in spec.get("columns", ()))
         if not wanted or resource_id == "core.sessions":
             return records
         declared = {r.get("session_id") for r in self._tables.get("core.sessions", [])}
+        declared.discard(None)
+        if not declared and self._session is not None:
+            declared = {self._session}
         if len(declared) != 1:
             return records
         session = next(iter(declared))

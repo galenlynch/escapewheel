@@ -763,6 +763,9 @@ def build(
         # owns a core one. Which is what keeps declaring an extension from being harder than
         # adding a column to core -- the gradient that leaves NWB's own mechanism unused.
         extensions=[load_extension(named, base=recipe.path.parent) for named in recipe.extensions],
+        # R88 §2.3's fill needs the session before any source runs, and `core.sessions` is staged
+        # last: three tables reached validation with a null `session_id` because of the order.
+        session=session_id,
     )
 
     # R87 §2.8: the recipe supplies `core.subjects` only where no source owns it, so a packet
