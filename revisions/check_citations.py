@@ -44,8 +44,10 @@ HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
 NUMBER = re.compile(r"^R(\d+)-")
 #: `R92 §2.2`, `R92 §2`. The section may end a sentence, so the trailing dot is trimmed.
 REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
-#: "`03` §5.4" and "Part 03 §5.4".
-PART = re.compile(r"(?:`(0\d)`|Part (0\d)) §(\d+(?:\.\d+)*)")
+#: "`03` §5.4" and "Part 03 §5.4". Two digits, not `0` and a digit: R93 added Part 10, and a
+#: pattern written before it read every `10` §x as an unprefixed local reference, which is the
+#: bucket that does not fail the build.
+PART = re.compile(r"(?:`(\d\d)`|Part (\d\d)) §(\d+(?:\.\d+)*)")
 #: Any §, so the ones the two above did not claim can be treated as local.
 ANY = re.compile(r"§(\d+(?:\.\d+)*)")
 
