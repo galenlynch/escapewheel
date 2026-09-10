@@ -185,6 +185,15 @@ the ones a tool can settle are cheaper than the ones only a reader can.
   the build. It cannot check that the cited section *says* what the citing sentence claims, which
   is still a read: R89 §2.3 cited R56 §2.2 for the one-hop `resource.column` form, which R56 §2.3
   defines and §2.2 does not. Open the cited section.
+
+  **A citation landing on a boilerplate section is the commonest form of this.** `R83 §3` was cited
+  four times — twice in R105, once in R103, once in a draft — for a writer's ban on inferring a
+  channel list and a consumer's duty to report one unresolvable. R83 §3 is `What this does not
+  change`; the two rules are §2.2 and §2.3. The checker passed all four, because §3 exists. Neither
+  a keyword comparison nor a heading blacklist is worth building: the first flags **77** citations
+  across the accepted revisions, most of them sound, and the second flags six of which half are
+  arguable. What catches it is reading the heading you are about to cite and asking whether that
+  section, and not its neighbour, states the thing.
 - **No section contradicts another.** R89 §1.2 argued a calibration is reported as in force
   *rather than as having happened*, and §2.5 then said a row records that it happened. Read the
   Decision against the Motivation it rests on, and read §3's bullets against the Decision.
