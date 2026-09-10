@@ -7,7 +7,7 @@
 | **Depends on** | R101 §3.1 (a string column declares its vocabulary), R101 §3.3 (a discriminator declares none), R101 §3.6 (`authority`), R55 §2.1 (a discriminator's value space is the declared resource IDs), R55 §2.2 (`resolves`), R53 §2.3.1 (an assigned identifier carries a name beside it), R29 §2 (`since` is a citation a reader follows), R3 §3.0 (duplication must buy otherwise-unavailable access) |
 | **Profile** | all |
 
-Normative, except §2 and §6, which are informative.
+Normative, except §2, which is informative.
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
@@ -139,6 +139,13 @@ two manufacturers": the classification goes to the field holding it, and the con
 comparing exactly stays, being a fact no field states. A citation leaves with the claim it
 supported — `(R8 §4)` cited openness, so it goes with the word.
 
+The rule is about registry text. A **part** stating that a column's vocabulary is open is not the
+same duplication: every place one does — `01` §3.8, §3.12, §3.17 twice, §3.23 and `02` §8.7 —
+attaches a requirement that cannot be stated without it, such as a consumer's ban on reading an
+unrecognised basis as `measured`, which is the otherwise-unavailable access R3 §3.0 asks for. Nor is
+`02` §9.3's table of the three values a restatement: it defines what each obliges, as §8.1 does for
+`role` and §6 for presence, and the registry has no field for the meaning of its own enum.
+
 This replaces R101 §3.5's second and third sentences and R48 §2.5 entirely. Both were instances of
 this rule written for one field each: a description that may not restate `vocabulary` cannot imply a
 closed set is open, and one that may not restate `role` cannot restate a base.
@@ -238,11 +245,3 @@ Every one of the 45 takes a `since` naming this revision, as R101 §3.5's 25 did
 
 Three clauses are struck rather than relocated — R7 §2's reason, and R101 §3.5's nomenclature and
 closed-set sentences — and R48 §2.5 folds into §3.1. Four requirements on a description become one.
-
-## 6. Open
-
-- **Whether a part restating a declaration is the same defect.** This swept the registry's 512
-  columns. `01` and `02` name four of the eight discriminators and call none of them open, so
-  nothing here is owed there — but `02` §9.3's table of the three vocabulary values *is* prose
-  restating a field, and it is the declaration for a reader who never opens the registry. Whether
-  that is the one case where the duplication buys something, or the next sweep, is not settled here.
