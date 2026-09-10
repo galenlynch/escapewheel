@@ -36,7 +36,7 @@ from escapewheel_reader.clocks import BOUND, align
 from numpy.typing import NDArray
 
 from .extensions import load as load_extension
-from .recipe import PREFERRED, RECIPE_SUPPLIES, Recipe, SourceSpec, states
+from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe, SourceSpec, states
 from .sources import SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
@@ -909,10 +909,10 @@ def _add_records(
     produced: dict[str, int] = {}
     for resource, rows in _records(spec, source, context).items():
         produced[resource] = len(rows)
-        if resource in PREFERRED:
+        if resource in _ARBITRATED:
             # Kept rather than counted, so R108 §3.1 can compare what the winner staged against
-            # what the source it displaced stated. Only for a preferred resource, which is what
-            # keeps this bounded.
+            # what the source it displaced stated. Only where a preference arbitrates, which is
+            # what keeps this bounded.
             context.stated.setdefault(resource, {})[spec.kind] = rows
         if resource not in spec.claims:
             continue
@@ -922,6 +922,13 @@ def _add_records(
         writer.add(resource, rows)
         counts[resource] = counts.get(resource, 0) + len(rows)
     return produced
+
+
+#: R108 §3.1 reaches a resource a preference arbitrates, which is not every resource one names:
+#: `_resolve_ownership` checks `SHARED` first and returns, so for a resource in both tables the
+#: preference decides nothing and the sources hold *different* rows (R108 §4). Comparing those
+#: would report a probe clock against a reference clock and call the difference a loss.
+_ARBITRATED = frozenset(PREFERRED) - SHARED
 
 
 def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Recipe) -> None:
@@ -940,14 +947,18 @@ def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Rec
     (R108 §3.2). The recipe resolves it: name the fact in `[overrides]` with its reason (R87 §2.5),
     prefer the other source, or fix the one that states less.
     """
-    claimed = {resource: spec.kind for spec in recipe.sources for resource in spec.claims}
+    kinds = {spec.kind for spec in recipe.sources}
     lost: list[str] = []
     for resource, by_kind in sorted(context.stated.items()):
         table = writer.spec(resource)
         if table is None or len(by_kind) < 2:
             continue
-        winner = claimed.get(resource)
-        kept = by_kind.get(winner or "", [])
+        # The preference names the winner. Reading it off whoever claims the resource is wrong for
+        # a contributed one, where every claimant is a legitimate supplier of different rows.
+        winner = PREFERRED[resource]
+        if winner not in kinds:
+            continue
+        kept = by_kind.get(winner, [])
         key = list(table.get("primary_key") or [])
         columns = [c["name"] for c in table["columns"] if c["name"] != "metadata"]
         for kind, rows in sorted(by_kind.items()):

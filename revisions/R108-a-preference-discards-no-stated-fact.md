@@ -92,6 +92,12 @@ passed-over source's row holds a non-null value in a column the preferred source
 or does not produce at all. A preferred source that produces no rows for the resource while another
 does is that rule's limiting case, every value being discarded, and needs no clause of its own.
 
+The rule reaches a resource a preference **arbitrates**, which is not every resource one names:
+where a resource is also declared shared, ownership resolution never consults the preference and
+the sources hold different rows, so there is nothing displaced to compare (§4). Of the four
+preferences remaining after §3.4, two arbitrate — `core.probes` and `core.subjects` — and two do
+not.
+
 Comparing means the build holds the passed-over source's rows for the resource rather than
 discarding them as counted. That is bounded by where a preference may be declared: every resource
 one names is metadata-scale — twelve probes, ten, one subject — and the one large contested table,

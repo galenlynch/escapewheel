@@ -6,8 +6,9 @@ from typing import ClassVar
 
 import pytest
 
-from escapewheel_writer.recipe import PREFERRED, RECIPE_SUPPLIES, Recipe, produces
+from escapewheel_writer.recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe, produces
 from escapewheel_writer.session import (
+    _ARBITRATED,
     CONSUMES,
     Context,
     RecipeError,
@@ -299,6 +300,18 @@ def test_a_preference_names_a_resource_more_than_one_source_produces(tmp_path):
         for resource in sorted(PREFERRED)
     }
     assert {r: k for r, k in uncontested.items() if len(k) < 2} == {}
+
+
+def test_a_shared_resource_is_not_compared(tmp_path, registry):
+    """R108 §4: where the rows are disjoint there is no passed-over row to weigh.
+
+    `core.clocks` and both array tables sit in `PREFERRED` *and* `SHARED`, and
+    `_resolve_ownership` checks `SHARED` first, so the preference arbitrates nothing there. A real
+    build refused on exactly these: the sync source's reference clock read as a loss against the
+    sorter's twelve probe clocks, which are different rows and not a displaced copy.
+    """
+    assert _ARBITRATED == {"core.probes", "core.subjects"}
+    assert not _ARBITRATED & SHARED
 
 
 def test_a_preference_that_discards_a_stated_fact_is_refused(tmp_path, registry):
