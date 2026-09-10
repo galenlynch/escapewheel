@@ -13,7 +13,7 @@ conformance corpus, and 625 tests.
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R111 accepted. R42 and R73 withdrawn. No draft is open.
+R1–R41, R43–R72 and R74–R111 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: extensions -->
 4 extension registries: aind_opto, aind_unit_qc, dynamic_foraging, vr_foraging
@@ -189,6 +189,12 @@ Revision numbers are reserved even where the document is not yet written:
 
 `NWB_Lake_POC_v0.1_Implementation_Spec.md` is generated: a concatenation of `README.md` and `00`–`09`
 delimited by `<!-- BEGIN <file> -->` / `<!-- END <file> -->`.
+
+**Invoke the `prose` skill before writing a docstring or a comment, too.** The same reader is on
+the other end of both: someone implementing against this months from now, deciding what a function
+guarantees from the words above it. The skill's genre note is short — a docstring says what is not
+already obvious from the code, and one dense sentence beats a paragraph — and the sentence-level
+rules apply unchanged, which is what keeps a module's prose readable at the length these are.
 
 MUST / SHOULD / MAY in the spec are RFC 2119 keywords and define the conformance surface.
 

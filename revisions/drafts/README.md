@@ -14,5 +14,13 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-No draft is open. When one is written, it goes here with the reason it sits where it does, and the
-order is dependency first and readiness second.
+One draft is open, so nothing depends on anything below it.
+
+| # | draft | why here |
+|---|---|---|
+| 1 | `a-requirement-is-cited-where-it-is-stated` | rests on R93 §3.1 having made the parts the specification and R93 §3.6 on each part stating what it binds, and on R111 §3.3 for what a requirement may be |
+
+**It moves no count in the generated block.** No table, column, reference, rule or vocabulary
+changes: it adds a section to `00` and a sentence to `07` §2. Every number in it is measured against the
+parts and the three distributions as they stood when it was drafted and is re-measured at
+acceptance, which the pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
