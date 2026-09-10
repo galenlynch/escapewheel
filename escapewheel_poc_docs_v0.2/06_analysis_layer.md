@@ -13,7 +13,7 @@ Normative.
 An analysis resource MUST declare lineage naming each canonical resource it derives from — core
 or extension (04 §7, R71 §2.3).
 
-An analysis resource is disposable. A consumer MAY delete and recompute any of them without loss.
+An analysis resource is disposable. A writer MAY delete and recompute any of them without loss.
 
 A writer SHOULD materialize an analysis resource only where doing so materially reduces repeated computational or I/O cost, gives an access layout core cannot, preserves the result of an expensive transformation, or provides a stable interface to an explicitly parameterised derivation (R78 §2.1). A cheap filter, projection, rename or small join SHOULD remain a view.
 

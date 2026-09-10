@@ -254,7 +254,7 @@ A writer conforms when it:
 
 Byte-identical output is **not** required and cannot be: a manifest carries `created_at` and
 `validated_at`, and encoders may encode identical logical content differently between library
-versions. An implementation MAY offer a deterministic-build mode that pins those, and a packet
+versions. A writer MAY offer a deterministic-build mode that pins those, and a packet
 a validator MUST NOT judge a packet non-conforming for lacking one (R75 §2.2).
 
 A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would

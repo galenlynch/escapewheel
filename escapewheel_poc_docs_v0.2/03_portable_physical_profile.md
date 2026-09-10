@@ -268,7 +268,7 @@ resource added later is caught without the registry having to declare that it mi
 
 A validator **MUST make that test over-inclusive where it is uncertain** (R35 §5). Matching a resource name inside
 a string literal or a comment re-runs a check that did not need it, which costs time; failing to
-match one costs correctness. An implementation that cannot show an input is immutable MUST run the
+match one costs correctness. A validator that cannot show an input is immutable MUST run the
 check (R35 §6): skipping a check whose inputs *could* have changed stays forbidden, which is what
 R32 §5 was protecting.
 

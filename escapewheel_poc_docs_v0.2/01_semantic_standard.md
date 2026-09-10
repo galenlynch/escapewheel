@@ -181,7 +181,7 @@ An importer MUST examine a source in acquisition order and MUST NOT assume monot
 
 A tick's zero is where the clock's declared origin says it is — for a sample clock whose origin is
 sample 0 of a recording, tick 0 **is** that sample. A writer MUST NOT re-base a source's sample
-index and a reader MUST NOT assume any base beyond what the origin declares (R45 §3); that
+index and a consumer MUST NOT assume any base beyond what the origin declares (R45 §3); that
 prohibition is what makes a tick exact.
 
 Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default (R37 §3, R40 §2). A profile or a recipe MAY state a different tolerance; a writer MUST record the value it used.

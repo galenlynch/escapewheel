@@ -146,7 +146,7 @@ A unit's identity is the tuple `(session_id, unit_id, sorting_run_id, curation_i
 
 The analysis layer MAY contain denormalized, prejoined, binned, aligned, or otherwise transformed products. An analysis resource MUST declare lineage to the core resources it derives from.
 
-Analysis resources are disposable. A consumer MAY delete and recompute any of them. An analysis resource becomes canonical only through an explicit revision of this specification.
+Analysis resources are disposable. A writer MAY delete and recompute any of them. An analysis resource becomes canonical only through an explicit revision of this specification.
 
 ### 5.2 Materialization is justified by layout, not by arithmetic
 

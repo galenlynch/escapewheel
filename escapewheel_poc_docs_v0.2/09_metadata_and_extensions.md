@@ -76,7 +76,7 @@ An extension's command MUST produce the same rows from the same inputs, and MUST
 
 An extension MAY validate its own tables before returning them, against its own registry document and on the same terms a validator applies to core (R17 §4). A build MUST NOT rely on its having done so; its own validation runs over every staged resource whatever produced it (R109 §3.5).
 
-An extension MAY write a report of its run at a path the recipe names, and a build MUST report what one contains where it is present. A build MUST NOT require one, and MUST NOT fail a build on a report's contents alone (R109 §3.6).
+An extension MAY write a report of its run at a path the recipe names, and a build MUST report what one contains where it is present. A build MUST NOT require one, and MUST NOT fail on a report's contents alone (R109 §3.6).
 
 A report carries what a build cannot derive, and a build SHOULD ignore what it can: rows per table, which tables exist, and whether their schemas conform are each established without asking. What no artifact holds is what the command read, what it skipped and why, and whether a table that is short is legitimately short.
 
@@ -102,13 +102,15 @@ A field moves from an extension into core through a revision of this specificati
 
 ## 8. Anti-patterns
 
-An implementation MUST NOT:
+A reader MUST NOT make an extension's schema required in order to open core tables or arrays.
 
-- make an extension's schema required in order to open core tables or arrays;
+A writer MUST NOT:
+
 - hide analysis-critical metadata inside free-form JSON;
 - use an object path as the only way to identify a resource;
-- block an import because optional institutional metadata is incomplete;
 - treat the catalog as a store for all metadata.
+
+A build MUST NOT block an import because optional institutional metadata is incomplete.
 
 ### 8.1 Untyped accretion
 

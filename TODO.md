@@ -132,6 +132,76 @@ commands, and that freedom is what R109 §3.1 exists to protect. Print for a per
 put anything a build should parse in the report file. Do not restate what the build already
 derives: rows per table come from the Parquet footer at `05` Stage 1.
 
+## 1₊₄. The actor audit is done, and what it found
+
+**Complete, 2026-09-10.** Every one of the **176 normative sentences that name an actor** was read
+against R111 §3.1's line — a reader is bound by what it **returns**, a consumer by what it
+**concludes** — and against §3.2, where a build is one run of a writer. **Seven were repointed**,
+which is the yield the by-part test predicted:
+
+- `01` §7 — "a **reader** MUST NOT assume any base beyond what the origin declares" became a
+  consumer. R45 §3 copies a tick verbatim, so no reader converts one; assuming a base is a
+  conclusion about the value, not a property of what came back.
+- `00` §5 and `06` §1 — "A **consumer** MAY delete and recompute any of them" became a writer.
+  Regenerating an analysis resource is a write, and no consumer mutates a packet.
+- `03` §6's revalidation and `05` §11's deterministic-build mode left **implementation** for a
+  validator and a writer: R111 §3.2 keeps that word for a requirement binding every actor alike,
+  and neither did.
+- `09` §8's five anti-patterns were one `implementation MUST NOT` list binding three actors, and
+  are now a reader's one, a writer's three and a build's one.
+- `09` §5.8 said "a build MUST NOT fail a build", which R109 introduced. It fails, or it does not.
+
+**What the sweep did not find is the result worth keeping.** Every `build` clause was already
+correct — all 24 are about one run against one recipe — and 36 of 37 consumer clauses were right,
+which is §2.2's by-part habit holding up under a full reading rather than a sample. The distribution
+now runs writer 75, consumer 37, validator 26, build 24, reader 20, and **implementation 2**, which
+is where R111 §3.2 says it should sit.
+
+## 1₊₊₊. An extension copier template, and the instructions to go with it
+
+**Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
+it: the four here were written by hand, and `registry/extensions/README.md` covers *what to model* —
+what varies belongs on the row, a source's columns are evidence rather than a schema, deriving a
+document from a pydantic model — while saying nothing about how to build and deliver one.
+
+**The template.** Base it on `~/Documents/Code/aind-python-copier-template`, which already carries
+the shape: `_templates_suffix: .jinja`, `_subdirectory: template`, copier ≥ 9.0.0, and conditional
+`_exclude` blocks for docs, notebooks, a CLI and a `CLAUDE.md`.
+`~/Documents/Code/aind-capsule-copier-template` is the other one to read before choosing which to
+fork. What it should generate:
+
+- `registry/<namespace>.json`, a skeleton declaring one table with every attribute a column owes,
+  and a test running it against `registry/registry.schema.json`;
+- an `extract.py` matching the shape a recipe's `command` invokes — an argument list run in the
+  source root, writing Parquet to declared paths;
+- an optional self-validation step against the extension's own document (R109 §3.5) and an
+  optional run report (R109 §3.6);
+- a `[source]` block and an `[encoding]` block to paste into a recipe.
+
+**What the instructions must state**, because each is a rule an author will otherwise break:
+
+- The document is a registry document in `02`'s format, namespaced (R17 §2, `09` §5.2), and the
+  packet declares it in the catalog (`09` §5.3).
+- Every column declares a type, a presence and a role (R2 §5, R48 §2.1); a string column declares
+  its vocabulary (R101 §3.1); an identifier declares `carried` or `assigned` (R53 §2.3); a
+  session-scoped table carries `session_id` and declares the reference (R88 §2.1).
+- Rows arrive with identifiers as the **names** their source used, never numbers: the writer mints
+  those packet-wide (R53 §2.5).
+- The document **MUST NOT** be derived from the rows it delivers (R109 §3.2). Declare the **union**
+  of what the pipeline may emit, as `nullable` — `aind_unit_qc.waveform_metrics` declares 13
+  columns where the extraction delivers 10, and that difference is what says a run did not compute
+  `half_width` rather than that the extension lacks it.
+- The command **MUST** be a function of its inputs (R109 §3.7). Where it cannot be, deliver a file
+  produced beforehand instead.
+- An encoding exception goes in the recipe's `[encoding]`, never in the schema, because it is a
+  fact about one packet's values (R110 §3.4).
+
+**Best practices worth stating beside the rules.** Isolate dependencies however you like — the
+command is an argument list, so `uv run`, a pinned interpreter and a container are all just
+commands, and that freedom is what R109 §3.1 exists to protect. Print for a person on stdout and
+put anything a build should parse in the report file. Do not restate what the build already
+derives: rows per table come from the Parquet footer at `05` Stage 1.
+
 ## 1₊₄. Audit the clauses that already name an actor
 
 **Queued, with a method and a trigger.** R111 defines writer, reader, validator and consumer and

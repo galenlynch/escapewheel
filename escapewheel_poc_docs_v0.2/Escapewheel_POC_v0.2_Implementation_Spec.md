@@ -281,7 +281,7 @@ A unit's identity is the tuple `(session_id, unit_id, sorting_run_id, curation_i
 
 The analysis layer MAY contain denormalized, prejoined, binned, aligned, or otherwise transformed products. An analysis resource MUST declare lineage to the core resources it derives from.
 
-Analysis resources are disposable. A consumer MAY delete and recompute any of them. An analysis resource becomes canonical only through an explicit revision of this specification.
+Analysis resources are disposable. A writer MAY delete and recompute any of them. An analysis resource becomes canonical only through an explicit revision of this specification.
 
 ### 5.2 Materialization is justified by layout, not by arithmetic
 
@@ -540,7 +540,7 @@ An importer MUST examine a source in acquisition order and MUST NOT assume monot
 
 A tick's zero is where the clock's declared origin says it is — for a sample clock whose origin is
 sample 0 of a recording, tick 0 **is** that sample. A writer MUST NOT re-base a source's sample
-index and a reader MUST NOT assume any base beyond what the origin declares (R45 §3); that
+index and a consumer MUST NOT assume any base beyond what the origin declares (R45 §3); that
 prohibition is what makes a tick exact.
 
 Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default (R37 §3, R40 §2). A profile or a recipe MAY state a different tolerance; a writer MUST record the value it used.
@@ -1518,7 +1518,7 @@ resource added later is caught without the registry having to declare that it mi
 
 A validator **MUST make that test over-inclusive where it is uncertain** (R35 §5). Matching a resource name inside
 a string literal or a comment re-runs a check that did not need it, which costs time; failing to
-match one costs correctness. An implementation that cannot show an input is immutable MUST run the
+match one costs correctness. A validator that cannot show an input is immutable MUST run the
 check (R35 §6): skipping a check whose inputs *could* have changed stays forbidden, which is what
 R32 §5 was protecting.
 
@@ -1999,7 +1999,7 @@ A writer conforms when it:
 
 Byte-identical output is **not** required and cannot be: a manifest carries `created_at` and
 `validated_at`, and encoders may encode identical logical content differently between library
-versions. An implementation MAY offer a deterministic-build mode that pins those, and a packet
+versions. A writer MAY offer a deterministic-build mode that pins those, and a packet
 a validator MUST NOT judge a packet non-conforming for lacking one (R75 §2.2).
 
 A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would
@@ -2031,7 +2031,7 @@ Normative.
 An analysis resource MUST declare lineage naming each canonical resource it derives from — core
 or extension (04 §7, R71 §2.3).
 
-An analysis resource is disposable. A consumer MAY delete and recompute any of them without loss.
+An analysis resource is disposable. A writer MAY delete and recompute any of them without loss.
 
 A writer SHOULD materialize an analysis resource only where doing so materially reduces repeated computational or I/O cost, gives an access layout core cannot, preserves the result of an expensive transformation, or provides a stable interface to an explicitly parameterised derivation (R78 §2.1). A cheap filter, projection, rename or small join SHOULD remain a view.
 
@@ -2416,7 +2416,7 @@ An extension's command MUST produce the same rows from the same inputs, and MUST
 
 An extension MAY validate its own tables before returning them, against its own registry document and on the same terms a validator applies to core (R17 §4). A build MUST NOT rely on its having done so; its own validation runs over every staged resource whatever produced it (R109 §3.5).
 
-An extension MAY write a report of its run at a path the recipe names, and a build MUST report what one contains where it is present. A build MUST NOT require one, and MUST NOT fail a build on a report's contents alone (R109 §3.6).
+An extension MAY write a report of its run at a path the recipe names, and a build MUST report what one contains where it is present. A build MUST NOT require one, and MUST NOT fail on a report's contents alone (R109 §3.6).
 
 A report carries what a build cannot derive, and a build SHOULD ignore what it can: rows per table, which tables exist, and whether their schemas conform are each established without asking. What no artifact holds is what the command read, what it skipped and why, and whether a table that is short is legitimately short.
 
@@ -2442,13 +2442,15 @@ A field moves from an extension into core through a revision of this specificati
 
 ## 8. Anti-patterns
 
-An implementation MUST NOT:
+A reader MUST NOT make an extension's schema required in order to open core tables or arrays.
 
-- make an extension's schema required in order to open core tables or arrays;
+A writer MUST NOT:
+
 - hide analysis-critical metadata inside free-form JSON;
 - use an object path as the only way to identify a resource;
-- block an import because optional institutional metadata is incomplete;
 - treat the catalog as a store for all metadata.
+
+A build MUST NOT block an import because optional institutional metadata is incomplete.
 
 ### 8.1 Untyped accretion
 
