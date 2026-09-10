@@ -1937,7 +1937,7 @@ A recorded `sha256` therefore says what a packet's bytes **are**, not what a sec
 produce. Two conforming builds of one dataset may record different digests for the same rows
 (R75 §2.3).
 
-## 11. Alternatives are resolved before a commit
+## 12. Alternatives are resolved before a commit
 
 Where two or more `core.processing_runs` rows share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not (R82 §2.1). Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` (R82 §2.2) — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
 
