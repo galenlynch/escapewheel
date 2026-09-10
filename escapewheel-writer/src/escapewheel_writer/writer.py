@@ -1152,7 +1152,7 @@ class PacketWriter:
             *self._reference_media(),
         ]
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
-        # R68 §3's rule and its two neighbours are good guesses, and a column one guesses wrong
+        # `03` §5.5's rules are good guesses, and a column one guesses wrong
         # about is said aloud rather than silently paid for. A report, not a refusal: every
         # encoding is permitted (`03` §5.5), so the packet is conforming whichever it got.
         for note in sorted(set(self._encoding_notes)):

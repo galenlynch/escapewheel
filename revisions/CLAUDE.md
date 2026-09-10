@@ -348,6 +348,12 @@ touches.
    genuinely fits no section, add a section at the **end of the part** — appending after the last
    one renumbers nothing either — rather than filing it under a heading that does not describe
    it.
+5a. **`python revisions/impact.py`** once the parts are edited, before moving on. It maps each
+   changed line to the section it falls in and lists every file citing that section, which is the
+   only way to find them: `check_citations.py` asks whether a citation resolves, and a citation
+   into a rewritten section resolves perfectly. R110 rewrote `03` §5.5, which **16 files cite,
+   three of them the writer's own source**, and one of those still named `R68 §3` — the
+   miscitation R110's appraisal had just struck from the revision — for two more commits.
 6. **`escapewheel_poc_docs_v0.2/applied.toml`**, one entry per clause. `ledger.py` demands a
    disposition for every §2 subsection and for any other section carrying a MUST or a SHOULD, and
    fails equally on an entry naming a clause that no longer exists.

@@ -138,6 +138,13 @@ than rewrite: each points at prose that no longer stands.
 Nothing about a packet changes, and no rule this specification states moves. What moves is the
 direction a reader is sent when they ask what binds them.
 
+Citing a part is only maintainable if a change to one can find its citers, which nothing could do:
+`check_citations.py` asks whether a citation resolves, and a citation into a rewritten section
+resolves perfectly. `revisions/impact.py` answers the other direction — it maps each changed line to
+its section and lists every file citing it — and finding the citers is what §3.1 turns from a
+search into a lookup. Run against the commit that accepted R110, it reports **48 sections changed
+and 127 citations to read**, `03` §5.5 alone carrying 16.
+
 ## 6. Open
 
 - **Whether a part's headings should be checked against the citations that resolve to them.** §3.5

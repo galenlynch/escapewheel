@@ -1,7 +1,7 @@
 """How a column is encoded in Parquet, and what an extension may say about its own.
 
 The rules are `03` §5.5's, and they reach any table the writer stages -- an extension's as much as
-core's, because R17 §3 gives an extension no second code path. What core does **not** do is name an
+core's, because `09` §5.6 lets a writer require no code of an extension. What core does **not** do is name an
 extension's tables: the exception tables below carry `core.*` and `analysis.*` alone, and an
 extension supplying its own passes them to :class:`~escapewheel_writer.writer.PacketWriter`.
 
