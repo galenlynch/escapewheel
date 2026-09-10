@@ -36,6 +36,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader.clocks import NotAligned, anchors, declared_bound, mapped, reference_clock
+from numpy.typing import NDArray
 
 from .arrow import schema as arrow_schema
 
@@ -122,6 +123,23 @@ def _clock_id(packet: Any, reference: Any) -> Any:
         if name == reference:
             return identifier
     raise NotAligned(f"no clock is named {reference!r}, so there is nothing to map onto")
+
+
+def _unit_clocks(packet: Any) -> NDArray[np.int64]:
+    """Each unit's `clock_id`, indexed by `unit_id` (R96 §3.3).
+
+    A spike's tick is on its unit's clock, and the hop is one column of a 6,781-row table against
+    287 M rows that no longer carry a copy of it (R96 §3.4). An array rather than a mapping because
+    R81 §2.1 numbers `unit_id` densely from zero, so the lookup is an index.
+    """
+    units = packet.table("core.units")
+    identifiers = units.column("unit_id").to_numpy(zero_copy_only=False)
+    clocks = units.column("clock_id").to_numpy(zero_copy_only=False)
+    if identifiers.size == 0:
+        return np.zeros(0, dtype=np.int64)
+    found = np.full(int(identifiers.max()) + 1, -1, dtype=np.int64)
+    found[identifiers] = clocks
+    return found
 
 
 def _bytes(budget: int | str) -> int:
@@ -317,7 +335,13 @@ def spike_events(
     dropped = [0] if dropped is None else dropped
     by_clock = anchors(packet)
     handle = packet.table_resource("core.spike_events")
-    columns = ["session_id", "unit_id", "t_tick", "clock_id"]
+    columns = ["session_id", "unit_id", "t_tick"]
+    # R96 §3.4 struck `core.spike_events.clock_id` and §3.3 gave `t_tick` a `clock_from` hop to
+    # `core.units.clock_id`, so a spike's clock is resolved through its unit rather than carried
+    # per row. Resolved once into an array indexed by `unit_id`, which R81 §2.1 numbers densely
+    # from zero: a dict lookup per spike would materialise a Python object for each of 287 M rows,
+    # which is the cost R53's note below says the int32 column exists to avoid.
+    on_clock = _unit_clocks(packet)
     # Types come from the registry rather than being spelled here. They were dictionary-coded
     # strings until R53 made every identifier an `int32`, and the machinery that avoided
     # decoding them -- 9.13 GB of Arrow per 40 row groups -- has nothing left to avoid: four
@@ -325,7 +349,8 @@ def spike_events(
     registry = packet.registry
     if registry is None:
         raise NotAligned("the packet embeds no registry, so the derived table has no declared types")
-    out = arrow_schema(registry["tables"]["analysis.spike_events"], {*columns, "time_bucket_tick"})
+    out = arrow_schema(registry["tables"]["analysis.spike_events"],
+                       {*columns, "clock_id", "time_bucket_tick"})
 
     root = Path(scratch) if scratch else Path(tempfile.mkdtemp(prefix=".materialize-", dir=packet.root.parent))
     buckets = _Buckets(root, out, _bytes(memory_budget))
@@ -333,7 +358,16 @@ def spike_events(
         reader = pq.ParquetFile(handle.path)
         carry: tuple[int, int] | None = None
         for batch in reader.iter_batches(batch_size=BATCH_ROWS, columns=columns):
-            parent, keep = mapped(batch, reference, by_clock, bound)
+            units = batch.column("unit_id").to_numpy(zero_copy_only=False)
+            if units.size and int(units.max()) >= on_clock.size:
+                raise NotAligned(
+                    f"a spike names unit {int(units.max())}, which `core.units` does not declare, "
+                    f"so its tick reaches no clock (R96 §3.3)"
+                )
+            timed = pa.record_batch(
+                {"t_tick": batch.column("t_tick"), "clock_id": pa.array(on_clock[units])}
+            )
+            parent, keep = mapped(timed, reference, by_clock, bound)
             # R40 §2.3: counted whether or not any are dropped. A recorded zero is the
             # evidence the bound was sufficient; silence is what let a reader and this
             # writer disagree about which spikes exist without either noticing.

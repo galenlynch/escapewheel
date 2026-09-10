@@ -55,14 +55,27 @@ class Fake:
                 "parent_tick": ap.tolist() if anchors else [],
             }
         )
+        # R96 §3.4 struck `core.spike_events.clock_id` and §3.3 resolves a tick's clock through
+        # the unit, so the clock is declared once per unit and the spike carries none.
+        identifiers = [unit_of(i) for i in range(len(ticks))]
+        by_unit: dict[int, int] = {}
+        for unit, clock in zip(identifiers, clocks, strict=True):
+            if by_unit.setdefault(unit, clock) != clock:
+                raise AssertionError(f"unit {unit} on two clocks, which R96 §3.3 leaves unsayable")
+        ordered = sorted(by_unit)
+        self._units = pa.table(
+            {
+                "unit_id": pa.array(ordered, type=pa.int32()),
+                "clock_id": pa.array([by_unit[u] for u in ordered], type=pa.int32()),
+            }
+        )
         path = tmp_path / "spike_events.parquet"
         pq.write_table(
             pa.table(
                 {
                     "session_id": pa.array([SESSION] * len(ticks), type=pa.int32()),
-                    "unit_id": pa.array([unit_of(i) for i in range(len(ticks))], type=pa.int32()),
+                    "unit_id": pa.array(identifiers, type=pa.int32()),
                     "t_tick": pa.array(ticks, type=pa.int64()),
-                    "clock_id": pa.array(clocks, type=pa.int32()),
                 }
             ),
             path,
@@ -79,6 +92,7 @@ class Fake:
             "core.sessions": self._sessions,
             "core.clock_anchors": self._anchors,
             "core.clocks": self._clocks,
+            "core.units": self._units,
         }[rid]
 
     def table_resource(self, rid):
