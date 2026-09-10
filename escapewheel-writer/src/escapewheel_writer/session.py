@@ -766,6 +766,9 @@ def build(
         # R88 §2.3's fill needs the session before any source runs, and `core.sessions` is staged
         # last: three tables reached validation with a null `session_id` because of the order.
         session=session_id,
+        # An extension reaches the writer across a file or a subprocess, so what it says about its
+        # own columns arrives as recipe data rather than as a Python object it hands over.
+        encoding_exceptions=_encoding_exceptions(recipe),
     )
 
     # R87 §2.8: the recipe supplies `core.subjects` only where no source owns it, so a packet
@@ -932,6 +935,21 @@ def _add_records(
 #: preference decides nothing and the sources hold *different* rows (R108 §4). Comparing those
 #: would report a probe clock against a reference clock and call the difference a loss.
 _ARBITRATED = frozenset(PREFERRED) - SHARED
+
+
+def _encoding_exceptions(recipe: Recipe) -> dict[str, dict[str, tuple[str, ...]]]:
+    """Group the recipe's `[encoding]` block the way `encoding.encodings` reads it.
+
+    `resource.column` splits at the last dot, since a resource ID is itself dotted.
+    """
+    grouped: dict[str, dict[str, list[str]]] = {"delta": {}, "plain": {}, "dictionary": {}}
+    for name, declared in recipe.encoding.items():
+        chosen = str(declared.get("encoding", "")).strip()
+        if chosen not in grouped or name.count(".") < 2:
+            continue
+        resource, _, column = name.rpartition(".")
+        grouped[chosen].setdefault(resource, []).append(column)
+    return {how: {r: tuple(c) for r, c in tables.items()} for how, tables in grouped.items()}
 
 
 def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Recipe) -> None:

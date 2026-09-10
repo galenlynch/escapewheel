@@ -9,7 +9,12 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 
 from escapewheel_writer import CommitRefused, PacketWriter
-from escapewheel_writer.encoding import DELTA_COLUMNS, DICTIONARY_COLUMNS, NO_DICTIONARY
+from escapewheel_writer.encoding import (
+    DELTA_COLUMNS,
+    DICTIONARY_COLUMNS,
+    NO_DICTIONARY,
+    inefficient,
+)
 
 
 def _write(root, registry, tables, **kwargs):
@@ -934,3 +939,30 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
                    for c in tables[resource]["columns"])
     ]
     assert stale == []
+
+
+def test_an_inefficient_encoding_is_reported(tmp_path, registry, minimal):
+    """R68 §3's rule is a good guess, and a column it guesses wrong about is said aloud.
+
+    Collected and never read is how this mechanism failed first: the notes were appended in two
+    places and emitted in none, so the report existed and reached nobody. Both halves are pinned
+    here — that `inefficient` finds a column, and that `commit` says what it found.
+    """
+    said: list[str] = []
+    writer = PacketWriter(registry, packet_id="p", session="s001")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    writer._encoding_notes.append("core.pretend.column is plain where dict is 9.9x smaller")
+    writer.commit(tmp_path / "packet", say=said.append)
+    assert [line for line in said if "9.9x smaller" in line], "a collected note reached nobody"
+
+
+def test_inefficient_finds_a_column_encoded_worse_than_it_could_be(registry):
+    """An ascending integer is what delta exists for, so calling it anything else is reported.
+
+    The check is over what a caller says it chose, not over what a rule would choose, so a writer
+    that ignores `03` §5.5 entirely still learns what its choice cost.
+    """
+    ramp = pa.table({"t_tick": pa.array(range(1_000_000, 1_020_000), type=pa.int64())})
+    assert inefficient("core.pretend", ramp, delta=[], plain=["t_tick"]), "delta is far smaller"
+    assert inefficient("core.pretend", ramp, delta=["t_tick"], plain=[]) == [], "and delta is said to be right"

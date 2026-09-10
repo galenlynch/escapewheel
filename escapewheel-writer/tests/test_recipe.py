@@ -12,6 +12,7 @@ from escapewheel_writer.session import (
     CONSUMES,
     Context,
     RecipeError,
+    _encoding_exceptions,
     _note_unclaimed,
     _refuse_a_discarded_fact,
     order,
@@ -472,3 +473,36 @@ def test_a_stated_fact_with_no_accessor_is_refused(tmp_path, registry, monkeypat
     monkeypatch.setitem(sources.ADAPTERS, "sorter", Absent)
     problems = levels(Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n')).check(registry))
     assert any("which its adapter does not expose" in m for m in problems.get("error", []))
+
+
+# -- an extension declares an encoding where the writer can read it without importing it ------
+
+
+def test_an_encoding_declaration_needs_a_choice_and_a_reason(tmp_path):
+    """An extension reaches the writer across a file, so it declares in the recipe, with a reason.
+
+    The reason is what makes the entry re-judgeable: an encoding is a fact about one packet's
+    values, so a bare choice cannot be checked against the next session's data.
+    """
+    recipe = Recipe.load(write(tmp_path, """
+[encoding]
+"aind_unit_qc.metrics.num_spikes_used" = { encoding = "delta", reason = "climbs with the spike count; 1.7x" }
+"aind_unit_qc.metrics.presence_ratio" = { encoding = "sideways", reason = "no such thing" }
+"aind_unit_qc.metrics.silhouette" = { encoding = "plain", reason = "" }
+"""))
+    tables = {"aind_unit_qc.metrics": {"columns": [{"name": "num_spikes_used"},
+                                                   {"name": "presence_ratio"},
+                                                   {"name": "silhouette"}]}}
+    found = recipe.encoding_problems(tables)
+    assert any("sideways" in e for e in found)
+    assert any("silhouette" in e and "no reason" in e for e in found)
+    assert not any("num_spikes_used" in e for e in found)
+
+
+def test_an_encoding_declaration_reaches_the_writer(tmp_path):
+    """`resource.column` splits at the last dot, a resource ID being dotted itself."""
+    recipe = Recipe.load(write(tmp_path, """
+[encoding]
+"aind_unit_qc.metrics.num_spikes_used" = { encoding = "delta", reason = "1.7x" }
+"""))
+    assert _encoding_exceptions(recipe)["delta"] == {"aind_unit_qc.metrics": ("num_spikes_used",)}

@@ -324,6 +324,11 @@ class Recipe:
     subject: Mapping[str, Any]
     #: R87 §2.5: `block.field` to the reason the recipe's value supersedes the source's.
     overrides: Mapping[str, str]
+    #: Parquet encodings this build forces, `resource.column` to `{encoding, reason}`. Declared
+    #: here because an extension reaches the writer across a file or a subprocess and cannot hand
+    #: it a Python object, and because an encoding is a fact about *this packet's* values rather
+    #: than about the schema: a column that repeats in one session may not in the next.
+    encoding: Mapping[str, Mapping[str, str]]
     clocks: tuple[ClockSpec, ...]
     sources: tuple[SourceSpec, ...]
     materialize: tuple[MaterializeSpec, ...]
@@ -400,6 +405,7 @@ class Recipe:
             session=document.get("session", {}),
             subject=document.get("subject", {}),
             overrides=document.get("overrides", {}),
+            encoding=document.get("encoding", {}),
             clocks=tuple(ClockSpec(**c) for c in document.get("clock", [])),
             sources=_resolve_ownership(
                 tuple(
@@ -540,6 +546,7 @@ class Recipe:
         errors.extend(self._clock_problems())
         errors.extend(self._option_problems())
         errors.extend(self._states_problems())
+        errors.extend(self.encoding_problems(tables))
         fact_errors, fact_warnings, notes = self._declared_fact_problems()
         errors.extend(fact_errors)
         warnings.extend(fact_warnings)
@@ -579,6 +586,30 @@ class Recipe:
             for fact in states(kind):
                 by_field.setdefault(fact, []).append(kind)
         return by_field
+
+    def encoding_problems(self, tables: Mapping[str, Any]) -> list[str]:
+        """Everything wrong with the `[encoding]` block, knowable with no source read.
+
+        An extension reaches the writer across a file or a subprocess, so what it says about its
+        own columns arrives here rather than as a Python object it hands over. Each entry names a
+        `resource.column`, one of three encodings, and the reason it was chosen -- a measurement,
+        since an encoding is a fact about one packet's values and a bare choice cannot be
+        re-judged against the next session's.
+        """
+        found: list[str] = []
+        for name, declared in sorted(self.encoding.items()):
+            chosen = str(declared.get("encoding", "")).strip()
+            if chosen not in {"delta", "plain", "dictionary"}:
+                found.append(f"[encoding] {name} declares {chosen!r}; one of delta, plain, dictionary")
+            if not str(declared.get("reason", "")).strip():
+                found.append(f"[encoding] {name} carries no reason; a measurement is what makes an "
+                             "entry re-judgeable when the data changes")
+            resource, _, column = name.rpartition(".")
+            if name.count(".") < 2 or resource not in tables:
+                found.append(f"[encoding] {name} names no declared table")
+            elif not any(c["name"] == column for c in tables[resource]["columns"]):
+                found.append(f"[encoding] {name} names no column of {resource}")
+        return found
 
     def _declared_fact_problems(self) -> tuple[list[str], list[str], list[str]]:
         """Errors, warnings and notes about declared facts and their overrides (R87 §2.3, §2.5).

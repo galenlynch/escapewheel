@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `03` §5.5 (two writer SHOULDs beside the tick one, and what a writer reports); adds three subsections to `10` §2 |
+| **Amends** | `03` §5.5 (two writer SHOULDs beside the tick one, and what a writer reports); `05` §3 (a recipe declares an encoding); adds three subsections to `10` §2 |
 | **Depends on** | R68 §2.3 (`DELTA_BINARY_PACKED` is defined for `INT32` and `INT64` alone), R68 §3 (the tick SHOULD `03` §5.5 carries), R10 §2 (a table is sorted by its primary key), R53 §2.1 (an identifier is an integer), R93 §3.4 (a measurement supports a rule that lives elsewhere), R93 §3.5 (what survives replacing the reference implementation), R17 §3 (an extension needs no second code path), R53 §2.5 (a writer mints every assigned identifier) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -119,19 +119,29 @@ list that grows by accident and is never read again.
 A writer **SHOULD** refuse an exception naming a column no table declares, which is decidable with
 no packet in hand and is what keeps such a list from going stale.
 
-### 3.4 An extension declares exceptions for its own tables and no others
+### 3.4 An extension declares an exception in the recipe
 
-A writer's exceptions **MUST** name only tables of the layer that writer implements, and a writer
-**MUST** accept exceptions an extension supplies for the extension's own tables. Core naming an
-extension's table makes the extension unmaintainable by anyone but core: a fourth extension arriving
-tomorrow could declare nothing, and one shipped as a document alone (R17 §2) has no code to patch.
+A writer's own exceptions **MUST** name only tables of the layer it implements, and an extension's
+**MUST** be declarable without the writer importing anything the extension ships. A recipe carries
+them, in an `[encoding]` table keyed `resource.column`, each entry naming one of `delta`, `plain`
+or `dictionary` and the reason it was measured.
 
-The division costs an extension almost nothing, because the columns where an encoding is worth 37x
-to 79x are not its own. An extension hands the writer Arrow with its identifiers as **names**, and
-R53 §2.5 has the writer mint the integers packet-wide, so `aind_unit_qc.metrics.unit_id` is core's
-column by the time an encoding is chosen for it — which is why §2.1's table includes it at 57x
-without the extension being consulted. What an extension owns is its own measurements, and §3.2
-reaches those by rule.
+The boundary is the requirement, not a fallback. An extension that runs in the writer's process
+puts its dependency closure in the writer's environment, and one badly maintained extension then
+makes that environment unsolvable — which is the failure `ndx-` extensions demonstrate on the read
+path, and which a registered adapter would reproduce on the write path. So an extension reaches a
+build through files and, where the raw source needs converting, a subprocess; anything more coupled
+is an optimisation a writer **MUST NOT** require. Nothing about the boundary costs correctness: a
+subprocess extension may run the same validation over its own tables and fail before returning.
+
+The recipe is also the right granularity rather than the only reachable one. An encoding is a fact
+about **one packet's values** — `aind_unit_qc.metrics.presence_ratio` repeats often enough to want a
+dictionary in these two sessions and may not in a third — where a schema-level declaration would
+claim it of every packet the extension ever appears in. R87 §2.5 already puts a chosen value and its
+reason in a recipe for the same reason: the choice belongs to the build.
+
+An entry **MUST** carry a reason. A bare choice cannot be re-judged when the data moves, which is
+what §3.5's report exists to prompt.
 
 ### 3.5 A writer reports a column a rule guessed wrong about
 
@@ -142,7 +152,7 @@ good guesses, and a report is how the author of a table learns that theirs is on
 Measured on the two packaged sessions, three columns draw one, all in one extension:
 `aind_unit_qc.metrics.num_spikes_used` at 1.7x, `presence_ratio` and `sliding_rp_violation` at 1.8x.
 That is the mechanism working as intended rather than a defect — those are the columns core stopped
-naming under §3.4, and the report is what tells their owner to declare them.
+naming under §3.4, and the report is what tells a recipe author which entries to write.
 
 A report and not a refusal, because `03` §5.5 permits every encoding and a packet is conforming
 whichever it uses. The level is R97 §3.4's, which reports a declared `metadata` column no row fills
@@ -185,11 +195,10 @@ reading that table alone pays.
 
 ## 6. Open
 
-- **Where an extension shipped as a document alone declares an exception.** §3.4 has a writer accept
-  what an extension supplies, which serves a distribution carrying code. An extension that is
-  entirely data — a registry document and Parquet files, which R17 §2 permits and the `tables`
-  source exists for — has nothing to supply it from, so §3.5's report is all it gets. A recipe could
-  carry the declaration, being the per-build document where R87 §2.5 already puts a value someone
-  chose and the reason they chose it, and an encoding is a fact about one packet's values rather
-  than about the schema. Nothing here needs it yet: the three columns §3.5 reports are in an
-  extension that ships an adapter.
+- **What else an extension may be held to across that boundary.** §3.4 states the boundary for one
+  thing an extension says, and the contract it is part of is stated nowhere whole: R17 §2 makes an
+  extension a registry document, `05` §3.4 has an adapter declare `PRODUCES`, and the `tables`
+  source gives it files and an optional command, but no part says what a writer may require of an
+  extension or what an extension may assume in return. Whether a subprocess extension owes its own
+  validation before returning, and what it owes on failure, belongs with that contract rather than
+  here.
