@@ -435,10 +435,13 @@ class SessionSource(Compensates):
     def subjects(self) -> list[dict[str, Any]]:
         """`core.subjects` from `subject.json`, which states what the NWB does not.
 
-        `general/subject` carries no species in either packaged session and this document carries
-        `Mus musculus` with the registry that spells it, in both. Nothing translates: the value is
-        the NCBI Taxonomy name `core.subjects.species` asks for, and a writer that guessed one from
-        a common name would be inventing a fact (R101 §3.4).
+        `general/subject` states a species too -- `Mus musculus` in both sessions -- so this is the
+        record rather than the only source. What it adds is what the exporter's projection has no
+        place for: a `background_strain` key the NWB lacks entirely, and a date of birth with no
+        timezone, where the NWB writes `2024-09-24T00:00:00-07:53` and R4 §3.3 exists because
+        converting a midnight through an offset can move the day. Nothing translates either way:
+        both already spell the name as NCBI Taxonomy does, and a writer that guessed one from a
+        common name would be inventing a fact (R101 §3.4).
 
         Everything the standard does not model goes to `metadata` (R97 §3.1), the taxon identifier
         included -- `NCBI:txid10090` is what survives a renaming the name does not (R59 §1), and no
