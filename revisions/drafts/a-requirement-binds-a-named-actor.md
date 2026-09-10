@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `00` §2 (adds the actors to Terms and definitions); `05` §10 (the conformance classes name the actor they are properties of); eight clauses across `00`, `01`, `03`, `04` and `05` that bind no actor |
+| **Amends** | `00` §2 (adds the actors to Terms and definitions); `05` §10 (the conformance classes name the actor they are properties of); 45 clauses across every part but `07`, `08` and `10` that name neither an actor nor what they bind |
 | **Depends on** | R79 §2.2 (a packet obligation and an importer obligation are reported apart), R75 §2.1 (logical determinism binds an importer), R67 §2.4 (a requirement may bind an actor no tool can watch), R93 §3.6 (each part states what it binds) |
 | **Profile** | all |
 
@@ -19,7 +19,7 @@ adapter, an importer, an implementation and a client. It defines none of them. `
 levels, a packet, its catalog, an Iceberg catalog, and resource identity — and no actor at all.
 
 This part adds the actors to that section, says what a requirement may bind, and gives an actor to
-the eight clauses that bind none.
+the 45 clauses that name neither.
 
 Measured over the eleven v0.2 parts as they stand: **12 actor nouns and 249 mentions, of which 146 sentences
 carrying a MUST, SHOULD or MAY name one.** Seven of those name two, mostly because they bind two.
@@ -80,11 +80,23 @@ A check does not refuse; whoever runs it does. This is the same defect as the tw
 a third one: with no roster to reach for, an author reaches for the nearest noun, and sometimes the
 nearest noun is the process itself.
 
-The eight are those whose subject is an abstract process. A larger class phrases a requirement in
-the **agentless passive** — 38 clauses of the form "X MUST be *verbed*" with no "by" — and most of
-those are sound: "`INT96` MUST NOT be used" and "The `transpose` codec MUST NOT be used" state
-properties of a packet, which §3.3 permits. Telling the two apart needs the definitions this part
-adds, which is why §6 leaves that audit open rather than attempting it here.
+Those eight are the clauses whose subject is an abstract process. A second and larger group phrases
+the requirement in the **agentless passive** — **38 clauses** of the form "X MUST be *verbed*" with
+no "by" — and reading them individually splits three ways:
+
+| | count | example |
+|---|---:|---|
+| elides an actor the roster names | **25** | "A recipe MUST be checked against the registry before any source is opened" — a build |
+| names an artifact, and hides both the part and the action | **12** | "`INT96` MUST NOT be used"; "A table whose purpose is to hold arbitrary name-value pairs MUST NOT be added to core" |
+
+The remaining one is `05` §3.4's, already counted above. The second group is not the first defect
+in disguise: nobody is missing from "`INT96` MUST NOT be used", but **which part** of a packet is
+also missing, and so is the verb. A wall-clock column is what may not use `INT96`, and saying so
+turns a rule a reader must place into one that points at what a validator opens.
+
+Doing both here rather than deferring either is what keeps §3.3 true on the day it lands: a part
+stating that every requirement binds an actor or describes an artifact, over a specification with
+45 clauses doing neither, would be violated by the document that contains it.
 
 ## 3. Decision
 
@@ -127,7 +139,10 @@ can fail:
 1. **Bind an actor** named in §3.1 or resolving to one by §3.2, which says who complies.
 2. **State a property of an artifact** — a packet, a table, a column, a manifest entry — which is
    inspectable. "A packet carrying sorted units MUST carry `core.sorting_runs`" binds nobody and is
-   sound, because the packet either carries them or does not.
+   sound, because the packet either carries them or does not. Such a clause **MUST** name the part
+   of the artifact it constrains and **MUST** put the constraint in an active verb: "a wall-clock
+   column MUST NOT use `INT96`" over "`INT96` MUST NOT be used", which leaves a reader to work out
+   what the rule is about before they can apply it.
 
 This clause binds whoever writes this specification, and nothing else in it does. No validator
 inspects the specification, so a clause failing it is corrected here rather than reported anywhere.
@@ -153,12 +168,32 @@ R75 §2.1 and `05` §10 both bind an importer, and both continue to bind the wri
 `05` §10's two classes are renamed to say what they are properties of: **packet conformance** and
 **writer conformance**.
 
-### 3.5 Eight requirements gain an actor
+### 3.5 Thirty-three requirements gain an actor, and twelve name what they constrain
 
-Each clause in §2.3 names the actor that performs it: a **validator** for the two checks, the
-re-run and the verification pass; a **writer** for the rewrite and for recording both version
-strings verbatim; and a **build** for the source entry whose `owns` is silent, which is what
-resolves a recipe's ownership.
+Each of §2.3's eight abstract-subject clauses and each of its 25 agentless passives names the actor
+that performs it. By actor: **13 a writer** — immutability, amendment order, `packet_version`, stray
+removal, recording the recipe and its digest, streaming a large table, converting a half-open
+interval, recording a compensation, materialization, and the two spike-omission clauses of `06`;
+**6 a validator** — the two checks, the shim's non-SQL tests, an extension's verdict in both `05`
+and `09`, and the deterministic-build clause; **4 a consumer** — the source-provenance label, the
+undecoded code, the joinability rules, and resolution through a different document; **3 a build** —
+recipe checking, refusal on a defaulted resource, and a silent `owns`; and **1 a reader**, reporting
+an unresolved `source`.
+
+Twelve bind an artifact rather than an actor, and are restated under §3.3's second form so that each
+names the part it constrains and states it actively: a **wall-clock column** does not use `INT96`, a
+**column's type** is not `list`, `struct` or `map`, an **array's codec chain** does not include
+`transpose`, a **catalog entry** for an external asset declares it external, a **`metadata` column's
+presence** is `optional`, an **extension's resource identifier** begins with its namespace, a
+**naming exception** carries a reason, a **Tier 2 rule** expresses no storage-layer test, and
+**core** holds no arbitrary name-value table.
+
+Three are a judgement call and are settled here rather than left to whoever implements the sweep.
+`00` §4.1's "Core resources MUST be validated before they are committed" binds a **writer**, since
+`05` §1 makes validate-then-commit the writer's own sequence and not a verdict anyone reports.
+`03` §7's stray binds a **writer**, cleanup being a mutation of a packet whatever it is called.
+`04` §5.5's unresolved source splits: a **reader** reports it, and a **validator** does not fail
+structural validation for it.
 
 ## 4. What this does not change
 
@@ -172,7 +207,8 @@ resolves a recipe's ownership.
 ## 5. Consequence
 
 `00` §2 gains four definitions and three derived terms; `05` §10 renames one of its conformance
-classes; eight clauses gain an actor. Thirteen mentions of a retired spelling are repointed.
+classes; 33 clauses gain an actor and 12 name the part of the artifact they constrain. Thirteen
+mentions of a retired spelling are repointed.
 
 The reference implementation changes nothing. `escapewheel-reader`, `-validator` and `-writer`
 already divide along three of the four actors, and the fourth has no code because a consumer is
@@ -183,12 +219,6 @@ part it governs binds 8 clauses to a writer, 12 to a build and 3 to an importer,
 deciding which of those are importer obligations was deciding it by name.
 
 ## 6. Open
-
-- **Which of the 38 agentless passives elide an actor.** §2.3 measures the class and fixes none of
-  it: "X MUST be *verbed*" with no "by" is sound where X is an artifact — "`INT96` MUST NOT be
-  used" — and elides a nameable actor where it is not, as "A recipe MUST be checked against the
-  registry before any source is opened" elides a build. The definitions §3.1 adds are what make
-  that separable, and separating it is a reading of 38 clauses rather than a rule.
 
 - **Whether the 146 sentences that already name an actor name the right one.** §2.2 measures that the
   read side splits cleanly by part, which is evidence the habit was sound rather than proof of it,
