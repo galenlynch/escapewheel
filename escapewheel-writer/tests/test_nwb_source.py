@@ -11,6 +11,7 @@ from escapewheel_reader import open_packet
 from escapewheel_writer import Clock, OffGrid, PacketWriter
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
 from escapewheel_writer.sources import NWBSource, SourceDefect
+from escapewheel_writer.sources.nwb import _sex
 from tests import nwbfixture
 
 KIND = "task.trials"
@@ -210,6 +211,21 @@ def test_a_naive_wall_clock_is_read_in_the_declared_zone(tmp_path, harp):
 def test_a_date_of_birth_is_the_local_calendar_date(source):
     """Converting a date through UTC could move it by a day; the written date is the fact."""
     assert source.records()["core.subjects"][0]["date_of_birth"] == date(2024, 9, 24)
+
+
+def test_a_subjects_sex_lands_inside_the_closed_vocabulary(source):
+    """R101 §3.9 closes `sex` to four values, and a source states its own spelling.
+
+    Both packaged sessions state `Male`, which reached a committed packet verbatim and is outside
+    the set, so the mapping is what stands between a source's spelling and a Tier 1 failure.
+    """
+    assert source.records()["core.subjects"][0]["sex"] == "male"
+    assert [_sex(v) for v in ("M", "Male", "male", "F", "Female", "H", "O")] == [
+        "male", "male", "male", "female", "female", "hermaphrodite", "other"
+    ]
+    # `U` is unknown, and R101 §3.9 makes that a null rather than `other`: recording it as `other`
+    # asserts a sex the source never claimed, where a null says the source did not say.
+    assert [_sex(v) for v in ("U", "unknown", "", None)] == [None, None, None, None]
 
 
 # -- what it will not decode ---------------------------------------------------------
