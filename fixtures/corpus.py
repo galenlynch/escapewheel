@@ -44,6 +44,9 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "undeclared_currency": ("error", "core.processing_runs.undeclared_currency"),
     "unscoped_runs": ("error", "core.processing_runs.scope_undeclared"),
     "clock_without_window": ("error", "core.clocks.observation_declared"),
+    "frame_without_axes": ("error",
+                           "core.electrode_coordinate_values."
+                           "session_id_coordinate_frame_axis_index_resolves"),
 }
 
 #: Packets whose expected finding is advisory (R26 §3). Advisory rules are off by default --

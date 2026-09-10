@@ -84,10 +84,12 @@ def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
             # R58 §2.1: an exported file records where the probe was found, never where it was
             # aimed, so an import can only assert `measured`.
             "coordinate_basis": "measured",
-            "x_um": 100.0,
-            "y_um": 100.0,
-            "z_um": 100.0,
         }
+    ]
+    assert [(v["axis_index"], v["axis_value"]) for v in source.unit_coordinate_values()] == [
+        (0, 100.0),
+        (1, 100.0),
+        (2, 100.0),
     ]
     assert [note for note in source.notes if "spike_times" in note] == []
 
@@ -111,6 +113,11 @@ def test_it_reads_the_tables_the_nwb_is_the_authority_for(source):
         "core.probes": 1,
         "core.electrodes": 2,
         "core.electrode_coordinates": 3,  # both electrodes in the probe frame, one in CCF
+        # R105 §3.3: the same three positions as one row per axis -- two shank axes each and
+        # three CCF axes -- against the two frames and five axis rows they are stated on.
+        "core.electrode_coordinate_values": 7,
+        "core.coordinate_frames": 2,
+        "core.coordinate_frame_axes": 5,
         "core.event_streams": 4,
         "core.events": 4,
         "core.intervals": 1,
@@ -260,11 +267,32 @@ def test_the_probe_takes_its_model_and_serial_from_the_linked_device(source):
 
 
 def test_coordinates_are_rows_per_frame_not_a_padded_triple(source):
-    coordinates = source.records()["core.electrode_coordinates"]
-    assert only(coordinates, electrode_id="probeA.CH1", coordinate_frame="probe")["x_um"] == 32.0
-    ccf = only(coordinates, electrode_id="probeA.CH0", coordinate_frame="ccf")
-    # R19 §3 fixes the order: CCF ml, ap, dv occupy x, y, z.
-    assert (ccf["x_um"], ccf["y_um"], ccf["z_um"]) == (100.0, 200.0, 300.0)
+    values = source.records()["core.electrode_coordinate_values"]
+    on_shank = [
+        v for v in values if v["electrode_id"] == "probeA.CH1" and v["coordinate_frame"] == "probe"
+    ]
+    assert [(v["axis_index"], v["axis_value"]) for v in on_shank] == [(0, 32.0), (1, 0.0)]
+    ccf = [
+        v for v in values if v["electrode_id"] == "probeA.CH0" and v["coordinate_frame"] == "ccf"
+    ]
+    assert [v["axis_value"] for v in ccf] == [100.0, 200.0, 300.0]
+
+
+def test_a_frame_declares_its_axes_by_the_names_it_read_them_from(source):
+    """R105 §3.4: the source's column name becomes a value, verbatim and undirected."""
+    axes = source.records()["core.coordinate_frame_axes"]
+    assert [(a["coordinate_frame"], a["axis_index"], a["axis_name"]) for a in axes] == [
+        ("probe", 0, "rel_x"),
+        ("probe", 1, "rel_y"),
+        ("ccf", 0, "ccf_ml"),
+        ("ccf", 1, "ccf_ap"),
+        ("ccf", 2, "ccf_dv"),
+    ]
+    assert {a["axis_direction"] for a in axes} == {None}
+    assert {a["unit"] for a in axes} == {"um"}
+    # R105 §3.1: no artifact of these sessions names the atlas, so neither column is filled.
+    frames = source.records()["core.coordinate_frames"]
+    assert {(f["atlas"], f["atlas_version"]) for f in frames} == {(None, None)}
 
 
 def test_an_electrodes_bag_carries_only_what_no_column_holds(source):

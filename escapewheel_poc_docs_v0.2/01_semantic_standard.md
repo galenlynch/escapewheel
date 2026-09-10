@@ -134,7 +134,8 @@ One recording contact.
 
 A position of an electrode or unit in a declared frame.
 
-- MUST declare the frame it is in.
+- MUST name a frame the packet declares (§3.24, R105 §3.1).
+- MUST carry one value per axis that frame declares, each on the axis it sits on (R105 §3.3).
 - MUST declare the **basis** of its claim (R58 §2.1, R64 §2.1):
 
 | basis | meaning |
@@ -144,6 +145,8 @@ A position of an electrode or unit in a declared frame.
 | `nominal` | where it is by construction; nothing aimed at it and nothing observed it |
 
 The vocabulary is open. A consumer that does not recognise a basis MUST NOT treat the coordinate as `measured` (R58 §2.2).
+
+A position is as many numbers as its frame has axes, so the values are one row per axis rather than a fixed three (R105 §3.3). Each value's unit is the axis's, and its meaning is what the axis says it holds.
 
 A coordinate MAY carry an atlas annotation: the structure the position falls in, as an identifier and a label (R59 §2). An electrode is not in a region; a position is, so the annotation belongs to the coordinate rather than to the contact.
 
@@ -318,3 +321,20 @@ A calibration is a standing property of an instrument rather than an activity of
 One calibration covers many devices — six manipulator modules cite one file and one timestamp between them — so which devices it covers is recorded per device and not as a property of the calibration (R89 §2.2).
 
 A source states a calibration in at least four ways: as a curve, as an array, as a date and nothing else, and as an assertion that none was made (R89 §1.3). A calibration with no recorded content is still a calibration, and a consumer MUST read such a row as **unrecorded** rather than as absent (R89 §2.5). A source stating that no calibration was performed gets no row: the absence of a calibration is not a calibration.
+
+### 3.24 Coordinate frame
+
+The space a coordinate is a position in, together with its axes (R105 §3.1).
+
+- MUST have a name, which is the session's own name for that space.
+- MUST declare one row per axis it has, each carrying the source's own name for what that axis holds (R105 §3.2).
+- MAY name the published atlas the space is, and the version of that atlas.
+- MAY declare which way an axis's values increase, and MUST leave that undeclared where the source does not state it (R105 §3.4).
+
+A frame has as many axes as it has: two for a shank, five for a rendering space. Three was what the column names `x_um`, `y_um` and `z_um` claimed, and of the two packaged sessions' 27,557 coordinate rows, 8,448 are shank positions that leave the third empty (R105 §2.4).
+
+An axis's name is the source's word for the field its values came from, carried verbatim — `ccf_ml` where the source's electrodes table has a column of that name (R105 §3.4). It records where the value came from and not what the quantity is conventionally taken to be, so a consumer needing to know which way an axis runs, where no direction is declared, MUST report the coordinate unusable for that purpose rather than assume a convention (R105 §3.5).
+
+Which published atlas a frame is, is a fact the frame declares rather than a spelling of its name: two packets both naming a frame `ccf` may be registered against CCFv3 and against a successor whose structure ids differ, and comparing names cannot tell them apart. A writer MUST NOT fill the atlas or its version from the name (R105 §3.1).
+
+A frame belongs to one session, because a name two sessions reuse may name different spaces — the reason `core.devices` is session-scoped (R85 §1.3).

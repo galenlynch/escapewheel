@@ -2099,3 +2099,53 @@ note = "core declares no device detail table; check.py checks that no core table
 disposition = "rationale"
 where = "R104 §3.3"
 note = "a writer sets device_kind where it writes a detail row and not otherwise; a fact no detail table models stays in metadata, and a rule or query needing to read it is what justifies promoting it"
+
+[clause."R105 §2.1"]
+disposition = "rationale"
+where = "R105 §2.1"
+note = "R19 §3 named the axes x_um, y_um, z_um in every frame and left their meaning to the frame's own definition, which none of the three reserved names -- probe, ccf, stereotaxic -- carries anywhere a consumer can read"
+
+[clause."R105 §2.2"]
+disposition = "rationale"
+where = "R105 §2.2"
+note = "the only statement of the mapping is CCF_AXES in the writer's NWB adapter; under it x_um holds ML at 1,828-5,780 um and y_um holds AP at 2,580-9,360, and both fall inside both extents, so reading them in the CCFv3 volume's order places every electrode somewhere plausible and wrong"
+
+[clause."R105 §2.3"]
+disposition = "rationale"
+where = "R105 §2.3"
+note = "coordinate_frame sat in both coordinate tables' primary keys, carried role data and declared no reference, so R46 §2 applies: a packet spelling the frame ccf in one table and CCF in the other holds two frames no check compares"
+
+[clause."R105 §2.4"]
+disposition = "rationale"
+where = "R105 §2.4"
+note = "8,448 of 27,557 coordinate rows -- 31% -- carry a null z_um, those being the probe rows whose axes are rel_x and rel_y; a Neuroglancer space is routinely five-dimensional, and core.array_dimensions already shows what R3 §3.0's child table looks like for an axis"
+
+[clause."R105 §2.5"]
+disposition = "rationale"
+where = "R105 §2.5"
+note = "a Stage 1 survey found the sources name the field each value came from and nothing else: the NWB says 'rel_x from merged', Open Ephys offers ELECTRODE_XPOS, the preprocessed record carries none of ProbeInterface's ndim or contact_plane_axes, and ccf_coordinate_transform is null in rig.json, session.json and processing.json alike"
+
+[clause."R105 §3.1"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.24"
+note = "core.coordinate_frames keyed (session_id, coordinate_frame), with atlas and atlas_version as declared facts rather than a spelling of the name; both coordinate tables now reference it, so a frame no packet declares is an orphan Tier 1 reports, and 02 §11.9 indexes the two frame tables"
+
+[clause."R105 §3.2"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §12.7"
+note = "core.coordinate_frame_axes keyed (session_id, coordinate_frame, axis_index), one row per axis; axis_name required and axis_direction nullable, with core.coordinate_frame_axes.axis_names_distinct taking Tier 2 rules from 76 to 77"
+
+[clause."R105 §3.3"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.8"
+note = "core.electrode_coordinate_values and core.unit_coordinate_values, each keyed by its parent's key plus axis_index and referencing the axis row, so a value on an undeclared axis is an orphan; x_um, y_um and z_um struck from both parents, and axis_value declares unit_from of core.coordinate_frame_axes.unit through R56 §2.3's one hop"
+
+[clause."R105 §3.4"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.24"
+note = "axis_name is whatever the source called the field, verbatim (R22 §3), so the source's column name becomes a value in the packet; unit is known by construction, and axis_direction MUST be left null where the source does not state it, which binds the writer and no validator (R67 §2.4)"
+
+[clause."R105 §3.5"]
+disposition = "applied"
+where = "01_semantic_standard.md §3.24"
+note = "a consumer needing an axis's direction where none is declared reports the coordinate unusable rather than assuming a convention, which is R83 §3's rule for a run declaring no channels"

@@ -8,16 +8,16 @@ where they disagree with it — this states what the two together produced, whic
 otherwise answerable only by reading a frozen document and then every amendment to it.
 
 ```text
-39 tables, 334 columns, 100 references, 76 Tier 2 rules
+43 tables, 351 columns, 111 references, 77 Tier 2 rules
 registry 0.1.0   logical standard escapewheel-logical-v0.1
-derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99, R100, R101, R102, R103, R104
+derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35, R36, R37, R38, R39, R40, R41, R43, R44, R45, R46, R47, R48, R49, R50, R51, R52, R53, R54, R55, R56, R57, R58, R59, R60, R61, R62, R63, R64, R65, R66, R67, R68, R69, R70, R71, R72, R74, R75, R76, R77, R78, R79, R80, R81, R82, R83, R84, R85, R86, R87, R88, R89, R90, R91, R92, R93, R94, R95, R96, R97, R98, R99, R100, R101, R102, R103, R104, R105
 ```
 
 ## Contents
 
 **analysis** (3) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.spike_events`](#analysisspike_events)
 
-**core** (36) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.calibration_devices`](#corecalibration_devices) · [`core.calibration_points`](#corecalibration_points) · [`core.calibrations`](#corecalibrations) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clock_phase_steps`](#coreclock_phase_steps) · [`core.clocks`](#coreclocks) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
+**core** (40) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.calibration_devices`](#corecalibration_devices) · [`core.calibration_points`](#corecalibration_points) · [`core.calibrations`](#corecalibrations) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clock_phase_steps`](#coreclock_phase_steps) · [`core.clocks`](#coreclocks) · [`core.coordinate_frame_axes`](#corecoordinate_frame_axes) · [`core.coordinate_frames`](#corecoordinate_frames) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinate_values`](#coreelectrode_coordinate_values) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinate_values`](#coreunit_coordinate_values) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
 
 ## `analysis`
 
@@ -38,7 +38,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `device_id` | int32 | nullable | R20 §5 | The device that produced this array. |
 | `processing_run_id` | int32 | nullable | R102 §3.1 | The run that produced this array. Null means it was acquired rather than computed, which is the reading R23 §2 gives a stream. |
 | `sample_rate_hz` | float64 | nullable | R20 §5 | Sample rate if regularly sampled. |
-| `unit` | string | nullable | R101 §3.5 | The physical unit of the array's values, as a UCUM code. |
+| `unit` | string | nullable | R101 §3.6 | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable | R20 §5 | Multiply stored values by this before offset. |
 | `offset` | float64 | nullable | R20 §5 | Add after conversion. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -65,7 +65,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `coordinate_position_column` | string | nullable | R20 §5 | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | R100 §2.1 | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 §2.4). |
 | `coordinate_array_asset_id` | int32 | nullable | R20 §5 | A 1-D array holding one value per position (irregular axis). |
-| `coordinate_unit` | string | nullable | R101 §3.5 | The physical unit of this axis's coordinate values, as a UCUM code. |
+| `coordinate_unit` | string | nullable | R101 §3.6 | The physical unit of this axis's coordinate values, as a UCUM code. |
 | `step_value` | float64 | nullable | R20 §5 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §5 | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | R20 §5 | Ticks advanced per position (numerator). |
@@ -126,7 +126,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `device_id` | int32 | nullable | R65 §2.1 | The device that produced this array. |
 | `processing_run_id` | int32 | nullable | R102 §3.1 | The run that produced this array. Null means it was acquired rather than computed, which is the reading R23 §2 gives a stream. |
 | `sample_rate_hz` | float64 | nullable |  | Sample rate if regularly sampled. |
-| `unit` | string | nullable | R101 §3.5 | The physical unit of the array's values, as a UCUM code. |
+| `unit` | string | nullable | R101 §3.6 | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable |  | Multiply stored values by this before offset. |
 | `offset` | float64 | nullable |  | Add after conversion. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -156,7 +156,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `electrode_id` | int32 | nullable |  | Electrode ID. |
 | `channel_label` | string | nullable |  | Human-readable channel label. |
 | `inter_sample_shift` | float64 | nullable | R19 §2 | Acquisition time offset within one sample period, in sample periods. |
-| `unit` | string | nullable | R101 §3.5 | The physical unit of the converted value, as a UCUM code. |
+| `unit` | string | nullable | R101 §3.6 | The physical unit of the converted value, as a UCUM code. |
 | `offset` | float64 | nullable | R19 §2 | Add after conversion. |
 | `conversion` | float64 | nullable | R19 §2 | Multiply stored values by this before offset. |
 
@@ -185,7 +185,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `coordinate_position_column` | string | nullable | R20 §2 | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | R100 §2.1 | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 §2.4). |
 | `coordinate_array_asset_id` | int32 | nullable | R20 §2 | A 1-D array holding one value per position (irregular axis). |
-| `coordinate_unit` | string | nullable | R101 §3.5 | The physical unit of this axis's coordinate values, as a UCUM code. |
+| `coordinate_unit` | string | nullable | R101 §3.6 | The physical unit of this axis's coordinate values, as a UCUM code. |
 | `step_value` | float64 | nullable | R20 §2 | Increment per position. |
 | `origin_value` | float64 | nullable | R20 §2 | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | R20 §2 | Ticks advanced per position (numerator). |
@@ -262,8 +262,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `calibration_type` | string | **required** | R89 §2.1 | What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open (R8 §4). Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 §2.1), and this holds a value that resolves to no table. |
 | `calibrated_at` | timestamp | nullable | R89 §2.1 | When the calibration was measured, which is not when it was in force: R89 §1.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (R66 §2.1). |
 | `description` | string | nullable | R89 §2.1 | What the source said the calibration was. |
-| `input_unit` | string | nullable | R101 §3.5 | The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column (R89 §2.3). |
-| `output_unit` | string | nullable | R101 §3.5 | The unit of `core.calibration_points.output_value`, as a UCUM code. |
+| `input_unit` | string | nullable | R101 §3.6 | The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column (R89 §2.3). |
+| `output_unit` | string | nullable | R101 §3.6 | The unit of `core.calibration_points.output_value`, as a UCUM code. |
 | `array_asset_id` | int32 | nullable | R89 §2.1 | The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics (R89 §2.4). |
 | `detail_kind` | string | nullable | R89 §2.1 | A table carrying a calibration shape core does not define, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (R89 §2.5). |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -392,6 +392,48 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.clocks.observation_declared` — error: a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit (R98 3.1)
 - `core.clocks.withheld_needs_anchors` — error: a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it (R99 3.2)
 
+### `core.coordinate_frame_axes`
+
+*Introduced by R105 §3.2 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R105 §3.2 | Session. |
+| `coordinate_frame` | string | **required** | R105 §3.2 | The frame these axes belong to. |
+| `axis_index` | int64 | **required** | R105 §3.2 | Which axis, 0-based (R3 §6). |
+| `axis_name` | string | **required** | R105 §3.2 | Whatever the source called the field these values came from, verbatim (R22 §3). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be. |
+| `axis_direction` | string | nullable | R105 §3.2 | Which way the values increase -- `right`, `anterior`, `superior`. Null where the source does not state it, which no inference may fill (R105 §3.4). |
+| `unit` | string | nullable | R101 §3.6 | The axis's unit, as a UCUM code (R101 §3.6). |
+
+**Primary key** — `session_id`, `coordinate_frame`, `axis_index`  
+
+**References**
+
+- `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
+- `session_id` → `core.sessions` (`session_id`)
+
+**Tier 2 rules** — 1
+
+- `core.coordinate_frame_axes.axis_names_distinct` — error: two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told (R105 3.2)
+
+### `core.coordinate_frames`
+
+*Introduced by R105 §3.1 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R105 §3.1 | Session. |
+| `coordinate_frame` | string | **required** | R105 §3.1 | The session's own name for this space. |
+| `atlas` | string | nullable | R105 §3.1 | The published atlas this space is, where it is one. Null where no source names it; a writer MUST NOT read one out of the frame's name. |
+| `atlas_version` | string | nullable | R105 §3.1 | That atlas's version, spelled as the atlas spells it -- `CCFv3`. Two packets naming one atlas at different versions are in different spaces. |
+| `description` | string | nullable | R105 §3.1 | What the frame is, for a reader without the atlas. |
+
+**Primary key** — `session_id`, `coordinate_frame`  
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+
 ### `core.curation_versions`
 
 | Column | Type | Presence | Since | Description |
@@ -447,6 +489,27 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `core.devices.parent_chain_well_founded` — error: a device is its own ancestor, or its attachment chain does not terminate (R67 §2.3)
 - `core.devices.serial_identifies_one_device` — error: one serial number appears on more than one device row; a device is the physical object (R67 §2.2)
 
+### `core.electrode_coordinate_values`
+
+*Introduced by R105 §3.3 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R105 §3.3 | Session. |
+| `electrode_id` | int32 | **required** | R105 §3.3 | The thing positioned. |
+| `coordinate_frame` | string | **required** | R105 §3.3 | The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key. |
+| `coordinate_basis` | string | **required** | R105 §3.3 | What the coordinate asserts (R58 §2.1). |
+| `axis_index` | int64 | **required** | R105 §3.3 | Which of the frame's axes this value is on. |
+| `axis_value` | float64 | **required** | R105 §3.3 | The value, in the axis's unit. |
+
+**Primary key** — `electrode_id`, `coordinate_frame`, `coordinate_basis`, `axis_index`  
+
+**References**
+
+- `electrode_id`, `coordinate_frame`, `coordinate_basis` → `core.electrode_coordinates` (`electrode_id`, `coordinate_frame`, `coordinate_basis`)
+- `session_id`, `coordinate_frame`, `axis_index` → `core.coordinate_frame_axes` (`session_id`, `coordinate_frame`, `axis_index`)
+- `session_id` → `core.sessions` (`session_id`)
+
 ### `core.electrode_coordinates`
 
 *Introduced by R19 §3 (R29 §2). A column with no revision came from `02` unamended.*
@@ -455,14 +518,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | R88 §2.1 | Session ID. |
 | `electrode_id` | int32 | **required** | R19 §3 | Electrode ID. |
-| `coordinate_frame` | string | **required** | R101 §3.5 | The space these coordinates are in, and the atlas where that space is one (R59 §2.2). Open. Which way the axes point is stated nowhere. |
+| `coordinate_frame` | string | **required** | R105 §3.3 | The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is. Open. |
 | `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
 | `region_id` | int32 | nullable | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
 | `processing_run_id` | int32 | nullable | R58 §2.3 | The run that produced this coordinate. |
-| `x_um` | float64 | nullable | R19 §3 | X in micrometres, in that frame. |
-| `y_um` | float64 | nullable | R19 §3 | Y in micrometres. |
-| `z_um` | float64 | nullable | R19 §3 | Z in micrometres. |
 
 **Primary key** — `electrode_id`, `coordinate_frame`, `coordinate_basis`  
 
@@ -471,6 +531,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `electrode_id` → `core.electrodes` (`electrode_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
 
 ### `core.electrodes`
 
@@ -682,7 +743,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `manufacturer` | string | nullable | R101 §3.5 | The manufacturer's own name for itself, as the source states it. Open, and compared exactly, so two spellings are two manufacturers. |
 | `serial_number` | string | nullable |  | Serial number. |
 | `insertion_name` | string | nullable |  | Insertion label. |
-| `target_region` | string | nullable | R101 §3.5 | The structure the probe was aimed at, as an atlas acronym where the source gives one. Open, and not resolvable: no column here names the atlas, which R59 §2.2 does only beside a coordinate. |
+| `target_region` | string | nullable | R105 §3.3 | The structure the probe was aimed at, as an atlas acronym where the source gives one. Open, and not resolvable: no column here names the atlas, which only a coordinate frame does (R105 §3.1). |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `probe_id`  
@@ -887,14 +948,35 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `subject_id` | int32 | **required** |  | Stable subject ID. |
 | `subject_name` | string | nullable | R53 §2.3.1 | What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (R53 §2.5). |
-| `species` | string | nullable | R101 §3.5 | The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- `01` §3.4 admits a preparation, and a phantom or a simulation has no species. |
-| `strain` | string | nullable | R101 §3.5 | The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks such as `Long-Evans`. |
+| `species` | string | nullable | R101 §3.6 | The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- `01` §3.4 admits a preparation, and a phantom or a simulation has no species. |
+| `strain` | string | nullable | R101 §3.6 | The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks such as `Long-Evans`. |
 | `sex` | string | nullable | R101 §3.6 | The subject's sex. Null where the source states none, states it unknown, or describes a preparation that has none. |
 | `date_of_birth` | date | nullable |  | Date of birth if known. |
 | `genotype` | string | nullable | R101 §3.5 | The genotype as the source states it, in MGI allele nomenclature where it uses one. |
 | `metadata` | json_string | optional | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `subject_id`  
+
+### `core.unit_coordinate_values`
+
+*Introduced by R105 §3.3 (R29 §2). A column with no revision came from `02` unamended.*
+
+| Column | Type | Presence | Since | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | R105 §3.3 | Session. |
+| `unit_id` | int32 | **required** | R105 §3.3 | The thing positioned. |
+| `coordinate_frame` | string | **required** | R105 §3.3 | The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key. |
+| `coordinate_basis` | string | **required** | R105 §3.3 | What the coordinate asserts (R58 §2.1). |
+| `axis_index` | int64 | **required** | R105 §3.3 | Which of the frame's axes this value is on. |
+| `axis_value` | float64 | **required** | R105 §3.3 | The value, in the axis's unit. |
+
+**Primary key** — `session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`, `axis_index`  
+
+**References**
+
+- `session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis` → `core.unit_coordinates` (`session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`)
+- `session_id`, `coordinate_frame`, `axis_index` → `core.coordinate_frame_axes` (`session_id`, `coordinate_frame`, `axis_index`)
+- `session_id` → `core.sessions` (`session_id`)
 
 ### `core.unit_coordinates`
 
@@ -904,14 +986,11 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | R28 §2-4 | Session ID. |
 | `unit_id` | int32 | **required** | R28 §2-4 | Unit ID. |
-| `coordinate_frame` | string | **required** | R101 §3.5 | The space these coordinates are in, and the atlas where that space is one (R59 §2.2). Open. Which way the axes point is stated nowhere. |
+| `coordinate_frame` | string | **required** | R105 §3.3 | The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is. Open. |
 | `coordinate_basis` | string | **required** | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
 | `region_id` | int32 | nullable | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
 | `processing_run_id` | int32 | nullable | R58 §2.3 | The run that produced this coordinate. |
-| `x_um` | float64 | nullable | R28 §2-4 | X in micrometres, in that frame. |
-| `y_um` | float64 | nullable | R28 §2-4 | Y in micrometres. |
-| `z_um` | float64 | nullable | R28 §2-4 | Z in micrometres. |
 
 **Primary key** — `session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`  
 
@@ -920,6 +999,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 - `unit_id` → `core.units` (`unit_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
 
 ### `core.unit_electrodes`
 

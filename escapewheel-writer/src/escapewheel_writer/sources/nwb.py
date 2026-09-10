@@ -100,8 +100,17 @@ TRIAL_MAPPED = frozenset(
     {"start_time", "stop_time", "animal_response", "rewarded_historyL", "rewarded_historyR", *TRIAL_EVENTS}
 )
 
-#: R19 §3: CCF's `ml`, `ap`, `dv` occupy `x_um`, `y_um`, `z_um` in that order.
+#: The CCF columns this file writes, in the order this adapter puts them on a frame's axes.
 CCF_AXES = ("ccf_ml", "ccf_ap", "ccf_dv")
+
+#: R105 §3.2: each frame's axes in index order, named for the field the values are read from.
+#: The name is carried verbatim (R105 §3.4) -- `rel_x` says the packet's axis 0 holds what this
+#: file called `rel_x`, which is a fact, where calling it `across_shank` would be a claim no
+#: source supports and calling it `x` would discard where the value came from.
+FRAME_AXES: dict[str, tuple[str, ...]] = {
+    "probe": ("rel_x", "rel_y"),
+    "ccf": CCF_AXES,
+}
 
 
 #: R101 §3.9. `core.subjects.sex` closes to `male`, `female`, `hermaphrodite` and `other`, and NWB
@@ -219,6 +228,9 @@ class NWBSource(Compensates):
             "core.clock_anchors",
             "core.clocks",
             "core.devices",
+            "core.coordinate_frame_axes",
+            "core.coordinate_frames",
+            "core.electrode_coordinate_values",
             "core.electrode_coordinates",
             "core.electrodes",
             "core.event_streams",
@@ -227,9 +239,15 @@ class NWBSource(Compensates):
             "core.probes",
             "core.sessions",
             "core.subjects",
+            "core.unit_coordinate_values",
             "core.unit_coordinates",
         }
     )
+
+    #: R105 §3.4: the unit every coordinate this adapter writes is in. No NWB states one; what
+    #: makes this the packet's answer is that this adapter passed the values through unconverted,
+    #: and R19 §3 declared micrometres when it named the columns `x_um`, `y_um` and `z_um`.
+    COORDINATE_UNIT: ClassVar[str] = "um"
 
     #: R87 §2.2: every column of `core.subjects` this file states. The recipe declares four of
     #: them by hand, and until R87 §2.8 the row built from these was discarded unread.
@@ -618,6 +636,44 @@ class NWBSource(Compensates):
         matched = SIGNAL_DEVICE.search(str(self._attrs(f"acquisition/{name}").get("description", "")))
         return self.prefix + matched["device"] if matched else None
 
+    #: R64 §1.3: the basis travels with the columns a value comes from rather than with the
+    #: frame's name. `rel_x` is the shank's own layout and so is true by construction, where a
+    #: CCF triple is what a registration found. `planned` cannot be imported from either -- an
+    #: exported file records where a probe was, never where it was aimed, and a targeting record
+    #: does not reach NWB.
+    FRAME_BASIS: ClassVar[dict[str, str]] = {"probe": "nominal", "ccf": "measured"}
+
+    def _electrode_positions(self) -> list[tuple[dict[str, Any], tuple[float | None, ...]]]:
+        """Each electrode coordinate paired with its values, in its frame's axis order.
+
+        One pass serves both `core.electrode_coordinates` and its values, which R105 §3.3 makes
+        the same position split in two: the parent carries the annotation and the child one row
+        per axis.
+        """
+        columns = self._table("general/extracellular_ephys/electrodes")
+        if not columns:
+            return []
+        found = []
+        for index, electrode_id in enumerate(self._electrode_ids(columns)):
+            for frame, axes in FRAME_AXES.items():
+                values = tuple(
+                    _clean(columns[axis][index]) if axis in columns else None for axis in axes
+                )
+                if all(value is None for value in values):
+                    continue
+                found.append(
+                    (
+                        {
+                            "electrode_id": electrode_id,
+                            "coordinate_frame": frame,
+                            "coordinate_basis": self.FRAME_BASIS[frame],
+                            **self._annotation(columns, index, frame),
+                        },
+                        values,
+                    )
+                )
+        return found
+
     def electrode_coordinates(self) -> list[dict[str, Any]]:
         """`core.electrode_coordinates`, one row per electrode per populated frame.
 
@@ -626,36 +682,76 @@ class NWBSource(Compensates):
         electrodes, while probe-relative and CCF coordinates are both populated and differ in
         coverage.
         """
-        columns = self._table("general/extracellular_ephys/electrodes")
-        if not columns:
-            return []
-        # The basis travels with the columns a value comes from rather than with the frame's
-        # name (R64 §1.3): `rel_x` is the shank's own layout and so is true by construction,
-        # where a CCF triple is what a registration found. `planned` cannot be imported from
-        # either -- an exported file records where a probe was, never where it was aimed, and
-        # a targeting record does not reach NWB.
-        frames = {
-            "probe": (("rel_x", "rel_y", None), "nominal"),
-            "ccf": (CCF_AXES, "measured"),
+        return [row for row, _values in self._electrode_positions()]
+
+    def electrode_coordinate_values(self) -> list[dict[str, Any]]:
+        """`core.electrode_coordinate_values`, one row per axis of each coordinate (R105 §3.3).
+
+        An axis this file leaves empty gets no row. That is a position the source did not state
+        on that axis, which R105 §3.3 forbids a consumer reading as a zero.
+        """
+        return [
+            {
+                "session_id": self.session_id,
+                "electrode_id": row["electrode_id"],
+                "coordinate_frame": row["coordinate_frame"],
+                "coordinate_basis": row["coordinate_basis"],
+                "axis_index": index,
+                "axis_value": value,
+            }
+            for row, values in self._electrode_positions()
+            for index, value in enumerate(values)
+            if value is not None
+        ]
+
+    def _populated_frames(self) -> list[str]:
+        """Return the frames this file states a coordinate in, in `FRAME_AXES` order."""
+        named = {
+            *self._table("general/extracellular_ephys/electrodes"),
+            *self._table("units"),
         }
-        rows = []
-        for index, electrode_id in enumerate(self._electrode_ids(columns)):
-            for frame, (axes, basis) in frames.items():
-                values = [_clean(columns[axis][index]) if axis and axis in columns else None for axis in axes]
-                if all(value is None for value in values):
-                    continue
-                rows.append(
-                    {
-                        "electrode_id": electrode_id,
-                        "coordinate_frame": frame,
-                        "coordinate_basis": basis,
-                        **self._annotation(columns, index, frame),
-                        "x_um": values[0],
-                        "y_um": values[1],
-                        "z_um": values[2],
-                    }
-                )
-        return rows
+        return [
+            frame for frame, axes in FRAME_AXES.items() if any(axis in named for axis in axes)
+        ]
+
+    def coordinate_frames(self) -> list[dict[str, Any]]:
+        """`core.coordinate_frames`, one row per frame this file populates (R105 §3.1).
+
+        `atlas` and `atlas_version` are null. No artifact of these sessions names either --
+        `ccf_coordinate_transform` is null in the rig, session and processing documents alike --
+        and R105 §3.1 forbids reading one out of the frame's name, `ccf` being a label rather
+        than a version.
+        """
+        return [
+            {
+                "session_id": self.session_id,
+                "coordinate_frame": frame,
+                "atlas": None,
+                "atlas_version": None,
+                "description": None,
+            }
+            for frame in self._populated_frames()
+        ]
+
+    def coordinate_frame_axes(self) -> list[dict[str, Any]]:
+        """`core.coordinate_frame_axes`, one row per axis of each populated frame (R105 §3.2).
+
+        `axis_direction` is null throughout: which way `rel_x` or `ccf_ml` increases is an
+        interpretation of the source rather than a report of it, and R105 §3.4 requires a writer
+        to leave it null where its source does not state it.
+        """
+        return [
+            {
+                "session_id": self.session_id,
+                "coordinate_frame": frame,
+                "axis_index": index,
+                "axis_name": axis,
+                "axis_direction": None,
+                "unit": self.COORDINATE_UNIT,
+            }
+            for frame in self._populated_frames()
+            for index, axis in enumerate(FRAME_AXES[frame])
+        ]
 
     #: Where an exporter puts the atlas structure id. The two spellings are the same fact from
     #: two versions of one pipeline (R59 §1).
@@ -666,8 +762,8 @@ class NWBSource(Compensates):
     def _annotation(self, columns: Mapping[str, Any], index: int, frame: str) -> dict[str, Any]:
         """Return the atlas annotation for one coordinate row (R59 §2.1).
 
-        Only an atlas frame carries one: `coordinate_frame` names the atlas the structure id is
-        numbered by (R59 §2.2), and a probe-relative position is in no atlas.
+        Only an atlas frame carries one: the frame is the space the structure id is numbered in
+        (R105 §3.1), and a probe-relative position is in no atlas.
         """
         if frame == "probe":
             return {}
@@ -721,6 +817,35 @@ class NWBSource(Compensates):
             self.notes.append(f"units: {missed} NWB row(s) match no unit in the packet's sorting; skipped")
         return paired
 
+    def _unit_positions(self) -> list[tuple[dict[str, Any], tuple[float | None, ...]]]:
+        """Each unit coordinate paired with its CCF values, as `_electrode_positions` does."""
+        paired = self._unit_identity()
+        if not paired:
+            return []
+        columns = self._table("units")
+        if not any(axis in columns for axis in CCF_AXES):
+            return []
+        found = []
+        for index, identity in paired:
+            values = tuple(
+                _clean(columns[axis][index]) if axis in columns else None for axis in CCF_AXES
+            )
+            if all(value is None for value in values):
+                continue
+            found.append(
+                (
+                    {
+                        "session_id": self.session_id,
+                        **identity,
+                        "coordinate_frame": "ccf",
+                        "coordinate_basis": "measured",
+                        **self._annotation(columns, index, "ccf"),
+                    },
+                    values,
+                )
+            )
+        return found
+
     def unit_coordinates(self) -> list[dict[str, Any]]:
         """`core.unit_coordinates`, a unit's position per populated frame (R28).
 
@@ -729,30 +854,23 @@ class NWBSource(Compensates):
         A unit whose coordinates are all absent contributes no row -- 241 of 6,781 here, the
         electrode group the session's alignment does not cover.
         """
-        paired = self._unit_identity()
-        if not paired:
-            return []
-        columns = self._table("units")
-        if not any(axis in columns for axis in CCF_AXES):
-            return []
-        rows = []
-        for index, identity in paired:
-            values = [_clean(columns[axis][index]) if axis in columns else None for axis in CCF_AXES]
-            if all(value is None for value in values):
-                continue
-            rows.append(
-                {
-                    "session_id": self.session_id,
-                    **identity,
-                    "coordinate_frame": "ccf",
-                    "coordinate_basis": "measured",
-                    **self._annotation(columns, index, "ccf"),
-                    "x_um": values[0],
-                    "y_um": values[1],
-                    "z_um": values[2],
-                }
-            )
-        return rows
+        return [row for row, _values in self._unit_positions()]
+
+    def unit_coordinate_values(self) -> list[dict[str, Any]]:
+        """`core.unit_coordinate_values`, one row per axis of each unit coordinate (R105 §3.3)."""
+        return [
+            {
+                "session_id": self.session_id,
+                "unit_id": row["unit_id"],
+                "coordinate_frame": row["coordinate_frame"],
+                "coordinate_basis": row["coordinate_basis"],
+                "axis_index": index,
+                "axis_value": value,
+            }
+            for row, values in self._unit_positions()
+            for index, value in enumerate(values)
+            if value is not None
+        ]
 
     def _series(self) -> Iterator[tuple[str, NDArray[Any], NDArray[Any]]]:
         """Yield each acquisition TimeSeries as (name, timestamps, data)."""
@@ -1100,8 +1218,12 @@ class NWBSource(Compensates):
             "core.devices": self.devices(),
             "core.probes": self.probes(),
             "core.electrodes": self.electrodes(),
+            "core.coordinate_frames": self.coordinate_frames(),
+            "core.coordinate_frame_axes": self.coordinate_frame_axes(),
             "core.electrode_coordinates": self.electrode_coordinates(),
+            "core.electrode_coordinate_values": self.electrode_coordinate_values(),
             "core.unit_coordinates": self.unit_coordinates(),
+            "core.unit_coordinate_values": self.unit_coordinate_values(),
             "core.event_streams": self.event_streams(),
             "core.events": self.events(),
             "core.intervals": self.intervals(),

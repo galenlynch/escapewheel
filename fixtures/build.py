@@ -151,6 +151,21 @@ def content() -> dict[str, list[dict]]:
     # unit_002 drops out between 120k and 150k, so it has no spikes there: the windows
     # declared below and these spikes must agree (core.spike_events.within_observation).
     u2 = [t for t in range(45_000, 300_000, 21_000) if not 120_000 < t < 150_000]
+    # R105 §3.3: a position is one row per axis of its frame, so each is written once here and
+    # split below into the coordinate row and its values. The `probe` frame has two axes and the
+    # `ccf` frame three, which is the arity the frame declares rather than a column count.
+    unit_positions = [
+        (unit, frame, values, region, label)
+        for unit, depth in ((1, 22.0), (2, 58.0))
+        for frame, values, region, label in (
+            ("probe", (8.0, depth), None, None),
+            ("ccf", (-1960.0, 8770.0 + depth, -5140.0), 385, "VISp"))]
+    electrode_positions = [
+        (f"elec_{i:03d}", frame, values, region, label)
+        for i in range(4)
+        for frame, values, region, label in (
+            ("probe", (0.0 + (i % 2) * 16.0, 20.0 * (i // 2)), None, None),
+            ("ccf", (-1968.4 + i, 8768.5 + i, -5142.2 + i), 385, "VISp"))]
     return {
         "core.sessions": [{"session_id": "s001", "subject_id": "m001",
                            "session_start_time": START,
@@ -194,22 +209,43 @@ def content() -> dict[str, list[dict]]:
                 (1, "elec_001", (0, 1, 3)),
                 (2, "elec_003", (1, 3)))
             for k, e in enumerate(contacts)],
+        # R105 §3.1: which space a frame name means is a declared row. `ccf` names the atlas and
+        # its version; `probe` is nobody's published atlas, so both are null and the description
+        # is what a reader without one has.
+        "core.coordinate_frames": [
+            {"session_id": "s001", "coordinate_frame": "ccf",
+             "atlas": "Allen Mouse Brain Common Coordinate Framework",
+             "atlas_version": "CCFv3", "description": None},
+            {"session_id": "s001", "coordinate_frame": "probe", "atlas": None,
+             "atlas_version": None,
+             "description": "contact positions on the shank, as the probe file states them"}],
+        # R105 §3.2: `axis_name` is the source's own word for the field, and `axis_direction` is
+        # null on the shank because no source of a probe geometry says which way `rel_x` runs.
+        "core.coordinate_frame_axes": [
+            {"session_id": "s001", "coordinate_frame": frame, "axis_index": i,
+             "axis_name": name, "axis_direction": direction, "unit": "um"}
+            for frame, axes in (
+                ("ccf", (("ccf_ml", "right"), ("ccf_ap", "posterior"), ("ccf_dv", "inferior"))),
+                ("probe", (("rel_x", None), ("rel_y", None))))
+            for i, (name, direction) in enumerate(axes)],
         "core.unit_coordinates": [
             {"session_id": "s001", "unit_id": unit, "coordinate_frame": frame,
-             "coordinate_basis": "measured", "region_id": region, "region_label": label,
-             "x_um": x, "y_um": y, "z_um": z}
-            for unit, depth in ((1, 22.0), (2, 58.0))
-            for frame, x, y, z, region, label in (
-                ("probe", 8.0, depth, None, None, None),
-                ("ccf", -1960.0, 8770.0 + depth, -5140.0, 385, "VISp"))],
+             "coordinate_basis": "measured", "region_id": region, "region_label": label}
+            for unit, frame, _values, region, label in unit_positions],
+        "core.unit_coordinate_values": [
+            {"session_id": "s001", "unit_id": unit, "coordinate_frame": frame,
+             "coordinate_basis": "measured", "axis_index": i, "axis_value": value}
+            for unit, frame, values, _region, _label in unit_positions
+            for i, value in enumerate(values)],
         "core.electrode_coordinates": [
-            {"session_id": "s001", "electrode_id": f"elec_{i:03d}", "coordinate_frame": frame,
-             "coordinate_basis": "measured", "region_id": region, "region_label": label,
-             "x_um": x, "y_um": y, "z_um": z}
-            for i in range(4)
-            for frame, x, y, z, region, label in (
-                ("probe", 0.0 + (i % 2) * 16.0, 20.0 * (i // 2), None, None, None),
-                ("ccf", -1968.4 + i, 8768.5 + i, -5142.2 + i, 385, "VISp"))],
+            {"session_id": "s001", "electrode_id": electrode, "coordinate_frame": frame,
+             "coordinate_basis": "measured", "region_id": region, "region_label": label}
+            for electrode, frame, _values, region, label in electrode_positions],
+        "core.electrode_coordinate_values": [
+            {"session_id": "s001", "electrode_id": electrode, "coordinate_frame": frame,
+             "coordinate_basis": "measured", "axis_index": i, "axis_value": value}
+            for electrode, frame, values, _region, _label in electrode_positions
+            for i, value in enumerate(values)],
         # In name order, because R53 numbers a name to its rank and R10 §2 sorts by the key --
         # so the file's order is the names' order, and the child now precedes its parent.
         "core.clocks": [
@@ -488,6 +524,13 @@ def variants():
         c["core.clock_observation_intervals"] = [
             r for r in c["core.clock_observation_intervals"] if r["clock_id"] != "imec_ap_s001"]
 
+    def frame_without_axes(c):
+        # R105 §3.3: the frame declares two axes where its coordinates carry three, so every
+        # `ccf_dv` value names an axis no frame declares and Tier 1's anti-join returns it.
+        c["core.coordinate_frame_axes"] = [
+            r for r in c["core.coordinate_frame_axes"]
+            if not (r["coordinate_frame"] == "ccf" and r["axis_index"] == 2)]
+
     def undeclared_currency(c):
         # One probe sorted twice with nothing saying which to read (R41 §2.4). Both runs carry
         # a scope, so the packet says enough to know they compete -- which is what separates
@@ -527,7 +570,8 @@ def variants():
             "wide_anchor_gap": wide_anchor_gap, "two_primaries": two_primaries,
             "gapped_ordinal": gapped_ordinal, "unit_off_the_run": unit_off_the_run,
             "undeclared_currency": undeclared_currency, "unscoped_runs": unscoped_runs,
-            "clock_without_window": clock_without_window}
+            "clock_without_window": clock_without_window,
+            "frame_without_axes": frame_without_axes}
 
 
 def main():

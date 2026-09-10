@@ -107,7 +107,8 @@
       "R101",
       "R102",
       "R103",
-      "R104"
+      "R104",
+      "R105"
     ]
   },
   "tables": {
@@ -223,7 +224,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of the array's values, as a UCUM code.",
-          "since": "R101 \u00a73.5",
+          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             "https://ucum.org/ucum.html"
@@ -370,7 +371,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of this axis's coordinate values, as a UCUM code.",
-          "since": "R101 \u00a73.5",
+          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             "https://ucum.org/ucum.html"
@@ -683,11 +684,11 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of the array's values, as a UCUM code.",
+          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             "https://ucum.org/ucum.html"
-          ],
-          "since": "R101 \u00a73.5"
+          ]
         },
         {
           "name": "conversion",
@@ -833,7 +834,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of the converted value, as a UCUM code.",
-          "since": "R101 \u00a73.5",
+          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             "https://ucum.org/ucum.html"
@@ -972,7 +973,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of this axis's coordinate values, as a UCUM code.",
-          "since": "R101 \u00a73.5",
+          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             "https://ucum.org/ucum.html"
@@ -1325,7 +1326,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column (R89 \u00a72.3).",
-          "since": "R101 \u00a73.5",
+          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             "https://ucum.org/ucum.html"
@@ -1337,7 +1338,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "The unit of `core.calibration_points.output_value`, as a UCUM code.",
-          "since": "R101 \u00a73.5",
+          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             "https://ucum.org/ucum.html"
@@ -1730,8 +1731,8 @@
           "presence": "required",
           "role": "data",
           "description": "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (R45 \u00a72.4). Open.",
-          "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open"
         },
         {
           "name": "tick_zero_utc",
@@ -1888,6 +1889,168 @@
           "sql": "SELECT c.session_id, c.clock_id FROM core_clocks c WHERE (c.withheld_first_anchor IS NOT NULL OR c.withheld_last_anchor IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id)"
         }
       ]
+    },
+    "core.coordinate_frame_axes": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session.",
+          "identity": "assigned",
+          "since": "R105 \u00a73.2"
+        },
+        {
+          "name": "coordinate_frame",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "The frame these axes belong to.",
+          "since": "R105 \u00a73.2",
+          "vocabulary": "open"
+        },
+        {
+          "name": "axis_index",
+          "type": "int64",
+          "presence": "required",
+          "role": "structural_index",
+          "description": "Which axis, 0-based (R3 \u00a76).",
+          "since": "R105 \u00a73.2"
+        },
+        {
+          "name": "axis_name",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "Whatever the source called the field these values came from, verbatim (R22 \u00a73). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be.",
+          "since": "R105 \u00a73.2",
+          "vocabulary": "open"
+        },
+        {
+          "name": "axis_direction",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "Which way the values increase -- `right`, `anterior`, `superior`. Null where the source does not state it, which no inference may fill (R105 \u00a73.4).",
+          "since": "R105 \u00a73.2",
+          "vocabulary": "open"
+        },
+        {
+          "name": "unit",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The axis's unit, as a UCUM code (R101 \u00a73.6).",
+          "since": "R101 \u00a73.6",
+          "vocabulary": "open",
+          "authority": [
+            "https://ucum.org/ucum.html"
+          ]
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "coordinate_frame",
+        "axis_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "coordinate_frame"
+          ],
+          "resource": "core.coordinate_frames",
+          "resource_columns": [
+            "session_id",
+            "coordinate_frame"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        }
+      ],
+      "rules": [
+        {
+          "id": "core.coordinate_frame_axes.axis_names_distinct",
+          "level": "error",
+          "message": "two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told (R105 3.2)",
+          "sql": "SELECT session_id, coordinate_frame, axis_name, COUNT(*) AS axes FROM core_coordinate_frame_axes GROUP BY session_id, coordinate_frame, axis_name HAVING COUNT(*) > 1"
+        }
+      ],
+      "since": "R105 \u00a73.2"
+    },
+    "core.coordinate_frames": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session.",
+          "identity": "assigned",
+          "since": "R105 \u00a73.1"
+        },
+        {
+          "name": "coordinate_frame",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "The session's own name for this space.",
+          "since": "R105 \u00a73.1",
+          "vocabulary": "open"
+        },
+        {
+          "name": "atlas",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "The published atlas this space is, where it is one. Null where no source names it; a writer MUST NOT read one out of the frame's name.",
+          "since": "R105 \u00a73.1",
+          "vocabulary": "open"
+        },
+        {
+          "name": "atlas_version",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "That atlas's version, spelled as the atlas spells it -- `CCFv3`. Two packets naming one atlas at different versions are in different spaces.",
+          "since": "R105 \u00a73.1",
+          "vocabulary": "open"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "presence": "nullable",
+          "role": "data",
+          "description": "What the frame is, for a reader without the atlas.",
+          "since": "R105 \u00a73.1",
+          "vocabulary": "free"
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "coordinate_frame"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        }
+      ],
+      "rules": [],
+      "since": "R105 \u00a73.1"
     },
     "core.curation_versions": {
       "columns": [
@@ -2066,8 +2229,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "The manufacturer's own name for itself, as the source states it. Open, and compared exactly, so two spellings are two manufacturers.",
-          "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open"
         },
         {
           "name": "model",
@@ -2177,6 +2340,108 @@
         }
       ]
     },
+    "core.electrode_coordinate_values": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session.",
+          "identity": "assigned",
+          "since": "R105 \u00a73.3"
+        },
+        {
+          "name": "electrode_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The thing positioned.",
+          "identity": "assigned",
+          "since": "R105 \u00a73.3"
+        },
+        {
+          "name": "coordinate_frame",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key.",
+          "since": "R105 \u00a73.3",
+          "vocabulary": "open"
+        },
+        {
+          "name": "coordinate_basis",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "What the coordinate asserts (R58 \u00a72.1).",
+          "since": "R105 \u00a73.3",
+          "vocabulary": "open"
+        },
+        {
+          "name": "axis_index",
+          "type": "int64",
+          "presence": "required",
+          "role": "structural_index",
+          "description": "Which of the frame's axes this value is on.",
+          "since": "R105 \u00a73.3"
+        },
+        {
+          "name": "axis_value",
+          "type": "float64",
+          "presence": "required",
+          "role": "data",
+          "description": "The value, in the axis's unit.",
+          "since": "R105 \u00a73.3",
+          "unit_from": "core.coordinate_frame_axes.unit"
+        }
+      ],
+      "primary_key": [
+        "electrode_id",
+        "coordinate_frame",
+        "coordinate_basis",
+        "axis_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "electrode_id",
+            "coordinate_frame",
+            "coordinate_basis"
+          ],
+          "resource": "core.electrode_coordinates",
+          "resource_columns": [
+            "electrode_id",
+            "coordinate_frame",
+            "coordinate_basis"
+          ]
+        },
+        {
+          "columns": [
+            "session_id",
+            "coordinate_frame",
+            "axis_index"
+          ],
+          "resource": "core.coordinate_frame_axes",
+          "resource_columns": [
+            "session_id",
+            "coordinate_frame",
+            "axis_index"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        }
+      ],
+      "rules": [],
+      "since": "R105 \u00a73.3"
+    },
     "core.electrode_coordinates": {
       "columns": [
         {
@@ -2202,8 +2467,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "The space these coordinates are in, and the atlas where that space is one (R59 \u00a72.2). Open. Which way the axes point is stated nowhere.",
-          "since": "R101 \u00a73.5",
+          "description": "The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is. Open.",
+          "since": "R105 \u00a73.3",
           "vocabulary": "open"
         },
         {
@@ -2241,33 +2506,6 @@
           "description": "The run that produced this coordinate.",
           "identity": "assigned",
           "since": "R58 \u00a72.3"
-        },
-        {
-          "name": "x_um",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "X in micrometres, in that frame.",
-          "unit": "um",
-          "since": "R19 \u00a73"
-        },
-        {
-          "name": "y_um",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Y in micrometres.",
-          "unit": "um",
-          "since": "R19 \u00a73"
-        },
-        {
-          "name": "z_um",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Z in micrometres.",
-          "unit": "um",
-          "since": "R19 \u00a73"
         }
       ],
       "primary_key": [
@@ -2301,6 +2539,17 @@
           "resource": "core.sessions",
           "resource_columns": [
             "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id",
+            "coordinate_frame"
+          ],
+          "resource": "core.coordinate_frames",
+          "resource_columns": [
+            "session_id",
+            "coordinate_frame"
           ]
         }
       ],
@@ -2839,8 +3088,8 @@
           "presence": "required",
           "role": "data",
           "description": "The container format, as the file extension names it: `mp4`, `avi`. Open.",
-          "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open"
         },
         {
           "name": "device_id",
@@ -3197,8 +3446,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "The probe's model, as the manufacturer names it: `Neuropixels 1.0`. Open.",
-          "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open"
         },
         {
           "name": "manufacturer",
@@ -3206,8 +3455,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "The manufacturer's own name for itself, as the source states it. Open, and compared exactly, so two spellings are two manufacturers.",
-          "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open"
         },
         {
           "name": "serial_number",
@@ -3230,9 +3479,9 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The structure the probe was aimed at, as an atlas acronym where the source gives one. Open, and not resolvable: no column here names the atlas, which R59 \u00a72.2 does only beside a coordinate.",
-          "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "description": "The structure the probe was aimed at, as an atlas acronym where the source gives one. Open, and not resolvable: no column here names the atlas, which only a coordinate frame does (R105 \u00a73.1).",
+          "since": "R105 \u00a73.3",
+          "vocabulary": "open"
         },
         {
           "name": "metadata",
@@ -4002,8 +4251,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "The file's format in the producer's own terms, which this specification does not constrain. Open.",
-          "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open"
         },
         {
           "name": "sha256",
@@ -4145,11 +4394,11 @@
           "presence": "nullable",
           "role": "data",
           "description": "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- `01` \u00a73.4 admits a preparation, and a phantom or a simulation has no species.",
+          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             "https://www.ncbi.nlm.nih.gov/taxonomy"
-          ],
-          "since": "R101 \u00a73.5"
+          ]
         },
         {
           "name": "strain",
@@ -4157,12 +4406,12 @@
           "presence": "nullable",
           "role": "data",
           "description": "The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks such as `Long-Evans`.",
+          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             "https://www.informatics.jax.org/",
             "https://rgd.mcw.edu/"
-          ],
-          "since": "R101 \u00a73.5"
+          ]
         },
         {
           "name": "sex",
@@ -4170,13 +4419,13 @@
           "presence": "nullable",
           "role": "data",
           "description": "The subject's sex. Null where the source states none, states it unknown, or describes a preparation that has none.",
-          "vocabulary": "closed",
           "enum": [
             "male",
             "female",
             "hermaphrodite",
             "other"
           ],
+          "vocabulary": "closed",
           "since": "R101 \u00a73.6",
           "authority": [
             "https://hl7.org/fhir/valueset-administrative-gender.html"
@@ -4195,8 +4444,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "The genotype as the source states it, in MGI allele nomenclature where it uses one.",
-          "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R101 \u00a73.5",
+          "vocabulary": "open"
         },
         {
           "name": "metadata",
@@ -4212,6 +4461,111 @@
       ],
       "references": [],
       "rules": []
+    },
+    "core.unit_coordinate_values": {
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "Session.",
+          "identity": "assigned",
+          "since": "R105 \u00a73.3"
+        },
+        {
+          "name": "unit_id",
+          "type": "int32",
+          "presence": "required",
+          "role": "identifier",
+          "description": "The thing positioned.",
+          "identity": "assigned",
+          "since": "R105 \u00a73.3"
+        },
+        {
+          "name": "coordinate_frame",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key.",
+          "since": "R105 \u00a73.3",
+          "vocabulary": "open"
+        },
+        {
+          "name": "coordinate_basis",
+          "type": "string",
+          "presence": "required",
+          "role": "data",
+          "description": "What the coordinate asserts (R58 \u00a72.1).",
+          "since": "R105 \u00a73.3",
+          "vocabulary": "open"
+        },
+        {
+          "name": "axis_index",
+          "type": "int64",
+          "presence": "required",
+          "role": "structural_index",
+          "description": "Which of the frame's axes this value is on.",
+          "since": "R105 \u00a73.3"
+        },
+        {
+          "name": "axis_value",
+          "type": "float64",
+          "presence": "required",
+          "role": "data",
+          "description": "The value, in the axis's unit.",
+          "since": "R105 \u00a73.3",
+          "unit_from": "core.coordinate_frame_axes.unit"
+        }
+      ],
+      "primary_key": [
+        "session_id",
+        "unit_id",
+        "coordinate_frame",
+        "coordinate_basis",
+        "axis_index"
+      ],
+      "references": [
+        {
+          "columns": [
+            "session_id",
+            "unit_id",
+            "coordinate_frame",
+            "coordinate_basis"
+          ],
+          "resource": "core.unit_coordinates",
+          "resource_columns": [
+            "session_id",
+            "unit_id",
+            "coordinate_frame",
+            "coordinate_basis"
+          ]
+        },
+        {
+          "columns": [
+            "session_id",
+            "coordinate_frame",
+            "axis_index"
+          ],
+          "resource": "core.coordinate_frame_axes",
+          "resource_columns": [
+            "session_id",
+            "coordinate_frame",
+            "axis_index"
+          ]
+        },
+        {
+          "columns": [
+            "session_id"
+          ],
+          "resource": "core.sessions",
+          "resource_columns": [
+            "session_id"
+          ]
+        }
+      ],
+      "rules": [],
+      "since": "R105 \u00a73.3"
     },
     "core.unit_coordinates": {
       "columns": [
@@ -4238,8 +4592,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "The space these coordinates are in, and the atlas where that space is one (R59 \u00a72.2). Open. Which way the axes point is stated nowhere.",
-          "since": "R101 \u00a73.5",
+          "description": "The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is. Open.",
+          "since": "R105 \u00a73.3",
           "vocabulary": "open"
         },
         {
@@ -4277,33 +4631,6 @@
           "description": "The run that produced this coordinate.",
           "identity": "assigned",
           "since": "R58 \u00a72.3"
-        },
-        {
-          "name": "x_um",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "X in micrometres, in that frame.",
-          "unit": "um",
-          "since": "R28 \u00a72-4"
-        },
-        {
-          "name": "y_um",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Y in micrometres.",
-          "unit": "um",
-          "since": "R28 \u00a72-4"
-        },
-        {
-          "name": "z_um",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Z in micrometres.",
-          "unit": "um",
-          "since": "R28 \u00a72-4"
         }
       ],
       "primary_key": [
@@ -4338,6 +4665,17 @@
           "resource": "core.sessions",
           "resource_columns": [
             "session_id"
+          ]
+        },
+        {
+          "columns": [
+            "session_id",
+            "coordinate_frame"
+          ],
+          "resource": "core.coordinate_frames",
+          "resource_columns": [
+            "session_id",
+            "coordinate_frame"
           ]
         }
       ],

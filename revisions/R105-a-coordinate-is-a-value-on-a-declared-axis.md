@@ -1,8 +1,8 @@
-# A Coordinate Is a Value on a Declared Axis
+# R105 — A Coordinate Is a Value on a Declared Axis
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-09 |
 | **Amends** | R19 §3 (the axis columns and the three reserved frame names), R28 §3 (the same columns on `core.unit_coordinates`), R59 §2.2 (the frame names a space; which published atlas it is becomes a declared fact); adds four tables and strikes six columns |
 | **Depends on** | R3 §3.0 (a repeated value is a child table), R19 §3 (the coordinate table and its axes), R46 §2 (a reference is declared or nothing checks it), R56 §2.3 (a unit resolved one hop away), R58 §2.1 (a frame and a basis are two facts), R83 §3 (report unresolvable rather than resolve), R88 §2 (session scope), R101 §3.1 (every string column declares its vocabulary), R101 §3.4 (a value is spelled as its nomenclature spells it) |
 | **Profile** | all |
@@ -204,6 +204,12 @@ forbids.
 The reference to the axis row is what makes arity checkable. A coordinate carrying a value on an
 axis its frame never declared is an orphan Tier 1 reports, so a frame's axis count and its
 coordinates' shape cannot disagree.
+
+A coordinate **MAY** carry values on fewer axes than its frame declares, where its source states
+none on the rest, and a consumer **MUST NOT** read an absent axis row as a zero — it is a position
+the source did not state on that axis. That is what a null in the struck columns said, in the form
+the child table has. Neither packaged session omits one: 19,109 `ccf` coordinates on three axes and
+8,448 `probe` coordinates on two come to exactly the 74,223 value rows §5 counts.
 
 ### 3.4 What a writer records about an axis
 

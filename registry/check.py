@@ -414,6 +414,8 @@ NAMES_A_KIND = {
     "dynamic_foraging.sessions.auto_train_curriculum_name": "which curriculum, not which session",
     "vr_foraging.sessions.curriculum_name": "as auto_train_curriculum_name",
     "vr_foraging.sessions.curriculum_stage_name": "which stage of it",
+    "core.coordinate_frame_axes.axis_name": "what the source called the field, repeated across "
+                                            "every frame that read the same one (R105 §3.4)",
 }
 
 # R85 §2.2. Which `*_name` columns carry the uniqueness obligation: the ones naming an assigned

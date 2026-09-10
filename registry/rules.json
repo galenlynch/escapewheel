@@ -499,6 +499,14 @@
         "sql": "SELECT s.session_id, s.clock_id, s.t_tick FROM core_clock_phase_steps s JOIN core_clocks c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE c.parent_clock_id IS NULL"
       }
     ],
+    "core.coordinate_frame_axes": [
+      {
+        "id": "core.coordinate_frame_axes.axis_names_distinct",
+        "level": "error",
+        "message": "two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told (R105 3.2)",
+        "sql": "SELECT session_id, coordinate_frame, axis_name, COUNT(*) AS axes FROM core_coordinate_frame_axes GROUP BY session_id, coordinate_frame, axis_name HAVING COUNT(*) > 1"
+      }
+    ],
     "analysis.array_dimensions": [
       {
         "id": "analysis.array_dimensions.coordinate_pair_complete",

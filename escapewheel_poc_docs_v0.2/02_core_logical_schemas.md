@@ -353,6 +353,7 @@ The core layer comprises the following resources. Column definitions are in the 
 | `core.probes` | devices carrying electrodes |
 | `core.electrodes` | recording contacts |
 | `core.electrode_coordinates` | a contact's position per frame and basis |
+| `core.electrode_coordinate_values` | one row per axis of that position |
 | `core.calibrations` | what was measured about an instrument so its numbers can be read |
 | `core.calibration_devices` | the devices each calibration covers |
 | `core.calibration_points` | the paired series of a calibration that is a curve |
@@ -386,6 +387,7 @@ The core layer comprises the following resources. Column definitions are in the 
 | `core.unit_quality_labels` | one row per unit per scorer |
 | `core.unit_electrodes` | the contacts a unit sits on |
 | `core.unit_coordinates` | a unit's position per frame and basis |
+| `core.unit_coordinate_values` | one row per axis of that position |
 | `core.unit_observation_intervals` | a unit's refinement of its clock's window |
 
 ### 11.6 Arrays and media
@@ -415,10 +417,19 @@ The core layer comprises the following resources. Column definitions are in the 
 | `analysis.array_assets` | derived dense arrays |
 | `analysis.array_dimensions` | their axes |
 
+### 11.9 Space
+
+Frames stand to a coordinate as §11.3's clocks stand to a tick: the declared reference the value is stated against.
+
+| resource | contents |
+|---|---|
+| `core.coordinate_frames` | the spaces coordinates are positions in, and which published atlas each one is |
+| `core.coordinate_frame_axes` | one row per axis of a frame, with its name, direction, and unit |
+
 ## 12. Rules for particular resources
 
-Sections 2 through 10 bind every table. What follows binds three of them, where identifying a row,
-resolving a value, or reading an absence takes more than the generic rules give.
+Sections 2 through 10 bind every table. What follows binds particular ones, where identifying a
+row, resolving a value, or reading an absence takes more than the generic rules give.
 
 ### 12.1 Unit identity
 
@@ -502,3 +513,13 @@ Three facts about how a packet's clocks were aligned are columns, because a cons
 `core.clock_phase_steps` holds one row per step in a clock's alignment to its parent, a clock having possibly several (§5.2). A writer detecting a step MUST record it, and a step is reported and never corrected: R13's map is exact at every anchor, so it carries the step faithfully, and subtracting it would need to know whether the step also moved the devices timestamped on that parent, which the packet does not record. A clock whose `parent_clock_id` is null MUST NOT have rows here.
 
 `core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record there what R40 §2.2 requires of a measurement — median, p95 and maximum error, with the distance and the tolerance it judged them against. A consumer needs the bound to place a tick and not the residual that justified it.
+
+### 12.7 A frame's axes
+
+A frame declares one row of `core.coordinate_frame_axes` per axis it has, and two axes of one frame MUST NOT carry the same `axis_name` (R105 §3.2), which `core.coordinate_frame_axes.axis_names_distinct` checks. An axis name is the source's own word for the field the values came from, so two axes sharing one means a writer put two quantities under one name and the packet cannot say which value is on which axis.
+
+A coordinate's values reference the axis rows of their own frame on `(session_id, coordinate_frame, axis_index)`, so a value on an axis the frame never declared is an orphan Tier 1 reports, and a frame's axis count cannot disagree with the shape of its coordinates (R105 §3.3).
+
+A coordinate MAY carry values on fewer axes than its frame declares, where its source states none on the rest, and a consumer MUST NOT read an absent axis row as a zero: it is a position the source did not state on that axis (R105 §3.3). That is what a null in the struck `x_um`, `y_um` and `z_um` said, in the form the child table has.
+
+`axis_value` declares `unit_from` of `core.coordinate_frame_axes.unit`, resolved one hop through that reference (§8.4): the unit is the axis's, so a frame stated in millimetres needs no second set of columns and no column name carries a unit.

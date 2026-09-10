@@ -116,7 +116,10 @@ WITHDRAWN = {
 }
 
 ROLES: dict[str, str] = (dict.fromkeys(TRANSIENT, "data") | WITHDRAWN
-                         | {"band": "data", "device_kind": "discriminator"})
+                         | {"band": "data", "device_kind": "discriminator",
+                            "atlas": "data", "atlas_version": "data",
+                            "axis_name": "data", "axis_direction": "data",
+                            "axis_value": "data"})
 for _role, _names in {
     "identifier": (
         "array_asset_id", "calibration_id", "clock_id", "condition_id", "coordinate_array_asset_id", "curation_id",
@@ -296,7 +299,7 @@ VOCABULARY: dict[str, str] = {}
 for _vocab, _names in {
     "closed": ("normalized_label", "quality_label", "sex", "status"),
     "open": (
-        "activity_type", "band", "amplitude_unit", "calibration_type", "coordinate_basis",
+        "activity_type", "atlas", "atlas_version", "axis_direction", "axis_name", "band", "amplitude_unit", "calibration_type", "coordinate_basis",
         "coordinate_frame", "coordinate_unit", "event_type", "format", "genotype", "input_unit",
         "kind", "label", "manufacturer", "origin", "output_unit", "parent_port", "probe_type",
         "quality_label_source", "region_label", "semantic_type", "source", "species", "strain",
@@ -1704,10 +1707,7 @@ def build() -> dict:
     # left open. Set directly rather than through `amend`: what a column's values are drawn from
     # has not changed, only whether the registry says so, and restamping 95 columns would erase
     # which revision introduced each, which is what R29 §2 put `since` there for.
-    for _spec in tables.values():
-        for _c in _spec["columns"]:
-            if _c["type"] == "string" and _c["role"] != "discriminator":
-                _c["vocabulary"] = vocabulary_of(_c["name"])
+    # Run last, after every block: a table a later revision adds needs classifying too.
 
     # §3.9: `sex` closes. NWB writes `M`/`F`/`U`/`O` and a writer maps onto these, `U` becoming
     # null -- three of the four are HL7 FHIR's `AdministrativeGender`, whose `unknown` this set
@@ -1722,12 +1722,6 @@ def build() -> dict:
     SINCE[0] = "R101 §3.8"
     for _t in ("core.array_assets", "analysis.array_assets"):
         amend(_t, "kind", reserved_values=["raw", "ap", "lfp", "waveform"])
-
-    SINCE[0] = "R101 §3.6"
-    for _name, _uris in AUTHORITY.items():
-        for _resource, _spec in tables.items():
-            if any(_c["name"] == _name for _c in _spec["columns"]):
-                amend(_resource, _name, authority=list(_uris))
 
     # §3.5: 25 open columns described themselves by restating their own name or giving one
     # example, and `core.processing_runs.status` said "etc." of a closed set.
@@ -1798,6 +1792,109 @@ def build() -> dict:
             "the packet does not carry is a fact rather than a defect (R55 §2.2)."),
             after="parent_port")
 
+    # ---- R105 §3 : a coordinate is a value on a declared axis -----------------------------------
+    # R19 §3 named the axis columns `x_um`, `y_um`, `z_um` and left their meaning to "the frame's
+    # definition", which no packet carries. Three columns is also not how many axes a frame has:
+    # 8,448 of 27,557 coordinate rows carry a null `z_um`, a contact on a shank being two numbers.
+    SINCE[0] = "R105 §3.1"
+    tables["core.coordinate_frames"] = {
+        "columns": [col("session_id", "int32", "required", "Session."),
+                    col("coordinate_frame", "string", "required",
+                        "The session's own name for this space."),
+                    col("atlas", "string", "nullable",
+                        "The published atlas this space is, where it is one. Null where no source "
+                        "names it; a writer MUST NOT read one out of the frame's name."),
+                    col("atlas_version", "string", "nullable",
+                        "That atlas's version, spelled as the atlas spells it -- `CCFv3`. Two "
+                        "packets naming one atlas at different versions are in different spaces."),
+                    col("description", "string", "nullable",
+                        "What the frame is, for a reader without the atlas.")],
+        "primary_key": ["session_id", "coordinate_frame"],
+        "references": [{"columns": ["session_id"], "resource": "core.sessions",
+                        "resource_columns": ["session_id"]}],
+        "rules": [], "since": SINCE[0]}
+
+    SINCE[0] = "R105 §3.2"
+    tables["core.coordinate_frame_axes"] = {
+        "columns": [col("session_id", "int32", "required", "Session."),
+                    col("coordinate_frame", "string", "required", "The frame these axes belong to."),
+                    col("axis_index", "int64", "required", "Which axis, 0-based (R3 §6)."),
+                    col("axis_name", "string", "required",
+                        "Whatever the source called the field these values came from, verbatim "
+                        "(R22 §3). A writer MUST NOT normalise it or replace it with what the "
+                        "quantity is conventionally taken to be."),
+                    col("axis_direction", "string", "nullable",
+                        "Which way the values increase -- `right`, `anterior`, `superior`. Null "
+                        "where the source does not state it, which no inference may fill (R105 "
+                        "§3.4)."),
+                    col("unit", "string", "nullable",
+                        "The axis's unit, as a UCUM code (R101 §3.6).")],
+        "primary_key": ["session_id", "coordinate_frame", "axis_index"],
+        "references": [{"columns": ["session_id", "coordinate_frame"],
+                        "resource": "core.coordinate_frames",
+                        "resource_columns": ["session_id", "coordinate_frame"]},
+                       {"columns": ["session_id"], "resource": "core.sessions",
+                        "resource_columns": ["session_id"]}],
+        "rules": [], "since": SINCE[0]}
+
+    # §3.3: the values move to a child keyed by the parent's key plus the axis. The two parents
+    # differ -- `core.electrode_coordinates` carries no `session_id` in its key and
+    # `core.unit_coordinates` does -- so each child mirrors its own.
+    SINCE[0] = "R105 §3.3"
+    for _parent, _child, _own, _key in (
+            ("core.electrode_coordinates", "core.electrode_coordinate_values", "electrode_id",
+             ["electrode_id", "coordinate_frame", "coordinate_basis"]),
+            ("core.unit_coordinates", "core.unit_coordinate_values", "unit_id",
+             ["session_id", "unit_id", "coordinate_frame", "coordinate_basis"])):
+        tables[_child] = {
+            "columns": [col("session_id", "int32", "required", "Session."),
+                        col(_own, "int32", "required", "The thing positioned."),
+                        col("coordinate_frame", "string", "required",
+                            "The frame, naming a `core.coordinate_frames` row of this session; "
+                            "with `coordinate_basis` it completes the parent's key."),
+                        col("coordinate_basis", "string", "required",
+                            "What the coordinate asserts (R58 §2.1)."),
+                        col("axis_index", "int64", "required",
+                            "Which of the frame's axes this value is on."),
+                        col("axis_value", "float64", "required", "The value, in the axis's unit.")],
+            "primary_key": _key + ["axis_index"],
+            "references": [{"columns": _key, "resource": _parent, "resource_columns": _key},
+                           {"columns": ["session_id", "coordinate_frame", "axis_index"],
+                            "resource": "core.coordinate_frame_axes",
+                            "resource_columns": ["session_id", "coordinate_frame", "axis_index"]},
+                           {"columns": ["session_id"], "resource": "core.sessions",
+                            "resource_columns": ["session_id"]}],
+            "rules": [], "since": SINCE[0]}
+        amend(_child, "axis_value", unit_from="core.coordinate_frame_axes.unit")
+        for _axis in ("x_um", "y_um", "z_um"):
+            drop_col(_parent, _axis)
+        T(_parent)["references"].append(
+            {"columns": ["session_id", "coordinate_frame"], "resource": "core.coordinate_frames",
+             "resource_columns": ["session_id", "coordinate_frame"]})
+        # R101 §3.5 wrote this description when the frame was a bare string carrying the atlas and
+        # no statement of its axes. Both halves move to `core.coordinate_frames`.
+        amend(_parent, "coordinate_frame",
+              description="The space these coordinates are in, naming a `core.coordinate_frames` "
+                          "row of this session, which declares that space's axes and the "
+                          "published atlas it is. Open.")
+
+    amend("core.probes", "target_region",
+          description="The structure the probe was aimed at, as an atlas acronym where the source "
+                      "gives one. Open, and not resolvable: no column here names the atlas, which "
+                      "only a coordinate frame does (R105 §3.1).")
+
+    # ---- R101 §3.1 and §3.6, run after every block so a later table's columns are classified too ----
+    for _spec in tables.values():
+        for _c in _spec["columns"]:
+            if _c["type"] == "string" and _c["role"] != "discriminator":
+                _c["vocabulary"] = vocabulary_of(_c["name"])
+
+    SINCE[0] = "R101 §3.6"
+    for _name, _uris in AUTHORITY.items():
+        for _resource, _spec in tables.items():
+            if any(_c["name"] == _name for _c in _spec["columns"]):
+                amend(_resource, _name, authority=list(_uris))
+
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column
     # by name and no clause of `02` or `03` states an order, so no revision mandates this and the
@@ -1822,6 +1919,11 @@ def build() -> dict:
     # Last, so every table exists to be named and every primary key is final -- R24's templates
     # expand against the key, and R7 above is what settles three of them.
     authored = json.loads(RULES.read_text())
+    # A rule authored one level too high sits beside `rules` rather than inside it, and merging
+    # only what `rules` holds would drop it without a word -- which is how R105's rule was written
+    # and then not merged.
+    if stray := sorted(set(authored) - {"_comment", "rules"}):
+        raise SystemExit(f"rules.json has keys outside `rules`: {', '.join(stray)}")
     hand_written: dict[str, list[dict]] = authored["rules"]
     unknown = sorted(set(hand_written) - set(tables))
     if unknown:
