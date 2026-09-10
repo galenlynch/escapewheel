@@ -137,38 +137,48 @@ explicit `owns`, a build **MUST** refuse the recipe naming both sources and the 
 R63 §2.2's rule unchanged — a contradiction is refused before a byte is read — and it replaces a
 built-in winner that no recipe could see.
 
-### 3.3 An adapter reaches a build through files, and a recipe opts out
+### 3.3 An adapter delivers its rows out of process
 
-Every adapter **MUST** be able to reach a build through files and, where a raw source needs
-converting, a command, on the terms R109 §3.2 gives an extension. A writer **MUST** provide that
-route for every adapter it ships, and **MUST NOT** require any adapter to be importable in its own
-environment.
+Every adapter **MUST** be able to deliver its rows without being imported into the writer, and an
+adapter author **SHOULD** support that route whatever else they support. A writer **MUST NOT**
+require any adapter to be importable in its own environment, and **MUST** provide the route for
+every adapter it ships.
 
-A build **MUST** use that route unless the recipe declares that a source runs in the writer's
-process, and a writer **MUST NOT** run one in process where the recipe does not say so.
+The transport is not fixed to a file. A build **MUST** accept rows as **files the recipe names**,
+which is R109 §3.2's route for an extension, and **SHOULD** accept them as an **Arrow IPC stream**
+read from the command it ran. A writer **MAY** offer another transport and **MUST NOT** require one.
+
+The stream matters where the file does not fit. A packet's largest table is `core.spike_events` at
+674.2 MB, and an intermediate file for it is a write and a read the build did not otherwise need,
+where a stream is the batches the staging path already consumes. Every other adapter produces under
+0.25 MB (§2.4), so the file route costs them nothing and the stream is what keeps the boundary
+usable for the one that matters.
+
+### 3.4 A recipe opts a source into the writer's process
+
+A build **MUST** deliver a source out of process unless the recipe declares that it runs in the
+writer's, and a writer **MUST NOT** run one in process where the recipe does not say so.
 
 **The recipe declares it because the recipe author chose the environment.** Python resolves one
-environment per process, so whether a given set of adapters can be installed together is a fact
-about one machine on one day, not a property of any adapter — and the person assembling the recipe
-is the only party who can find out, and the one who carries it when the answer changes. A writer
-deciding for them would be asserting something it cannot know, and §2.4 measures how quickly it
-would go stale: the writer's own closure is five packages today and nothing about shipping with the
-writer keeps it that way.
+environment per process, so whether a given set of adapters installs together is a fact about one
+machine on one day rather than a property of any adapter — and the person assembling the recipe is
+the only party who can find out, and the one who carries it when the answer changes. A writer
+deciding for them would assert what it cannot know, and §2.4 measures how fast that goes stale: its
+own closure is five packages today and nothing about shipping with the writer keeps it that way.
 
-An adapter adding no requirement the writer already declares is the case where opting in is safe,
-and it is advice to a recipe author rather than a permission a writer grants. A build that cannot
-import an adapter the recipe opted in **MUST** refuse naming the source and the import that failed,
+What the opt-in buys is efficiency, and what it costs is a solvable environment. A build that cannot
+import an adapter the recipe opted in **MUST** refuse, naming the source and the import that failed,
 before any source is opened.
 
-### 3.4 An identifier crosses the boundary as a name
+### 3.5 An identifier crosses the boundary as a name
 
 An adapter reaching a build through files hands over identifiers as the **names** its source used,
 never as numbers, because a writer mints every assigned identifier packet-wide (R53 §2.5) and the
 numbers do not exist until it has. That is R109 §3.2's rule for an extension and it binds an adapter
 identically.
 
-A writer **SHOULD** report what a file-delivered adapter cost it in identifier resolution where that
-exceeds a table it staged directly, which is the measurement §6 leaves open.
+A writer **SHOULD** report what resolving those names cost where it exceeds what staging the table
+directly would have, which is the measurement §6 leaves open.
 
 ## 4. What this does not change
 
@@ -179,21 +189,28 @@ exceeds a table it staged directly, which is the measurement §6 leaves open.
 
 ## 5. Consequence
 
-`05` §3 gains a preference table and an in-process declaration, §3.4 gains what an adapter declares,
-and `07` §4 gains what a build supplies and how an adapter reaches it.
+`05` §3 gains a preference table and an in-process declaration, `05` §3.4 gains what an adapter
+declares, and `07` §4 gains what a build supplies an adapter and the transports it accepts rows
+over.
 
 The reference implementation loses four tables that name a kind — `_SHARED_SOURCES`, `SAMPLED`,
 `REQUIRED_OPTIONS` and `PREFERRED` — and gains one declaration per adapter. It also gains a command
 it does not have: `escapewheel` runs `inspect`, `init`, `extension`, `verify`, `prune` and `import`,
-and none of them runs one adapter and writes its tables, which is what §3.3's route requires of the
-ten it ships. That command is also the `command` a `tables` source names, so a built-in adapter
-reaches a build through the same door an extension does (R109 §3.2) rather than through a second
-mechanism built for it.
+and none of them runs one adapter and hands over its rows, which is what §3.3 requires of the ten it
+ships. That command is also the `command` a `tables` source names, so a built-in adapter reaches a
+build through the same door an extension does (R109 §3.2) rather than through a second mechanism
+built for it — and it is where the Arrow IPC transport lands, since a command already has a
+standard output and the staging path already consumes batches.
 
 Both packaged recipes gain two preference lines — `core.probes` to `nwb`, `core.subjects` to
 `session` — which is what §2.3 measures the whole preference table to be, and an opt-in for whichever
 sources their author finds installable together. Neither packet's rows change: the same source wins
 each contest, declared where a reader of the recipe can see it.
+
+The `Amends` line understates one thing deliberately. Nothing here forces the ten adapters apart, and
+§2.5's grouping is why the option is worth having: an adapter reading one institute's metadata schema
+or one tool's directory layout can move to that institute or that tool once it can reach a build
+without being imported, which is what §3.3 establishes and what nothing before it did.
 
 What §3.3 buys is that the ten adapters this project ships stop being a privileged class. A
 registered adapter today produces resources and cannot reach an object store; after this every
@@ -208,12 +225,13 @@ one.
 
 ## 6. Open
 
-- **What a file boundary costs the one adapter that produces bulk.** §3.3 leaves the choice to a
-  recipe author and gives them no number for the case that matters. What it would take:
-  stage `core.spike_events` through a Parquet intermediate and compare, remembering that the rows
-  would carry `local_unit_label` rather than the `unit_id` a writer assigns, and that R86 §2.3 puts
-  a widened join key at 2.93x over 286,896,563 spikes without measuring it as an intermediate. Until
-  then a recipe author opting `sorter` in is doing it on an intuition rather than a measurement.
+- **Whether the stream removes the reason to opt in at all.** §3.3 offers it for the case a file
+  does not fit and §3.4 leaves the choice to a recipe author, neither with a number. What it would
+  take: stage `core.spike_events` three ways — in process, through a Parquet intermediate, and over
+  an Arrow IPC stream — remembering that the out-of-process rows carry `local_unit_label` rather
+  than the `unit_id` a writer assigns, and that R86 §2.3 puts a widened join key at 2.93x over
+  286,896,563 spikes without measuring it as an intermediate. If the stream costs little, §3.4's
+  opt-in is a convenience rather than a necessity, and saying so is worth more than permitting it.
 
 - **Whether a build should report what an opt-in bought.** §3.3 makes running an adapter in process
   the recipe author's call, and gives them nothing to judge it by: a build knows what the file route
