@@ -67,7 +67,30 @@ quantised to the sorting run's amplitude step, so 286,896,563 rows hold few dist
 dictionary is **1.85x** better across **209 MB** — the largest single encoding decision a packet
 makes, and the one a rule without exceptions discards.
 
-### 2.3 A rule read off the declaration picks wrongly
+### 2.3 Every read of a packet transfers the small tables whole
+
+A packet is two spike tables and everything else. `core.spike_events` and `analysis.spike_events`
+are **1,168 MB** of `ecephys_776259` and are read behind a filter, a row group at a time; the
+other **38 tables come to 1.375 MB and are read entire**, because a consumer wanting the units,
+the electrodes, the coordinates or the trials wants all of each.
+
+Those 38 are **2.622 MB** under pyarrow's default, so the rules take **1.91x** off what a consumer
+transfers before a filter can prune anything. `ecephys_786867` is **1.80x** over its 37 comparable
+tables, 1.686 MB against 0.934 MB, and **23.94x** with `core.media_frames` counted, where
+7,570,450 rows go from 30.949 MB to 0.429 MB.
+
+Decoding gives none of it back. Over the same 38 tables, warm and with the two arms interleaved,
+the written files decode in **15.6 ms against 15.8 ms** for the default ones, and in 28.8 ms
+against 57.7 ms where `core.media_frames` is among them (pyarrow 25.0.1, Python 3.13.15,
+2026-09-10). Delta unpacking is arithmetic on registers where a dictionary is a gather, and at
+these sizes both disappear beside the Zstandard pass that shrinks with the bytes.
+
+Round trips are the one cost this leaves alone. `10` §4.1 puts an endpoint at about **120 requests
+a second** whatever the concurrency, and a column chunk is one ranged read at either size, so what
+an encoding changes is what each request carries. Across the twenty sessions R86 §1.1 measures
+that plateau against, a packet's small tables are **52 MB by default and 27 MB as written**.
+
+### 2.4 A rule read off the declaration picks wrongly
 
 What delta exploits is small successive differences and what a dictionary exploits is repetition,
 and the registry declares neither. Deriving the choice from the sort key was measured against all
@@ -81,7 +104,7 @@ and the registry declares neither. Deriving the choice from the sort key was mea
 A role says what a column means. It does not say how the values are spread, and a storage choice
 turns on the second.
 
-### 2.4 Measuring every column at write time is affordable and still wrong
+### 2.5 Measuring every column at write time is affordable and still wrong
 
 Writing each column three ways over a 65,536-row sample and keeping the smallest costs **12 ms for
 four columns**, about **0.4 s** for a whole packet against a 467 s build. Cost is not what refuses
@@ -162,7 +185,8 @@ for the same reason: a judgement someone should revisit is not a defect.
 ### 3.6 `10` carries the readings
 
 R93 §3.4 puts a measurement where it supports a rule that lives elsewhere, so §2.1's table, §2.2's
-count and §2.3's regressions go to `10` §2 beside R68's `pts` measurement. §2.4's 0.4 s is
+count, §2.3's denominator and §2.4's regressions go to `10` §2 beside R68's `pts` measurement.
+§2.5's 0.4 s is
 `07` §7's instead: it is a property of one implementation's libraries, which R93 §3.5 separates from
 what survives replacing them. §3.5's tolerance goes to `03` §5.5 with the rule it qualifies, being a
 number a writer acts on rather than a reading.
@@ -178,9 +202,10 @@ number a writer acts on rather than a reading.
 
 ## 5. Consequence
 
-`03` §5.5 gains two SHOULDs beside the tick one, and `10` §2 gains three subsections: an
-ascending identifier's cost, a float's dictionary, and what a rule read off the declaration does to
-`pts`. `07` §7 gains one line for the cost of measuring instead.
+`03` §5.5 gains two SHOULDs beside the tick one, and `10` §2 gains four subsections: an ascending
+identifier's cost, a float's dictionary, what the rules take off the tables a consumer reads whole,
+and what a rule read off the declaration does to `pts`. `07` §7 gains one line for the cost of
+measuring instead.
 
 **No table, column, reference, rule or vocabulary changes**, and both packets carry the new
 encodings, having been rebuilt for other reasons.
@@ -193,11 +218,10 @@ declaration would have had to be wrong for one of the two. Measured over the 75 
 off the smallest encoding available to it, the worst being
 `aind_unit_qc.metrics.isi_violations_count` at 1.15x.
 
-The saving is small and the ratios are not. Across both packets the three rules recover about
-**1.9 MB of 1.76 GB**, because the columns that dominate a packet were already right: 17 tick
-columns at 1,422 MB and 72 measurement columns at 327 MB are unchanged. What the rules buy is per
-table rather than per packet — `core.unit_coordinates` goes 30 kB to 5 kB, which is what a consumer
-reading that table alone pays.
+What the rules recover is **1.247 MB of the 2.622 MB** a consumer transfers before it can filter
+anything (§2.3), and the largest single number in the exercise is one they **keep**:
+`core.spike_events.amplitude` holds its dictionary under §3.3, **1.85x across 209 MB**, which a
+float rule admitting no exception would have spent.
 
 ## 6. Open
 
