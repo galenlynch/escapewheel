@@ -298,23 +298,24 @@ through `session.py`, asserting the packet it produces — including that its en
 restructuring, and best done after the two open drafts are accepted, since it would assert what they
 define and a test may not cite a draft any more than a revision may.
 
-## 1a₃. What is left on encodings, after the rule landed
+## 1a₃. The encoding residual is closed
 
-The rule and its exceptions catch every large case; **59 columns remain more than 15% off the best
-choice, worth roughly 400 kB across both packets**, and I stopped rather than chase them:
+**Done, 2026-09-10.** The item recorded **59 columns more than 15% off the best choice, worth about
+400 kB**, and predicted where the fix would come from. R110 delivered all three: the float rule took
+the high-cardinality floats, `core.unit_electrodes.electrode_id` became a declared exception, and the
+recipe `[encoding]` block reached the extension columns "no rule reaches".
 
-- **High-cardinality floats prefer plain to a dictionary** by 1.3-1.8x — `axis_value` in both
-  coordinate child tables, `unit_quality_labels.confidence`, and most of `aind_unit_qc.metrics`.
-  A blanket rule is measured wrong in the other direction: `metrics.presence_ratio` and
-  `sliding_rp_violation` prefer the dictionary by 1.77x, so this wants either per-column exceptions
-  or a cardinality test, and neither is worth 400 kB yet.
-- **`core.unit_electrodes.electrode_id`** prefers plain to the dictionary by 1.7x, being a trailing
-  key component.
-- **`aind_unit_qc.metrics.num_spikes_used`** wants delta, 1.7x, and no rule reaches an extension's
-  columns.
+Measured against both packets as written, that left **five columns and 12.6 kB**, every one in
+`aind_unit_qc.metrics` — an extension's table, which is exactly what R110 §3.4 exists for rather than
+a gap in the rules. Three declarations close it: `firing_range` and `amplitude_median` take the
+dictionary (1.30x and 1.32x over plain, both rounded by the analyzer), `isi_violations_count` takes
+plain (1.15x, a small count with a long tail). Both recipes now carry them, `Recipe.encoding_problems`
+returns clean, and re-encoding the table through the writer's own option path leaves **zero columns
+over 15%** in either packet, taking `aind_unit_qc/metrics.parquet` down 9.8 kB and 5.0 kB.
 
-The reason to record rather than fix: the packet is 1.76 GB and the residual is 0.02% of it. What
-made the first pass worth doing was 37 columns at 5x to 79x, not the tail.
+The packets on disk are not rebuilt for it: 14.8 kB against a 1.16 GB packet does not earn a
+fifteen-minute build, and the declarations apply to the next one. The recipes live outside this
+repository, at `/mnt/Data/776259-packet/recipe.toml` and `/mnt/Data/786867-packet/recipe.toml`.
 
 ## 1a₂. The source cache defaults onto tmpfs
 

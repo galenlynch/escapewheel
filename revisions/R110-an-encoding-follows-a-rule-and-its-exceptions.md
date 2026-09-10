@@ -217,9 +217,11 @@ Both recipes exercise §3.4, and the result is §3.4's argument rather than an i
 `aind_unit_qc.metrics.presence_ratio` is declared `dictionary` in `ecephys_776259` and declared
 nothing in `ecephys_786867`, because it repeats across 6,781 units and not across 4,505; rebuilt,
 the column carries `RLE_DICTIONARY` in the first packet and `PLAIN` in the second. One schema-level
-declaration would have had to be wrong for one of the two. Measured over the 80 columns after the rules and their exceptions: none more than **15%**
-off the smallest encoding available to it, the worst being
-`aind_unit_qc.metrics.isi_violations_count` at 1.15x.
+declaration would have had to be wrong for one of the two. Measured over the 80 columns after the rules and the exceptions declared at the time, **three**
+remained more than **15%** off the smallest encoding available to them, all in `aind_unit_qc.metrics`
+and worth 12.6 kB between them: `amplitude_median` at **1.32x**, `firing_range` at 1.31x and
+`isi_violations_count` at 1.15x. Each is a column §3.4 reaches and no core rule does, so each was
+declared in the recipe that produces it; with those three entries written, none exceeds 15%.
 
 What the rules recover is **1.247 MB of the 2.622 MB** a consumer transfers before it can filter
 anything (§2.3), and the largest single number in the exercise is one they **keep**:
