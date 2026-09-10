@@ -526,8 +526,7 @@ def _array_tables(uri: str = "arrays/core/waveform_means.zarr") -> dict[str, lis
                 "array_asset_id": "wf",
                 "session_id": "s001",
                 "semantic_type": "waveform_mean",
-                "name": "mean waveform per unit",
-                "kind": "dense_array_asset",
+                "array_asset_name": "mean waveform per unit",
                 "uri": uri,
                 "format": "zarr_v3",
             }
@@ -716,6 +715,60 @@ def test_an_out_of_order_stream_is_refused_while_staging(tmp_path, registry, min
         writer.commit(tmp_path / "pkt")
 
 
+def test_a_record_carrying_an_undeclared_column_is_refused(registry):
+    """Both entry points refuse it, which is the whole point.
+
+    `add_batches` always has; `add` documented the key as ignored, so one adapter defect was a
+    build failure through one door and a dropped column through the other. Three test fixtures
+    were carrying `name` where the registry declares `array_asset_name` and `clock_name`, and
+    nothing said so.
+    """
+    writer = PacketWriter(registry, packet_id="s001")
+    with pytest.raises(ValueError, match="declared by no registry"):
+        writer.add("core.clocks", [{"clock_id": "c", "session_id": "s001", "name": "master"}])
+
+
+def test_a_batch_says_which_of_the_two_causes_it_hit(tmp_path, registry, minimal):
+    """An undeclared column and a late optional one send an author to different files.
+
+    The check fires on the first batch too, where only the first cause is possible, so a message
+    naming only the second described the rarer case.
+    """
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    _add_spike_context(writer)
+    batch = _spike_batch(4, 1, 0)
+    stray = pa.record_batch(
+        {**{n: batch.column(n) for n in batch.schema.names},
+         "nonsense": pa.array([1, 2, 3, 4], type=pa.int64())}
+    )
+    writer.add_batches("core.spike_events", iter([stray]))
+    with pytest.raises(ValueError, match=r"\['nonsense'\] is declared by no registry"):
+        writer.commit(tmp_path / "pkt")
+
+
+def test_an_optional_column_absent_from_the_first_batch_says_so(tmp_path, registry, minimal):
+    """The other cause: `schema` omits an optional column no first batch carries (R2 §5).
+
+    Nothing is undeclared here, so the fix is to the stream rather than to a registry, which is
+    why the two read differently.
+    """
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    rows = {"session_id": pa.array(["s001"]), "stream_id": pa.array(["s"]),
+            "t_tick": pa.array([1], type=pa.int64())}
+    writer.add_batches(
+        "core.events",
+        iter([pa.record_batch(rows),
+              pa.record_batch({**rows, "t_tick": pa.array([2], type=pa.int64()),
+                               "metadata": pa.array(['{"a": 1}'])})]),
+    )
+    with pytest.raises(ValueError, match=r"\['metadata'\] is optional and absent"):
+        writer.commit(tmp_path / "pkt")
+
+
 def test_a_duplicate_across_batches_is_refused_while_staging(tmp_path, registry, minimal):
     from escapewheel_validator import OrderViolation
 
@@ -860,7 +913,8 @@ def test_a_refused_commit_publishes_no_catalog(tmp_path, registry, minimal):
     # A clock that names a parent it does not have: refused by the generated foreign key.
     writer.add(
         "core.clocks",
-        [{"clock_id": "orphan", "session_id": "s1", "name": "x", "origin": "sample 0", "parent_clock_id": "nowhere"}],
+        [{"clock_id": "orphan", "session_id": "s1", "clock_name": "x", "origin": "sample 0",
+          "parent_clock_id": "nowhere"}],
     )
     with pytest.raises(CommitRefused):
         writer.commit(root)

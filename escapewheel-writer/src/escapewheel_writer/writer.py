@@ -237,8 +237,18 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
                                                if n not in options.get("use_dictionary", out.names)
                                                and n not in options.get("column_encoding", {})]))
             if extra := sorted(set(batch.schema.names) - set(out.names)):
+                # Two causes reach here and they send an author to different files: a column the
+                # registry never declared, and an optional one the first batch lacked so `schema`
+                # left it out. The check fires on the first batch too, where only the first is
+                # possible, so a message naming only the second described the rarer case.
+                declared = {c["name"] for c in spec["columns"]}
+                said = []
+                if undeclared := [n for n in extra if n not in declared]:
+                    said.append(f"{undeclared} is declared by no registry this build loaded")
+                if late := [n for n in extra if n in declared]:
+                    said.append(f"{late} is optional and absent from the first batch")
                 raise ValueError(
-                    f"batch carries {extra}, which the first batch did not; the column would be dropped silently"
+                    f"{resource_id}: {'; '.join(said)}; the column would be dropped silently"
                 )
             columns = [
                 batch.column(name) if name in batch.schema.names else pa.nulls(batch.num_rows, field.type)
@@ -519,17 +529,28 @@ class PacketWriter:
         resource_id : str
             Dotted resource ID, e.g. ``core.trials``.
         records : sequence of Mapping
-            Rows. Keys absent from the registry's column list are ignored.
+            Rows, whose keys the registry must declare.
 
         Raises
         ------
         KeyError
             If the registry does not define this resource.
+        ValueError
+            If a record carries a key no column declares. `add_batches` has always refused
+            one, and this path ignored it, so the same adapter defect was a build failure
+            through one entry point and a dropped column through the other.
         """
-        if self.spec(resource_id) is None:
+        spec = self.spec(resource_id)
+        if spec is None:
             raise KeyError(
                 f"no registry defines a table named {resource_id}; core and "
                 f"{len(self._extensions)} extension(s) were consulted"
+            )
+        declared = {c["name"] for c in spec["columns"]}
+        if undeclared := sorted({key for record in records for key in record} - declared):
+            raise ValueError(
+                f"{resource_id}: {undeclared} is declared by no registry this build loaded; "
+                f"the column would be dropped silently"
             )
         self._tables.setdefault(resource_id, []).extend(self._with_session(resource_id, records))
 
