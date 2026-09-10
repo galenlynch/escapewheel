@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `05` §3 (a recipe declares a preference between two sources, and whether a source runs in process); `05` §3.4 (what an adapter declares); `07` §4 (what a build supplies an adapter, and the transports it accepts rows over); `05` §3.7 (what a build captures where a command's output carries rows); `09` §5.7 (an extension's rows cross the same boundary by the same transports) |
+| **Amends** | `05` §3 (a recipe declares a preference between two sources, and whether a source runs in process); `05` §3.4 (what an adapter declares); `07` §4 (what a build supplies an adapter, and the transports it accepts rows over); `05` §3.7 (what a build captures where a command's output carries rows); `09` §5.7 (an extension's rows cross the same boundary by the same transports, and a command is carried as a list) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole), R87 §2.2 (an adapter declares which recipe fields it states), R109 §3.1 (a writer requires no code of an extension), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -204,7 +204,26 @@ and every other adapter produces under 0.25 MB (§2.4), so a file costs the smal
 large one a write and a read; defaulting to the stream means no adapter needs permission to avoid
 that, and a recipe that wants the file says so.
 
-### 3.4 A recipe opts a source into the writer's process
+### 3.4 A command is an argument list, and a stream is bytes
+
+`09` §5.7 says a command is an argument list run in the source's own root and not a shell line. A
+recipe **MUST** carry it as a list, and a build **MUST NOT** derive one by splitting a string.
+Splitting is a shell convention and the conventions differ: POSIX splitting consumes a backslash, so
+`C:\Python\python.exe extract.py` becomes `C:Pythonpython.exe`, and every Windows path in a command
+is silently corrupted by the very step `09` §5.7 says not to take. A list needs no convention and no
+quoting.
+
+Where rows travel on standard output, they are **bytes**. An adapter **MUST** write the stream to a
+binary handle, and a build **MUST** read one. A platform that translates a line ending in text mode
+corrupts an Arrow IPC stream written through it, which fails as malformed data rather than as an
+encoding error and so is worth stating rather than leaving to be discovered.
+
+A build **MUST** consume standard output and standard error concurrently. A pipe holds tens of
+kilobytes, so a build that reads one to completion before the other deadlocks on any adapter whose
+diagnosis outruns that buffer — which is not a Windows question, though how a build does it is:
+`07` §7 carries that, being a technique that changes with the implementation (R93 §3.5).
+
+### 3.5 A recipe opts a source into the writer's process
 
 A build **MUST** deliver a source out of process unless the recipe declares that it runs in the
 writer's, and a writer **MUST NOT** run one in process where the recipe does not say so.
@@ -220,7 +239,7 @@ What the opt-in buys is efficiency, and what it costs is a solvable environment.
 import an adapter the recipe opted in **MUST** refuse, naming the source and the import that failed,
 before any source is opened.
 
-### 3.5 An adapter returns records, and a transport is not the return type
+### 3.6 An adapter returns records, and a transport is not the return type
 
 `07` §4 states that an adapter's return type is records and not a path, because that is what lets an
 adapter be tested without a filesystem and keeps normalization decisions out of I/O code. That
@@ -235,10 +254,10 @@ boundary by machinery that already exists.
 What the out-of-process route gives up is the property `07` §4 names. Testing an adapter that
 delivers over a transport means running it, so the filesystem or the pipe is back, and an in-process
 adapter is the only one testable without either. **That is the trade** — a solvable environment
-against a test that needs no I/O — and §3.4 puts it where the person who bears it can make it, rather
+against a test that needs no I/O — and §3.5 puts it where the person who bears it can make it, rather
 than settling it here for every recipe.
 
-### 3.6 An identifier crosses the boundary as a name
+### 3.7 An identifier crosses the boundary as a name
 
 An adapter reaching a build through files hands over identifiers as the **names** its source used,
 never as numbers, because a writer mints every assigned identifier packet-wide (R53 §2.5) and the
@@ -263,6 +282,12 @@ a build can make.
 declares, `05` §3.7 gains what a build captures where rows are on standard output, `07` §4 gains what a build supplies an adapter and the transports it accepts rows
 over, `09` §5.7 gains that an extension may use them too, and `07` §4's sentence about a return type gains
 what it does not cover.
+
+The reference implementation also carries the defect §3.4 forbids: `TablesSource` takes `command`
+as a string and splits it with `shlex`, which the module's own docstring calls "a plain argument
+list … **not** a shell". Both packaged recipes say `command = "python extract.py"`, which survives
+splitting because it contains no backslash; a recipe naming a Windows interpreter would not, and
+would fail as a missing executable rather than as a malformed command. The fix is a TOML array.
 
 The reference implementation loses four tables that name a kind — `_SHARED_SOURCES`, `SAMPLED`,
 `REQUIRED_OPTIONS` and `PREFERRED` — and gains one declaration per adapter. It also gains a command
@@ -301,7 +326,7 @@ one.
   take: stage `core.spike_events` three ways — in process, through a Parquet intermediate, and over
   an Arrow IPC stream — remembering that the out-of-process rows carry `local_unit_label` rather
   than the `unit_id` a writer assigns, and that R86 §2.3 puts a widened join key at 2.93x over
-  286,896,563 spikes without measuring it as an intermediate. If the stream costs little, §3.4's
+  286,896,563 spikes without measuring it as an intermediate. If the stream costs little, §3.5's
   opt-in is a convenience rather than a necessity, and saying so is worth more than permitting it.
 
 - **Whether a build should report what an opt-in bought.** §3.3 makes running an adapter in process
