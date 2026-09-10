@@ -44,7 +44,7 @@ What no part says is what a build may **require**. An implementation that resolv
 through an installed distribution would contradict no clause, and every packet it wrote would
 conform.
 
-### 2.2 Every extension table in both packets crosses a boundary
+### 2.2 Both packets' extension tables cross a boundary
 
 Both recipes supply all six extension tables — `dynamic_foraging.trials`, `.blocks`, `.sessions` and
 `aind_unit_qc.metrics`, `.waveform_metrics`, `.synchrony` — through a source of kind `tables`,

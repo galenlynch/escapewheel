@@ -55,7 +55,7 @@ A dictionary over a near-unique ascending column stores the values once and an i
 again: `core.unit_coordinates.unit_id` cost **30.95 bits a row** for an `int32`, which is almost
 the 32 bits the raw values take.
 
-### 2.2 Float columns with high cardinality and dictionary encoding
+### 2.2 A float column's values rarely repeat
 
 Of the **32 float columns** above 2 kB, **27 are smaller written plain**, by 1.15x to 1.76x —
 `axis_value` in both coordinate child tables, `core.unit_quality_labels.confidence`, and most of
@@ -67,7 +67,7 @@ quantised to the sorting run's amplitude step, so 286,896,563 rows hold few dist
 dictionary is **1.85x** better across **209 MB** — the largest single encoding decision a packet
 makes, and the one a rule without exceptions discards.
 
-### 2.3 Every read of a packet transfers the small tables whole
+### 2.3 Every packet read downloads the entirety of small tables
 
 A packet is two spike tables and everything else. `core.spike_events` and `analysis.spike_events`
 are **1,168 MB** of `ecephys_776259` and are read behind a filter, a row group at a time; the
@@ -90,7 +90,7 @@ a second** whatever the concurrency, and a column chunk is one ranged read at ei
 an encoding changes is what each request carries. Across the twenty sessions R86 §1.1 measures
 that plateau against, a packet's small tables are **52 MB by default and 27 MB as written**.
 
-### 2.4 A rule read off the declaration picks wrongly
+### 2.4 A declaration-derived rule picks the wrong encoding
 
 What delta exploits is small successive differences and what a dictionary exploits is repetition,
 and the registry declares neither. Deriving the choice from the sort key was measured against all
@@ -163,7 +163,7 @@ reason in a recipe for the same reason: the choice belongs to the build.
 An entry **MUST** carry a reason. A bare choice cannot be re-judged when the data moves, which is
 what §3.5's report exists to prompt.
 
-### 3.5 A writer reports a column a rule guessed wrong about
+### 3.5 A writer reports when rules guess wrong about columns
 
 A writer **SHOULD** report, at `info`, a column whose encoding costs more than **1.5x** the smallest
 available to it, measured over a sample of the rows it wrote. R68 §3's rule and the two above are

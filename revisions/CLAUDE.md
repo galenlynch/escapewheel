@@ -11,15 +11,40 @@ were written to a house style whose titles and section headings are often hard t
 `escapewheel_poc_docs_v0.2/` is the model to copy instead. A new revision is read by someone
 implementing it months later, and their cost of reading is what the style is chosen to lower.
 
-**A section heading names its subject.** Part 06 numbers its sections `Scope`, `Rules`,
-`analysis.spike_events`, `Provenance of a materialization` — noun phrases a reader locates by,
-not findings they must absorb in sequence. The older revisions
-put a full-sentence claim in every heading, so a contents list of nine sections is nine
-propositions to hold with nowhere to put them. State the finding in the body, where the stress
-positions carry it.
+**A section heading names its subject, and how it names it depends on what the section does.**
+Part 06 numbers its sections `Scope`, `Rules`, `analysis.spike_events`, `Provenance of a
+materialization` — noun phrases a reader locates by. Those are the model for a section that
+**declares or amends a named thing**, and for nothing else: measured, the v0.2 parts carry **236
+headings, 8.1% of them with a finite verb, at a mean of 2.5 words**, because a part is looked up
+rather than read through. A revision is read once, in order, and its sections carry findings; its
+1,163 headings run **40.8% with a finite verb at 4.5 words**, and shortening them to 2.5 would
+delete the findings.
 
-This overrides the `prose` skill's heading guidance, which is written for a report or an argument.
-A revision is navigated like a specification, by subject.
+So a section stating a rule or a measurement takes a **declarative clause**, and copying a part's
+2.5-word label there is what produces the hybrid described below. The older revisions failed the
+other way, putting a full-sentence claim in every heading, so a contents list of nine sections was
+nine propositions to hold with nowhere to put them.
+
+This narrows the `prose` skill's heading guidance rather than replacing it: a revision's headings
+are shorter and more locatable than a report's, and **every other heading rule in that skill still
+applies here** — no interrogative, no negation, the claim rather than the route to it, one finding
+each, and a verb that follows its subject immediately.
+
+**Nothing stands between a heading's subject and its verb.** This is the defect that survives the
+rules above, because a heading can name its subject, state a finding, avoid an interrogative and
+avoid a negation while still burying the verb behind a relative clause — and it is exactly what
+trying to satisfy "name the subject" and "state the rule" at once produces. **72 of the 1,163
+numbered headings** here do it. Read to the head noun; the next thing must be its verb.
+
+| | |
+|---|---|
+| "The identifier a table sorts by ascends" | "Table identifiers are ascending" |
+| "A rule read off the declaration picks wrongly" | "A declared rule picks the wrong encoding" |
+| "A dictionary over values that do not repeat" | "A float column's values rarely repeat" |
+| "Every read of a packet transfers the small tables whole" | "Every packet read downloads whole tables" |
+
+The repair is one of two moves — put the qualification **in front of** the head noun, or rename the
+subject so it needs none — and both shorten the heading, which is the sign they are right.
 
 **A heading SHOULD NOT open on an interrogative** — What, Which, Where, How, Why, When, Whether.
 Such a heading is a **free relative**, a clause fused into a noun phrase, so it satisfies the rule
@@ -28,6 +53,11 @@ above grammatically while stating nothing, which is why that rule has not stoppe
 does not change`. It is also the heading writable before the section is, so it survives from the
 outline and nothing later reads it against the finished body — and where a section has quietly grown two
 findings, it is what hides them.
+
+**That ban is why the rules here are stated as mechanical tests.** Before it was written, **125 of
+1,023** numbered headings across R1–R105 opened on an interrogative, 12.2%; across R106–R109 and both
+drafts since, **0 of 54** do. A rule that is named, specific and checkable at a glance held on the
+first four revisions that met it, where the same defect had survived years of general advice.
 
 Two forms remain. The thing's own name, where the section declares or amends one:
 `animal_response`, `core.coordinate_frames`. Or a declarative clause naming the actor and the rule:
