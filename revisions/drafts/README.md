@@ -14,13 +14,15 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-One draft is open, so nothing depends on anything below it.
+Dependencies run downward: a draft may depend on the ones above it and on nothing below.
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `a-requirement-is-cited-where-it-is-stated` | rests on R93 §3.1 having made the parts the specification and R93 §3.6 on each part stating what it binds, and on R111 §3.3 for what a requirement may be |
+| 1 | `a-requirement-is-cited-where-it-is-stated` | rests on R93 §3.6 and R93 §4 for where a clause belongs, and on R111 §3.3 for what a requirement may be |
+| 2 | `an-extension-declares-the-core-it-was-authored-against` | rests on R17 §5 for what an extension already declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
 
-**It moves no count in the generated block.** No table, column, reference, rule or vocabulary
-changes: it adds a section to `00` and a sentence to `07` §2. Every number in it is measured against the
-parts and the three distributions as they stood when it was drafted and is re-measured at
-acceptance, which the pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
+**Neither moves a count in the generated block.** No core table, column, reference, rule or
+vocabulary changes: #1 adds a section to `00` and a sentence to `07` §2, and #2 adds one field to an
+extension's registry document and a clause to `02` §3. Every number in either is measured against
+the parts, the registries and the three distributions as they stood when it was drafted and is
+re-measured at acceptance, which the pre-acceptance checks in `../CLAUDE.md` require anyway.
