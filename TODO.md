@@ -5,7 +5,7 @@ settled item lives in the revision it produced and in git history, not here.
 
 ## State of the world
 
-Last checked 2026-09-04, by `python verify.py` — which is the way to check it, rather than by
+Last checked 2026-09-09, by `python verify.py` — which is the way to check it, rather than by
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
@@ -47,126 +47,83 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. R89 to R93 are drafted and none is accepted
+## 1. Rebuilding both packets
 
-Only the user moves a revision from Proposed to Accepted. R85 and R86 were accepted on
-2026-09-06 and R87 and R88 on 2026-09-07; all four are applied.
+**The goal.** Twenty-one accepted revisions since the last build have made both committed packets
+stale, and neither can be read as evidence for anything until they are rebuilt. What was blocking
+it is cleared:
 
-R87 left one thing owed: `ecephys_776259` still carries `core.subjects.subject_name = 786867`
-against a session named `ecephys_776259_2025-04-09`, so it must be rebuilt. R88 and R90 want
-the same rebuild, so it is one build rather than three.
+- **`extract.py` decodes `animal_response`** in both packet directories (R106 §3.1). The staged
+  `trials.parquet` held `int64` where the registry now declares a string closed to `left`, `right`
+  and `no_response`, so a build was refused on the column's type before a rule ran.
+- **Both recipes declare `core.clock_observation_intervals` as `contributes`** rather than `owns`,
+  which is what kept twelve clocks of thirteen from having a window (R98 §3.2), and the sync source
+  now owns `core.clock_phase_steps` (R99 §3.3), which they had narrowed away.
+- **The session source owns `core.subjects`**, so `subject.json`'s `Mus musculus` reaches the
+  packet. `recipe.PREFERRED` names it, which R98 §3.2 requires of a contested resource and R108
+  §3.1 makes safe: preferring it now refuses a build that loses a fact the NWB stated.
+- **Both recipes claim R105's four coordinate tables and R89's three calibration tables**, which
+  `escapewheel import --check` refused them for: a coordinate referencing a frame no source owns is
+  a dangling required key.
+- **`[subject] sex` reads `male`**, not `Male`. R101 §3.9 closed the vocabulary, so the old value
+  would have failed Tier 1 wherever the recipe supplied the table.
 
-- **R89 — A Packet Records the Calibrations of Its Instruments.** Nothing records a calibration, while
-  `dynamic_foraging.sessions` carries a valve open time *and* the volume it delivers, and
-  `aind_opto.emissions.power_mw` is the calibrated quantity an opto experiment is read through.
-  The curve is in `rig.json`: **the same two water calibrations dated 2024-11-27** appear in both
-  packets, 133 and 302 days before their sessions, so a calibration is not a processing run. Four
-  shapes are measured — a 7-point curve, an array in a `.npy`, a date and nothing else, and an
-  explicit "did not calibrate" — and **one calibration covers six probes**, so the devices are a
-  child table. Adds `core.calibrations`, `core.calibration_devices` and `core.calibration_points`;
-  35 tables → 38.
+Both recipes now check **sound**. What the rebuild is expected to correct, measured on the committed
+bytes: `core.subjects.subject_name` reads `786867` in **both** packets, which is R87's defect;
+`sex` reads `Male`, outside R101 §3.9's closed set; and `species` and `strain` are null where
+`subject.json` states a species.
 
-Neither packet has been rebuilt against R85, so `core.devices.parent_port` is null in both. The
-column is nullable and both remain conforming; the values arrive with §2's rebuild.
+## 1a. The packets' physical layout and encoding
 
-## 1a. A code quality audit of the whole project
+**Not started.** Several tables have changed shape substantially — R105's four coordinate tables at
+74,223 value rows, R81's collapse of unit identity, R88's `session_id` on every session-scoped
+table, R83's `core.sorting_run_channels`, R99's phase steps — and a rebuild is the moment to check
+what Parquet actually does with them rather than what it was assumed to do.
+
+R68 §1.3 is the precedent and the method: `core.media_frames.pts` was **96.9%** of its table because
+a column declaring nothing else gets dictionary encoding, and a monotonic ramp of 7.5 M values is
+its worst case. That closed without a revision, the writer's choice being the defect. Worth checking
+per table: which encoding each column got, whether a sort makes a column compress away as R88 §4
+measured for `session_id` at 1.0005x, and whether any row group is small enough that its footer
+costs more than its rows.
+
+## 1b. A code quality audit of the whole project
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
 well, the code should not be solving it again. The reader's `Location`, the writer's store
 abstraction, the registry's generators and the clock arithmetic are the places to look first.
 
-## 2. `ecephys_776259` needs rebuilding, and R86's evidence depends on it
+The writer's arbitration layer is the newest candidate. `STATES`, `PREFERRED`, `SHARED` and
+`RECIPE_SUPPLIES` are four tables consulted in different orders by `_resolve_ownership` and
+`_note_unclaimed`, which is how they came to disagree about what a preference means — R108 §2.2
+measures three entries where one reads the table and the other does not. One relation, derived from
+each adapter's `PRODUCES`, would make every arbitration rule a query over it and make a stale entry
+a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncontested until R108
+§3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
+`rules.json` is that the queries are authored outside the code, which is not true here.
 
-Its recipe is corrected in `[subject]` and **not in `[session]`**, where `subject_id` still reads
-`786867`; both need the true value before the rebuild. The packet still names subject `786867` in
-`core.subjects.subject_name`, and nothing else about it is stale — its session times are the true
-April ones, because the session source supplies them, and it reads its sorted asset from S3.
+## 2. `registry_version` — still `0.1.0`
 
-R86 §2.2 was corrected before acceptance and no longer depends on this: it states **6 of 13**
-name columns colliding and excludes `subject_name` explicitly, naming the recipe defect as the
-only reason the two packets agree on a value. The rebuild removes the collision and changes
-nothing in the revision.
-
-## 2₀. The two recipes still say `owns` where two sources each hold part
-
-R98 §3.2 refuses that and the recipes under `/mnt/Data/*/recipe.toml` predate it:
-`core.clock_observation_intervals` is declared `owns` on the sync source, which is what kept
-twelve clocks of thirteen from having a window. `SyncSource.PRODUCES` now also names
-`core.clock_phase_steps`, which those recipes narrow away and R98 §3.3's report will say so about.
-Both are edits to a file outside this repository, made when the packets are rebuilt.
-
-R99's three facts are all emitted now: `core.sessions.alignment_bound` from `_declare_origin`,
-`core.clock_phase_steps` from `SyncSource.phase_steps`, and the two `withheld_*` columns from
-`_declare_withheld` through `PacketWriter.stamp`.
-
-## 2a. `registry_version` — still `0.1.0`
-
-Unchanged through R48, R53's string-to-int32 change, R56, R81 and R83. Two packets claiming one
-version with incompatible schemas is what the field exists to prevent, and it is preventing
-nothing. Free to settle while nobody outside holds a packet, and free to batch into any rebuild.
+Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
+packets claiming one version with incompatible schemas is what the field exists to prevent, and it
+is preventing nothing. Free to settle while nobody outside holds a packet, and free to batch into
+the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
+three at 0.2.0.
 
 ## 2b. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
-working tree's own root.
+working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
+doing in one order or the other, not at once.
 
 ## 2c. Staging both packets to scratch needs a token
 
-`aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Both packets are
-current apart from 776259's subject; roughly 1.2 GB and 700 MB excluding referenced LFP.
+`aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
+700 MB excluding referenced LFP.
 
-## 3. `vr_foraging.json` — draftable now, not drafted
-
-**In progress when this stopped.** I had said the inventory's prose was not enough to draft from
-without inventing types. That was wrong: `Aind.Behavior.VrForaging.Packaging`'s `models.py` carries
-the `Site` and `SessionMetadata` pydantic models with types, optionality **and units**, read via
-`gh api repos/AllenNeuralDynamics/Aind.Behavior.VrForaging.Packaging/contents/src/aind_behavior_vr_foraging_packaging/models.py`.
-
-What the source settles:
-
-- **`odor_concentration` is per olfactometer channel** — *"the concentration levels of each odor
-  channels (unit: percentage)"*. So the child table R3 §2.1 forces is
-  `(session_id, site_id, odor_channel, concentration)`, `odor_channel` a **`structural_index`**
-  (0-based, converted at a 1-based boundary per R3 §6) and `concentration` a `float64`
-  with `unit: "%"`.
-- **Every unit lives in a prose description** — centimeter, second, percentage, milliliter, cm/s.
-  Independent evidence for R56: a real pipeline hand-writing units into English because there was
-  nowhere else to put them. This would be the first extension carrying `unit` on live data.
-- **The eleven index columns are `sequence_position`, not `structural_index`** — `site_index`,
-  `site_index_in_patch`, `site_index_by_type`, `patch_index_in_block`, and so on. They are
-  ordinals within a scope, which R48 distinguishes.
-- **Five columns are derived** — `reward_delay_duration` is literally
-  `reward_onset_time - choice_cue_time`, `last_stop_duration` likewise. R3 §3.0 says a table does
-  not restate what the data declares, so they are candidates to strike.
-- **`has_forced_rewards` references the events table in prose** —
-  *"See events table (event_name='ManualWaterDelivery')"*.
-- **`last_stop_time` is renamed to dodge NWB** — the source comment says *"While this variable
-  should ideally be called stop_time, NWB reserves the names start_time and stop_time."* The cost
-  R50 weighed for `offset`, paid by someone else.
-
-## 4. `core.events.payload` carries a column R11 struck
-
-Measured on the real session: payload correlates **perfectly** with type — `delay_start`, `go_cue`
-and `reward_outcome` carry one on all 708 rows each, the four lick and reward-delivery types carry
-none — and its only key is `trial_id`.
-
-That is not a typed payload. It is `core.events.trial_id`, which **R11 §5 struck**, smuggled back
-through JSON by the importer. R54 makes striking it more right rather than less: an event can fall
-inside a trial *and* an opto epoch *and* a block at once, so one `trial_id` names one kind and
-silently ignores the rest, where containment answers correctly.
-
-Fix: the NWB source stops writing it. Payload is then null on every row of this session, which is
-what `optional` is supposed to mean (R3 §2.1).
-
-**Not** an argument for an event discriminator. If a genuinely typed event appears, the mechanism
-is R55's — but as a nullable `event_kind` beside `event_type`, never by repurposing it:
-`event_type` is an open vocabulary a validator MUST NOT reject values from (R11 §4), and several
-types may share one payload schema (`left_lick` and `right_lick`). No packet has such a case, so
-this is a note rather than a proposal.
-
-## 5. Nesting: containment is cheap, but not in SQL
+## 3. Nesting: containment is cheap, but not in SQL
 
 **Measured 2026-09-02**, five repeats, on blocks derived from a real session (708 trials, 18
 blocks, disjoint, minimum gap 5,750 ticks) and synthetic data at the same ratio:
@@ -197,7 +154,7 @@ springs at a scale no packet has reached yet.
 binary search sound: a trial inside two blocks has no containing block. Scripts in
 `/mnt/Data/escapewheel/bench/nesting/` with the raw output in `results.txt`.
 
-## 6. Parked: R42's write case
+## 4. Parked: R42's write case
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -215,23 +172,18 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 7. Smaller, still open
+## 5. Smaller, still open
 
-- **`core.trials` is task-shaped.** `choice`, `rewarded`, `stimulus_id` and `condition_id` are one
-  paradigm's vocabulary in the core schema — a foraging, navigation or passive-viewing trial has
-  none of them — and R43 already ruled that a task's shape belongs in an R17 extension when it
-  moved `trials_wide`'s columns there. But the evidence cuts the other way than the old note said:
-  measured on a real packet, only `stimulus_id` is empty. `condition_id`, `choice`, `rewarded` and
-  `metadata` are populated in all 708 rows, so they are carrying real data and withdrawing them
-  costs something. Needs a second trials table from a different paradigm to settle.
 - **A second ergonomic surface** for people who avoid both SQL and raw PyArrow: DuckDB relations,
   a polars `LazyFrame` behind an extra, or both. Does not block anything.
-- **`registry/tables.html`** remains untracked, deliberately.
 - **No conformance variant for R51 or the shape check.** The fixture packet has no array resources
   and no external ones, so exercising either there means introducing an external Zarr plus whatever
   table rows the registry's rules expect of one — a larger change to the shared fixture than the
   checks it would cover. The validator's own tests cover every path. Worth revisiting when the
   fixture next needs an array for another reason.
+- **A second trials table from another paradigm** would settle whether an interval's task columns
+  belong in core. R54 struck the four `02` defined and nothing wrote, so the question is now about
+  what an extension carries rather than what core does.
 
 ---
 
@@ -284,6 +236,25 @@ Whole packet, 2,496 objects and 6.83 GB across twelve arrays:
 | local disk | 0.33 s | 75 s (91 MB/s, cold) |
 
 Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
+
+---
+
+# Settled 2026-09-09
+
+- **R89 through R108 are accepted and applied.** The item that stood here said R89 to R93 were
+  drafted and none accepted; twenty of them landed since. `revisions/drafts/` is empty.
+- **`vr_foraging.json` is drafted and shipped.** The extension carries `sites`, `site_odors` and
+  `sessions`, with the `(session_id, site_id, odor_channel_index, concentration)` child table R3
+  §2.1 forces, `odor_channel_index` as a `structural_index`, and the eleven ordinals within a scope
+  declared `sequence_position` as R48 distinguishes. Units are on the columns rather than in prose,
+  which is what R56 was drafted against.
+- **`core.events.payload` no longer smuggles `trial_id`.** The NWB source stops writing it, and the
+  comment where it did records that R11 §5 struck the column. Payload now travels only where the
+  stream's data varies.
+- **An interval's task columns are gone from core.** R54 struck the four `02` defined and nothing
+  wrote, so `choice`, `rewarded`, `stimulus_id` and `condition_id` appear nowhere in the registry.
+- **`registry/tables.html` is tracked.** The note saying it was deliberately untracked is stale.
+- **The recipes no longer say `owns` where two sources each hold part.** See §1.
 
 ---
 
