@@ -19,10 +19,12 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 | # | draft | why here |
 |---|---|---|
 | 1 | `a-requirement-is-cited-where-it-is-stated` | rests on R93 §3.6 and R93 §4 for where a clause belongs, and on R111 §3.3 for what a requirement may be |
-| 2 | `an-extension-declares-the-core-it-was-authored-against` | rests on R17 §5 for what an extension already declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
+| 2 | `an-extension-declares-the-core-it-was-authored-against` | rests on R17 §5 for what an extension declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
+| 3 | `a-writer-requires-no-knowledge-of-a-particular-source` | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, so it reads after the draft that puts an extension elsewhere |
 
-**Neither moves a count in the generated block.** No core table, column, reference, rule or
-vocabulary changes: #1 adds a section to `00` and a sentence to `07` §2, and #2 adds one field to an
-extension's registry document and a clause to `02` §3. Every number in either is measured against
-the parts, the registries and the three distributions as they stood when it was drafted and is
-re-measured at acceptance, which the pre-acceptance checks in `../CLAUDE.md` require anyway.
+**None moves a count in the generated block.** No core table, column, reference, rule or vocabulary
+changes: #1 adds a section to `00` and a sentence to `07` §2, #2 adds one field to an extension's
+registry document and a clause to `02` §3, and #3 adds a preference table to `05` §3 and moves four
+tables out of the reference implementation. Every number in each is measured against the parts, the
+registries and the three distributions as they stood when it was drafted and is re-measured at
+acceptance, which the pre-acceptance checks in `../CLAUDE.md` require anyway.
