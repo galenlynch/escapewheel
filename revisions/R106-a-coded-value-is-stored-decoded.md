@@ -133,8 +133,9 @@ costs nothing today and is what a rebuild from a partial source would need.
 
 ## 5. Consequence
 
-`dynamic_foraging.trials.animal_response` goes from `int32` to `string`, so Tier 1's
-closed-vocabulary checks go from 4 to **5**. The extension's `registry_version` bumps, which R17
+`dynamic_foraging.trials.animal_response` goes from `int32` to `string`, so a packet embedding
+this extension runs **5** closed-vocabulary checks where it ran 4. The generated count stays at 4:
+Tier 1 is generated from the merged registry a packet carries, and that block counts core. The extension's `registry_version` bumps, which R17
 §5 makes independent of core's. `02` §8 gains a subsection for §3.1's rule.
 
 **The decode lands outside this repository.** No adapter here writes `dynamic_foraging.trials`:

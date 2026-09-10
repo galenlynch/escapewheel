@@ -20,7 +20,7 @@ resource IDs the registry itself declares. Six descriptions still say the column
 A description sits beside the declaration it describes and nothing compares them, so the two can
 disagree indefinitely. This part corrects the six and adds the check that would have caught them.
 
-Measured on the registry as R103 left it: 39 core tables and 4 extension registries, 494 columns
+Measured on the registry as R106 left it: 43 core tables and 4 extension registries, 512 columns
 between them.
 
 ## 2. Background
@@ -52,20 +52,24 @@ what a discriminator's value space was; R55 §2.1 said it, R101 §3.3 made the d
 and neither swept the prose.
 
 R100 §2.1 wrote the two `coordinate_resource` descriptions after R55 and did not make the claim:
-"The table whose rows are this axis's positions, as a dotted resource ID." Two of the registry's
-seven discriminators already describe themselves correctly, which is the form the other five take
+"The table whose rows are this axis's positions, as a dotted resource ID." Three of the registry's
+eight discriminators already describe themselves correctly, which is the form the other five take
 here.
+
+The drift is behind rather than ahead. R104 §3.1 added the eighth discriminator and described it
+the way R100 §2.1 does without being told to, so what these five need is a sweep and not a habit
+to break.
 
 ## 3. Decision
 
-### 3.1 What a description may claim
+### 3.1 A description claims only what the column declares
 
 A column's `description` **MUST NOT** claim a vocabulary the column does not declare. A
 discriminator's description **MUST NOT** call its values open, closed or free at all: R55 §2.1
 fixes them to the dotted resource IDs the registry declares, and `resolves` says what an
 unmatched one means.
 
-`registry/check.py` checks it, taking its structural invariants from 28 to **29**. The check is
+`registry/check.py` checks it, taking its structural invariants from 29 to **30**. The check is
 exact rather than approximate: a claim is written "Open" where the word describing a mechanism is
 written lowercase, so `dynamic_foraging.sessions.left_valve_open_time` and its right-hand twin
 are not caught and need no declared exception.
@@ -79,13 +83,13 @@ do. `core.processing_runs.scope` states that its value is an identifier in the t
 
 ## 4. Consequence
 
-Six descriptions change and `registry/check.py` gains one structural invariant, going from 28 to
-**29**. No column, table, reference, rule or declaration moves, and no packet is invalidated: a
+Six descriptions change and `registry/check.py` gains the invariant §3.1 states. No column,
+table, reference, rule or declaration moves, and no packet is invalidated: a
 description is registry text, so what changes is the registry each packet embeds.
 
 ## 5. Open
 
-- **Whether the same drift reaches the parts.** This swept the registry's 494 columns and found
+- **Whether the same drift reaches the parts.** This swept the registry's 512 columns and found
   the six. `01` and `02` name four of the discriminators and call none of them open, so nothing
   here is owed there — but the sweep that found these was a search for one word, and prose can
   disagree with a declaration in ways no pattern catches.

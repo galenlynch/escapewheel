@@ -2173,4 +2173,4 @@ note = "a writer that can decode MUST store the decoded value; one that cannot s
 [clause."R106 §3.2"]
 disposition = "registry"
 where = "dynamic_foraging.trials.animal_response"
-note = "int32 becomes string with vocabulary closed over left/right/no_response, staying nullable and role data; closed on R8 §3's test since a two-spout task admits no fourth outcome, taking Tier 1's closed-vocabulary checks from 4 to 5, and a null is not a no_response. No adapter here writes the table -- a TablesSource reads a Parquet file each session's extract.py produces -- so the type change is what refuses a packet whose codes were never decoded"
+note = "int32 becomes string with vocabulary closed over left/right/no_response, staying nullable and role data; closed on R8 §3's test since a two-spout task admits no fourth outcome, so a packet embedding this extension runs 5 closed-vocabulary checks where it ran 4 while the generated core count stays at 4, and a null is not a no_response. No adapter here writes the table -- a TablesSource reads a Parquet file each session's extract.py produces -- so the type change is what refuses a packet whose codes were never decoded"
