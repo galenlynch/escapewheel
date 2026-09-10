@@ -87,6 +87,30 @@ per table: which encoding each column got, whether a sort makes a column compres
 measured for `session_id` at 1.0005x, and whether any row group is small enough that its footer
 costs more than its rows.
 
+## 1a₁. The corpus proves the format and not the writer
+
+**Found by the rebuild.** Two accepted revisions had left the writer unable to build any packet at
+all, and neither 448 tests nor 28 conformance packets saw it:
+
+- `Clock.record` wrote a human label into `core.clocks.clock_name`, which R95 §3.1 defines as what
+  `clock_id` stands for. Nothing could resolve a recipe's `harp` back to a clock, so materializing
+  `analysis.spike_events` raised `NotAligned`. R53 is what exposed it — making `clock_id` an integer
+  retired the path where the identifier *was* the string.
+- `materialize.spike_events` read `core.spike_events.clock_id`, which R96 §3.4 struck in favour of
+  §3.3's hop through `core.units.clock_id`, and died on a `KeyError`.
+
+Both are on paths `fixtures/build.py` does not take: it writes rows directly rather than through
+`Clock.record`, and the corpus has no packet whose `analysis.spike_events` the materializer derived.
+So the corpus proves that an implementation agrees about the **format** and proves nothing about the
+**writer**, which is where twenty-one revisions of drift accumulated unseen.
+
+What would close it is a corpus packet built by the writer from declared sources rather than by hand
+— the same fixtures, reached through `PacketWriter` and one adapter — so that a struck column or a
+renamed one fails a suite instead of a rebuild months later. Worth sizing before committing to:
+`fixtures/build.py` is the artifact any implementation runs to prove it agrees, and a writer-built
+packet is this implementation proving it agrees with itself, which is a different claim and may want
+a different home.
+
 ## 1b. A code quality audit of the whole project
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
