@@ -1416,20 +1416,20 @@ where = "core.units.default_electrode_id struck with its rule core.units.default
 [clause."R82 §2.1"]
 disposition = "registry"
 where = "core.processing_runs.undeclared_currency, advisory removed and level error"
-note = "also stated in 05_validation_and_import.md §12"
+note = "also stated in 05_validation_and_import.md §11"
 
 [clause."R82 §2.2"]
 disposition = "registry"
 where = "core.processing_runs.scope_undeclared, advisory removed and level error"
-note = "also stated in 05_validation_and_import.md §12"
+note = "also stated in 05_validation_and_import.md §11"
 
 [clause."R82 §2.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §12"
+where = "05_validation_and_import.md §11"
 
 [clause."R82 §2.4"]
 disposition = "applied"
-where = "05_validation_and_import.md §12"
+where = "05_validation_and_import.md §11"
 
 
 
