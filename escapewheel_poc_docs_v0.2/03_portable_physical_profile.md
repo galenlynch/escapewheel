@@ -114,6 +114,28 @@ them. On a high-cardinality tick column a writer builds a dictionary nearly as l
 abandons it at its size threshold, and emits a mix of partial-dictionary and plain pages larger
 than either encoding alone.
 
+A writer SHOULD encode with `DELTA_BINARY_PACKED`, and SHOULD NOT dictionary-encode, the first
+column of a table's sort order whose role is `identifier` (R110 §3.1). Sorting a table by its key
+(R10 §2) makes that column ascend across the whole table, which is what delta encoding exists for
+and which no later key column has. `session_id` is not that column, being one value in a
+single-session packet and already 0.03 bits a row under run-length encoding; a writer skips it and
+takes the next.
+
+A writer SHOULD NOT dictionary-encode a floating-point column, and SHOULD write one whose values
+repeat as a declared exception (R110 §3.2). Repetition is what a dictionary indexes, and four
+floats in five do not repeat enough to pay for one.
+
+Neither rule is the property it stands in for, so a writer MUST be able to override each per
+column, and every override MUST record what it measured and on what (R110 §3.3). An exception
+recording nothing cannot be re-judged when the data changes. A writer SHOULD refuse an exception
+naming a column no table declares, which is decidable with no packet in hand.
+
+A writer SHOULD report, at `info`, a column whose encoding costs more than **1.5x** the smallest
+available to it, measured over a sample of the rows it wrote (R110 §3.5). These rules are good
+guesses, and the report is how the author of a table learns that theirs is one a guess misses. A
+report and not a refusal: every encoding above is permitted, so a packet is conforming whichever
+it uses.
+
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
 precision; `INT96` MUST NOT be used. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
 

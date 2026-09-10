@@ -2325,3 +2325,53 @@ disposition = "applied"
 where = "09_metadata_and_extensions.md §5.7"
 note = "an extension's command MUST be a function of its inputs, splitting determinism as R75 does: §2.1 binds what the program computes, §2.2 leaves pinning the environment a build property no packet is judged on. An extension that cannot be delivers a file produced beforehand. Nothing checks it, which is R67 §2.4's shape"
 
+[clause."R110 §2.1"]
+disposition = "rationale"
+where = "R110 §2.1"
+note = "R10 §2 sorts a table by its key so the first key column ascends across the whole table, which is what delta exists for; measured on ecephys_776259, a dictionary over core.unit_coordinates.unit_id costs 30.95 bits a row for an int32, and delta is 37x to 79x smaller across six identifier columns. Carried to 10 §2.4"
+
+[clause."R110 §2.2"]
+disposition = "rationale"
+where = "R110 §2.2"
+note = "of the 32 float columns reaching 2 kB under pyarrow's default, 27 are smaller written plain by 1.15x to 1.76x; the five that repeat decide more, core.spike_events.amplitude being quantised to the sorting run's step and 1.85x better with the dictionary across 209 MB. Carried to 10 §2.5"
+
+[clause."R110 §2.3"]
+disposition = "rationale"
+where = "R110 §2.3"
+note = "the two spike tables are 1,168 MB of ecephys_776259 and read behind a filter; the other 38 tables are 1.375 MB and read entire, 2.622 MB under the default, so the rules take 1.91x off what an open transfers. Decode is 15.6 ms against 15.8 ms, and round trips are unchanged. Carried to 10 §2.6"
+
+[clause."R110 §2.4"]
+disposition = "rationale"
+where = "R110 §2.4"
+note = "deriving the encoding from the sort key was measured over the 116 column-and-packet pairs reaching 2 kB under either choice and picked worse on 82, regressing core.media_frames.pts 188x and core.clock_anchors.t_tick 57x, both monotone without being key columns. Carried to 10 §2.7"
+
+[clause."R110 §2.5"]
+disposition = "rationale"
+where = "R110 §2.5"
+note = "measuring every column three ways over a 65,536-row sample costs about 0.4 s a packet against a 467 s build, so cost is not what refuses it: the choice records no reason and differs between a --sample build and a full one. A property of one implementation's libraries, so carried to 07 §7 rather than 10 (R93 §3.5)"
+
+[clause."R110 §3.1"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §5.5"
+note = "a writer SHOULD delta-encode, and SHOULD NOT dictionary-encode, the first column of a table's sort order whose role is identifier; session_id is skipped, being one value in a single-session packet and 0.03 bits a row under RLE"
+
+[clause."R110 §3.2"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §5.5"
+note = "a writer SHOULD NOT dictionary-encode a floating-point column, and SHOULD write one whose values repeat as a declared exception"
+
+[clause."R110 §3.3"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §5.5"
+note = "a writer MUST be able to override each rule per column and every override MUST record what it measured and on what; a writer SHOULD refuse an exception naming a column no table declares, which is decidable with no packet in hand"
+
+[clause."R110 §3.4"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.8"
+note = "a recipe MAY declare a column's encoding in an [encoding] table keyed resource.column, each entry naming delta, plain or dictionary and carrying a reason. The recipe rather than the extension because a writer requires no code of an extension (R109 §3.1), and rather than the schema because an encoding is a fact about one packet's values"
+
+[clause."R110 §3.5"]
+disposition = "applied"
+where = "03_portable_physical_profile.md §5.5"
+note = "a writer SHOULD report at info a column costing more than 1.5x the smallest encoding available to it, over a sample of the rows it wrote. A report and not a refusal, since every encoding is permitted and a packet is conforming whichever it uses"
+

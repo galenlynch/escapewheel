@@ -1,8 +1,8 @@
-# An Encoding Follows a Rule and Its Declared Exceptions
+# R110 — An Encoding Follows a Rule and Its Declared Exceptions
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-10 |
 | **Amends** | `03` §5.5 (two writer SHOULDs beside the tick one, and what a writer reports); `05` §3 (a recipe declares an encoding); adds four subsections to `10` §2 |
 | **Depends on** | R68 §2.3 (`DELTA_BINARY_PACKED` is defined for `INT32` and `INT64` alone), R68 §1.3 (what the tick rule was worth on `pts`), R10 §2 (a table is sorted by its primary key), R53 §2.1 (an identifier is an integer), R93 §3.4 (a measurement supports a rule that lives elsewhere), R93 §3.5 (what survives replacing the reference implementation), R53 §2.5 (a writer mints every assigned identifier), R109 §3.1 (a writer requires no code of an extension), R109 §3.6 (what an extension may state across the boundary) |
 | **Profile** | `escapewheel-portable-v0.1` |

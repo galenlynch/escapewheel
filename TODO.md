@@ -9,7 +9,7 @@ Last checked 2026-09-09, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R109 accepted. R42 and R73 withdrawn. 2 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R110 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -89,15 +89,15 @@ before: the pair is where a rule gets implemented once and forgotten once.
 
 ## 1₊. One draft is open, and what it still owes
 
-**`an-encoding-follows-a-rule-and-its-exceptions` — reframed, not yet appraised.** §2.3 now measures
-the rules against what a consumer reads whole rather than against the packet, which is where the
-earlier "1.9 MB of 1.76 GB" was misleading: **1.91x** and **1.80x** over the tables read entire,
-23.94x with `core.media_frames`, and decode unchanged at 15.6 ms against 15.8 ms. Its §3.4 now cites
-R109 §3.1 and §3.6 rather than arguing the boundary itself, and its `Open` section is struck, R109
-§3.5 and §3.6 having settled what an extension owes across that boundary.
+**`a-requirement-binds-a-named-actor` — drafted, not yet appraised.** It defines writer, reader,
+validator and consumer in `00` §2, resolves build, adapter and implementation to them, retires four
+spellings, and gives an actor to the ten requirements that bind a process which cannot comply. §1₊₊
+below is the finding it closes.
 
-Its pre-acceptance re-measurement is the whole of what is left: every figure was taken against the
-packets as rebuilt, and the packets have not moved since.
+Its pre-acceptance re-measurement is what is left, and R110 is the reason to take that seriously:
+three of its population counts did not reproduce, because a 2 kB threshold on compressed size
+removes the columns the rules shrink. Every count in the actor draft — 12 nouns, 238 mentions, 151
+normative, the 7/12/3 split inside `05` — was taken with a regex whose precision was never measured.
 
 ## 1₊₊. The specification does not define its actors
 

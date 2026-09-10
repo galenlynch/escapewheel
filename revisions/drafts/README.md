@@ -14,16 +14,13 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-Dependencies run downward: a draft may depend on the ones above it and on nothing below. These two
-are independent, and the order is readiness.
+One draft is open, so nothing depends on anything below it.
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `an-encoding-follows-a-rule-and-its-exceptions` | rests on R68 §3 having put one encoding SHOULD in `03` §5.5, on R93 having built `10` for the readings, and on R109 §3.6 for what an extension states across the boundary; measured and exercised, so only re-measurement is left |
-| 2 | `a-requirement-binds-a-named-actor` | touches no clause the other adds, and the other's two SHOULDs bind a writer either way. Later because it is newly drafted |
+| 1 | `a-requirement-binds-a-named-actor` | rests on R79 §2.2 for the two conformance classes and R67 §2.4 for a requirement no tool can watch |
 
-**Neither moves a count in the generated block.** No table, column, reference, rule or vocabulary
-changes: #1 adds two SHOULDs to `03` §5.5 and four subsections to `10` §2, and #2 adds four
-definitions to `00` §2 and gives ten clauses an actor. Every number in either is measured against
-the packets and the parts as they stood when it was drafted and is re-measured at acceptance, which
-the pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
+**It moves no count in the generated block.** No table, column, reference, rule or vocabulary
+changes: it adds four definitions to `00` §2 and gives ten clauses an actor. Every number in it is
+measured against the parts as they stood when it was drafted and is re-measured at acceptance,
+which the pre-acceptance checks in `../CLAUDE.md` require of every number anyway.

@@ -1334,6 +1334,28 @@ them. On a high-cardinality tick column a writer builds a dictionary nearly as l
 abandons it at its size threshold, and emits a mix of partial-dictionary and plain pages larger
 than either encoding alone.
 
+A writer SHOULD encode with `DELTA_BINARY_PACKED`, and SHOULD NOT dictionary-encode, the first
+column of a table's sort order whose role is `identifier` (R110 §3.1). Sorting a table by its key
+(R10 §2) makes that column ascend across the whole table, which is what delta encoding exists for
+and which no later key column has. `session_id` is not that column, being one value in a
+single-session packet and already 0.03 bits a row under run-length encoding; a writer skips it and
+takes the next.
+
+A writer SHOULD NOT dictionary-encode a floating-point column, and SHOULD write one whose values
+repeat as a declared exception (R110 §3.2). Repetition is what a dictionary indexes, and four
+floats in five do not repeat enough to pay for one.
+
+Neither rule is the property it stands in for, so a writer MUST be able to override each per
+column, and every override MUST record what it measured and on what (R110 §3.3). An exception
+recording nothing cannot be re-judged when the data changes. A writer SHOULD refuse an exception
+naming a column no table declares, which is decidable with no packet in hand.
+
+A writer SHOULD report, at `info`, a column whose encoding costs more than **1.5x** the smallest
+available to it, measured over a sample of the rows it wrote (R110 §3.5). These rules are good
+guesses, and the report is how the author of a table learns that theirs is one a guess misses. A
+report and not a refusal: every encoding above is permitted, so a packet is conforming whichever
+it uses.
+
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
 precision; `INT96` MUST NOT be used. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
 
@@ -1804,6 +1826,23 @@ A command that exits non-zero MUST fail the build, and a build MUST name the sou
 
 A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 
+### 3.8 A recipe declares an encoding
+
+A recipe MAY declare a column's Parquet encoding, in an `[encoding]` table keyed `resource.column`,
+each entry naming one of `delta`, `plain` or `dictionary` and the reason it was measured (R110
+§3.4). An entry MUST carry a reason, since a bare choice cannot be re-judged when the data moves.
+
+A writer's own exceptions MUST name only tables of the layer it implements, and an extension's MUST
+be declarable without the writer importing anything the extension ships — a writer may require no
+code of an extension (R109 §3.1), so a declaration arriving as a Python object would be one only an
+importable extension could make.
+
+The recipe is also the right granularity rather than the only reachable one. An encoding is a fact
+about one packet's values: a column repeating often enough to want a dictionary in one session may
+not in the next, where a schema-level declaration would claim it of every packet. §3.6's
+`[overrides]` puts a chosen value and its reason in a recipe for the same reason — the choice
+belongs to the build.
+
 ## 4. Stages 1 to 3
 
 ### 4.1 Discover
@@ -2120,6 +2159,10 @@ These are properties of the reference implementation, not requirements. A number
 - **Never convert a column to host objects inside a per-batch loop.** Every performance defect found in the reference writer has been this.
 - **Read a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.
 - **Bound memory explicitly** where a job's working set is data-dependent, and give the SQL engine a spill directory: a memory limit without one bounds nothing.
+- **Do not measure every column's encoding at write time.** Writing each column three ways over a
+  65,536-row sample and keeping the smallest costs about **0.4 s** for a whole packet against a
+  467 s build, so cost is not what refuses it: a measured choice records no reason for itself, and
+  it differs between a `--sample` build and a full one (R110 §2.5).
 - **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id` (R86 §2.4). A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.
 
 <!-- END 07_reference_implementation.md -->
@@ -2442,6 +2485,58 @@ Four-column unit identity against one numbered `unit_id`, over the same spike ta
 either way** (R81 §1, 2026-09-05; toolchain not kept). `core.media_frames` shows the same shape at
 7,570,450 rows, where one distinct `session_id` costs **1.0005x**, 0.013 bits a row (R88 §4,
 2026-09-07; toolchain not kept).
+
+### 2.4 An ascending identifier costs 30.95 bits a row under a dictionary
+
+The first column of a table's sort order whose role is `identifier` ascends across the whole table,
+and a dictionary over it stores the values once and an index into them again. Column-chunk bytes on
+`ecephys_776259` (R110 §2.1, 2026-09-10; pyarrow 25.0.1, Python 3.13.15):
+
+| column | dictionary | delta | |
+|---|---:|---:|---:|
+| `aind_unit_qc.synchrony.unit_id` | 48.6 kB | 0.6 kB | **79x** |
+| `core.unit_coordinate_values.unit_id` | 46.8 kB | 0.6 kB | **75x** |
+| `core.units.unit_id` | 26.3 kB | 0.5 kB | 57x |
+| `core.unit_coordinates.unit_id` | 25.3 kB | 0.5 kB | 53x |
+| `core.electrode_coordinates.electrode_id` | 24.3 kB | 0.5 kB | 48x |
+| `core.electrodes.electrode_id` | 17.5 kB | 0.5 kB | 37x |
+
+`core.unit_coordinates.unit_id` costs **30.95 bits a row** for an `int32`, which is almost the 32
+bits the raw values take.
+
+### 2.5 Four float columns in five do not repeat enough to index
+
+Of the **32 float columns** reaching 2 kB under pyarrow's default across two packaged sessions,
+**27 are smaller written plain**, by 1.15x to 1.76x. The five that repeat decide more than the
+twenty-seven: `core.spike_events.amplitude` is quantised to the sorting run's amplitude step, so
+286,896,563 rows hold few distinct values and the dictionary is **1.85x** better across **209 MB**
+(R110 §2.2, 2026-09-10; toolchain as above).
+
+### 2.6 A packet's small tables are what an open transfers
+
+Two spike tables are **1,168 MB** of `ecephys_776259` and are read behind a filter; the other 38
+tables come to **1.375 MB** and are read entire. Those 38 are **2.622 MB** under pyarrow's default,
+so the encoding rules take **1.91x** off what a consumer transfers before a filter can prune
+anything — 1.80x on `ecephys_786867` over its 37 comparable tables, and **23.94x** with
+`core.media_frames` counted, where 7,570,450 rows go from 30.949 MB to 0.429 MB.
+
+Decoding gives none of it back: over the same 38 tables, warm and interleaved, **15.6 ms against
+15.8 ms**, and 28.8 ms against 57.7 ms where `core.media_frames` is among them (R110 §2.3,
+2026-09-10; toolchain as above). Round trips are the one cost this leaves alone — a column chunk is
+one ranged read at either size, so what an encoding changes is what each request carries (§4.1).
+
+### 2.7 A rule read off the declaration picks worse on 82 columns of 116
+
+What delta exploits is small successive differences and what a dictionary exploits is repetition,
+and the registry declares neither. Deriving the choice from the sort key — delta for a key column,
+a dictionary for everything else — was measured over the 116 column-and-packet pairs reaching 2 kB
+under either choice and picked worse on **82**: `core.media_frames.pts` **188x worse** and
+`core.clock_anchors.t_tick` 57x, both climbing steadily without being key columns, and
+`core.unit_electrodes.electrode_id` 1.84x, a trailing key component that climbs within each unit
+and resets (R110 §2.4, 2026-09-10; toolchain as above).
+
+A declaration says what a value means. It does not say how the values are spread, and a storage
+choice turns on the second.
 
 ## 3. Row groups
 

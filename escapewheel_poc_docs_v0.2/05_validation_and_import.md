@@ -111,6 +111,23 @@ A command that exits non-zero MUST fail the build, and a build MUST name the sou
 
 A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 
+### 3.8 A recipe declares an encoding
+
+A recipe MAY declare a column's Parquet encoding, in an `[encoding]` table keyed `resource.column`,
+each entry naming one of `delta`, `plain` or `dictionary` and the reason it was measured (R110
+§3.4). An entry MUST carry a reason, since a bare choice cannot be re-judged when the data moves.
+
+A writer's own exceptions MUST name only tables of the layer it implements, and an extension's MUST
+be declarable without the writer importing anything the extension ships — a writer may require no
+code of an extension (R109 §3.1), so a declaration arriving as a Python object would be one only an
+importable extension could make.
+
+The recipe is also the right granularity rather than the only reachable one. An encoding is a fact
+about one packet's values: a column repeating often enough to want a dictionary in one session may
+not in the next, where a schema-level declaration would claim it of every packet. §3.6's
+`[overrides]` puts a chosen value and its reason in a recipe for the same reason — the choice
+belongs to the build.
+
 ## 4. Stages 1 to 3
 
 ### 4.1 Discover

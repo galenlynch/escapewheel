@@ -52,6 +52,58 @@ either way** (R81 §1, 2026-09-05; toolchain not kept). `core.media_frames` show
 7,570,450 rows, where one distinct `session_id` costs **1.0005x**, 0.013 bits a row (R88 §4,
 2026-09-07; toolchain not kept).
 
+### 2.4 An ascending identifier costs 30.95 bits a row under a dictionary
+
+The first column of a table's sort order whose role is `identifier` ascends across the whole table,
+and a dictionary over it stores the values once and an index into them again. Column-chunk bytes on
+`ecephys_776259` (R110 §2.1, 2026-09-10; pyarrow 25.0.1, Python 3.13.15):
+
+| column | dictionary | delta | |
+|---|---:|---:|---:|
+| `aind_unit_qc.synchrony.unit_id` | 48.6 kB | 0.6 kB | **79x** |
+| `core.unit_coordinate_values.unit_id` | 46.8 kB | 0.6 kB | **75x** |
+| `core.units.unit_id` | 26.3 kB | 0.5 kB | 57x |
+| `core.unit_coordinates.unit_id` | 25.3 kB | 0.5 kB | 53x |
+| `core.electrode_coordinates.electrode_id` | 24.3 kB | 0.5 kB | 48x |
+| `core.electrodes.electrode_id` | 17.5 kB | 0.5 kB | 37x |
+
+`core.unit_coordinates.unit_id` costs **30.95 bits a row** for an `int32`, which is almost the 32
+bits the raw values take.
+
+### 2.5 Four float columns in five do not repeat enough to index
+
+Of the **32 float columns** reaching 2 kB under pyarrow's default across two packaged sessions,
+**27 are smaller written plain**, by 1.15x to 1.76x. The five that repeat decide more than the
+twenty-seven: `core.spike_events.amplitude` is quantised to the sorting run's amplitude step, so
+286,896,563 rows hold few distinct values and the dictionary is **1.85x** better across **209 MB**
+(R110 §2.2, 2026-09-10; toolchain as above).
+
+### 2.6 A packet's small tables are what an open transfers
+
+Two spike tables are **1,168 MB** of `ecephys_776259` and are read behind a filter; the other 38
+tables come to **1.375 MB** and are read entire. Those 38 are **2.622 MB** under pyarrow's default,
+so the encoding rules take **1.91x** off what a consumer transfers before a filter can prune
+anything — 1.80x on `ecephys_786867` over its 37 comparable tables, and **23.94x** with
+`core.media_frames` counted, where 7,570,450 rows go from 30.949 MB to 0.429 MB.
+
+Decoding gives none of it back: over the same 38 tables, warm and interleaved, **15.6 ms against
+15.8 ms**, and 28.8 ms against 57.7 ms where `core.media_frames` is among them (R110 §2.3,
+2026-09-10; toolchain as above). Round trips are the one cost this leaves alone — a column chunk is
+one ranged read at either size, so what an encoding changes is what each request carries (§4.1).
+
+### 2.7 A rule read off the declaration picks worse on 82 columns of 116
+
+What delta exploits is small successive differences and what a dictionary exploits is repetition,
+and the registry declares neither. Deriving the choice from the sort key — delta for a key column,
+a dictionary for everything else — was measured over the 116 column-and-packet pairs reaching 2 kB
+under either choice and picked worse on **82**: `core.media_frames.pts` **188x worse** and
+`core.clock_anchors.t_tick` 57x, both climbing steadily without being key columns, and
+`core.unit_electrodes.electrode_id` 1.84x, a trailing key component that climbs within each unit
+and resets (R110 §2.4, 2026-09-10; toolchain as above).
+
+A declaration says what a value means. It does not say how the values are spread, and a storage
+choice turns on the second.
+
 ## 3. Row groups
 
 A large table's row groups are sized for analytical scans (`03` §5.1). **100,000 to 1,000,000
