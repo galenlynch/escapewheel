@@ -14,6 +14,13 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-No drafts are open. R108 was the last, and `../R108-a-preference-discards-no-stated-fact.md`
-carries it. A new one goes here with a line saying why it sits where it does: dependencies run
-downward, and a draft may depend on the ones above it and on nothing below.
+Dependencies run downward: a draft may depend on the ones above it and on nothing below.
+
+| # | draft | why here |
+|---|---|---|
+| 1 | `an-encoding-follows-a-rule-and-its-exceptions` | rests on R68 §3 having put one encoding SHOULD in `03` §5.5, and on R93 having built `10` for the readings |
+
+**It moves no count in the generated block.** No table, column, reference, rule or vocabulary
+changes; `03` §5.5 gains two SHOULDs and `10` §2 three subsections. Every number in it is measured
+against the packets as they stood when it was drafted and is re-measured at acceptance, which the
+pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
