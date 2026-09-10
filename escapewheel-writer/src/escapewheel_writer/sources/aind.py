@@ -35,19 +35,20 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
 from ..clock import Clock, epoch_from
 from .compensations import Compensates
-from .nwb import SourceDefect, _offset
+from .nwb import SourceDefect, _offset, _sex
 from .store import source_root
 
 #: `session.json`'s own name for the file, used to accept either it or its directory.
 SESSION_JSON = "session.json"
 RIG_JSON = "rig.json"
+SUBJECT_JSON = "subject.json"
 
 
 @dataclass(frozen=True)
@@ -116,12 +117,21 @@ class SessionSource(Compensates):
             "core.calibrations",
             "core.clocks",
             "core.event_stream_observation_intervals",
+            "core.subjects",
         }
     )
 
-    #: R87 §2.2: `session.json` names the subject, which the recipe declares by hand. The
-    #: value is `subject_id` below; a build compares the two and refuses where they differ.
-    STATES: ClassVar[dict[str, str]] = {"subject.subject_id": "subject_id"}
+    #: R87 §2.2: `session.json` names the subject and `subject.json` describes it, and the recipe
+    #: may declare either by hand. A build compares each against what the recipe says and refuses
+    #: only on `subject.subject_id`, which is the one fact a reader resolves across packets.
+    STATES: ClassVar[dict[str, str]] = {
+        "subject.subject_id": "subject_id",
+        "subject.species": "stated_species",
+        "subject.sex": "stated_sex",
+        "subject.genotype": "stated_genotype",
+        "subject.date_of_birth": "stated_date_of_birth",
+        "subject.strain": "stated_strain",
+    }
 
     def __init__(self, root: str | Path, *, zone: ZoneInfo, session_id: str | None = None) -> None:
         if not isinstance(zone, ZoneInfo):
@@ -136,6 +146,7 @@ class SessionSource(Compensates):
         self._streams: list[AcquisitionStream] | None = None
         self._document: dict[str, Any] = json.loads(self.path.read_text())
         self._rig_document: dict[str, Any] | None = None
+        self._subject_document: dict[str, Any] | None = None
         self.session_id = session_id or self.path.parent.name
 
     @property
@@ -379,6 +390,81 @@ class SessionSource(Compensates):
             self._rig_document = json.loads(path.read_text()) if path.is_file() else {}
         return self._rig_document
 
+    @property
+    def _subject(self) -> dict[str, Any]:
+        """The `subject.json` beside this `session.json`, or an empty document where there is none.
+
+        Absent is not a defect, and one of the two packaged sessions has none: `ecephys_786867`
+        carries the document and `ecephys_776259` does not, so a species is read for one animal
+        and stays null for the other.
+        """
+        if self._subject_document is None:
+            path = self.path.parent / SUBJECT_JSON
+            self._subject_document = json.loads(path.read_text()) if path.is_file() else {}
+        return self._subject_document
+
+    @property
+    def stated_species(self) -> str | None:
+        """The scientific name, as NCBI Taxonomy spells it and this document already writes it."""
+        return _clean((self._subject.get("species") or {}).get("name"))
+
+    @property
+    def stated_sex(self) -> str | None:
+        """The sex, mapped onto its closed vocabulary: this document writes `Male`."""
+        return _sex(_clean(self._subject.get("sex")))
+
+    @property
+    def stated_genotype(self) -> str | None:
+        """The genotype as stated, in whatever nomenclature this document used."""
+        return _clean(self._subject.get("genotype"))
+
+    @property
+    def stated_strain(self) -> str | None:
+        """The background strain, which both packaged sessions leave unset."""
+        return _clean(self._subject.get("background_strain"))
+
+    @property
+    def stated_date_of_birth(self) -> date | None:
+        """The date of birth this document writes, read as the calendar date it is."""
+        born = _clean(self._subject.get("date_of_birth"))
+        # A date of birth is a calendar date (R4 §3.3), and this document writes one, so there is
+        # no instant to localize and nothing can move it by a day.
+        return date.fromisoformat(born) if born else None
+
+    def subjects(self) -> list[dict[str, Any]]:
+        """`core.subjects` from `subject.json`, which states what the NWB does not.
+
+        `general/subject` carries no species in either packaged session and this document carries
+        `Mus musculus` with the registry that spells it. Nothing translates: the value already is
+        the NCBI Taxonomy name `core.subjects.species` asks for, and a writer that guessed one from
+        a common name would be inventing a fact (R101 §3.4).
+
+        Everything the standard does not model goes to `metadata` (R97 §3.1), the taxon identifier
+        included -- `NCBI:txid10090` is what survives a renaming the name does not (R59 §1), and no
+        column holds one. The name itself is not repeated there, which R97 §3.3 forbids.
+        """
+        document = self._subject
+        if not document:
+            return []
+        row: dict[str, Any] = {
+            "subject_id": _clean(document.get("subject_id")) or self.subject_id,
+            "species": self.stated_species,
+            "strain": self.stated_strain,
+            "sex": self.stated_sex,
+            "genotype": self.stated_genotype,
+            "date_of_birth": self.stated_date_of_birth,
+        }
+        extra: dict[str, Any] = {}
+        if identifier := _clean((document.get("species") or {}).get("registry_identifier")):
+            extra["species_registry_identifier"] = identifier
+        for key in ("rrid", "breeding_info", "housing", "restrictions", "notes", "source"):
+            value = document.get(key)
+            if value not in (None, {}, [], "") and _clean(value) is not None:
+                extra[key] = value
+        if extra:
+            row["metadata"] = json.dumps(extra, sort_keys=True)
+        return [row]
+
     def _modules(self) -> list[dict[str, Any]]:
         """Every `ephys_module` of every stream, in file order."""
         return [m for s in self._document.get("data_streams", []) or []
@@ -502,8 +588,9 @@ class SessionSource(Compensates):
         return parsed.astimezone(timezone.utc)
 
     def offers(self) -> dict[str, int]:
-        """`05` Stage 1: how many rows of each calibration resource this root holds."""
-        return {"core.calibrations": len(self.calibrations()),
+        """`05` Stage 1: how many rows of each resource this root holds."""
+        return {"core.subjects": len(self.subjects()),
+                "core.calibrations": len(self.calibrations()),
                 "core.calibration_points": len(self.calibration_points()),
                 "core.calibration_devices": len(self.calibration_devices())}
 
@@ -559,6 +646,8 @@ class SessionSource(Compensates):
         }
         return {
             "core.clocks": [built.record()],
+            # Omitted rather than staged empty where the document is absent, as a calibration is.
+            **({"core.subjects": subjects} if (subjects := self.subjects()) else {}),
             "core.event_stream_observation_intervals": self.observation_intervals(built, list(event_stream_ids or [])),
             # An asset carrying no calibration is conforming (R89 §3), so the resources are
             # omitted rather than staged empty -- a manifest entry a packet cannot answer for.
@@ -611,4 +700,4 @@ def _bag(**stated: str | None) -> str | None:
     return json.dumps(kept, sort_keys=True) if kept else None
 
 
-__all__ = ["RIG_JSON", "SESSION_JSON", "AcquisitionStream", "SessionSource"]
+__all__ = ["RIG_JSON", "SESSION_JSON", "SUBJECT_JSON", "AcquisitionStream", "SessionSource"]
