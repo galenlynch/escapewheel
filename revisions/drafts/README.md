@@ -14,6 +14,13 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-No drafts are open. R107 was the last, and `../R107-a-declaration-is-not-a-description.md` carries
-it. When one is written, it goes here with a line saying why it sits where it does: dependencies run
-downward, and a draft may depend on the ones above it and on nothing below.
+Dependencies run downward: a draft may depend on the ones above it and on nothing below.
+
+| # | draft | why here |
+|---|---|---|
+| 1 | `a-preference-discards-no-stated-fact` | rests on R98 §3.3 having spent a preference to buy silence about a discarded row, which is the premise it checks |
+
+**It moves no count in the generated block.** No table, column, reference, rule or vocabulary
+changes; `recipe.PREFERRED` loses one stale entry and a build gains one refusal. Every number in it
+is measured against the registry as it stood when it was drafted and is re-measured at acceptance,
+which the pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
