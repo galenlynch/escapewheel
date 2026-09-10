@@ -1,6 +1,6 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "logical_standard_version": "0.1",
   "extension_id": "aind_opto",
   "extends": "escapewheel-logical-v0.1",
@@ -28,8 +28,9 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What the light was for, in the rig's own words. Open: tagging and inactivation are the same measurement differently parameterised.",
-          "vocabulary": "open"
+          "description": "What the light was for, in the rig's own words: tagging and inactivation are the same measurement differently parameterised.",
+          "vocabulary": "open",
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "duration_s",
@@ -84,8 +85,9 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The rig's own condition label. Open.",
-          "vocabulary": "open"
+          "description": "The rig's own condition label.",
+          "vocabulary": "open",
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "condition_probability",

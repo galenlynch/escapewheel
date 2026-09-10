@@ -2174,3 +2174,58 @@ note = "a writer that can decode MUST store the decoded value; one that cannot s
 disposition = "registry"
 where = "dynamic_foraging.trials.animal_response"
 note = "int32 becomes string with vocabulary closed over left/right/no_response, staying nullable and role data; closed on R8 §3's test since a two-spout task admits no fourth outcome, so a packet embedding this extension runs 5 closed-vocabulary checks where it ran 4 while the generated core count stays at 4, and a null is not a no_response. No adapter here writes the table -- a TablesSource reads a Parquet file each session's extract.py produces -- so the type change is what refuses a packet whose codes were never decoded"
+
+[clause."R107 §2.1"]
+disposition = "rationale"
+where = "R107 §2.1"
+note = "five requirements are made of a column's description and four hold what a field holds: R101 §3.5's nomenclature is `authority`, its closed-set clause is `vocabulary` and `enum`, R48 §2.5's base is `role`, and R7 §2's reason has no field at all; only the form the values take survives contact with one"
+
+[clause."R107 §2.2"]
+disposition = "rationale"
+where = "R107 §2.2"
+note = "R101 §3.6 says a nomenclature is a value rather than prose, one subsection after §3.5 requires the description to name it; nothing compared them because check.py carried one invariant about a description, that an open column has one"
+
+[clause."R107 §2.3"]
+disposition = "rationale"
+where = "R107 §2.3"
+note = "50 restatements over 45 distinct columns -- 35 of `vocabulary`, 10 of `authority`, 2 of `resolves`, 2 of `reserved_values`, 1 of `enum` -- of which 39 agree with the field and six do not, all six written before the revision that settled what their column declares"
+
+[clause."R107 §2.4"]
+disposition = "rationale"
+where = "R107 §2.4"
+note = "registry/tables.md rendered Column, Type, Presence, Since and Description and no declaration at all, which is what the prose was buying: core.processing_runs.status's three values reached a reader of that document only because someone typed them beside the enum holding them"
+
+[clause."R107 §2.5"]
+disposition = "rationale"
+where = "R107 §2.5"
+note = "a table declares columns, primary_key, references, rules and since, and R2 §9's meta-schema sets additionalProperties false, so R7 §2's reason has had nowhere to go since the meta-schema was published; no table declares primary_key null, which is why nothing reached it"
+
+[clause."R107 §2.6"]
+disposition = "rationale"
+where = "R107 §2.6"
+note = "R56 §1 opens on the same defect one field over -- R48 gave a column a role and left the clock and the unit as prose -- with a live pipeline's every unit inside a Field(description=...) as its evidence"
+
+[clause."R107 §3.1"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §3"
+note = "one MUST NOT replaces R101 §3.5's second and third sentences and R48 §2.5, enforced by one new check.py invariant taking the structural checks from 29 to 30 and reaching `vocabulary`, `resolves` and `enum` exactly; naming a declared value is not restating one where the description says what that value means, which is why core.array_assets.band keeps `wideband`, `ap` and `lfp` and core.processing_runs.status loses its three"
+
+[clause."R107 §3.2"]
+disposition = "registry"
+where = "the five discriminator descriptions"
+note = "core.intervals.interval_kind, both scope_kinds and both detail_kinds stop calling their values open; R55 §2.1 fixes them to the declared resource IDs, so none of the three words is true of them, and R100 §2.1's two and R104 §3.1's one already had this form"
+
+[clause."R107 §3.3"]
+disposition = "applied"
+where = "02_core_logical_schemas.md §9.3"
+note = "authority becomes an array of {name, uri}, both required, on 12 columns naming 5 nomenclatures; R53 §2.3.1's shape one level over, since neither informatics.jax.org nor rgd.mcw.edu contains the name of the registry it serves and no rule derives MGI or RGD from a URI"
+
+[clause."R107 §3.4"]
+disposition = "implementation"
+where = "registry/render.py"
+note = "tables.md gains a Declares column rendering the vocabulary, the closed set, the reserved values, the authorities by name and a discriminator's resolves, generated from the field so the two cannot disagree in core"
+
+[clause."R107 §3.5"]
+disposition = "superseded"
+where = "02_core_logical_schemas.md §2"
+note = "R7 §2's requirement that a keyless table state its reason in a description is struck rather than given a field: a table-level description would recreate at table level what §3.1 corrects at column level. primary_key null is the declaration and `since` names the revision that set it (R29 §2)"

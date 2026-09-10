@@ -1,9 +1,9 @@
-# A Declaration Is Not a Description
+# R107 — A Declaration Is Not a Description
 
 | | |
 |---|---|
-| **Status** | Draft |
-| **Amends** | R7 §2 (a keyless table states no reason), R48 §2.5 and R101 §3.5 (both fold into one rule), R101 §3.6 (`authority` gains a name), `02` §3 and `02` §9.3; 45 column descriptions; adds the declarations to `registry/tables.md` and one structural check |
+| **Status** | **Accepted** 2026-09-09 |
+| **Amends** | R7 §2 (a keyless table states no reason), R48 §2.5 and R101 §3.5 (both fold into one rule), R101 §3.6 (`authority` gains a name), `02` §3 and `02` §9.3; 35 column descriptions; adds the declarations to `registry/tables.md` and one structural check |
 | **Depends on** | R101 §3.1 (a string column declares its vocabulary), R101 §3.3 (a discriminator declares none), R101 §3.6 (`authority`), R55 §2.1 (a discriminator's value space is the declared resource IDs), R55 §2.2 (`resolves`), R53 §2.3.1 (an assigned identifier carries a name beside it), R29 §2 (`since` is a citation a reader follows), R3 §3.0 (duplication must buy otherwise-unavailable access) |
 | **Profile** | all |
 
@@ -196,6 +196,11 @@ R7 §2's requirement that a table declaring `primary_key: null` state the reason
 is **struck**. `primary_key: null` is the declaration and `since` names the revision that set it
 (R29 §2), which is where every other reason in this specification lives.
 
+A consumer **MUST NOT** read `primary_key: null` as a declaration not yet made. It is the
+declaration that the table admits duplicate rows, and R7 §2 already forbids omitting the field, so
+a key nobody decided is absent and a key decided against is null. That distinction is what the
+struck reason was defending, and it survives without it.
+
 A table-level `description` is not added. It would recreate at table level exactly what §3.1 is
 correcting at column level — prose beside a declaration, with nothing comparing them — and R7 §2's
 own purpose is served without it: a key that was forgotten declares nothing, where a table admitting
@@ -228,20 +233,28 @@ rendering cannot reach them and only a check can.
 - **No packet is rebuilt.** R101 and each of R103 through R106 required both packaged packets
   rebuilt, so a registry change reads as forcing one. This does not: `authority` is read by no rule
   and appears in no packet's rows, and a description never did.
-- **`02` §3's declaration table gains `description` and `authority`.** It lists neither today, while
-  R101 §3.5 makes a description MUST for an open column and `check.py` enforces exactly that — so
-  the part that says what a column declares omits two things it does.
 
 ## 5. Consequence
 
-45 column descriptions change, `authority` becomes an array of objects on 12 columns naming 5
+35 column descriptions change — 26 in core and 9 across three extensions — `authority` becomes an
+array of objects on 12 columns naming 5
 nomenclatures — NCBI Taxonomy, MGI, RGD, HL7 FHIR administrative gender and UCUM, the last on 8
 columns — `registry/tables.md` gains the declarations it never rendered, and `registry/check.py`
 gains the invariant §3.6 states. `registry.schema.json` changes with `authority`'s shape. No column,
 table, reference, rule or vocabulary moves.
 
-Every one of the 45 takes a `since` naming this revision, as R101 §3.5's 25 did: R29 §2 makes
+`02` §3's declaration table gains `description` and `authority`, listing neither today while R101
+§3.5 makes a description required for an open column and `check.py` enforces exactly that — so the
+part saying what a column declares omitted two things it does.
+
+Every one of the 35 takes a `since` naming this revision, as R101 §3.5's 25 did: R29 §2 makes
 `since` the revision that last changed the column, and the prose is part of what a column is.
+
+The other ten of §2.3's forty-five keep their prose, and that is §3.1's exception doing the work it
+was written for: "as a UCUM code" and "as NCBI Taxonomy spells it" are what makes the form legible,
+so §3.1's exception is satisfied where it stands and only the field's shape changes under those
+ten. Six of the 35 are the disagreements §2.3 lists; the other 29 agreed with their field and
+still lose the prose, because agreement today is not the property being bought.
 
 Three clauses are struck rather than relocated — R7 §2's reason, and R101 §3.5's nomenclature and
 closed-set sentences — and R48 §2.5 folds into §3.1. Four requirements on a description become one.

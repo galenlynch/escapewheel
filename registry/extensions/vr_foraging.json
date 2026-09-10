@@ -1,6 +1,6 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "logical_standard_version": "0.1",
   "extension_id": "vr_foraging",
   "extends": "escapewheel-logical-v0.1",
@@ -37,16 +37,18 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What kind of site this is, in the task's own words (RewardSite, InterSite, ...). Open.",
-          "vocabulary": "open"
+          "description": "What kind of site this is, in the task's own words (RewardSite, InterSite, ...).",
+          "vocabulary": "open",
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "patch_label",
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Patch type this site belongs to. Open.",
-          "vocabulary": "open"
+          "description": "Patch type this site belongs to.",
+          "vocabulary": "open",
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "start_position",

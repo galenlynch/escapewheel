@@ -32,6 +32,26 @@ def _code(names: Any) -> str:
     return ", ".join(f"`{n}`" for n in names)
 
 
+def _declares(column: dict[str, Any]) -> str:
+    """Render every declaration a column carries about its values (R107 §3.4).
+
+    The descriptions used to say these, because this table showed none of them and it is what a
+    person reads. Generated from the field, so the two cannot disagree.
+    """
+    said = []
+    if values := column.get("enum"):
+        said.append("closed: " + ", ".join(f"`{v}`" for v in values))
+    elif vocabulary := column.get("vocabulary"):
+        said.append(vocabulary)
+    if reserved := column.get("reserved_values"):
+        said.append("reserving " + ", ".join(f"`{v}`" for v in reserved))
+    if resolves := column.get("resolves"):
+        said.append(f"resolves {resolves}")
+    if authority := column.get("authority"):
+        said.append(", ".join(f"[{a['name']}]({a['uri']})" for a in authority))
+    return "; ".join(said) or "—"
+
+
 def _table(name: str, spec: dict[str, Any]) -> list[str]:
     """Render one table: its columns, then everything that constrains them."""
     out = [f"### `{name}`", ""]
@@ -39,12 +59,14 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
         note = f"*Introduced by {introduced} (R29 §2). A column with no revision came from `02` unamended.*"
         out += [note, ""]
 
-    out += ["| Column | Type | Presence | Since | Description |", "|---|---|:---:|---|---|"]
+    out += ["| Column | Type | Presence | Declares | Since | Description |",
+            "|---|---|:---:|---|---|---|"]
     for column in spec["columns"]:
         description = (column.get("description") or "").replace("|", "\\|")
         out.append(
             f"| `{column['name']}` | {column['type']} | "
             f"{PRESENCE.get(column['presence'], column['presence'])} | "
+            f"{_declares(column)} | "
             f"{column.get('since', '')} | {description} |"
         )
     out.append("")

@@ -1,6 +1,6 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
-  "registry_version": "0.2.0",
+  "registry_version": "0.3.0",
   "logical_standard_version": "0.1",
   "extension_id": "dynamic_foraging",
   "extends": "escapewheel-logical-v0.1",
@@ -554,32 +554,36 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Whether a session-wide control condition was in force. Open.",
-          "vocabulary": "open"
+          "description": "Whether a session-wide control condition was in force.",
+          "vocabulary": "open",
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "session_start_with",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Which condition the session opened on. Open.",
-          "vocabulary": "open"
+          "description": "Which condition the session opened on.",
+          "vocabulary": "open",
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "session_alternation",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Whether conditions alternated. Open.",
-          "vocabulary": "open"
+          "description": "Whether conditions alternated.",
+          "vocabulary": "open",
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "auto_train_curriculum_name",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Curriculum the trainer was running. Open.",
-          "vocabulary": "open"
+          "description": "Curriculum the trainer was running.",
+          "vocabulary": "open",
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "auto_train_curriculum_version",
@@ -602,8 +606,9 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Stage within the curriculum. Open.",
-          "vocabulary": "open"
+          "description": "Stage within the curriculum.",
+          "vocabulary": "open",
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "auto_train_engaged",

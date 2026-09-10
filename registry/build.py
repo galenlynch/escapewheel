@@ -323,11 +323,17 @@ for _vocab, _names in {
 #: R101 §3.6. Where a column's values are spelled, never what they may be: a validator MUST NOT
 #: dereference one (R14 §2.3.2) nor reject a value for being absent from it. An array because a
 #: strain is drawn from two registries, MGI for mouse and RGD for rat.
-UCUM = "https://ucum.org/ucum.html"
-AUTHORITY: dict[str, tuple[str, ...]] = {
-    "species": ("https://www.ncbi.nlm.nih.gov/taxonomy",),
-    "strain": ("https://www.informatics.jax.org/", "https://rgd.mcw.edu/"),
-    "sex": ("https://hl7.org/fhir/valueset-administrative-gender.html",),
+UCUM = {"name": "UCUM", "uri": "https://ucum.org/ucum.html"}
+#: R107 §3.3. A name beside the URI, because the name is a fact and not a substring: neither
+#: `informatics.jax.org` nor `rgd.mcw.edu` contains the name of the registry it serves, so no rule
+#: derives one from the other. R53 §2.3.1's shape one level over -- the identity a document
+#: resolves, and the name a person reads.
+AUTHORITY: dict[str, tuple[dict[str, str], ...]] = {
+    "species": ({"name": "NCBI Taxonomy", "uri": "https://www.ncbi.nlm.nih.gov/taxonomy"},),
+    "strain": ({"name": "MGI", "uri": "https://www.informatics.jax.org/"},
+               {"name": "RGD", "uri": "https://rgd.mcw.edu/"}),
+    "sex": ({"name": "HL7 FHIR administrative gender",
+             "uri": "https://hl7.org/fhir/valueset-administrative-gender.html"},),
     "unit": (UCUM,), "coordinate_unit": (UCUM,), "input_unit": (UCUM,),
     "output_unit": (UCUM,), "amplitude_unit": (UCUM,),
 }
@@ -1890,10 +1896,99 @@ def build() -> dict:
                 _c["vocabulary"] = vocabulary_of(_c["name"])
 
     SINCE[0] = "R101 §3.6"
-    for _name, _uris in AUTHORITY.items():
+    for _name, _named in AUTHORITY.items():
         for _resource, _spec in tables.items():
             if any(_c["name"] == _name for _c in _spec["columns"]):
-                amend(_resource, _name, authority=list(_uris))
+                amend(_resource, _name, authority=[dict(_a) for _a in _named])
+
+    # ---- R107 §3.1 : a description says what no field says --------------------------------------
+    # `vocabulary`, `enum`, `reserved_values`, `authority` and `resolves` are fields a rule reads.
+    # A description restating one is a second statement of the same fact that nothing compared, and
+    # six had drifted. What survives the cut is what no field holds: the form the values take, what
+    # a reserved value means, and how two of them compare.
+    SINCE[0] = "R107 §3.1"
+
+    # A trailing claim and nothing else, so stripping it is exact.
+    for _resource, _name in (("core.clocks", "origin"),
+                             ("core.electrode_coordinates", "coordinate_frame"),
+                             ("core.media_assets", "format"),
+                             ("core.preferred_runs", "scope_kind"),
+                             ("core.probes", "probe_type"),
+                             ("core.source_files", "format"),
+                             ("core.unit_coordinates", "coordinate_frame")):
+        _was = next(c for c in T(_resource)["columns"] if c["name"] == _name)["description"]
+        if not _was.endswith(" Open."):
+            raise SystemExit(f"{_resource}.{_name} no longer ends in a bare claim: {_was!r}")
+        amend(_resource, _name, description=_was[: -len(" Open.")])
+
+    _SEMANTIC_107 = (
+        "What quantity the asset holds, where the row's declared facts do not already say. Null is "
+        "the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map "
+        "or the dimensions carry the answer. An unrecognised value is a label carrying no contract "
+        "(`01` §3.17).")
+    _BAND_107 = (
+        "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the "
+        "action-potential band, `lfp` the local field potential band, with R8 §4's meanings. A "
+        "conventional shorthand for a filter the packet does not record. Null where the signal was "
+        "not split.")
+    _MANUF_107 = ("The manufacturer's own name for itself, as the source states it, compared "
+                  "exactly, so two spellings are two manufacturers.")
+    for (_resource, _name), _text in {
+        ("analysis.array_assets", "semantic_type"): _SEMANTIC_107,
+        ("core.array_assets", "semantic_type"): _SEMANTIC_107,
+        ("core.media_assets", "semantic_type"): _SEMANTIC_107,
+        # The reserved values stay: `reserved_values` holds the strings and this holds what each
+        # one means, which is a fact no field carries and cannot be stated without naming them.
+        ("analysis.array_assets", "band"): _BAND_107,
+        ("core.array_assets", "band"): _BAND_107,
+        ("core.devices", "manufacturer"): _MANUF_107,
+        ("core.probes", "manufacturer"): _MANUF_107,
+        ("core.calibrations", "calibration_type"):
+            "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named "
+            "`_type` rather than `_kind` because a `_kind` column is a discriminator (R55 §2.1), "
+            "and this holds a value that resolves to no table.",
+        ("core.calibrations", "detail_kind"):
+            "A table carrying a calibration shape core does not define, as a dotted resource ID. A "
+            "kind the packet cannot resolve records that the content is elsewhere rather than that "
+            "the row is wrong (R89 §2.5).",
+        ("core.event_streams", "detail_kind"):
+            "A table specialising this stream's events, as a dotted resource ID. A kind the packet "
+            "cannot resolve records that the detail is elsewhere (R90 §3.4). Resolved against "
+            "`core.events`' key by R90 §3.5's shared key, through the reference `discriminates_via` "
+            "names.",
+        ("core.event_streams", "event_type"):
+            "What kind of event this stream emits. A stream emits one kind, so a source emitting "
+            "several on one channel is written as several streams.",
+        ("core.intervals", "interval_kind"):
+            "The resource that specialises this interval, as a dotted resource ID, resolved as "
+            "R55 §2.3's shared key.",
+        ("core.preferred_runs", "activity_type"):
+            "Which kind of output this preference is about, in the vocabulary "
+            "`core.processing_runs.activity_type` uses (R9 §6).",
+        ("core.probes", "target_region"):
+            "The structure the probe was aimed at, as an atlas acronym where the source gives one. "
+            "Not resolvable: no column here names the atlas, which only a coordinate frame does "
+            "(R105 §3.1).",
+        ("core.processing_runs", "activity_type"):
+            "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, "
+            "`materialization`. A pipeline names its own.",
+        ("core.processing_runs", "scope"):
+            "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id "
+            "itself where the run is session-wide. Read only with the `scope_kind` beside it, which "
+            "names the table the value keys into (R49 §2.2).",
+        ("core.processing_runs", "scope_kind"):
+            "The resource whose primary key `scope` holds, as a dotted resource ID -- "
+            "`core.probes`, `core.array_assets`. A value naming no declared resource means the "
+            "scope is not a packet resource. Set with `scope` or not at all.",
+        # The three values leave with the claim: unlike `band` above, this listed them and cited
+        # their meanings elsewhere, so the list restated the `enum` and added nothing.
+        ("core.processing_runs", "status"):
+            "Whether the run completed, with the meanings R8 §3 declares.",
+        ("core.units", "amplitude_unit"):
+            "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- "
+            "microvolts, or ADC counts.",
+    }.items():
+        amend(_resource, _name, description=_text)
 
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column

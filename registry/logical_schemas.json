@@ -109,7 +109,8 @@
       "R103",
       "R104",
       "R105",
-      "R106"
+      "R106",
+      "R107"
     ]
   },
   "tables": {
@@ -147,18 +148,18 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. Open (R8 \u00a74): an unrecognised value is a label carrying no contract (`01` \u00a73.17).",
+          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (`01` \u00a73.17).",
           "vocabulary": "open",
-          "since": "R103 \u00a73.4"
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "band",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 \u00a74's meanings. A conventional shorthand for a filter the packet does not record. Open, and null where the signal was not split.",
+          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 \u00a74's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split.",
           "vocabulary": "open",
-          "since": "R103 \u00a73.1",
+          "since": "R107 \u00a73.1",
           "reserved_values": [
             "wideband",
             "ap",
@@ -228,7 +229,10 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://ucum.org/ucum.html"
+            {
+              "name": "UCUM",
+              "uri": "https://ucum.org/ucum.html"
+            }
           ]
         },
         {
@@ -375,7 +379,10 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://ucum.org/ucum.html"
+            {
+              "name": "UCUM",
+              "uri": "https://ucum.org/ucum.html"
+            }
           ]
         },
         {
@@ -611,18 +618,18 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. Open (R8 \u00a74): an unrecognised value is a label carrying no contract (`01` \u00a73.17).",
+          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (`01` \u00a73.17).",
           "vocabulary": "open",
-          "since": "R103 \u00a73.4"
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "band",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 \u00a74's meanings. A conventional shorthand for a filter the packet does not record. Open, and null where the signal was not split.",
+          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 \u00a74's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split.",
           "vocabulary": "open",
-          "since": "R103 \u00a73.1",
+          "since": "R107 \u00a73.1",
           "reserved_values": [
             "wideband",
             "ap",
@@ -688,7 +695,10 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://ucum.org/ucum.html"
+            {
+              "name": "UCUM",
+              "uri": "https://ucum.org/ucum.html"
+            }
           ]
         },
         {
@@ -838,7 +848,10 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://ucum.org/ucum.html"
+            {
+              "name": "UCUM",
+              "uri": "https://ucum.org/ucum.html"
+            }
           ]
         },
         {
@@ -977,7 +990,10 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://ucum.org/ucum.html"
+            {
+              "name": "UCUM",
+              "uri": "https://ucum.org/ucum.html"
+            }
           ]
         },
         {
@@ -1300,8 +1316,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open (R8 \u00a74). Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 \u00a72.1), and this holds a value that resolves to no table.",
-          "since": "R89 \u00a72.1",
+          "description": "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 \u00a72.1), and this holds a value that resolves to no table.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -1330,7 +1346,10 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://ucum.org/ucum.html"
+            {
+              "name": "UCUM",
+              "uri": "https://ucum.org/ucum.html"
+            }
           ]
         },
         {
@@ -1342,7 +1361,10 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://ucum.org/ucum.html"
+            {
+              "name": "UCUM",
+              "uri": "https://ucum.org/ucum.html"
+            }
           ]
         },
         {
@@ -1359,9 +1381,9 @@
           "type": "string",
           "presence": "nullable",
           "role": "discriminator",
-          "description": "A table carrying a calibration shape core does not define, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (R89 \u00a72.5).",
+          "description": "A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (R89 \u00a72.5).",
           "resolves": "optional",
-          "since": "R89 \u00a72.1"
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "metadata",
@@ -1731,8 +1753,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (R45 \u00a72.4). Open.",
-          "since": "R101 \u00a73.5",
+          "description": "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (R45 \u00a72.4).",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -1946,7 +1968,10 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://ucum.org/ucum.html"
+            {
+              "name": "UCUM",
+              "uri": "https://ucum.org/ucum.html"
+            }
           ]
         }
       ],
@@ -2229,8 +2254,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The manufacturer's own name for itself, as the source states it. Open, and compared exactly, so two spellings are two manufacturers.",
-          "since": "R101 \u00a73.5",
+          "description": "The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -2468,8 +2493,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is. Open.",
-          "since": "R105 \u00a73.3",
+          "description": "The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -2765,8 +2790,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What kind of event this stream emits. Open (R8 \u00a74); a stream emits one kind, so a source emitting several on one channel is written as several streams.",
-          "since": "R91 \u00a73.1",
+          "description": "What kind of event this stream emits. A stream emits one kind, so a source emitting several on one channel is written as several streams.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -2774,9 +2799,9 @@
           "type": "string",
           "presence": "nullable",
           "role": "discriminator",
-          "description": "A table specialising this stream's events, as a dotted resource ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records that the detail is elsewhere (R90 \u00a73.4). Resolved against `core.events`' key by R90 \u00a73.5's shared key, through the reference `discriminates_via` names.",
+          "description": "A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (R90 \u00a73.4). Resolved against `core.events`' key by R90 \u00a73.5's shared key, through the reference `discriminates_via` names.",
           "resolves": "optional",
-          "since": "R91 \u00a73.1",
+          "since": "R107 \u00a73.1",
           "discriminates_via": "core.events.stream_id"
         },
         {
@@ -2959,9 +2984,9 @@
           "type": "string",
           "presence": "required",
           "role": "discriminator",
-          "description": "The resource that specialises this interval, as a dotted resource ID. Open (R8 \u00a74); resolved as R55 \u00a72.3's shared key.",
+          "description": "The resource that specialises this interval, as a dotted resource ID, resolved as R55 \u00a72.3's shared key.",
           "resolves": "required",
-          "since": "R54 \u00a72.1"
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "interval_id",
@@ -3071,9 +3096,9 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. Open (R8 \u00a74): an unrecognised value is a label carrying no contract (`01` \u00a73.17).",
+          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (`01` \u00a73.17).",
           "vocabulary": "open",
-          "since": "R103 \u00a73.4"
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "uri",
@@ -3088,8 +3113,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "The container format, as the file extension names it: `mp4`, `avi`. Open.",
-          "since": "R101 \u00a73.5",
+          "description": "The container format, as the file extension names it: `mp4`, `avi`.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3308,8 +3333,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Which kind of output this preference is about. Open, as R9 \u00a76 leaves it.",
-          "since": "R41 \u00a72.3",
+          "description": "Which kind of output this preference is about, in the vocabulary `core.processing_runs.activity_type` uses (R9 \u00a76).",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3317,10 +3342,10 @@
           "type": "string",
           "presence": "required",
           "role": "discriminator",
-          "description": "The resource whose primary key `scope` holds, as a dotted resource ID (R49 \u00a72.2). Open.",
+          "description": "The resource whose primary key `scope` holds, as a dotted resource ID (R49 \u00a72.2).",
           "resolves": "optional",
           "discriminates": "scope",
-          "since": "R49 \u00a72.1"
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "scope",
@@ -3446,8 +3471,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The probe's model, as the manufacturer names it: `Neuropixels 1.0`. Open.",
-          "since": "R101 \u00a73.5",
+          "description": "The probe's model, as the manufacturer names it: `Neuropixels 1.0`.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3455,8 +3480,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The manufacturer's own name for itself, as the source states it. Open, and compared exactly, so two spellings are two manufacturers.",
-          "since": "R101 \u00a73.5",
+          "description": "The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3480,8 +3505,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The structure the probe was aimed at, as an atlas acronym where the source gives one. Open, and not resolvable: no column here names the atlas, which only a coordinate frame does (R105 \u00a73.1).",
-          "since": "R105 \u00a73.3",
+          "description": "The structure the probe was aimed at, as an atlas acronym where the source gives one. Not resolvable: no column here names the atlas, which only a coordinate frame does (R105 \u00a73.1).",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3617,17 +3642,17 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, `materialization`. Open (R9 \u00a76), so a pipeline names its own.",
+          "description": "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, `materialization`. A pipeline names its own.",
           "vocabulary": "open",
-          "since": "R101 \u00a73.5"
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "scope",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Open, as activity_type is.",
-          "since": "R44 \u00a72.1",
+          "description": "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Read only with the `scope_kind` beside it, which names the table the value keys into (R49 \u00a72.2).",
+          "since": "R107 \u00a73.1",
           "vocabulary": "free"
         },
         {
@@ -3635,10 +3660,10 @@
           "type": "string",
           "presence": "nullable",
           "role": "discriminator",
-          "description": "The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. Open (R8 \u00a74); a value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all.",
+          "description": "The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all.",
           "resolves": "optional",
           "discriminates": "scope",
-          "since": "R49 \u00a72.1"
+          "since": "R107 \u00a73.1"
         },
         {
           "name": "supersedes_run_id",
@@ -3699,13 +3724,13 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Whether the run completed: `succeeded`, `failed` or `partial`, with the meanings R8 \u00a73 declares. Closed -- a validator rejects any other value.",
+          "description": "Whether the run completed, with the meanings R8 \u00a73 declares.",
           "enum": [
             "succeeded",
             "failed",
             "partial"
           ],
-          "since": "R101 \u00a73.5",
+          "since": "R107 \u00a73.1",
           "vocabulary": "closed"
         },
         {
@@ -4251,8 +4276,8 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The file's format in the producer's own terms, which this specification does not constrain. Open.",
-          "since": "R101 \u00a73.5",
+          "description": "The file's format in the producer's own terms, which this specification does not constrain.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -4398,7 +4423,10 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://www.ncbi.nlm.nih.gov/taxonomy"
+            {
+              "name": "NCBI Taxonomy",
+              "uri": "https://www.ncbi.nlm.nih.gov/taxonomy"
+            }
           ]
         },
         {
@@ -4410,8 +4438,14 @@
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
-            "https://www.informatics.jax.org/",
-            "https://rgd.mcw.edu/"
+            {
+              "name": "MGI",
+              "uri": "https://www.informatics.jax.org/"
+            },
+            {
+              "name": "RGD",
+              "uri": "https://rgd.mcw.edu/"
+            }
           ]
         },
         {
@@ -4429,7 +4463,10 @@
           "vocabulary": "closed",
           "since": "R101 \u00a73.6",
           "authority": [
-            "https://hl7.org/fhir/valueset-administrative-gender.html"
+            {
+              "name": "HL7 FHIR administrative gender",
+              "uri": "https://hl7.org/fhir/valueset-administrative-gender.html"
+            }
           ]
         },
         {
@@ -4593,8 +4630,8 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is. Open.",
-          "since": "R105 \u00a73.3",
+          "description": "The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -5040,11 +5077,14 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. Open (R11 \u00a72).",
-          "since": "R101 \u00a73.6",
+          "description": "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts.",
+          "since": "R107 \u00a73.1",
           "vocabulary": "open",
           "authority": [
-            "https://ucum.org/ucum.html"
+            {
+              "name": "UCUM",
+              "uri": "https://ucum.org/ucum.html"
+            }
           ]
         },
         {

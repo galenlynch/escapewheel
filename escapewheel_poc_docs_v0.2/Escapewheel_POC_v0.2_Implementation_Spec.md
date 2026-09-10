@@ -690,7 +690,7 @@ Every table resource MUST declare:
 
 - a schema identifier;
 - an ordered list of columns, each conforming to §3;
-- a primary key, or `null` with a stated reason (R7 §2);
+- a primary key, or `null` (R7 §2, R107 §3.5);
 - its references to other tables (§7);
 - its Tier 2 validation rules, if any (§10.2).
 
@@ -708,7 +708,13 @@ Every column MUST declare a name, a type, a presence, and a role. It MAY declare
 | `enum` | for closed vocabularies | §9.3 |
 | `resolves`, `discriminates` | for discriminators | §8.3 |
 | `unit`, `unit_from`, `clock_from` | where applicable | §8.4 |
+| `authority` | where one nomenclature covers the column | §9.3 |
+| `description` | for an open vocabulary | §9.3 |
 | `since` | recommended | §9.4 |
+
+A column's `description` MUST NOT restate what one of that column's own fields declares (R107 §3.1). `vocabulary`, `enum`, `reserved_values`, `authority` and `resolves` are read by a rule; a description is prose for a person, and prose repeating a field is a second statement of the same fact that nothing compares. What a description says is what no field can: the form the values take, what a reserved value means, and how two values compare. Naming a declared value is not restating one where the description says what that value means — `core.array_assets.band` names `wideband`, `ap` and `lfp` because it states what each is, and `core.processing_runs.status` named its three and cited their meanings elsewhere, so the list said nothing the `enum` did not.
+
+`registry/check.py` enforces this for `vocabulary`, `resolves` and `enum`. An `authority`'s name in prose is indistinguishable from prose, so a description SHOULD NOT name a nomenclature the field identifies unless naming it is what makes the form legible: `core.subjects.strain` needs MGI named to say why `C57BL/6J`'s substrain letter matters, and the field beside it holds a URI a reader may not recognise.
 
 ## 4. Naming
 
@@ -982,13 +988,13 @@ A scorer's own `label` is open, because aggregating over scorers is incompatible
 
 A value MAY be reserved only where it is read **whole**: where a consumer comparing two packets learns something from the value alone, without knowing what either packet was doing (R101 §3.4). Where an external nomenclature defines the values instead, the registry names it rather than copying it, which R3 §3.0 requires of any set the standard does not itself define. A validator SHOULD report a value outside a reserved set at `info`, and MUST NOT fail on one.
 
-An `open` column MUST carry a description stating the form its values take, and that description MUST name the nomenclature where one fixes the spelling (R101 §3.5). The column MAY also declare `authority`, naming that nomenclature as an absolute URI — identity, not a fetch instruction: a validator MUST NOT dereference one and MUST NOT reject a value for being absent from it (R101 §3.6). A writer MUST spell a value as the named nomenclature does.
+An `open` column MUST carry a description stating the form its values take (R101 §3.5). Where one nomenclature covers the column, the column MAY declare `authority` — an array whose entries each declare a `name`, which is what a person reads, and a `uri`, which is identity rather than a fetch instruction: a validator MUST NOT dereference one and MUST NOT reject a value for being absent from it (R101 §3.6, R107 §3.3). Both are required of an entry, because the name is a fact and not a substring: neither `informatics.jax.org` nor `rgd.mcw.edu` contains the name of the registry it serves. A writer MUST spell a value as the named nomenclature does.
+
+A column's declarations are rendered in `registry/tables.md` from the fields holding them (R107 §3.4) — the vocabulary, the closed set itself, the reserved values, the authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is, and it showed none of them, which is why 35 descriptions had come to say them in prose.
 
 ### 9.4 Provenance of a declaration
 
 A table and a column SHOULD each carry `since`, naming the revision that introduced or last changed it (R77 §2.3). The registry stamps both: 19 tables and 213 columns carry one.
-
-A column whose role is declared SHOULD NOT restate its base in its description (R48 §2.5). The role carries it, and prose repeating it is a second statement that can disagree with the first.
 
 ## 10. Validation rules
 

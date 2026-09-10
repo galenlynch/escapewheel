@@ -214,9 +214,10 @@ def structural(tables, universe, prefix=""):
     c_("`reserved_values` appears only under `open` (R101 §3.4)",
        [(n, c["name"]) for n, c in _strings
         if "reserved_values" in c and c.get("vocabulary") != "open"])
-    c_("an authority is an absolute URI (R101 §3.6)",
-       [(n, c["name"], u) for n, t in tables.items() for c in t["columns"]
-        for u in c.get("authority", []) if not u.startswith(("http://", "https://"))])
+    c_("an authority declares a name and an absolute URI (R107 §3.3)",
+       [(n, c["name"], a) for n, t in tables.items() for c in t["columns"]
+        for a in c.get("authority", [])
+        if not (a.get("name") and str(a.get("uri", "")).startswith(("http://", "https://")))])
     c_("a declared unit is a UCUM code (R101 §3.6)",
        [(n, c["name"], c["unit"]) for n, t in tables.items() for c in t["columns"]
         if c.get("unit") and not _UCUM.fullmatch(c["unit"])],
@@ -231,9 +232,31 @@ def structural(tables, universe, prefix=""):
     for n, c in _strings:
         if "vocabulary" in c:
             _by_name.setdefault(c["name"], set()).add(
-                (c["vocabulary"], tuple(c.get("authority", ()))))
+                (c["vocabulary"],
+                 tuple((a["name"], a["uri"]) for a in c.get("authority", ()))))
     c_("one column name carries one vocabulary and one authority (R101 §3.6)",
        sorted(k for k, v in _by_name.items() if len(v) > 1))
+
+    # R107 §3.6. A description restating a field is a second statement of the same fact that
+    # nothing compared, and six had drifted from the declaration beside them. Reaches four of the
+    # five fields exactly; an authority's name in prose is prose, so §3.1 binds the writer there.
+    # Capitalised, because "Calibrated open time" and "onto the closed set" are the ordinary words.
+    _CLAIM = re.compile(r"(?<![A-Za-z])(Open|Closed|Free)(?![A-Za-z])")
+    _restated = []
+    for n, t in tables.items():
+        for c in t["columns"]:
+            desc, said = c.get("description", ""), []
+            if _CLAIM.search(desc):
+                said.append("names a vocabulary")
+            if c.get("resolves") and f"resolves: {c['resolves']}" in desc:
+                said.append("quotes `resolves`")
+            # A value repeated with no meaning beside it restates the field; `band` states what
+            # each of its reserved values means, which is a fact no field carries (R107 §3.1).
+            if c.get("enum") and all(f"`{v}`" in desc for v in c["enum"]):
+                said.append("lists its `enum`")
+            if said:
+                _restated.append(f"{n}.{c['name']}: {', '.join(said)}")
+    c_("a description restates no field the column declares (R107 §3.1)", sorted(_restated))
 
 
 structural(T, T)
