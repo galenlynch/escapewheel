@@ -99,6 +99,30 @@ R109 §3.1 and §3.6 rather than arguing the boundary itself, and its `Open` sec
 Its pre-acceptance re-measurement is the whole of what is left: every figure was taken against the
 packets as rebuilt, and the packets have not moved since.
 
+## 1₊₊. The specification does not define its actors
+
+**Found by the actorless-MUST scan, 2026-09-10.** Across the eleven v0.2 parts, **12 distinct actor
+nouns** appear — writer, consumer, reader, validator, build, adapter, importer, implementation,
+client, process, binding, caller — over **238 mentions**, of which **151 bind a MUST, SHOULD or
+MAY**. None is defined anywhere.
+
+The distinctions are real but unstated. `02` §9 has "a reader SHOULD offer the resolution" while
+`01` has "a consumer MUST refuse to derive seconds", which reads as software that hands over
+relations against whoever interprets the values — but `00` also has "a reader MUST NOT derive it
+from a `*_name`", which is interpretation. `05` is titled *Validation and Import* and R75 §2.1 binds
+an **importer**, where every neighbouring clause binds a **writer**; nothing says whether those are
+one role.
+
+This is the root of the actorless requirement rather than a separate defect: with no roster, an
+author reaches for whichever noun fits the sentence, and where none fits, attaches the modal to
+whatever noun is there. Ten clauses do that today — "The comparison ... MUST refuse", "A rewrite of
+rows MUST NOT increment `packet_version`", "The test MUST be over-inclusive".
+
+Closing it is a revision, not an edit: a roster in `00` naming each role and what it does, then the
+sweep that repoints the 151 clauses onto it. Worth sizing first — the sweep is where the cost is,
+and some of those clauses will turn out to bind two roles at once, which is the finding rather than
+a complication.
+
 ## 1a. The packets' physical layout and encoding
 
 **Not started.** Several tables have changed shape substantially — R105's four coordinate tables at
