@@ -51,7 +51,6 @@ RECIPE_MAY_SUPPLY = ("core.subjects",)
 #: support. Held here rather than in the scaffolder, so a draft and a build resolve alike.
 PREFERRED = {
     "core.probes": "nwb",
-    "core.unit_electrodes": "waveforms",
     "core.clocks": "sync",
     "core.array_assets": "nwb",
     "core.array_dimensions": "nwb",

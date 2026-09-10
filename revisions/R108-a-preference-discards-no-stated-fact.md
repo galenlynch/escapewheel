@@ -1,8 +1,8 @@
-# A Preference Discards No Stated Fact
+# R108 — A Preference Discards No Stated Fact
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-09 |
 | **Amends** | `05` §3.3 and `05` §3.4 (what a preference permits and what it exempts); adds one refusal to a build |
 | **Depends on** | R98 §3.2 (a resource several sources supply is `contributes`), R98 §3.3 (a discarded row is reported unless a preference explains it), R87 §2.5 (an override declares the recipe authoritative, and why), R63 §2.2 (silence means the whole of `PRODUCES`), R63 §2.3 (a resource no source claims is reported as a warning before any I/O) |
 | **Profile** | all |
@@ -120,9 +120,14 @@ which is the whole argument for declaring a preference rather than letting one e
 
 ### 3.3 A refusal is resolved in the recipe
 
-A recipe resolves a refusal by naming the fact, in the `[overrides]` table R87 §2.5 defines and
-keyed the same `block.field` way, with the reason R87 §2.5 requires. That records which value was
-kept and why, where today the same outcome is reached by silence.
+An `[overrides]` entry naming a fact **MUST** silence §3.1's refusal for that fact. The table is
+R87 §2.5's, keyed the same `block.field` way and carrying the reason it requires, and this is a
+second use of it: R87 §2.5 declares the recipe authoritative over a *source*, where an entry here
+declares the preferred source authoritative over the one it displaced. Both record that a value was
+chosen and why, which is what a refusal exists to extract.
+
+An override is per fact where §3.1's refusal names a column, so the two meet at the same
+granularity, and an entry silences that column and no other.
 
 The other two resolutions need no new mechanism: name the other source in the preference, or fix
 the source that states less. A refusal is a build-time failure with the offending column named, so
@@ -151,7 +156,9 @@ recipe layer keeps.
 ## 5. Consequence
 
 `recipe.PREFERRED` loses its `core.unit_electrodes` entry under §3.4, going from five entries to
-four, of which three are shadowed by `SHARED` for ownership and one arbitrates. `05` §3.3 gains
+four, of which three are shadowed by `SHARED` for ownership and one arbitrates. One test enumerates
+the table against every adapter's `PRODUCES`, so a second producer disappearing fails a suite rather
+than leaving an entry nothing tests. `05` §3.3 gains
 §3.4's bound on where a preference may be declared and `05` §3.4 gains §3.1's refusal beside the
 exemption it makes sound.
 

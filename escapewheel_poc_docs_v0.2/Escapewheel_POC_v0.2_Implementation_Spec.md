@@ -1750,6 +1750,8 @@ Each source declares its resources as `owns` or `contributes`.
 
 A recipe MUST NOT declare `owns` for a resource that more than one of its sources produces rows for, unless it declares a preference between them (R98 §3.2). Exclusivity is for a resource one source is responsible for; where two sources each hold part, `owns` discards the part the owner does not hold, and no check sees it because the resource is claimed.
 
+A preference MUST NOT name a resource only one source produces (R108 §3.4). Such an entry arbitrates nothing and exempts a report that will never be due, so it is a claim no build tests, and it goes stale the moment the second producer stops producing.
+
 ### 3.4 What a source can produce
 
 Every source adapter MUST declare `PRODUCES`, the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
@@ -1758,7 +1760,11 @@ A source entry that declares no `owns` MUST be read as owning every resource in 
 
 Where two sources default to the same resource and no preference is declared, the recipe MUST be refused naming both.
 
-A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them (R98 §3.3). That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. R63 §2.3's warning covers the neighbouring case, a resource *no* source claims, refused before a byte is read.
+A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them (R98 §3.3). That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. R63 §2.3's warning covers the neighbouring case, a resource *no* source claims, reported before a byte is read.
+
+A build MUST refuse where a preference discards a value another source stated: where a passed-over source's row holds a non-null value in a column the preferred source's row leaves null, or does not produce at all (R108 §3.1). A preferred source that produces no rows for the resource while another does is that rule's limiting case. The comparison is over declared columns and not over `metadata`, which §8 of Part 02 makes schemaless by design, so two sources filling it differently is not a difference a build can weigh. That refusal is what makes the exemption above sound: the exemption rests on the loser's copy being redundant, and a preference is declared before either source is opened.
+
+A build MUST NOT compose a row from more than one source (R108 §3.2). The merged row would be a fact no source stated. A recipe resolves the refusal by naming the fact in `[overrides]` with its reason (R87 §2.5), by preferring the other source, or by correcting the source that states less.
 
 A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for (R87 §2.2). What that declaration is called and where it lives is Part 07 §4's.
 

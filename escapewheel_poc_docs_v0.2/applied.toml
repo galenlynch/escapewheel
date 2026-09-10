@@ -2229,3 +2229,43 @@ note = "tables.md gains a Declares column rendering the vocabulary, the closed s
 disposition = "superseded"
 where = "02_core_logical_schemas.md §2"
 note = "R7 §2's requirement that a keyless table state its reason in a description is struck rather than given a field: a table-level description would recreate at table level what §3.1 corrects at column level. primary_key null is the declaration and `since` names the revision that set it (R29 §2)"
+
+[clause."R108 §2.1"]
+disposition = "rationale"
+where = "R108 §2.1"
+note = "prefer the session adapter for core.subjects and an asset without subject.json stages no subject at all, so core.sessions.subject_id orphans and the finding lands on the table that was staged, naming neither the preference nor the source it named"
+
+[clause."R108 §2.2"]
+disposition = "rationale"
+where = "R108 §2.2"
+note = "of five PREFERRED entries, three name resources _resolve_ownership never consults because SHARED is checked first, one named a resource a single adapter produces, and core.probes is the only one that arbitrates -- while _note_unclaimed exempts all five from R98 §3.3's report"
+
+[clause."R108 §2.3"]
+disposition = "rationale"
+where = "R108 §2.3"
+note = "seven of the eight contests carry a SHARED entry, a PREFERRED entry or both; core.subjects carries neither, which is the state R87 §2.8 created so a source may own it and R63 §2.3's warning fires"
+
+[clause."R108 §2.4"]
+disposition = "rationale"
+where = "R108 §2.4"
+note = "the NWB and subject.json agree on every declared column for both animals -- Mus musculus, male from M and Male, wt/wt, the birth dates, strain null in both -- so the refusal fires on neither packet, which is what makes a MUST safe rather than a SHOULD"
+
+[clause."R108 §3.1"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.4"
+note = "a build refuses where a passed-over row holds a non-null value in a column the preferred row leaves null, or the preferred source stages nothing; over declared columns only, metadata being schemaless. Bounded by §3.4: every preferred resource is metadata-scale, and core.clock_anchors at 754,222 rows carries no preference"
+
+[clause."R108 §3.2"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.4"
+note = "a build MUST NOT compose a row from more than one source; the merged row would be a fact no source stated, which is the inference R83 §2.2, R67 §2.4 and R105 §3.4 each refuse"
+
+[clause."R108 §3.3"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.4"
+note = "an [overrides] entry silences §3.1's refusal for the fact it names, a second use of R87 §2.5's table: there the recipe is authoritative over a source, here the preferred source over the one it displaced. Per fact, which is the granularity §3.1's refusal names"
+
+[clause."R108 §3.4"]
+disposition = "applied"
+where = "05_validation_and_import.md §3.3"
+note = "a preference MUST NOT name a resource only one source produces; core.unit_electrodes is struck from recipe.PREFERRED, five entries becoming four, and one test enumerates the table against every adapter's PRODUCES so it cannot go stale again"

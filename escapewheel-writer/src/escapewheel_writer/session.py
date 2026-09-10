@@ -128,6 +128,11 @@ class Context:
         Resolved source root to its open store. Three adapters in a real recipe read the same
         `.nwb`; sharing the store means they cannot disagree about what is in it, and stops the
         electrode table being parsed once per adapter.
+    stated : dict
+        Resource to source kind to the rows that kind produced, for the resources a preference
+        arbitrates. Held so R108 §3.1 can compare the winner's row against the one it displaced;
+        bounded to those resources, because a preference may only name one more than one source
+        produces (R108 §3.4) and every such resource is metadata-scale.
     """
 
     session_id: str
@@ -136,6 +141,7 @@ class Context:
     electrodes: dict[int, str] = field(default_factory=dict)
     clocks: dict[str, float] = field(default_factory=dict)
     stores: dict[Path, Any] = field(default_factory=dict)
+    stated: dict[str, dict[str, list[dict[str, Any]]]] = field(default_factory=dict)
     #: The reference clock, as the recipe declares it. A `session` source rewrites its row
     #: with a `tick_zero_utc`; every other adapter uses it as given.
     reference: Any = None
@@ -799,6 +805,7 @@ def build(
         drained[spec.kind] = _say_notes(spec.kind, source, 0, say, strict)
         applied.extend(getattr(source, "compensations", []))
 
+    _refuse_a_discarded_fact(writer, context, recipe)
     _declare_withheld(context, writer, say)
     _declare_origin(context, say)
     for note in context.notes:
@@ -902,6 +909,11 @@ def _add_records(
     produced: dict[str, int] = {}
     for resource, rows in _records(spec, source, context).items():
         produced[resource] = len(rows)
+        if resource in PREFERRED:
+            # Kept rather than counted, so R108 §3.1 can compare what the winner staged against
+            # what the source it displaced stated. Only for a preferred resource, which is what
+            # keeps this bounded.
+            context.stated.setdefault(resource, {})[spec.kind] = rows
         if resource not in spec.claims:
             continue
         if resource == "core.clock_observation_intervals":
@@ -910,6 +922,58 @@ def _add_records(
         writer.add(resource, rows)
         counts[resource] = counts.get(resource, 0) + len(rows)
     return produced
+
+
+def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Recipe) -> None:
+    """Refuse where preferring a source discarded a value another source stated (R108 §3.1).
+
+    R98 §3.3 spends a preference to buy silence about a discarded row, on the premise that the
+    loser's copy is redundant. A preference is declared before either source is opened, so nothing
+    checked the premise: one naming a source that turns out to state less, or nothing at all, buys
+    the same silence and loses the difference. A preferred source producing no rows while another
+    does is the limiting case, every value being discarded.
+
+    Compared over declared columns. `metadata` is schemaless by design (`02` §8.6), so two sources
+    filling it differently is not a difference this can weigh, and R97 §3.3 already binds it.
+
+    A build refuses rather than composing the row from both, which would be a fact no source stated
+    (R108 §3.2). The recipe resolves it: name the fact in `[overrides]` with its reason (R87 §2.5),
+    prefer the other source, or fix the one that states less.
+    """
+    claimed = {resource: spec.kind for spec in recipe.sources for resource in spec.claims}
+    lost: list[str] = []
+    for resource, by_kind in sorted(context.stated.items()):
+        table = writer.spec(resource)
+        if table is None or len(by_kind) < 2:
+            continue
+        winner = claimed.get(resource)
+        kept = by_kind.get(winner or "", [])
+        key = list(table.get("primary_key") or [])
+        columns = [c["name"] for c in table["columns"] if c["name"] != "metadata"]
+        for kind, rows in sorted(by_kind.items()):
+            if kind == winner or not rows:
+                continue
+            if not kept:
+                lost.append(f"{resource}: {kind} stated {len(rows):,} row(s) and "
+                            f"{winner or 'no source'} staged none")
+                continue
+            held = {tuple(r.get(k) for k in key): r for r in kept} if key else {}
+            for row in rows:
+                match = held.get(tuple(row.get(k) for k in key)) if key else None
+                if match is None:
+                    lost.append(f"{resource}: {kind} stated a row {winner} did not")
+                    continue
+                lost.extend(
+                    f"{resource}.{column}: {kind} stated {row[column]!r} and {winner} left it null"
+                    for column in columns
+                    if row.get(column) is not None and match.get(column) is None
+                )
+    if lost:
+        raise SourceDefect(
+            "preferring a source discarded a fact another stated (R108 §3.1). Declare it in "
+            "[overrides] with a reason, prefer the other source, or fix the one that states less:"
+            "\n  " + "\n  ".join(sorted(set(lost)))
+        )
 
 
 def _note_unclaimed(spec: SourceSpec, source: Any, produced: Mapping[str, int]) -> None:

@@ -6,8 +6,16 @@ from typing import ClassVar
 
 import pytest
 
-from escapewheel_writer.recipe import RECIPE_SUPPLIES, Recipe
-from escapewheel_writer.session import CONSUMES, RecipeError, _note_unclaimed, order
+from escapewheel_writer.recipe import PREFERRED, RECIPE_SUPPLIES, Recipe, produces
+from escapewheel_writer.session import (
+    CONSUMES,
+    Context,
+    RecipeError,
+    _note_unclaimed,
+    _refuse_a_discarded_fact,
+    order,
+)
+from escapewheel_writer.sources import ADAPTERS, SourceDefect
 
 BASE = """
 [packet]
@@ -250,6 +258,70 @@ def test_a_source_that_could_supply_the_subject_is_noted(tmp_path):
     source = Noted()
     _note_unclaimed(recipe.sources[0], source, {"core.subjects": 1})
     assert any("core.subjects" in n for n in source.notes)
+
+
+# -- R108: a preference discards no stated fact --------------------------------------------
+
+
+class _Registry:
+    """Enough of a writer to answer what a table declares."""
+
+    def __init__(self, registry):
+        self._registry = registry
+
+    def spec(self, resource_id):
+        return self._registry["tables"].get(resource_id)
+
+
+def _contest(tmp_path):
+    """A recipe where the NWB claims `core.probes` and the sorter also produces it."""
+    return Recipe.load(write(tmp_path, '\n[[source]]\nkind = "nwb"\nroot = "n"\n'
+                                       'owns = ["core.probes"]\n'
+                                       '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
+                                       'owns = ["core.units"]\n'))
+
+
+def test_a_preference_names_a_resource_more_than_one_source_produces(tmp_path):
+    """R108 §3.4: an uncontested entry arbitrates nothing and exempts a report never due.
+
+    `core.unit_electrodes` sat here until the sorter stopped producing that table, and nothing
+    noticed. This is `02` §4's discipline for a declared naming exception, one table over.
+    """
+    uncontested = {
+        resource: [kind for kind in sorted(ADAPTERS) if resource in produces(kind)]
+        for resource in sorted(PREFERRED)
+    }
+    assert {r: k for r, k in uncontested.items() if len(k) < 2} == {}
+
+
+def test_a_preference_that_discards_a_stated_fact_is_refused(tmp_path, registry):
+    """R108 §3.1: the premise a preference buys silence on is now checked."""
+    context = Context(session_id="s001")
+    context.stated["core.probes"] = {
+        "nwb": [{"probe_id": "probeA", "probe_type": None}],
+        "sorter": [{"probe_id": "probeA", "probe_type": "NP2000"}],
+    }
+    with pytest.raises(SourceDefect, match=r"core\.probes\.probe_type"):
+        _refuse_a_discarded_fact(_Registry(registry), context, _contest(tmp_path))
+
+
+def test_a_preferred_source_that_stages_nothing_is_refused(tmp_path, registry):
+    """R108 §3.1's limiting case: every value discarded, not just one."""
+    context = Context(session_id="s001")
+    context.stated["core.probes"] = {"sorter": [{"probe_id": "probeA"}]}
+    context.stated["core.probes"]["nwb"] = []
+    with pytest.raises(SourceDefect, match="staged none"):
+        _refuse_a_discarded_fact(_Registry(registry), context, _contest(tmp_path))
+
+
+def test_two_sources_that_agree_are_not_refused(tmp_path, registry):
+    """Agreement is the ordinary case, and `metadata` is never compared (R108 §3.1)."""
+    context = Context(session_id="s001")
+    context.stated["core.probes"] = {
+        "nwb": [{"probe_id": "probeA", "probe_type": "NP2000", "metadata": '{"a": 1}'}],
+        "sorter": [{"probe_id": "probeA", "probe_type": "NP2000", "metadata": '{"b": 2}'}],
+    }
+    _refuse_a_discarded_fact(_Registry(registry), context, _contest(tmp_path))
 
 
 # -- R63: a recipe declares what it narrows ------------------------------------------------
