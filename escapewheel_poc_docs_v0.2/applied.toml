@@ -2375,3 +2375,28 @@ disposition = "applied"
 where = "03_portable_physical_profile.md §5.5"
 note = "a writer SHOULD report at info a column costing more than 1.5x the smallest encoding available to it, over a sample of the rows it wrote. A report and not a refusal, since every encoding is permitted and a packet is conforming whichever it uses"
 
+[clause."R111 §2.1"]
+disposition = "rationale"
+where = "R111 §2.1"
+note = "05 §10 makes a validator's report turn on telling a packet obligation from a writer's, and 05 spread its own writing-side obligations over 8 clauses binding a writer, 12 a build and 3 an importer, with nothing saying whether those were one actor or three"
+
+[clause."R111 §2.2"]
+disposition = "rationale"
+where = "R111 §2.2"
+note = "the read side already split by part -- 01 binds 19 clauses to a consumer and 2 to a reader, 03 binds 6 to a reader and none to a consumer -- because a reader is bound by what it returns and a consumer by what it concludes, a distinction load-bearing for R58 §2.2 and stated nowhere"
+
+[clause."R111 §2.3"]
+disposition = "rationale"
+where = "R111 §2.3"
+note = "45 clauses named neither an actor nor the part they constrain: 8 whose subject is an abstract process, and 38 in the agentless passive, of which 25 elide an actor the roster names and 12 name an artifact while hiding which part of it and what it must do"
+
+[clause."R111 §3.3"]
+disposition = "applied"
+where = "00_architecture.md §2.8"
+note = "the roster itself -- writer, reader, validator, consumer, and build/adapter/implementation resolving to them -- lands here as definitions carrying no modal, which is why only the rules that bind it are disposed. Every requirement binds an actor or states a property of an artifact, and an artifact predicate MUST name the part it constrains and put the constraint in an active verb -- a wall-clock column MUST NOT use INT96, over INT96 MUST NOT be used. Binds whoever writes this specification; a clause failing it is corrected rather than reported"
+
+[clause."R111 §3.5"]
+disposition = "applied"
+where = "00 §4.1, 01 §7 and §8, 02 §4 §5 §8 §9 §10, 03 §3 §5 §6 §7, 04 §5, 05 §2 §3 §5 §6 §10 §12, 06 §1 §3, 09 §5 §8"
+note = "33 clauses gain an actor -- 13 a writer, 6 a validator, 4 a consumer, 3 a build, 1 a reader, and the 8 abstract-subject ones -- and 12 name the part of the artifact they constrain, actively. Three judgement calls settled in the revision: 00 §4.1 binds a writer, 03 §7's stray binds a writer, and 04 §5's unresolved source splits between a reader and a validator"
+

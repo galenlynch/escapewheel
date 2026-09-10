@@ -113,7 +113,7 @@ Where `members` accompanies R36 §2.2's `sha256`, the listing digested MUST be t
 
 Where a validator is asked to verify content **without reading**, it compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading (R51 §2.3). A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped.
 
-A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A verification pass MUST report what it skipped for these reasons, and a store-digest pass **MUST NOT** be reported as a checksum verification (R51 §2.4): it establishes something weaker and store-specific, so it gets its own finding.
+A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A validator MUST report what a verification pass skipped for these reasons, and **MUST NOT** report a store-digest pass as a checksum verification (R51 §2.4): it establishes something weaker and store-specific, so it gets its own finding.
 
 ### 5.5 Source resolution
 
@@ -133,11 +133,11 @@ A reader MUST accept one or more resolution documents from its caller, and resol
 this order: the documents the caller supplied, in the order supplied; then `sources.json` at the
 packet root if it is there; then the source is unresolved. A writer SHOULD write that default.
 
-An unresolved `source` MUST be reported as unresolved and MUST NOT fail structural validation:
+A reader MUST report an unresolved `source` as unresolved, and a validator MUST NOT fail structural validation for one:
 which mirrors a reader can reach is a property of the reader. Structural validation MUST NOT
 require a resolution document.
 
-Resolving through a different document MUST NOT be read as invalidating a recorded `sha256`,
+A consumer MUST NOT read resolution through a different document as invalidating a recorded `sha256`,
 `size_bytes` or `members`. Where a reader verifies a resolved source and finds a mismatch, it MUST
 report it against the resource entry, and MUST NOT silently prefer either the recorded digest or
 the bytes it found.

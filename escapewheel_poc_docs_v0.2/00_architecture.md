@@ -63,6 +63,36 @@ An **Iceberg catalog** is distinct from the packet catalog. It is relevant only 
 
 Resources and rows reference each other by stable identifier. An implementation MUST NOT use HDF5 object references, Zarr hierarchy paths, host object identity, or file layout as the primary identity system.
 
+### 2.8 Actors
+
+Four actors appear throughout this specification, and every requirement binds one of them or states
+a property of an artifact (R111 §3.1, §3.3).
+
+A **writer** produces a packet from sources. It stages, validates and commits, and it is the actor
+Part 05 binds throughout.
+
+A **reader** opens a committed packet and returns its resources — rows, arrays, resolved
+references. It is bound by what it returns.
+
+A **validator** decides whether a packet conforms, and reports findings.
+
+A **consumer** interprets values a reader returned and acts on them. It is bound by what it
+concludes, and it is the only actor that may be a person rather than a program.
+
+An actor is a part someone plays, not a distribution: one program is commonly all four. Naming them
+separately is what lets a clause say who owes an obligation.
+
+Three further terms resolve to those four (R111 §3.2). A **build** is one execution of a writer
+against one recipe, so a requirement on a build binds the writer performing it — which is what makes
+Part 05 §10 decidable, an obligation on a build or a writer being a writer obligation and one on a
+packet not. An **adapter** is the part of a writer that reads one source, and an obligation on an
+adapter binds the writer that ships it. An **implementation** is software performing one or more of
+the four, and is the right subject only where a requirement binds every actor alike, as §2.7's ban
+on HDF5 object references does.
+
+`importer` is another name for a writer, `client` and `binding` for a reader, and `caller` for a
+consumer (R111 §3.4). An accepted revision using one binds the actor it names.
+
 ## 3. Layer model
 
 A packet is divided into layers by namespace prefix.
@@ -92,7 +122,7 @@ Extension namespaces are additional to these and are specified in Part 09.
 
 ### 4.1 Requirements
 
-The core layer MUST contain canonical facts in the logical schemas of Part 02. Core resources MUST be validated before they are committed.
+The core layer MUST contain canonical facts in the logical schemas of Part 02. A writer MUST validate core resources before it commits them.
 
 A fact belongs in core when common interpretation, validation, joining or analysis would break
 without it (Part 09 §3). A fact a single domain owns belongs in that domain's extension, typed,
@@ -144,11 +174,11 @@ Externalizing a table costs more than externalizing an array, because a table's 
 
 ### 7.3 Iceberg later
 
-Iceberg is a later table-management profile, useful for table snapshots, schema and partition evolution, concurrent writers, catalog integration, and reproducible release tags. It MUST NOT be required by an implementation of this specification.
+Iceberg is a later table-management profile, useful for table snapshots, schema and partition evolution, concurrent writers, catalog integration, and reproducible release tags. An implementation of this specification MUST NOT require it.
 
 A physical profile — Iceberg's or any other — MUST declare a `profile_id` that a packet's manifest names, MUST bind only the packets declaring it, and MUST say how each logical resource of Part 02 is stored. It MUST NOT require an amendment to Part 01 or Part 02; where one would be needed, the defect is in those parts rather than in the profile (R93 §3.2). No clause of Part 01 or Part 02 may depend on a clause of Part 03.
 
-`packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A rewrite of rows MUST NOT increment `packet_version` (R61 §4).
+`packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A writer MUST NOT increment `packet_version` for a rewrite of rows (R61 §4).
 
 ## 8. Implementation thesis
 

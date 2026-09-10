@@ -40,7 +40,7 @@ An extension needs no code. A registry document names its tables, Parquet files 
 
 ### 5.2 Namespacing
 
-An extension's resource identifiers MUST be prefixed with its namespace: `dynamic_foraging.trials`, not `trials`. A namespace MUST NOT be `core`, `analysis`, or `nwb`.
+An extension's resource identifier MUST begin with its namespace: `dynamic_foraging.trials`, not `trials`. A namespace MUST NOT be `core`, `analysis`, or `nwb`.
 
 ### 5.3 Registration
 
@@ -50,7 +50,7 @@ A validator MUST check that a declared registry exists. It MUST NOT require an e
 
 ### 5.4 Separate verdicts
 
-An extension is validated on core's terms and its verdict is reported separately (R17 §4). A core failure MUST NOT be attributed to an extension, and an extension's failure MUST NOT invalidate core.
+An extension is validated on core's terms and its verdict is reported separately (R17 §4). A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension's failure invalidate core.
 
 ### 5.5 Independent versioning
 
@@ -70,7 +70,7 @@ Rows arrive carrying identifiers as the names their source used, and a writer nu
 
 How the registry document is produced is the extension's business, but an extension MUST NOT derive it from the rows it delivers for the packet being built. A declaration derived from one packet's data cannot disagree with that data, so it declares nothing, and two packets whose extensions each derived one no longer share a schema. Part 02 §5's three presence states are what carry the difference between a column this run did not compute and one the extension does not have.
 
-An extension's command MUST produce the same rows from the same inputs, and MUST NOT let wall-clock time, an unfixed random seed, or iteration over an unordered collection reach a value it writes (R109 §3.7). Which program the command resolves to is the recipe author's, and R75 §2.2 places it: pinning library versions so two runs agree byte for byte is a build property, and a packet MUST NOT be judged non-conforming for lacking one. An extension that cannot be a function of its inputs delivers a file produced beforehand rather than a command the build runs.
+An extension's command MUST produce the same rows from the same inputs, and MUST NOT let wall-clock time, an unfixed random seed, or iteration over an unordered collection reach a value it writes (R109 §3.7). Which program the command resolves to is the recipe author's, and R75 §2.2 places it: pinning library versions so two runs agree byte for byte is a build property, and a validator MUST NOT judge a packet non-conforming for lacking one. An extension that cannot be a function of its inputs delivers a file produced beforehand rather than a command the build runs.
 
 ### 5.8 What an extension may state about its own run
 
@@ -112,7 +112,7 @@ An implementation MUST NOT:
 
 ### 8.1 Untyped accretion
 
-A table whose purpose is to hold arbitrary name-value pairs MUST NOT be added to core.
+Core MUST NOT contain a table whose purpose is to hold arbitrary name-value pairs.
 
 Nothing constrains the name, type, or meaning of what accretes in such a table, so two packets cannot be compared and neither can be checked. `core.trial_tags` was the one place this format permitted it and is withdrawn (R54 §2.3).
 

@@ -54,9 +54,9 @@ Column names MUST be lowercase snake case.
 | `_uri`, or bare `uri` | a URI |
 | `_index` | a zero-based offset into a sequence |
 
-A name is a property of the registry rather than of any packet's rows, so naming is checked against the declaration and not by a validation rule (R48 §4). An exception MUST be declared with a reason.
+A name is a property of the registry rather than of any packet's rows, so naming is checked against the declaration and not by a validation rule (R48 §4). A naming exception MUST carry a reason.
 
-A source-provenance label — `local_electrode_label`, `local_channel_label`, `local_unit_label` — is a `string` carrying whatever base the producing software used, and MUST NOT be used as an offset into any packet resource (R5 §5, R8 §2).
+A source-provenance label — `local_electrode_label`, `local_channel_label`, `local_unit_label` — is a `string` carrying whatever base the producing software used, and a consumer MUST NOT use it as an offset into any packet resource (R5 §5, R8 §2).
 
 ## 5. Type system
 
@@ -70,7 +70,7 @@ string  int32  int64  float32  float64  bool  timestamp  date  json_string
 
 ### 5.2 No nested types
 
-`list`, `struct`, and `map` MUST NOT be used (R3 §2.1). A repeated value becomes a child table; a semi-structured value becomes a `json_string` in an optional column.
+A column's type MUST NOT be `list`, `struct`, or `map` (R3 §2.1). A repeated value becomes a child table; a semi-structured value becomes a `json_string` in an optional column.
 
 This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps a native reader viable in a language without an embedded SQL engine.
 
@@ -134,7 +134,7 @@ The role is what makes index-base conversion derivable from a packet rather than
 
 A **structural index** addresses a position in a stored resource and MUST be a **0-based offset**. A client converting to a 1-based language MUST convert at the boundary (R3 §6); the format picks one base and clients adapt, because an offset whose base changes per reader is not an offset.
 
-A **source label** is copied verbatim from acquisition or sorting software. Its base is whatever that software used, and it MUST NOT be used as an offset into any packet resource.
+A **source label** is copied verbatim from acquisition or sorting software. Its base is whatever that software used, and a consumer MUST NOT use it as an offset into any packet resource.
 
 A **coordinate** is neither: copied verbatim like a source label, but used arithmetically, which a source label MUST NOT be (R45 §2.5). Its zero is where its clock's origin says it is.
 
@@ -144,7 +144,7 @@ Because a reference relates columns of the same role (§7), converting every str
 
 An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing (R95 §3.1). Seven tables carried both a generated `*_name` and a `name` declared by `02`, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
 
-A `carried` identifier gets no name column and MUST NOT be given one: the value is already the source's own, so a name beside it would be a second identity for one thing.
+A `carried` identifier gets no name column, and a table MUST NOT declare one for it: the value is already the source's own, so a name beside it would be a second identity for one thing.
 
 An assigned identifier's `*_name` MUST be unique within its packet (R85 §2.2) — the 16 name columns in core and analysis that pair with one, not the 6 that name a kind of thing and are expected to repeat, such as `core.sorting_runs.sorter_name`. `registry/check.py` sorts them and requires the second kind to be declared. No rule can check it: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct one R67 §2.2 requires, where four streams naming one serial become one device. The obligation falls on whatever composes the name.
 
@@ -195,7 +195,7 @@ is the observed fate of the mechanism this one replaces. Three shapes exist (R90
   `string` matching that key where it is `carried` or its `*_name` where it is `assigned`.
 - **By position.** The named resource's rows are the positions the discriminated column indexes,
   located by a column that resource declares. Resolution is neither a key join nor a value-to-key
-  join, so the joinability rules above do not apply and MUST NOT be read as applying. The
+  join, so the joinability rules above do not apply, and a consumer MUST NOT read them as applying. The
   discriminator MUST declare `positions_in`, naming the column of its own table whose value is that
   position column, and MUST NOT declare it beside `discriminates` (R100 §2.3). Without the
   declaration this shape and the shared key are indistinguishable, and the exclusion above binds a
@@ -251,7 +251,7 @@ A column named `metadata` is a `json_string` holding what a source stated about 
 
 A table's registry entry MUST declare `metadata` where its primary key includes an `identifier` column that is not part of a declared reference, MUST NOT declare one where every key column is part of a declared reference, and MAY declare one otherwise (R97 §3.1). An identifier of the table's own is what makes a row a thing rather than a statement about other things; a key made entirely of other tables' identifiers makes it a relationship, and nothing can be said about a relationship that is not a fact about one of its ends. Seventeen core tables fall in the first band and three in the second. Both bounds are decidable from the registry with no packet in hand, and `registry/check.py` enforces both against core and against every extension.
 
-A `metadata` column MUST be declared `optional`, which is what makes R94 §3's prohibition sound: that check matches the bare column name, and so holds only while every column called `metadata` may be absent from the file.
+A `metadata` column's presence MUST be `optional`, which is what makes R94 §3's prohibition sound: that check matches the bare column name, and so holds only while every column called `metadata` may be absent from the file.
 
 A validator SHOULD report, at `info`, a declared `metadata` column that no row of the packet fills. Where the key neither requires the column nor forbids it, declaring one is a judgement, and this is the evidence against which it is revisited: `core.spike_events` carried the column on 286,896,563 rows that no adapter ever filled.
 
@@ -269,7 +269,7 @@ A writer that can decode a source's code MUST store the decoded value, declaring
 
 A writer that cannot decode one stores the code itself, verbatim, in a `string` column declaring an open vocabulary, whose description names where the key lives. An undecoded code is a label carrying no contract, and an open vocabulary is how this standard declares one (`01` §3.17); an integer column declares nothing of the sort, since §9.3 permits a vocabulary on no other type and a code stored as an integer is indistinguishable from a count.
 
-Recording the token rather than dropping it is R22 §3's rule for a scorer's label and §4's for a source-provenance label: a source's own token is a string, kept as the source emitted it, and MUST NOT be used as an offset.
+Recording the token rather than dropping it is R22 §3's rule for a scorer's label and §4's for a source-provenance label: a source's own token is a string, kept as the source emitted it, and a consumer MUST NOT use it as an offset.
 
 No rule checks either half, and none is added. Nothing structural tells a code from a count, so the obligation binds the writer, which is the party that knows whether it had a key.
 
@@ -347,7 +347,7 @@ not say which mode produced it cannot be compared with the other.
 
 ### 10.3 What is not a rule
 
-Physical order, file presence, Parquet types, Zarr rank and codecs, and checksums MUST NOT be expressed as SQL (R12 §4). A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
+A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums (R12 §4). A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
 
 ## 11. Core resource index
 

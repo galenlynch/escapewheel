@@ -15,7 +15,7 @@ or extension (04 §7, R71 §2.3).
 
 An analysis resource is disposable. A consumer MAY delete and recompute any of them without loss.
 
-An analysis resource SHOULD be materialized only where doing so materially reduces repeated computational or I/O cost, gives an access layout core cannot, preserves the result of an expensive transformation, or provides a stable interface to an explicitly parameterised derivation (R78 §2.1). A cheap filter, projection, rename or small join SHOULD remain a view.
+A writer SHOULD materialize an analysis resource only where doing so materially reduces repeated computational or I/O cost, gives an access layout core cannot, preserves the result of an expensive transformation, or provides a stable interface to an explicitly parameterised derivation (R78 §2.1). A cheap filter, projection, rename or small join SHOULD remain a view.
 
 Where the justification is an expensive transformation or a parameterised derivation, the producing run MUST record the transformation's parameters and not merely that it ran (R78 §2.2). A spectrogram whose window and overlap are unrecorded is not reproducible, and an irreproducible derived asset fails the disposability test below.
 
@@ -49,7 +49,7 @@ Core keeps each spike on the clock of the probe that measured it, sorted unit-ma
 
 A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data and is therefore recorded in the producing run's parameters.
 
-**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted rather than given an extrapolated value (R30 §4), so this table MAY hold fewer rows than core's. The count omitted MUST be recorded in the producing run's parameters, even when it is zero (R40 §2.3): a derived table one row short otherwise looks exactly like a complete one.
+**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value (R30 §4), so this table MAY hold fewer rows than core's. A writer MUST record the count omitted in the producing run's parameters, even when it is zero (R40 §2.3): a derived table one row short otherwise looks exactly like a complete one.
 
 **A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and MUST record the reason in the producing run's parameters as R40 §2.3 requires of an omitted row (R92 §2.4). A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
 

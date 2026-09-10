@@ -1,9 +1,9 @@
-# A Requirement Binds a Named Actor
+# R111 — A Requirement Binds a Named Actor
 
 | | |
 |---|---|
-| **Status** | Draft |
-| **Amends** | `00` §2 (adds the actors to Terms and definitions); `05` §10 (the conformance classes name the actor they are properties of); 45 clauses across every part but `07`, `08` and `10` that name neither an actor nor what they bind |
+| **Status** | **Accepted** 2026-09-10 |
+| **Amends** | `00` §2 (adds the actors to Terms and definitions); `05` §10 (the conformance classes name the actor they are properties of); 46 clauses across every part but `07`, `08` and `10` that name neither an actor nor what they bind |
 | **Depends on** | R79 §2.2 (a packet obligation and an importer obligation are reported apart), R75 §2.1 (logical determinism binds an importer), R67 §2.4 (a requirement may bind an actor no tool can watch), R93 §3.6 (each part states what it binds) |
 | **Profile** | all |
 
@@ -19,7 +19,7 @@ adapter, an importer, an implementation and a client. It defines none of them. `
 levels, a packet, its catalog, an Iceberg catalog, and resource identity — and no actor at all.
 
 This part adds the actors to that section, says what a requirement may bind, and gives an actor to
-the 45 clauses that name neither.
+the 46 clauses that name neither.
 
 Measured over the eleven v0.2 parts as they stand: **12 actor nouns and 249 mentions, of which 146 sentences
 carrying a MUST, SHOULD or MAY name one.** Seven of those name two, mostly because they bind two.
@@ -96,7 +96,7 @@ turns a rule a reader must place into one that points at what a validator opens.
 
 Doing both here rather than deferring either is what keeps §3.3 true on the day it lands: a part
 stating that every requirement binds an actor or describes an artifact, over a specification with
-45 clauses doing neither, would be violated by the document that contains it.
+46 clauses doing neither, would be violated by the document that contains it.
 
 ## 3. Decision
 
@@ -168,10 +168,11 @@ R75 §2.1 and `05` §10 both bind an importer, and both continue to bind the wri
 `05` §10's two classes are renamed to say what they are properties of: **packet conformance** and
 **writer conformance**.
 
-### 3.5 Thirty-three requirements gain an actor, and twelve name what they constrain
+### 3.5 Thirty-four requirements gain an actor, and twelve name what they constrain
 
-Each of §2.3's eight abstract-subject clauses and each of its 25 agentless passives names the actor
-that performs it. By actor: **13 a writer** — immutability, amendment order, `packet_version`, stray
+Each of §2.3's abstract-subject clauses and each of its agentless passives names the actor that
+performs it — 34 in all, by part: 3 in `00`, 2 in `01`, 9 in `02`, 9 in `03`, 3 in `04`, 14 in
+`05`, 2 in `06` and 4 in `09`, counting the twelve restated as predicates. By actor: **13 a writer** — immutability, amendment order, `packet_version`, stray
 removal, recording the recipe and its digest, streaming a large table, converting a half-open
 interval, recording a compensation, materialization, and the two spike-omission clauses of `06`;
 **6 a validator** — the two checks, the shim's non-SQL tests, an extension's verdict in both `05`
@@ -207,7 +208,7 @@ structural validation for it.
 ## 5. Consequence
 
 `00` §2 gains four definitions and three derived terms; `05` §10 renames one of its conformance
-classes; 33 clauses gain an actor and 12 name the part of the artifact they constrain. Thirteen
+classes; 34 clauses gain an actor and 12 name the part of the artifact they constrain. Thirteen
 mentions of a retired spelling are repointed.
 
 The reference implementation changes nothing. `escapewheel-reader`, `-validator` and `-writer`

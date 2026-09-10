@@ -22,7 +22,7 @@ A staged resource MUST NOT appear in the catalog as a committed canonical resour
 | 6 | record provenance |
 | 7 | materialize analysis resources |
 
-An importer MUST NOT combine parsing, normalization, validation, and writing into one opaque step. A source adapter returns records; it MUST NOT write files.
+A writer MUST NOT combine parsing, normalization, validation, and writing into one opaque step. A source adapter returns records; it MUST NOT write files.
 
 ## 3. The session recipe
 
@@ -42,7 +42,7 @@ A recipe MAY declare a fact a source it reads also states; §3.6 says which of t
 
 ### 3.2 The recipe is the provenance record
 
-A recipe MUST be recorded in the import run's parameters, and its digest MUST be recorded as the run's `code_uri`. A committed packet therefore states what produced it.
+A writer MUST record the recipe in the import run's parameters, and its digest as the run's `code_uri`. A committed packet therefore states what produced it.
 
 ### 3.3 Ownership
 
@@ -63,9 +63,9 @@ A preference MUST NOT name a resource only one source produces (R108 §3.4). Suc
 
 Every source adapter MUST declare `PRODUCES`, the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-A source entry that declares no `owns` MUST be read as owning every resource in its adapter's `PRODUCES` that no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
+A build MUST read a source entry that declares no `owns` as owning every resource in its adapter's `PRODUCES` that no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
 
-Where two sources default to the same resource and no preference is declared, the recipe MUST be refused naming both.
+Where two sources default to the same resource and no preference is declared, a build MUST refuse the recipe naming both.
 
 A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them (R98 §3.3). That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. R63 §2.3's warning covers the neighbouring case, a resource *no* source claims, reported before a byte is read.
 
@@ -77,7 +77,7 @@ A build MUST also be able to determine, for each source a recipe names and witho
 
 ### 3.5 Checking a recipe
 
-A recipe MUST be checked against the registry before any source is opened. The check MUST refuse:
+A build MUST check a recipe against the registry before it opens any source. A build MUST refuse:
 
 - a resource owned by more than one source;
 - an owned resource the registry does not define;
@@ -85,7 +85,7 @@ A recipe MUST be checked against the registry before any source is opened. The c
 - a clock declared twice, referenced but absent, or parented to nothing;
 - a required source option that is not set.
 
-The check MUST report as a **warning**:
+A build MUST report as a **warning**:
 
 - an owned table whose **nullable** foreign key targets a table nothing supplies;
 - a resource some listed source declares in `PRODUCES` that no source claims (R63 §2.3);
@@ -136,7 +136,7 @@ For each source, report what it offers per resource, and how many rows. Discover
 
 ### 4.2 Extract
 
-Copy or stream candidate resources into a staging area under the packet root. A table whose row count is large MUST be streamed rather than materialized as host objects.
+Copy or stream candidate resources into a staging area under the packet root. A writer MUST stream a table whose row count is large rather than materializing it as host objects.
 
 ### 4.3 Normalize
 
@@ -144,9 +144,9 @@ Map source objects onto the logical schemas: assign identifiers packet-wide befo
 
 Normalization MUST be deterministic in the recipe. Two runs of the same recipe over the same sources produce the same packet.
 
-An interval is closed (01 §2.3). A source whose intervals are half-open — `[start, stop)` — MUST be converted, which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
+An interval is closed (01 §2.3). A writer MUST convert a source whose intervals are half-open — `[start, stop)` — which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
 
-An adapter compensating for a known defect in its source MUST declare the compensation, and every compensation applied MUST be recorded in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
+An adapter compensating for a known defect in its source MUST declare the compensation, and a writer MUST record every compensation applied in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
 
 ## 5. Stage 4: Validate
 
@@ -160,13 +160,13 @@ Declared per table as SQL returning offending rows, or as an expanded template (
 
 ### 5.3 The shim
 
-Physical order, file presence, Parquet types, Zarr rank and codecs, and checksums MUST be checked outside SQL (R12 §4). A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
+A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and checksums outside SQL (R12 §4). A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
 
 A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key (R31 §5).
 
 ### 5.4 Extensions
 
-Each extension registry present is validated on the same terms as core, and its verdict is reported separately (R17 §4). A core failure MUST NOT be attributed to an extension, and an extension failure MUST NOT invalidate core.
+Each extension registry present is validated on the same terms as core, and its verdict is reported separately (R17 §4). A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension failure invalidate core.
 
 ## 6. Stage 5: Commit
 
@@ -231,15 +231,15 @@ A report says which of two claims it is making (R79 §2.1).
 
 **Packet conformance** is a property of the bytes. It is evaluated on a packet regardless of how the packet was produced, and it is what `validate` reports. Provenance is SHOULD within it: a packet carrying none is conforming (R9 §5).
 
-**Importer conformance** is a property of a process. An importer conforms when it satisfies this part, which includes recording provenance for the import activity and the inputs it read. A packet is not judged by it.
+**Writer conformance** is a property of a process. A writer conforms when it satisfies this part, which includes recording provenance for the import activity and the inputs it read. A packet is not judged by it.
 
-A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only an importer. Where it also checks importer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately (R79 §2.2), as it already does for core and extension verdicts.
+A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only a writer. Where it also checks writer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately (R79 §2.2), as it already does for core and extension verdicts.
 
-An analysis resource is where the two meet: `processing_run_id` is MUST for one (R31 §3), and that is a packet obligation rather than an importer's, because a derived resource naming no run is unreproducible whoever built it (R79 §2.3).
+An analysis resource is where the two meet: `processing_run_id` is MUST for one (R31 §3), and that is a packet obligation rather than a writer's, because a derived resource naming no run is unreproducible whoever built it (R79 §2.3).
 
 ## 11. Minimum acceptance criteria
 
-An importer conforms when it:
+A writer conforms when it:
 
 1. refuses a recipe that cannot produce a valid packet, before opening any source;
 2. produces a packet that passes Tier 1, Tier 2, and the shim;
@@ -255,7 +255,7 @@ An importer conforms when it:
 Byte-identical output is **not** required and cannot be: a manifest carries `created_at` and
 `validated_at`, and encoders may encode identical logical content differently between library
 versions. An implementation MAY offer a deterministic-build mode that pins those, and a packet
-MUST NOT be judged non-conforming for lacking one (R75 §2.2).
+a validator MUST NOT judge a packet non-conforming for lacking one (R75 §2.2).
 
 A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would
 produce. Two conforming builds of one dataset may record different digests for the same rows

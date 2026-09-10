@@ -9,7 +9,7 @@ Last checked 2026-09-09, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R110 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R111 accepted. R42 and R73 withdrawn. No draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -87,42 +87,6 @@ Two of the five are `add()` against `add_batches()`. The records path and the st
 drifted apart and nothing compares them, which is a sharper statement of §1b than could be written
 before: the pair is where a rule gets implemented once and forgotten once.
 
-## 1₊. One draft is open, and what it still owes
-
-**`a-requirement-binds-a-named-actor` — drafted, not yet appraised.** It defines writer, reader,
-validator and consumer in `00` §2, resolves build, adapter and implementation to them, retires four
-spellings, and gives an actor to the ten requirements that bind a process which cannot comply. §1₊₊
-below is the finding it closes.
-
-Its pre-acceptance re-measurement is what is left, and R110 is the reason to take that seriously:
-three of its population counts did not reproduce, because a 2 kB threshold on compressed size
-removes the columns the rules shrink. Every count in the actor draft — 12 nouns, 238 mentions, 151
-normative, the 7/12/3 split inside `05` — was taken with a regex whose precision was never measured.
-
-## 1₊₊. The specification does not define its actors
-
-**Found by the actorless-MUST scan, 2026-09-10.** Across the eleven v0.2 parts, **12 distinct actor
-nouns** appear — writer, consumer, reader, validator, build, adapter, importer, implementation,
-client, process, binding, caller — over **238 mentions**, of which **151 bind a MUST, SHOULD or
-MAY**. None is defined anywhere.
-
-The distinctions are real but unstated. `02` §9 has "a reader SHOULD offer the resolution" while
-`01` has "a consumer MUST refuse to derive seconds", which reads as software that hands over
-relations against whoever interprets the values — but `00` also has "a reader MUST NOT derive it
-from a `*_name`", which is interpretation. `05` is titled *Validation and Import* and R75 §2.1 binds
-an **importer**, where every neighbouring clause binds a **writer**; nothing says whether those are
-one role.
-
-This is the root of the actorless requirement rather than a separate defect: with no roster, an
-author reaches for whichever noun fits the sentence, and where none fits, attaches the modal to
-whatever noun is there. Ten clauses do that today — "The comparison ... MUST refuse", "A rewrite of
-rows MUST NOT increment `packet_version`", "The test MUST be over-inclusive".
-
-Closing it is a revision, not an edit: a roster in `00` naming each role and what it does, then the
-sweep that repoints the 151 clauses onto it. Worth sizing first — the sweep is where the cost is,
-and some of those clauses will turn out to bind two roles at once, which is the finding rather than
-a complication.
-
 ## 1₊₊₊. An extension copier template, and the instructions to go with it
 
 **Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
@@ -167,6 +131,35 @@ command is an argument list, so `uv run`, a pinned interpreter and a container a
 commands, and that freedom is what R109 §3.1 exists to protect. Print for a person on stdout and
 put anything a build should parse in the report file. Do not restate what the build already
 derives: rows per table come from the Parquet footer at `05` Stage 1.
+
+## 1₊₄. Audit the clauses that already name an actor
+
+**Queued, with a method and a trigger.** R111 defines writer, reader, validator and consumer and
+fixes the 45 clauses that named neither an actor nor the part they constrain. It audits none of the
+**146 normative sentences that already name one**, and its §6 records that as open — but an `Open`
+section is a record rather than a queue: **72 of 110 accepted revisions carry one, and 13 later
+revisions have ever reached back into one**, always where evidence forced the question (R64 into
+R58 §4 once both packets carried a probe frame; R70 into R68 §5 once its premise failed for
+referenced media). An item with no trigger does not acquire one, which is why this sits here too.
+
+**The method.** Read each clause and ask whether the obligation is about what a reader **returns**
+or what a consumer **concludes**; repoint it where the answer disagrees with the noun. Same for the
+writing side, where a build is one run of a writer (R111 §3.2), so the question is whether the
+obligation belongs to the run or to whatever performs it.
+
+**The measured starting point.** §2.2's finding is that the split already follows the part — `01`
+binds 19 clauses to a consumer and 2 to a reader, `03` binds 6 to a reader and none to a consumer —
+so an actor out of place for its part is the cheap test. It returns **10 suspects**, of which seven
+are correct on reading and **three are arguable in both directions**:
+
+- `01` §7 — "a **reader** MUST NOT assume any base beyond what the origin declares" reads as
+  interpretation until R3 §6 and R48 make base conversion the reader's job at the boundary.
+- `00` §5 and `06` §1 — "A **consumer** MAY delete and recompute any of them" sits oddly, no
+  consumer mutating a packet, though each sentence before it already states the artifact fact.
+
+**The trigger.** The next revision that moves an obligation across `05` §10's two conformance
+classes, since a misattributed actor is exactly what corrupts that boundary, and R111 §3.2 is what
+made it decidable in the first place.
 
 ## 1a. The packets' physical layout and encoding
 

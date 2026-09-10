@@ -110,7 +110,7 @@ Attachment names a device, and which place on that device a child occupied is a 
 
 A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT create a second device row for one instrument (R67 §2.2). Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor (R67 §2.3, §2.4).
 
-Both versions are recorded **verbatim** as the source stated them, and MUST NOT be normalised, padded, or parsed into components. Neither is ordered: a consumer MAY compare two version strings for equality and MUST NOT compare them for precedence, because different manufacturers' schemes share none.
+A writer records both versions **verbatim** as the source stated them, and MUST NOT normalise, pad, or parse them into components. Neither is ordered: a consumer MAY compare two version strings for equality and MUST NOT compare them for precedence, because different manufacturers' schemes share none.
 
 Where an element of an acquisition chain reports its own versions, it is its own device. A value the source gives as unknown is recorded as the source gave it, which is distinct from a source that said nothing.
 
@@ -150,7 +150,7 @@ A position is as many numbers as its frame has axes, so the values are one row p
 
 A coordinate MAY carry an atlas annotation: the structure the position falls in, as an identifier and a label (R59 §2). An electrode is not in a region; a position is, so the annotation belongs to the coordinate rather than to the contact.
 
-Where the identifier is present the label SHOULD be too, so a consumer without the atlas can still read the annotation. A structure's full name and its ancestry path MUST NOT be carried as columns: both are derivable from the identifier, and an ancestry path is a list, which Part 02 §5.2 forbids in a delimited string.
+Where the identifier is present the label SHOULD be too, so a consumer without the atlas can still read the annotation. A table MUST NOT carry a structure's full name or its ancestry path as columns: both are derivable from the identifier, and an ancestry path is a list, which Part 02 §5.2 forbids in a delimited string.
 
 A validator MUST NOT treat an absent annotation as a finding. Where a position falls outside any declared structure, or no registration covered it, the packet records a fact about the session.
 

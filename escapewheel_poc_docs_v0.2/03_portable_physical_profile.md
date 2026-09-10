@@ -59,7 +59,7 @@ The catalog MUST record the actual layout. A reader MUST resolve resources throu
 
 A URI in the catalog or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
 
-An absolute URI MAY name an external asset. An external asset MUST be declared as such in the catalog (Part 04 §5).
+An absolute URI MAY name an external asset. A catalog entry for an external asset MUST declare it external (Part 04 §5).
 
 A packet root MAY itself be an object-store prefix rather than a directory, in which case a relative URI resolves under that prefix (Part 00 §3).
 
@@ -137,7 +137,7 @@ report and not a refusal: every encoding above is permitted, so a packet is conf
 it uses.
 
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
-precision; `INT96` MUST NOT be used. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
+precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
 
 ### 5.6 One null
 
@@ -161,7 +161,7 @@ Each array resource declares its own Zarr version in the catalog. A reader MUST 
 
 ### 6.2 Axis order
 
-Array axes are stored order, slowest-varying first (R3 §5). The `transpose` codec MUST NOT be used.
+Array axes are stored order, slowest-varying first (R3 §5). An array's codec chain MUST NOT include `transpose`.
 
 A column-major binding enumerates axes in reverse. The client adapts; the format does not.
 
@@ -214,7 +214,7 @@ A value used for filtering, grouping, joining, or validation MUST be a first-cla
 
 ### 8.1 Packet-owned bytes
 
-A resource the packet owns MUST NOT be modified in place once committed (R14 §2.3). A correction is a new packet version, not an edit.
+A writer MUST NOT modify a resource the packet owns once it is committed (R14 §2.3). A correction is a new packet version, not an edit.
 
 This promise is what allows an amendment to skip revalidating untouched files (R35 §2), so it is verified rather than assumed: a writer records a checksum for every packet-owned resource (§10).
 
@@ -258,15 +258,15 @@ An amendment MUST validate the whole packet, not only what it added (R32 §5). W
 the *work*, not the verdict: the resources an amendment did not write are immutable, so their
 verdict is determined rather than assumed, and re-establishing it costs nothing.
 
-An amendment MUST establish the physical order of the resources it writes, and MUST NOT be required
-to re-establish it for any other packet-owned resource (R35 §4).
+A writer performing an amendment MUST establish the physical order of the resources it writes, and a validator MUST NOT
+require it to re-establish that order for any other packet-owned resource (R35 §4).
 
-A check MUST be re-run when it is **attached to** a resource the amendment writes, **or when its
+A validator MUST re-run a check when it is **attached to** a resource the amendment writes, **or when its
 query names one**; a check meeting neither condition MAY be skipped (R35 §2). The second test is
 syntactic — a generated check refers to a resource by its flattened name — so a rule that names a
 resource added later is caught without the registry having to declare that it might.
 
-The test **MUST be over-inclusive where it is uncertain** (R35 §5). Matching a resource name inside
+A validator **MUST make that test over-inclusive where it is uncertain** (R35 §5). Matching a resource name inside
 a string literal or a comment re-runs a check that did not need it, which costs time; failing to
 match one costs correctness. An implementation that cannot show an input is immutable MUST run the
 check (R35 §6): skipping a check whose inputs *could* have changed stays forbidden, which is what
@@ -276,7 +276,7 @@ R32 §5 was protecting.
 
 Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second (R61 §2.1). Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
 
-A **stray** — a file no manifest ever named — MUST NOT be removed (R61 §2.1). A packet may carry
+A writer MUST NOT remove a **stray** — a file no manifest ever named (R61 §2.1). A packet may carry
 files this specification does not govern, and cleanup that deletes the ungoverned is a data-loss
 bug wearing an operation's name. The operation reports by default and acts only when asked.
 
@@ -288,7 +288,7 @@ A packet MAY declare its own retention, and a writer SHOULD emit one (R61 §2.2)
 
 ### 9.6 What a version is not
 
-`packet_version` versions the bundle. It MUST NOT be incremented for a rewrite of a table's rows under a future lakehouse profile (R61 §4).
+`packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's rows under a future lakehouse profile (R61 §4).
 
 ## 10. Checksums
 

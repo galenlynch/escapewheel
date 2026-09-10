@@ -14,13 +14,5 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-One draft is open, so nothing depends on anything below it.
-
-| # | draft | why here |
-|---|---|---|
-| 1 | `a-requirement-binds-a-named-actor` | rests on R79 §2.2 for the two conformance classes and R67 §2.4 for a requirement no tool can watch |
-
-**It moves no count in the generated block.** No table, column, reference, rule or vocabulary
-changes: it adds four definitions to `00` §2 and gives ten clauses an actor. Every number in it is
-measured against the parts as they stood when it was drafted and is re-measured at acceptance,
-which the pre-acceptance checks in `../CLAUDE.md` require of every number anyway.
+No draft is open. When one is written, it goes here with the reason it sits where it does, and the
+order is dependency first and readiness second.
