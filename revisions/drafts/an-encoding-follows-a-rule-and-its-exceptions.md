@@ -149,8 +149,9 @@ A writer **SHOULD** report, at `info`, a column whose encoding costs more than *
 available to it, measured over a sample of the rows it wrote. R68 §3's rule and the two above are
 good guesses, and a report is how the author of a table learns that theirs is one the guess misses.
 
-Measured on the two packaged sessions, three columns draw one, all in one extension:
-`aind_unit_qc.metrics.num_spikes_used` at 1.7x, `presence_ratio` and `sliding_rp_violation` at 1.8x.
+Measured on the two packaged sessions before §3.4's declarations were written, three columns drew
+one and all were in one extension: `aind_unit_qc.metrics.num_spikes_used` at 1.7x, `presence_ratio`
+and `sliding_rp_violation` at 1.8x. Rebuilt with those three declared, none does.
 That is the mechanism working as intended rather than a defect — those are the columns core stopped
 naming under §3.4, and the report is what tells a recipe author which entries to write.
 
@@ -181,9 +182,14 @@ number a writer acts on rather than a reading.
 ascending identifier's cost, a float's dictionary, and what a rule read off the declaration does to
 `pts`. `07` §7 gains one line for the cost of measuring instead.
 
-**No table, column, reference, rule or vocabulary changes, and no packet is rebuilt for this
-part** — though both packets are rebuilt for other reasons, and they carry the new encodings when
-they are. Measured over the 75 columns after the rules and their exceptions: none more than **15%**
+**No table, column, reference, rule or vocabulary changes**, and both packets carry the new
+encodings, having been rebuilt for other reasons.
+
+Both recipes exercise §3.4, and the result is §3.4's argument rather than an illustration of it.
+`aind_unit_qc.metrics.presence_ratio` is declared `dictionary` in `ecephys_776259` and declared
+nothing in `ecephys_786867`, because it repeats across 6,781 units and not across 4,505; rebuilt,
+the column carries `RLE_DICTIONARY` in the first packet and `PLAIN` in the second. One schema-level
+declaration would have had to be wrong for one of the two. Measured over the 75 columns after the rules and their exceptions: none more than **15%**
 off the smallest encoding available to it, the worst being
 `aind_unit_qc.metrics.isi_violations_count` at 1.15x.
 
