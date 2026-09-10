@@ -18,8 +18,10 @@ before any I/O. Everything else a build needs to know about an adapter is writte
 instead: which resource it wins when two sources offer one, whether it is handed an object store,
 whether it may be sampled, and which recipe options it cannot be constructed without.
 
-Measured across the writer, **72 occurrences name a particular source kind**, 51 of them in the
-module that drives a build. This part moves each piece to where it can be stated by whoever knows
+Measured across the writer package, **102 occurrences name a particular source kind**. Fifteen are
+sound — `sources/__init__.py` maps the ten built-in kinds to their classes, which is core's registry
+of its own adapters, and three modules name themselves — leaving **87 in the modules that decide
+behaviour**, 51 of them in the one that drives a build. This part moves each piece to where it can be stated by whoever knows
 it, and says how an adapter reaches a build without being imported — which is a process boundary
 rather than a file, and so generalises what R109 §3.2 gave an extension.
 
@@ -99,16 +101,34 @@ What an adapter reads says whose it is. `aind.py` reads `rig.json`, `session.jso
 `sample_numbers.npy` and `sync_messages.txt`, both Open Ephys artifacts, and `harp` reads
 `device.yml`.
 
-Two read neither an institute's files nor a tool's. `tables` reads whatever the recipe names, which
-is R109 §3.2's route. `nwb` reads NWB, which is the format this specification exists to interoperate
-with and whose importer is `07` §5's Phase 3; its AIND mentions are a dialect it accommodates —
-`aind-data-schema`'s device string, `ccf_acronym` beside core NWB's `location` — rather than a
-schema it depends on.
+One reads neither an institute's files nor a tool's: `tables` reads whatever the recipe names, which
+is R109 §3.2's route.
 
-The dependency work is the evidence. The NWB adapter decodes Zarr v2 chunks with `numcodecs`
-directly rather than importing `pynwb`, `hdmf-zarr` or `zarr`, which is effort nobody spends on an
-adapter that could live in another distribution and pull what it likes. It was spent because that
-adapter belongs to the writer.
+`nwb` is the interesting case and it does not divide at the module. It reads NWB, the format this
+specification exists to interoperate with and whose importer is `07` §5's Phase 3 — and **15 of the
+columns it reads are ones base NWB does not define**: eight for a CCF position (`ccf_ap`, `ccf_ml`,
+`ccf_dv`, `ccf_id`, `ccf_acronym`, `ccf_name`, `ccf_structure_id_path`, `brain_region_id`), five for
+a dynamic-foraging trial (`go_cue`, `reward_outcome`, `reward_outcome_time`, `delay_start`,
+`delay_start_time`), plus `ks_unit_id` and `channel_name`. A `DynamicTable` admits any column, so
+reading those is reading one producer's dialect, not the standard.
+
+So the boundary runs **inside** the 1,291-line module rather than around it: the machinery that opens
+an NWB and walks its tables is this format's, and the knowledge of which extra columns a particular
+exporter writes is not. The dependency work says the same thing about the first half — the adapter
+decodes Zarr v2 chunks with `numcodecs` rather than importing `pynwb`, `hdmf-zarr` or `zarr`, which
+is effort nobody spends on an adapter free to pull what it likes.
+
+### 2.6 One adapter's kind and its module disagree about whose it is
+
+The kind a recipe names is `session`, and the module behind it is `aind.py`, which reads
+`rig.json`, `session.json` and `subject.json` — one institute's metadata schema. A recipe author sees
+a generic word for a specific reader, and R85 §2.3 is the rule that makes that a defect rather than
+untidiness: a name this specification does not constrain must not be doing load-bearing work, and
+this one names what a build constructs.
+
+The mismatch is why §2.5's grouping is hard to see from a recipe: `[[source]] kind = "session"` reads
+as a session's metadata generally, where it means AIND's. Nothing in this part turns on the fix, and
+recording it is what keeps a rename from being invented later as a new idea.
 
 ## 3. Decision
 
@@ -140,10 +160,15 @@ built-in winner that no recipe could see.
 
 ### 3.3 An adapter delivers its rows out of process
 
-Every adapter **MUST** be able to deliver its rows without being imported into the writer, and an
-adapter author **SHOULD** support that route whatever else they support. A writer **MUST NOT**
-require any adapter to be importable in its own environment, and **MUST** provide the route for
-every adapter it ships.
+A writer **MUST NOT** require any adapter to be importable in its own environment, and **MUST**
+provide a route by which every adapter it ships delivers its rows without being imported. An adapter
+author **SHOULD** provide that route for an adapter the writer does not ship, whatever else they
+provide.
+
+The obligation is the writer's and the author's rather than the adapter's, which is R109's
+allocation: R109 §3.1 binds a writer to build from a document and rows, and describes what an
+extension delivers without requiring it of the extension. An adapter is a class and cannot run
+itself out of process; whoever ships it can.
 
 **What matters is the process boundary; the transport is a choice.** A build **MUST** accept rows as
 **files the recipe names** and **SHOULD** accept them as an **Arrow IPC stream** read from the command
@@ -178,15 +203,35 @@ What the opt-in buys is efficiency, and what it costs is a solvable environment.
 import an adapter the recipe opted in **MUST** refuse, naming the source and the import that failed,
 before any source is opened.
 
-### 3.5 An identifier crosses the boundary as a name
+### 3.5 An adapter returns records, and a transport is not the return type
+
+`07` §4 states that an adapter's return type is records and not a path, because that is what lets an
+adapter be tested without a filesystem and keeps normalization decisions out of I/O code. That
+sentence **stands and is not enough**, because it answers what an adapter returns and this part asks
+how rows reach a build.
+
+An adapter's interface **MUST** remain records whichever route delivers them. Out of process, the
+transport carries them and the receiving end returns records again — which is not a hope: a `tables`
+source reads files and yields batches today, so the interface is re-established on this side of the
+boundary by machinery that already exists.
+
+What the out-of-process route gives up is the property `07` §4 names. Testing an adapter that
+delivers over a transport means running it, so the filesystem or the pipe is back, and an in-process
+adapter is the only one testable without either. **That is the trade** — a solvable environment
+against a test that needs no I/O — and §3.4 puts it where the person who bears it can make it, rather
+than settling it here for every recipe.
+
+### 3.6 An identifier crosses the boundary as a name
 
 An adapter reaching a build through files hands over identifiers as the **names** its source used,
 never as numbers, because a writer mints every assigned identifier packet-wide (R53 §2.5) and the
 numbers do not exist until it has. That is R109 §3.2's rule for an extension and it binds an adapter
 identically.
 
-A writer **SHOULD** report what resolving those names cost where it exceeds what staging the table
-directly would have, which is the measurement §6 leaves open.
+A writer **SHOULD** report what resolving those names cost, as a figure of its own rather than as a
+comparison: a build that received rows out of process never staged them the other way and has no
+baseline to subtract. What the two routes cost against each other is §6's measurement, not a report
+a build can make.
 
 ## 4. What this does not change
 
@@ -199,7 +244,8 @@ directly would have, which is the measurement §6 leaves open.
 
 `05` §3 gains a preference table and an in-process declaration, `05` §3.4 gains what an adapter
 declares, `07` §4 gains what a build supplies an adapter and the transports it accepts rows
-over, and `09` §5.7 gains that an extension may use them too.
+over, `09` §5.7 gains that an extension may use them too, and `07` §4's sentence about a return type gains
+what it does not cover.
 
 The reference implementation loses four tables that name a kind — `_SHARED_SOURCES`, `SAMPLED`,
 `REQUIRED_OPTIONS` and `PREFERRED` — and gains one declaration per adapter. It also gains a command
