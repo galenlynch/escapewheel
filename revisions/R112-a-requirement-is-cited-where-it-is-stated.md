@@ -1,10 +1,10 @@
-# A Requirement Is Cited Where It Is Stated
+# R112 — A Requirement Is Cited Where It Is Stated
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-10 |
 | **Amends** | `00` (adds a section on how a requirement is cited and how a part is numbered); `07` §2 (what a comment in the reference implementation states and cites) |
-| **Depends on** | R93 §3.6 (`00` lists the parts and what each one binds), R93 §4 (where a clause belongs), R29 §2 (a registry column names the revision that set it), R111 §3.3 (a requirement binds an actor or describes an artifact) |
+| **Depends on** | R93 §3.6 (`00` lists the parts and what each one binds), R93 §4 (where a clause belongs), R77 §2.3 (a table and a column carry `since`, naming the revision that set it), R111 §3.3 (a requirement binds an actor or describes an artifact) |
 | **Profile** | all |
 
 Normative, except §2, which is informative.
@@ -17,7 +17,7 @@ The parts are the specification and the revisions record how it came to say what
 states where a clause belongs among the parts and R93 §3.6 has `00` list what each one binds;
 neither says which of the two a reader should be sent to for a rule, and the reference
 implementation answers one way while the parts answer the other: **754 citations of a revision
-against 192 of a part**, across the three distributions' source.
+against 35 of a part**, across the three distributions' source.
 
 This part states where a requirement is cited from, what a revision may still be cited for, and how
 a part is numbered so that citing one stays safe.
@@ -75,7 +75,7 @@ in silence.**
 
 **Where a part states a requirement**, a citation of it — in the reference implementation, in a
 packet's documentation, or in a revision's Decision — **MUST** name that part and section, and
-**MUST NOT** name a revision in its place. That sentence is what binds (R93 §3.6), and a revision
+**MUST NOT** name a revision in its place. That sentence is what binds (`00` §9), and a revision
 naming the same rule records how the part came to say it.
 
 Naming an actor does not exempt a clause. A requirement binding a writer, a reader, a validator or a
@@ -94,7 +94,7 @@ already say — why this way, what breaks otherwise, the constraint that is not 
 cites: the part for the requirement, and the revision for the measurement behind it (§3.3).
 
 This is not a style preference dressed as a requirement. A comment naming a revision instead of a part is
-how the source came to hold 754 citations of the change record against 192 of the specification, and
+how the source came to hold 754 citations of the change record against 35 of the specification, and
 a comment restating its own line is how a reader learns to stop reading them.
 
 ### 3.3 A revision is cited for what a part does not carry
@@ -105,8 +105,8 @@ what holds; a revision states why, and a reader wanting the second is sent to th
 
 Three uses name a revision and are sound, and nobody repoints them at a part:
 
-- a registry column's `since`, which R29 §2 makes revision-keyed so `tables.md` answers both what a
-  table is and why;
+- a registry column's `since`, whose value names the revision that set it (`02` §9.4), so `tables.md`
+  answers both what a table is and why;
 - `applied.toml`, which maps a revision's clauses to where each landed and is the map §3.1 is
   resolved through;
 - a revision citing another revision, which is one record referring to another.
@@ -143,7 +143,7 @@ five accepted revisions.
 ## 5. Consequence
 
 `00` gains a section and `07` §2 gains what a comment states and what it cites. The three distributions carry
-**754 revision citations against 192 part citations**, of which 522 repoint by looking the clause up
+**754 revision citations against 35 part citations**, of which 522 repoint by looking the clause up
 in `applied.toml` and taking its `where`. The 11 disposed `superseded` are the ones to read rather
 than rewrite: each points at prose that no longer stands.
 
@@ -164,8 +164,8 @@ Citing a part is only maintainable if a change to one can find its citers, which
 `check_citations.py` asks whether a citation resolves, and a citation into a rewritten section
 resolves perfectly. `revisions/impact.py` answers the other direction — it maps each changed line to
 its section and lists every file citing it — and finding the citers is what §3.1 turns from a
-search into a lookup. Run against the commit that accepted R110 it reports **48 sections changed and
-138 citations to read**, `03` §5.5 alone carrying **19** — a figure that grows as documents cite a
+search into a lookup. Run against the commit that accepted R110 it reports **51 sections changed and
+147 citations to read**, `03` §5.5 alone carrying **19** — a figure that grows as documents cite a
 section, which is the point of reading it before editing one rather than after.
 
 ## 6. Open

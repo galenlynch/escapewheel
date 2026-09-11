@@ -18,13 +18,14 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `a-requirement-is-cited-where-it-is-stated` | rests on R93 §3.6 and R93 §4 for where a clause belongs, and on R111 §3.3 for what a requirement may be |
-| 2 | `an-extension-declares-the-core-it-was-authored-against` | rests on R17 §5 for what an extension declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
-| 3 | `a-writer-requires-no-knowledge-of-a-particular-source` | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
-| 4 | `an-adapters-rows-cross-a-process-boundary` | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in `05` §3.7 and `09` §5.7 |
+| 1 | `an-extension-declares-the-core-it-was-authored-against` | rests on R17 §5 for what an extension declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
+| 2 | `a-writer-requires-no-knowledge-of-a-particular-source` | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
+| 3 | `an-adapters-rows-cross-a-process-boundary` | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in `05` §3.7 and `09` §5.7 |
 
-**#3 and #4 were one draft and were split at 3,801 words.** They amend disjoint sections and neither
-depends on the other: #3 says what a build learns *about* a source, #4 says how a source's rows reach
+Each cites a part for every requirement it states, which R112 §3.1 requires of a Decision.
+
+**#2 and #3 were one draft and were split at 3,801 words.** They amend disjoint sections and neither
+depends on the other: #2 says what a build learns *about* a source, #3 says how a source's rows reach
 it. Both touch `05` §3 by appending, which renumbers nothing either way.
 
 **None moves a count in the generated block.** No core table, column, reference, rule or vocabulary

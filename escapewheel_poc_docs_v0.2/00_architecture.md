@@ -217,3 +217,25 @@ informative parts, and no arrangement could fix that in general, since Part 06 i
 sections and informative in the rest. The table is appended rather than inserted for the same
 reason the sequence is not renumbered — 119 citations across the accepted revisions and the parts
 depend on part and section identifiers both.
+
+## 10. Citing this specification
+
+### 10.1 A requirement is cited from the part that states it
+
+Where a part states a requirement, a citation of it — in an implementation's source, in a packet's documentation, or in a revision's Decision — MUST name that part and section, and MUST NOT name a revision in its place (R112 §3.1). The part's sentence is what binds (§9), and a revision naming the same rule records how the part came to say it.
+
+Naming an actor does not exempt a clause. A requirement binding a writer, a reader, a validator or a consumer (§2.8) is stated by the part that binds it, and is cited from that part like any other.
+
+Two dispositions leave a requirement outside the parts. A clause the registry carries is cited from the registry, which is where a consumer reads it, and a clause that decided nothing states no requirement to cite. Where a clause is recorded as landing anywhere but a part, the revision is the statement of record.
+
+### 10.2 A revision is cited for what a part does not carry
+
+A revision MAY be cited for the reasoning a part does not hold: the measurement behind a rule, the alternative that was rejected and why, and the defect that prompted the change (R112 §3.3). A part states what holds; a revision states why, and a reader wanting the second is sent to the revision by name.
+
+Three uses name a revision and are sound: a registry column's `since`, whose value names the revision that set it (`02` §9.4); the ledger mapping each clause to where it landed, which is what §10.1 is resolved through; and a revision citing another revision. The exemption says which document to cite and not that the citation is accurate.
+
+### 10.3 A part is numbered by appending
+
+Whoever amends a part MUST add a section at the end of that part, and a subsection at the end of its section, neither of which renumbers anything already cited. They MUST NOT insert one between two that exist, and a part MUST NOT carry two sections with one number (R112 §3.4). `01` §3 is not an exception: that section is a flat list of concepts every later part cites by number, so a concept is appended as the next number.
+
+A tool that checks citations MUST refuse a part carrying two sections with one number, and SHOULD refuse one whose sections do not ascend (R112 §3.5). Both are decidable from the headings alone, with no citation in hand.

@@ -134,10 +134,10 @@ class SortedStream:
         A quad-base probe reaches Open Ephys as four streams (`...45883-1` through `-4`), and
         everything downstream keeps them apart: SpikeInterface sorts each separately, giving
         four unit-id spaces that each start at 0, and an NWB writes four electrode groups.
-        `01` §92 admits exactly this -- a Probe is "an electrode-bearing recording instrument
-        **or logical recording probe**" -- so the logical probe is what `probe_id` names and
-        `serial_number` carries the physical one, which is where a grouping belongs rather
-        than inside an identifier that would have to be parsed.
+        `01` §3.5 admits exactly this: where a source presents several recording entities from
+        one physical object, each is a Probe and all name the same Device. So `probe_id` names the
+        recording entity and `serial_number` carries the object, which is where a grouping belongs
+        rather than inside an identifier that would have to be parsed.
         """
         return self.probe.rsplit(".", 1)[-1]
 
