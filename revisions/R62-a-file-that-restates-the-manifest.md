@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-03 |
-| **Amends** | `03` "Directory layout" (`03:75`), R2 §8 (versioning) |
+| **Amends** | Part 03 "Directory layout" (`03:75`), R2 §8 (versioning) |
 | **Depends on** | R3 §3.0 (duplication must buy otherwise-unavailable access) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -11,7 +11,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`03`'s directory layout lists `schemas/semantic_version.txt`, and R2 §8 defines it: *"contains the
+Part 03's directory layout lists `schemas/semantic_version.txt`, and R2 §8 defines it: *"contains the
 semantic standard version string and nothing else."* The manifest already carries that string, as
 `semantic_standard_version`, which R2 §10's schema requires.
 
@@ -44,7 +44,7 @@ it as a resource, which is a manifest entry per packet for 23 bytes that restate
 
 ### 2.1 The file is struck
 
-`schemas/semantic_version.txt` is removed from `03`'s directory layout and R2 §8's definition. A
+`schemas/semantic_version.txt` is removed from Part 03's directory layout and R2 §8's definition. A
 writer **MUST NOT** be required to emit one, and a validator **MUST NOT** refuse a packet for
 lacking one.
 
@@ -62,7 +62,7 @@ manifest names but does not contain, so a packet without it is not self-describi
 
 ## 3. What this does not change
 
-- **`03`'s layout otherwise.** `schemas/` still holds the embedded registry.
+- **Part 03's layout otherwise.** `schemas/` still holds the embedded registry.
 - **R2 §8's other sentences.** The rule that a packet records its registry version and embeds the
   registry is untouched.
 - **No stored value.** No manifest field changes, and no packet becomes invalid.

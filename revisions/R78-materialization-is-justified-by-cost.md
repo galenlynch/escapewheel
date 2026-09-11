@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | `06` §2 (when an analysis resource is materialized), R43 §3 (which generalised a measurement) |
+| **Amends** | Part 06 §2 (when an analysis resource is materialized), R43 §3 (which generalised a measurement) |
 | **Depends on** | R43 (an alignment is a query), R30 (what `analysis.spike_events` is for), R65 (an array names its instrument) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -11,7 +11,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-R43 withdrew four of `06`'s five materialized resources on measured grounds and stated the test
+R43 withdrew four of Part 06's five materialized resources on measured grounds and stated the test
 that survived them as **layout, not arithmetic**: a resource is worth materializing when its
 physical organization answers a question core's cannot, and not when it merely saves computation.
 
@@ -57,14 +57,14 @@ is a view whatever else is true of it, and nothing here reopens the four withdra
 >
 > A cheap filter, projection, rename or small join **SHOULD** remain a view.
 
-Four grounds where `06` had one. The last two are what R43's wording excluded.
+Four grounds where Part 06 had one. The last two are what R43's wording excluded.
 
 ### 2.2 An expensive result declares what produced it
 
 A materialized resource whose justification is §2.1's third or fourth ground **MUST** record the
 parameters of the transformation in its producing run (R31 §3), not only that a run occurred. A
 spectrogram whose window and overlap are unrecorded is not reproducible, and an irreproducible
-derived asset fails `06`'s disposability test — a consumer cannot delete and recompute it.
+derived asset fails Part 06's disposability test — a consumer cannot delete and recompute it.
 
 ### 2.3 Nothing is grandfathered
 
@@ -73,9 +73,9 @@ filters, and §2.1's first two grounds are the ones they failed.
 
 ## 3. What this does not change
 
-- **No table, no column, no rule.** One sentence of `06` is replaced by four grounds.
+- **No table, no column, no rule.** One sentence of Part 06 is replaced by four grounds.
 - **No new obligation on a writer**, which materializes what a recipe asks for.
-- **No change to disposability.** An analysis resource remains deletable and recomputable (`06`),
+- **No change to disposability.** An analysis resource remains deletable and recomputable (Part 06),
   which §2.2 is what protects.
 - **No change to lineage.** R71 §2.3 already requires it to name every canonical resource it
   derived from.

@@ -11,7 +11,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-Three properties in the intended data are per-channel or per-frame, and `02` represents each
+Three properties in the intended data are per-channel or per-frame, and Part 02 represents each
 as a single value (`inventory/nwb-core-schema-comparison.md` §2.4, §2.5).
 
 **Scaling is per channel.** `core.array_assets` carries `conversion`, `offset`, and `unit` as

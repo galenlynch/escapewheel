@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | R55 §2.4 (the checks a discriminator implies), `05` §? (what a packet's verdict covers) |
+| **Amends** | R55 §2.4 (the checks a discriminator implies), Part 05 §? (what a packet's verdict covers) |
 | **Depends on** | R55 (a discriminated reference), R54 §2.4a (a kind must name a resource the packet declares) |
 | **Profile** | `escapewheel-portable-v0.1` |
 

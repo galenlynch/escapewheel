@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-09 |
-| **Amends** | `02` §8.4 (a unit is a UCUM code), `02` §9.3 (a vocabulary is declared, not defaulted), `03` §5 (the profile has one null), R8 §4 (the test a reservation must pass), R11 §4 (strikes `event_type`'s reserved set), the registry meta-schema, and every string column's declaration |
+| **Amends** | Part 02 §8.4 (a unit is a UCUM code), Part 02 §9.3 (a vocabulary is declared, not defaulted), Part 03 §5 (the profile has one null), R8 §4 (the test a reservation must pass), R11 §4 (strikes `event_type`'s reserved set), the registry meta-schema, and every string column's declaration |
 | **Depends on** | R8 (open vocabularies and reserved values), R11 (the reserved event types), R22 §3 (a scorer's label and its source), R48 (a column declares its role), R55 §2.1 (a discriminator's value space), R91 §3.1 (which table declares `event_type`) |
 | **Profile** | all |
 
@@ -14,7 +14,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 ## 1. Scope
 
 R8 §4 declares a vocabulary **open** so a packet may name what the standard has not seen, and
-**reserves** some values so two packets cannot spell one thing two ways. `02` §9.3 supplies the
+**reserves** some values so two packets cannot spell one thing two ways. Part 02 §9.3 supplies the
 default that makes openness free: a vocabulary is open unless the column declares an `enum`.
 
 That default is what this part removes. A column saying nothing about its values is
@@ -26,7 +26,7 @@ to whoever wrote it.
 Three things a column can say about its values are settled here: which vocabulary they are drawn
 from, what unit they are in, and what an absent one means. Every string column declares the first,
 a reservation gets a test, the three sets reserved so far are settled — one recorded, one struck,
-one deferred — units become UCUM, and `03` states that the profile has one null and no second
+one deferred — units become UCUM, and Part 03 states that the profile has one null and no second
 marker.
 
 Measured on the registry as built at R100, and on the two packaged sessions — **`ecephys_776259`**
@@ -45,7 +45,7 @@ counts closed vocabularies and not open ones, `registry/check.py` has no check o
 `registry/build.py` is its only writer.
 
 A validator therefore behaves identically on the 15 columns declaring it and the 84 that do not,
-which `02` §9.3 guarantees by making open the default. The field is a comment in the shape of a
+which Part 02 §9.3 guarantees by making open the default. The field is a comment in the shape of a
 declaration, and which columns carry it records which revision remembered.
 
 ### 2.2 Three sets were reserved and none reached the registry
@@ -135,7 +135,7 @@ Every `string` column **MUST** declare `vocabulary`, whatever its role, except a
   string, a person: comparing one across packets establishes nothing, so nothing may be reserved
   and no report is due.
 
-A column of any other type **MUST NOT** declare one. `02` §9.3's default is struck: an absent
+A column of any other type **MUST NOT** declare one. Part 02 §9.3's default is struck: an absent
 declaration is a defect rather than a claim of openness.
 
 ### 3.2 Required, with no default
@@ -192,13 +192,13 @@ whether to write `Mus musculus` or `mouse`, which is the only question a species
 
 Four descriptions still contain the word **"etc."**, which is the construction R8 §4 was written
 to remove — *"'etc.' implied a closed set existed and had merely been elided"* — and which it
-struck from `02` while the registry kept it. Three are open columns. The fourth is
+struck from Part 02 while the registry kept it. Three are open columns. The fourth is
 `core.processing_runs.status`, whose `enum` admits `succeeded`, `failed` and `partial` and whose
 description reads "succeeded, failed, partial, etc.": a closed set whose prose says it is open,
 with nothing in the registry comparing the two.
 
 - `core.subjects.species` states the **scientific name** of the organism the subject derives
-  from, as NCBI Taxonomy spells it. Null where it derives from none: `01` §3.4 makes a subject
+  from, as NCBI Taxonomy spells it. Null where it derives from none: Part 01 §3.4 makes a subject
   "the animal or preparation recorded from", and a phantom or a simulated recording has no
   species where a slice or a culture has its donor's.
 - `core.subjects.strain` states the strain in its registry's nomenclature: MGI for mouse, where
@@ -240,7 +240,7 @@ common name" is an instruction.
 R56's `unit` field follows UCUM too, by a different mechanism. The eight columns above hold a unit
 as a **value**, so a packet's rows are what conform and an `authority` is the declaration. The
 fifteen columns that *declare* one hold it as registry text, which `registry/check.py` checks as
-it checks a column's name against `02` §4 — a property of the registry rather than of any packet's
+it checks a column's name against Part 02 §4 — a property of the registry rather than of any packet's
 rows.
 
 Eleven of the fifteen conform already: `Hz` on four columns, `um` on six, `s` on one. Two are
@@ -259,9 +259,9 @@ declarations are UCUM codes and no column is exempt.
 No table changes — a declared unit is registry text, so what moves is the registry each packet
 embeds.
 
-Both halves are a **MUST**, and `02` §8.4 gains the statement: a column holding a physical unit
+Both halves are a **MUST**, and Part 02 §8.4 gains the statement: a column holding a physical unit
 **MUST** hold a UCUM code, and a column declaring one **MUST** declare a UCUM code, an annotation
-being one. That is what makes `02` §8.4's existing rule operable. It says a
+being one. That is what makes Part 02 §8.4's existing rule operable. It says a
 consumer **MUST NOT** silently compare or combine two columns whose declared units differ (R56
 §2.5), and without one vocabulary `volts` and `V` differ while naming one unit — so the rule
 refuses a legitimate comparison exactly as readily as it catches a wrong one.
@@ -279,8 +279,8 @@ conforming rather than a breach nothing could see, and `build.py` loses the line
 on a struck column. `core.event_streams.event_type` declares `vocabulary: open`, so a validator
 still **MUST NOT** reject any value.
 
-R11 §4's six stay in that revision as **examples**, which is what `01` offered them as, and what
-`02` should have said instead of "etc." A writer naming an event may use them and is not obliged
+R11 §4's six stay in that revision as **examples**, which is what Part 01 offered them as, and what
+Part 02 should have said instead of "etc." A writer naming an event may use them and is not obliged
 to.
 
 ### 3.8 `kind` records the four values R8 reserved
@@ -335,7 +335,7 @@ a packet, and the reason §5 owes a corpus change.
 
 ### 3.10 The profile has one null
 
-`03` §5 gains a clause, because §3.9 rests on a property of the profile that is written nowhere.
+Part 03 §5 gains a clause, because §3.9 rests on a property of the profile that is written nowhere.
 Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker:
 Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value
 that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive
@@ -411,7 +411,7 @@ caught; the third caught `dynamic_foraging.trials.animal_response`, an `int32` d
 
 `core.array_assets.kind` carries a reserved set for the first time, so §2.5's three arrays draw
 §3.11's `info` report rather than passing unremarked. Which value replaces `dense_array_asset` is
-not settled here: §6 records why it cannot be. `02` §8.4 gains the UCUM statement and `03` §5 gains a subsection stating the profile's single null beside the Parquet floor `03` §5.5 already
+not settled here: §6 records why it cannot be. Part 02 §8.4 gains the UCUM statement and Part 03 §5 gains a subsection stating the profile's single null beside the Parquet floor Part 03 §5.5 already
 records. `fixtures/build.py` writes `sex` as `male` rather than `M`, so every packet in the corpus changes;
 the NWB adapter gains the mapping §3.9 requires, and both packets are rebuilt, which R87 §2.1,
 R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains §3.11's report.
@@ -425,7 +425,7 @@ R88 §2, R91 §5, R95, R96, R97, R98 and R99 already require. A validator gains 
   go cue, and `event_type` holds one of those. Nothing has asked, and the three streams that would
   carry it — `FIP_rising_time`, `FIP_falling_time`, `optogenetics_time` — hold no events in either
   packet.
-- **A subject will declare what kind of thing it is**, in a revision of its own. `01` §3.4 admits "the animal or
+- **A subject will declare what kind of thing it is**, in a revision of its own. Part 01 §3.4 admits "the animal or
   preparation recorded from" and `core.subjects` carries an animal's columns alone, so a slice, a
   culture, an organoid, a phantom and a simulated recording are all subjects and only the first
   three have a donor species. The distinction collapses onto null, on `species`, `sex`, `strain`,

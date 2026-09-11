@@ -17,11 +17,11 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 Two problems make the definition necessary rather than tidy:
 
-**Schemas are prose.** `02` expresses its table schemas as markdown tables. No program reads
+**Schemas are prose.** Part 02 expresses its table schemas as markdown tables. No program reads
 them, so each implementation transcribes them by hand.
 
-**Validation rules are prose and scattered.** They appear in `02`'s per-table Validation
-sections, `05`'s validator taxonomy, `08`'s checklist, and `09`'s ordering. Independent
+**Validation rules are prose and scattered.** They appear in Part 02's per-table Validation
+sections, Part 05's validator taxonomy, Part 08's checklist, and Part 09's ordering. Independent
 implementations derive checks from English text and diverge, after which conformance is
 defined by whichever validator was run.
 
@@ -89,7 +89,7 @@ The registry is a single JSON document. Structure:
 `columns` MUST be an array, not an object. Column order is meaningful for generated DDL and
 for human reading, and JSON object key order is not guaranteed across parsers.
 
-`tables` is keyed by resource ID (dotted). SQL identifiers substitute underscores, as `08`
+`tables` is keyed by resource ID (dotted). SQL identifiers substitute underscores, as Part 08
 already does — `core.trials` is queried as `core_trials`.
 
 ## 4. Column types
@@ -110,7 +110,7 @@ target languages read it identically (R3 §3.0, §7.3).
 
 ## 5. Presence — three states
 
-`02` says "prefer present nullable columns over absent columns," which implies three states,
+Part 02 says "prefer present nullable columns over absent columns," which implies three states,
 not two. A boolean `required` flag cannot carry them.
 
 | `presence` | Column present? | Values null? |
@@ -124,15 +124,15 @@ even when every value is null, so that query code need not branch on column exis
 
 ## 6. Keys, references, ordering
 
-`primary_key` is an array of column names, composite where `02` declares a composite. The
+`primary_key` is an array of column names, composite where Part 02 declares a composite. The
 generated uniqueness check follows from it. A table admitting duplicate rows declares
 `primary_key: null` with the reason in its description; omitting the field is not permitted
 (R7 §2).
 
-`references` express foreign keys. Composite references are supported because `02` uses
+`references` express foreign keys. Composite references are supported because Part 02 uses
 them — `core.spike_events` references `core.units` on four columns.
 
-`sort` records the physical ordering a writer SHOULD apply, from `03`. It is a performance
+`sort` records the physical ordering a writer SHOULD apply, from Part 03. It is a performance
 property, not correctness, and generates a warning-level check rather than an error.
 
 ## 7. Validation rules
@@ -147,7 +147,7 @@ Not written by hand, for any table. A generator emits, from §3's structure alon
 - every `references` entry resolves (anti-join)
 - physical order matches `sort` (warning)
 
-That is most of `05`'s check taxonomy, across every table, with no per-table authoring.
+That is most of Part 05's check taxonomy, across every table, with no per-table authoring.
 
 ### 7.2 Tier 2 — SQL for what structure cannot imply
 
@@ -163,7 +163,7 @@ is a failure, and the returned rows are the finding.**
 That is the entire contract. It requires no expression language, no per-language rule
 interpreter, and no custom result protocol.
 
-`level` is `error`, `warning`, or `info`, matching `05`'s error policy.
+`level` is `error`, `warning`, or `info`, matching Part 05's error policy.
 
 ### 7.4 Why SQL
 
@@ -180,7 +180,7 @@ requirements MUST remain separable.
 
 The registry carries one `registry_version`. Per-table `schema_id` values are derived from
 it, not managed independently: at registry version `0.1.0`, `core.trials` has `schema_id`
-`core.trials.v0.1`. This matches the IDs `04` already uses in resource entries.
+`core.trials.v0.1`. This matches the IDs Part 04 already uses in resource entries.
 
 A packet MUST record the registry version it was written against, and SHOULD embed the
 registry itself at `schemas/logical_schemas.json` so the packet is self-describing. A packet
@@ -201,8 +201,8 @@ be conflated: one describes the shape of a registry, the other the shape of
 
 ## 10. Manifest JSON Schema
 
-`packet.json` is a JSON document whose contract `04` gives only by example. This
-revision requires a JSON Schema for it, covering `04`'s required and recommended fields plus
+`packet.json` is a JSON document whose contract Part 04 gives only by example. This
+revision requires a JSON Schema for it, covering Part 04's required and recommended fields plus
 those added by accepted revisions — `required_codecs` (R3 §7.2) and `sessions` (R1 §4), and
 minus `canonical_representations` (R5 §6).
 
@@ -232,16 +232,16 @@ magnitude and is recorded here so that effort is directed accordingly:
 | Python types | ~250 lines | convenience; the tables are primitives and hand-writing is cheap |
 | Julia types | ~250 lines | as above |
 | Per-table JSON Schema | one per table | for languages with no first-party client |
-| Markdown schema tables | one per table | regenerates `02`-style documentation |
+| Markdown schema tables | one per table | regenerates Part 02-style documentation |
 
 The ~230 figure is 196 column presence and type checks, 15 primary-key uniqueness checks, and
-19 foreign-key anti-joins, counted from `02`. Seven Tier 2 rules have been written by hand so
+19 foreign-key anti-joins, counted from Part 02. Seven Tier 2 rules have been written by hand so
 far. Generating language types saves little; generating the rules avoids maintaining ~230
 checks per implementation with nothing detecting divergence between them.
 
 Generating the markdown schema tables would prevent the drift R4 corrects, rather than
 correcting it once. `nwb_lake_poc_docs/` is frozen, so this applies to a future specification
-version rather than to `02`.
+version rather than to Part 02.
 
 Field naming follows Frictionless Table Schema where the concepts coincide (`primary_key`,
 foreign key `resource`/`fields`, per-field constraints). This revision does not claim
@@ -252,9 +252,9 @@ and it has no representation for SQL rules.
 
 - **A rule expression language.** SQL is the expression language.
 - **Codegen output specifications.** §11 lists targets; emitters are implementation.
-- **Analysis-layer schemas.** `06`'s tables are derived and their shapes depend on
+- **Analysis-layer schemas.** Part 06's tables are derived and their shapes depend on
   materialization parameters. Core first.
-- **Extension schemas.** `09` §5 requires only that declared extension files exist.
+- **Extension schemas.** Part 09 §5 requires only that declared extension files exist.
 
 ## 13. Open
 

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-08 |
-| **Amends** | `02` (`core.events`' columns and key, `core.event_streams`' columns), R23 §2 (what a stream declares), R11 §4 (which table declares `event_type`) |
+| **Amends** | Part 02 (`core.events`' columns and key, `core.event_streams`' columns), R23 §2 (what a stream declares), R11 §4 (which table declares `event_type`) |
 | **Depends on** | R23 (an event stream is the context events lacked), R53 (an identifier is an integer, and an assigned one carries a name), R55 (a discriminated reference), R56 (a column declares its context) |
 | **Profile** | `escapewheel-portable-v0.1` |
 

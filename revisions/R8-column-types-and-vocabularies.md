@@ -11,7 +11,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-Two defects remain in `02`'s column declarations after R3–R7.
+Two defects remain in Part 02's column declarations after R3–R7.
 
 Three columns are typed `int64` while being defined as opaque source values, which excludes
 sources that do not label with integers.
@@ -64,7 +64,7 @@ Closing it makes a check possible that the open form does not:
 SELECT processing_run_id, activity_type FROM core_processing_runs WHERE status = 'failed'
 ```
 
-Under `05`'s principle that validation is importation, a failed run has no business having
+Under Part 05's principle that validation is importation, a failed run has no business having
 produced committed resources.
 
 Where `core.provenance_activities` retains a `status` column, the same vocabulary applies.
@@ -75,7 +75,7 @@ Where `core.provenance_activities` retains a `status` column, the same vocabular
 
 This is NOT closeable now. The set of array kinds a packet may hold depends on acquisition
 and preprocessing systems this specification has not been tested against, and enumerating it
-from the four examples in `02` would exclude legitimate data on no evidence.
+from the four examples in Part 02 would exclude legitimate data on no evidence.
 
 It is therefore declared open rather than left ambiguous:
 

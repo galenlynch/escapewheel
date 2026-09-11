@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-11 |
 | **Amends** | Part 00 §10 (adds a subsection on how a citation spells a part) |
 | **Depends on** | R112 §3.1 (a requirement is cited from the part that states it), R93 §3.6 (Part 00 lists the parts and what each one binds) |
 | **Profile** | all |
@@ -16,7 +16,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 The specification is eleven parts, listed by number in Part 00 §9, and a citation of a requirement
 names the part that states it (Part 00 §10.1). Neither section says how that name is written, so two
 spellings are in use across the parts and the revisions: **`Part 02 §5.2` at 28 sites and
-`` `02` §5.2 `` at 340**, with a further 105 and 374 naming a part and no section at all. Every
+`` Part 02 §5.2 `` at 340**, with a further 105 and 374 naming a part and no section at all. Every
 count here excludes this document, whose own specimens of the second spelling are quotations of
 what §3.1 forbids rather than citations subject to it.
 
@@ -34,7 +34,7 @@ Informative.
 
 A backtick in this specification's prose marks a literal a program can hold: a column, a field, a
 value. Part 00 §10.2 reads "a registry column's `since`, whose value names the revision that set it
-(`02` §9.4)" — one sentence, two backticked tokens, and only the first is something a program has.
+(Part 02 §9.4)" — one sentence, two backticked tokens, and only the first is something a program has.
 The section saying how a requirement is cited is itself where the two collide.
 
 The number alone also says nothing about what it numbers. Two digits in backticks leave a reader who
@@ -43,7 +43,7 @@ four characters.
 
 ### 2.2 R111 and R112 spelled it both ways on one day
 
-R111 wrote `Part 02 §5.2` in three parts and R112 wrote `` `02` §5.2 `` in two, both accepted on
+R111 wrote `Part 02 §5.2` in three parts and R112 wrote `` Part 02 §5.2 `` in two, both accepted on
 2026-09-10. Neither form is giving way to the other: 8 of the 20 word-form citations in the parts
 date from the v0.2 compilation and 3 from R111, while all 15 backtick citations arrived with R92,
 R93, R99, R104, R106 and R112.
@@ -92,11 +92,12 @@ revision.
 Part 00 §10 gains a subsection and **714 references are respelled** across the parts, the revisions
 and the drafts: 340 naming a section and 374 naming a part alone.
 
-Three shapes take more than inserting the word. **71** are possessive, where `` `02`'s `` becomes
-`Part 02's`; **6** name a part and a stage rather than a section, as `` `05` Stage 5 ``; and **2**
+Three shapes take more than inserting the word. **71** are possessive, where `` Part 02's `` becomes
+`Part 02's`; **6** name a part and a stage rather than a section, as `` Part 05 Stage 5 ``; and **2**
 are ranges, which take a plural.
 
-Two tools change, neither of them by narrowing what it reads. `check_citations.py` resolves
-citations in the source as well as in the documents, so it keeps accepting both spellings and
-reports only where §3.1 binds. `repoint.py` prints the part a citation should move to, in the
-spelling §3.1 forbids.
+One tool changes, and not by narrowing what it reads. `check_citations.py` resolves citations in
+the source as well as in the documents, so it keeps accepting both spellings everywhere and reports
+the second only where §3.1 binds. `repoint.py` prints the part a citation should move to in the
+spelling §3.1 does not bind, which is correct: it reads tracked Python and nothing else, so every
+replacement it proposes lands in a file this section leaves alone.

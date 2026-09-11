@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-08 |
-| **Amends** | `05` §3.3 (ownership), `05` §3.4 (what a source can produce); adds one Tier 2 rule on `core.clocks` |
+| **Amends** | Part 05 §3.3 (ownership), Part 05 §3.4 (what a source can produce); adds one Tier 2 rule on `core.clocks` |
 | **Depends on** | R38 (observation belongs to the clock), R39 (the session's time origin), R63 (default ownership when a recipe omits `owns`) |
 | **Profile** | all |
 
@@ -55,7 +55,7 @@ contributes = ["core.clocks", "core.clock_anchors"]
 owns = ["core.clock_observation_intervals"]
 ```
 
-`05` §3.3 makes `owns` exclusive, so the sorter's twelve windows are produced and discarded.
+Part 05 §3.3 makes `owns` exclusive, so the sorter's twelve windows are produced and discarded.
 
 Two mechanisms exist to catch this and neither does. `recipe.SHARED` names the resources several
 sources each supply part of, so that a scaffolded recipe writes `contributes`; it lists
@@ -142,7 +142,7 @@ and becomes unreachable on a conforming packet, as R82 §2.3 left R41 §2.4.
 ### 3.2 A resource several sources supply is declared `contributes`
 
 A recipe **MUST NOT** declare `owns` for a resource that more than one of its sources produces rows
-for, unless the recipe declares a preference between them. `05` §3.3's exclusivity is for a
+for, unless the recipe declares a preference between them. Part 05 §3.3's exclusivity is for a
 resource one source is responsible for; where two sources each hold part, `contributes` is the
 declaration and `owns` silently discards the part the owner does not hold.
 

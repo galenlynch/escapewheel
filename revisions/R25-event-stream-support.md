@@ -52,7 +52,7 @@ table has to carry one or its ticks are meaningless. `core.event_streams` **does
 `clock_id` (R23 §2), so repeating it here would restate what the parent already says.
 
 R23 §4.2 kept `clock_id` on `core.events` under the same rule, and the difference is what the
-duplication buys. An event row is legitimately read without its stream — `03` sorts
+duplication buys. An event row is legitimately read without its stream — Part 03 sorts
 `core.events` by `session_id, clock_id, t_tick, event_type`, so scanning a session's timeline
 never touches `core.event_streams`. An observation interval is meaningless without knowing
 whose interval it is, so the join to the stream always happens, and the clock comes with it
@@ -145,7 +145,7 @@ problem.
 |---|---|:---:|---|
 | `session_end_time` | timestamp | no | When the session ended, UTC. |
 
-`02` defines `session_start_time` and no counterpart, so the duration of a session is not
+Part 02 defines `session_start_time` and no counterpart, so the duration of a session is not
 recorded anywhere in the core layer today.
 
 This is **metadata, not a derived summary**. It is what the acquisition system recorded as the
@@ -178,7 +178,7 @@ offset it has not checked.
 - **No general support mechanism.** Two tables now use R24's `interval` template with
   `partition_of`, which is the shape recurring, not a new abstraction.
 - **Nothing about trial closure.** `core.trials` still declares no `partition_of` and still
-  gets no overlap test; whether its `stop_tick` is inclusive remains a question for `02`.
+  gets no overlap test; whether its `stop_tick` is inclusive remains a question for Part 02.
 
 ## 8. Open
 

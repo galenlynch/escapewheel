@@ -137,7 +137,7 @@ R16 §3's `designated_label_pair_complete` is unchanged.
 - **`source` stays open** (R16 §2, R8 §4).
 - **`default_qc` is still not a label.** R16 §2's reasoning holds and is strengthened by the
   measurement: `default_qc` agrees with no label column at all, because it is a policy over
-  labels and metrics, which is `06`'s `analysis.good_units` territory.
+  labels and metrics, which is Part 06's `analysis.good_units` territory.
 - **Two names for one classifier are two rows.** `unitrefine_label` and `decoder_label` are
   byte-identical here, but the packet records what the source called itself. Recognising them
   as one classifier is an analysis-layer judgement, not a normalization the importer may make.
@@ -146,6 +146,6 @@ R16 §3's `designated_label_pair_complete` is unchanged.
 ## 7. Consequence
 
 The 53.3% disagreement between bombcell and decoder becomes a fact the packet carries rather
-than one it flattens. A `quality_policy_id` in `06` can now name a source *and* choose whether
+than one it flattens. A `quality_policy_id` in Part 06 can now name a source *and* choose whether
 it wants raw labels or the projection — "bombcell's `non_soma`, excluded" is expressible,
 and under R11 §3 it was not.

@@ -144,7 +144,7 @@ Because a reference relates columns of the same role (§7), converting every str
 
 ### 8.2 Identity
 
-An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing (R95 §3.1). Seven tables carried both a generated `*_name` and a `name` declared by `02`, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
+An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing (R95 §3.1). Seven tables carried both a generated `*_name` and a `name` declared by Part 02, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
 
 A `carried` identifier gets no name column, and a table MUST NOT declare one for it: the value is already the source's own, so a name beside it would be a second identity for one thing.
 
@@ -226,7 +226,7 @@ and no integrity constraint couples the versions (R90 §3.9).
 A row's kind-specific facts live in a table sharing that row's key, which is R54 §2's shape and
 R90 §3.5's shared-key join: the detail table's primary key MUST begin with the discriminated
 table's own identifier (R104 §3.1). `core.devices` names such a table through `device_kind`, and
-core MUST NOT declare one — `01` §3.17 makes this standard name no instruments, so a camera's
+core MUST NOT declare one — Part 01 §3.17 makes this standard name no instruments, so a camera's
 target or a thermistor's range belongs to an R17 §2 extension (R104 §3.2). A fact no detail table
 models stays in `metadata` (R97 §3.3), and what justifies promoting one out of it is a rule or a
 query that has to read it.
@@ -247,7 +247,7 @@ A consumer MAY label a quantity with its declared unit, and MUST NOT silently co
 
 A column MAY declare `determined_by`, naming the columns whose values fix its own: two rows agreeing on every column named agree on this one, and an empty list declares a constant (R92 §2.2). The declaration is structural, decidable from the registry with no packet in hand.
 
-It is a statement about values and holds under any profile. What a profile does with it is the profile's: `03` §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows (R92 §2.3), because a wrong one waives a check rather than failing one.
+It is a statement about values and holds under any profile. What a profile does with it is the profile's: Part 03 §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows (R92 §2.3), because a wrong one waives a check rather than failing one.
 
 ### 8.6 Free-form metadata
 
@@ -271,7 +271,7 @@ A writer SHOULD put prose in a prose column where the table has one, and not in 
 
 A writer that can decode a source's code MUST store the decoded value, declaring the vocabulary it decodes onto as §9.3 requires of any other (R106 §3.1). A code is a token standing for something the emitting system names elsewhere, and a packet holding one without the key leaves no rule, query or reader able to tell one value from another.
 
-A writer that cannot decode one stores the code itself, verbatim, in a `string` column declaring an open vocabulary, whose description names where the key lives. An undecoded code is a label carrying no contract, and an open vocabulary is how this standard declares one (`01` §3.17); an integer column declares nothing of the sort, since §9.3 permits a vocabulary on no other type and a code stored as an integer is indistinguishable from a count.
+A writer that cannot decode one stores the code itself, verbatim, in a `string` column declaring an open vocabulary, whose description names where the key lives. An undecoded code is a label carrying no contract, and an open vocabulary is how this standard declares one (Part 01 §3.17); an integer column declares nothing of the sort, since §9.3 permits a vocabulary on no other type and a code stored as an integer is indistinguishable from a count.
 
 Recording the token rather than dropping it is R22 §3's rule for a scorer's label and §4's for a source-provenance label: a source's own token is a string, kept as the source emitted it, and a consumer MUST NOT use it as an offset.
 
@@ -524,7 +524,7 @@ A packet MUST declare at least one row of `core.clock_observation_intervals` for
 
 ### 12.6 A clock's alignment record
 
-Three facts about how a packet's clocks were aligned are columns, because a consumer needs them to place a tick and `02` §8.6's line puts such a fact in a column and never in a key (R99 §3).
+Three facts about how a packet's clocks were aligned are columns, because a consumer needs them to place a tick and Part 02 §8.6's line puts such a fact in a column and never in a key (R99 §3).
 
 `core.sessions.alignment_bound` holds how far past its anchors the writer mapped, in median anchor intervals. A writer establishing a bound wider than R27 §5.3's default MUST record it; a consumer reading a null MUST map at that default, which is a fact and not a defect. It is on the session because the bound is a property of the times the packet states, as `t_zero_tick` is (R39 §2.1), so one session declares one bound and no rule is needed to say which run wins. A value below one is refused.
 

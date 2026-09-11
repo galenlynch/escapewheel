@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-05 |
-| **Amends** | `02` (`core.units` and the six tables keyed on it), R53 §2.3 (`unit_id` is carried), R28 §2.1 (`default_electrode_id`) |
+| **Amends** | Part 02 (`core.units` and the six tables keyed on it), R53 §2.3 (`unit_id` is carried), R28 §2.1 (`default_electrode_id`) |
 | **Depends on** | R53 (an identifier is an integer), R28 (a unit sits on many electrodes), R3 §3.0 (tables do not restate what the data declares), R75 (determinism is logical) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -76,7 +76,7 @@ it. The primary key becomes `["unit_id"]`.
 `sorting_run_id` as ordinary columns — so this is the pattern core already uses rather than a new
 one.
 
-`session_id` stays a required column of every unit table. `03` partitions by it and R1's
+`session_id` stays a required column of every unit table. Part 03 partitions by it and R1's
 multi-session extension needs it. It simply leaves the key.
 
 ### 2.2 The numbering is deterministic
@@ -97,8 +97,8 @@ for partitioning.
 ### 2.4 The spike table's sort follows its key
 
 `core.spike_events` is sorted `(session_id, sorting_run_id, curation_id, unit_id, t_tick)` by
-`03` §5.3, which names two columns §2.3 removes. Its sort becomes `(session_id, unit_id, t_tick)`
-and its primary key the same, so `03`'s override for this table is struck.
+Part 03 §5.3, which names two columns §2.3 removes. Its sort becomes `(session_id, unit_id, t_tick)`
+and its primary key the same, so Part 03's override for this table is struck.
 
 The clustering does not change. §2.2 numbers units by ascending
 `(sorting_run_id, curation_id, local_unit_label)`, so ascending `unit_id` **is** run-major order:

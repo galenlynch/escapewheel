@@ -6,7 +6,7 @@
 | **Amends** | `02_core_logical_schemas.md`, `03_portable_physical_profile.md`, `04_packet_catalog_manifest.md`, `09_metadata_minimalism_and_extensions.md` |
 | **Depends on** | R1 (single-session primary) |
 | **Forces** | R5 (flat spike representation) — see §4 |
-| **Defers** | Downstream edits to `04` §canonical_representations, `06`, `07` — to R5 |
+| **Defers** | Downstream edits to Part 04 §canonical_representations, Parts 06 and 07 — to R5 |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
@@ -162,7 +162,7 @@ The accepted cost: catalog-scale questions ("what dtypes, how large") now requir
 each array's metadata rather than one Parquet scan. Acceptable under R1's single-session
 primary case, where a packet holds few arrays.
 
-`09` §4.5 is amended correspondingly: `dtype` and `shape` are struck from the MUST-include
+Part 09 §4.5 is amended correspondingly: `dtype` and `shape` are struck from the MUST-include
 list for array assets.
 
 ### 3.1 New table: `core.session_experimenters`
@@ -279,8 +279,8 @@ by tick, which is also faster than the chunked form on that pattern.
 The remaining costs of chunking are structural: chunk size is a free parameter no document
 specifies, so importers produce non-comparable packets; three derived columns can disagree
 with the data; four validation rules exist only because of chunking; and the
-dual-representation mechanism — the spike policy in `02`, `canonical_representations` in
-`04`, `analysis.spike_events` in `06`, and the round-trip equivalence tests in `07` — exists
+dual-representation mechanism — the spike policy in Part 02, `canonical_representations` in
+Part 04, `analysis.spike_events` in Part 06, and the round-trip equivalence tests in Part 07 — exists
 only to reconcile the two forms.
 
 `core.units` SHOULD gain `n_spikes`, `first_spike_tick`, and `last_spike_tick`. These are
@@ -297,8 +297,8 @@ LEFT JOIN (SELECT unit_id, COUNT(*) AS n FROM core_spike_events GROUP BY unit_id
 WHERE u.n_spikes IS DISTINCT FROM s.n
 ```
 
-The full schema surgery — table definitions, deletions, and the downstream edits to `04`,
-`06`, and `07` — is deferred to **R5**. This revision records only the decision that §2.1
+The full schema surgery — table definitions, deletions, and the downstream edits to Part 04,
+Part 06, and Part 07 — is deferred to **R5**. This revision records only the decision that §2.1
 forces.
 
 ## 5. Array axis convention
@@ -366,7 +366,7 @@ Renaming the source labels to `*_label` is preferable and SHOULD be considered i
 
 ### 6.1 Binding `core.array_channels` to an axis
 
-`core.array_channels.channel_index` is defined in `02` as "Channel dimension index", but
+`core.array_channels.channel_index` is defined in Part 02 as "Channel dimension index", but
 nothing identifies *which* axis is the channel dimension. `dimension_name` is free text and
 no controlled vocabulary requires the channel axis to be named `channel`.
 
@@ -418,7 +418,7 @@ opening any array, whether it can proceed — the same mechanism as `profile_id`
 withdrawn `02:52` rule a reader could determine a packet's physical encoding only by
 inspecting the data.
 
-This amends `04`'s required top-level manifest fields.
+This amends Part 04's required top-level manifest fields.
 
 ### 7.3 Evidence
 
@@ -523,7 +523,7 @@ disagree with the data it describes buys nothing that opening the array does not
 **Enumerating permitted array data types.** An earlier draft restricted core arrays to a
 fixed list and banned `float16`, complex, and raw types. Withdrawn as over-specification:
 it prescribes acquisition choices the specification has no stake in, on speculation about
-reader support, and `07` explicitly warns against this kind of early over-building. Should
+reader support, and Part 07 explicitly warns against this kind of early over-building. Should
 a data type prove a genuine portability risk, it is the same shape of problem as a codec
 and gets §7.2's declaration mechanism, not a ban.
 
@@ -551,6 +551,6 @@ encoders already provide.
   ranking. The flat-sorted-by-unit decision rests on one synthetic session through DuckDB.
   Re-run `conformance/parquet-probe/access.py` against real data before treating it as
   settled for AIND-scale packets. Should a chunked form ever earn its place, it belongs in
-  `analysis` with declared lineage per `06`, never in `core`, which would reinstate the
+  `analysis` with declared lineage per Part 06, never in `core`, which would reinstate the
   dual-canonical machinery §4 removes.
 - Non-linear clock alignment (§3.4).

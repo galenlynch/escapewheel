@@ -14,7 +14,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 A real project does not sort once. It re-sorts, re-curates, runs a second pose model over the
 same video, and recomputes quality metrics against a new registry. The format already lets those
 alternatives coexist — unit identity is `(session_id, unit_id, sorting_run_id, curation_id)`
-(`02`), so a second sorting collides with nothing — and R32 already lets a packet gain them
+(Part 02), so a second sorting collides with nothing — and R32 already lets a packet gain them
 without modifying a file. **What is missing is any way to say which one to use.**
 
 **Three axes keep being conflated, and only one of them is built.**
@@ -132,7 +132,7 @@ history of *choices* is recoverable by reading the packet's earlier versions —
   not depend on it: currency is worth having at one sorting per session, and partitioning is worth
   having whether or not currency exists.
 - **No opinion on Iceberg.** A preference is a fact about the data, not about its storage, so it
-  survives a profile change unaltered (`03`).
+  survives a profile change unaltered (Part 03).
 
 ## 4. Measured
 

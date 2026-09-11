@@ -46,7 +46,7 @@ until an interval is short, which is exactly when someone reaches for a recordin
 R25 §7 saw this and deferred it:
 
 > Nothing about trial closure. `core.trials` still declares no `partition_of` and still gets no
-> overlap test; whether its `stop_tick` is inclusive **remains a question for `02`**.
+> overlap test; whether its `stop_tick` is inclusive **remains a question for Part 02**.
 
 A consumer counting events in a trial has to choose `<` or `<=` and the packet does not say
 which. On the session this was measured against **no event lands on a boundary tick at all**, so
@@ -95,7 +95,7 @@ R38 §2.2's column definition is unchanged and was correct throughout.
 
 ### 2.4 `core.trials.stop_tick`
 
-**Replace** `02`'s description of `core.trials.stop_tick`:
+**Replace** Part 02's description of `core.trials.stop_tick`:
 
 > | `stop_tick` | int64 | yes | Last tick of the trial, inclusive, on `clock_id`. |
 

@@ -87,7 +87,7 @@ registries at one `registry_version` — so it is retained for as long as a mani
 
 ## 3. Iceberg layers above this, not through it
 
-`03` defers an Iceberg profile and says an Iceberg catalog manages only tables. Two axes follow,
+Part 03 defers an Iceberg profile and says an Iceberg catalog manages only tables. Two axes follow,
 and stating them now costs a paragraph where discovering them in Phase 7 costs a redesign.
 
 **`packet_version` versions the bundle: which resources exist.** An Iceberg snapshot versions a

@@ -71,7 +71,7 @@ matching.
 
 `array_asset_id` is the primary key of **both** `core.array_assets` and `analysis.array_assets`,
 so a column named for it has two candidate targets. The layering settles it: `core` is the sole
-source of truth and `analysis` derives from it (`06`), so a **core table MUST NOT reference an
+source of truth and `analysis` derives from it (Part 06), so a **core table MUST NOT reference an
 analysis resource**. `core.array_dimensions.coordinate_array_asset_id` and
 `core.sorting_runs.input_array_asset_id` therefore reference `core.array_assets`.
 

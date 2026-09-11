@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `09` §5.5 (what an extension's version declaration names); `02` §3 (what a registry version may be reused for) |
+| **Amends** | Part 09 §5.5 (what an extension's version declaration names); Part 02 §3 (what a registry version may be reused for) |
 | **Depends on** | R17 §5 (an extension carries its own version and names what it extends), R2 §8 (the registry carries one `registry_version` and a packet records it), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files) |
 | **Profile** | all |
 
@@ -115,7 +115,7 @@ development, and it is the state this repository is in: `0.1.0` has been held de
 
 ## 5. Consequence
 
-`09` §5.5 gains `extends_registry` and what a validator does with it; `02` §3 gains what a registry
+Part 09 §5.5 gains `extends_registry` and what a validator does with it; Part 02 §3 gains what a registry
 version may name. The four extension registries each gain one field, and `registry.schema.json`
 gains an optional property beside `extends`.
 

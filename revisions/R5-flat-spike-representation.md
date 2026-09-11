@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-08-26 |
-| **Amends** | `02`, `03`, `04`, `05`, `06`, `07` |
+| **Amends** | Parts 02–07 |
 | **Depends on** | R3 (decision recorded in R3 §4) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -42,7 +42,7 @@ representation.
 
 **Primary key:** `(session_id, unit_id, sorting_run_id, curation_id, t_tick)`.
 
-`02` declares no primary key for this table. One is required here because the registry (R2)
+Part 02 declares no primary key for this table. One is required here because the registry (R2)
 needs it and because uniqueness is a meaningful check: two spikes from one unit at the same
 tick in one sorting/curation context is a defect, not a legitimate observation.
 
@@ -57,10 +57,10 @@ t_tick` — which R3 §7.3 measures as the best all-around layout.
 
 ### 2.1 `trial_id` is withdrawn from core
 
-`02` defines an optional `trial_id` on `core.spike_events`, "if trial assignment has been
+Part 02 defines an optional `trial_id` on `core.spike_events`, "if trial assignment has been
 materialized."
 
-**Resolution:** strike it. Trial assignment is a derived alignment that `06` already owns
+**Resolution:** strike it. Trial assignment is a derived alignment that Part 06 already owns
 through `analysis.spikes_by_trial`, which carries it along with `t_rel_tick` and
 `alignment_event` — information a bare `trial_id` cannot express. A column that is populated
 in some packets and not others also complicates every query and validation rule that touches
@@ -73,7 +73,7 @@ analysis layer already provides it.
 
 The table is removed in its entirety, with its columns `chunk_index`, `t_min_tick`,
 `t_max_tick`, `n_spikes`, and `spike_ticks`, and its four chunk-specific validation rules in
-`02`:
+Part 02:
 
 ```text
 - spike_ticks MUST be sorted ascending within each row
@@ -84,7 +84,7 @@ The table is removed in its entirety, with its columns `chunk_index`, `t_min_tic
 
 None applies to a flat table.
 
-`02`'s "Spike representation policy" section is struck. With one canonical representation
+Part 02's "Spike representation policy" section is struck. With one canonical representation
 there is no declaration to make, no equivalence to validate, and no per-`(session_id,
 sorting_run_id, curation_id)` choice to record.
 
@@ -125,7 +125,7 @@ A unit with no spikes has `n_spikes = 0` and null tick bounds.
 R3 §6 classifies three columns as opaque source-provenance values with undefined base, and
 proposes renaming them here. Applied:
 
-| `02` name | Becomes |
+| Part 02 name | Becomes |
 |---|---|
 | `core.electrodes.local_electrode_index` | `local_electrode_label` |
 | `core.electrodes.local_channel_index` | `local_channel_label` |
@@ -144,15 +144,15 @@ offset, so R3 §6's rule becomes uniform rather than a classification readers mu
 
 | Document | Struck |
 |---|---|
-| `02` | Spike representation policy section; `core.unit_spike_chunks` schema; `core.spike_events.trial_id` |
-| `03` | `unit_spike_chunks.parquet` from the layout; its recommended ordering; the partitioned-dataset example keyed on it |
-| `04` | The `canonical_representations` block, its required-declaration rule, and the partitioned-table example built on `core.unit_spike_chunks` |
-| `05` | "Convert NWB units/spike_times to `core.unit_spike_chunks`"; the "explode chunks into `analysis.spike_events`" materialization; `core.unit_spike_chunks` in the minimum acceptance criteria, replaced by `core.spike_events` |
-| `06` | `analysis.spike_events` in its entirety — it existed only as the flat materialization of chunks, and is now the canonical core table |
-| `07` | Round-trip "spike chunk -> spike event -> chunk equivalence" from the testing strategy; `pkt.materialize("analysis.spike_events")` from the API examples; `spike_chunks` from the minimum API |
-| `08` | The `core.unit_spike_chunks` example rows and manifest entry; the chunk-count SQL example |
+| Part 02 | Spike representation policy section; `core.unit_spike_chunks` schema; `core.spike_events.trial_id` |
+| Part 03 | `unit_spike_chunks.parquet` from the layout; its recommended ordering; the partitioned-dataset example keyed on it |
+| Part 04 | The `canonical_representations` block, its required-declaration rule, and the partitioned-table example built on `core.unit_spike_chunks` |
+| Part 05 | "Convert NWB units/spike_times to `core.unit_spike_chunks`"; the "explode chunks into `analysis.spike_events`" materialization; `core.unit_spike_chunks` in the minimum acceptance criteria, replaced by `core.spike_events` |
+| Part 06 | `analysis.spike_events` in its entirety — it existed only as the flat materialization of chunks, and is now the canonical core table |
+| Part 07 | Round-trip "spike chunk -> spike event -> chunk equivalence" from the testing strategy; `pkt.materialize("analysis.spike_events")` from the API examples; `spike_chunks` from the minimum API |
+| Part 08 | The `core.unit_spike_chunks` example rows and manifest entry; the chunk-count SQL example |
 
-The `canonical_representations` block in `04` exists solely to reconcile two canonical spike
+The `canonical_representations` block in Part 04 exists solely to reconcile two canonical spike
 forms. With one canonical form it has no function and is removed entirely.
 
 ## 7. Validation rules
@@ -193,4 +193,4 @@ structure and are not written by hand.
 - Whether bursty real firing or AIND-scale sessions change R3 §7.3's ranking. Re-run
   `conformance/parquet-probe/access.py` against a real session before treating the layout as
   settled at scale. Should a chunked form ever earn its place it belongs in `analysis`, with
-  declared lineage per `06`, never in `core`.
+  declared lineage per Part 06, never in `core`.

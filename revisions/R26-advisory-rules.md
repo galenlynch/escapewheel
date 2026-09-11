@@ -151,7 +151,7 @@ registry's vocabulary.
 - **Not a severity system.** `error`/`warning`/`info` are unchanged (R8 §3's closed vocabulary
   still holds). `advisory` is orthogonal: level says how serious, `advisory` says whether it
   was asked for.
-- **Not a policy engine.** `06`'s `analysis.good_units` is where a lab encodes what it counts
+- **Not a policy engine.** Part 06's `analysis.good_units` is where a lab encodes what it counts
   as acceptable. This is a validator verbosity control, not a place to express quality policy.
 - **No advisory rules beyond §6.** Provenance, designated labels and all-null columns are named
   in §1 as the same shape; each earns its own rule and its own argument that it is worth

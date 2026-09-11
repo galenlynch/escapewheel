@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | `05` §? (the fifth property of a conforming import) |
+| **Amends** | Part 05 §? (the fifth property of a conforming import) |
 | **Depends on** | R52 (a packet-owned resource records a digest) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -11,14 +11,14 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`05` requires a conforming import to *"produce byte-identical output from two runs over the same
+Part 05 requires a conforming import to *"produce byte-identical output from two runs over the same
 sources"*. No conforming importer can, and the reference one does not.
 
 ### 1.1 The packet timestamps itself
 
 Every manifest carries `created_at` and `validated_at`, and every `core.processing_runs` row
 carries `started_at`. Two runs a second apart differ in all three, so the requirement is
-unsatisfiable by any packet that records when it was made — which `04` requires of all of them.
+unsatisfiable by any packet that records when it was made — which Part 04 requires of all of them.
 
 ### 1.2 Encoders are not required to be stable
 
@@ -58,7 +58,7 @@ requires two builds to agree about them in the first place.
 > encoder settings and library versions so repeated runs produce byte-identical packet-owned
 > resources. A packet **MUST NOT** be judged non-conforming for lacking one.
 
-Where such a mode exists it belongs in `07` and in the implementation's own tests, which is where
+Where such a mode exists it belongs in Part 07 and in the implementation's own tests, which is where
 a regression against a pinned build is a useful signal and where the pinning is possible.
 
 ### 2.3 What a digest then means
@@ -74,7 +74,7 @@ A consumer wanting the second question compares the canonical rows, or the recip
 ## 3. What this does not change
 
 - **No field, no column, no rule.** One property of a conforming import is replaced by two.
-- **No weakening of reproducibility.** §2.1 is the stronger half of what `05` asked for, and it is
+- **No weakening of reproducibility.** §2.1 is the stronger half of what Part 05 asked for, and it is
   the half that was achievable.
 - **No change to R52 or R35.** A digest still pins the bytes a packet holds, and R35 still bounds
   revalidation by immutability.

@@ -96,7 +96,7 @@ stream declares, and R3 §3.0 does not apply to it.
 ### 4.2 `clock_id` stays, as a validated denormalization
 
 This one *is* a restatement — a sensor is wired to one acquisition system, so the stream
-determines the clock. It is kept for two reasons. `03` sorts `core.events` by
+determines the clock. It is kept for two reasons. Part 03 sorts `core.events` by
 `session_id, clock_id, t_tick, event_type`, and a sort key that requires a join to evaluate
 is not a sort key. And a tick without its clock is meaningless, so a table that carries ticks
 and not clocks is self-describing only to a reader who joins.
@@ -138,13 +138,13 @@ validated where present — still holds, through the nullable foreign key.
 
 **Latency.** The measurement that motivated this — how far an event time sits from the
 physical event — is not given a column. A `latency_tick` that does not say whether it has
-already been applied is a convention read two ways, which is the failure `03` records for
+already been applied is a convention read two ways, which is the failure Part 03 records for
 `core.media_frames.frame_index`. Until a real behaviour import forces the question, latency
 belongs in `metadata`.
 
-**Sort order.** `03` sorts `core.events` clock-major, serving "the session timeline". A
+**Sort order.** Part 03 sorts `core.events` clock-major, serving "the session timeline". A
 stream-major order would serve "all the licks". Which is better is a measurement, not an
-argument, and R3 §7.3's ranking for `core.spike_events` came from one. `03`'s order stands
+argument, and R3 §7.3's ranking for `core.spike_events` came from one. Part 03's order stands
 until someone runs it.
 
 ## 7. Table count

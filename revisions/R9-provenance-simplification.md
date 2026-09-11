@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-08-26 |
-| **Amends** | `01`, `02`, `04`, `05`, `09` |
+| **Amends** | Parts 01, 02, 04, 05 and 09 |
 | **Supersedes** | R7 §3.1 (in part), R7 §3.2 |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -15,12 +15,12 @@ The provenance layer has five tables and four defects.
 
 **`core.provenance_activities` restates `core.processing_runs`.** Its non-key columns —
 `activity_type`, `started_at`, `ended_at`, `status` — all exist on `core.processing_runs`,
-and `processing_run_id` is a foreign key to the table being restated. `05` Stage 6 confirms
+and `processing_run_id` is a foreign key to the table being restated. Part 05 Stage 6 confirms
 they are written in pairs. This is the failure R3 §3.0 rules out: duplication where reading
 the source is a join.
 
 **`core.provenance_entities` restates `core.source_files`.** An entity with
-`entity_type: source_file` duplicates `uri` and `sha256` from a `source_files` row. `01`
+`entity_type: source_file` duplicates `uri` and `sha256` from a `source_files` row. Part 01
 lists "source NWB file" as a ProvenanceEntity example, so this is the expected case.
 
 **The edge vocabulary does not match the edge shape.** `relationship_type` offers "used,
@@ -28,8 +28,8 @@ generated, derived_from, validated, etc.", but `used` and `generated` are entity
 relations, while `core.provenance_edges` is entity-to-entity through an activity. Only
 `derived_from` fits the table it is declared on.
 
-**The requirement level is contradictory.** `01:25` and `09` §4.7 say a packet MUST record
-enough provenance to trace; `05` Stage 6 — the only place stating what to write — says
+**The requirement level is contradictory.** `01:25` and Part 09 §4.7 say a packet MUST record
+enough provenance to trace; Part 05 Stage 6 — the only place stating what to write — says
 SHOULD. The MUSTs have no mechanism.
 
 Underlying all four: no importer exists, so nothing has exercised this layer. Every other
@@ -67,11 +67,11 @@ registry content                                  22
 ```
 
 The return to 22 is coincidental. This revision is a net removal of two tables, not a
-no-op: `02`'s 22 and the registry's 22 name different sets.
+no-op: Part 02's 22 and the registry's 22 name different sets.
 
 Reproduce with `python3 conformance/spec-sweep/tables.py`.
 
-The semantic concepts in `01` survive; only the generic encoding is withdrawn. A
+The semantic concepts in Part 01 survive; only the generic encoding is withdrawn. A
 ProvenanceActivity is a `core.processing_runs` row. A ProvenanceEntity is a
 `core.source_files` row or a packet resource. Nothing needs a node table to be one of those.
 
@@ -91,11 +91,11 @@ A run consumes zero or more source files, so this is R3 §3.0's multiplicity rul
 
 ## 4. Outputs are recorded in the manifest
 
-Which resources a run produced is resource-level, not row-level, and `04` already carries it:
+Which resources a run produced is resource-level, not row-level, and Part 04 already carries it:
 resource entries have `derived_from` and `activity_id`.
 
 `activity_id` is renamed `processing_run_id` and references `core.processing_runs`.
-`04`'s provenance block field `import_activity_id` becomes `import_processing_run_id`.
+Part 04's provenance block field `import_activity_id` becomes `import_processing_run_id`.
 The block's `entities_resource`, `activities_resource`, and `edges_resource` fields are
 struck along with the tables they name.
 
@@ -108,12 +108,12 @@ individual row came from which input, and no consumer has been identified that w
 
 > Every imported core resource SHOULD be traceable to source data or source activities.
 
-`09` §4.7 is amended to match. `05` Stage 6 already says SHOULD and is unchanged.
+Part 09 §4.7 is amended to match. Part 05 Stage 6 already says SHOULD and is unchanged.
 
 **Consequence, stated plainly: a packet carrying no provenance is conforming.** This is a
 deliberate weakening. Provenance is valuable for reproducibility, but requiring it makes
 import fail on packets that are otherwise complete and usable, and the specification's
-stated priority (`09` §4.7) is reproducibility over process modelling — not process
+stated priority (Part 09 §4.7) is reproducibility over process modelling — not process
 modelling as a precondition.
 
 Where provenance is recorded, the rules in §3 and §6 apply. Optional does not mean

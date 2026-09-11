@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `05` §3 (a recipe declares whether a source runs in the writer's process); `05` §3.7 (what a build captures where a command's output carries rows); `07` §4 (an adapter's return type and the transports a build accepts rows over); `09` §5.7 (an extension's rows cross the same boundary by the same transports, and a command is carried as a list) |
-| **Depends on** | R109 §2.3 (a shared process is a shared dependency closure), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files), R109 §3.4 (a build keeps what a command wrote to its streams), R53 §2.5 (a writer mints every assigned identifier), R93 §3.5 (a number that would change with the implementation belongs to `07` §7) |
+| **Amends** | Part 05 §3 (a recipe declares whether a source runs in the writer's process); Part 05 §3.7 (what a build captures where a command's output carries rows); Part 07 §4 (an adapter's return type and the transports a build accepts rows over); Part 09 §5.7 (an extension's rows cross the same boundary by the same transports, and a command is carried as a list) |
+| **Depends on** | R109 §2.3 (a shared process is a shared dependency closure), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files), R109 §3.4 (a build keeps what a command wrote to its streams), R53 §2.5 (a writer mints every assigned identifier), R93 §3.5 (a number that would change with the implementation belongs to Part 07 §7) |
 | **Profile** | all |
 
 Normative, except §2, which is informative.
@@ -69,7 +69,7 @@ One reads neither an institute's files nor a tool's: `tables` reads whatever the
 is R109 §3.2's route.
 
 `nwb` is the interesting case and it does not divide at the module. It reads NWB, the format this
-specification exists to interoperate with and whose importer is `07` §5's Phase 3 — and **15 of the
+specification exists to interoperate with and whose importer is Part 07 §5's Phase 3 — and **15 of the
 columns it reads are ones base NWB does not define**: eight for a CCF position (`ccf_ap`, `ccf_ml`,
 `ccf_dv`, `ccf_id`, `ccf_acronym`, `ccf_name`, `ccf_structure_id_path`, `brain_region_id`), five for
 a dynamic-foraging trial (`go_cue`, `reward_outcome`, `reward_outcome_time`, `delay_start`,
@@ -124,7 +124,7 @@ across builds, or one whose output should still be there to inspect after a fail
 lesser route: it is the one R109 §3.2 requires of an extension, and both packaged sessions use it
 today, re-reading a `tables/` directory across several rebuilds without running the extraction again.
 
-Where the stream is used, standard output carries rows and cannot also carry a diagnosis. **`05`
+Where the stream is used, standard output carries rows and cannot also carry a diagnosis. **Part 05
 §3.5 is amended to match**: a build **MUST** capture standard error and report it with a failure, and
 **MUST NOT** report standard output where the recipe put rows on it. R109 §3.2's reason survives
 intact, since the diagnosis a command prints was always the thing worth keeping and stderr is where
@@ -144,7 +144,7 @@ that, and a recipe that wants the file says so.
 
 ### 3.2 A command is an argument list, and a stream is bytes
 
-`09` §5.7 says a command is an argument list run in the source's own root and not a shell line. A
+Part 09 §5.7 says a command is an argument list run in the source's own root and not a shell line. A
 recipe **MUST** carry it as a list, and a build **MUST NOT** derive one by splitting a string.
 
 A build given a string must parse it, and a parse is a quoting convention the recipe never declared.
@@ -162,7 +162,7 @@ corrupts the stream, and it fails as malformed data rather than as an encoding e
 
 A build **MUST** consume standard output and standard error concurrently. A pipe holds tens of
 kilobytes, so reading one to completion first deadlocks on any adapter whose diagnosis outruns that
-buffer. How a build does it is `07` §7's, being a technique that changes with the implementation
+buffer. How a build does it is Part 07 §7's, being a technique that changes with the implementation
 (R93 §3.3).
 
 ### 3.3 A recipe opts a source into the writer's process
@@ -183,7 +183,7 @@ before any source is opened.
 
 ### 3.4 An adapter returns records, and a transport is not the return type
 
-`07` §4 states that an adapter's return type is records and not a path, because that is what lets an
+Part 07 §4 states that an adapter's return type is records and not a path, because that is what lets an
 adapter be tested without a filesystem and keeps normalization decisions out of I/O code. That
 sentence **stands and is not enough**, because it answers what an adapter returns and this part asks
 how rows reach a build.
@@ -193,7 +193,7 @@ transport carries them and the receiving end returns records again — which is 
 source reads files and yields batches today, so the interface is re-established on this side of the
 boundary by machinery that already exists.
 
-What the out-of-process route gives up is the property `07` §4 names. Testing an adapter that
+What the out-of-process route gives up is the property Part 07 §4 names. Testing an adapter that
 delivers over a transport means running it, so the filesystem or the pipe is back, and an in-process
 adapter is the only one testable without either. **That is the trade** — a solvable environment
 against a test that needs no I/O — and §3.3 puts it where the person who bears it can make it, rather
@@ -221,9 +221,9 @@ a build can make.
 
 ## 5. Consequence
 
-`05` §3 gains an in-process declaration, `05` §3.7 gains what a build captures where rows are on
-standard output, `07` §4 gains the transports a build accepts and what its own sentence does not
-cover, and `09` §5.7 gains that an extension may use them too and that a command is carried as a list.
+Part 05 §3 gains an in-process declaration, Part 05 §3.7 gains what a build captures where rows are on
+standard output, Part 07 §4 gains the transports a build accepts and what its own sentence does not
+cover, and Part 09 §5.7 gains that an extension may use them too and that a command is carried as a list.
 
 The reference implementation owes a command it does not have: `escapewheel` runs `inspect`, `init`,
 `extension`, `verify`, `prune` and `import`, and none of them runs one adapter and hands over its

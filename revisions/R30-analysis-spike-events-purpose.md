@@ -11,12 +11,12 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`06` introduces the table like this:
+Part 06 introduces the table like this:
 
 > Long spike table derived from `core.unit_spike_chunks` when chunked spikes are canonical.
 
 **R5 withdrew `core.unit_spike_chunks`.** `core.spike_events` became canonical, one row per
-spike, all primitives — which is exactly the long flat table `06` described building. So the
+spike, all primitives — which is exactly the long flat table Part 06 described building. So the
 table's stated derivation is from a table that no longer exists, to produce a shape core now
 has. The schema survived R5 and the reason for it did not.
 
@@ -25,7 +25,7 @@ on their probes' sample clocks, which is what makes them exact and what makes tw
 incomparable without conversion. A reader's default is to return times on the session's
 reference clock, and doing that conversion on every read is work a writer can do once.
 
-That much would justify a table with `06`'s schema and `03`'s ordering. Measurement says it
+That much would justify a table with Part 06's schema and Part 03's ordering. Measurement says it
 would not be worth writing. A copy that keeps core's order differs from core only by the
 clock conversion, and conversion is measured at 29 M spikes a second — so the materialization
 buys a few milliseconds on the queries anyone would run. What it can buy, and core cannot, is
@@ -33,7 +33,7 @@ a **layout**: a common clock is what makes ordering by time meaningful at all.
 
 ## 2. Replacement: purpose
 
-**Strike** `06`'s sentence introducing `analysis.spike_events` and replace it with:
+**Strike** Part 06's sentence introducing `analysis.spike_events` and replace it with:
 
 > Spikes on the session's reference clock (R27 §2), mapped from `core.spike_events` through
 > `core.clock_anchors`, and laid out so that both a unit filter and a time filter prune.
@@ -42,7 +42,7 @@ a **layout**: a common clock is what makes ordering by time meaningful at all.
 
 ## 3. Replacement: layout
 
-`03` recommends one ordering for "`core.spike_events` or `analysis.spike_events`". **Strike
+Part 03 recommends one ordering for "`core.spike_events` or `analysis.spike_events`". **Strike
 `analysis.spike_events` from that recommendation**; the order below governs it instead.
 `core.spike_events` is unaffected.
 
@@ -59,7 +59,7 @@ into contiguous non-overlapping ranges — for two buckets of one `(session_id, 
 later bucket's smallest `t_tick` MUST exceed the earlier bucket's largest. That is what makes
 the column mean anything, and it is checkable in SQL without knowing the bucket width.
 
-The bucket width is a **transform parameter** and MUST be declared as `06` already requires,
+The bucket width is a **transform parameter** and MUST be declared as Part 06 already requires,
 not inferred. It is not recoverable from a table whose buckets are all non-empty only by
 accident.
 
@@ -96,7 +96,7 @@ at twice the intended width in the worst case, which is pruning given away for n
 
 ### 3.3 What is not specified
 
-Bucket width, row-group size and column encoding are **not** normative. `03` mandates nothing
+Bucket width, row-group size and column encoding are **not** normative. Part 03 mandates nothing
 about Parquet encodings and calls row-group size a starting point to "adjust after profiling",
 and the right values depend on session length, unit count and firing rate. §6 records what was
 measured; it is evidence for a default, not a rule.
@@ -116,9 +116,9 @@ writer.
 
 ## 5. It is still disposable
 
-R30 does not make this table canonical, and `06`'s promotion rules are untouched. It is
+R30 does not make this table canonical, and Part 06's promotion rules are untouched. It is
 derived, regenerable from `core.spike_events` and `core.clock_anchors`, and a packet without
-it is complete. `06` already requires an analysis resource to declare lineage to core; for
+it is complete. Part 06 already requires an analysis resource to declare lineage to core; for
 this table that lineage is those two resources and `core.clocks`.
 
 ## 6. Why the analysis layer, and why core cannot do this
@@ -177,11 +177,11 @@ page index.
 - **No new canonical fact.** `time_bucket_tick` is a function of `t_tick` and the declared
   bucket width, carried so the order is declarable as a column list and checkable by R12's
   shim. It is not a scientific claim.
-- **No treatment of the other analysis resources.** `06` names six more, and
+- **No treatment of the other analysis resources.** Part 06 names six more, and
   `analysis.spikes_by_trial` in particular has the same problem in a milder form: it says
   spikes carry `t_abs_tick` and `t_rel_tick` without saying which clock either is on. That
   wants its own revision once something builds it.
-- **No `since` stamp on the columns `06` already defined.** Under R29 §2 only
+- **No `since` stamp on the columns Part 06 already defined.** Under R29 §2 only
   `time_bucket_tick` carries one, because only it is new here.
 
 ## 8. Open
@@ -189,7 +189,7 @@ page index.
 - **Whether a dropped spike should be recorded anywhere.** §4 omits it silently, and a count of
   what the mapping could not place is a real quality signal — a session losing thousands is one
   whose sync started late. `core.processing_runs` could carry it as a materialization
-  parameter, which is `06` §169's mechanism, and nothing currently writes one.
+  parameter, which is Part 06 §169's mechanism, and nothing currently writes one.
 - **Whether the reference clock should be named in the resource rather than the rows.** Every
   row carries the same `clock_id`, which dictionary-encodes to nothing but is still a column
   restating a per-resource fact. R3 §3.0 would normally strike it; it stays because the foreign

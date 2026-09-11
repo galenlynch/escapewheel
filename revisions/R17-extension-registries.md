@@ -11,14 +11,14 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`09` §5 requires an extension to declare its `extension_id`, version, namespace, **schema
-locations**, resources provided, validation rules, and core mappings. `09` §6 registers it in
+Part 09 §5 requires an extension to declare its `extension_id`, version, namespace, **schema
+locations**, resources provided, validation rules, and core mappings. Part 09 §6 registers it in
 the packet catalog. Neither says what a schema location contains, and R2 defines the registry
 format for core alone.
 
 So the extension path is specified in outline and unusable in practice. Three decisions have
 now deferred to it: R16 §5 sends continuous quality metrics there, R9 §2 sends richer
-provenance there, and `09` §2.3 sends procedural and institutional metadata there. None can
+provenance there, and Part 09 §2.3 sends procedural and institutional metadata there. None can
 proceed.
 
 NWB solves the same problem with `DynamicTable`, which permits arbitrary runtime columns with
@@ -63,7 +63,7 @@ Table names MUST be namespaced by `extension_id`. An extension MUST NOT define a
 `core` or `analysis` namespace, and MUST NOT redefine a core table.
 
 An extension MAY reference core tables. Core MUST NOT reference an extension: core resources
-must stay interpretable when no extension is present, which `09` §2.3 already requires.
+must stay interpretable when no extension is present, which Part 09 §2.3 already requires.
 
 ## 3. Why the same format
 
@@ -79,7 +79,7 @@ can validate and becomes a declared one a generator handles like any other.
 
 ## 4. Conformance is layered
 
-`09` §6 already states the rule and this revision does not weaken it: a core validator MUST
+Part 09 §6 already states the rule and this revision does not weaken it: a core validator MUST
 verify that declared extension files exist and MUST NOT require their schemas. A packet
 remains core-conformant carrying extension registries it cannot parse.
 
@@ -99,10 +99,10 @@ core version it predates; nothing requires them to move together.
 ## 6. What this does not do
 
 **No schema translation.** An extension declares its own columns; nothing maps them into core
-automatically. `09` §7's mapping guidance stays a job for importers.
+automatically. Part 09 §7's mapping guidance stays a job for importers.
 
 **No dependency resolution.** An extension referencing a core table a packet omits is simply
 unvalidatable, and reported as such. Extensions declare no requirements on each other.
 
-**No promotion path.** Moving an extension field into core remains `09` §8's process — a
+**No promotion path.** Moving an extension field into core remains Part 09 §8's process — a
 revision, with evidence the field is broadly needed.

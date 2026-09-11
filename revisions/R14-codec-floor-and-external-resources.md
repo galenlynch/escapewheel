@@ -60,17 +60,17 @@ does not scale to acquisition systems the specification has not met.
 A packet using a non-baseline codec is conforming and **not portable by default**, which the
 manifest now states rather than implies.
 
-### 2.3 External resources, and the declaration `03` requires but never defined
+### 2.3 External resources, and the declaration Part 03 requires but never defined
 
 `00:56` already admits the form: a packet may be "a local directory, an object-store prefix,
-or **a release manifest that points to distributed assets**." `03` permits absolute URIs and
+or **a release manifest that points to distributed assets**." Part 03 permits absolute URIs and
 then requires that "external assets MUST be explicitly declared in the manifest" — but no
-field for that declaration exists anywhere in `04`. The mechanism has been mandatory and
+field for that declaration exists anywhere in Part 04. The mechanism has been mandatory and
 absent since v0.1.
 
-This revision defines it, and states the expectation `03` leaves ambiguous.
+This revision defines it, and states the expectation Part 03 leaves ambiguous.
 
-**Referencing is the expected form for large resources.** `03`'s preference for relative
+**Referencing is the expected form for large resources.** Part 03's preference for relative
 URIs is scoped to "portable local packets" and is not a general default. For dense arrays,
 media, and large tables, copying is usually wrong: it duplicates the bulk of a dataset for
 no gain, and for arrays it additionally forces either a transcode that discards the
@@ -95,7 +95,7 @@ a packet published beside its data records that it does not own it.
 
 ### 2.3.1 Immutability does not extend to external resources
 
-`03` says a portable packet SHOULD be treated as immutable after validation, and that a
+Part 03 says a portable packet SHOULD be treated as immutable after validation, and that a
 committed packet MUST have a validation report corresponding to its current bytes. That
 guarantee covers **bytes the packet owns**. An external resource may change or vanish
 without the packet changing at all.
@@ -106,7 +106,7 @@ would be worse than one that says plainly where its guarantee stops.
 
 ### 2.3.2 Validation does not reach the network by default
 
-`05`'s physical validators require that declared URIs resolve. Applied to external resources
+Part 05's physical validators require that declared URIs resolve. Applied to external resources
 that would make validity depend on network reachability, credentials, and whether the
 validator is running offline — none of which is a property of the packet.
 
@@ -151,10 +151,10 @@ R3 §7.2's sentence naming `blosc` and `sharding_indexed` as the permitted opt-i
 replaced by §2.2's open declaration. The measured evidence in R3 §7.3 stands as evidence
 that those two are safe to use, not as the boundary of what may be used.
 
-`04`'s resource entry gains `external`, `sha256`, `size_bytes`, and `verified_at`. The
+Part 04's resource entry gains `external`, `sha256`, `size_bytes`, and `verified_at`. The
 manifest JSON Schema gains them with `external` required wherever `uri` is absolute.
 
-`05`'s physical validators are amended per §2.3.2: "declared URIs resolve" applies to
+Part 05's physical validators are amended per §2.3.2: "declared URIs resolve" applies to
 packet-owned resources, and external resolution is a separate mode.
 
 This makes `00:56`'s third packet form — "a release manifest that points to distributed

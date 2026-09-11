@@ -64,7 +64,7 @@ definition. What remains is structural and complete without it:
 | `channel_ordinal` | that contact's position along a dense array's channel axis (R20 §2) |
 | `is_primary` | which of them is the peak |
 
-This is `09`'s minimalism test applied. Amplitude is needed to identify no unit, to interpret
+This is Part 09's minimalism test applied. Amplitude is needed to identify no unit, to interpret
 no array — R20 §2's labelled axis is indexed by `channel_ordinal`, not by amplitude — to
 validate no rule, and to reproduce nothing. It is a measured quality-like number, and R16 §5
 already routes those to a namespaced extension. R16 §5's list omits amplitude only because

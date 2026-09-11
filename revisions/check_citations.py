@@ -34,6 +34,11 @@ error, as in a draft: the source is live.
 Those are spelled out in prose rather than written as citations, because this file is one of the
 files it reads.
 
+A part named by its number alone is an error in a part, a revision or a draft, which `00` §10.4
+requires and no other check can see: both spellings resolve to the same section. A source file is
+read for whether its citations resolve and never for how they are spelled, since a specification
+does not impose a comment style on code it does not own.
+
 The parts are also checked for the numbering `00` §10.3 requires. `headings` returns a set, which is
 what hid `05` carrying two sections numbered 11 through five accepted revisions -- a duplicate
 vanishes into a set and the citation still resolves. Two sections with one number fail the build and
@@ -66,6 +71,13 @@ REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
 PART = re.compile(r"(?:`(\d\d)`|Part (\d\d)) §(\d+(?:\.\d+)*)")
 #: Any §, so the ones the two above did not claim can be treated as local.
 ANY = re.compile(r"§(\d+(?:\.\d+)*)")
+#: A part named by its number alone, which `00` §10.4 forbids in a part or a revision. Every
+#: backticked two-digit string in those documents is a part, so nothing yet needs excusing.
+NUMBERED = re.compile(r"`(\d\d)`")
+
+#: Sites where a backticked two-digit number is not a part, each with why. Checked to still match
+#: something, so an entry cannot outlive the text it excuses.
+NOT_A_PART: tuple[tuple[str, str], ...] = ()
 
 
 def headings(text: str) -> set[str]:
@@ -97,6 +109,24 @@ def part(number: str) -> Path | None:
     """The v0.2 part with this number."""
     found = sorted(PARTS.glob(f"{number}_*.md"))
     return found[0] if found else None
+
+
+def numbered(path: Path, text: str) -> tuple[list[str], set[str]]:
+    """Each part this document names by its number alone, and which exemptions that used.
+
+    `00` §10.4 binds a part and a revision and nothing else, so an implementation's source is read
+    for whether its citations resolve and never for how they are spelled.
+    """
+    found, used = [], set()
+    for number, line in ((m, text[:m.start()].count("\n") + 1) for m in NUMBERED.finditer(text)):
+        whole = text.splitlines()[line - 1]
+        excuse = next((why for site, why in NOT_A_PART
+                       if path.name.startswith(site) and why in whole), None)
+        if excuse is not None:
+            used.add(excuse)
+            continue
+        found.append(f"`{number.group(1)}` on line {line} — a part is named as Part {number.group(1)}")
+    return found, used
 
 
 def check(path: Path) -> tuple[list[str], list[str], list[str]]:
@@ -156,6 +186,7 @@ def main() -> int:
     paths = [p for p in paths if p.is_file()]
     code = sources()
     broken, historical = 0, 0
+    excused: set[str] = set()
 
     # `00` §10.3's numbering, checked before any citation: a duplicate number makes a citation
     # ambiguous rather than unresolvable, so nothing downstream can see it.
@@ -172,6 +203,11 @@ def main() -> int:
     for path in paths + code:
         draft = path.parent.name == "drafts" or path.suffix == ".py"
         errors, parts, loose = check(path)
+        # `00` §10.4 binds a part and a revision; a source file is read only for resolution.
+        if path.suffix == ".md":
+            spelled, fired = numbered(path, path.read_text())
+            errors += spelled
+            excused |= fired
         if draft:
             errors += parts
         else:
@@ -185,6 +221,13 @@ def main() -> int:
                 print(f"  v0.1    {shown}: {line}")
             for line in loose:
                 print(f"  loose   {shown}: {line}")
+    # An exemption that matches nothing is as wrong as a missing one: it excuses text that has
+    # gone, and the next reader takes it for a live case.
+    for _, why in NOT_A_PART:
+        if why not in excused:
+            print(f"  STALE   an exemption for {why!r} matches nothing")
+            broken += 1
+
     tail = f", {historical} citing the frozen v0.1 numbering" if historical else ""
     print(f"{len(paths)} documents and {len(code)} source files, "
           f"{broken} unresolved citation(s){tail}")

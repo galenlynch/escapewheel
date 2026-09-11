@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-06 |
-| **Amends** | `00`–`09` and `03` §2 (the profile identifier), `04` §2 (the catalog filename), R2 §9 (published schema `$id`s), R17 §2 (`extends`), R80 §2.2 (the sidecar's version string) |
+| **Amends** | Parts 00–09 and Part 03 §2 (the profile identifier), Part 04 §2 (the catalog filename), R2 §9 (published schema `$id`s), R17 §2 (`extends`), R80 §2.2 (the sidecar's version string) |
 | **Depends on** | R32 (a packet version is the bundle), R61 (a correction is a rebuild), R71 (canonical is a property of a resource) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -101,7 +101,7 @@ adapter and every reference to the NWB format as a format.
   or rule is touched and no packet's data is rewritten.
 - **`registry_version` does not move.** It versions the registry's content, which this revision
   leaves alone.
-- **No clause of the standard changes.** Every MUST and SHOULD in `00`–`09` means afterwards what
+- **No clause of the standard changes.** Every MUST and SHOULD in Parts 00–09 means afterwards what
   it meant before; only the strings naming the standard differ.
 
 ## 4. Consequence

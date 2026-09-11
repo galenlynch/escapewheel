@@ -81,9 +81,9 @@ A partitioned table's row order across files is not defined by this profile. A s
 
 ### 5.3 Ordering
 
-A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (`02` §8.5). Where the registry declares no sort for a table, the order required is its primary key's. A validator MUST report a departure as an **error** (R92 §2.2).
+A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where the registry declares no sort for a table, the order required is its primary key's. A validator MUST report a departure as an **error** (R92 §2.2).
 
-Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means `02` §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (R12 §4, `02` §10.3).
+Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means Part 02 §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3).
 
 The scan MUST verify each `determined_by` declaration it relies on: of two adjacent rows sharing a primary key, every sort column declared `determined_by` a subset of that key MUST hold the same value in both, and a validator MUST report a difference as an **error** (R92 §2.3). A wrong declaration otherwise waives a check rather than failing one. The comparison reaches a declaration that is false between two adjacent rows, which the scan reports as a duplicate key as well, the second finding saying which to repair; a declaration false enough to sort two duplicates apart is beyond a scan of neighbours.
 
@@ -91,7 +91,7 @@ Where the scan finds a departure, uniqueness MUST be settled by aggregate rather
 
 A reader MUST NOT depend on stored order for correctness. Establishing the order is the validator's work, and a reader that assumed it would be trusting a property of the profile rather than of the logical standard.
 
-One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST` (R30 §3.2); `03` §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: R91 §3.2 keys it on `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: R81 §2.4 makes its key `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
+One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST` (R30 §3.2); Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: R91 §3.2 keys it on `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: R81 §2.4 makes its key `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
 
 ### 5.4 The overriding orders
 

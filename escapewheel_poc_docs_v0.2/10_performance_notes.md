@@ -36,7 +36,7 @@ number silently missing the field says nothing at all.
 
 Dictionary encoding is what a column declaring nothing else receives, and a monotonic ramp of 7.5 M
 distinct values is its worst case: `pts` is **96.9%** of the table as written. `DELTA_BINARY_PACKED`
-is defined for `INT32` and `INT64` alone, which is what `03` §5.5's SHOULD turns on.
+is defined for `INT32` and `INT64` alone, which is what Part 03 §5.5's SHOULD turns on.
 
 ### 2.2 An integer identifier costs nothing to store and much to read
 
@@ -106,9 +106,9 @@ choice turns on the second.
 
 ## 3. Row groups
 
-A large table's row groups are sized for analytical scans (`03` §5.1). **100,000 to 1,000,000
+A large table's row groups are sized for analytical scans (Part 03 §5.1). **100,000 to 1,000,000
 rows** is a starting point to be adjusted by profiling; it is a number this format fixes rather
-than a rule a packet can fail, which is why `03` §5.1 keeps the SHOULD and the number is here.
+than a rule a packet can fail, which is why Part 03 §5.1 keeps the SHOULD and the number is here.
 
 Where a table declares a time bucket, a row group SHOULD start at each bucket boundary (R30 §3.3):
 a group cut at a fixed row count straddles boundaries and spans two buckets' worth of time.
@@ -145,5 +145,5 @@ shows why the others should be:
 | v2 zstd, v2 blosc-zstd-shuffle | reads | reads |
 
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
-changing to show it. That is what `03` §6.1's per-version codec floor exists to state as a rule,
+changing to show it. That is what Part 03 §6.1's per-version codec floor exists to state as a rule,
 and what this table exists to explain.

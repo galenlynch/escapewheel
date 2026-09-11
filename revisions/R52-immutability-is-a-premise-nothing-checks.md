@@ -23,7 +23,7 @@ well-meant "fix" to one column — makes R35 return a stale verdict, silently, a
 reports `passed`.
 
 **No packet-owned resource records a checksum.** Measured on a real packet: **0 of 26**. The
-manifest schema has carried `sha256` on a resource since `04`, and `checksums=True` reaches only
+manifest schema has carried `sha256` on a resource since Part 04, and `checksums=True` reaches only
 `_resolve_external`, so there is neither a value to compare nor a path that would compare it.
 
 ### 1.1 This is the opposite case from an external resource

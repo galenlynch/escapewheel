@@ -160,11 +160,11 @@ join-free filtering, and a rule keeps it honest.
 
 An analysis array registered in `core.array_assets`, with axis rows in
 `core.array_dimensions` pointing at an analysis coordinate table, would make a core table
-reference a resource the analysis layer owns. `00` says analysis resources may be deleted and
+reference a resource the analysis layer owns. Part 00 says analysis resources may be deleted and
 recomputed; a core table pointing at one would dangle. R17 §2 forbids core referencing an
 extension for the same reason.
 
-`06` anticipated this, saying array metadata belongs in "`core.array_assets` or an
+Part 06 anticipated this, saying array metadata belongs in "`core.array_assets` or an
 `analysis.array_assets` extension table." This revision defines the latter.
 
 Two tables mirror their core counterparts exactly, column for column:

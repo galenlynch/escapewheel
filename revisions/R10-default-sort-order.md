@@ -11,11 +11,11 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`03` recommends a physical ordering for three tables — `core.unit_spike_chunks`,
+Part 03 recommends a physical ordering for three tables — `core.unit_spike_chunks`,
 `core.spike_events`, and `core.events` — and says nothing about the rest. The first of those
 is withdrawn by R5, leaving two orderings declared out of 22 tables.
 
-The omission has no principled basis. `03` scoped its recommendation to "large spike tables",
+The omission has no principled basis. Part 03 scoped its recommendation to "large spike tables",
 but ordering costs a writer one sort and benefits any table that is filtered, compressed, or
 checksummed. Enumerating an ordering per table would add twenty entries of normative surface
 for what a single rule expresses.
@@ -33,7 +33,7 @@ ignores this rule produces a conforming packet, only a slower one.
 
 ## 3. The two specified orderings are overrides
 
-Neither ordering `03` specifies is primary-key order. Both are retained, and both override
+Neither ordering Part 03 specifies is primary-key order. Both are retained, and both override
 §2 for their table.
 
 | Table | Primary key | Specified ordering |
@@ -60,7 +60,7 @@ other things, all of which hold at any table size:
 - **Page-level pruning.** Parquet page indexes let an engine skip pages within a row group,
   so a filtered read benefits even where a table is too small to span row groups.
 - **Deterministic output.** The same input produces a byte-identical file, which is what
-  makes the checksums `03` recommends meaningful and what makes two packets diffable.
+  makes the checksums Part 03 recommends meaningful and what makes two packets diffable.
 
 The third is the reason to apply the rule to small tables. Pruning and compression gains on a
 few-hundred-row table are negligible; reproducible bytes are not, and cost the same nothing.
@@ -82,7 +82,7 @@ exception keeps a generator from having to implement the rule.
 `core.media_frames` requires no special handling: §2 gives it its key order,
 `(media_asset_id, frame_index)`.
 
-Whether this is also time order depends on a convention `02` leaves unstated: it defines
+Whether this is also time order depends on a convention Part 02 leaves unstated: it defines
 `frame_index` only as "Frame index", without saying whether frames are counted in decode or
 presentation order. Presentation order is the near-certain intent — it is the only reading
 under which a frame-timing table is monotonic in `t_tick`, and it is what frame counters in

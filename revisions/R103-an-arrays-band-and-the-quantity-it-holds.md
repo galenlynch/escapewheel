@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-09 |
-| **Amends** | `01` §3.17 (`semantic_type` becomes nullable and is filled only where the facts cannot say it), R8 §4 (renames `raw`, strikes `waveform`, narrows what the column is for), the declarations of `kind` and `semantic_type` on the asset tables |
+| **Amends** | Part 01 §3.17 (`semantic_type` becomes nullable and is filled only where the facts cannot say it), R8 §4 (renames `raw`, strikes `waveform`, narrows what the column is for), the declarations of `kind` and `semantic_type` on the asset tables |
 | **Depends on** | R102 §3.1 (an array names the run that produced it), R101 §3.1 (every string column declares `closed`, `open` or `free`), R101 §3.8 (records R8 §4's reserved set), R8 §4 (the four reserved kinds), R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R50 §2 (a column is renamed where its name says less than its declaration), R65 §1 (an array names the device that made it) |
 | **Profile** | all |
 
@@ -41,11 +41,11 @@ Neither adds anything either. Grouped by every fact but the name and `semantic_t
 come to **14 distinct tuples over 14** and **11 over 11**, so no two are told apart by a label.
 On 22 arrays `semantic_type` holds `ElectricalSeries`, a class name for voltage per channel over
 time — which `unit`, the channel map and the dimensions already give. On the three waveform arrays
-it holds `waveform_mean` and `waveform_sd`, **the same strings as their `array_asset_name`**. `02`
+it holds `waveform_mean` and `waveform_sd`, **the same strings as their `array_asset_name`**. Part 02
 §6 forbids exactly that: "A schema MUST NOT declare a column that duplicates what the data already
 declares."
 
-The columns came from `02`, where naming a class is how NWB says what a thing is. Every revision
+The columns came from Part 02, where naming a class is how NWB says what a thing is. Every revision
 since has moved the other way: R23 §1.1 replaced an acquired-versus-derived vocabulary with a run
 pointer, R55 §2.1 made a discriminator name a table, R59 §2.1 put `region_id` beside
 `region_label` because the id survives an atlas rename, R65 §1 answered which signal an array
@@ -88,7 +88,7 @@ table row.
 `semantic_type` shows the same pressure. The writer emits five values, of which one is an NWB
 neurodata type (`ElectricalSeries`, `lfp.py:278`), two are **column names** of NWB's `Units` table
 rather than types (`waveform_mean`, `waveform_sd`), and two are this implementation's own
-(`signal` at `nwb.py:821`, `behavior_video` at `video.py:169`). A required column that `01` §3.17
+(`signal` at `nwb.py:821`, `behavior_video` at `video.py:169`). A required column that Part 01 §3.17
 says "carries no contract" is one a writer must fill with something, and inventing a label is what
 filling it means.
 
@@ -146,7 +146,7 @@ not because the column is for ephys.
 meeting a null **MUST NOT** infer one from `semantic_type`, from the device or from the sample
 rate. Each of those is evidence and none of them is the statement.
 
-Requiring a value is what forced §2.3's. R65 §1 and `01` §3.17 make an array asset hold "**any**
+Requiring a value is what forced §2.3's. R65 §1 and Part 01 §3.17 make an array asset hold "**any**
 sampled quantity, whatever instrument produced it", so a photometry trace, a respiration trace and
 a spike-waveform template are all core-owned arrays with no band — and a column they must fill is
 a column they will fill wrongly.
@@ -167,11 +167,11 @@ vocabulary, applied to the table R23 did not reach.
 where the asset's declared facts already say what the asset holds. It is what the facts cannot
 express, and null is the ordinary case.
 
-`02` §6 settles the shape in one paragraph: a present nullable column is preferred to an absent
+Part 02 §6 settles the shape in one paragraph: a present nullable column is preferred to an absent
 one, and a schema MUST NOT declare a column that duplicates what the data already declares.
 Nullable satisfies both, where striking the column would honour the second by breaking the first.
 
-Requiring it is what made it a duplicate. A column that `01` §3.17 says "carries no contract" and
+Requiring it is what made it a duplicate. A column that Part 01 §3.17 says "carries no contract" and
 that every row must fill is a column a writer invents a value for. `signal` (`nwb.py:821`) is the
 plainest case, a category noun for what the table already is, and `ElectricalSeries` is the other
 kind of filling, a class name standing where the row already says voltage, per channel, over time.
@@ -217,7 +217,7 @@ not-null checks go from 154 to **149**; the reserved set on `band` goes from fou
 with `raw` renamed `wideband`. `build.py` gains `band` in `ROLES` and in `VOCABULARY` (§3.1). No
 column is added or struck, and no reference and no Tier 2 rule changes.
 
-`02` names neither column and `01` §3.17 names `semantic_type`, so §3.4's rule lands there and
+Part 02 names neither column and Part 01 §3.17 names `semantic_type`, so §3.4's rule lands there and
 nothing else in the parts moves. The not-null figure is measured against the registry as R102 left
 it. A proposed table of coordinate frames adds two required columns of its own, so whichever of
 the two lands second is measured again.

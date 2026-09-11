@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | `02` (`core.devices`, `core.probes`), R66 §4 (settles its first open question) |
+| **Amends** | Part 02 (`core.devices`, `core.probes`), R66 §4 (settles its first open question) |
 | **Depends on** | R46 (a reference may be self-referencing), R66 (a device declares its version) |
 | **Profile** | `escapewheel-portable-v0.1` |
 

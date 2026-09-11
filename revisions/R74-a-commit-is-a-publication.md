@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | `05` §? (the commit sequence), R32 §2 (how a new version becomes visible) |
+| **Amends** | Part 05 §? (the commit sequence), R32 §2 (how a new version becomes visible) |
 | **Depends on** | R14 §2.3 (packet-owned bytes are immutable), R32 (amending a committed packet) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -11,7 +11,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`05`'s commit sequence ends *"rename the candidate to `packet.json` **last**"*. The rename is
+Part 05's commit sequence ends *"rename the candidate to `packet.json` **last**"*. The rename is
 what makes a commit atomic: a reader sees the previous catalog or the new one, never a catalog
 naming resources still being moved.
 
@@ -19,17 +19,17 @@ The invariant is right. Naming the mechanism as the requirement is not.
 
 ### 1.1 The profile permits a store that has no rename
 
-`03` allows a packet to live under an object-store prefix, and `04` binds resources by URI rather
+Part 03 allows a packet to live under an object-store prefix, and Part 04 binds resources by URI rather
 than by path. An object store has no atomic directory rename: S3's "rename" is a copy followed by
 a delete, which is neither atomic nor cheap, and a packet whose catalog is renamed that way has a
 window in which no catalog exists at all.
 
 What such a store does have is an atomic single-object write. `packet.json` is a single
-object, so the invariant is reachable — by a different primitive than the one `05` mandates.
+object, so the invariant is reachable — by a different primitive than the one Part 05 mandates.
 
 ### 1.2 The requirement is stated one level too low
 
-A writer targeting S3 cannot comply with `05` as written and can satisfy everything `05` wanted.
+A writer targeting S3 cannot comply with Part 05 as written and can satisfy everything Part 05 wanted.
 That is the signature of a specification naming an implementation where it meant to name a
 guarantee.
 
@@ -51,7 +51,7 @@ guarantee.
 The publication primitive is profile-specific and this standard does not name one. A filesystem
 profile **MAY** publish by atomic rename within one directory; an object-store profile **MAY**
 publish by a single-object write. A writer **MUST NOT** be required to perform an atomic
-**directory** rename, which is the operation `05` assumed and which no object store offers.
+**directory** rename, which is the operation Part 05 assumed and which no object store offers.
 
 ### 2.3 Concurrent publication
 
@@ -65,7 +65,7 @@ substitute for the conditional write.
 
 ### 2.4 Staging is unchanged
 
-`05`'s staging discipline stands in full: validation is importation, staged resources MUST NOT
+Part 05's staging discipline stands in full: validation is importation, staged resources MUST NOT
 appear as committed canonical resources, and nothing is published until validation has passed.
 This revision changes the last step of the sequence and no other.
 

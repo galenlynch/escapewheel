@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | `05` §3 (a recipe declares a preference between two sources); `05` §3.4 (what an adapter declares); `07` §4 (what a build supplies an adapter) |
+| **Amends** | Part 05 §3 (a recipe declares a preference between two sources); Part 05 §3.4 (what an adapter declares); Part 07 §4 (what a build supplies an adapter) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole), R87 §2.2 (an adapter declares which recipe fields it states), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -104,7 +104,7 @@ built-in winner that no recipe could see.
 
 ## 5. Consequence
 
-`05` §3 gains a preference table, `05` §3.4 gains what an adapter declares, and `07` §4 gains what a
+Part 05 §3 gains a preference table, Part 05 §3.4 gains what an adapter declares, and Part 07 §4 gains what a
 build supplies one.
 
 The reference implementation loses four tables that name a kind — `_SHARED_SOURCES`, `SAMPLED`,

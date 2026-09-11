@@ -32,7 +32,7 @@ should be cheap.
 
 ## 2. Scope: an amendment, not a build
 
-A packet whose recipe fully describes it does not amend. `05` stages 8 and 9
+A packet whose recipe fully describes it does not amend. Part 05 stages 8 and 9
 place materialization inside the import pipeline, and a staged packet is
 openable, so a commit derives its analysis resources from the resources it has
 staged and validates the whole packet once. Such a packet is complete at its

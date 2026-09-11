@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-08 |
-| **Amends** | `02` §5.2 (the clause against filling a `json_string` routinely), `09` §2 (the tier table), the 21 registry declarations of `metadata` and their descriptions |
+| **Amends** | Part 02 §5.2 (the clause against filling a `json_string` routinely), Part 09 §2 (the tier table), the 21 registry declarations of `metadata` and their descriptions |
 | **Depends on** | R48 (a column declares its role), R46 (the references that make "its own" decidable), R53 (identity), R2 §5 (three-state presence), R91 §3.3 (what `core.events.payload` is for), R94 §3 (which asks this part for the presence rule) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -66,12 +66,12 @@ vocabulary — `ccf_id`, `port`, `spikeinterface_version` — and core names a c
 A list of retired keys would not close it either, and the same table shows why. `core.electrodes`
 holds four `ccf_*` keys splitting two against two: `ccf_id` and `ccf_acronym` are forbidden, while
 `ccf_name` and `ccf_structure_id_path` must stay, R59 §2 having declined both deliberately — the
-name is derivable from the id, and the ancestry path is a delimited list `03` forbids as a column.
+name is derivable from the id, and the ancestry path is a delimited list Part 03 forbids as a column.
 One JSON object, one prefix, opposite verdicts.
 
 ### 2.4 The cost of filling one
 
-`02` §5.2 says a writer SHOULD NOT fill a `json_string` column routinely, because "a column present
+Part 02 §5.2 says a writer SHOULD NOT fill a `json_string` column routinely, because "a column present
 on every row forces a parse on every row, in exactly the table where a consumer works."
 
 Parquet reads the columns a query projects and no others, so the cost falls only on a consumer who
@@ -140,11 +140,11 @@ strikes: someone declared one on `core.spike_events` because the middle band all
 
 ### 3.2 Routine filling
 
-`02` §5.2's sentence forbidding routine filling is **struck**. A writer **MAY** fill `metadata` on
+Part 02 §5.2's sentence forbidding routine filling is **struck**. A writer **MAY** fill `metadata` on
 every row of a table that declares it.
 
 §2.4 measures why: an unprojected column is not read, and an optional one need not be written at
-all. `02` §5.2's ban on `list`, `struct` and `map` stands, and so does R3 §2.1's guarantee that a
+all. Part 02 §5.2's ban on `list`, `struct` and `map` stands, and so does R3 §2.1's guarantee that a
 conforming reader satisfies every required column without a JSON parser. §3.3 is what keeps that
 guarantee true in practice rather than only in form.
 
@@ -166,7 +166,7 @@ it is unenforceable in principle rather than merely in practice, and §2.3 measu
 no signal to check against. A writer-side test can still report it, and the shape is settled: R95
 §3.3 compares two columns of one table for equal values in every row, excluding a pair that is
 constant, and bounds itself by row-group statistics. The same comparison over a `metadata` key and
-a column is what would have caught all three of §2.3, and it belongs in `07` §4 beside `STATES`
+a column is what would have caught all three of §2.3, and it belongs in Part 07 §4 beside `STATES`
 rather than in a normative part. The obligation binds the writer, as R67 §2.4's prohibition on inferring
 attachment from a device's name binds a consumer, and for the same reason: a named actor can comply
 where no validator can observe them. Uncheckable is not unsatisfiable, and the two are distinct
@@ -193,7 +193,7 @@ adding a column is not this part's subject.
 Every declaration's description is replaced by one text: what the source stated about this row that
 the standard does not model, carried in the source's own vocabulary and read by no rule.
 
-`09` §2's tiers place a fact in the catalog, in a core table, in an extension's tables, or in a
+Part 09 §2's tiers place a fact in the catalog, in a core table, in an extension's tables, or in a
 `docs/` sidecar, and never place a `json_string` column inside a core table. The table gains a row
 for it, holding tier 3 or tier 4 content that no rule reads.
 
@@ -245,7 +245,7 @@ Two extension tables owe a column and declare none: `aind_opto.stimulations`, ke
 regenerates an extension registry, which is why §3.1's check runs against all four rather than
 against core alone.
 
-`registry/check.py` gains the §3.1 check, `build.py` emits the column from the primary key, `09` §2
+`registry/check.py` gains the §3.1 check, `build.py` emits the column from the primary key, Part 09 §2
 gains a row, and twenty-one descriptions become one.
 
 ## 6. Open

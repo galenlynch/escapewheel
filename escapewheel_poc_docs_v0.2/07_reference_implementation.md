@@ -30,7 +30,7 @@ This is what Part 02 §5.2's ban on nested types exists to preserve — a native
 
 ### 2.3 A comment states what the code does not
 
-A comment or docstring SHOULD state what the code does not already say — why this way, what breaks otherwise, the constraint that is not visible locally — and SHOULD NOT restate what the line below it does. Where it gives a reason, `00` §10.1 decides what it cites: the part for the requirement, and the revision for the measurement behind it (R112 §3.2).
+A comment or docstring SHOULD state what the code does not already say — why this way, what breaks otherwise, the constraint that is not visible locally — and SHOULD NOT restate what the line below it does. Where it gives a reason, Part 00 §10.1 decides what it cites: the part for the requirement, and the revision for the measurement behind it (R112 §3.2).
 
 A comment naming a revision instead of a part sends a reader to the change record rather than to the statement of record, and a comment restating its own line is how a reader learns to stop reading them.
 

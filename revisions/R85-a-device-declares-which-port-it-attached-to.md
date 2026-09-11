@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-06 |
-| **Amends** | `02` (`core.devices`), R67 §2.1 (attachment is the reference, not the name) |
+| **Amends** | Part 02 (`core.devices`), R67 §2.1 (attachment is the reference, not the name) |
 | **Depends on** | R66 (a device declares what version it was), R67 (a device names what it was attached to) |
 | **Profile** | `escapewheel-portable-v0.1` |
 

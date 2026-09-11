@@ -86,7 +86,7 @@ third column is a hole every one of them leaves. A frame is not three-dimensiona
 table has three columns.
 
 It reaches the other way too. A Neuroglancer coordinate space is routinely five-dimensional, and
-nothing about an atlas registration or a rig makes three the limit; three is what `02` happened to
+nothing about an atlas registration or a rig makes three the limit; three is what Part 02 happened to
 declare, and `x`, `y` and `z` are what it happened to call them.
 
 R3 §3.0 settles the shape for a repeated value: it is a child table, never a list, a delimited

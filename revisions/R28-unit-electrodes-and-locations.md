@@ -176,7 +176,7 @@ an array whose channels are not electrodes leaves it null.
 - **No unit-to-unit relations.** Whether two units share electrodes is derivable from §2 by
   self-join, which is what a child table buys. A materialization belongs in `analysis`.
 - **No lineage across curations.** §2 and §3 are keyed by the full unit identity, so a unit's
-  electrodes under one curation say nothing about another's. `02` still has no table for a
+  electrodes under one curation say nothing about another's. Part 02 still has no table for a
   merge or a split, and this revision does not add one.
 - **Nothing about `extremum_channel_index`.** An importer resolves NWB's local index against
   the unit's region and writes `electrode_id`; the positional form does not survive into a

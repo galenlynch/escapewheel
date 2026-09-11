@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-08 |
-| **Amends** | `02` §5.2 (`core.processing_runs.parameters`), `core.sessions`, `core.clocks`; adds `core.clock_phase_steps` |
+| **Amends** | Part 02 §5.2 (`core.processing_runs.parameters`), `core.sessions`, `core.clocks`; adds `core.clock_phase_steps` |
 | **Depends on** | R37 (bounding alignment by error), R40 (a tolerance that gates on quality), R56 (a column declares its context), R88 (a session-scoped table names its session), R98 (a clock declares when it was observing) |
 | **Profile** | all |
 
@@ -15,12 +15,12 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 Three facts decide how a consumer reads a packet's clocks: how far the writer mapped beyond its
 anchors, which terminal anchors it withheld, and where a parent clock's phase stepped. All three
-are recorded today inside `core.processing_runs.parameters`, an optional `json_string` that `02`
+are recorded today inside `core.processing_runs.parameters`, an optional `json_string` that Part 02
 describes in one word: *Parameters.*
 
 They do not belong there. A consumer that does not parse that string maps at a different bound and
 disagrees with the writer about which rows have a time, so the facts are required to interpret the
-data — which `02` §8.6 puts in a column and never in a key. This part moves the three that are, and
+data — which Part 02 §8.6 puts in a column and never in a key. This part moves the three that are, and
 leaves in `parameters` the ones that are not.
 
 Measured on the two packaged sessions, **`ecephys_776259`** (twelve probes, 6,781 sorted units,
@@ -43,7 +43,7 @@ where no run declares one it maps at `BOUND = 1.0`. The name appears in no part 
 specification and in no revision — the writer chose it — and the reader's own docstring attributes
 it to R37 §4, which placed a different record.
 
-`02` §5.2 confines a `json_string` to an optional column so that a conforming reader satisfies
+Part 02 §5.2 confines a `json_string` to an optional column so that a conforming reader satisfies
 every required column without a JSON parser. That guarantee is about columns and this breaks it
 anyway: a reader that skips `parameters` does not merely learn less, it maps at one median anchor
 interval where the writer mapped at more and refuses to place ticks the writer placed. Because the
@@ -64,7 +64,7 @@ One entry of each, from `ecephys_776259`:
 
 Three things the format forbids elsewhere, in eight lines.
 
-**It is nested.** `02` §5.2 forbids `list`, `struct` and `map`, and a repeated value becomes a child
+**It is nested.** Part 02 §5.2 forbids `list`, `struct` and `map`, and a repeated value becomes a child
 table. `withheld_anchors` is a map to an object and `phase_discontinuities` a map to a *list* of
 objects. R3 §3.4 already converted `core.clocks.transform_to_parent` from `struct/map/json` to
 typed columns, which is this subject decided once.
@@ -173,7 +173,7 @@ required to be there as well. A writer **SHOULD** record the measurement R40 §2
 `tolerance_seconds` and the per-clock statistics — beside `recipe` and `compensations`, which no
 consumer reads either.
 
-The line is `02` §8.6's: a fact required to interpret the data is a column, and a fact recording
+The line is Part 02 §8.6's: a fact required to interpret the data is a column, and a fact recording
 why a writer decided as it did is not. A consumer needs the bound to place a tick and does not need
 the residual that justified it.
 
@@ -212,6 +212,6 @@ every run. Both shrink: `declared_bound` loses its JSON parse, its per-run scan 
   consumer reading `analysis.spike_events` needs it to know rows are missing, which is the test
   §3.4 applies — but it is a fact about a *materialization* rather than about a clock, and where it
   would go is `core.processing_runs` or the manifest.
-- **Whether `code_uri` should say it holds a digest.** `02` describes it as *"Code reference"* and
-  `05` §3.2 makes it the recipe's digest, which the writer writes as `sha256:<hex>`. A consumer
+- **Whether `code_uri` should say it holds a digest.** Part 02 describes it as *"Code reference"* and
+  Part 05 §3.2 makes it the recipe's digest, which the writer writes as `sha256:<hex>`. A consumer
   meeting a digest under a column named `_uri` has to know the convention to parse it.

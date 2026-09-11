@@ -101,7 +101,7 @@ revision changes only where the declaration lives and how coarsely a reader may 
 
 ## 6. Consequence
 
-`04`'s resource entry gains `codecs`, required for `dense_array_asset`. The manifest JSON
+Part 04's resource entry gains `codecs`, required for `dense_array_asset`. The manifest JSON
 Schema gains it with that conditional.
 
 `Packet.check_codecs()` in the reference reader is packet-level and implements exactly the

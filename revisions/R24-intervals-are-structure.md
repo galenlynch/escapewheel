@@ -98,7 +98,7 @@ keeps its meaning and `fixtures/corpus.py` keeps matching.
 timeline, so no overlap test applies to them.
 
 The template MUST be invoked explicitly. A generator MUST NOT infer it from column names —
-`06`'s `analysis.spikes_by_trial` carries `t_bin_start_tick`/`t_bin_stop_tick` and
+Part 06's `analysis.spikes_by_trial` carries `t_bin_start_tick`/`t_bin_stop_tick` and
 `core.clock_anchors` carries `t_tick`/`parent_tick`, and neither is an observation window.
 
 ## 4. The template reports the primary key, and that fixes two rules
@@ -147,7 +147,7 @@ rather than inherits.
 
 **This revision does not settle closure for `core.trials`.** `core.trials` declares no
 `partition_of` and gets no overlap test, so nothing forces the question. Whether a trial's
-`stop_tick` is inclusive belongs to `02` and deserves its own argument.
+`stop_tick` is inclusive belongs to Part 02 and deserves its own argument.
 
 ## 6. What changes
 

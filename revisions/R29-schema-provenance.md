@@ -11,15 +11,15 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-Twenty-eight revisions have amended a frozen `02`. The registry states the result and the
+Twenty-eight revisions have amended a frozen Part 02. The registry states the result and the
 revisions state the reasoning, and nothing connects a particular column to the particular
 decision that set it. Asking *why is `local_unit_label` a string* means grepping the
 revisions for the column name and hoping the answer is phrased the way the search was.
 
 That cost grows with every revision, and it is what makes people ask for a consolidated
-specification. Consolidation as usually meant — a new frozen `02` restating the current
+specification. Consolidation as usually meant — a new frozen Part 02 restating the current
 state — would answer *what* and destroy *why*, since `registry/build.py` derives structure by
-parsing `02` and applying each revision in turn. Re-baselining the parser against a
+parsing Part 02 and applying each revision in turn. Re-baselining the parser against a
 consolidated document discards the chain it exists to preserve.
 
 The provenance is not missing. It is in `build.py` as twenty-five block comments:
@@ -53,8 +53,8 @@ The value is free text naming a revision, optionally with a section — `R8`, `R
 and the revisions do not travel with it, so this is a citation for a reader, not a link a
 validator follows.
 
-A column with no `since` came from `02` unamended. That is a meaningful state and the reason
-the field is optional rather than required: a registry built only from `02` carries none, and
+A column with no `since` came from Part 02 unamended. That is a meaningful state and the reason
+the field is optional rather than required: a registry built only from Part 02 carries none, and
 saying so by omission is more honest than stamping every column with the base specification's
 name.
 
@@ -116,12 +116,12 @@ This revision does not specify the rendering. It specifies the field the renderi
 - `build.py`'s twenty-five revision blocks each pass their own identifier, so the comment and
   the data cannot disagree.
 - `check.py` SHOULD gain an invariant that every table and column introduced by a revision
-  carries a `since` — not that every column does, since `02`'s own carry none.
+  carries a `since` — not that every column does, since Part 02's own carry none.
 - No table, column, type, presence, key, reference or rule changes. 32 tables, 268 columns.
 
 ## 7. Open
 
-- **Whether `02`'s own columns should be stamped too**, with something like `02` rather than
+- **Whether Part 02's own columns should be stamped too**, with something like Part 02 rather than
   a revision. It would make the field uniformly present and lose the distinction between
   *unamended* and *unrecorded*.
 - **Whether `since` should be structured** — `{"revision": "R8", "section": "2"}` rather than

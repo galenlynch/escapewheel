@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-09 |
-| **Amends** | `dynamic_foraging.trials.animal_response` (int32 becomes a closed string vocabulary); adds a subsection to `02` §8 |
+| **Amends** | `dynamic_foraging.trials.animal_response` (int32 becomes a closed string vocabulary); adds a subsection to Part 02 §8 |
 | **Depends on** | R101 §3.1 (every string column declares its vocabulary), R8 §4 (an open vocabulary a validator MUST NOT reject a value from), R8 §2 (a source's own token is a string, never an offset), R66 §1.4 (a value a rule cannot read), R17 §5 (an extension versions independently) |
 | **Profile** | all |
 
@@ -85,7 +85,7 @@ decodes onto is declared under R101 §3.1 like any other.
 
 A writer that cannot decode one stores the code itself, verbatim, in a `string` column declaring
 `vocabulary: open`, whose description names where the key lives. An undecoded code is a label
-carrying no contract, and an open vocabulary is how this format declares one (`01` §3.17). An
+carrying no contract, and an open vocabulary is how this format declares one (Part 01 §3.17). An
 integer column declares nothing of the sort: R101 §3.1 permits a vocabulary on no other type, so a
 code stored as one sits among the registry's 20 integer `data` columns with nothing separating it
 from the counts `core.units.n_spikes` and `aind_unit_qc.synchrony.synchrony_size`.
@@ -136,7 +136,7 @@ costs nothing today and is what a rebuild from a partial source would need.
 `dynamic_foraging.trials.animal_response` goes from `int32` to `string`, so a packet embedding
 this extension runs **5** closed-vocabulary checks where it ran 4. The generated count stays at 4:
 Tier 1 is generated from the merged registry a packet carries, and that block counts core. The extension's `registry_version` bumps, which R17
-§5 makes independent of core's. `02` §8 gains a subsection for §3.1's rule.
+§5 makes independent of core's. Part 02 §8 gains a subsection for §3.1's rule.
 
 **The decode lands outside this repository.** No adapter here writes `dynamic_foraging.trials`:
 the table reaches a packet through a `TablesSource` reading a Parquet file, which each session's

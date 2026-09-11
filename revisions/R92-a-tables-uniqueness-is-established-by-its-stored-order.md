@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-08 |
-| **Amends** | `02` §10.1 (the uniqueness obligation, losing its physical condition), `02` §8 (a new §8.5 defining `determined_by`), `03` §5.3 (the ordering rule and the level a departure is reported at), `06` §4 (when `analysis.spike_events` is not materialised) |
+| **Amends** | Part 02 §10.1 (the uniqueness obligation, losing its physical condition), Part 02 §8 (a new §8.5 defining `determined_by`), Part 03 §5.3 (the ordering rule and the level a departure is reported at), Part 06 §4 (when `analysis.spike_events` is not materialised) |
 | **Depends on** | R10 §2 (sort by primary key), R30 §3.2 (`analysis.spike_events`' layout), R81 §2.4 (that layout narrowed to five columns), R75 §2.1 (an assigned identifier is reproducible), R91 §3.2 (`core.events`' key) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -13,19 +13,19 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Scope
 
-`02` §10.1 lets a validator skip the primary-key uniqueness query "where a table's physical sort
+Part 02 §10.1 lets a validator skip the primary-key uniqueness query "where a table's physical sort
 begins with its primary key", since duplicates are then adjacent and the ordering scan settles
 them. Two things are wrong with that. Stored order is a physical property and every clause of
 Part 02 must hold under any profile, so the logical standard is discharging its own MUST with
-something only a profile can promise; and `03` §5.3 promises nothing, making ordering a SHOULD
+something only a profile can promise; and Part 03 §5.3 promises nothing, making ordering a SHOULD
 reported at **warning**, on the ground that a mis-sorted packet is readable and slower rather than
 wrong. A correctness check is skipped on the strength of a recommendation.
 
-§2 puts the obligation and the means on opposite sides of that line. `02` §10.1 keeps the
-requirement that uniqueness be established and loses the condition; `03` §5.3 gains the ordering
+§2 puts the obligation and the means on opposite sides of that line. Part 02 §10.1 keeps the
+requirement that uniqueness be established and loses the condition; Part 03 §5.3 gains the ordering
 rule as a **MUST** reported at **error**, shaped so that it admits `analysis.spike_events`, whose
 layout is what justified materialising it; `determined_by`, the declaration that shaping leans on,
-is defined in `02` §8 and verified against rows by the scan rather than believed; and `06` §4 says
+is defined in Part 02 §8 and verified against rows by the scan rather than believed; and Part 06 §4 says
 what a writer does when the conversion that table performs collides two spikes onto one tick. No
 column, reference or Tier 2 rule changes, and no packet's rows move.
 
@@ -36,7 +36,7 @@ sorted units, and **`ecephys_786867`**, ten probes and 4,505.
 
 ### 2.1 Uniqueness is the logical standard's; establishing it is the profile's
 
-`02` §10.1 states two things about uniqueness and both change. Its list of what a validator **MUST**
+Part 02 §10.1 states two things about uniqueness and both change. Its list of what a validator **MUST**
 generate from the declaration alone keeps required-column non-null checks, foreign-key anti-joins
 and closed-vocabulary membership, and loses primary-key uniqueness; its sentence waiving the
 uniqueness query where the sort begins with the key is **struck**. In their place the logical
@@ -52,7 +52,7 @@ itself.
 A column **MAY** declare `determined_by`, naming the columns whose values fix its own: two rows
 agreeing on every column named agree on this one, and an empty list declares a constant. The
 declaration is structural, decidable from the registry with no packet in hand, and §2.3 is what
-verifies it against rows. It belongs in `02` §8 as a new §8.5, beside role, identity, discriminator
+verifies it against rows. It belongs in Part 02 §8 as a new §8.5, beside role, identity, discriminator
 and unit — a statement about values holds under any profile, where the rule below consuming it does
 not.
 
@@ -60,7 +60,7 @@ A table under `escapewheel-portable-v0.1` **MUST** be stored in an order that se
 key by adjacency: every key column appears in the sort, and every sort column up to and including
 the last key column is either a key column itself or one the registry declares `determined_by` a
 subset of the key. Where the registry declares no sort for a table, the order required is its
-primary key's. A validator **MUST** report a departure as an **error**, where `03` §5.3 made it a
+primary key's. A validator **MUST** report a departure as an **error**, where Part 03 §5.3 made it a
 SHOULD reported at warning.
 
 Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a
@@ -94,15 +94,15 @@ the detection it rests on stays the duplicate-key check itself.
 
 ### 2.4 A conversion that collides is not materialised
 
-`analysis.spike_events` is keyed on the converted tick (R30 §3.2, `06` §4), and a conversion
+`analysis.spike_events` is keyed on the converted tick (R30 §3.2, Part 06 §4), and a conversion
 preserves distinctness only where it expands. A writer that finds two spikes of one unit landing on
 one reference tick **MUST NOT** materialise the table, and **MUST** record the reason in the
 producing run's parameters, as R40 §2.3 requires of an omitted row.
 
-Refusing costs the packet nothing it can use. `06` §4 justifies the table on a ten-second
+Refusing costs the packet nothing it can use. Part 06 §4 justifies the table on a ten-second
 population window costing 0.025 s against 7.7 s, and a histogram built on collapsed spikes
 undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table
-the wrong instrument rather than a broken one — and `06` §2 already contemplates its not being
+the wrong instrument rather than a broken one — and Part 06 §2 already contemplates its not being
 built. Carrying the probe tick instead, and keying on that, is rejected on the cost §3.3 measures.
 
 ## 3. Why the rule takes this shape
@@ -112,7 +112,7 @@ built. Carrying the probe tick instead, and keying on that, is rejected on the c
 `analysis.spike_events` is keyed `(session_id, unit_id, t_tick)` and stored in `(session_id,
 clock_id, time_bucket_tick, unit_id, t_tick)` — R30 §3.2's layout under a MUST, in seven columns,
 narrowed to these five by R81 §2.4 and still keeping the time bucket ahead of the unit. Its sort
-therefore does not begin with its key, and `02` §10.1's prefix test never covered it.
+therefore does not begin with its key, and Part 02 §10.1's prefix test never covered it.
 
 Measured against the current registry, that test reaches **24 of 38** tables where
 `escapewheel_validator.generate.adjacency_settles_uniqueness` waives **25**. The extra one is
@@ -229,7 +229,7 @@ R91 §5 already requires is what clears it.
   rewriting; Part 02 names a physical property in other places, and stating the general
   prohibition — that no clause of Part 02 may name one or depend on a clause of Part 03 — is a
   question about which part holds which rule, not about uniqueness.
-- **`03` §5.2's partitioning rules are untouched.** A partitioned table's order across files is
+- **Part 03 §5.2's partitioning rules are untouched.** A partitioned table's order across files is
   still undefined by the profile, and §2.2 is a statement about a table's contents rather than
   about file boundaries.
 - **An assigned identifier's numbering is already constrained.** §2.2 leans on a rebuild
@@ -248,7 +248,7 @@ No column, reference or Tier 2 rule changes, so `registry/build.py` gains no blo
 recorded in its `UNSTAMPED` tuple. It loses `core.events` from the `OVERRIDE` table its R10 block
 reads, dead since the R91 block rewrites the same field afterwards.
 
-`06` §4 gains §2.4's clause beside its "Rows are not preserved" paragraph, and `02` §8 gains §8.5.
+Part 06 §4 gains §2.4's clause beside its "Rows are not preserved" paragraph, and Part 02 §8 gains §8.5.
 The writer compares the two ticks at conversion, which is one comparison in a loop it already runs.
 `escapewheel_validator.generate.adjacency_settles_uniqueness` gains one line, reading a table's
 primary key where it declares no sort; today it returns `False` for those thirteen and the
@@ -271,5 +271,5 @@ packets, and the rebuild R87 §2.1, R88 §2 and R91 §5 already require is what 
   file, a later batch would be ordered within itself but forbidden from re-entering an earlier
   batch's key range, which makes appending useful only where data arrives in key order; read per
   table, the whole table must be re-established, which makes appending no cheaper than a rewrite.
-  What would decide it is the Iceberg profile `00` §7.3 holds open, where a snapshot versions a
+  What would decide it is the Iceberg profile Part 00 §7.3 holds open, where a snapshot versions a
   table's rows and appending is the ordinary operation.

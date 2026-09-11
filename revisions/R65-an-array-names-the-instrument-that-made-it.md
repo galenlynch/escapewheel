@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | `01` §3.17 (what an array asset holds), `02` (`core.array_assets`), R19 §2 (what the array tables carry) |
+| **Amends** | Part 01 §3.17 (what an array asset holds), Part 02 (`core.array_assets`), R19 §2 (what the array tables carry) |
 | **Depends on** | R46 (references are declared), R53 (identifiers are assigned or carried) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -33,7 +33,7 @@ The first two are reachable only because something *else* in core happens to lin
 the units it is indexed by. Neither route is a statement about the asset, and neither exists for
 an array that is not channel-mapped and not per-unit.
 
-`core.probes` has declared `device_id` since `02`. An array asset is the only acquired thing in
+`core.probes` has declared `device_id` since Part 02. An array asset is the only acquired thing in
 core that does not name its instrument.
 
 ### 1.2 The gap is a reference, not a mechanism
@@ -52,7 +52,7 @@ join between them is missing.
 The absence has a second cost, and it is the larger one. With no way to say what made an array,
 the only thing distinguishing one acquired signal from another is `semantic_type` — so a rig
 fitting a new instrument appears to need a new value in the standard, or an extension, or a
-concept in `01`. None of that is true, and none of it should be.
+concept in Part 01. None of that is true, and none of it should be.
 
 `core.array_assets` is generic **by design**. An acquired signal belongs in it whatever produced
 the signal, and *which* signal it is should be answered by the **device**, which is data, rather
@@ -81,11 +81,11 @@ the packet cannot attribute.
 
 ### 2.2 The standard does not enumerate instruments
 
-`01` §3.17 is amended to state positively what it previously permitted by silence: an array asset
+Part 01 §3.17 is amended to state positively what it previously permitted by silence: an array asset
 holds any sampled quantity, whatever instrument produced it, and this standard **MUST NOT**
 enumerate instruments. A quantity whose meaning lives in the device is identified by its
 `device_id`; a quantity the standard defines as a concept is identified by its `semantic_type`,
-and `01` §3.16 is the only such concept today.
+and Part 01 §3.16 is the only such concept today.
 
 `semantic_type` stays open (R8 §4). A value the standard does not define is a label carrying no
 contract, which is the honest state of affairs rather than a gap to be filled.
@@ -102,17 +102,17 @@ URI. Those are labels; this is a reference.
 ### 2.4 What stays where it is
 
 Device-specific detail — calibration, what an arbitrary unit corresponds to, mounting, firmware —
-belongs on `core.devices.metadata` or in an extension, by `09`'s tiering unchanged. This revision
+belongs on `core.devices.metadata` or in an extension, by Part 09's tiering unchanged. This revision
 adds a join and no vocabulary.
 
 A quantity that becomes queryable earns a typed column then, argued from what a producer emits, as
-`09` §7 already requires of any promotion.
+Part 09 §7 already requires of any promotion.
 
 ## 3. What this does not change
 
 - **No new table**, and no table is withdrawn. `core.array_assets` was already the table that
   describes signals.
-- **No change to `semantic_type`.** It stays open, and `ElectricalSeries` keeps the contract `01`
+- **No change to `semantic_type`.** It stays open, and `ElectricalSeries` keeps the contract Part 01
   gives it.
 - **No packet becomes invalid.** The column is nullable, so every existing packet stays conforming
   and gains the reference on its next rebuild.

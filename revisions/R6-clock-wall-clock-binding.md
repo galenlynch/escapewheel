@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-08-26 |
-| **Amends** | `02`, `05` |
+| **Amends** | Parts 02 and 05 |
 | **Profile** | `escapewheel-portable-v0.1` |
 
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
@@ -14,7 +14,7 @@ The specification carries two disjoint time systems (R3 §2.1): integer `*_tick`
 declared clock for experimental time, and wall-clock `timestamp` columns for administrative
 and provenance time. Nothing machine-readable connects them.
 
-`core.clocks.origin` is a free-text `string` — `02:237`, "Origin description" — and `08`'s
+`core.clocks.origin` is a free-text `string` — `02:237`, "Origin description" — and Part 08's
 example value is `sample 0 at acquisition start`. Searching the specification for UTC,
 wall-clock, absolute time, or epoch returns nothing relevant; the only "epoch" matches are
 `epoch_name` and `epoch_start_rel_tick` in the analysis layer, which are task epochs.

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-09 |
-| **Amends** | `05` §3.3 and `05` §3.4 (what a preference permits and what it exempts); adds one refusal to a build |
+| **Amends** | Part 05 §3.3 and Part 05 §3.4 (what a preference permits and what it exempts); adds one refusal to a build |
 | **Depends on** | R98 §3.2 (a resource several sources supply is `contributes`), R98 §3.3 (a discarded row is reported unless a preference explains it), R87 §2.5 (an override declares the recipe authoritative, and why), R63 §2.2 (silence means the whole of `PRODUCES`), R63 §2.3 (a resource no source claims is reported as a warning before any I/O) |
 | **Profile** | all |
 
@@ -14,7 +14,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 ## 1. Scope
 
 A **preference** names, per resource, the source kind that wins where more than one produces rows
-for it. `05` §3.4 spends exactly one thing on it: a build reports rows a source produced for a
+for it. Part 05 §3.4 spends exactly one thing on it: a build reports rows a source produced for a
 resource another source owns, "except where the recipe declares a preference between them", because
 a preference says the two offer the same rows and names the one that knows more. The loser's copy
 is redundant by design, so the silence is bought.
@@ -104,10 +104,10 @@ one names is metadata-scale — twelve probes, ten, one subject — and the one 
 `core.clock_anchors` at 754,222 rows (R47 §2.4), carries no preference and is never compared.
 
 The comparison is over **declared columns** and not over `metadata`. A bag is schemaless by design
-(`02` §8.6), so two sources filling it differently is not a difference a build can weigh, and R97
+(Part 02 §8.6), so two sources filling it differently is not a difference a build can weigh, and R97
 §3.3 already binds what may go in one.
 
-This is what makes `05` §3.4's exemption sound. That clause spends a preference to buy silence
+This is what makes Part 05 §3.4's exemption sound. That clause spends a preference to buy silence
 about a discarded row, on the premise that the loser's copy is redundant; the premise is now
 checked against what the sources actually stated rather than against what the recipe expected them
 to state.
@@ -145,7 +145,7 @@ A preference **MUST NOT** name a resource only one source produces. Such an entr
 nothing and exempts a report that will never be due, so it is a claim no build tests, and it goes
 stale exactly as `core.unit_electrodes` did when the sorter stopped producing that table.
 
-This is the discipline `02` §4 states for a declared naming exception, which must carry a reason
+This is the discipline Part 02 §4 states for a declared naming exception, which must carry a reason
 and which `registry/check.py` verifies still breaks a convention, applied to the other table a
 recipe layer keeps.
 
@@ -164,8 +164,8 @@ recipe layer keeps.
 `recipe.PREFERRED` loses its `core.unit_electrodes` entry under §3.4, going from five entries to
 four, of which three are shadowed by `SHARED` for ownership and one arbitrates. One test enumerates
 the table against every adapter's `PRODUCES`, so a second producer disappearing fails a suite rather
-than leaving an entry nothing tests. `05` §3.3 gains
-§3.4's bound on where a preference may be declared and `05` §3.4 gains §3.1's refusal beside the
+than leaving an entry nothing tests. Part 05 §3.3 gains
+§3.4's bound on where a preference may be declared and Part 05 §3.4 gains §3.1's refusal beside the
 exemption it makes sound.
 
 The comparison runs where a source's rows are staged, and costs one pass over the passed-over

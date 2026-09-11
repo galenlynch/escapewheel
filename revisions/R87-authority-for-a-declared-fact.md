@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-07 |
-| **Amends** | `05` §3.1 (what a recipe declares, and which resources it supplies), `05` §3.5 (checking a recipe), `07` §4 (the object model) |
+| **Amends** | Part 05 §3.1 (what a recipe declares, and which resources it supplies), Part 05 §3.5 (checking a recipe), Part 07 §4 (the object model) |
 | **Depends on** | R63 (default ownership when a recipe omits `owns`), R86 (a reader presents many packets as one relation) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -12,7 +12,7 @@ Informative, except §2, which is normative.
 MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base specification.
 
 A **recipe** is the TOML document naming a packet's sources and the facts none of them supplies.
-`05` §3.1 lists the last of those as *"session and subject facts no source carries"*, and `05` §3.2
+Part 05 §3.1 lists the last of those as *"session and subject facts no source carries"*, and Part 05 §3.2
 records the recipe verbatim as the packet's provenance. Where a source carries such a fact after
 all, nothing says which of the two declarations wins.
 
@@ -32,7 +32,7 @@ ever looking at the field.
 
 ### 1.2 One question, three answers
 
-`05` §3.5's check sees a resource owned twice, a resource no adapter produces, a dangling required
+Part 05 §3.5's check sees a resource owned twice, a resource no adapter produces, a dangling required
 key, a broken clock declaration, an unset required option, and the unclaimed resource R63 §2.3
 added. Every one of those is a statement the recipe makes about **itself**, so a declaration
 contradicting a source passes: it contradicts nothing internally. R63 §1.1 made the same argument
@@ -101,7 +101,7 @@ Normalizing to the stored type is what keeps `subject.date_of_birth` from refusi
 declares `2024-09-24`, the NWB states `2024-09-24T00:00:00-07:53`, and R4 §3.3 makes the column a
 calendar date, so both reduce to the same date.
 
-This extends `05` §3.5's refusal to a contradiction the recipe cannot show on its own. R63 §1.2
+This extends Part 05 §3.5's refusal to a contradiction the recipe cannot show on its own. R63 §1.2
 measured what the alternative costs: a defect surfacing ninety seconds into a build as another
 table's rule failure. A recipe that contradicts its sources is the same defect, and it never
 surfaces at all.
@@ -157,7 +157,7 @@ since only the build can tell whether the two agree; a field an override covers 
 **information**, so the log lists every place the recipe corrects a source.
 
 A field the recipe declares that no listed source states is reported as nothing at all. That is
-`05` §3.1's intended case, and it is what the recipe is for.
+Part 05 §3.1's intended case, and it is what the recipe is for.
 
 ### 2.4 A source that states nothing is not a contradiction
 
@@ -207,7 +207,7 @@ this build reads.
 
 ### 2.6 The comparison runs where the source is opened
 
-`05` §3.5's check runs before any I/O and cannot do this one, which needs the source read. The
+Part 05 §3.5's check runs before any I/O and cannot do this one, which needs the source read. The
 comparison therefore happens as each source is built, and **MUST** refuse before any resource is
 staged — early enough that a contradicted recipe costs nothing but the source's own open.
 
@@ -256,9 +256,9 @@ no new machinery.
 
 - **No table, column or rule.** The comparison is a writer check rather than a Tier 1 or Tier 2
   rule: the packet it would have refused never exists, so there is nothing for SQL to see.
-- **`05` §3.1's list is unchanged.** A recipe still declares what no source carries; this says what
+- **Part 05 §3.1's list is unchanged.** A recipe still declares what no source carries; this says what
   happens when it declares something a source carries after all.
-- **No new key in the run's parameters.** An override travels inside the recipe, which `05` §3.2
+- **No new key in the run's parameters.** An override travels inside the recipe, which Part 05 §3.2
   already records there. It is not one of R92's keys, because no consumer needs it to read the
   value — the packet's value *is* the value, and the override says only where it came from.
 - **No recipe stops building.** §2.8 removes a resource from the recipe-supplied set and adds it
@@ -287,7 +287,7 @@ empty reason, and an override the source does not contradict.
 §2.8 is a one-line deletion from the recipe-supplied set, and the warning that follows is R63
 §2.3's, already written and until now suppressed for that set.
 
-`05` §3 gains §2.1 to §2.8's rules and names no attribute. `07` §4's object-model table gains one
+Part 05 §3 gains §2.1 to §2.8's rules and names no attribute. Part 07 §4's object-model table gains one
 row for `STATES`, which is where a reader of this codebase looks and where nothing binds.
 
 `ecephys_776259` must be rebuilt: its recipe is corrected and its packet still names the wrong
@@ -330,10 +330,10 @@ subject. Nothing else in that packet changes, since `subject_id` reaches no othe
   `subject.date_of_birth` is `core.subjects.date_of_birth` and the registry answers. Not every
   recipe field maps to a column — `packet.out` and `session.reference_clock_id` do not — so a field
   a source states and no column receives has no declared type to normalize to, and none exists yet.
-- **Whether `05` §3.4's `PRODUCES` clause should be split the way §2.2 is.** It requires every
+- **Whether Part 05 §3.4's `PRODUCES` clause should be split the way §2.2 is.** It requires every
   source adapter to declare `PRODUCES` *as a class attribute*, so a normative part demands a
-  particular class in a particular language where Part 07 exists to hold exactly that. The rule stays in `05` and the
-  spelling moves to `07` §4, which is the same split §2.2 makes; it belongs to whichever revision
+  particular class in a particular language where Part 07 exists to hold exactly that. The rule stays in Part 05 and the
+  spelling moves to Part 07 §4, which is the same split §2.2 makes; it belongs to whichever revision
   next opens that clause.
 - **Whether the wrong subject should have been caught downstream.** `core.subjects.subject_name`
   reads `786867` in a packet whose session is named `ecephys_776259_2025-04-09`, and no rule

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | `02` §5 (the type system), `05` §? (what an importer must refuse) |
+| **Amends** | Part 02 §5 (the type system), Part 05 §? (what an importer must refuse) |
 | **Depends on** | R53 (an identifier is an integer), R45 (a tick is a coordinate) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -11,7 +11,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-R53 makes every identifier an `int32`, R45 makes every tick a signed `int64`, and `02` §5 pins the
+R53 makes every identifier an `int32`, R45 makes every tick a signed `int64`, and Part 02 §5 pins the
 width of both. Nothing says what happens when a source value does not fit.
 
 ### 1.1 Silence is the default in every language this format targets

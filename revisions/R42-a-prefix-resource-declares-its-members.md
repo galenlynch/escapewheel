@@ -100,7 +100,7 @@ Adding a thirteenth sorting to a session revalidates one member, not 287 M rows.
   its path. R3 §2.1's native reader concatenates members without a path parser, and the physical
   schema keeps matching the registry, which `_check_schemas` compares against.
 - **No opinion on what to partition by.** `sorting_run_id` motivates this; `session_id` is what
-  `03` already suggests for large tables. The mechanism is indifferent.
+  Part 03 already suggests for large tables. The mechanism is indifferent.
 - **No cross-packet index.** A dataset-level catalogue is a separate question, and Phase 7.
 
 ## 4. Measured

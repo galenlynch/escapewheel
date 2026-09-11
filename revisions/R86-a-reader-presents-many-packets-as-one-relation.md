@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-06 |
-| **Amends** | `07` (the reference reader's surface), R1 §2 (multi-session packets) |
+| **Amends** | Part 07 (the reference reader's surface), R1 §2 (multi-session packets) |
 | **Depends on** | R46 (a reference is declared), R53 §2.5 (an assigned identifier is not stable across packets), R81 (unit IDs are assigned by the packet) |
 | **Profile** | `escapewheel-portable-v0.1` |
 

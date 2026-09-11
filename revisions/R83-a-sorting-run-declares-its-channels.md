@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-05 |
-| **Amends** | `02` (adds `core.sorting_run_channels`), R28 §2 (what `core.unit_electrodes` may name), R3 §6 (a structural index's coordinate system) |
+| **Amends** | Part 02 (adds `core.sorting_run_channels`), R28 §2 (what `core.unit_electrodes` may name), R3 §6 (a structural index's coordinate system) |
 | **Depends on** | R28 (a unit sits on many electrodes), R38 (a sorting run names its clock), R46 (a reference is declared), R48 (a column declares its role), R53 (an identifier is an integer) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -81,7 +81,7 @@ older one did not. A writer reading whichever file a given export happens to hav
 
 ### 2.1 A new table names a run's channels in order
 
-`core.sorting_run_channels` is added to `02`, one row per channel of one sorting run:
+`core.sorting_run_channels` is added to Part 02, one row per channel of one sorting run:
 
 | column | type | presence | role | description |
 |---|---|---|---|---|

@@ -11,7 +11,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`02` defines `core.units.firing_rate_hz` as "Firing rate if known" and never says over what
+Part 02 defines `core.units.firing_rate_hz` as "Firing rate if known" and never says over what
 window. The column is therefore uninterpretable: a unit with 100 spikes observed for ten
 minutes of a sixty-minute session has a rate of 10/min or 1.7/min depending on an answer no
 packet carries.
@@ -112,12 +112,12 @@ value.
 
 ## 5. Consequence for the analysis layer
 
-`06`'s `analysis.unit_condition_rates` carries `duration_ticks` per epoch without saying
+Part 06's `analysis.unit_condition_rates` carries `duration_ticks` per epoch without saying
 whether the unit was observed for it. With observation intervals present, a materialization
 MUST intersect the epoch with the unit's observed windows rather than assume the whole epoch,
 or a unit absent for half a condition will appear to have fired at half its true rate.
 
-`06`'s `analysis.spikes_by_trial` is unaffected: it aligns spikes that exist and makes no
+Part 06's `analysis.spikes_by_trial` is unaffected: it aligns spikes that exist and makes no
 rate claim.
 
 ## 6. Table count

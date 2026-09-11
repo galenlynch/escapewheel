@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-10 |
-| **Amends** | `03` §5.5 (two writer SHOULDs beside the tick one, and what a writer reports); `05` §3 (a recipe declares an encoding); adds four subsections to `10` §2 |
+| **Amends** | Part 03 §5.5 (two writer SHOULDs beside the tick one, and what a writer reports); Part 05 §3 (a recipe declares an encoding); adds four subsections to Part 10 §2 |
 | **Depends on** | R68 §2.3 (`DELTA_BINARY_PACKED` is defined for `INT32` and `INT64` alone), R68 §1.3 (what the tick rule was worth on `pts`), R10 §2 (a table is sorted by its primary key), R53 §2.1 (an identifier is an integer), R93 §3.4 (a measurement supports a rule that lives elsewhere), R93 §3.5 (what survives replacing the reference implementation), R53 §2.5 (a writer mints every assigned identifier), R109 §3.1 (a writer requires no code of an extension), R109 §3.6 (what an extension may state across the boundary) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -13,17 +13,17 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Scope
 
-`03` §5.5 tells a writer one thing about how to encode a column: a tick column takes
+Part 03 §5.5 tells a writer one thing about how to encode a column: a tick column takes
 `DELTA_BINARY_PACKED` and not a dictionary, because a dictionary built over millions of distinct
 ticks is abandoned at its size threshold and leaves pages larger than either encoding alone. That rule is
-original to `03` and predates every revision; R68 §1.3 is what measured it, on
+original to Part 03 and predates every revision; R68 §1.3 is what measured it, on
 `core.media_frames.pts`, which was **96.9%** of its table before the rule reached it.
 
 Two more rules hold on the same evidence and are stated nowhere, so the columns they govern were
 encoded by pyarrow's default. Rebuilding both packaged sessions against a registry twenty-one
 revisions newer made that visible: **28 leading identifier columns carried a dictionary**, fifteen
 distinct columns across the two packets, where delta is 37x to 79x smaller. This part states both rules, records why each must carry exceptions,
-and puts the readings in `10` beside R68's.
+and puts the readings in Part 10 beside R68's.
 
 Measured on **`ecephys_776259`** (twelve probes, 6,781 sorted units, recorded 2025-04-09) and
 **`ecephys_786867`** (ten probes, 4,505 units, recorded 2025-09-25). The population is the **80
@@ -32,7 +32,7 @@ numeric columns that reach 2 kB under pyarrow's default** across the two packets
 threshold on compressed size otherwise removes the columns a rule fixed: `core.units.unit_id` is
 26.3 kB dictionary-encoded and **0.5 kB** delta-encoded, so measuring the rules against their own
 result drops it from the very set that justifies them. Every figure is the encoding and its
-compression together, since `03` §5.1 puts Zstandard over whatever the encoding produced.
+compression together, since Part 03 §5.1 puts Zstandard over whatever the encoding produced.
 
 ## 2. Background
 
@@ -90,7 +90,7 @@ against 57.7 ms where `core.media_frames` is among them (pyarrow 25.0.1, Python 
 2026-09-10). Delta unpacking is arithmetic on registers where a dictionary is a gather, and at
 these sizes both disappear beside the Zstandard pass that shrinks with the bytes.
 
-Round trips are the one cost this leaves alone. `10` §4.1 puts an endpoint at about **120 requests
+Round trips are the one cost this leaves alone. Part 10 §4.1 puts an endpoint at about **120 requests
 a second** whatever the concurrency, and a column chunk is one ranged read at either size, so what
 an encoding changes is what each request carries. Across the twenty sessions R86 §1.1 measures
 that plateau against, a packet's small tables are **52 MB by default and 27 MB as written**.
@@ -172,7 +172,7 @@ what §3.5's report exists to prompt.
 ### 3.5 A writer reports when rules guess wrong about columns
 
 A writer **SHOULD** report, at `info`, a column whose encoding costs more than **1.5x** the smallest
-available to it, measured over a sample of the rows it wrote. `03` §5.5's tick rule and the two above are
+available to it, measured over a sample of the rows it wrote. Part 03 §5.5's tick rule and the two above are
 good guesses, and a report is how the author of a table learns that theirs is one the guess misses.
 
 Measured on the two packaged sessions before §3.4's declarations were written, three columns drew
@@ -181,22 +181,22 @@ and `sliding_rp_violation` at 1.8x. Rebuilt with those three declared, none does
 That is the mechanism working as intended rather than a defect — those are the columns core stopped
 naming under §3.4, and the report is what tells a recipe author which entries to write.
 
-A report and not a refusal, because `03` §5.5 permits every encoding and a packet is conforming
+A report and not a refusal, because Part 03 §5.5 permits every encoding and a packet is conforming
 whichever it uses. The level is R97 §3.1's, which reports a declared `metadata` column no row fills
 for the same reason: a judgement someone should revisit is not a defect.
 
-### 3.6 `10` carries the readings
+### 3.6 Part 10 carries the readings
 
 R93 §3.4 puts a measurement where it supports a rule that lives elsewhere, so §2.1's table, §2.2's
-count, §2.3's denominator and §2.4's regressions go to `10` §2 beside R68's `pts` measurement.
+count, §2.3's denominator and §2.4's regressions go to Part 10 §2 beside R68's `pts` measurement.
 §2.5's 0.4 s is
-`07` §7's instead: it is a property of one implementation's libraries, which R93 §3.5 separates from
-what survives replacing them. §3.5's tolerance goes to `03` §5.5 with the rule it qualifies, being a
+Part 07 §7's instead: it is a property of one implementation's libraries, which R93 §3.5 separates from
+what survives replacing them. §3.5's tolerance goes to Part 03 §5.5 with the rule it qualifies, being a
 number a writer acts on rather than a reading.
 
 ## 4. What this does not change
 
-- **No packet already written becomes invalid.** `03` §5.5 makes dictionary, RLE and delta
+- **No packet already written becomes invalid.** Part 03 §5.5 makes dictionary, RLE and delta
   encodings all permitted and all required of readers, so a packet's encoding was never part of
   what makes it conforming; what changes is which encoding a writer reaches for first.
 - **No column's type changes.** R68 changed one — `pts` from `float64` to `int64` — because
@@ -205,9 +205,9 @@ number a writer acts on rather than a reading.
 
 ## 5. Consequence
 
-`03` §5.5 gains two SHOULDs beside the tick one, and `10` §2 gains four subsections: an ascending
+Part 03 §5.5 gains two SHOULDs beside the tick one, and Part 10 §2 gains four subsections: an ascending
 identifier's cost, a float's dictionary, what the rules take off the tables a consumer reads whole,
-and what a rule read off the declaration does to `pts`. `07` §7 gains one line for the cost of
+and what a rule read off the declaration does to `pts`. Part 07 §7 gains one line for the cost of
 measuring instead.
 
 **No table, column, reference, rule or vocabulary changes**, and both packets carry the new

@@ -11,12 +11,12 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`09` §4 restates required and recommended field lists for several core tables that `02`
+Part 09 §4 restates required and recommended field lists for several core tables that Part 02
 defines independently. Where the two disagree, the column set is undefined, and a machine-
 readable schema registry (R2) cannot be written against an undefined column set.
 
 This revision reconciles those disagreements and resolves the remaining type ambiguities in
-`02`. It adds no fields and changes no semantics.
+Part 02. It adds no fields and changes no semantics.
 
 ## 2. Scope of the disagreement
 
@@ -32,69 +32,69 @@ fields named in 09 but absent from 02                       5
 requirement-level mismatches (09 MUST vs 02 optional)        0
 ```
 
-The drift surface is small because `09` duplicates only five tables' field lists, and no
-claim conflicts on requirement level — every disagreement is a field `09` names that `02`
+The drift surface is small because Part 09 duplicates only five tables' field lists, and no
+claim conflicts on requirement level — every disagreement is a field Part 09 names that Part 02
 does not define.
 
-`09` §4.4 (devices, probes, electrodes, channels) is descriptive prose spanning several
+Part 09 §4.4 (devices, probes, electrodes, channels) is descriptive prose spanning several
 tables rather than a field-list restatement. It names concepts — "channel label or channel
 ID", "electrode coordinates", "coordinate frame" — not columns. It is NOT normative as to
 column names, and MUST NOT be read as defining any.
 
 ## 3. Resolutions
 
-`02` is authoritative in each case and `09` is corrected. `02` is the schema definition;
-`09` is a policy document that restates schemas for illustration.
+Part 02 is authoritative in each case and Part 09 is corrected. Part 02 is the schema definition;
+Part 09 is a policy document that restates schemas for illustration.
 
 ### 3.1 `core.clocks` — `exact_tick_rate`
 
-`09` §4.3 requires "`tick_rate_hz` or `exact_tick_rate`". No field named `exact_tick_rate`
-exists. `02` expresses the exact form as two columns, `tick_rate_num` and `tick_rate_den`.
+Part 09 §4.3 requires "`tick_rate_hz` or `exact_tick_rate`". No field named `exact_tick_rate`
+exists. Part 02 expresses the exact form as two columns, `tick_rate_num` and `tick_rate_den`.
 
-**Resolution:** strike `exact_tick_rate` from `09` §4.3; the requirement reads
-"`tick_rate_hz`, or both `tick_rate_num` and `tick_rate_den`", matching `02`'s existing
+**Resolution:** strike `exact_tick_rate` from Part 09 §4.3; the requirement reads
+"`tick_rate_hz`, or both `tick_rate_num` and `tick_rate_den`", matching Part 02's existing
 validation rule.
 
 ### 3.2 `core.clocks` — `sync_quality`, `sync_method`
 
-`09` §4.3 lists both as SHOULD-include. Neither is defined in `02`.
+Part 09 §4.3 lists both as SHOULD-include. Neither is defined in Part 02.
 
-**Resolution:** strike both from `09` §4.3. Synchronization *quality* is quality-control
+**Resolution:** strike both from Part 09 §4.3. Synchronization *quality* is quality-control
 metadata, not information required to interpret a tick, so it belongs in `core.clocks.metadata`
-under `09`'s own tier-3 rule. This is narrower than R3 §3.4, which promotes the alignment
+under Part 09's own tier-3 rule. This is narrower than R3 §3.4, which promotes the alignment
 *transform* to typed columns because interpretation depends on it.
 
 ### 3.3 `core.processing_runs` — `created_at`
 
-`09` §4.6 lists `created_at` as SHOULD-include. `02` defines `started_at` and `ended_at`.
+Part 09 §4.6 lists `created_at` as SHOULD-include. Part 02 defines `started_at` and `ended_at`.
 
-**Resolution:** strike `created_at` from `09` §4.6, replacing it with `started_at`. A
+**Resolution:** strike `created_at` from Part 09 §4.6, replacing it with `started_at`. A
 processing run has a start and an end; a separate creation time duplicates the start.
 
 ### 3.4 `core.subjects` — `age_at_session`
 
-`09` §4.1 lists "`date_of_birth` or `age_at_session`". No `age_at_session` field exists in
-`02`.
+Part 09 §4.1 lists "`date_of_birth` or `age_at_session`". No `age_at_session` field exists in
+Part 02.
 
-**Resolution:** strike `age_at_session` from `09` §4.1.
+**Resolution:** strike `age_at_session` from Part 09 §4.1.
 
-The case for the field is recorded here rather than lost. `01` permits sensitive subject
+The case for the field is recorded here rather than lost. Part 01 permits sensitive subject
 metadata to be redacted, and an age is less identifying than a date of birth, so a packet
 withholding `date_of_birth` has no way to express age. Adding it is nonetheless a new field
 rather than a reconciliation, and `age_at_session` is session-relative while `core.subjects`
 is not session-scoped, so it would belong on `core.sessions`. Deferred; raise separately if a
 packet requires redaction.
 
-### 3.5 `09` inline type annotations
+### 3.5 Part 09 inline type annotations
 
-`09` §4.1 and §4.2 annotate the optional metadata field as `metadata: struct/map/json`.
+Part 09 §4.1 and §4.2 annotate the optional metadata field as `metadata: struct/map/json`.
 R3 §2.1 withdraws struct and map.
 
 **Resolution:** amend both to `metadata: json_string`.
 
 ### 3.6 `core.subjects.date_of_birth` — ambiguous scalar type
 
-`02` types this column `date or timestamp`. It is the only ambiguous scalar type in `02`;
+Part 02 types this column `date or timestamp`. It is the only ambiguous scalar type in Part 02;
 every other disjunction is a nested-type alternative withdrawn by R3 §2.1.
 
 **Resolution:** pin to `date`. A birth date has no meaningful time-of-day component, and R3
@@ -105,7 +105,7 @@ every other disjunction is a nested-type alternative withdrawn by R3 §2.1.
 Three columns carry requirement level `conditional` rather than `yes`/`no`:
 `core.clocks.tick_rate_hz`, `tick_rate_num`, `tick_rate_den`.
 
-This is not drift — `02`'s validation rule states the condition ("either `tick_rate_hz` OR
+This is not drift — Part 02's validation rule states the condition ("either `tick_rate_hz` OR
 both `tick_rate_num` and `tick_rate_den` MUST be present"). It is recorded here because the
 registry (R2) must express it, and a two-state required flag cannot. R2's three-state
 nullability model MUST accommodate a conditional whose predicate references sibling
@@ -115,7 +115,7 @@ columns, or express this particular case as a named cross-column validation rule
 
 Recorded so that R2 need not re-derive it, and so that a future sweep can detect regression.
 
-Against R3's rules, `02` is otherwise compliant:
+Against R3's rules, Part 02 is otherwise compliant:
 
 - **Nested types.** 31 columns use `list`, `struct`, `map`, or `json_string`. All 31 are
   accounted for in R3 §2.2; none is unlisted.
@@ -130,7 +130,7 @@ Against R3's rules, `02` is otherwise compliant:
 ## 6. Reproducing the sweep
 
 `conformance/spec-sweep/` parses both documents and reports drift, requirement mismatches,
-and R3 compliance. Re-run it after any revision touching `02` or `09`.
+and R3 compliance. Re-run it after any revision touching Part 02 or Part 09.
 
 ```bash
 python3 conformance/spec-sweep/sweep.py       # 09 vs 02 drift

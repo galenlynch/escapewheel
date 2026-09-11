@@ -108,7 +108,7 @@ columns whose declared units differ.
   is (R11 §2, R8 §4). Declaring a controlled vocabulary of units is a separate question and a
   larger one; this revision records what the writer knows rather than governing it.
 - **No dimension or quantity kind.** A field saying a column holds "time" or "voltage" would need
-  governance and buys little over the unit itself, and `07` puts generalized ontology machinery
+  governance and buys little over the unit itself, and Part 07 puts generalized ontology machinery
   out of scope.
 - **No change to the sibling columns.** `amplitude_unit` and `coordinate_unit` stay exactly as
   they are; `unit_from` makes them *declared* rather than conventional.

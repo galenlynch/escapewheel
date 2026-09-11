@@ -36,7 +36,7 @@ forgotten.
 ### 3.1 Single-column keys
 
 Five tables carry an explicit identifier column, already required and already named as a
-stable ID by `01`:
+stable ID by Part 01:
 
 | Table | Primary key |
 |---|---|
@@ -46,7 +46,7 @@ stable ID by `01`:
 | `core.provenance_activities` | `activity_id` — withdrawn by R9 |
 | `core.provenance_entities` | `entity_id` — withdrawn by R9 |
 
-These match the pattern `02` already uses for `core.devices`, `core.probes`,
+These match the pattern Part 02 already uses for `core.devices`, `core.probes`,
 `core.electrodes`, `core.clocks`, `core.sorting_runs`, and `core.curation_versions`.
 
 `core.source_files` deserves one note: the key is `source_file_id`, not `uri`. The same URI

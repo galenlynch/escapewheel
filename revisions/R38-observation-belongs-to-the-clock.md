@@ -104,7 +104,7 @@ inside. The clock's window is the more correct one as well as the cheaper one.
 ## 3. What this does not do
 
 - **No merge of units into event streams.** A unit emitting timestamped events on a clock is a
-  `01`-level likeness, not a `02`-level one: unit identity is four columns and `core.spike_events`
+  Part 01-level likeness, not a Part 02-level one: unit identity is four columns and `core.spike_events`
   carries R30's measured layout over 287 M rows. Both remain their own resources.
 - **No new requirement.** Declaring no observation anywhere stays legal and stays `info`, as
   R18 and R25 left it.

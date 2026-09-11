@@ -232,10 +232,16 @@ Two dispositions leave a requirement outside the parts. A clause the registry ca
 
 A revision MAY be cited for the reasoning a part does not hold: the measurement behind a rule, the alternative that was rejected and why, and the defect that prompted the change (R112 §3.3). A part states what holds; a revision states why, and a reader wanting the second is sent to the revision by name.
 
-Three uses name a revision and are sound: a registry column's `since`, whose value names the revision that set it (`02` §9.4); the ledger mapping each clause to where it landed, which is what §10.1 is resolved through; and a revision citing another revision. The exemption says which document to cite and not that the citation is accurate.
+Three uses name a revision and are sound: a registry column's `since`, whose value names the revision that set it (Part 02 §9.4); the ledger mapping each clause to where it landed, which is what §10.1 is resolved through; and a revision citing another revision. The exemption says which document to cite and not that the citation is accurate.
 
 ### 10.3 A part is numbered by appending
 
-Whoever amends a part MUST add a section at the end of that part, and a subsection at the end of its section, neither of which renumbers anything already cited. They MUST NOT insert one between two that exist, and a part MUST NOT carry two sections with one number (R112 §3.4). `01` §3 is not an exception: that section is a flat list of concepts every later part cites by number, so a concept is appended as the next number.
+Whoever amends a part MUST add a section at the end of that part, and a subsection at the end of its section, neither of which renumbers anything already cited. They MUST NOT insert one between two that exist, and a part MUST NOT carry two sections with one number (R112 §3.4). Part 01 §3 is not an exception: that section is a flat list of concepts every later part cites by number, so a concept is appended as the next number.
 
 A tool that checks citations MUST refuse a part carrying two sections with one number, and SHOULD refuse one whose sections do not ascend (R112 §3.5). Both are decidable from the headings alone, with no citation in hand.
+
+### 10.4 A part is cited as Part 02
+
+A citation of a part, in a part or in a revision, MUST write the word `Part` before the number, as `Part 02 §5.2`, and MUST NOT name the part by its number alone, with or without backticks (R113 §3.1). An implementation's source is not bound. §10.1 binds which document a citation names, because naming the wrong one sends a reader to prose that does not bind them; a spelling is presentation, and this specification does not impose one on code it does not own.
+
+A tool that checks citations MUST report a part named by its number alone, in a part, in a revision or in a draft, and MUST NOT report one elsewhere (R113 §3.2). Both spellings resolve to the same section, so no other check can see which was written. A two-digit number in backticks is not certainly a part, so the check MUST admit an exception carrying the reason it is not one, and MUST report an exception that matches nothing.

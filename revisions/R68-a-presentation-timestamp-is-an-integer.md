@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | `02` (`core.media_frames.pts`) |
+| **Amends** | Part 02 (`core.media_frames.pts`) |
 | **Depends on** | R45 (a coordinate is copied verbatim), R14 §2.3 (media is referenced) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -11,7 +11,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`02` gives `core.media_frames.pts` the type `float64` and the description *"Media presentation
+Part 02 gives `core.media_frames.pts` the type `float64` and the description *"Media presentation
 timestamp if relevant."* Neither says which quantity it holds.
 
 ### 1.1 One clause, two quantities
@@ -36,7 +36,7 @@ The first is the container's own integer timestamp, in a time base the file decl
 `frame.time`.
 
 The declared type argues for the second: an integer domain does not need a float to hold it. So a
-writer following `02` reasonably stores seconds, and a writer following the container reasonably
+writer following Part 02 reasonably stores seconds, and a writer following the container reasonably
 stores 32 — under one column name, with nothing in either packet saying which. A consumer holding
 two packets cannot tell a count from a duration, and the two differ by a factor the packet does
 not carry.
@@ -116,7 +116,7 @@ R3 §3.0 admits duplication only where it buys otherwise-unavailable access, and
 declares its own time base to every library that opens it. A consumer holding a `pts` holds the
 file the value indexes into.
 
-A writer **MAY** record the base in `core.media_assets.metadata`, where `09` §3 puts what is not
+A writer **MAY** record the base in `core.media_assets.metadata`, where Part 09 §3 puts what is not
 queried. What is worth recording beside it is which container the value came from, since a media
 asset may reference more than one rendering of one capture.
 

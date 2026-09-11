@@ -28,7 +28,7 @@ clock 31,250 Hz (HARP)
   29.97 fps  1,042.708333... ticks
 ```
 
-Every one of those is exact as a fraction and impossible as an integer. `06` lists
+Every one of those is exact as a fraction and impossible as an integer. Part 06 lists
 `analysis.binned_spikes`, so the first packet that bins spikes at a standard PSTH width meets
 this immediately.
 

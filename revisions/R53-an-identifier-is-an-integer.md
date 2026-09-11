@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-02 |
-| **Amends** | R2 §4 (the Arrow type vocabulary's use), R5 §5 and R8 §2 (what a label is, restated), R48 §2.1 (what `identifier` implies), `02` (every identifier column) |
+| **Amends** | R2 §4 (the Arrow type vocabulary's use), R5 §5 and R8 §2 (what a label is, restated), R48 §2.1 (what `identifier` implies), Part 02 (every identifier column) |
 | **Depends on** | R2 (registry format), R32 (a committed packet is immutable), R46 (declared references), R48 (column roles) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -114,7 +114,7 @@ An R17 extension declaring an identifier over more than 2^31 rows declares `int6
 
 ### 2.5 Keys are assigned at commit and never move
 
-A writer assigns identifiers when it commits (`05`). R32 §3 forbids an amendment modifying
+A writer assigns identifiers when it commits (Part 05). R32 §3 forbids an amendment modifying
 anything it did not write, so an identifier is stable for the life of the packet: an amendment
 adding a sorting run assigns new numbers to its new units and leaves every existing one alone.
 
@@ -125,7 +125,7 @@ A **carried** identifier has no such problem, because neither build invented it.
 
 ### 2.6 The analysis layer moves with core
 
-`analysis.*` identifier columns change on the same schedule, not a later one. `06` makes an
+`analysis.*` identifier columns change on the same schedule, not a later one. Part 06 makes an
 analysis resource disposable, which is an argument for rebuilding it cheaply rather than for
 letting it key differently: a packet whose `analysis.spike_events` joins on strings and whose
 `core.spike_events` joins on integers cannot be joined to itself.

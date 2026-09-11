@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-10 |
-| **Amends** | `00` §2 (adds the actors to Terms and definitions); `05` §10 (the conformance classes name the actor they are properties of); 46 clauses across every part but `07`, `08` and `10` that name neither an actor nor what they bind |
+| **Amends** | Part 00 §2 (adds the actors to Terms and definitions); Part 05 §10 (the conformance classes name the actor they are properties of); 46 clauses across every part but Parts 07 and 08 and Part 10 that name neither an actor nor what they bind |
 | **Depends on** | R79 §2.2 (a packet obligation and an importer obligation are reported apart), R75 §2.1 (logical determinism binds an importer), R67 §2.4 (a requirement may bind an actor no tool can watch), R93 §3.6 (each part states what it binds) |
 | **Profile** | all |
 
@@ -14,7 +14,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 ## 1. Scope
 
 The specification requires things of a writer, a reader, a validator, a consumer, a build, an
-adapter, an importer, an implementation and a client. It defines none of them. `00` §2 is titled
+adapter, an importer, an implementation and a client. It defines none of them. Part 00 §2 is titled
 **Terms and definitions** and defines seven terms — the three vocabulary
 levels, a packet, its catalog, an Iceberg catalog, and resource identity — and no actor at all.
 
@@ -30,34 +30,34 @@ Informative.
 
 ### 2.1 A validator cannot tell which obligations bind it
 
-`05` §10 sets two conformance classes against each other and makes a validator's report depend on
+Part 05 §10 sets two conformance classes against each other and makes a validator's report depend on
 telling them apart. Packet conformance is a property of the bytes; **importer conformance is a
 property of a process**; and a validator **MUST NOT** report a packet as non-conforming for an
 obligation that binds only an importer.
 
-Applying that rule means deciding, clause by clause, whether an obligation binds the process. `05`
+Applying that rule means deciding, clause by clause, whether an obligation binds the process. Part 05
 does not make that decidable, because it spreads its own writing-side obligations across three
 nouns:
 
 | part | writer | build | importer |
 |---|---:|---:|---:|
-| `05` validation and import | **8** | **12** | **3** |
+| Part 05 validation and import | **8** | **12** | **3** |
 
-Nothing says whether those are one actor or three. A validator implementing `05` §10 has to guess,
+Nothing says whether those are one actor or three. A validator implementing Part 05 §10 has to guess,
 and a guess either suppresses a finding a packet deserved or reports one against a packet that
 never had the chance to comply.
 
 ### 2.2 The read side already draws a line the document never states
 
-The other pair is not confusion. `01`, the semantic standard, binds **19** clauses to a consumer
-and 2 to a reader; `03`, the portable physical profile, binds **6** to a reader and none to a
-consumer. The split follows what the part is about: `03` governs how bytes come back, `01` governs
+The other pair is not confusion. Part 01, the semantic standard, binds **19** clauses to a consumer
+and 2 to a reader; Part 03, the portable physical profile, binds **6** to a reader and none to a
+consumer. The split follows what the part is about: Part 03 governs how bytes come back, Part 01 governs
 what the values mean once they have.
 
 Both clauses below are correct under that reading, and neither part says so:
 
-- `03` — a reader **MUST NOT** depend on stored order for correctness.
-- `01` — a consumer that does not recognise a basis **MUST NOT** treat the coordinate as
+- Part 03 — a reader **MUST NOT** depend on stored order for correctness.
+- Part 01 — a consumer that does not recognise a basis **MUST NOT** treat the coordinate as
   `measured` (R58 §2.2).
 
 A reader is bound by what it **returns**; a consumer by what it **concludes**. That distinction is
@@ -68,13 +68,13 @@ caller is about to assume — and it survives only as a habit of whoever was wri
 
 Where no actor fits the sentence, the modal attaches to whatever noun is there:
 
-- `05` — "The check MUST refuse:", "The check MUST report as a **warning**:", "A source entry that
+- Part 05 — "The check MUST refuse:", "The check MUST report as a **warning**:", "A source entry that
   declares no `owns` **MUST be read as** owning every resource in its adapter's `PRODUCES`"
-- `03` — "The test **MUST be over-inclusive where it is uncertain**", "A check MUST be re-run
+- Part 03 — "The test **MUST be over-inclusive where it is uncertain**", "A check MUST be re-run
   when it is attached to a resource the amendment writes"
-- `04` — "A verification pass MUST report what it skipped"
-- `00` — "A rewrite of rows MUST NOT increment `packet_version`"
-- `01` — "Both versions … MUST NOT be normalised, padded, or parsed into components"
+- Part 04 — "A verification pass MUST report what it skipped"
+- Part 00 — "A rewrite of rows MUST NOT increment `packet_version`"
+- Part 01 — "Both versions … MUST NOT be normalised, padded, or parsed into components"
 
 A check does not refuse; whoever runs it does. This is the same defect as the two above rather than
 a third one: with no roster to reach for, an author reaches for the nearest noun, and sometimes the
@@ -89,7 +89,7 @@ no "by" — and reading them individually splits three ways:
 | elides an actor the roster names | **25** | "A recipe MUST be checked against the registry before any source is opened" — a build |
 | names an artifact, and hides both the part and the action | **12** | "`INT96` MUST NOT be used"; "A table whose purpose is to hold arbitrary name-value pairs MUST NOT be added to core" |
 
-The remaining one is `05` §3.4's, already counted above. The second group is not the first defect
+The remaining one is Part 05 §3.4's, already counted above. The second group is not the first defect
 in disguise: nobody is missing from "`INT96` MUST NOT be used", but **which part** of a packet is
 also missing, and so is the verb. A wall-clock column is what may not use `INT96`, and saying so
 turns a rule a reader must place into one that points at what a validator opens.
@@ -102,10 +102,10 @@ stating that every requirement binds an actor or describes an artifact, over a s
 
 ### 3.1 The specification names four actors
 
-`00` §2 gains four definitions, and every requirement in every part binds one of them:
+Part 00 §2 gains four definitions, and every requirement in every part binds one of them:
 
 - A **writer** produces a packet from sources. It stages, validates and commits, and it is the
-  actor `05` binds throughout.
+  actor Part 05 binds throughout.
 - A **reader** opens a committed packet and returns its resources — rows, arrays, resolved
   references. It is bound by what it returns.
 - A **validator** decides whether a packet conforms, and reports findings.
@@ -122,12 +122,12 @@ Three terms already in use are defined in terms of the four rather than beside t
 carrying them keep their meaning:
 
 - A **build** is one execution of a writer against one recipe. A requirement on a build binds the
-  writer performing it, which is what makes `05` §10 decidable: an obligation on a build or a
+  writer performing it, which is what makes Part 05 §10 decidable: an obligation on a build or a
   writer is an importer obligation, and one on a packet is not.
 - An **adapter** is the part of a writer that reads one source. An obligation on an adapter binds
   the writer that ships it.
 - An **implementation** is software performing one or more of the four actors. It is the right
-  subject only where a requirement binds every actor alike — `00` §2.7's ban on HDF5 object
+  subject only where a requirement binds every actor alike — Part 00 §2.7's ban on HDF5 object
   references is one.
 
 ### 3.3 A requirement binds an actor, or states a property of an artifact
@@ -155,7 +155,7 @@ determinable behaviour, and no tool can watch it.
 
 `importer` is another name for a writer, `client` and `binding` for a reader, and `caller` for a
 consumer. An accepted revision using one binds the actor it names. This is a definition and carries
-no modal, as `00` §2's definitions do not and as `00` §9's precedence rule does not:
+no modal, as Part 00 §2's definitions do not and as Part 00 §9's precedence rule does not:
 
 | retired | reads as | mentions |
 |---|---|---:|
@@ -164,19 +164,19 @@ no modal, as `00` §2's definitions do not and as `00` §9's precedence rule doe
 | `binding` | reader | 2 |
 | `caller` | consumer | 1 |
 
-R75 §2.1 and `05` §10 both bind an importer, and both continue to bind the writer without amendment.
-`05` §10's two classes are renamed to say what they are properties of: **packet conformance** and
+R75 §2.1 and Part 05 §10 both bind an importer, and both continue to bind the writer without amendment.
+Part 05 §10's two classes are renamed to say what they are properties of: **packet conformance** and
 **writer conformance**.
 
 ### 3.5 Thirty-four requirements gain an actor, and twelve name what they constrain
 
 Each of §2.3's abstract-subject clauses and each of its agentless passives names the actor that
-performs it — 34 in all, by part: 3 in `00`, 2 in `01`, 9 in `02`, 9 in `03`, 3 in `04`, 14 in
-`05`, 2 in `06` and 4 in `09`, counting the twelve restated as predicates. By actor: **13 a writer** — immutability, amendment order, `packet_version`, stray
+performs it — 34 in all, by part: 3 in Part 00, 2 in Part 01, 9 in Part 02, 9 in Part 03, 3 in Part 04, 14 in
+Part 05, 2 in Part 06 and 4 in Part 09, counting the twelve restated as predicates. By actor: **13 a writer** — immutability, amendment order, `packet_version`, stray
 removal, recording the recipe and its digest, streaming a large table, converting a half-open
-interval, recording a compensation, materialization, and the two spike-omission clauses of `06`;
-**6 a validator** — the two checks, the shim's non-SQL tests, an extension's verdict in both `05`
-and `09`, and the deterministic-build clause; **4 a consumer** — the source-provenance label, the
+interval, recording a compensation, materialization, and the two spike-omission clauses of Part 06;
+**6 a validator** — the two checks, the shim's non-SQL tests, an extension's verdict in both Part 05
+and Part 09, and the deterministic-build clause; **4 a consumer** — the source-provenance label, the
 undecoded code, the joinability rules, and resolution through a different document; **3 a build** —
 recipe checking, refusal on a defaulted resource, and a silent `owns`; and **1 a reader**, reporting
 an unresolved `source`.
@@ -190,10 +190,10 @@ presence** is `optional`, an **extension's resource identifier** begins with its
 **core** holds no arbitrary name-value table.
 
 Three are a judgement call and are settled here rather than left to whoever implements the sweep.
-`00` §4.1's "Core resources MUST be validated before they are committed" binds a **writer**, since
-`05` §1 makes validate-then-commit the writer's own sequence and not a verdict anyone reports.
-`03` §7's stray binds a **writer**, cleanup being a mutation of a packet whatever it is called.
-`04` §5.5's unresolved source splits: a **reader** reports it, and a **validator** does not fail
+Part 00 §4.1's "Core resources MUST be validated before they are committed" binds a **writer**, since
+Part 05 §1 makes validate-then-commit the writer's own sequence and not a verdict anyone reports.
+Part 03 §7's stray binds a **writer**, cleanup being a mutation of a packet whatever it is called.
+Part 04 §5.5's unresolved source splits: a **reader** reports it, and a **validator** does not fail
 structural validation for it.
 
 ## 4. What this does not change
@@ -202,12 +202,12 @@ structural validation for it.
   binds how the specification is written, so what changes is which clauses a reader can act on.
 - **No obligation moves between packet conformance and writer conformance.** §3.2 makes the
   existing boundary decidable rather than redrawing it: every clause binding a build or a writer
-  today was already an importer obligation under `05` §10, and every clause about a packet's
+  today was already an importer obligation under Part 05 §10, and every clause about a packet's
   contents was already the other.
 
 ## 5. Consequence
 
-`00` §2 gains four definitions and three derived terms; `05` §10 renames one of its conformance
+Part 00 §2 gains four definitions and three derived terms; Part 05 §10 renames one of its conformance
 classes; 34 clauses gain an actor and 12 name the part of the artifact they constrain. Thirteen
 mentions of a retired spelling are repointed.
 
@@ -215,7 +215,7 @@ The reference implementation changes nothing. `escapewheel-reader`, `-validator`
 already divide along three of the four actors, and the fourth has no code because a consumer is
 whoever calls them.
 
-What this buys is that `05` §10 becomes a rule a validator can apply. It could not before: the
+What this buys is that Part 05 §10 becomes a rule a validator can apply. It could not before: the
 part it governs binds 8 clauses to a writer, 12 to a build and 3 to an importer, and a validator
 deciding which of those are importer obligations was deciding it by name.
 

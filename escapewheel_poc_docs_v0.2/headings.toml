@@ -38,6 +38,7 @@
 "10.1" = "A requirement is cited from the part that states it"
 "10.2" = "A revision is cited for what a part does not carry"
 "10.3" = "A part is numbered by appending"
+"10.4" = "A part is cited as Part 02"
 
 ["01"]
 "1" = "Scope"

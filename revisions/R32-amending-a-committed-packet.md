@@ -12,7 +12,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`05` Stage 5 commits a packet by renaming the manifest into place last, and R14 §2.3 makes
+Part 05 Stage 5 commits a packet by renaming the manifest into place last, and R14 §2.3 makes
 packet-owned bytes immutable afterwards. Neither says what happens next. There is no defined
 way to add a resource to a packet that has been committed, so the reference writer refuses a
 root that already holds a manifest — which is correct under the rules as written and useless in
@@ -20,7 +20,7 @@ practice.
 
 The case that forced this is ordinary. A packet is committed with its core tables. An analysis
 resource is derived from them afterwards, because deriving it needs the packet open and the
-core tables validated — that is the order `05` puts them in. Under the current rules the only
+core tables validated — that is the order Part 05 puts them in. Under the current rules the only
 way to add it is to rebuild the packet from its sources, which discards the validation that
 already passed and re-imports data that did not change.
 
@@ -48,7 +48,7 @@ as a semantic version.
 |---|---|
 | Add an analysis resource | MAY |
 | Add rows to a provenance table (`core.processing_runs`, `core.source_files`, `core.processing_run_inputs`), as a new file | MAY |
-| Remove an analysis resource | MAY — `06` makes them disposable |
+| Remove an analysis resource | MAY — Part 06 makes them disposable |
 | Add a core resource | MAY |
 | Change the content of a core resource other than the provenance tables | MUST NOT |
 | Remove a core resource | MUST NOT |
@@ -65,8 +65,8 @@ already treats them as separable from the scientific core.
 
 ## 4. The manifest
 
-`04` fixes the manifest at `packet.json`, and it MUST stay there — a reader finds a packet
-by that path, not by scanning. So an amendment **rewrites** it, by the same atomic rename `05`
+Part 04 fixes the manifest at `packet.json`, and it MUST stay there — a reader finds a packet
+by that path, not by scanning. So an amendment **rewrites** it, by the same atomic rename Part 05
 Stage 5 already uses: write a candidate, validate, `rename` it onto the canonical path last.
 At every instant that path names a complete, validated manifest.
 
@@ -157,11 +157,11 @@ not.
 ## 7. What this does not do
 
 - **No new validation tier and no new rule.** The checks are the ones a commit already runs.
-- **No release semantics.** `04` has `release_id` and `06` mentions pinning to a source packet
+- **No release semantics.** Part 04 has `release_id` and Part 06 mentions pinning to a source packet
   release; whether an amendment constitutes a new release is a policy question this does not
   answer.
 - **No detection of stale derivations.** If a core resource is added and an analysis resource
-  derived from its neighbours becomes misleading, nothing here notices. `06` already says
+  derived from its neighbours becomes misleading, nothing here notices. Part 06 already says
   dependent resources SHOULD be invalidated when sources change, and still nothing implements
   it.
 - **No concurrency.** Two writers amending one packet at once is undefined. The atomic rename
@@ -176,7 +176,7 @@ not.
 - **Whether a reader should be able to open a superseded version.** The bytes and the manifest
   are both retained, so it is mechanically possible, and no API exposes it. Doing so would make
   `manifests/` a first-class feature rather than a record.
-- **Whether the provenance-table exception should be a general append mechanism.** `03` already
+- **Whether the provenance-table exception should be a general append mechanism.** Part 03 already
   permits partitioned Parquet datasets, where adding a part is the natural append, and this
   revision instead writes a whole new file for a table that gains rows. For tables the size of
   `core.processing_runs` the difference does not matter; for a large one it would.

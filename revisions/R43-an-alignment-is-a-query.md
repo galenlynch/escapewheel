@@ -11,7 +11,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Motivation
 
-`07` Phase 4 names three analysis resources. R30 built one and, in §7, deferred the next:
+Part 07 Phase 4 names three analysis resources. R30 built one and, in §7, deferred the next:
 
 > `analysis.spikes_by_trial` in particular has the same problem in a milder form: it says
 > spikes carry `t_abs_tick` and `t_rel_tick` without saying which clock either is on. That
@@ -22,21 +22,21 @@ noticed is the smallest of three reasons. Phase 4's success criterion — "run a
 query from packet data" — is met without either remaining table, three separate ways, all
 verified bin-for-bin identical.
 
-`06` chose these tables before anything measured them, and says so: they are "recommended
+Part 06 chose these tables before anything measured them, and says so: they are "recommended
 initial analysis resources" with "suggested" schemas. This revision records what the
 measurement says, so that a later implementer does not read their absence as an oversight.
 
 ## 2. `analysis.spikes_by_trial` is withdrawn
 
-**Strike `06` §46 in its entirety.** A packet MUST NOT be judged incomplete for lacking it, and
-`07` Phase 4 no longer requires it (§5). A writer MAY still materialize such a table as a
+**Strike Part 06 §46 in its entirety.** A packet MUST NOT be judged incomplete for lacking it, and
+Part 07 Phase 4 no longer requires it (§5). A writer MAY still materialize such a table as a
 private resource under an R17 extension namespace; it is not a core-adjacent recommendation.
 
 Three arguments, in descending strength.
 
 ### 2.1 It is a table per query
 
-`06` requires the materialization parameters to fix an **alignment event** and an **inclusion
+Part 06 requires the materialization parameters to fix an **alignment event** and an **inclusion
 window**. Those are the two things a question varies. So each `(event, window)` pair is a
 separate table, and the tables do not compose: a copy built at ±0.5 s cannot answer a question
 at ±1 s, and one built on the go cue cannot answer one on the lick.
@@ -59,9 +59,9 @@ window is wide, the windows overlap, and a correct copy must **repeat** each spi
 window it falls in. 2,641 licks at ±1 s expand 287 M spikes into 224 M rows — 78% of the spike
 table for one question — and a wider window expands further without bound.
 
-### 2.2 `06`'s own test puts it on the other side of the line
+### 2.2 Part 06's own test puts it on the other side of the line
 
-`06` §186 says: *view when the transformation is cheap, materialized table when expensive or
+Part 06 §186 says: *view when the transformation is cheap, materialized table when expensive or
 frequently reused.* It then lists "spike-to-trial assignment" and "event-aligned spike
 expansion" as materialized — a judgement made without a number.
 
@@ -96,7 +96,7 @@ well defined.
 
 ## 3. `analysis.trials_wide` and `analysis.unit_condition_rates` are task-shaped
 
-**Strike `06` §73 and §117**, and replace both with:
+**Strike Part 06 §73 and §117**, and replace both with:
 
 > A convenience trial table and a per-condition rate table are useful and are **not
 > core-adjacent**. Their columns name a task's structure, which varies between experiments in
@@ -104,7 +104,7 @@ well defined.
 > namespaced to the task family, where the column set can be closed against one paradigm and
 > validated. Deriving one at read time is a view (§186).
 
-Two separate objections, and the first disposes of the table on `06`'s own terms.
+Two separate objections, and the first disposes of the table on Part 06's own terms.
 
 ### 3.1 It is the cheapest thing in the document
 
@@ -119,7 +119,7 @@ materialized list.
 
 ### 3.2 The column set is not portable, so it should not be normative
 
-What remains is whether `06` should recommend a *shape*. It should not, because the shape is a
+What remains is whether Part 06 should recommend a *shape*. It should not, because the shape is a
 task's and not a format's.
 
 Measured against the session this was built on, a foraging task:
@@ -135,13 +135,13 @@ Measured against the session this was built on, a foraging task:
 And a second real source disagrees in the other direction.
 `Aind.Behavior.VrForaging.Packaging`, the pipeline most behaviour data in this collection will
 pass through, has **no go cue, no condition, and no trial** in §73's sense: its structure is
-site → patch → block, with eleven index columns that `06` never contemplates.
+site → patch → block, with eleven index columns that Part 06 never contemplates.
 `inventory/vr-foraging-packaging.md:104` reached the same conclusion for the site table
 independently — *"everything task-shaped ... is an R17 extension, not core."*
 
 Any column set that fits one misfits the other, and a union of both fits neither: it would be a
 table of mostly-null columns whose meaning depends on which pipeline wrote it, which is the
-shape `09`'s metadata minimalism exists to prevent.
+shape Part 09's metadata minimalism exists to prevent.
 
 `analysis.unit_condition_rates` inherits both objections. Its `condition_id` and `epoch_name`
 are task-shaped for the same reason, and the aggregation is a `GROUP BY` over a table §2 has
@@ -170,7 +170,7 @@ replacement rather than as four separate strikes, §186's two lists become:
 The array list (§202) is unchanged; those resources are dense by nature and Phase 5's concern.
 
 That the "expensive" list is now nearly empty is the finding, not an accident of editing. **A
-transformation over a well-laid-out columnar table is cheap**, and `06`'s original list was
+transformation over a well-laid-out columnar table is cheap**, and Part 06's original list was
 written against an intuition formed on row stores and HDF5, where it would have been right.
 
 ## 4. What replaces them
@@ -210,13 +210,13 @@ them:
 Neither is a specification change. They are recorded because R43 removes the resource that
 would have hidden them.
 
-## 5. `07` Phase 4
+## 5. Part 07 Phase 4
 
 **Replace** §217's implementation list with:
 
 > - `analysis.spike_events` from `core.spike_events` and `core.clock_anchors` (R5, R30).
 
-`06` §46 and §73 are withdrawn by §2 and §3 above, and Phase 4's success criterion is unchanged
+Part 06 §46 and §73 are withdrawn by §2 and §3 above, and Phase 4's success criterion is unchanged
 and met.
 
 The list also still names `core.unit_spike_chunks` as the source, a table **R5 withdrew**. That
@@ -270,7 +270,7 @@ were taken.
 
 - **No change to `analysis.spike_events`.** R30 stands entirely; §4's queries are what its
   layout was measured for.
-- **No change to `analysis.good_units`.** `06` §104 already offers it as a view, and §186
+- **No change to `analysis.good_units`.** Part 06 §104 already offers it as a view, and §186
   already lists selecting good units on the view side. R16 and R22 make the quality policy the
   user's, which is the same argument arriving at the same place.
 - **No change to `analysis.binned_spikes` or the array-shaped resources.** Those are Phase 5

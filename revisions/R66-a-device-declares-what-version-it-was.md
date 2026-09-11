@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | `02` (`core.devices`), `09` §4.4 (the minimum a device records) |
+| **Amends** | Part 02 (`core.devices`), Part 09 §4.4 (the minimum a device records) |
 | **Depends on** | R65 (an array names the device that made it) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -79,12 +79,12 @@ that anyone needs it; two producers filling it with differing values is.
 
 ### 1.4 Why not `metadata`
 
-`core.devices.metadata` could hold both today, and `09` §3 would keep them there while they are
+`core.devices.metadata` could hold both today, and Part 09 §3 would keep them there while they are
 rarely queried.
 
 That test is met and passed. A firmware version changes how a signal must be interpreted while
 every other column stays identical — §1.2's sensor dispatches on an interval set by a register its
-own schema documents, so its sampling rate is a firmware fact — and `09` §3 puts anything needed to
+own schema documents, so its sampling rate is a firmware fact — and Part 09 §3 puts anything needed to
 *interpret* a recording in core. A value inside a JSON string is also unavailable to a rule: no
 Tier 2 check can compare firmware across the probes of one session while it lives there.
 
@@ -125,7 +125,7 @@ A basestation and its connect board are two devices, not two columns of one.
 - **No new table**, and no existing column changes type or presence.
 - **No packet becomes invalid.** Both columns are nullable, so every existing packet stays
   conforming and gains the values on its next rebuild.
-- **No change to `core.probes`.** A probe already names its device (`02`); which basestation that
+- **No change to `core.probes`.** A probe already names its device (Part 02); which basestation that
   device hangs off is §4's question, not this one.
 - **`metadata` still holds what is not queried.** This promotes two fields, not a policy.
 

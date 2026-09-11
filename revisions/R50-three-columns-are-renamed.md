@@ -43,7 +43,7 @@ axes of different arrays should not name it differently.
 
 **Rename** `core.processing_runs.supersedes` to `supersedes_run_id`.
 
-It holds a `processing_run_id` and is a declared self-reference. `03`'s convention is `_id` for
+It holds a `processing_run_id` and is a declared self-reference. Part 03's convention is `_id` for
 stable IDs, and every other reference column in the registry follows it — this is the only one
 that does not, and it is a verb where the rest are nouns.
 

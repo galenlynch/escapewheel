@@ -367,13 +367,19 @@ Two dispositions leave a requirement outside the parts. A clause the registry ca
 
 A revision MAY be cited for the reasoning a part does not hold: the measurement behind a rule, the alternative that was rejected and why, and the defect that prompted the change (R112 §3.3). A part states what holds; a revision states why, and a reader wanting the second is sent to the revision by name.
 
-Three uses name a revision and are sound: a registry column's `since`, whose value names the revision that set it (`02` §9.4); the ledger mapping each clause to where it landed, which is what §10.1 is resolved through; and a revision citing another revision. The exemption says which document to cite and not that the citation is accurate.
+Three uses name a revision and are sound: a registry column's `since`, whose value names the revision that set it (Part 02 §9.4); the ledger mapping each clause to where it landed, which is what §10.1 is resolved through; and a revision citing another revision. The exemption says which document to cite and not that the citation is accurate.
 
 ### 10.3 A part is numbered by appending
 
-Whoever amends a part MUST add a section at the end of that part, and a subsection at the end of its section, neither of which renumbers anything already cited. They MUST NOT insert one between two that exist, and a part MUST NOT carry two sections with one number (R112 §3.4). `01` §3 is not an exception: that section is a flat list of concepts every later part cites by number, so a concept is appended as the next number.
+Whoever amends a part MUST add a section at the end of that part, and a subsection at the end of its section, neither of which renumbers anything already cited. They MUST NOT insert one between two that exist, and a part MUST NOT carry two sections with one number (R112 §3.4). Part 01 §3 is not an exception: that section is a flat list of concepts every later part cites by number, so a concept is appended as the next number.
 
 A tool that checks citations MUST refuse a part carrying two sections with one number, and SHOULD refuse one whose sections do not ascend (R112 §3.5). Both are decidable from the headings alone, with no citation in hand.
+
+### 10.4 A part is cited as Part 02
+
+A citation of a part, in a part or in a revision, MUST write the word `Part` before the number, as `Part 02 §5.2`, and MUST NOT name the part by its number alone, with or without backticks (R113 §3.1). An implementation's source is not bound. §10.1 binds which document a citation names, because naming the wrong one sends a reader to prose that does not bind them; a spelling is presentation, and this specification does not impose one on code it does not own.
+
+A tool that checks citations MUST report a part named by its number alone, in a part, in a revision or in a draft, and MUST NOT report one elsewhere (R113 §3.2). Both spellings resolve to the same section, so no other check can see which was written. A two-digit number in backticks is not certainly a part, so the check MUST admit an exception carrying the reason it is not one, and MUST report an exception that matches nothing.
 
 <!-- END 00_architecture.md -->
 
@@ -870,7 +876,7 @@ Because a reference relates columns of the same role (§7), converting every str
 
 ### 8.2 Identity
 
-An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing (R95 §3.1). Seven tables carried both a generated `*_name` and a `name` declared by `02`, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
+An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing (R95 §3.1). Seven tables carried both a generated `*_name` and a `name` declared by Part 02, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
 
 A `carried` identifier gets no name column, and a table MUST NOT declare one for it: the value is already the source's own, so a name beside it would be a second identity for one thing.
 
@@ -952,7 +958,7 @@ and no integrity constraint couples the versions (R90 §3.9).
 A row's kind-specific facts live in a table sharing that row's key, which is R54 §2's shape and
 R90 §3.5's shared-key join: the detail table's primary key MUST begin with the discriminated
 table's own identifier (R104 §3.1). `core.devices` names such a table through `device_kind`, and
-core MUST NOT declare one — `01` §3.17 makes this standard name no instruments, so a camera's
+core MUST NOT declare one — Part 01 §3.17 makes this standard name no instruments, so a camera's
 target or a thermistor's range belongs to an R17 §2 extension (R104 §3.2). A fact no detail table
 models stays in `metadata` (R97 §3.3), and what justifies promoting one out of it is a rule or a
 query that has to read it.
@@ -973,7 +979,7 @@ A consumer MAY label a quantity with its declared unit, and MUST NOT silently co
 
 A column MAY declare `determined_by`, naming the columns whose values fix its own: two rows agreeing on every column named agree on this one, and an empty list declares a constant (R92 §2.2). The declaration is structural, decidable from the registry with no packet in hand.
 
-It is a statement about values and holds under any profile. What a profile does with it is the profile's: `03` §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows (R92 §2.3), because a wrong one waives a check rather than failing one.
+It is a statement about values and holds under any profile. What a profile does with it is the profile's: Part 03 §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows (R92 §2.3), because a wrong one waives a check rather than failing one.
 
 ### 8.6 Free-form metadata
 
@@ -997,7 +1003,7 @@ A writer SHOULD put prose in a prose column where the table has one, and not in 
 
 A writer that can decode a source's code MUST store the decoded value, declaring the vocabulary it decodes onto as §9.3 requires of any other (R106 §3.1). A code is a token standing for something the emitting system names elsewhere, and a packet holding one without the key leaves no rule, query or reader able to tell one value from another.
 
-A writer that cannot decode one stores the code itself, verbatim, in a `string` column declaring an open vocabulary, whose description names where the key lives. An undecoded code is a label carrying no contract, and an open vocabulary is how this standard declares one (`01` §3.17); an integer column declares nothing of the sort, since §9.3 permits a vocabulary on no other type and a code stored as an integer is indistinguishable from a count.
+A writer that cannot decode one stores the code itself, verbatim, in a `string` column declaring an open vocabulary, whose description names where the key lives. An undecoded code is a label carrying no contract, and an open vocabulary is how this standard declares one (Part 01 §3.17); an integer column declares nothing of the sort, since §9.3 permits a vocabulary on no other type and a code stored as an integer is indistinguishable from a count.
 
 Recording the token rather than dropping it is R22 §3's rule for a scorer's label and §4's for a source-provenance label: a source's own token is a string, kept as the source emitted it, and a consumer MUST NOT use it as an offset.
 
@@ -1250,7 +1256,7 @@ A packet MUST declare at least one row of `core.clock_observation_intervals` for
 
 ### 12.6 A clock's alignment record
 
-Three facts about how a packet's clocks were aligned are columns, because a consumer needs them to place a tick and `02` §8.6's line puts such a fact in a column and never in a key (R99 §3).
+Three facts about how a packet's clocks were aligned are columns, because a consumer needs them to place a tick and Part 02 §8.6's line puts such a fact in a column and never in a key (R99 §3).
 
 `core.sessions.alignment_bound` holds how far past its anchors the writer mapped, in median anchor intervals. A writer establishing a bound wider than R27 §5.3's default MUST record it; a consumer reading a null MUST map at that default, which is a fact and not a defect. It is on the session because the bound is a property of the times the packet states, as `t_zero_tick` is (R39 §2.1), so one session declares one bound and no rule is needed to say which run wins. A value below one is refused.
 
@@ -1357,9 +1363,9 @@ A partitioned table's row order across files is not defined by this profile. A s
 
 ### 5.3 Ordering
 
-A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (`02` §8.5). Where the registry declares no sort for a table, the order required is its primary key's. A validator MUST report a departure as an **error** (R92 §2.2).
+A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where the registry declares no sort for a table, the order required is its primary key's. A validator MUST report a departure as an **error** (R92 §2.2).
 
-Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means `02` §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (R12 §4, `02` §10.3).
+Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means Part 02 §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3).
 
 The scan MUST verify each `determined_by` declaration it relies on: of two adjacent rows sharing a primary key, every sort column declared `determined_by` a subset of that key MUST hold the same value in both, and a validator MUST report a difference as an **error** (R92 §2.3). A wrong declaration otherwise waives a check rather than failing one. The comparison reaches a declaration that is false between two adjacent rows, which the scan reports as a duplicate key as well, the second finding saying which to repair; a declaration false enough to sort two duplicates apart is beyond a scan of neighbours.
 
@@ -1367,7 +1373,7 @@ Where the scan finds a departure, uniqueness MUST be settled by aggregate rather
 
 A reader MUST NOT depend on stored order for correctness. Establishing the order is the validator's work, and a reader that assumed it would be trusting a property of the profile rather than of the logical standard.
 
-One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST` (R30 §3.2); `03` §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: R91 §3.2 keys it on `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: R81 §2.4 makes its key `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
+One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST` (R30 §3.2); Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: R91 §3.2 keys it on `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: R81 §2.4 makes its key `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
 
 ### 5.4 The overriding orders
 
@@ -2162,7 +2168,7 @@ This is what Part 02 §5.2's ban on nested types exists to preserve — a native
 
 ### 2.3 A comment states what the code does not
 
-A comment or docstring SHOULD state what the code does not already say — why this way, what breaks otherwise, the constraint that is not visible locally — and SHOULD NOT restate what the line below it does. Where it gives a reason, `00` §10.1 decides what it cites: the part for the requirement, and the revision for the measurement behind it (R112 §3.2).
+A comment or docstring SHOULD state what the code does not already say — why this way, what breaks otherwise, the constraint that is not visible locally — and SHOULD NOT restate what the line below it does. Where it gives a reason, Part 00 §10.1 decides what it cites: the part for the requirement, and the revision for the measurement behind it (R112 §3.2).
 
 A comment naming a revision instead of a part sends a reader to the change record rather than to the statement of record, and a comment restating its own line is how a reader learns to stop reading them.
 
@@ -2534,7 +2540,7 @@ number silently missing the field says nothing at all.
 
 Dictionary encoding is what a column declaring nothing else receives, and a monotonic ramp of 7.5 M
 distinct values is its worst case: `pts` is **96.9%** of the table as written. `DELTA_BINARY_PACKED`
-is defined for `INT32` and `INT64` alone, which is what `03` §5.5's SHOULD turns on.
+is defined for `INT32` and `INT64` alone, which is what Part 03 §5.5's SHOULD turns on.
 
 ### 2.2 An integer identifier costs nothing to store and much to read
 
@@ -2604,9 +2610,9 @@ choice turns on the second.
 
 ## 3. Row groups
 
-A large table's row groups are sized for analytical scans (`03` §5.1). **100,000 to 1,000,000
+A large table's row groups are sized for analytical scans (Part 03 §5.1). **100,000 to 1,000,000
 rows** is a starting point to be adjusted by profiling; it is a number this format fixes rather
-than a rule a packet can fail, which is why `03` §5.1 keeps the SHOULD and the number is here.
+than a rule a packet can fail, which is why Part 03 §5.1 keeps the SHOULD and the number is here.
 
 Where a table declares a time bucket, a row group SHOULD start at each bucket boundary (R30 §3.3):
 a group cut at a fixed row count straddles boundaries and spans two buckets' worth of time.
@@ -2643,7 +2649,7 @@ shows why the others should be:
 | v2 zstd, v2 blosc-zstd-shuffle | reads | reads |
 
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
-changing to show it. That is what `03` §6.1's per-version codec floor exists to state as a rule,
+changing to show it. That is what Part 03 §6.1's per-version codec floor exists to state as a rule,
 and what this table exists to explain.
 
 <!-- END 10_performance_notes.md -->

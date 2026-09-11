@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Accepted** 2026-09-08 |
 | **Supersedes** | R55 §2.1–§2.6, R72 §2.1–§2.3 |
-| **Amends** | `02` §8.3 (the compiled statement of all of it), R54 §2.1 (the role it gave a detail table's kind column), the registry declarations of `interval_kind` on two extension tables |
+| **Amends** | Part 02 §8.3 (the compiled statement of all of it), R54 §2.1 (the role it gave a detail table's kind column), the registry declarations of `interval_kind` on two extension tables |
 | **Depends on** | R55 (the mechanism), R54 (the first discriminator), R49 (the first paired value), R72 (the reverse check), R17 (what core may say about an extension) |
 | **Profile** | all |
 
@@ -227,7 +227,7 @@ included, so the case R49 §2.4 designed the mechanism for is the case it checks
 
 R17 §2 forbids core to reference an extension. Its stated reason — that core must stay
 interpretable when no extension is present — does not hold, because a packet embeds the extension
-registries it declares (`09` §6). Two others do.
+registries it declares (Part 09 §6). Two others do.
 
 **Separable verdicts.** R17 §4 requires a core validator to check that declared extension files
 exist, **MUST NOT** require their schemas, and to keep a finding against an extension out of core
@@ -254,7 +254,7 @@ extension → core, which R17 §2 already permits.
   is a statement about conformance rather than about discriminators, and lands in another part, so
   it is outside the clause-set this part consolidates; restating it would put one rule in two
   places.
-- **`02` §8.3 is replaced, not extended.** It compiles R55 §2; it now compiles this.
+- **Part 02 §8.3 is replaced, not extended.** It compiles R55 §2; it now compiles this.
 
 ## 5. Consequence
 
@@ -265,7 +265,7 @@ with them. Two extension registries are edited and `registry/check.py` gains two
 R91 §3.4.
 
 Nine `applied.toml` entries for R55 §2 and three for R72 §2 become `superseded`, naming this part.
-`02` §8.3 is rewritten from §3 rather than amended.
+Part 02 §8.3 is rewritten from §3 rather than amended.
 
 No table, column, reference or Tier 2 rule changes, no packet is invalidated, and no rebuild is
 owed.

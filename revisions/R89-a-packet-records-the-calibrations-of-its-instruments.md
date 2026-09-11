@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-07 |
-| **Amends** | `01` (adds Calibration as a semantic concept), `02` (adds three core resources) |
+| **Amends** | Part 01 (adds Calibration as a semantic concept), Part 02 (adds three core resources) |
 | **Depends on** | R55 (a discriminated reference), R56 (a column declares its context), R65 (an array names the instrument that made it), R88 (a session-scoped table names the session of every row) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -214,7 +214,7 @@ declares `metadata` already; §5 measures how much of it a packet fills.
   from every rule, which is R66 §1.4's and R70 §2's argument, and two parallel lists are what R3
   §3.0 forbids by name. What does belong there is §2.6's remainder: what a source says about a
   device that no column models.
-- **No calibration is required.** A packet holding none is conforming. `09`'s metadata minimalism
+- **No calibration is required.** A packet holding none is conforming. Part 09's metadata minimalism
   makes core carry what is needed to interpret, and a session with no calibrated quantity needs
   none.
 

@@ -169,7 +169,7 @@ mechanism for is the case it checks. A kind naming a resource the packet does no
 
 R17 §2 forbids core to reference an extension, on the grounds that *"core resources must stay
 interpretable when no extension is present."* A packet embeds the extension registries it declares
-(`09` §6), so the schema travels with the data and is essentially never absent, and that reason
+(Part 09 §6), so the schema travels with the data and is essentially never absent, and that reason
 does not hold. Two others do, and replace it.
 
 **Separable verdicts.** R17 §4 requires a core validator to check that declared extension files

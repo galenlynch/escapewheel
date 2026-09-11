@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-07 |
-| **Amends** | `02` (`core.devices.session_id`, `core.processing_runs.session_id`, and the eight tables that carry no session column), R86 §2.1 (its count of undeclared `session_id` columns) |
+| **Amends** | Part 02 (`core.devices.session_id`, `core.processing_runs.session_id`, and the eight tables that carry no session column), R86 §2.1 (its count of undeclared `session_id` columns) |
 | **Depends on** | R46 (the references the registry never declared), R86 (session scope is derivable) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -65,7 +65,7 @@ The first multi-session packet meets the refusal on eight tables at once.
 
 ### 1.4 Two `session_id` columns are nullable for a question the registry now answers
 
-`core.devices.session_id` and `core.processing_runs.session_id` are nullable, and `02` describes
+`core.devices.session_id` and `core.processing_runs.session_id` are nullable, and Part 02 describes
 them as *"Session if device record is session-scoped"* and *"Session ID if session-scoped"*. Both
 hedges were written before anything could compute scope; R86 §2.1 now does, and both tables reach
 `core.sessions`, so both are session-scoped and the condition the hedge waits on is settled.

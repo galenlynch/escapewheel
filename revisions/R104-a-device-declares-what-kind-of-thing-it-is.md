@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-09 |
-| **Amends** | Adds `device_kind` to `core.devices`; adds a clause to `02` §8.3 |
+| **Amends** | Adds `device_kind` to `core.devices`; adds a clause to Part 02 §8.3 |
 | **Depends on** | R102 §3.3 (a camera is recorded as a device), R54 §2 (a kind in the key, with per-kind detail tables), R55 §2.1 (a discriminator names a table), R55 §2.2 (`resolves` says whether an unmatched value is a defect), R90 §3.5 (the shared-key resolution shape), R17 §2 (an extension is a registry document in the same format) |
 | **Profile** | all |
 
@@ -39,7 +39,7 @@ resolution generic: read the kind, take that resource's primary key from the reg
 `core.devices` has no discriminator, and **no other table in the registry is keyed on
 `device_id`**.
 The two tables that look like specialisations are not. `core.probes` is keyed on `probe_id` and
-references the device, because `01` §3.6 makes a probe "a device that carries electrodes" and R67
+references the device, because Part 01 §3.6 makes a probe "a device that carries electrodes" and R67
 §3 measured four probes to one quad-base device — a different entity at a different cardinality,
 which is why `core.electrodes`, `core.sorting_runs` and `core.units` reference it and not
 `core.devices`. `core.calibration_devices` is a link table of `(calibration_id, device_id)`.
@@ -58,11 +58,11 @@ one, holding prose such as `{"description":"Neuropixels 2.0 single shank probe w
 
 ### 2.3 Which instruments core models
 
-`01` §3.17 states the position: an array asset holds any sampled quantity, "this standard names
+Part 01 §3.17 states the position: an array asset holds any sampled quantity, "this standard names
 the concepts it defines … and it does not enumerate instruments", which R65 §1 rests on when it
 answers *which signal* with the device rather than with a vocabulary.
 
-`core.probes` is not a counter-example. `01` §3.6 defines a probe as a device that **carries
+`core.probes` is not a counter-example. Part 01 §3.6 defines a probe as a device that **carries
 electrodes**, and an electrode is a concept the format is built on — `core.electrodes`,
 `core.array_channels`, `core.unit_electrodes` and every spike hang off it. A probe is in core
 because electrodes are, not because it is an instrument. A camera carries nothing core models.
@@ -76,7 +76,7 @@ because electrodes are, not because it is an instrument. A camera carries nothin
 device's kind-specific facts. It declares no vocabulary, which R101 §3.3 requires of a
 discriminator: R55 §2.1 fixes the value space to the resource IDs the registry declares.
 
-Nullable rather than optional, on `02` §6's preference for a present column over an absent one.
+Nullable rather than optional, on Part 02 §6's preference for a present column over an absent one.
 Optional is for a column a reader must be able to skip, which R3 §2.1 confines to `json_string`
 and which every one of the registry's 22 optional columns is.
 
@@ -95,9 +95,9 @@ resolution is R90 §3.5's shared-key join and needs no second column.
 
 ### 3.2 Where a detail table lives
 
-Core **MUST NOT** declare a device detail table. `01` §3.17 makes this standard name no
+Core **MUST NOT** declare a device detail table. Part 01 §3.17 makes this standard name no
 instruments, and a `core.camera_devices` would name one; behind it would come tables for the
-thermistor, the respiration sensor and the heart-rate monitor that `01` §3.17 lists by name.
+thermistor, the respiration sensor and the heart-rate monitor that Part 01 §3.17 lists by name.
 
 An R17 §2 extension declares them instead, which is what a discriminator makes possible: R55 §2.6
 records that core may name an extension's table without depending on it, because the value is a
@@ -122,7 +122,7 @@ a query that has to read the fact (R66 §1.4).
 a proposed table of coordinate frames adds seven columns of its own, so whichever of the two
 lands second is measured again. Tier 1's discriminator checks go from 14 to **16**, the two a discriminator implies
 (R55 §2.4) being that the value is a dotted resource ID and that it resolves where the packet
-carries the resource. `02` §8.3 gains the clause §3.1 states. No packet is invalidated: the column
+carries the resource. Part 02 §8.3 gains the clause §3.1 states. No packet is invalidated: the column
 is nullable and both packets pass with it unset.
 
 `registry/check.py` gains the check that no core table but `core.devices` is keyed beginning

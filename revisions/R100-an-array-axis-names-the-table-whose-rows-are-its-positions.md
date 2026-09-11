@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-08 |
-| **Amends** | `02` §8.3 (what a discriminator is), R20 §2.4 (the labelled axis), R90 §3.5 (the third shape becomes declared) |
+| **Amends** | Part 02 §8.3 (what a discriminator is), R20 §2.4 (the labelled axis), R90 §3.5 (the third shape becomes declared) |
 | **Depends on** | R46 (the references the registry never declared), R55 (a discriminated reference), R88 (the reference count this starts from) |
 | **Profile** | all |
 
@@ -197,5 +197,5 @@ Neither packet is rebuilt. Both already satisfy every rule this adds.
   `core.unit_electrodes` cannot. A third case would say whether the tie belongs in the registry or
   stays the named resource's own business.
 - **Whether `analysis.array_dimensions` should exist at all.** It has never been written, and R43
-  withdrew four of `06`'s five materialized resources. If the analysis layer settles on arrays it
+  withdrew four of Part 06's five materialized resources. If the analysis layer settles on arrays it
   does not own, the table and §2.4's reference both go.

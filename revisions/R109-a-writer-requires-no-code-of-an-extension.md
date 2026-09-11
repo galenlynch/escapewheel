@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-10 |
-| **Amends** | `09` §5 (adds the contract an extension is held to); `05` §3 (adds §3.7, what a build owes when a source's command fails) |
-| **Depends on** | R17 §2 (an extension is a registry document in `02`'s format), R17 §4 (an extension's verdict is separate), R63 §2.1 (an adapter declares `PRODUCES`), R53 §2.5 (a writer mints every assigned identifier), R79 §2.2 (a packet obligation and an importer obligation are reported apart), R51 §2.2 (a record optional to produce and useful when present), R3 §3.0 (duplication must buy otherwise-unavailable access), R75 §2.1 (logical determinism is normative), R75 §2.2 (byte determinism is a build property), R2 §5 (three presence states) |
+| **Amends** | Part 09 §5 (adds the contract an extension is held to); Part 05 §3 (adds §3.7, what a build owes when a source's command fails) |
+| **Depends on** | R17 §2 (an extension is a registry document in Part 02's format), R17 §4 (an extension's verdict is separate), R63 §2.1 (an adapter declares `PRODUCES`), R53 §2.5 (a writer mints every assigned identifier), R79 §2.2 (a packet obligation and an importer obligation are reported apart), R51 §2.2 (a record optional to produce and useful when present), R3 §3.0 (duplication must buy otherwise-unavailable access), R75 §2.1 (logical determinism is normative), R75 §2.2 (byte determinism is a build property), R2 §5 (three presence states) |
 | **Profile** | all |
 
 Normative, except §2, which is informative.
@@ -13,7 +13,7 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Scope
 
-`09` §5.1 says an extension needs no code: a registry document names its tables, Parquet files hold
+Part 09 §5.1 says an extension needs no code: a registry document names its tables, Parquet files hold
 their rows, and neither imports anything of the reference implementation. That states what an
 extension may get away with. It does not state what a **writer** may require, and the difference is
 the whole of an extension's independence — a writer free to demand code makes "needs no code" a
@@ -36,8 +36,8 @@ Informative.
 ### 2.1 The contract is stated in pieces
 
 Four parts each hold one piece and none holds the shape. R17 §2 makes an extension a registry
-document and `09` §5.2 namespaces it. `09` §5.3 has a packet declare it in the catalog. `05` §3.4
-has a source adapter declare `PRODUCES` before any I/O (R63 §2.1). `09` §5.1 observes that no code
+document and Part 09 §5.2 namespaces it. Part 09 §5.3 has a packet declare it in the catalog. Part 05 §3.4
+has a source adapter declare `PRODUCES` before any I/O (R63 §2.1). Part 09 §5.1 observes that no code
 is needed.
 
 What no part says is what a build may **require**. An implementation that resolved an extension only
@@ -87,7 +87,7 @@ name, and ahead of the note recording the run.
 [  46.3s]   note: ran 'python extract.py' in /mnt/Data/786867-packet
 ```
 
-Six of those lines restate what a build already reads from the Parquet footer at `05` Stage 1
+Six of those lines restate what a build already reads from the Parquet footer at Part 05 Stage 1
 without opening a row. The one carrying a fact nothing else holds is the first: 450 trials became
 19 blocks, a relation between the command's inputs and its outputs that no artifact in the packet
 records.
@@ -109,12 +109,12 @@ be installed, importable, or resolvable in the writer's own environment.
 
 A writer **MAY** accept an extension that ships code — an adapter registered under an entry-point
 group, or a registry document loaded from an installed distribution — and **MUST NOT** treat either
-as the ordinary case, which is what `09` §5.1's "needs no code" turns from a possibility into a
+as the ordinary case, which is what Part 09 §5.1's "needs no code" turns from a possibility into a
 promise.
 
 ### 3.2 An extension delivers a registry document and rows as files
 
-An extension delivers a registry document in `02`'s format (R17 §2) and, per table it declares, rows
+An extension delivers a registry document in Part 02's format (R17 §2) and, per table it declares, rows
 as Parquet. Where a raw source needs converting first, a recipe names a **command**: an argument
 list run in the source's own root, not a shell line, so an extension isolates its dependencies
 however it likes and a build states no opinion about how.
@@ -178,7 +178,7 @@ prevents it: the validator is a distribution an extension may depend on exactly 
 Parquet, and doing so in the extension's own environment is what the boundary makes safe.
 
 A build **MUST NOT** rely on an extension having done so. Its own validation runs over every staged
-resource whatever produced it, which is what `05` makes commit mean.
+resource whatever produced it, which is what Part 05 makes commit mean.
 
 ### 3.6 An extension may state what a build cannot derive
 
@@ -189,7 +189,7 @@ extension's account of its own inputs says how they came to be rather than wheth
 
 A report carries what a build cannot derive, and a build **SHOULD** ignore what it can. Rows per
 table, which tables exist, and whether their schemas conform are each established without asking —
-from the Parquet footer at `05` Stage 1, from the recipe, and by validation — so a report restating
+from the Parquet footer at Part 05 Stage 1, from the recipe, and by validation — so a report restating
 them is R3 §3.0's duplication that buys no otherwise-unavailable access, which §2.4 measures two
 lines of. What no artifact holds is what the command **read**, what it **skipped and why**, and
 whether a table that is short is legitimately short.
@@ -209,7 +209,7 @@ nothing the command already prints.
 
 Optional to produce and useful when present is R51 §2.2's shape for `store_digest`, adopted for the
 same reason. Every artifact an extension must produce before its tables are accepted is a reason
-not to write an extension, and `09` §5.1's "needs no code" exists to keep that gradient flat.
+not to write an extension, and Part 09 §5.1's "needs no code" exists to keep that gradient flat.
 
 ### 3.7 An extension's command is a function of its inputs
 
@@ -235,13 +235,13 @@ is still worth stating.
 
 ## 4. What this does not change
 
-- **An extension is still a registry document in `02`'s format.** R17 §2 is untouched. §3.2
+- **An extension is still a registry document in Part 02's format.** R17 §2 is untouched. §3.2
   constrains where a document may be derived from, which is not a change to what the format admits:
   a document declaring 13 columns is the same document however it was produced.
 
 ## 5. Consequence
 
-`09` §5 gains three subsections — §5.6, §5.7 and §5.8 — and `05` §3 gains §3.7, what a build owes
+Part 09 §5 gains three subsections — §5.6, §5.7 and §5.8 — and Part 05 §3 gains §3.7, what a build owes
 when a source's command fails. No table, column, reference, rule or vocabulary changes, and neither packaged packet
 is rebuilt for this part.
 

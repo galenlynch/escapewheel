@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-04 |
-| **Amends** | `02` (`core.media_assets`), R68 §2.4 (which it reverses) |
+| **Amends** | Part 02 (`core.media_assets`), R68 §2.4 (which it reverses) |
 | **Depends on** | R68 (a presentation timestamp is an integer), R33 (a rational is two integers) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -42,7 +42,7 @@ different route.
 
 ### 1.3 A rule cannot see into a JSON string
 
-The writer records the base in `core.media_assets.metadata` today, which is where `09` §3 puts
+The writer records the base in `core.media_assets.metadata` today, which is where Part 09 §3 puts
 what is not queried. R66 §1.4 gives the reason that is not enough here, and it applies unchanged:
 a value inside a JSON string is unavailable to a Tier 2 rule, so nothing can check that an asset
 whose frames carry `pts` said what those timestamps count.
@@ -70,7 +70,7 @@ accumulates over the millions of frames a session holds. A rate rather than a pe
 consumer who has read `core.clocks` needs no second convention; a writer reading `1/16000` from a
 container inverts it once, at the boundary.
 
-No third column restates the rate as a float. `core.clocks.tick_rate_hz` exists because `02`
+No third column restates the rate as a float. `core.clocks.tick_rate_hz` exists because Part 02
 declared it before R4 made the rational conditional; a new declaration would only be duplicating
 what R3 §3.0 refuses.
 

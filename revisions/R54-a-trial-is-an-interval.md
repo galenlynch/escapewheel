@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-03 |
-| **Amends** | `02` (`core.trials`, `core.trial_tags`), R3 §3.0 (one of its child-table examples), R43 §3 (which sent a task's columns to an extension) |
+| **Amends** | Part 02 (`core.trials`, `core.trial_tags`), R3 §3.0 (one of its child-table examples), R43 §3 (which sent a task's columns to an extension) |
 | **Depends on** | R17 (extension registries), R45 (a tick interval is closed), R49 (a kind names a resource), R53 (an identifier is an integer) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -128,8 +128,8 @@ An interval's **stimulation** — an optogenetic wavelength, power and pulse wid
 stimulus's contrast and orientation; a drug and its concentration — is declared by an R17
 extension and **MUST NOT** be added to `core.intervals`.
 
-This is `09`'s metadata minimalism applied where it is easiest to talk oneself out of it. Opto is
-near-universal in this field, and universality is not the test: `09` §8 requires evidence a field
+This is Part 09's metadata minimalism applied where it is easiest to talk oneself out of it. Opto is
+near-universal in this field, and universality is not the test: Part 09 §8 requires evidence a field
 is broadly needed *and* a revision, and no two rigs agree on the columns — ramping, multi-site,
 sinusoidal and closed-loop stimulation each want different ones. The same session that motivates
 this revision carries `laser_wavelength`, `laser_1_power` and `laser_condition` among the 49 keys

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-09 |
-| **Amends** | `01` §3.5 (a camera is a device), `01` §3.17 (an array names the run that made it), `01` §3.18 (a media asset names the device that recorded it); adds `processing_run_id` to `core.array_assets` and `analysis.array_assets`, and `device_id` to `core.media_assets` |
+| **Amends** | Part 01 §3.5 (a camera is a device), Part 01 §3.17 (an array names the run that made it), Part 01 §3.18 (a media asset names the device that recorded it); adds `processing_run_id` to `core.array_assets` and `analysis.array_assets`, and `device_id` to `core.media_assets` |
 | **Depends on** | R23 §1.1 (derivedness belongs in provenance, not a vocabulary), R41 §2.1 (currency is keyed on the producing run), R65 §1 (an array names the device that made it), R67 §2.2 (a device's identity is the serial the source states), R82 §2.1 (an undeclared currency is an error), R9 §4 (an output is recorded at resource granularity) |
 | **Profile** | all |
 
@@ -74,7 +74,7 @@ fourth video, `clip`, that neither describes.
 
 One camera is called five things across the artifacts — `Right Camera assembly`, `Right size of
 face camera`, `Face side right`, `Face Side Right`, and the file stem `side_camera_right` — none
-derivable from another by rule, and the packet carries only the last. `01` §3.5 already settles
+derivable from another by rule, and the packet carries only the last. Part 01 §3.5 already settles
 what a consumer does with that: a name is unconstrained by this standard, and the reference is the
 statement.
 
@@ -98,13 +98,13 @@ keeps R9 §4's meaning, for resources that are not rows of a table.
 column R65 §2.1 gave the array table and not this one.
 
 A writer **MUST** name the device where its source states one, and **MUST NOT** infer it from a
-file name (`01` §3.5). Where the source states none the column is null, and a consumer **MUST**
+file name (Part 01 §3.5). Where the source states none the column is null, and a consumer **MUST**
 report the instrument as unrecorded rather than read one out of the asset's name.
 
 ### 3.3 Which instruments get a device row
 
 A writer **MUST** record an instrument its source declares as a `core.devices` row, whatever kind
-of instrument it is, and identity is the serial the source states (R67 §2.2). `01` §3.5 defines a
+of instrument it is, and identity is the serial the source states (R67 §2.2). Part 01 §3.5 defines a
 device as "a physical instrument used during acquisition" and names no kinds, so a camera is one
 on the same terms as a headstage.
 
@@ -114,7 +114,7 @@ camera points, which §6 records.
 
 ## 4. What this does not change
 
-- **`core.probes` is unaffected.** A probe is not a device subtype: `01` §3.6 makes it "a device
+- **`core.probes` is unaffected.** A probe is not a device subtype: Part 01 §3.6 makes it "a device
   that carries electrodes", R67 §3 measures four probes to one quad-base device, and three core
   tables reference it because electrodes do.
 
@@ -125,8 +125,8 @@ left it — the other proposed changes to the asset tables move the same counts,
 second is measured again. All three columns are nullable, so Tier 1's not-null checks are unchanged
 at 154, and no Tier 2 rule changes.
 
-`02`'s column tables are generated, so they follow from the registry. What is written is in `01`:
-`01` §3.17 gains §3.1's rule, `01` §3.18 gains §3.2's, and `01` §3.5 gains §3.3's, each beside the rules
+Part 02's column tables are generated, so they follow from the registry. What is written is in Part 01:
+Part 01 §3.17 gains §3.1's rule, Part 01 §3.18 gains §3.2's, and Part 01 §3.5 gains §3.3's, each beside the rules
 R66, R67 and R85 already put there.
 
 The registry change is the whole of what lands now, because every writer obligation §3 states is

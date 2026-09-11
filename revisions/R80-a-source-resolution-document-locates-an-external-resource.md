@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-05 |
-| **Amends** | `03` §"URI rules", R14 §2.3 (the external resource declaration), `04` (manifest schema) |
+| **Amends** | Part 03 §"URI rules", R14 §2.3 (the external resource declaration), Part 04 (manifest schema) |
 | **Depends on** | R14 §2.3 (immutability covers packet-owned bytes), R14 §2.3.1, R36 §2.4, R51 §2, R55 §2 (unresolvable as fact or defect) |
 | **Profile** | `escapewheel-portable-v0.1` |
 
@@ -113,7 +113,7 @@ readable.
 
 A **resolution document** is a JSON document, conventionally named `sources.json`, whose shape
 is published as `registry/sources.schema.json` at `$id`
-`https://escapewheel.org/schemas/sources/0.1.0`. It is specified the way `04`'s manifest is, and for
+`https://escapewheel.org/schemas/sources/0.1.0`. It is specified the way Part 04's manifest is, and for
 the same reason: two implementations that must agree about a file need a schema rather than a
 description.
 
