@@ -2,7 +2,14 @@
 [baseline]
 undisposed = 0
 # Applied targets the part does not corroborate by citing the revision. Same rule: may shrink.
-uncorroborated = 85
+#
+# Not a backlog to clear. 41 of these are R111 §3.5's actor sweep, which rewrote sentences in 41
+# sections and stamped none, because a revision that changes who a clause binds leaves no rule to
+# credit. Most of the rest are a section stating a rule an earlier revision set and crediting the
+# later one that reset it -- Part 03 §6.4 carries R3 §7.2's codec floor and credits R21 §3, which
+# made it per-version. What the number catches is a target that is simply wrong, which is how
+# eight were found: four clauses filed at Part 05 §8, which is Stage 7: Materialize.
+uncorroborated = 78
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -110,7 +117,7 @@ note = "a column, key or reference the registry declares"
 
 [clause."R52 §2.1"]
 disposition = "applied"
-where = [{ part = "04", section = "5.4" }]
+where = [{ part = "04", section = "4.1" }]
 note = "restored 2026-09-04; compiled as MUST where R52 §2.1 says SHOULD"
 
 [clause."R52 §2.3"]
@@ -304,7 +311,7 @@ note = "restated whole in R90 §3; was a paired-value discriminator keeps R55 §
 [clause."R72 §2.4"]
 disposition = "applied"
 where = [{ part = "00", section = "3" }]
-note = "R71 §2.1 states the canonical set the conjunction follows from"
+note = "R71 §2.1 states the canonical set the conjunction follows from. The conjunction itself -- a packet whose core passes and whose extension fails is not conforming -- is stated in no part: Part 05 §5.4 and Part 09 §5.4 give separable verdicts and neither combines them, and Part 00 §3 is the layer model, which says nothing of it. Writing it down needs a revision"
 
 [clause."R74 §2.1"]
 disposition = "applied"
@@ -668,7 +675,7 @@ where = [{ part = "01", section = "2.1" }]
 
 [clause."R39 §2.2"]
 disposition = "applied"
-where = [{ part = "05", section = "7" }]
+where = [{ part = "01", section = "2.2" }]
 
 [clause."R39 §2.4"]
 disposition = "applied"
@@ -1015,7 +1022,7 @@ where = [{ part = "02", section = "6" }]
 
 [clause."R54 §2.6"]
 disposition = "applied"
-where = [{ part = "05", section = "4" }]
+where = [{ part = "05", section = "4.3" }]
 
 [clause."R54 §4"]
 disposition = "rationale"
@@ -1032,7 +1039,7 @@ note = "restored 2026-09-04; the MUST survived only as its consequence"
 
 [clause."R43 §2"]
 disposition = "applied"
-where = [{ part = "06", section = "5" }]
+where = [{ part = "06", section = "6" }]
 
 [clause."R43 §2.1"]
 disposition = "rationale"
@@ -1053,7 +1060,7 @@ disposition = "rationale"
 
 [clause."R2 §3"]
 disposition = "applied"
-where = [{ part = "02", section = "2" }]
+where = [{ part = "02", section = "9.1" }]
 note = "an ordered list of columns; ordering is why an array and not an object"
 
 [clause."R2 §5"]
@@ -1091,7 +1098,7 @@ note = "the specific keys, including core.source_files keyed by id and not uri"
 
 [clause."R17 §2"]
 disposition = "applied"
-where = [{ part = "09", section = "2" }]
+where = [{ part = "09", section = "5.1" }]
 
 [clause."R17 §4"]
 disposition = "applied"
@@ -1441,11 +1448,11 @@ note = "also stated in 05_validation_and_import.md §11"
 
 [clause."R82 §2.3"]
 disposition = "applied"
-where = [{ part = "05", section = "11" }]
+where = [{ part = "05", section = "12" }]
 
 [clause."R82 §2.4"]
 disposition = "applied"
-where = [{ part = "05", section = "11" }]
+where = [{ part = "05", section = "12" }]
 
 [clause."R83 §2.1"]
 disposition = "registry"
