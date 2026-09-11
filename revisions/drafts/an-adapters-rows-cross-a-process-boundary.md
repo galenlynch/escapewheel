@@ -172,31 +172,32 @@ key**, `resource_id`. Everything else is Arrow: the container, the schema, the b
 terminator that separates one resource from the next, and the metadata field the key lives in. A
 protocol that owned more would be a format to maintain; these are a spelling of two.
 
-**`flight-v0.1` is the protocol to reach for, because it is the only one that can answer Stage 1.**
-Part 05 §4.1 requires a build to report, per source, what it offers per resource and how many rows,
-without writing to the packet. Flight answers that with `ListFlights`: a `FlightDescriptor` per
-resource, its schema, and its row count, **before any data moves**. `files-v0.1` answers it from a
-Parquet footer. `stream-v0.1` cannot answer it at all — rows are what a stream carries, so
-discovering costs extracting, and a build out of process would have to run the source to find out
-what it holds.
+**`flight-v0.1` gives, for free, two things the others need protocol to get.** Part 05 §4.1 has a
+build report per source what it offers per resource and how many rows, without writing to the
+packet, and Part 05 §3.3 lets a recipe narrow a source to some of what it produces. Flight answers
+both from its own vocabulary: `ListFlights` returns a descriptor per resource with its schema and
+row count before any data moves, and `DoGet` fetches one descriptor, so a build asks for what the
+recipe named and no more.
 
-It buys two more things a pipe has no way to offer. A build **fetches only what the recipe's `owns`
-names**, by asking for those descriptors, where a stream delivers everything a source has and the
-build discards the rest — and R63 §1.2 measured a recipe naming four resources of five, so the
-difference is one extraction in five wasted. And it can stop: a build that fails early cancels
-rather than draining.
+Neither is out of reach of the others; each costs surface we would have to own. `files-v0.1` answers
+discovery from a Parquet footer and selection by which files the recipe names, so it needs nothing.
+`stream-v0.1` would need a way to be asked — an invocation that reports rather than emits, and a way
+to say which resources are wanted — and both are ours to specify, name and version. **That is the
+trade: own more protocol, or need gRPC bindings.**
 
-It also owns the least. A descriptor is the format's, so the `resource_id` key is unnecessary, and
-what a build supplies is the **socket path**, which it already passes in an argument list. Measured
-in `conformance/adapter-boundary/`, a server over a **Unix socket** — no port, no network exposure,
-shipped in the standard pyarrow wheel — serves three resources by descriptor in **119 ms including
-the process start**.
+Flight also owns the least of the three. A descriptor is the format's, so the `resource_id` key is
+unnecessary, and what a build supplies is the **socket path**, which it already passes in an
+argument list. Measured in `conformance/adapter-boundary/`, a server over a **Unix socket** — no
+port, no network exposure, shipped in the standard pyarrow wheel — serves three resources by
+descriptor in **119 ms including the process start**.
 
-`stream-v0.1` stays for the reason R3 §2.1 has been arguing from the beginning. A raw IPC stream is
-implementable wherever there is an Arrow binding at all; Flight needs gRPC bindings for that
-language too, and the Arrow implementations carrying Flight are a subset of those carrying IPC. An
-author working where Flight is not available writes a stream and loses Stage 1 to an extraction,
-which is a price to pay knowingly rather than a reason to own a worse protocol for everyone.
+`stream-v0.1` is not the lesser protocol for it. It is the one implementable wherever there is an
+Arrow binding at all, which is R3 §2.1's argument from the beginning: Flight needs gRPC bindings for
+that language too, and the Arrow implementations carrying Flight are a subset of those carrying IPC.
+An adapter that emits everything it has and lets the build discard is paying a cost R63 §1.2
+measures at one resource in five, and an adapter whose discovery costs an extraction is paying what
+the NWB adapter's `offers` pays in process today, counting rows by computing them. Both are costs a
+working adapter can carry.
 
 A recipe declares files where persistence is the point — an extraction expensive enough to reuse
 across builds, or one whose output should still be there to inspect after a failure. That is not a

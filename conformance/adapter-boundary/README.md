@@ -55,13 +55,16 @@ A pipe is also memory, so this route touches no disk. Where an adapter is not a 
 build — another host, a scheduler — a port would be the shape, and Arrow Flight is its standard;
 that is a protocol to add rather than a change to these two.
 
-## Arrow Flight answers Stage 1; a stream cannot
+## Arrow Flight answers Stage 1 from its own vocabulary
 
 Part 05 §4.1 has a build report, per source, what it offers per resource and how many rows, without
 writing to the packet. `ListFlights` is that: a descriptor per resource with its schema and row
-count, before any data moves. A stream carries rows, so out of process, discovering costs
-extracting — and the NWB adapter's `offers()` shows the shape of that cost today, computing every
-record to count them.
+count, before any data moves, and `DoGet` then fetches one descriptor rather than everything.
+
+A stream can be made to do both and the surface is ours: an invocation that reports rather than
+emits, and a way to name which resources are wanted. Left unspecified, a stream adapter discovers
+by extracting — which is what the NWB adapter's `offers()` costs in process today, computing every
+record to count them — and emits everything it has for the build to discard.
 
 `flight.py` serves three resources over a **Unix socket** — `Location.for_grpc_unix`, so no port
 and no network exposure — and a client lists them by descriptor and fetches each: **119 ms
