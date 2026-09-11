@@ -51,10 +51,9 @@ extension is a registry document in the format of Part 02, in its own namespace 
 Code citing `09` §5.1 is one hop from R17 §2 and zero hops from the sentence that binds it.
 
 `applied.toml` is the map. Of **235 distinct revision clauses cited across the three distributions'
-source**, the ledger disposes 192 and **117 landed in a part**, which covers **455 of the 754
-citations**. The rest divide the way the dispositions do: 42 landed in the registry, 14 are about
-this implementation and belong where they are, 8 are rationale, and **11 are `superseded`** — code
-pointing at prose another revision has replaced.
+source**, the ledger disposes 192 and **131 landed in a part**, which covers **522 of the 754
+citations**. The rest divide the way the dispositions do: 42 landed in the registry, 8 are
+rationale, and **11 are `superseded`** — code pointing at prose another revision has replaced.
 
 ### 2.3 A part's numbers move, and that is what makes them checkable
 
@@ -79,12 +78,13 @@ packet's documentation, or in a revision's Decision — **MUST** name that part 
 **MUST NOT** name a revision in its place. That sentence is what binds (R93 §3.6), and a revision
 naming the same rule records how the part came to say it.
 
-Not every requirement is in a part. The ledger disposes **14 clauses as `implementation`**, which
-decided something about this implementation rather than about the format, and **8 as `rationale`**,
-which decided nothing and explain. Neither landed in a part, so neither can be cited from one, and a
-citation naming the revision is the only citation available. §3.3 covers the second and this covers
-the first: where the ledger disposes a clause anywhere but a part, the revision **is** the statement
-of record.
+Naming an actor does not exempt a clause. A requirement binding a writer, a reader, a validator or a
+consumer (`00` §2.8) is stated by the part that binds it, and is cited from that part like any other.
+
+Two dispositions leave a requirement outside the parts. A clause the registry carries is cited from
+the registry, which is where a consumer reads it, and **8 clauses decided nothing and explain**,
+disposed `rationale`, so they state no requirement to cite. Where the ledger disposes a clause
+anywhere but a part, the revision **is** the statement of record.
 
 ### 3.2 A comment states what the code does not
 
@@ -143,9 +143,17 @@ five accepted revisions.
 ## 5. Consequence
 
 `00` gains a section and `07` §2 gains what a comment states and what it cites. The three distributions carry
-**754 revision citations against 192 part citations**, of which 455 repoint by looking the clause up
+**754 revision citations against 192 part citations**, of which 522 repoint by looking the clause up
 in `applied.toml` and taking its `where`. The 11 disposed `superseded` are the ones to read rather
 than rewrite: each points at prose that no longer stands.
+
+That figure rose by 67 while this draft was open, because the ledger had a disposition that read as
+an exemption. `implementation` said a clause "binds a writer, reader or validator rather than the
+prose", and 23 clauses carried it; **21 were in a part or the registry all along**, the ledger
+having recorded only that the reference implementation complied, and **2 had reached no part** —
+R56 §2.4's structural checks and R88 §2.3's ban on inferring a session from a name, both since
+written into `02`. The disposition is struck and `applied` now requires a `where`, so a clause
+cannot be counted as placed without naming the part that places it.
 
 Nothing about a packet changes, and no rule this specification states moves. What moves is the
 direction a reader is sent when they ask what binds them. §3.5's numbering check is owed:

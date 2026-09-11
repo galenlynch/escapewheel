@@ -8,10 +8,18 @@ revision is cited elsewhere in the spec, so a citation sweep sees it and a reade
 The fix is a ledger rather than another audit. Every clause of every accepted revision that
 carries RFC 2119 force appears in `applied.toml` with one of four dispositions:
 
-    applied         stated in the compiled spec; `where` names the part
-    registry        delegated to registry/logical_schemas.json, which the spec does not restate
-    implementation  binds a writer, reader or validator rather than the prose
+    applied         stated in the compiled spec; `where` names the part and section
+    registry        delegated to registry/logical_schemas.json or rules.json
     superseded      a later revision replaced it; `by` names which
+    rationale       decided nothing, so there is nothing to place
+
+A clause binding a writer, reader, validator or consumer is `applied` like any other: an actor
+is bound by the spec's prose, so naming one does not excuse a clause from appearing in a part.
+There was a fifth disposition, `implementation`, which said a clause "binds a writer, reader or
+validator rather than the prose" and so let 23 of them be counted as disposed while living
+nowhere in the durable document. 21 were in a part or the registry all along and the ledger had
+simply never recorded where; 2 had reached no part, which is the class this script exists to
+catch and which that disposition hid. `applied` now requires a `where`.
 
 A clause with no entry is **undisposed**, and this script exits non-zero listing them. Adding a
 revision therefore adds failures until someone says where each of its clauses went, which is the
@@ -33,7 +41,7 @@ HERE = Path(__file__).resolve().parent
 REVISIONS = HERE.parent / "revisions"
 LEDGER = HERE / "applied.toml"
 
-DISPOSITIONS = {"applied", "registry", "implementation", "superseded", "rationale"}
+DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 
 
 def clauses() -> dict[str, str]:
@@ -105,6 +113,10 @@ def main() -> int:
     stale = sorted(set(ledger) - set(binding))
     bad = {k: d.get("disposition") for k, d in ledger.items()
            if d.get("disposition") not in DISPOSITIONS}
+    # An `applied` entry naming no part says the clause was written down and not where, which is
+    # the state the withdrawn `implementation` disposition made permanent for 23 clauses.
+    placeless = sorted(k for k, d in ledger.items()
+                       if d.get("disposition") == "applied" and not d.get("where"))
 
     counts: dict[str, int] = {}
     for entry in ledger.values():
@@ -121,9 +133,11 @@ def main() -> int:
             print(f"    STALE       {key:<12} the ledger disposes a clause no revision states")
         for key, value in sorted(bad.items()):
             print(f"    BAD         {key:<12} disposition {value!r} is not one of {sorted(DISPOSITIONS)}")
+        for key in placeless:
+            print(f"    PLACELESS   {key:<12} applied, but `where` names no part")
 
     over = max(0, len(undisposed) - baseline)
-    failures = over + len(stale) + len(bad)
+    failures = over + len(stale) + len(bad) + len(placeless)
     if len(undisposed) < baseline:
         text = LEDGER.read_text()
         LEDGER.write_text(re.sub(r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text))

@@ -113,6 +113,8 @@ A session-scoped table MUST carry a `session_id` column — `int32`, required, r
 
 Carrying the column without the reference is what the rule forbids: Tier 1 generates one anti-join per declared reference and nothing from a column's name, so an undeclared `session_id` is a foreign key no rule can see.
 
+A writer fills the column from the parent row it already read, or from the session it was constructed with, and MUST NOT infer it from a name: a file path and a packet directory both spell a session, and neither is a statement this specification constrains (R88 §2.3).
+
 ## 8. Column semantics
 
 ### 8.1 Role
@@ -234,6 +236,8 @@ query that has to read it.
 A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit_from` naming a column that carries it (R77 §2.2). A `coordinate` column MUST declare `clock_from` where the clock its ticks are on is not the one that row's `clock_id` names, and MUST declare it where the table has no `clock_id` at all (R77 §2.1). Measured across the registry, 6 of 20 coordinates declare one and the other 14 resolve to their own row's clock; none has neither.
 
 `clock_from` names a column of the same table or a one-hop `resource.column`. A consumer resolves it rather than guessing, because converting on the wrong clock fails silently.
+
+A validator decides all of it from the registry with no packet in hand (R56 §2.4): `unit` and `unit_from` are mutually exclusive, `clock_from` appears only on a `coordinate`, a same-table name is a column of that table, a `resource.column` name resolves through a reference the table declares and names a column of that resource, and a `clock_from` target is an `identifier` referencing `core.clocks`.
 
 A column holding a physical unit MUST hold a UCUM code, and a column declaring one MUST declare a UCUM code — an annotation in curly braces is one, and is dimensionless, which is what a quantity normalised by something the packet measured is (R101 §3.6).
 
