@@ -19,7 +19,7 @@ def write(out: Path, name: str, table: pa.Table):
 
 #: The kind these intervals are, as `01` §3.10 requires: a dotted resource ID naming the table
 #: that specialises them. This packet does not carry it, which `01` §3.10a makes an error -- the
-#: generator here does not implement the discriminator checks R55 §2.4 adds, and the limits
+#: generator here does not implement the discriminator checks `02` §8.3 adds, and the limits
 #: section says so rather than the fixture pretending otherwise.
 KIND = "dynamic_foraging.trials"
 

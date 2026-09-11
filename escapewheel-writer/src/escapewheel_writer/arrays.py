@@ -176,7 +176,7 @@ def _codec(name: str, *, differenced: bool = False) -> Any:
 
     `differenced` says a delta filter runs first, which decides blosc's shuffle. Bit shuffle
     wins where the high bits go constant, and differencing a smooth signal is what makes them
-    constant -- so on real waveforms in R3 §5's layout it is 0.92 MB against byte shuffle's
+    constant -- so on real waveforms in `03` §6.2's layout it is 0.92 MB against byte shuffle's
     0.96 undifferenced, and 0.86 against 0.95 differenced.
     """
     from zarr.codecs import BloscCodec, GzipCodec, ZstdCodec

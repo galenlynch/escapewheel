@@ -191,7 +191,7 @@ class _Buckets:
     76.6 s.
 
     Bucketing by time and sorting by unit inside each bucket needs no global sort, because
-    `core.spike_events` is already ordered by `(session_id, unit_id, t_tick)` (R81 §2.4)
+    `core.spike_events` is already ordered by `(session_id, unit_id, t_tick)` (`03` §5.4)
     (`03` §5.3, `03`). Visiting it in that order and appending each row to its bucket's file
     leaves every file in exactly the intra-bucket order `03` §5.4 declares. What remains is to
     concatenate the files in bucket order, which is a second pass and no comparisons.
@@ -300,7 +300,7 @@ def spike_events(
         The clock to map onto. Defaults to `core.sessions.reference_clock_id` (R27 §2).
     bound : float, optional
         Passed to :func:`~escapewheel_reader.clocks.align`. Defaults to what the packet's own
-        import run measured (R37 §3.3), so a table derived here places the same spikes the
+        import run measured (`01` §3.9), so a table derived here places the same spikes the
         packet's `t_zero_tick` was taken over.
     bucket_seconds : int
         Bucket width, in seconds of the reference clock. A transform parameter `06` requires

@@ -125,7 +125,7 @@ def draft(extension_id: str, tables: dict[str, Path], *, logical_standard_versio
             # R7: every table declares a key or explicitly null with a reason. Neither is
             # guessable -- a column unique in one session need not be unique in the next.
             "primary_key": None,
-            # `09` §2 lets an extension reference core, and R55 §2.3.1 needs it to where a
+            # `09` §2 lets an extension reference core, and `02` §8.3 needs it to where a
             # discriminator names this table. Nothing here can know which.
             "references": [],
             "rules": [],

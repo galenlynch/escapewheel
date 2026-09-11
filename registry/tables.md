@@ -60,7 +60,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — | R88 §2.1 | Session ID. |
 | `array_asset_id` | int32 | **required** | — | R20 §5 | Array asset ID. |
-| `axis_index` | int64 | **required** | — | R20 §5 | 0-based axis position in stored order (R3 §5). |
+| `axis_index` | int64 | **required** | — | R20 §5 | 0-based axis position in stored order (`03` §6.2). |
 | `dimension_name` | string | **required** | free | R20 §5 | Axis name. |
 | `coordinate_position_column` | string | nullable | free | R20 §5 | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | resolves required | R100 §2.1 | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 §2.4). |
@@ -180,7 +180,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — | R88 §2.1 | Session ID. |
 | `array_asset_id` | int32 | **required** | — | R3 §3.1-3.3 | Array asset ID. |
-| `axis_index` | int64 | **required** | — | R3 §3.1-3.3 | 0-based axis position in stored order (R3 §5). |
+| `axis_index` | int64 | **required** | — | R3 §3.1-3.3 | 0-based axis position in stored order (`03` §6.2). |
 | `dimension_name` | string | **required** | free | R3 §3.1-3.3 | Axis name. |
 | `coordinate_position_column` | string | nullable | free | R20 §2 | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | resolves required | R100 §2.1 | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 §2.4). |
@@ -258,8 +258,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — | R89 §2.1 | Session ID. |
 | `calibration_id` | int32 | **required** | — | R89 §2.1 | Stable calibration ID. |
-| `calibration_name` | string | **required** | free | R89 §2.1 | What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since R85 §2.2 makes two calibrations sharing a name one row. |
-| `calibration_type` | string | **required** | open | R107 §3.1 | What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 §2.1), and this holds a value that resolves to no table. |
+| `calibration_name` | string | **required** | free | R89 §2.1 | What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since `02` §8.2 makes two calibrations sharing a name one row. |
+| `calibration_type` | string | **required** | open | R107 §3.1 | What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (`02` §8.3), and this holds a value that resolves to no table. |
 | `calibrated_at` | timestamp | nullable | — | R89 §2.1 | When the calibration was measured, which is not when it was in force: R89 §1.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (`01` §3.5). |
 | `description` | string | nullable | free | R89 §2.1 | What the source said the calibration was. |
 | `input_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | R101 §3.6 | The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column (R89 §2.3). |
@@ -361,7 +361,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `tick_rate_hz` | float64 | nullable | — |  | Tick rate as float, required unless exact tick rate provided. |
 | `tick_rate_num` | int64 | nullable | — |  | Exact rational numerator. |
 | `tick_rate_den` | int64 | nullable | — |  | Exact rational denominator. |
-| `origin` | string | **required** | open | R107 §3.1 | Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (R45 §2.4). |
+| `origin` | string | **required** | open | R107 §3.1 | Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (`01` §2.2). |
 | `tick_zero_utc` | timestamp | nullable | — | R6 §2 | Wall-clock instant of tick 0 on this clock. |
 | `parent_clock_id` | int32 | nullable | — |  | Parent/reference clock. |
 | `transform_slope` | float64 | nullable | — | R3 §3.4 | Parent ticks per this clock's tick, as measured. |
@@ -403,7 +403,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `axis_index` | int64 | **required** | — | R105 §3.2 | Which axis, 0-based (`02` §8.1.1). |
 | `axis_name` | string | **required** | open | R105 §3.2 | Whatever the source called the field these values came from, verbatim (`02` §9.3). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be. |
 | `axis_direction` | string | nullable | open | R105 §3.2 | Which way the values increase -- `right`, `anterior`, `superior`. Null where the source does not state it, which no inference may fill (R105 §3.4). |
-| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | R101 §3.6 | The axis's unit, as a UCUM code (R101 §3.6). |
+| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | R101 §3.6 | The axis's unit, as a UCUM code (`02` §8.4). |
 
 **Primary key** — `session_id`, `coordinate_frame`, `axis_index`  
 
@@ -474,7 +474,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `serial_number` | string | nullable | free |  | Serial number. |
 | `parent_device_id` | int32 | nullable | — | R67 §2.1 | The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it. |
 | `parent_port` | string | nullable | open | R85 §2.1 | Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (`01` §3.5). |
-| `device_kind` | string | nullable | resolves optional | R104 §3.1 | The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is `02` §8.3's shared-key join. Core declares no such table (`02` §8.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (R55 §2.2). |
+| `device_kind` | string | nullable | resolves optional | R104 §3.1 | The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is `02` §8.3's shared-key join. Core declares no such table (`02` §8.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (`02` §8.3). |
 | `metadata` | json_string | optional | — | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `device_id`  
@@ -631,7 +631,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Declares | Since | Description |
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Session ID. |
-| `interval_kind` | string | **required** | resolves required | R107 §3.1 | The resource that specialises this interval, as a dotted resource ID, resolved as R55 §2.3's shared key. |
+| `interval_kind` | string | **required** | resolves required | R107 §3.1 | The resource that specialises this interval, as a dotted resource ID, resolved as `02` §8.3's shared key. |
 | `interval_id` | int32 | **required** | — | R54 §2.1 | Stable trial ID. |
 | `start_tick` | int64 | **required** | — | R45 §2.4 | First tick of the trial, inclusive, on `clock_id`. |
 | `stop_tick` | int64 | **required** | — | R45 §2.4 | Last tick of the trial, inclusive, on `clock_id`. |

@@ -367,7 +367,7 @@ def test_a_trial_without_an_interval_is_a_defect_not_a_dropped_row(tmp_path, har
 
 #: The minimum an interval kind needs to resolve: `01` §3.10 makes `interval_kind` resolve
 #: `required`, so a packet carrying intervals and no table saying what they were is refused.
-#: One table, one column, and the reference R55 §2.3.1 requires of a named resource.
+#: One table, one column, and the reference `02` §8.3 requires of a named resource.
 TASK_EXTENSION = {
     "registry_version": "0.1.0",
     "logical_standard_version": "0.1",

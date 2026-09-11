@@ -30,7 +30,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import polars as pl
 
 
-#: Where a Zarr array keeps its metadata. v3 names it `zarr.json`; v2, which R21 §3 permits
+#: Where a Zarr array keeps its metadata. v3 names it `zarr.json`; v2, which `03` §6.1 permits
 #: an external array to use, names it `.zarray`. Both are JSON.
 #:
 #: `physical_profile` -> Zarr version, for a remote array whose documents cannot be read
@@ -440,7 +440,7 @@ class ArrayResource:
 
     @property
     def shape(self) -> tuple[int, ...]:
-        """The array's shape, in stored axis order (R3 §5)."""
+        """The array's shape, in stored axis order (`03` §6.2)."""
         return tuple(int(n) for n in self.metadata()["shape"])
 
     @property

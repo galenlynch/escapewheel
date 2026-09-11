@@ -32,7 +32,7 @@ def check(label, bad, fmt=str):
 
 ledger = subprocess.run([sys.executable, str(HERE.parent / "conformance/spec-sweep/tables.py")],
                         capture_output=True, text=True).stdout
-# Namespaces beyond core exist from R20 §5; match any <namespace>.<table> line.
+# Namespaces beyond core exist from `00` §3; match any <namespace>.<table> line.
 expected = {l.strip() for l in ledger.splitlines()
             if re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", l.strip())}
 check("table set matches R9 §2 ledger", expected ^ set(T))
@@ -57,7 +57,7 @@ check("a since names a revision",
       [(n, v) for n, t in T.items()
        for v in [t.get("since"), *(c.get("since") for c in t["columns"])]
        if v is not None and not re.fullmatch(r"R\d+(?: §[\d.\-]+)?", v)])
-#: R101 §3.6. A UCUM code is printable ASCII without spaces; an annotation in curly
+#: `02` §8.4. A UCUM code is printable ASCII without spaces; an annotation in curly
 #: braces is one and is dimensionless. This rejects the prose that was declared --
 #: "median anchor intervals", "byte" -- rather than parsing the grammar.
 _UCUM = re.compile(r"[!-~]+")
@@ -135,7 +135,7 @@ def structural(tables, universe, prefix=""):
     c_("a table carrying session_id leads with it",
        [n for n, t in tables.items()
         if "session_id" in cols[n] and t["columns"][0]["name"] != "session_id"])
-    # R56 §2.2 resolves a `coordinate` against its own row's `clock_id`, so a reader who has found a
+    # `02` §8.4 resolves a `coordinate` against its own row's `clock_id`, so a reader who has found a
     # tick needs the clock next to it. Twelve of the thirteen tables carrying one already do that;
     # `core.units` did not, because R96 §3.2 added the column beside what R96 §3.1 had just added.
     # A `clock_id` in the primary key leads for that reason instead, and a table with no coordinate
@@ -204,7 +204,7 @@ def structural(tables, universe, prefix=""):
     c_("a discriminator declares no vocabulary (`02` §9.3)",
        [(n, c["name"]) for n, c in _strings
         if c["role"] == "discriminator" and "vocabulary" in c],
-       lambda x: f"{x[0]}.{x[1]}: R55 §2.1 fixes the value space to the declared resource IDs")
+       lambda x: f"{x[0]}.{x[1]}: `02` §8.3 fixes the value space to the declared resource IDs")
     c_("no column of another type declares one (`02` §9.3)",
        [(n, c["name"]) for n, t in tables.items() for c in t["columns"]
         if c["type"] != "string" and "vocabulary" in c])
@@ -218,7 +218,7 @@ def structural(tables, universe, prefix=""):
        [(n, c["name"], a) for n, t in tables.items() for c in t["columns"]
         for a in c.get("authority", [])
         if not (a.get("name") and str(a.get("uri", "")).startswith(("http://", "https://")))])
-    c_("a declared unit is a UCUM code (R101 §3.6)",
+    c_("a declared unit is a UCUM code (`02` §8.4)",
        [(n, c["name"], c["unit"]) for n, t in tables.items() for c in t["columns"]
         if c.get("unit") and not _UCUM.fullmatch(c["unit"])],
        lambda x: f"{x[0]}.{x[1]} declares {x[2]!r}; an annotation in curly braces is a UCUM unit "
@@ -234,7 +234,7 @@ def structural(tables, universe, prefix=""):
             _by_name.setdefault(c["name"], set()).add(
                 (c["vocabulary"],
                  tuple((a["name"], a["uri"]) for a in c.get("authority", ()))))
-    c_("one column name carries one vocabulary and one authority (R101 §3.6)",
+    c_("one column name carries one vocabulary and one authority (`02` §9.3)",
        sorted(k for k, v in _by_name.items() if len(v) > 1))
 
     # R107 §3.6. A description restating a field is a second statement of the same fact that
@@ -400,7 +400,7 @@ NAMING = {
     # R50 §3: `step_ticks` read as a coordinate and was a duration. A plural integer is the shape
     # that confusion takes, so it is flagged and a real count says so here.
     "no integer column is plural": lambda n, t, role: not (n.endswith("s") and t in INTEGERS),
-    # R55 §2.1. A discriminator holds a dotted resource ID, so it is a string by construction,
+    # `02` §8.3. A discriminator holds a dotted resource ID, so it is a string by construction,
     # and the `_kind` suffix is what R49 chose for the first one.
     "a _kind column is a discriminator": lambda n, t, role: not (
         n.endswith("_kind") and role != "discriminator"),
@@ -424,7 +424,7 @@ print(f"      {len(NAMING)} conventions over {sum(len(t['columns']) for t in ALL
       f"{len(NAMING_EXCEPTIONS)} declared exceptions")
 
 
-#: R85 §2.2. Name columns that name a **kind** of thing rather than one assigned identifier's
+#: `02` §8.2. Name columns that name a **kind** of thing rather than one assigned identifier's
 #: value, and are therefore expected to repeat. Declared rather than inferred, for the reason
 #: NAMING_EXCEPTIONS is: a set absorbing whatever has no `*_id` sibling today would absorb the
 #: next identifier whose name column was added without one.
@@ -442,7 +442,7 @@ NAMES_A_KIND = {
                                             "every frame that read the same one (`01` §3.24)",
 }
 
-# R85 §2.2. Which `*_name` columns carry the uniqueness obligation: the ones naming an assigned
+# `02` §8.2. Which `*_name` columns carry the uniqueness obligation: the ones naming an assigned
 # identifier of their own table. No rule can enforce it -- a writer numbering per distinct name
 # has already merged two things into one row, and that merge is what `01` §3.5 requires of four
 # streams naming one serial -- so the registry says which columns it falls on and `02` §8.2 states
@@ -459,7 +459,7 @@ check("a name column names an assigned identifier, or is declared to name a kind
 check("every column declared to name a kind of thing still exists and still names one",
       sorted(n for n in NAMES_A_KIND if named.get(n, True)))
 core_unique = sum(1 for n, paired in named.items() if paired and not n.startswith(tuple(EXT)))
-print(f"      {sum(named.values())} name columns must be unique within a packet (R85 §2.2), "
+print(f"      {sum(named.values())} name columns must be unique within a packet (`02` §8.2), "
       f"{core_unique} of them in core and analysis; {len(NAMES_A_KIND)} name a kind of thing")
 
 
@@ -515,7 +515,7 @@ print(f"      {len(scoped)} of {len(T)} core and analysis tables are session-sco
       f"{len(set(T) - scoped)} are not ({', '.join(sorted(set(T) - scoped))}); "
       f"{len(scoped - carries)} reach core.sessions without carrying the column")
 
-# R55 §2.2, §2.3.2. What a discriminator declares, checked where the meta-schema cannot: the
+# `02` §8.3, §2.3.2. What a discriminator declares, checked where the meta-schema cannot: the
 # enum constrains the value but not that a discriminator has one, and `resolves` on anything else
 # is a declaration that decides nothing.
 _disc = []
@@ -578,7 +578,7 @@ for _r, _t in ALL.items():
             _via.append(f"{_r}.{_c['name']}: {_from}.{_col} is no declared reference to {_r}")
 check("a discriminator away from its rows names the reference", sorted(_via))
 
-# R55 §2.3.3. A paired value is a string, and not by accident: one column resolves against
+# `02` §8.3. A paired value is a string, and not by accident: one column resolves against
 # several kinds, and an assigned key is matched by its `*_name` where a carried one is matched by
 # the number itself, so the union it joins mixes types by construction.
 check("a paired value is a string",
@@ -588,13 +588,13 @@ check("a paired value is a string",
              if _c.get("discriminates") and any(
                  x["name"] == _c["discriminates"] and x["type"] != "string" for x in _t["columns"])))
 
-# R55 §2.3.1: a paired value holds one identifier, so it can only name a resource whose key is one
+# `02` §8.3: a paired value holds one identifier, so it can only name a resource whose key is one
 # column. Reported rather than enforced -- the kind vocabulary is open (`02` §8.3), so what this can
 # say is which resources are namable at all, which is otherwise found by a check quietly matching
 # no branch.
 NAMABLE = {_r: _t["primary_key"][0] for _r, _t in ALL.items()
            if _t.get("primary_key") and len(_t["primary_key"]) == 1}
-# R55 §2.3.3: which column a paired value matches follows from the key's identity, so the split
+# `02` §8.3: which column a paired value matches follows from the key's identity, so the split
 # is a property of the registry and is reported rather than rediscovered per consumer.
 _by_name = {_r for _r, _k in NAMABLE.items()
             if next(c for c in ALL[_r]["columns"] if c["name"] == _k).get("identity") == "assigned"

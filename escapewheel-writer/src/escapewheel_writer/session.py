@@ -153,7 +153,7 @@ class Context:
     #: `core.clock_observation_intervals` rows, whatever source produced them, since R39's
     #: origin is a minimum across all of them and no single adapter sees them all.
     observed: list[dict[str, Any]] = field(default_factory=list)
-    #: What `_bound_for` measured, for the import run's parameters (R37 §3.3, §4).
+    #: What `_bound_for` measured, for the import run's parameters (`01` §3.9, §4).
     measured_bound: dict[str, Any] = field(default_factory=dict)
     #: The anchors and the bound, once `alignment` has settled them.
     _alignment: tuple[dict[str, Any], float] | None = None
@@ -441,7 +441,7 @@ def _bound_for(
     tolerance: float,
     rate: float,
 ) -> tuple[float, dict[str, Any]]:
-    """Choose the bound to map at, measuring it as R37 §3.3 and R40 §2 require.
+    """Choose the bound to map at, measuring it as `01` §3.9 requires.
 
     A packet whose earliest data sits inside one median anchor interval of its first anchor
     needs nothing; `01` §3.9's default covers it and this returns it unmeasured. Where it does

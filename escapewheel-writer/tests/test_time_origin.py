@@ -1,4 +1,4 @@
-"""R39's time origin, and the measured bound R37 §3.3 requires to reach it.
+"""R39's time origin, and the measured bound `01` §3.9 requires to reach it.
 
 Both are arithmetic over anchors rather than adapter behaviour, so they are exercised
 directly: an origin that is wrong by a tick is invisible in a packet and shifts every second

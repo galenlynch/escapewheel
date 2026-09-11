@@ -24,7 +24,7 @@ Let *m* be the median interval between a clock's anchors.
    anchor drops p95 extrapolation error from 525 µs to 258 µs (R37 §2).
 3. Anywhere further than *m* from every anchor -- past the ends, or inside a wider gap -- the
    mapping is undefined by default, and this returns a mask saying so rather than a plausible
-   number. R37 §3.3 makes the real bound one on *error*: a caller that has measured its own
+   number. `01` §3.9 makes the real bound one on *error*: a caller that has measured its own
    clocks may widen `bound`, and one that has not gets `01` §3.9's distance unchanged.
 
 The mask is not a formality. On a real session the first sync pulse arrives 18,000 to 28,000
@@ -151,7 +151,7 @@ def extrapolation_error(
 ) -> dict[str, float]:
     """Measure :func:`align`'s out-of-range estimator at a given distance, in parent ticks.
 
-    R37 §3.3 makes the bound one on error rather than on distance, and requires a writer that
+    `01` §3.9 makes the bound one on error rather than on distance, and requires a writer that
     wants more than `01` §3.9's one median interval to *measure* it at the distance it intends
     to use. This is that measurement: every interior anchor stands in for a terminal one, the
     §3.1 estimator predicts the anchor `distance` median intervals further on, and the spread
@@ -222,7 +222,7 @@ def anchors(packet: Any) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]
 def declared_bound(packet: Any) -> float:
     """Return the alignment bound the packet's writer established, or `BOUND`.
 
-    R37 §3.3 lets a writer map further than one median anchor interval once it has *measured*
+    `01` §3.9 lets a writer map further than one median anchor interval once it has *measured*
     the estimator at the distance it intends to use, and R99 §3.1 puts that bound in
     `core.sessions.alignment_bound`. Reading it is what makes a consumer's mapping match the
     writer's: a packet whose spikes were placed at a bound of two and whose reader maps at one
@@ -436,7 +436,7 @@ def on_clock(packet: Any, table: pa.Table, clock: str | None = None, *, bound: f
     A row whose tick the anchors cannot place is **dropped**, which is what `01` §3.9 leaves
     undefined and what `analysis.spike_events` does with the same rows. Reading `core` through
     this and reading the materialized table therefore agree -- which is why the bound defaults to
-    the one the packet's writer established and recorded (R37 §3.3), not to `01` §3.9's. A reader
+    the one the packet's writer established and recorded, not the default `01` §3.9 states. A reader
     mapping at a narrower bound than the writer used drops rows the packet's own derived table
     kept, and the two disagree about which spikes exist.
 

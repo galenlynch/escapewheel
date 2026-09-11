@@ -100,7 +100,7 @@ class Resource:
 
     @property
     def source(self) -> str | None:
-        """The body of data this resource belongs to, if it names one (R80 §2.1).
+        """The body of data this resource belongs to, if it names one (`04` §5.5).
 
         Where present, `uri` is a path relative to wherever that source turns out to be, and a
         resolution document says where that is. Neither field is a location.

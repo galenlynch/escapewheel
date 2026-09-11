@@ -79,7 +79,7 @@ def test_a_local_location_reads_its_own_bytes(tmp_path):
 
 
 def test_a_source_resolves_through_a_document(tmp_path):
-    """R80 §2.1: the entry names a body of data, the document says where that is."""
+    """`04` §5.5: the entry names a body of data, the document says where that is."""
     root = Location.of(tmp_path, sources={"raw_nwb": "s3://bucket/session.nwb"})
     where = root.resolve("processing/ecephys/LFP/data", "raw_nwb")
     assert where.uri == "s3://bucket/session.nwb/processing/ecephys/LFP/data"
@@ -94,6 +94,6 @@ def test_a_source_no_document_locates_is_refused(tmp_path):
 
 
 def test_an_entry_naming_no_source_is_unchanged(tmp_path):
-    """R80 §2.1: silence keeps today's meaning, so every existing packet still resolves."""
+    """`04` §5.5: silence keeps today's meaning, so every existing packet still resolves."""
     root = Location.of(tmp_path, sources={"raw_nwb": "s3://bucket/x"})
     assert root.resolve("tables/core/units.parquet").path == Path(tmp_path) / "tables/core/units.parquet"

@@ -450,7 +450,7 @@ def variants():
         # projection, which stays closed to sua/mua/noise (R22 5).
         c["core.units"][0]["quality_label"] = "good"
     def unspecialised_interval(c):
-        # R72 §2.1: a core interval naming a kind with no counterpart there. Every other check
+        # `02` §8.3: a core interval naming a kind with no counterpart there. Every other check
         # passes -- the kind is a dotted resource ID, the packet declares it, and the detail
         # rows that exist all resolve -- which is why the reverse direction had to be generated.
         c[KIND] = c[KIND][:-1]

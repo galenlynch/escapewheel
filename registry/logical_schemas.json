@@ -335,7 +335,7 @@
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "0-based axis position in stored order (R3 \u00a75).",
+          "description": "0-based axis position in stored order (`03` \u00a76.2).",
           "since": "R20 \u00a75"
         },
         {
@@ -946,7 +946,7 @@
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "0-based axis position in stored order (R3 \u00a75).",
+          "description": "0-based axis position in stored order (`03` \u00a76.2).",
           "since": "R3 \u00a73.1-3.3"
         },
         {
@@ -1312,7 +1312,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since R85 \u00a72.2 makes two calibrations sharing a name one row.",
+          "description": "What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since `02` \u00a78.2 makes two calibrations sharing a name one row.",
           "since": "R89 \u00a72.1",
           "vocabulary": "free"
         },
@@ -1321,7 +1321,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 \u00a72.1), and this holds a value that resolves to no table.",
+          "description": "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (`02` \u00a78.3), and this holds a value that resolves to no table.",
           "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
@@ -1758,7 +1758,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (R45 \u00a72.4).",
+          "description": "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (`01` \u00a72.2).",
           "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
@@ -1969,7 +1969,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The axis's unit, as a UCUM code (R101 \u00a73.6).",
+          "description": "The axis's unit, as a UCUM code (`02` \u00a78.4).",
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
@@ -2320,7 +2320,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "discriminator",
-          "description": "The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is `02` \u00a78.3's shared-key join. Core declares no such table (`02` \u00a78.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (R55 \u00a72.2).",
+          "description": "The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is `02` \u00a78.3's shared-key join. Core declares no such table (`02` \u00a78.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (`02` \u00a78.3).",
           "resolves": "optional",
           "since": "R104 \u00a73.1"
         },
@@ -2989,7 +2989,7 @@
           "type": "string",
           "presence": "required",
           "role": "discriminator",
-          "description": "The resource that specialises this interval, as a dotted resource ID, resolved as R55 \u00a72.3's shared key.",
+          "description": "The resource that specialises this interval, as a dotted resource ID, resolved as `02` \u00a78.3's shared key.",
           "resolves": "required",
           "since": "R107 \u00a73.1"
         },

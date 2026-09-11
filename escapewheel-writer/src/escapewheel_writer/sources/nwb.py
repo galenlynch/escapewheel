@@ -894,7 +894,7 @@ class NWBSource(Compensates):
         """
         if name not in self._signals:
             # A recipe declares its signals, because whether a stream is one is a fact about
-            # the instrument. Saying so about a stream the file lacks is a contradiction R63 §2
+            # the instrument. Saying so about a stream the file lacks is a contradiction `05` §3.5
             # refuses in a recipe, and it surfaced here as a Zarr encoding error naming a path
             # rather than the declaration that asked for it.
             if not self.store.is_array(f"acquisition/{name}/timestamps"):
@@ -1019,7 +1019,7 @@ class NWBSource(Compensates):
 
         Every sample carries its own HARP timestamp, so every anchor here is measured and none
         is fitted. They are subsampled because they need only bound the interpolation error
-        R40 §2 governs: at the 2 ppm separating the two oscillators, anchors 25 s apart leave
+        `01` §3.9 governs: at the 2 ppm separating the two oscillators, anchors 25 s apart leave
         far less than one tick between them, where the tolerance is 3 ms.
         """
         rows = []

@@ -333,7 +333,7 @@ class SorterSource:
         `unit_id` is assigned, so the sorter's label cannot be it: a sorter numbers from zero
         within each run and a run is one probe, which put 810 distinct labels across 6,781 units
         on the measured session. The number must follow ascending
-        `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces it (R75 §2),
+        `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces it (`05` §8),
         and `PacketWriter._preassign` assigns in sorted-name order -- so the name is those three,
         with the label zero-padded to `width` to make its text order its numeric one. Run and
         curation ids are themselves assigned in sorted-name order, which is what makes ordering

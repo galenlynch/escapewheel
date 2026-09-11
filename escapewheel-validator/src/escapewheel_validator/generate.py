@@ -92,7 +92,7 @@ def adjacency_settles_uniqueness(resource: str, table: Mapping[str, Any]) -> boo
     return all(column in key or determined.get(column, {object()}) <= set(key) for column in sort[: max(positions) + 1])
 
 
-#: A dotted resource ID: two lowercase snake_case names. R55 §2.1 makes this checkable without
+#: A dotted resource ID: two lowercase snake_case names. `02` §8.3 makes this checkable without
 #: knowing which resources exist, which is what nothing did -- `scope_kind` could hold an empty
 #: string and no rule would see it.
 RESOURCE_ID = r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$"
@@ -108,7 +108,7 @@ def _discriminator(
     specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
     specs: Mapping[str, Any] | None = None,
 ) -> list[Check]:
-    """Build the checks one discriminator column implies (R55 §2.4).
+    """Build the checks one discriminator column implies (`02` §8.3).
 
     Three, and they fail for different reasons: the value is not a resource ID at all, it names a
     resource the packet does not declare, or it names one that exists and holds no such row. Only
@@ -132,7 +132,7 @@ def _discriminator(
     checks.append(
         Check(
             f"{resource}.{column['name']}.kind_declared",
-            # R55 §2.2. Where an unresolvable kind is a fact rather than a defect it is still
+            # `02` §8.3. Where an unresolvable kind is a fact rather than a defect it is still
             # reported: R49 §2.5's union passed it in silence, which is what let an extension
             # kind go unchecked without anything saying so.
             "error" if column.get("resolves") == "required" else "info",
@@ -178,11 +178,11 @@ def _discriminator(
             )
         return checks
 
-    # A paired value lives in the named table's key space (R55 §2.3), so it resolves value-to-key.
+    # A paired value lives in the named table's key space (`02` §8.3), so it resolves value-to-key.
     paired = column.get("discriminates")
     if paired is None:
-        # A shared-key discriminator: the reference R55 §2.3.1 requires of the named table
-        # generates the anti-join from detail to discriminated row. R72 §2.1 adds the direction a
+        # A shared-key discriminator: the reference `02` §8.3 requires of the named table
+        # generates the anti-join from detail to discriminated row. `02` §8.3 adds the direction a
         # foreign key cannot point -- a row naming a kind with no counterpart in it, which is
         # `01` §3.10a's "a kind that resolves to nothing is a name again" and which every other
         # check passes. Only where `resolves` is required: an optional kind naming nothing is a
@@ -190,16 +190,16 @@ def _discriminator(
         if column.get("resolves") != "required" or not table.get("primary_key"):
             return checks
         # Only a resource that could *be* a specialisation: one declaring a reference back over
-        # the discriminated table's whole key, which is what R55 §2.3.1 requires of a named
+        # the discriminated table's whole key, which is what `02` §8.3 requires of a named
         # resource. Without the filter this generates one check per declared resource, and 34 of
-        # the 35 name a core table that could never carry the key (R72 §2.2).
+        # the 35 name a core table that could never carry the key (`02` §8.3).
         for kind, mapping in sorted((specialises or {}).get(resource, ()), key=lambda pair: pair[0]):
             on = " AND ".join(f"s.{quote(mapping[c])} = d.{quote(c)}" for c in table["primary_key"])
             checks.append(
                 Check(
                     f"{resource}.{column['name']}.{sql_name(kind)}_is_specialised",
                     "error",
-                    f"a row names {kind} and has no counterpart there (R72 §2.1)",
+                    f"a row names {kind} and has no counterpart there (`02` §8.3)",
                     f"SELECT {', '.join(quote(c) for c in table['primary_key'])} FROM {name} d "
                     f"WHERE d.{col} = '{kind}' "
                     f"AND NOT EXISTS (SELECT 1 FROM {sql_name(kind)} s WHERE {on})",
@@ -208,7 +208,7 @@ def _discriminator(
             )
         return checks
     # Only a resource a paired value can actually name: one with a single-column key, which is
-    # what `_resolve_column` returns a column for (R55 §2.3.3).
+    # what `_resolve_column` returns a column for (`02` §8.3).
     joinable = {k: key for k, key in kinds.items() if k in included and key is not None}
     if not joinable:
         return checks
@@ -262,9 +262,9 @@ def generate(
         extension registry needs core's tables here, since it declares none of them and `09` §2
         lets it reference them.
     kinds : Mapping, optional
-        Every resource a discriminator may name (R55 §2.1), mapped to the column a paired value
+        Every resource a discriminator may name (`02` §8.3), mapped to the column a paired value
         joins to -- the `*_name` where the key is assigned, the key where it is carried (R55
-        §2.3.3). Supplied by the caller rather than read from this registry, because R55 §2.5
+        §2.3.3). Supplied by the caller rather than read from this registry, because `02` §8.3
         requires the resolution to reach the packet's *extension* kinds -- the case `02` §8.3
         designed the mechanism for and whose hand-written union quietly matched no branch.
 

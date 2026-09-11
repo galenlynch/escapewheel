@@ -1,4 +1,4 @@
-"""Cleanup over a committed packet (R61 §2).
+"""Cleanup over a committed packet (`03` §9.5).
 
 Two removals, in one order. **Orphans first**: a manifest identifies the orphans of its own
 version, so expiring it before they are removed makes an orphan and a stray indistinguishable and

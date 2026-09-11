@@ -1,4 +1,4 @@
-"""Cleanup over a committed packet (R61 §2)."""
+"""Cleanup over a committed packet (`03` §9.5)."""
 
 import json
 from datetime import datetime, timedelta, timezone

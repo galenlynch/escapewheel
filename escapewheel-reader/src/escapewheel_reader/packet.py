@@ -508,7 +508,7 @@ class Packet:
         # a view skipped for want of an input gains it when that input is registered later.
         # What the packet declares is passed separately from what is registered, so a view whose
         # refinements table exists but is not yet registered is skipped rather than built without
-        # its guard (R38 §2) -- which would answer, wrongly, instead of not answering.
+        # its guard (`01` §2.2) -- which would answer, wrongly, instead of not answering.
         register_views(connection, [sql_name(r.resource_id) for r in self._table_resources()])
 
     def _named_in(self, query: str) -> set[str]:

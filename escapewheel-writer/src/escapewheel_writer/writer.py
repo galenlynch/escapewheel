@@ -327,7 +327,7 @@ class ExternalArray:
 
     array_asset_id: str
     uri: str
-    #: R80 §2.1: the body of data these bytes belong to. Where set, `uri` is a path relative to
+    #: `04` §5.5: the body of data these bytes belong to. Where set, `uri` is a path relative to
     #: wherever that source turns out to be rather than a location, and a resolution document
     #: says where that is.
     source: str | None = None
@@ -356,7 +356,7 @@ class ExternalMedia:
     media_asset_id: str
     uri: str
     format: str
-    #: R80 §2.1, as on `ExternalArray`.
+    #: `04` §5.5, as on `ExternalArray`.
     source: str | None = None
     sha256: str | None = None
     size_bytes: int | None = None
@@ -364,7 +364,7 @@ class ExternalMedia:
 
 
 def _check_reference(resource_id: str, uri: str, source: str | None) -> None:
-    """Refuse a referenced URI that does not match how it will be resolved (`04` §5.1, R80 §2.1).
+    """Refuse a referenced URI that does not match how it will be resolved (`04` §5.1, `04` §5.5).
 
     Absolute where the entry names no source, because a relative one would resolve against a
     packet the bytes do not live in. Relative where it names one, because the source supplies
@@ -771,7 +771,7 @@ class PacketWriter:
         ------
         ValueError
             If this resource already has an array, or if the URI does not match how it resolves:
-            absolute where no `source` is named, relative where one is (R80 §2.1).
+            absolute where no `source` is named, relative where one is (`04` §5.5).
         """
         if resource_id in self._staged_arrays or resource_id in self._referenced_arrays:
             raise ValueError(f"{resource_id} already has an array")
@@ -795,7 +795,7 @@ class PacketWriter:
         ------
         ValueError
             If this resource already has media, or if the URI does not match how it resolves
-            (R80 §2.1).
+            (`04` §5.5).
         """
         if resource_id in self._referenced_media:
             raise ValueError(f"{resource_id} already has media")
@@ -976,7 +976,7 @@ class PacketWriter:
             if run := self._runs.get(resource_id):
                 # The name, not the assigned number: a manifest identifies by name throughout
                 # -- `packet_id`, `sessions`, every `resource_id` -- because it is read before
-                # any table and a number resolves against nothing. R53 §2's `*_name` columns
+                # any table and a number resolves against nothing. `02` §5.3's `*_name` columns
                 # are the bridge, and `05` §5.3's check crosses it.
                 entry["processing_run_id"] = run
             entries.append(entry)
@@ -1047,7 +1047,7 @@ class PacketWriter:
         return manifest
 
     def declare_source(self, name: str, uri: str) -> None:
-        """Record where a named body of referenced data was read from (R80 §2.1).
+        """Record where a named body of referenced data was read from (`04` §5.5).
 
         An adapter that references bytes belonging to a nameable asset calls this once and then
         gives each resource a `source` and a path relative to it. What the packet stores is the

@@ -241,7 +241,7 @@ def _check_materialization_provenance(packet: Packet, report: Report) -> None:
             f"{len(named)} resource(s) name a processing run but the packet carries no core.processing_runs",
         )
         return
-    # A manifest names a run and the table numbers it (R53 §2), so the join is across the
+    # A manifest names a run and the table numbers it (`02` §5.3), so the join is across the
     # `*_name` column. Both are accepted: a packet built before R53 has names in both places.
     known = set(runs.column("processing_run_id").to_pylist())
     if "processing_run_name" in runs.column_names:
@@ -314,7 +314,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
     expected = min(starts)
     for stated in declared:
         # The writer's own estimator is not bit-reproducible from the packet -- it may have
-        # fitted over anchors it then withheld -- so agreement is judged at R37 §3.3's
+        # fitted over anchors it then withheld -- so agreement is judged at `01` §3.9's
         # tolerance of one parent tick rather than exactly.
         if abs(int(stated) - expected) > 1:
             report.add(
@@ -357,7 +357,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
         report.add(
             "error",
             "array.transpose_codec",
-            f"{resource.resource_id} uses the transpose codec, which R3 §5 forbids: axes are stored in the "
+            f"{resource.resource_id} uses the transpose codec, which `03` §6.2 forbids: axes are stored in the "
             "order the packet declares them",
         )
 
@@ -388,7 +388,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "error",
             "array.rank_disagrees_with_dimensions",
             f"{resource.resource_id} has rank {rank} but core.array_dimensions gives axis_index "
-            f"{sorted(declared) or 'none'} for {asset!r}; R3 §5 requires one row per stored axis",
+            f"{sorted(declared) or 'none'} for {asset!r}; `03` §6.2 requires one row per stored axis",
         )
         return
     # An axis whose coordinates are a table has one row per position, so that count is its length.
@@ -552,7 +552,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
     """R80: what a source declaration must be, decided without reaching the network.
 
     Three things are structural and one is not. A `source` names a body of data rather than a
-    location, so the entry's `uri` MUST be relative to it (R80 §2.1) and the entry MUST be
+    location, so the entry's `uri` MUST be relative to it (`04` §5.5) and the entry MUST be
     external, since the mechanism exists for bytes the packet does not own. `sources.json` MUST
     NOT be a declared resource (`04` §5.5): being outside the manifest is what keeps `04` §5.1's
     immutability off it, and a packet that declared it would freeze the one file that has to
@@ -581,14 +581,14 @@ def _check_sources(packet: Packet, report: Report) -> None:
                 "error",
                 "source.not_external",
                 f"{resource.resource_id} names source {source!r} without external: true; a source locates "
-                "bytes the packet does not own (R80 §2.1)",
+                "bytes the packet does not own (`04` §5.5)",
             )
         if "://" in resource.uri:
             report.add(
                 "error",
                 "source.absolute_uri",
                 f"{resource.resource_id} names source {source!r} and an absolute uri {resource.uri!r}; "
-                "where a source is named the uri is a path under it (R80 §2.1)",
+                "where a source is named the uri is a path under it (`04` §5.5)",
             )
     if not named:
         return
@@ -909,7 +909,7 @@ def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, An
             "error",
             "external.array_rank",
             f"{resource.resource_id} is stored with rank {len(shape)} but core.array_dimensions "
-            f"gives axis_index {sorted(declared)} for {asset!r}; R3 §5 requires one row per stored axis",
+            f"gives axis_index {sorted(declared)} for {asset!r}; `03` §6.2 requires one row per stored axis",
         )
         return ["rank"]
     offending = [
@@ -1552,7 +1552,7 @@ def _run_checks(connection: Any, checks: Sequence[Any], report: Report, extensio
 def _resolve_column(spec: Mapping[str, Any]) -> str | None:
     """Return the column a paired value joins to, or None where the resource is not namable.
 
-    R55 §2.3.1 requires a single-column key, since a paired value holds one identifier. Which
+    `02` §8.3 requires a single-column key, since a paired value holds one identifier. Which
     column it *matches* then follows from R53 §2.3: an `assigned` key is a number this format
     chose at build time, so a value written before the build cannot hold it and the join is on
     the `*_name` the owner carries for exactly this purpose. A `carried` key is the source's own
@@ -1574,7 +1574,7 @@ def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, st
     """Every resource a discriminator may name, mapped to the column a paired value joins to.
 
     Built from the packet's registry *and* the extension registries it carries, because `02` §8.3
-    lets a kind name an extension table and R55 §2.5 makes that the case the check must reach --
+    lets a kind name an extension table and `02` §8.3 makes that the case the check must reach --
     the one whose hand-written union over core matched no branch and passed in silence.
     """
     tables = dict(registry["tables"])
@@ -1584,7 +1584,7 @@ def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, st
     for document in packet.extensions().values():
         if isinstance(document.get("tables"), Mapping):
             tables.update({n: t for n, t in document["tables"].items() if n in carried})
-    # Every declarable resource, whether or not a *paired* value could name it. R55 §2.3.3's
+    # Every declarable resource, whether or not a *paired* value could name it. `02` §8.3's
     # single-column-key rule governs the paired shape alone; R54's shared-key discriminator
     # names tables whose key is composite by construction, and dropping them here made a
     # correctly declared `interval_kind` read as naming nothing.
@@ -1595,8 +1595,8 @@ def _specialisations(packet: Packet, registry: Mapping[str, Any]) -> dict[str, l
     """Which resources could specialise which, keyed by the discriminated resource.
 
     A specialisation declares a reference back over the discriminated table's **whole** key
-    (R55 §2.3.1). Anything else a discriminator could name is a resource that could not carry
-    the key, so generating R72 §2.1's reverse check for it would be checking the impossible.
+    (`02` §8.3). Anything else a discriminator could name is a resource that could not carry
+    the key, so generating `02` §8.3's reverse check for it would be checking the impossible.
     """
     tables = dict(registry["tables"])
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
@@ -1610,7 +1610,7 @@ def _specialisations(packet: Packet, registry: Mapping[str, Any]) -> dict[str, l
             key = (tables.get(target) or {}).get("primary_key") or []
             mapping = dict(zip(reference.get("resource_columns", []), reference["columns"], strict=False))
             if key and set(mapping) >= set(key):
-                # The mapping, not just the name: R55 §2.3.1 requires the whole key and does not
+                # The mapping, not just the name: `02` §8.3 requires the whole key and does not
                 # require the same column names for it. `dynamic_foraging.trials` carries the
                 # interval's id as `trial_id`, so a join on matching names finds nothing.
                 found.setdefault(target, []).append((name, mapping))

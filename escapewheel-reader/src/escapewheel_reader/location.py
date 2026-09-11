@@ -189,7 +189,7 @@ class Location:
         """Where a manifest's declared URI points from here.
 
         Substitution comes first, so a caller may redirect an absolute URI as well as a
-        relative one. A resource naming a `source` (R80 §2.1) is then relative to wherever that
+        relative one. A resource naming a `source` (`04` §5.5) is then relative to wherever that
         source resolves; one that does not is relative to this root where it has no scheme,
         which is what makes a packet portable (`03` §4).
 

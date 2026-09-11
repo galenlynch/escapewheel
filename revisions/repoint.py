@@ -8,8 +8,13 @@ perfectly and still sends a reader to the change record.
 The ledger is the map. Where `applied.toml` disposes a clause `applied`, its `where` names the part
 and section that states it, so the replacement is mechanical: `R88 §2.1` becomes `02` §7.1.
 
-What is not mechanical is whether a citation is of the **requirement** or of the **reasoning**, and
-`00` §10.2 permits the second. So a citation that stays carries a reason in `EXEMPT`, keyed by the
+Only a clause disposed `applied` is reported. A clause the registry carries is read from the
+registry, one disposed `rationale` decided nothing and so states no requirement, and a Motivation
+or an Open section is the reasoning itself -- `00` §10.2 sends a reader to the revision for all
+three, so they are not citations `00` §10.1 binds.
+
+What is not mechanical is whether a citation of an `applied` clause is of the **requirement** or of
+the **reasoning** behind it, and `00` §10.2 permits the second. So a citation that stays carries a reason in `EXEMPT`, keyed by the
 shape or the site rather than left to be rediscovered -- `registry/check.py`'s discipline for
 `NAMING_EXCEPTIONS`, whose entries are checked to still be needed so the list cannot go stale.
 
@@ -24,16 +29,21 @@ import argparse
 import re
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 LEDGER = ROOT / "escapewheel_poc_docs_v0.2" / "applied.toml"
 
 #: `R92 §2.2`. The same spelling `check_citations.py` resolves.
 REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
-#: A `where` naming a part and section: "02_core_logical_schemas.md §7.1".
-WHERE = re.compile(r"^(\d\d)_\w+\.md §(\d+(?:\.\d+)*)$")
+#: Each part and section a `where` names. A clause may land in more than one place -- R2 §6 in
+#: three -- and a `where` also names things that are not sections at all, such as the version
+#: strings R84 §2.2 changed, so every occurrence is collected rather than the whole field matched.
+WHERE = re.compile(r"\b(\d\d)(?:_\w+\.md)? (§\d+(?:\.\d+)*(?:(?:[,;] ?| and )§\d+(?:\.\d+)*)*)")
+#: A section within one of those groups: "§5.3, §5.4" names two of the same part.
+SECTION = re.compile(r"§(\d+(?:\.\d+)*)")
 
 #: Sites where naming a revision is the point, each with why. A pattern is matched against the
 #: whole line. Every entry is checked to still match something, so a site that goes away takes
@@ -43,13 +53,14 @@ EXEMPT: tuple[tuple[str, str, str], ...] = (
      "the stamp that becomes a column's `since`, whose value names a revision by design (`02` §9.4)"),
     ("registry/build.py", r'since="',
      "the same stamp, written inline on a column"),
-    ("registry/build.py", r"^\s*# ----",
-     "a block marker saying which revision's block follows; the file is organised by revision"),
+    ("registry/", r"^\s*# ----",
+     "a block marker saying which revision's block follows; both files are organised by revision"),
     ("escapewheel_poc_docs_v0.2/ledger.py", r".",
      "the ledger keys on revision clauses, which is what makes it the map `00` §10.1 resolves through"),
     ("revisions/", r".",
      "a revision citing another revision (`00` §10.2)"),
 )
+
 
 #: Individual citations of the **reasoning** a part does not carry, which `00` §10.2 permits: a
 #: measurement, or what a revision did to the format on its way to the present. Keyed by file and
@@ -73,19 +84,64 @@ REASONING: tuple[tuple[str, str, str], ...] = (
      "what that revision gave the device chain, and where it stopped"),
     ("registry/build.py", "R65 §2.1",
      "what that revision gave the array tables, and what it skipped"),
+    ("registry/build.py", "R81 §2.4",
+     "which columns the old override named, which is why the current one has five"),
+    ("escapewheel-reader/src/escapewheel_reader/ordering.py", "R81 §2.4",
+     "what narrowed the override, beside the citation of the override itself"),
+    ("escapewheel-writer/src/escapewheel_writer/sources/nwb.py", "R59 §2",
+     "which of the four atlas fields that revision promoted to columns, and which it left"),
+    ("escapewheel-writer/tests/nwbfixture.py", "R59 §2",
+     "the same, at the fixture that supplies all four"),
+    ("escapewheel-writer/tests/test_nwb_source.py", "R59 §2",
+     "the same, at the test that asserts which two leave the bag"),
+    ("fixtures/corpus.py", "R82 §2",
+     "that the two rules changed level, which is why no advisory pass is needed here"),
+    ("registry/build.py", "R54 §2",
+     "what that revision gave `core.intervals`, and what had nowhere to go before it"),
 )
 
 
-def ledger() -> dict[str, str]:
-    """Each clause disposed `applied`, mapped to the `NN §S` citation that states it."""
+def rollup(clauses: dict[str, dict]) -> dict[str, list[str]]:
+    """Each section-level key, mapped to every part section its own subsections landed in.
+
+    The ledger keys on subsections, so a citation naming a whole Decision -- `R40 §2` where the
+    ledger holds `R40 §2.1` -- matched no entry and passed unchecked. 29 citations were that shape.
+    """
+    out: dict[str, list[str]] = {}
+    for key, entry in clauses.items():
+        if entry.get("disposition") != "applied":
+            continue
+        parent = key.split(".")[0] if "." in key.split("§")[1] else None
+        if parent is None:
+            continue
+        found = [f"`{part}` §{section}"
+                 for part, group in WHERE.findall(entry.get("where", ""))
+                 for section in SECTION.findall(group)]
+        for candidate in found:
+            if candidate not in out.setdefault(parent, []):
+                out[parent].append(candidate)
+    return {k: v for k, v in out.items() if k not in clauses and v}
+
+
+def ledger() -> dict[str, list[str]]:
+    """Each clause disposed `applied`, mapped to every `NN §S` citation that states it.
+
+    A clause landing in one place has one candidate and the repoint is mechanical. One landing in
+    several has no single answer, so the list is returned whole and the citation is reported for a
+    decision rather than rewritten -- which is what a `where` naming two parts used to buy: the
+    citation passed unseen, because a single-match pattern read the field as naming nothing.
+    """
     clauses = tomllib.loads(LEDGER.read_text())["clause"]
     out = {}
     for key, entry in clauses.items():
         if entry.get("disposition") != "applied":
             continue
-        found = WHERE.match(entry.get("where", ""))
+        found = [f"`{part}` §{section}"
+                 for part, group in WHERE.findall(entry.get("where", ""))
+                 for section in SECTION.findall(group)]
         if found:
-            out[key] = f"`{found.group(1)}` §{found.group(2)}"
+            out[key] = found
+    out.update({k: v for k, v in rollup(clauses).items() if k not in out})
     return out
 
 
@@ -147,8 +203,9 @@ def main() -> int:
         return 1 if stale else 0
 
     if not args.quiet:
-        for name, number, key, target in sorted({(n, ln, k, t) for n, ln, k, t, _ in found}):
-            print(f"  {name}:{number}  {key} → {target}")
+        for name, number, key, targets in sorted({(n, ln, k, tuple(t)) for n, ln, k, t, _ in found}):
+            arrow = targets[0] if len(targets) == 1 else " or ".join(targets) + "  (choose)"
+            print(f"  {name}:{number}  {key} → {arrow}")
     by_file = len({name for name, *_ in found})
     print(f"{len(found)} citation(s) of a requirement name a revision, across {by_file} file(s)")
     return 1 if found else 0

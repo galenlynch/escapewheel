@@ -26,8 +26,8 @@ STEPS = [
     ("R16 §2  + core.unit_quality_labels",     set(), {"core.unit_quality_labels"}),
     ("R18 §2  + core.unit_observation_intervals", set(), {"core.unit_observation_intervals"}),
     ("R19 §3  + core.electrode_coordinates",   set(), {"core.electrode_coordinates"}),
-    ("R20 §5  + analysis.array_assets",        set(), {"analysis.array_assets"}),
-    ("R20 §5  + analysis.array_dimensions",    set(), {"analysis.array_dimensions"}),
+    ("`00` §3  + analysis.array_assets",        set(), {"analysis.array_assets"}),
+    ("`00` §3  + analysis.array_dimensions",    set(), {"analysis.array_dimensions"}),
     ("R23 §2  + core.event_streams",           set(), {"core.event_streams"}),
     ("R25 §2  + core.event_stream_observation_intervals", set(), {"core.event_stream_observation_intervals"}),
     ("R28 §2  + core.unit_electrodes",         set(), {"core.unit_electrodes"}),
@@ -42,7 +42,7 @@ STEPS = [
     # R83 §2.1: a channel index a source emits counts the channels its run kept, and nothing
     # held that list, so no packet could resolve one.
     ("R83 §2.1 + core.sorting_run_channels",   set(), {"core.sorting_run_channels"}),
-    # R89 §2: a calibration is what someone measured about an instrument so that its numbers can
+    # `02` §12.3: a calibration is what someone measured about an instrument so that its numbers can
     # be interpreted, and nothing in the specification recorded one. Three resources, because the
     # devices a calibration covers and the points of its curve are both repeated values (`02` §6).
     ("R89 §2.1 + core.calibrations",           set(), {"core.calibrations"}),

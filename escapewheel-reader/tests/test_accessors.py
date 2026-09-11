@@ -262,7 +262,7 @@ def test_seconds_refuse_ticks_that_are_not_on_the_reference(two_clock_packet):
 
 
 def test_mapping_uses_the_bound_the_writer_established(two_clock_packet, tmp_path):
-    """R37 §3.3: a reader mapping at a narrower bound drops rows the packet's own derived
+    """`01` §3.9: a reader mapping at a narrower bound drops rows the packet's own derived
     table kept, and the two then disagree about which spikes exist."""
     import json
     import shutil

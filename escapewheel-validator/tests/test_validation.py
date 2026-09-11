@@ -515,7 +515,7 @@ def test_an_irregular_chunk_grid_is_caught(packet_root):
 
 
 def test_a_rank_the_dimensions_do_not_cover_is_caught(packet_root):
-    """R3 §5: axis_index enumerates every stored axis, so two rows cannot describe rank 3."""
+    """`03` §6.2: axis_index enumerates every stored axis, so two rows cannot describe rank 3."""
     _add_array(packet_root, declared=["sharding_indexed", "blosc"], axes=2)
     assert "array.rank_disagrees_with_dimensions" in _checks(validate(open_packet(packet_root)))
 
@@ -1141,7 +1141,7 @@ def test_an_unreadable_extension_registry_is_ignored_by_the_reader(packet_root):
 
 
 def _discriminated(role="discriminator", **extra):
-    """A one-table registry whose `k_kind` discriminates `k` (R55 §2.3.2)."""
+    """A one-table registry whose `k_kind` discriminates `k` (`02` §8.3)."""
     column = {"name": "k_kind", "type": "string", "presence": "nullable", "role": role, **extra}
     return {
         "tables": {
@@ -1160,7 +1160,7 @@ def _discriminated(role="discriminator", **extra):
 
 
 def test_a_discriminator_is_checked_for_being_a_resource_id():
-    """R55 §2.1. Nothing checked this: `scope_kind` could hold an empty string and no rule saw it."""
+    """`02` §8.3. Nothing checked this: `scope_kind` could hold an empty string and no rule saw it."""
     checks = generate(_discriminated(resolves="optional", discriminates="k"))
     ids = {c.id for c in checks}
     assert "core.runs.k_kind.is_a_resource_id" in ids
@@ -1173,7 +1173,7 @@ def test_a_data_column_generates_no_discriminator_checks():
 
 
 def test_resolves_decides_the_level_not_whether_the_check_exists():
-    """R55 §2.4. An optional kind naming nothing is a fact, and reported; R49 §2.5 passed it in silence."""
+    """`02` §8.3. An optional kind naming nothing is a fact, and reported; R49 §2.5 passed it in silence."""
     kinds = {"core.sessions": "session_id"}
     optional = generate(_discriminated(resolves="optional", discriminates="k"), kinds=kinds)
     required = generate(_discriminated(resolves="required", discriminates="k"), kinds=kinds)
@@ -1184,7 +1184,7 @@ def test_resolves_decides_the_level_not_whether_the_check_exists():
 
 
 def test_a_shared_key_discriminator_generates_no_value_resolution():
-    """R55 §2.3.1: the named table's own reference carries that integrity, pointing the other way."""
+    """`02` §8.3: the named table's own reference carries that integrity, pointing the other way."""
     checks = generate(_discriminated(resolves="required"), kinds={"core.sessions": "session_id"})
     assert not [c for c in checks if c.id.endswith("k_kind.resolves")]
 
@@ -1264,7 +1264,7 @@ def test_a_located_source_is_counted_as_located(packet_root):
 
 
 def test_a_source_with_an_absolute_uri_is_refused(packet_root):
-    """R80 §2.1: naming a source and an absolute URI means the source would do nothing."""
+    """`04` §5.5: naming a source and an absolute URI means the source would do nothing."""
     _reference(packet_root, uri="s3://elsewhere/data")
     report = validate(open_packet(packet_root))
     assert not report.passed
@@ -1272,7 +1272,7 @@ def test_a_source_with_an_absolute_uri_is_refused(packet_root):
 
 
 def test_a_source_on_a_packet_owned_resource_is_refused(packet_root):
-    """R80 §2.1: a source locates bytes the packet does not own."""
+    """`04` §5.5: a source locates bytes the packet does not own."""
     _reference(packet_root, external=False)
     report = validate(open_packet(packet_root))
     assert not report.passed

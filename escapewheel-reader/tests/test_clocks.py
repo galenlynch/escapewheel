@@ -159,7 +159,7 @@ def test_a_million_ticks_map_without_a_python_loop():
     assert bool((np.diff(parent) >= 0).all())  # monotone in, monotone out
 
 
-# -- measuring the bound (R37 §3.3) ----------------------------------------------------
+# -- measuring the bound (`01` §3.9) ----------------------------------------------------
 
 
 def test_a_clean_clock_extrapolates_within_quantization():

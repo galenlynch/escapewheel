@@ -63,7 +63,7 @@ def detail(extension_id, table, extra, *, based):
     references = [{"columns": ["session_id"], "resource": "core.sessions",
                    "resource_columns": ["session_id"]}]
     if based:
-        # R55 §2.3.1: the named resource declares the reference back, which is what makes the
+        # `02` §8.3: the named resource declares the reference back, which is what makes the
         # join mechanical rather than inferred from names matching.
         references.append({"columns": ["session_id", "interval_id"], "resource": "core.intervals",
                            "resource_columns": ["session_id", "interval_id"]})

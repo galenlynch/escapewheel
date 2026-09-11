@@ -519,7 +519,7 @@ def _waveforms(units=8, channels=4, samples=10):
 
 
 def _array_tables(uri: str = "arrays/core/waveform_means.zarr") -> dict[str, list[dict]]:
-    """The rows an array must be accompanied by: R3 §5 requires every axis to be named."""
+    """The rows an array must be accompanied by: `03` §6.2 requires every axis to be named."""
     return {
         "core.array_assets": [
             {
