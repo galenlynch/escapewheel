@@ -159,10 +159,23 @@ three copies of one extraction already took in this project — which is also wh
 one, and why neither protocol is the other's replacement.
 
 **An Arrow IPC stream carries one schema, and an adapter returns many resources.** They concatenate:
-each ends with an end-of-stream marker, so a reader opens one, reads to it, and opens the next on
-what is left, and the resource identifier rides in the schema's own key-value metadata. Nothing is
-framed that Arrow does not frame. `conformance/adapter-boundary/` sends three resources with three
-schemas over a real pipe and reads all three back, which is the measurement this clause rests on.
+a stream ends with the format's own end-of-stream marker — the continuation `0xFFFFFFFF` followed by
+a zero length — so a reader opens one, reads to it, and opens the next on what is left. The resource
+identifier rides in the schema's key-value metadata, which is a field the format defines.
+`conformance/adapter-boundary/` sends three resources with three schemas over a real pipe and reads
+all three back, which is the measurement this clause rests on.
+
+**What each protocol invents, and nothing more.** `files-v0.1` invents a mapping from resource to
+path, which a recipe already carries for a `tables` source. `stream-v0.1` invents **one metadata
+key**, `resource_id`. Everything else is Arrow: the container, the schema, the batching, the
+terminator that separates one resource from the next, and the metadata field the key lives in. A
+protocol that owned more would be a format to maintain; these are a spelling of two.
+
+A third thing was considered and rejected. Arrow **Flight** is the standard for many datasets over
+one connection and names each with a descriptor, which would leave us owning nothing at all — and it
+is gRPC, a listener, a port and an auth surface for a child process reading a file on the same
+machine. It is what a group reaching an adapter the build did not launch would use, and adding that
+group is §3.1's mechanism rather than a change to this one.
 
 A recipe declares files where persistence is the point — an extraction expensive enough to reuse
 across builds, or one whose output should still be there to inspect after a failure. That is not a
@@ -277,7 +290,8 @@ fill value — and a location.
 
 **The build names the location, and it is in staging.** Where the packet will own the array, a build
 **MUST** supply a location under the staging area Part 05 §1 already requires, and an adapter
-**MUST** write the array there and return the reference rather than the measurement. Writing it
+**MUST** write the array there and return the reference rather than the measurement, whether it is
+an adapter the writer ships, one it does not, or an extension. Writing it
 anywhere else costs a copy: staging is where the array has to be before it is validated, and commit
 moves it to its final path by the rename Part 05 §6 already performs. Told where, an adapter writes
 the array once and nothing moves it again but that rename.
@@ -295,7 +309,15 @@ memory, into a file the build then writes — the copy the staging path exists t
 this section gives every adapter.
 
 Where the array is external — bytes the packet references rather than owns (Part 03 §6.1) — a
-build supplies no location and the adapter returns the URI its source already has.
+build supplies no location and the producer returns the URI its source already has.
+
+**This binds whoever produces an array, which includes an extension.** An extension declares tables
+and no arrays, because core already models any dense array generically: `core.array_assets` holds a
+sampled quantity of any kind and the device it names says what kind (R65 §2.1), and
+`core.array_dimensions` carries its axes. So an extension needing one does not describe a new sort
+of array — it fills in core's, supplying those rows like any other source, and this section is what
+lets the bytes travel with them. Without it an extension could declare an array asset and have no
+way to deliver what it asserts.
 
 ### 3.7 A writer ships each protocol so an adapter need not write one
 
