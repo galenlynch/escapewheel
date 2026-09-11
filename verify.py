@@ -40,6 +40,12 @@ STAGES: list[tuple[str, Path, list[str]]] = [
      ["uv", "run", "--project", str(TOOLS), "python", "check.py"]),
     ("citations: every one resolves, and no part number repeats", ROOT / "revisions",
      [sys.executable, "check_citations.py", "--quiet"]),
+    # The other half of `00` §10.1: a citation of a clause that landed in a part resolves
+    # perfectly while still sending a reader to the change record, so nothing else can see it.
+    ("citations: a requirement names its part", ROOT / "revisions",
+     [sys.executable, "repoint.py", "--quiet"]),
+    ("citations: every exemption is still needed", ROOT / "revisions",
+     [sys.executable, "repoint.py", "--exempt"]),
     # A ratchet: the backlog of undisposed clauses may shrink and must not grow. Adding a
     # revision fails this until someone records where each of its clauses went, which is the
     # property two independent audits of the compiled spec found missing.
