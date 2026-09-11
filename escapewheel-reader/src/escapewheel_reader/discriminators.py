@@ -195,7 +195,7 @@ def _paired_target(packet: Any, kind: str) -> str:
     """Find the column a paired value joins to: the key where it is carried, its name where assigned.
 
     Part 02 §8.3 makes the value a `string`, and an assigned identifier is an `int32` a packet
-    mints, so the value can only be the `*_name` its owner carries (R53 §2.5).
+    mints, so the value can only be the `*_name` its owner carries (Part 02 §8.2).
     """
     key = _key(packet, kind)
     if len(key) != 1:

@@ -273,7 +273,7 @@ Two details are easy to get wrong and are why this lives here. A shared-key join
 **discriminated** table, which `discriminates_via` moves away from the one carrying the column:
 `core.event_streams.detail_kind` specialises `core.events`. And a paired value is a `string` where
 the named key is an `int32` a packet mints, so it matches that resource's `*_name` and not its key
-(R53 §2.5).
+(Part 02 §8.2).
 
 ### Registration is not free over a store
 
