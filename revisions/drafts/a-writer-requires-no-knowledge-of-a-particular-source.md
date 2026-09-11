@@ -90,11 +90,11 @@ declaration, and what this implementation calls it is the reference implementati
 A build **MUST** refuse a recipe naming an adapter that declares something the build cannot supply,
 before any source is opened, which is where R63 §2.2 already refuses a recipe it cannot satisfy.
 
-**Everything a build supplies is data.** A build **MUST NOT** require an adapter to accept a live
-handle — an open store, a connection, an object of the writer's own — because an adapter need not
-run in the writer's process, and what reaches one that does not is an argument list, which carries
-values. What may be declared is closed for the same reason: a build can pass only what survives the
-crossing.
+**Everything a build supplies is data.** An adapter need not run in the writer's process. Across a
+process boundary a build passes an argument list, and an argument list holds strings. So a build
+**MUST NOT** require an adapter to accept a live handle — an open store, a connection, an object of
+the writer's own — and what may be declared is closed for the same reason: a build can pass only
+what survives the crossing.
 
 | an adapter declares it needs | a build passes |
 |---|---|
