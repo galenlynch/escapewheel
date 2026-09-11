@@ -164,80 +164,6 @@ which is §2.2's by-part habit holding up under a full reading rather than a sam
 now runs writer 75, consumer 37, validator 26, build 24, reader 20, and **implementation 2**, which
 is where R111 §3.2 says it should sit.
 
-## 1₊₊₊. An extension copier template, and the instructions to go with it
-
-**Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
-it: the four here were written by hand, and `registry/extensions/README.md` covers *what to model* —
-what varies belongs on the row, a source's columns are evidence rather than a schema, deriving a
-document from a pydantic model — while saying nothing about how to build and deliver one.
-
-**The template.** Base it on `~/Documents/Code/aind-python-copier-template`, which already carries
-the shape: `_templates_suffix: .jinja`, `_subdirectory: template`, copier ≥ 9.0.0, and conditional
-`_exclude` blocks for docs, notebooks, a CLI and a `CLAUDE.md`.
-`~/Documents/Code/aind-capsule-copier-template` is the other one to read before choosing which to
-fork. What it should generate:
-
-- `registry/<namespace>.json`, a skeleton declaring one table with every attribute a column owes,
-  and a test running it against `registry/registry.schema.json`;
-- an `extract.py` matching the shape a recipe's `command` invokes — an argument list run in the
-  source root, writing Parquet to declared paths;
-- an optional self-validation step against the extension's own document (R109 §3.5) and an
-  optional run report (R109 §3.6);
-- a `[source]` block and an `[encoding]` block to paste into a recipe.
-
-**What the instructions must state**, because each is a rule an author will otherwise break:
-
-- The document is a registry document in Part 02's format, namespaced (R17 §2, Part 09 §5.2), and the
-  packet declares it in the catalog (Part 09 §5.3).
-- Every column declares a type, a presence and a role (R2 §5, R48 §2.1); a string column declares
-  its vocabulary (R101 §3.1); an identifier declares `carried` or `assigned` (R53 §2.3); a
-  session-scoped table carries `session_id` and declares the reference (R88 §2.1).
-- Rows arrive with identifiers as the **names** their source used, never numbers: the writer mints
-  those packet-wide (R53 §2.5).
-- The document **MUST NOT** be derived from the rows it delivers (R109 §3.2). Declare the **union**
-  of what the pipeline may emit, as `nullable` — `aind_unit_qc.waveform_metrics` declares 13
-  columns where the extraction delivers 10, and that difference is what says a run did not compute
-  `half_width` rather than that the extension lacks it.
-- The command **MUST** be a function of its inputs (R109 §3.7). Where it cannot be, deliver a file
-  produced beforehand instead.
-- An encoding exception goes in the recipe's `[encoding]`, never in the schema, because it is a
-  fact about one packet's values (R110 §3.4).
-
-**Best practices worth stating beside the rules.** Isolate dependencies however you like — the
-command is an argument list, so `uv run`, a pinned interpreter and a container are all just
-commands, and that freedom is what R109 §3.1 exists to protect. Print for a person on stdout and
-put anything a build should parse in the report file. Do not restate what the build already
-derives: rows per table come from the Parquet footer at Part 05 Stage 1.
-
-## 1₊₄. Audit the clauses that already name an actor
-
-**Queued, with a method and a trigger.** R111 defines writer, reader, validator and consumer and
-fixes the 45 clauses that named neither an actor nor the part they constrain. It audits none of the
-**146 normative sentences that already name one**, and its §6 records that as open — but an `Open`
-section is a record rather than a queue: **72 of 110 accepted revisions carry one, and 13 later
-revisions have ever reached back into one**, always where evidence forced the question (R64 into
-R58 §4 once both packets carried a probe frame; R70 into R68 §5 once its premise failed for
-referenced media). An item with no trigger does not acquire one, which is why this sits here too.
-
-**The method.** Read each clause and ask whether the obligation is about what a reader **returns**
-or what a consumer **concludes**; repoint it where the answer disagrees with the noun. Same for the
-writing side, where a build is one run of a writer (R111 §3.2), so the question is whether the
-obligation belongs to the run or to whatever performs it.
-
-**The measured starting point.** §2.2's finding is that the split already follows the part — Part 01
-binds 19 clauses to a consumer and 2 to a reader, Part 03 binds 6 to a reader and none to a consumer —
-so an actor out of place for its part is the cheap test. It returns **10 suspects**, of which seven
-are correct on reading and **three are arguable in both directions**:
-
-- Part 01 §3.9 — "a **reader** MUST NOT assume any base beyond what the origin declares" reads as
-  interpretation until R3 §6 and R48 make base conversion the reader's job at the boundary.
-- Part 00 §5 and Part 06 §1 — "A **consumer** MAY delete and recompute any of them" sits oddly, no
-  consumer mutating a packet, though each sentence before it already states the artifact fact.
-
-**The trigger.** The next revision that moves an obligation across Part 05 §10's two conformance
-classes, since a misattributed actor is exactly what corrupts that boundary, and R111 §3.2 is what
-made it decidable in the first place.
-
 ## 1a. The packets' physical layout and encoding
 
 **Not started.** Several tables have changed shape substantially — R105's four coordinate tables at
@@ -302,7 +228,7 @@ that each pass their own tests, which is what an end-to-end test catches and a u
 So the work is one test in `escapewheel-writer/tests/`: a small recipe with synthetic sources, run
 through `session.py`, asserting the packet it produces — including that its encodings are the ones
 Part 03 §5.5 asks for, which is the assertion no corpus packet can make. Sized at an afternoon, not a
-restructuring, and best done after the two open drafts are accepted, since it would assert what they
+restructuring, and best done after the open drafts are accepted, since it would assert what they
 define and a test may not cite a draft any more than a revision may.
 
 ## 1a₃. The encoding residual is closed

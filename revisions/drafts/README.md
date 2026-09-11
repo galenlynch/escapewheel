@@ -16,13 +16,20 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 Dependencies run downward: a draft may depend on the ones above it and on nothing below.
 
-| # | draft | why here |
-|---|---|---|
-| 1 | `an-extension-declares-the-core-it-was-authored-against` | rests on R17 §5 for what an extension declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
-| 2 | `a-writer-requires-no-knowledge-of-a-particular-source` | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
-| 3 | `an-adapters-rows-cross-a-process-boundary` | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in Part 05 §3.7 and Part 09 §5.7 |
+| # | draft | words | appraised | why here |
+|---|---|---|---|---|
+| 1 | `an-extension-declares-the-core-it-was-authored-against` | 1,297 | no | rests on R17 §5 for what an extension declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
+| 2 | `a-writer-requires-no-knowledge-of-a-particular-source` | 1,160 | not since the split | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
+| 3 | `an-adapters-rows-cross-a-process-boundary` | 2,925 | not since the split | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in Part 05 §3.7 and Part 09 §5.7 |
 
 Each cites a part for every requirement it states, which R112 §3.1 requires of a Decision.
+
+**What stands between each of these and acceptance is the pre-acceptance checks** in
+`../CLAUDE.md`, which none has been through in its current form. #2 and #3 were appraised as one
+document forty minutes before they were split, so each now carries a Scope, a Consequence and a
+status table that no appraisal has read; #1 has not been appraised at all. Every number in all
+three is measured against a registry that has moved since — R112 and R113 were accepted after they
+were written — and re-measuring is the first of those checks.
 
 **#2 and #3 were one draft and were split at 3,801 words.** They amend disjoint sections and neither
 depends on the other: #2 says what a build learns *about* a source, #3 says how a source's rows reach
