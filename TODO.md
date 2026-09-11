@@ -164,6 +164,25 @@ which is §2.2's by-part habit holding up under a full reading rather than a sam
 now runs writer 75, consumer 37, validator 26, build 24, reader 20, and **implementation 2**, which
 is where R111 §3.2 says it should sit.
 
+## 1c. An extension can be drafted and cannot be checked
+
+`escapewheel extension` drafts a registry document from tables that already exist, which is the
+half of extension authoring that is shipped. The other half is not: `registry/check.py` runs **30
+structural invariants over each registry document**, core's and every extension's — that a
+reference relates columns of the same type (R114 §3), the same role, the same identity, that a
+namespace prefixes its own tables, that a discriminator declares what it resolves to — and it is a
+script in this repository, not a command anyone else can run.
+
+So an author outside this repo scaffolds a document and has no way to find out whether it is
+sound until a build refuses it, or worse does not. The four extensions here drift for the same
+reason and are caught only because they sit beside `check.py`, which its own comment says: nothing
+regenerates them.
+
+This is the extension's version of what `an-adapters-rows-cross-a-process-boundary` §3.7 does for
+an adapter — ship the thing an author would otherwise write badly — and the shape is the same:
+`escapewheel extension check <document>`, the invariants already written, run against a document
+and the core registry a packet embeds.
+
 ## 1a. The packets' physical layout and encoding
 
 **Not started.** Several tables have changed shape substantially — R105's four coordinate tables at

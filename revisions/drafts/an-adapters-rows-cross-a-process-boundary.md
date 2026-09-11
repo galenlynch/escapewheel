@@ -284,6 +284,37 @@ this section gives every adapter.
 Where the array is external — bytes the packet references rather than owns (Part 03 §6.1) — a
 build supplies no location and the adapter returns the URI its source already has.
 
+### 3.7 A writer ships each protocol so an adapter need not write one
+
+A writer **SHOULD** ship an implementation of each protocol its profile names, covering both ends,
+and an adapter **MAY** use it rather than write its own. Nobody should hand-roll a framing that is
+already specified and already implemented, and an adapter that does is where the two ends drift
+apart first.
+
+Using it **MUST NOT** be a condition of conformance. §3.1 specifies each protocol so an adapter can
+speak one with nothing of the writer's installed, in any language, which is what R109 §3.1 asks and
+what a shipped implementation would otherwise quietly undo — the point is to spare an author the
+work, not to decide what they may build against.
+
+**An adapter out of process may import whatever version it was written against.** §2.1's coupling is
+a *shared* environment, and the boundary is what unshares it: an adapter depending on the writer at
+one version, in its own closure, resolves against nothing the build resolves. So importing the
+writer to speak a protocol is a cost rather than a coupling, and the cost is measurable — the
+writer's environment resolves **57 distributions**, duckdb through the validator, s3fs and botocore
+for an object store, zarr and numcodecs for arrays, where `pyarrow`, which both protocols need and
+neither exceeds, **requires nothing**.
+
+Where that implementation is published is not this part's business. It may ship inside the writer
+and be split out later if its closure starts to matter to authors; what this part requires is that
+it exist and that using it be optional.
+
+**A protocol's name is importable with it.** An adapter declares a protocol by naming it, and the
+name is a constant the implementation exports rather than a string the adapter spells. Pinning is
+then what keeps an old adapter working, and it needs no shim to maintain: the adapter resolves the
+version it was written against in its own environment, and that version exports `stream-v0.1` and
+speaks it. A profile **MUST NOT** change what a named protocol means (§3.1), so the build at a
+later version still names `stream-v0.1` in its group and still reads it.
+
 ## 4. What this does not change
 
 - **No table, column, reference, rule or vocabulary changes, and no packet is rebuilt.** This binds
@@ -300,11 +331,17 @@ gains that an adapter declares a protocol and that an array crosses as a referen
 §5.7 gains that an extension may use any protocol of the group and that a command is carried as a
 list.
 
-**What the reference implementation owes is both protocols, once.** A build supports every protocol
-in the group, so it reads Parquet the recipe names — which `tables.py` does today, as
-`{resource: path}` with a batch iterator each — and reads a sequence of Arrow IPC streams, which is
-new. Each of the ten adapters it ships then declares one, and an adapter author outside it
-implements one.
+**What the reference implementation owes is both protocols, once, and a fourth distribution.** A
+build supports every protocol in the group, so it reads Parquet the recipe names — which
+`tables.py` does today, as `{resource: path}` with a batch iterator each — and reads a sequence of
+Arrow IPC streams, which is new. Each of the ten adapters it ships then declares one.
+
+§3.7's implementation is the rest: both ends of both protocols, and the names as constants an
+adapter imports rather than spells. It can live in the writer to begin with. Splitting it into its
+own distribution is a later question and a measurable one — the writer's environment resolves 57
+distributions where `pyarrow`, which both protocols need and neither exceeds, requires nothing — but
+an adapter out of process resolves its own environment, so that is a convenience for authors rather
+than anything conformance turns on.
 
 The array is the smaller half of the implementation. `StagedArray` already carries the four layout
 fields and the identifier; what changes is that the adapter writes the values and returns the
