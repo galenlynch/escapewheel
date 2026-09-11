@@ -186,14 +186,33 @@ concatenated IPC streams, one per resource, and a command that stops at four dif
       parse error: Expected to read 200 metadata bytes, but only read 120
 
 **A reader treats end of file as end of stream.** The end-of-stream marker was withheld and all four
-rows arrived anyway, reported with the same parse error a clean finish reports. Flight discarded a
-partial transfer; the stream does not, so the draft's claim that a partial table is not a state the
-boundary can produce was true of the protocol it had been measured against and false of this one.
+rows arrived anyway, reported with the same parse error a clean finish reports. Flight discards a
+partial transfer; the stream does not. Nothing in the bytes separated a finished run from a run that
+died between two resources or one that died before its last marker — all three ended `Tried reading
+schema message, was null or length 0` — so a build reading the bytes to decide whether a run
+succeeded got the wrong answer twice in three.
 
-**Only the exit code separates the three.** A finished run, a run that died between two resources
-and a run that died before its last marker all end `Tried reading schema message, was null or length
-0`. A build that reads the bytes to decide whether a run succeeded gets the wrong answer twice in
-three.
+**One empty stream fixes it, and the probe now ends with one.** A delivery terminated by an empty
+stream whose `resource_id` is the reserved value `end` costs **128 bytes**, and its absence says the
+delivery was truncated. It also names the suspect, which the completeness set cannot: the last
+resource read is the one the adapter died inside, where the set reports the first that never
+arrived.
 
-**A truncated message is the one case the bytes do carry**, failing with how many bytes short it
-was. That is what a build reports where the command nonetheless exited zero.
+    a complete delivery is 7 rows over 3 resources, ended by an empty stream named
+    'end' costing 128 bytes
+
+    the command finishes:
+      holds {'core.sessions': 1, 'core.units': 4, 'core.intervals': 2}, exit 0
+      delivery complete
+    it dies between two resources:
+      holds {'core.sessions': 1}, exit 1
+      delivery truncated, last read 'core.sessions'
+    it dies after the rows, before the end-of-stream marker:
+      holds {'core.sessions': 1, 'core.units': 4}, exit 1
+      delivery truncated, last read 'core.units'
+    it is killed inside a batch:
+      holds {'core.sessions': 1, 'core.units': 0}, exit 1
+      delivery truncated, last read 'core.units'
+
+A resource ID is dotted, so no undotted token can be one and the reserved value collides with
+nothing.

@@ -16,6 +16,8 @@ from pathlib import Path
 import pyarrow as pa
 
 HERE = Path(__file__).resolve().parent
+#: The one reserved `resource_id`. A resource ID is dotted, so no undotted token can collide.
+SENTINEL = "end"
 TABLES = {
     "core.sessions": pa.table({"session_id": pa.array([0], "int32")}),
     "core.units": pa.table(
@@ -39,6 +41,7 @@ def emit(mode: str) -> None:
     """The adapter side: write rows to standard output and stop where the mode says."""
     out = sys.stdout.buffer
     streams = {r: encode(r, t) for r, t in TABLES.items()}
+    streams[SENTINEL] = encode(SENTINEL, pa.table({}))
     out.write(streams["core.sessions"])
     if mode == "between":
         out.flush()
@@ -53,29 +56,30 @@ def emit(mode: str) -> None:
         out.write(streams["core.units"][: len(streams["core.units"]) // 2])
         out.flush()
         raise SystemExit("killed inside a core.units batch")
-    for name in ("core.units", "core.intervals"):
+    for name in ("core.units", "core.intervals", SENTINEL):
         out.write(streams[name])
     out.flush()
 
 
-def read(stdout) -> tuple[dict[str, int], str | None]:
-    """Read the concatenation the way a build must, keeping what arrived before any failure."""
+def read(stdout) -> tuple[dict[str, int], bool, str | None]:
+    """Read the concatenation, returning what arrived, whether it ended, and what was read last."""
     got: dict[str, int] = {}
+    last: str | None = None
     while True:
         try:
             reader = pa.ipc.open_stream(stdout)
-        except (pa.ArrowInvalid, OSError) as err:
-            message = str(err).splitlines()[0]
-            return got, None if "Expected to read" in message and not got else message
-        except StopIteration:
-            return got, None
+        except (pa.ArrowInvalid, OSError):
+            return got, False, last
         name = reader.schema.metadata[b"resource_id"].decode()
+        if name == SENTINEL:
+            return got, True, last
+        last = name
         got[name] = 0
         try:
             for batch in reader:
                 got[name] += batch.num_rows
-        except (pa.ArrowInvalid, OSError) as err:
-            return got, str(err).splitlines()[0]
+        except (pa.ArrowInvalid, OSError):
+            return got, False, last
 
 
 def run(mode: str):
@@ -86,38 +90,30 @@ def run(mode: str):
         stderr=subprocess.PIPE,
         text=False,
     )
-    got, error = read(child.stdout)
+    got, ended, last = read(child.stdout)
     child.wait()
-    return got, error, child.returncode, child.stderr.read().decode()
+    return got, ended, last, child.returncode, child.stderr.read().decode()
 
 
 def main() -> int:
     """Measure every mode and print what a build is left holding."""
     whole = sum(t.num_rows for t in TABLES.values())
-    got, error, code, _ = run("clean")
     print(
-        f"**A run that finishes.** {sum(got.values())} of {whole} rows, exit {code}, "
-        f"parse error {error}\n"
+        f"a complete delivery is {whole} rows over {len(TABLES)} resources, "
+        f"ended by an empty stream named {SENTINEL!r} costing "
+        f"{len(encode(SENTINEL, pa.table({})))} bytes\n"
     )
-
-    got, error, code, stderr = run("between")
-    print(
-        "**The command dies between two resources.** The first is complete and valid:"
-    )
-    print(f"  the build holds {got}, exit {code}, parse error {error}")
-    print(f"  standard error: {stderr.strip().splitlines()[-1]!r}\n")
-
-    got, error, code, _ = run("midbatch")
-    print("**The command dies after the rows and before the end-of-stream marker.**")
-    print(f"  the build holds {got}, exit {code}")
-    print(f"  parse error: {error}\n")
-
-    got, error, code, _ = run("truncated")
-    print(
-        "**The command is killed inside a batch.** What had already been decoded stays decoded:"
-    )
-    print(f"  the build holds {got}, exit {code}")
-    print(f"  parse error: {error}")
+    for mode, said in (
+        ("clean", "the command finishes"),
+        ("between", "it dies between two resources"),
+        ("midbatch", "it dies after the rows, before the end-of-stream marker"),
+        ("truncated", "it is killed inside a batch"),
+    ):
+        got, ended, last, code, _ = run(mode)
+        verdict = "complete" if ended else f"truncated, last read {last!r}"
+        print(f"{said}:")
+        print(f"  holds {got}, exit {code}")
+        print(f"  delivery {verdict}")
     return 0
 
 

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 03 §1 (the protocol group the portable profile names); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the connection as a carrier beside the file, and when a report is this run's) |
+| **Amends** | Part 03 §2 (the source protocols the portable profile requires); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the connection as a carrier beside the file, and when a report is this run's) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole, and a contradiction is refused), R87 §2.2 (an adapter declares which recipe fields it states), R109 §2.3 (a shared process is a shared dependency closure), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -38,7 +38,7 @@ unless a build has something to tell it with.
 
 Informative.
 
-### 2.1 An adapter's closure is what rots, and authorship does not protect it
+### 2.1 An adapter's closure rots; authorship does not protect it
 
 R109 §2.3 refuses an in-process extension because its dependency closure becomes the writer's, and
 two extensions pinning incompatible versions make that environment unsolvable. An adapter for a
@@ -103,7 +103,7 @@ The mismatch is why §2.2's grouping is hard to see from a recipe: `[[source]] k
 as a session's metadata generally, where it means AIND's. Nothing in this part turns on the fix, and
 recording it is what keeps a rename from being invented later as a new idea.
 
-### 2.4 Five tables name a kind, and four hold one adapter's own property
+### 2.4 Four tables hold an adapter's own property, away from the adapter
 
 `_SHARED_SOURCES` names the three kinds handed an object store. `SAMPLED` names the one kind a
 `--sample` build may read partially. `REQUIRED_OPTIONS` names the two kinds that cannot be
@@ -306,9 +306,14 @@ all three back, which is the measurement this clause rests on.
 
 **What each protocol invents, and nothing more.** `files-v0.1` invents a mapping from resource to
 path, which a recipe already carries for a `tables` source. `stream-v0.1` invents **one metadata
-key**, `resource_id`. Everything else is Arrow: the container, the schema, the batching, the
-terminator that separates one resource from the next, and the metadata field the key lives in. A
+key**, `resource_id`, and one reserved value of it, `end`, which §3.10 uses to say a delivery
+finished. Everything else is Arrow: the container, the schema, the batching, the terminator that
+separates one resource from the next, and the metadata field the key lives in. A
 protocol that owned more would be a format to maintain; these are a spelling of two.
+
+Where rows travel on standard output they are **bytes**. An adapter **MUST** write the stream to a
+binary handle and a build **MUST** read one, because a platform translating a line ending in text
+mode corrupts the stream, which then fails as malformed data rather than as an encoding error.
 
 **`flight-v0.1` gives, for free, two things the others need protocol to get.** Part 05 §4.1 has a
 build report per source what it offers per resource and how many rows, without writing to the
@@ -350,13 +355,14 @@ port, no network exposure, shipped in the standard pyarrow wheel — serves thre
 descriptor in **119 ms including the process start**.
 
 `stream-v0.1` is not the lesser protocol for it. It is the one implementable wherever there is an
-Arrow binding at all, which is R3 §2.1's argument from the beginning: Flight needs gRPC bindings for
+Arrow binding at all, which is the floor R3 chose for stored columns applied here: Flight needs
+gRPC bindings for
 that language too, and the Arrow implementations carrying Flight are a subset of those carrying IPC.
 An adapter that emits everything it has and lets the build discard is paying a cost R63 §1.2
 measures at one resource in five, and an adapter whose discovery costs an extraction is paying what
 the NWB adapter's `offers` pays in process today, counting rows by computing them. Both are costs a
-working adapter can carry. What the stream costs on the failing path is larger and is §3.11's: a
-truncated resource passes as whole, so a build blames the wrong one, where Flight cannot.
+working adapter can carry. On the failing path the stream costs one more empty stream of **128
+bytes** (§3.10), which buys what a Flight call has for nothing: a delivery that says it finished.
 
 A recipe declares files where persistence is the point — an extraction expensive enough to reuse
 across builds, or one whose output should still be there to inspect after a failure. That is not a
@@ -378,7 +384,7 @@ and every other adapter produces under 0.25 MB (§2.1), so a file costs the smal
 large one a write and a read; defaulting to the stream means no adapter needs permission to avoid
 that, and a recipe that wants the file says so.
 
-### 3.4 A command is an argument list, and a stream is bytes
+### 3.4 A build runs a command from an argument list
 
 Part 09 §5.7 says a command is an argument list run in the source's own root and not a shell line. A
 recipe **MUST** carry it as a list, and a build **MUST NOT** derive one by splitting a string.
@@ -391,10 +397,6 @@ not — so the defect is the string and not the host.
 
 A list needs no convention, because `subprocess` already has one per host: `list2cmdline` on Windows,
 `execv` elsewhere. A list keeps that adaptation where it is already written.
-
-Where rows travel on standard output, they are **bytes**. An adapter **MUST** write the stream to a
-binary handle, and a build **MUST** read one. A platform translating a line ending in text mode
-corrupts the stream, and it fails as malformed data rather than as an encoding error.
 
 A build **MUST** consume standard output and standard error concurrently. A pipe holds tens of
 kilobytes, so reading one to completion first deadlocks on any adapter whose diagnosis outruns that
@@ -417,7 +419,7 @@ What the opt-in buys is efficiency, and what it costs is a solvable environment.
 import an adapter the recipe opted in **MUST** refuse, naming the source and the import that failed,
 before any source is opened.
 
-### 3.6 An adapter returns records, and a transport is not the return type
+### 3.6 An adapter returns records, never a transport
 
 Part 07 §4 states that an adapter's return type is records and not a path, because that is what lets an
 adapter be tested without a filesystem and keeps normalization decisions out of I/O code. That
@@ -512,13 +514,13 @@ and be split out later if its closure starts to matter to authors; what this par
 it exist and that using it be optional.
 
 **A build knows an adapter is serving before it asks.** Where a protocol needs the adapter running
-— `flight-v0.1` does, `files-v0.1` and `stream-v0.1` do not — the protocol **MUST** say how a build
-establishes that. `flight-v0.1` says it by **connection**: a build retries the socket until it
-connects or the adapter's process exits, and reports the exit — measured at **114 ms** to detect an
-adapter that failed before binding, against a build that would have waited on that socket forever. A readiness line on standard output
-is the obvious alternative and is weaker, because a build waiting for a line that never comes
-cannot tell *not yet* from *never* unless it watches the process as well, which is the whole of
-what retrying the socket already does.
+— `flight-v0.1` does, `files-v0.1` and `stream-v0.1` do not — the protocol **MUST** say how a
+build establishes that. `flight-v0.1` says it by **connection**: a build retries the socket until
+it connects or the adapter's process exits, and reports the exit — measured at **114 ms** to
+detect an adapter that failed before binding, against a build that would have waited on that
+socket forever. A readiness line on standard output is the obvious alternative and is weaker,
+because a build waiting for a line that never comes cannot tell *not yet* from *never* unless it
+watches the process as well, which is the whole of what retrying the socket already does.
 
 **A protocol's name is importable with it.** An adapter declares a protocol by naming it, and the
 name is a constant the implementation exports rather than a string the adapter spells. Pinning is
@@ -550,14 +552,20 @@ An empty table says the adapter looked, and it does not say the source is empty:
 silently produced nothing delivers the same rows, and a build wanting that difference reads
 §3.11's report.
 
-**The data does not say whether a delivery finished.** Measured in
-`conformance/adapter-boundary/stream_failures.py`, a command killed after writing four rows and
-before the end-of-stream marker delivers **4 of 4 rows that parse clean**, because a reader treats
-end of file as end of stream; a finished run, a run that died between two resources and that one all
-end with the same parse error. Over `flight-v0.1` a transfer failing partway delivers **0 rows**,
-the client discarding what it holds rather than returning a short table. The two protocols leave a
-build holding different things and neither says so in the data, which is why the test is the set and
-not the bytes.
+**A stream says it finished by ending with one.** A reader treats end of file as end of stream, so
+a command killed after writing four rows and before the end-of-stream marker delivers **4 of 4 rows
+that parse clean** — measured in `conformance/adapter-boundary/stream_failures.py`, where a
+finished run, a run that died between two resources and that one all end with the same parse error.
+`stream-v0.1` therefore ends a delivery with an empty stream whose `resource_id` is the reserved
+value `end`, at **128 bytes**. A build **MUST** refuse a delivery that did not end with it, and
+**MUST** name the last resource it read as the one the adapter died inside rather than the first
+that never arrived. A resource ID is dotted, so no undotted token can be one and the reserved value
+collides with nothing.
+
+The other two protocols answer it already. Over `flight-v0.1` a transfer failing partway delivers
+**0 rows**, the client discarding what it holds rather than returning a short table, and a failure
+is an error on the call for a named resource. A truncated Parquet file has no footer and will not
+open, so a `files-v0.1` delivery that parses is a delivery that finished.
 
 **A non-zero exit is a failure whatever arrived.** A build **MUST** report one as a failure even
 where every resource is present, because an adapter saying it failed is not overruled by its own
@@ -642,13 +650,11 @@ put there is one the adapter must know before doing the work, and what a build w
 which resources are offered, their schemas and their row counts — is in the `FlightInfo` already. A
 build **MUST** ignore `app_metadata`, which leaves the field to a later version of the protocol.
 
-Which resource a failure belongs to is the one thing a protocol does decide, and `stream-v0.1`
-decides it wrongly. §3.10's set says which resources are missing, and the resource an adapter died
-*inside* is not among them: truncated at a message boundary it arrives short and parses clean, so a
-build blames the first resource that never appeared while the damaged one passes as whole. A Flight
-failure is an error on the call for a named resource and cannot misattribute. Reading the
-end-of-stream marker would close it, and that is the framing §3.3 declines to own, so it stands as
-what the stream costs rather than as something to repair.
+Each protocol names the resource a failure belongs to, by a different route: a Flight error names
+the one its call asked for, a stream names the last read before its terminator went missing, and a
+file that will not open is the resource it is. §3.10's set says which resources never arrived, which
+is a different question — the resource an adapter died *inside* can arrive short and parse clean —
+so both answers are needed to report a failure rather than to report that one happened.
 
 ## 4. What this does not change
 
@@ -659,15 +665,15 @@ what the stream costs rather than as something to repair.
   of them a default, and §3.5 leaves the in-process route available where a recipe asks for it.
 - **`PRODUCES` and `STATES` are untouched.** R63 §2.1 and R87 §2.2 stand; §3.1 says the rest of what
   an adapter needs is declared the same way, not that those two change shape.
-- **An extension declares nothing of its own here.** An extension reaches a build as a source
-  (R109 §3.2), so the adapter delivering its rows is what declares `NEEDS` and a protocol, and for
-  the `tables` kind that is a root and the resources the recipe names. What an extension owes is its
-  registry document, which this part does not touch.
+- **An extension's registry document is untouched.** An extension reaches a build as a source
+  (R109 §3.2), so what declares `NEEDS`, a protocol and a delivery is the adapter carrying its rows,
+  and for the `tables` kind that is a root and the resources the recipe names. Its obligations under
+  §3.10 are an adapter's, and what it owes as an extension does not change.
 
 ## 5. Consequence
 
-Part 03 §1 gains the protocol group the portable profile names. Part 05 §3 gains a preference table,
-an in-process declaration and when a source's delivery is complete; Part 05 §3.4 gains what an
+Part 03 §2 gains the source protocols the portable profile requires. Part 05 §3 gains a preference
+table, an in-process declaration and when a source's delivery is complete; Part 05 §3.4 gains what an
 adapter declares; and Part 05 §3.5 and §3.7 gain what a build captures from a failure and what an
 adapter may report about a run. Part 09 §5.8's report gains the connection as a carrier beside the
 file, and the rule that a build clears the path before the run that writes it. Part 07 §4 gains
