@@ -53,7 +53,7 @@ def test_a_non_positive_rate_is_rejected_at_construction():
 
 
 def test_the_record_carries_one_rate_form():
-    """`02` §12.4. Both forms made the float a copy of `tick_rate_num`, free to disagree."""
+    """Part 02 §12.4. Both forms made the float a copy of `tick_rate_num`, free to disagree."""
     row = harp().record()
     assert (row["tick_rate_num"], row["tick_rate_den"]) == (31250, 1)
     assert "tick_rate_hz" not in row

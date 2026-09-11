@@ -27,7 +27,7 @@ uv run --with '../escapewheel-validator' --with duckdb escapewheel validate pack
 declared transform between them, one probe with four electrodes, two trials, four events,
 one sorting run, one curation version, two units and their spikes, and provenance.
 
-The five absent tables are arrays (Phase 5) and media (in no phase of `07`). A packet need
+The five absent tables are arrays (Phase 5) and media (in no phase of Part 07). A packet need
 not carry every table; `validate.py` checks what the manifest declares.
 
 The packet carries one extension, `dynamic_foraging`, holding the two rows its `trials` table
@@ -65,7 +65,7 @@ packet in the wrong order is conforming, only slower (R10 §2).
 
 ## Validation layers
 
-Four, in `09` §10's order — see `escapewheel_validator`:
+Four, in Part 09 §10's order — see `escapewheel_validator`:
 
 1. **Manifest shape** against `manifest.schema.json`, when the packet is opened.
 2. **The embedded registry** against the meta-schema, and its version against the manifest's.

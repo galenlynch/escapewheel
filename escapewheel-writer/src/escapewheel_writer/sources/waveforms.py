@@ -18,7 +18,7 @@ a quarter of the width and the packet says what the scale is.
 **Time is not the fastest axis.** The source stores (unit, sample, channel), mirroring a
 recording. A template is not a recording: one channel's trace is a smooth curve and adjacent
 channels are independent noise, so (unit, channel, sample) both compresses better and matches
-how a trace is read -- 11% smaller and a trace 3.8x faster. `03` §6.2 makes the stored order the
+how a trace is read -- 11% smaller and a trace 3.8x faster. Part 03 §6.2 makes the stored order the
 packet's to declare.
 
 `waveform_sd` is the same array of a different quantity and is stored the same way, on the
@@ -89,7 +89,7 @@ class WaveformSource:
         Prepended to identifiers this adapter mints.
     """
 
-    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
+    #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
     PRODUCES = frozenset(
@@ -100,7 +100,7 @@ class WaveformSource:
         }
     )
 
-    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
+    #: Part 05 §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -288,7 +288,7 @@ class WaveformSource:
     ) -> dict[str, Any]:
         """One `core.array_assets` row.
 
-        No `dtype` or `shape`: the Zarr array declares both, and `02` §6 forbids a table from
+        No `dtype` or `shape`: the Zarr array declares both, and Part 02 §6 forbids a table from
         restating what the data already says. `conversion` is the one thing the array cannot
         say, so it is the one thing recorded here.
         """
@@ -340,7 +340,7 @@ class WaveformSource:
         return rows
 
     def _axes(self, asset_id: str, clock_id: str | None, origin: int | None) -> list[dict[str, Any]]:
-        """One array's three axes, in stored order (`03` §6.2)."""
+        """One array's three axes, in stored order (Part 03 §6.2)."""
         built = self._read()
         start = origin if origin is not None else -(built["samples"] // 2)
         sample_axis: dict[str, Any] = {
@@ -365,7 +365,7 @@ class WaveformSource:
         ]
 
     def array_dimensions(self, clock_id: str | None = None, origin: int | None = None) -> list[dict[str, Any]]:
-        """`core.array_dimensions`, one row per axis of each array, in stored order (`03` §6.2).
+        """`core.array_dimensions`, one row per axis of each array, in stored order (Part 03 §6.2).
 
         The channel axis takes R20 §2's labelled form, pointing at `core.unit_electrodes`,
         because which contact a position means is per unit and no coordinate array can say it.
@@ -474,7 +474,7 @@ class WaveformSource:
         return {resource: rows for resource, rows in built.items() if rows}
 
     def offers(self) -> dict[str, int]:
-        """Which resources this source supplies from its root, and how many rows (`05` §1)."""
+        """Which resources this source supplies from its root, and how many rows (Part 05 §1)."""
         return {resource: len(rows) for resource, rows in self.records().items()}
 
 

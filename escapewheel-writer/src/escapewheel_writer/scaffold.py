@@ -1,6 +1,6 @@
 """Draft an extension registry document from tables that already exist.
 
-**This invents no format.** `09` §2 makes an extension a registry document in R2's format, so
+**This invents no format.** Part 09 §2 makes an extension a registry document in R2's format, so
 there is nothing here to design — only typing to avoid. The relationship is `escapewheel init`'s to a
 recipe: draft what can be read off the data, name what cannot, and let a human finish it.
 
@@ -28,7 +28,7 @@ import pyarrow.parquet as pq
 from escapewheel_validator.validator import registry_meta_schema
 
 #: R2 §4's vocabulary, keyed by what pyarrow reports. A type outside this is a defect in the
-#: source rather than a gap here: `03` §5.5 bans nested types so a native reader stays viable.
+#: source rather than a gap here: Part 03 §5.5 bans nested types so a native reader stays viable.
 ARROW_TO_REGISTRY = {
     "string": "string",
     "large_string": "string",
@@ -111,7 +111,7 @@ def draft(extension_id: str, tables: dict[str, Path], *, logical_standard_versio
     Parameters
     ----------
     extension_id : str
-        Namespace for every table, which `09` §2 requires each to be prefixed by.
+        Namespace for every table, which Part 09 §2 requires each to be prefixed by.
     tables : dict
         Bare table name to the Parquet file whose schema it takes.
     """
@@ -125,16 +125,16 @@ def draft(extension_id: str, tables: dict[str, Path], *, logical_standard_versio
             # R7: every table declares a key or explicitly null with a reason. Neither is
             # guessable -- a column unique in one session need not be unique in the next.
             "primary_key": None,
-            # `09` §2 lets an extension reference core, and `02` §8.3 needs it to where a
+            # Part 09 §2 lets an extension reference core, and Part 02 §8.3 needs it to where a
             # discriminator names this table. Nothing here can know which.
             "references": [],
             "rules": [],
         }
         decisions.append(f"{resource}: primary_key is null; declare it or say why not (R7)")
-        decisions.append(f"{resource}: no references; an extension may reference core (`09` §2)")
+        decisions.append(f"{resource}: no references; an extension may reference core (Part 09 §2)")
     return Draft(
         {
-            # `02` §9.2. Taken from the meta-schema the validator vendors rather than written
+            # Part 02 §9.2. Taken from the meta-schema the validator vendors rather than written
             # here, because a second copy of a URI is a second thing to go stale.
             "$schema": registry_meta_schema()["$id"],
             "registry_version": "0.1.0",

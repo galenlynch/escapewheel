@@ -32,7 +32,7 @@ array.read((slice(0, 1),))  # this needs Zarr
 
 The mandatory dependency closure is **jsonschema and pyarrow**, and that is the point rather
 than an accident. A complete read path exists without a SQL engine, which is what keeps a
-native reader viable in a language that has no embedded one — the reason `03` bans nested
+native reader viable in a language that has no embedded one — the reason Part 03 bans nested
 Parquet types. Everything heavier is an extra:
 
 | Extra | Brings | Needed for |

@@ -212,7 +212,7 @@ file is where a forgotten one hides best.
 
 ## Writing is not committing
 
-Copying bytes is staging (`05`). Staged resources MUST NOT appear as committed canonical
+Copying bytes is staging (Part 05). Staged resources MUST NOT appear as committed canonical
 resources in the manifest, and a commit writes a candidate manifest and renames it to
 `packet.json` **last**. If you are adding a path that produces files, make sure a failure
 part-way leaves a packet that is absent rather than one that is half-declared.

@@ -37,9 +37,9 @@ Predicate = str | int | float | bool | tuple[Any, Any] | list[Any] | None
 
 REGISTRY_PATH = "schemas/logical_schemas.json"
 
-#: Zarr codecs every conforming reader must support (`03` §6.4). Declared here so a packet
+#: Zarr codecs every conforming reader must support (Part 03 §6.4). Declared here so a packet
 #: requiring more can be rejected before it is opened. A resource declaring a codec outside
-#: this set is refused only when it is the one being opened (`03` §6.4).
+#: this set is refused only when it is the one being opened (Part 03 §6.4).
 BASELINE_CODECS = frozenset({"none", "gzip", "zstd"})
 
 #: Ask for ticks exactly as the file stores them. Spikes are counted on the probe that
@@ -49,7 +49,7 @@ STORED = "stored"
 
 
 #: The activities whose runs produce units and spikes, so the accessors returning those know
-#: what to check for currency (`01` §2.4). An accessor already names one resource; naming what
+#: what to check for currency (Part 01 §2.4). An accessor already names one resource; naming what
 #: produces it is not the general activity-to-table map R44 §2.4 rejects, which an extension's
 #: tables could never be added to.
 SORTING_ACTIVITIES = ("spike_sorting", "curation")
@@ -274,14 +274,14 @@ class Packet:
         return parsed
 
     def extensions(self) -> dict[str, dict[str, Any]]:
-        """Extension registries this packet declares and carries (`09` §2, `09` §6).
+        """Extension registries this packet declares and carries (Part 09 §5.1, Part 09 §5.3).
 
         Each is a registry document in R2's format, namespaced by its `extension_id`. Reading a
         packet never needs one -- core stays interpretable when no extension is present, which
-        `09` §2 requires by forbidding core to reference an extension.
+        Part 09 §6.1 requires by forbidding core to reference an extension.
 
         A declared extension whose file is absent or unparseable is **left out**, not raised:
-        `09` §6 makes verifying that declared files exist the validator's job, and a reader that
+        Part 09 §5.3 makes verifying that a declared registry exists the validator's job, and a reader that
         refused the packet over it would make holding an extension a condition of reading core.
 
         Returns
@@ -294,7 +294,7 @@ class Packet:
             location = entry.get("registry") if isinstance(entry, Mapping) else None
             if not location:
                 continue
-            # `09` §6 makes verifying that a declared file exists the validator's job, so an
+            # Part 09 §5.3 makes verifying that a declared registry exists the validator's job, so an
             # unreadable one is left out rather than raised.
             with contextlib.suppress(Exception):
                 loaded[extension_id] = json.loads(self._root.join(str(location)).read_bytes())
@@ -305,7 +305,7 @@ class Packet:
     def check_codecs(self, resource_id: str, supported: Iterable[str] = BASELINE_CODECS) -> None:
         """Check that this reader can open one resource, before opening it.
 
-        Codecs are a property of a resource, not of a packet (`03` §6.4). A packet may
+        Codecs are a property of a resource, not of a packet (Part 03 §6.4). A packet may
         reference an array in a codec this reader lacks while its own arrays are readable,
         so a missing codec disqualifies that resource and nothing else.
 
@@ -508,7 +508,7 @@ class Packet:
         # a view skipped for want of an input gains it when that input is registered later.
         # What the packet declares is passed separately from what is registered, so a view whose
         # refinements table exists but is not yet registered is skipped rather than built without
-        # its guard (`01` §2.2) -- which would answer, wrongly, instead of not answering.
+        # its guard (Part 01 §2.2) -- which would answer, wrongly, instead of not answering.
         register_views(connection, [sql_name(r.resource_id) for r in self._table_resources()])
 
     def _named_in(self, query: str) -> set[str]:
@@ -575,7 +575,7 @@ class Packet:
         return expression
 
     def intervals(self, *, session_id: str | None = None, interval_kind: str | None = None) -> pa.Table:
-        """Read ``core.intervals``, optionally filtered (`01` §3.10).
+        """Read ``core.intervals``, optionally filtered (Part 01 §3.10).
 
         Filtering by kind prunes rather than scans: the kind is the second key column, so each
         kind is a contiguous run in the file's order.
@@ -613,7 +613,7 @@ class Packet:
         ------
         AmbiguousRun
             If the packet holds two sortings or curations of one probe and does not say which
-            to read (`01` §2.4). Returning both concatenated is two complete sets of units with
+            to read (Part 01 §2.4). Returning both concatenated is two complete sets of units with
             nothing marking the seam, so every count taken over the result is wrong. Read
             ``table("core.units")`` to get the rows anyway.
         """
@@ -648,7 +648,7 @@ class Packet:
             The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
             :data:`STORED` for the ticks the file holds.
         seconds : bool, default False
-            Add a `t_second` column from the packet's declared origin (`01` §2.1). Refuses on
+            Add a `t_second` column from the packet's declared origin (Part 01 §2.1). Refuses on
             a packet that declares none, and on ticks that are not on the reference clock.
 
         Returns
@@ -741,7 +741,7 @@ class Packet:
             :data:`STORED` for the ticks the file holds. Mapping drops a spike the anchors
             cannot place, exactly as `analysis.spike_events` does.
         seconds : bool, default False
-            Add a `t_second` column from the packet's declared origin (`01` §2.1). Refuses on
+            Add a `t_second` column from the packet's declared origin (Part 01 §2.1). Refuses on
             a packet that declares none, and on ticks that are not on the reference clock.
 
         Returns
@@ -758,7 +758,7 @@ class Packet:
         ValueError
             If both or neither of `unit_id` and `units` are given.
         AmbiguousRun
-            If the packet does not say which sorting to read (`01` §2.4).
+            If the packet does not say which sorting to read (Part 01 §2.4).
 
         Examples
         --------
@@ -867,7 +867,7 @@ class Packet:
         return self._reference_cache
 
     def t_zero(self, *, session_id: str | None = None) -> int:
-        """Return the session's time origin, on the reference clock (`05` §7).
+        """Return the session's time origin, on the reference clock (Part 05 §7).
 
         The earliest tick at which any of the session's clocks was observing. It is read from
         `core.sessions.t_zero_tick` rather than recomputed: the writer took the minimum across
@@ -986,7 +986,7 @@ def _prepare_remote(connection: duckdb.DuckDBPyConnection) -> None:
     and no signal when it is off, which is the kind of wrong this package exists to prevent.
 
     Credentials are deliberately **not** set. Whether a store is reachable is a property of the
-    caller's situation rather than of the packet (`04` §5.1), so a caller supplies its own secret;
+    caller's situation rather than of the packet (Part 04 §5.1), so a caller supplies its own secret;
     what this removes is the setup a caller cannot be expected to know.
     """
     with contextlib.suppress(Exception):  # an older duckdb, or an extension it cannot fetch
@@ -997,12 +997,12 @@ def _prepare_remote(connection: duckdb.DuckDBPyConnection) -> None:
 
 
 def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | None) -> dict[str, str]:
-    """Work out where each named source is, in the order `04` §5.5 fixes.
+    """Work out where each named source is, in the order Part 04 §5.5 fixes.
 
     The caller's documents come first, in the order given, then `sources.json` at the packet
     root if it is there. First match wins, so a caller redirects a source without editing
     anything. A missing default is not an error -- a packet naming no source needs none, and an
-    unresolved one is a fact rather than a defect (`04` §5.5).
+    unresolved one is a fact rather than a defect (Part 04 §5.5).
 
     Parameters
     ----------
@@ -1042,16 +1042,16 @@ def open_packet(
     ----------
     path : str, Path, or Location
         Packet root: a local directory, or a store prefix such as ``s3://bucket/prefix``.
-        `00` §2.4 admits both, and an object store is where a shared dataset lives.
+        Part 00 §2.4 admits both, and an object store is where a shared dataset lives.
     validate_manifest : bool, default True
         Whether to check the manifest against its JSON Schema before parsing.
     rewrite : Mapping, optional
         Declared-URI prefix to replacement, applied to every resource before it is resolved.
-        `04` §5.1 makes reachability the reader's situation, and a committed packet records the
+        Part 04 §5.1 makes reachability the reader's situation, and a committed packet records the
         writer's -- so this is how the same bytes are reached from somewhere else without
-        editing bytes `04` §5.1 makes immutable. Longest prefix wins.
+        editing bytes Part 04 §5.1 makes immutable. Longest prefix wins.
     sources : iterable, optional
-        Source resolution documents (`04` §5.5), as mappings or as paths to read. Consulted
+        Source resolution documents (Part 04 §5.5), as mappings or as paths to read. Consulted
         before the packet root's own `sources.json`, in the order given.
 
     Returns

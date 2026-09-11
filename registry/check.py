@@ -8,7 +8,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REG = json.loads((HERE / "logical_schemas.json").read_text())
 T = REG["tables"]
-# `09` §2: an extension is a registry document in R2's format, so the invariants that hold of a
+# Part 09 §2: an extension is a registry document in R2's format, so the invariants that hold of a
 # registry hold of it. They are checked here for the same reason core's are -- a naming
 # convention or an unparseable rule is a property of the document, which no packet's rows can
 # show and no SQL can see (R12 §4).
@@ -32,7 +32,7 @@ def check(label, bad, fmt=str):
 
 ledger = subprocess.run([sys.executable, str(HERE.parent / "conformance/spec-sweep/tables.py")],
                         capture_output=True, text=True).stdout
-# Namespaces beyond core exist from `00` §3; match any <namespace>.<table> line.
+# Namespaces beyond core exist from Part 00 §3; match any <namespace>.<table> line.
 expected = {l.strip() for l in ledger.splitlines()
             if re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", l.strip())}
 check("table set matches R9 §2 ledger", expected ^ set(T))
@@ -57,7 +57,7 @@ check("a since names a revision",
       [(n, v) for n, t in T.items()
        for v in [t.get("since"), *(c.get("since") for c in t["columns"])]
        if v is not None and not re.fullmatch(r"R\d+(?: §[\d.\-]+)?", v)])
-#: `02` §8.4. A UCUM code is printable ASCII without spaces; an annotation in curly
+#: Part 02 §8.4. A UCUM code is printable ASCII without spaces; an annotation in curly
 #: braces is one and is dimensionless. This rejects the prose that was declared --
 #: "median anchor intervals", "byte" -- rather than parsing the grammar.
 _UCUM = re.compile(r"[!-~]+")
@@ -67,7 +67,7 @@ def structural(tables, universe, prefix=""):
     """The invariants that hold of any registry document, core's or an extension's.
 
     `universe` is what a reference may resolve against: core's own tables for core, and core's
-    plus the extension's own for an extension. `09` §2 makes the direction one-way and §4 declines
+    plus the extension's own for an extension. Part 09 §2 makes the direction one-way and §4 declines
     dependency resolution, so an extension reaching another extension's table is not a reference
     a packet can be relied on to satisfy.
     """
@@ -91,7 +91,7 @@ def structural(tables, universe, prefix=""):
     c_("primary key columns are required",
        [(n, k) for n, t in tables.items() for k in (t["primary_key"] or [])
         if k in cols[n] and cols[n][k]["presence"] != "required"])
-    # `03` §5.3's override names columns, and a revision that narrows a key leaves them behind:
+    # Part 03 §5.3's override names columns, and a revision that narrows a key leaves them behind:
     # `aind_unit_qc` kept sorting by two columns R81 had removed, which no packet could satisfy
     # and no rule could see, because a sort is physical and SQL cannot read it (R12 §4).
     c_("sort columns exist",
@@ -108,19 +108,19 @@ def structural(tables, universe, prefix=""):
     c_("reference arity matches",
        [(n, r["resource"]) for n, t in tables.items() for r in t["references"]
         if len(r["columns"]) != len(r["resource_columns"])])
-    # `02` §7. A structural index may also be a foreign-key component, so a client converting one
+    # Part 02 §7. A structural index may also be a foreign-key component, so a client converting one
     # side and not the other would break the join. Both sides sharing a role is what makes
     # converting every structural_index column join-preserving by construction.
     role = {(n, c["name"]): c["role"] for n, t in universe.items() for c in t["columns"]}
-    # `02` §8.3 exempts one pair: a shared-key column carrying a discriminator's value is `data`
+    # Part 02 §8.3 exempts one pair: a shared-key column carrying a discriminator's value is `data`
     # where the column it references is the `discriminator`. Nothing converts either side, so
-    # `02` §7's reason does not reach it.
+    # Part 02 §7's reason does not reach it.
     c_("a reference relates columns of the same role",
        [(n, a, r["resource"], b) for n, t in tables.items() for r in t["references"]
         for a, b in zip(r["columns"], r["resource_columns"])
         if role.get((n, a)) != role.get((r["resource"], b))
         and (role.get((n, a)), role.get((r["resource"], b))) != ("data", "discriminator")])
-    # R53 §2.3 with `02` §7's reasoning: `number` resolves an assigned identifier through its
+    # R53 §2.3 with Part 02 §7's reasoning: `number` resolves an assigned identifier through its
     # target's map and coerces a carried one, so a reference across the two numbers each side
     # differently and resolves to nothing. Decidable here, and invisible until a packet is built.
     identity = {(n, c["name"]): c.get("identity") for n, t in universe.items() for c in t["columns"]}
@@ -129,13 +129,13 @@ def structural(tables, universe, prefix=""):
         for a, b in zip(r["columns"], r["resource_columns"])
         if role.get((n, a)) == "identifier" and identity.get((n, a)) != identity.get((r["resource"], b))])
     # A convention of this registry rather than a conformance requirement, so no revision mandates
-    # it and `02` states no column order at all (DEVELOPING.md §4). `build.py` emits it for core; an
-    # extension is a registry document in the same format (`09` §2) and nothing regenerates one,
+    # it and Part 02 states no column order at all (DEVELOPING.md §4). `build.py` emits it for core; an
+    # extension is a registry document in the same format (Part 09 §2) and nothing regenerates one,
     # which is the case this check exists for.
     c_("a table carrying session_id leads with it",
        [n for n, t in tables.items()
         if "session_id" in cols[n] and t["columns"][0]["name"] != "session_id"])
-    # `02` §8.4 resolves a `coordinate` against its own row's `clock_id`, so a reader who has found a
+    # Part 02 §8.4 resolves a `coordinate` against its own row's `clock_id`, so a reader who has found a
     # tick needs the clock next to it. Twelve of the thirteen tables carrying one already do that;
     # `core.units` did not, because R96 §3.2 added the column beside what R96 §3.1 had just added.
     # A `clock_id` in the primary key leads for that reason instead, and a table with no coordinate
@@ -154,7 +154,7 @@ def structural(tables, universe, prefix=""):
     c_("source labels are strings",
        [(n, c["name"], c["type"]) for n, t in tables.items() for c in t["columns"]
         if c["name"].endswith("_label") and c["type"] != "string"])
-    # `02` §8.6. Which tables declare `metadata` is bounded at both ends by the primary key, and
+    # Part 02 §8.6. Which tables declare `metadata` is bounded at both ends by the primary key, and
     # both bounds are decidable here with no packet in hand. A key holding an identifier of its
     # own -- one not part of a declared reference -- makes the row a thing, which may carry what
     # its source said about it; a key made entirely of other tables' identifiers makes the row a
@@ -172,53 +172,53 @@ def structural(tables, universe, prefix=""):
     # and `session_id` stops counting as referenced, which reads as an identifier of the table's own
     # and reports a missing `metadata` column. Adding one satisfies this and leaves the foreign key
     # undeclared, so the message says which reading to check first.
-    c_("a table keyed by an identifier of its own declares `metadata` (`02` §8.6)",
+    c_("a table keyed by an identifier of its own declares `metadata` (Part 02 §8.6)",
        [n for n, t in tables.items() if own_key[n] and "metadata" not in cols[n]],
        lambda n: f"{n} owes one, its key holding {own_key[n]}; where such a column should be part "
                  f"of a reference, the undeclared reference is the defect and not the column")
-    c_("a table keyed only by other tables' identifiers declares no `metadata` (`02` §8.6)",
+    c_("a table keyed only by other tables' identifiers declares no `metadata` (Part 02 §8.6)",
        [n for n, t in tables.items() if t["primary_key"] and not own_key[n] and "metadata" in cols[n]
         and all(k in {c for r in t["references"] for c in r["columns"]} for k in t["primary_key"])])
-    # `02` §8.6 again: `02` §10.2's check matches a bare column name, which is sound only while every
+    # Part 02 §8.6 again: Part 02 §10.2's check matches a bare column name, which is sound only while every
     # column called `metadata` is optional.
-    # `02` §8.3: `01` §3.17 makes this standard name no instruments, so a device's kind-specific
+    # Part 02 §8.3: Part 01 §3.17 makes this standard name no instruments, so a device's kind-specific
     # facts live in an extension's table and never in core. A core table keyed beginning
     # `device_id` would be that table, whatever it was called.
     if not prefix:  # core only: a detail table keyed on `device_id` is what an extension is for
-        c_("no core table but `core.devices` is keyed beginning `device_id` (`02` §8.3)",
+        c_("no core table but `core.devices` is keyed beginning `device_id` (Part 02 §8.3)",
            [n for n, t in tables.items()
             if n != "core.devices" and t["primary_key"] and t["primary_key"][0] == "device_id"],
-           lambda n: f"{n} is shaped like a device detail table, which an extension declares (`09` §2)")
-    c_("every `metadata` column is optional (`02` §8.6)",
+           lambda n: f"{n} is shaped like a device detail table, which an extension declares (Part 09 §2)")
+    c_("every `metadata` column is optional (Part 02 §8.6)",
        [n for n, t in tables.items()
         if "metadata" in cols[n] and cols[n]["metadata"]["presence"] != "optional"])
 
     # ---- R101 §3 : what a column says about its values ---------------------------------------
-    # `02` §9.3 made open the default, so nothing distinguished a column deliberately left open
+    # Part 02 §9.3 made open the default, so nothing distinguished a column deliberately left open
     # from one nobody had classified, and the marker rode on a column rather than on the
     # vocabulary -- `coordinate_frame` open on one table and undeclared on the other.
     _strings = [(n, c) for n, t in tables.items() for c in t["columns"] if c["type"] == "string"]
-    c_("every string column but a discriminator declares a vocabulary (`02` §9.3)",
+    c_("every string column but a discriminator declares a vocabulary (Part 02 §9.3)",
        [(n, c["name"]) for n, c in _strings
         if c["role"] != "discriminator" and "vocabulary" not in c])
-    c_("a discriminator declares no vocabulary (`02` §9.3)",
+    c_("a discriminator declares no vocabulary (Part 02 §9.3)",
        [(n, c["name"]) for n, c in _strings
         if c["role"] == "discriminator" and "vocabulary" in c],
-       lambda x: f"{x[0]}.{x[1]}: `02` §8.3 fixes the value space to the declared resource IDs")
-    c_("no column of another type declares one (`02` §9.3)",
+       lambda x: f"{x[0]}.{x[1]}: Part 02 §8.3 fixes the value space to the declared resource IDs")
+    c_("no column of another type declares one (Part 02 §9.3)",
        [(n, c["name"]) for n, t in tables.items() for c in t["columns"]
         if c["type"] != "string" and "vocabulary" in c])
-    c_("`closed` holds exactly where `enum` does (`02` §9.3)",
+    c_("`closed` holds exactly where `enum` does (Part 02 §9.3)",
        [(n, c["name"]) for n, c in _strings
         if (c.get("vocabulary") == "closed") != ("enum" in c)])
     c_("`reserved_values` appears only under `open` (R101 §3.4)",
        [(n, c["name"]) for n, c in _strings
         if "reserved_values" in c and c.get("vocabulary") != "open"])
-    c_("an authority declares a name and an absolute URI (`02` §9.3)",
+    c_("an authority declares a name and an absolute URI (Part 02 §9.3)",
        [(n, c["name"], a) for n, t in tables.items() for c in t["columns"]
         for a in c.get("authority", [])
         if not (a.get("name") and str(a.get("uri", "")).startswith(("http://", "https://")))])
-    c_("a declared unit is a UCUM code (`02` §8.4)",
+    c_("a declared unit is a UCUM code (Part 02 §8.4)",
        [(n, c["name"], c["unit"]) for n, t in tables.items() for c in t["columns"]
         if c.get("unit") and not _UCUM.fullmatch(c["unit"])],
        lambda x: f"{x[0]}.{x[1]} declares {x[2]!r}; an annotation in curly braces is a UCUM unit "
@@ -234,7 +234,7 @@ def structural(tables, universe, prefix=""):
             _by_name.setdefault(c["name"], set()).add(
                 (c["vocabulary"],
                  tuple((a["name"], a["uri"]) for a in c.get("authority", ()))))
-    c_("one column name carries one vocabulary and one authority (`02` §9.3)",
+    c_("one column name carries one vocabulary and one authority (Part 02 §9.3)",
        sorted(k for k, v in _by_name.items() if len(v) > 1))
 
     # R107 §3.6. A description restating a field is a second statement of the same fact that
@@ -251,19 +251,19 @@ def structural(tables, universe, prefix=""):
             if c.get("resolves") and f"resolves: {c['resolves']}" in desc:
                 said.append("quotes `resolves`")
             # A value repeated with no meaning beside it restates the field; `band` states what
-            # each of its reserved values means, which is a fact no field carries (`02` §3).
+            # each of its reserved values means, which is a fact no field carries (Part 02 §3).
             if c.get("enum") and all(f"`{v}`" in desc for v in c["enum"]):
                 said.append("lists its `enum`")
             if said:
                 _restated.append(f"{n}.{c['name']}: {', '.join(said)}")
-    c_("a description restates no field the column declares (`02` §3)", sorted(_restated))
+    c_("a description restates no field the column declares (Part 02 §3)", sorted(_restated))
 
 
 structural(T, T)
 for _id, _doc in EXT.items():
     structural(_doc["tables"], T | _doc["tables"], prefix=f"{_id}: ")
 
-# `09` §2's MUST, stated rather than implied: core resolving against itself above cannot see a
+# Part 09 §2's MUST, stated rather than implied: core resolving against itself above cannot see a
 # reference *into* an extension, because such a target would simply be absent from core.
 check("core references no extension",
       [(n, r["resource"]) for n, t in T.items() for r in t["references"]
@@ -311,11 +311,11 @@ merged = {r["id"] for t_ in T.values() for r in t_["rules"]}
 authored = {r["id"] for r in authored_rules}
 check("every authored rule reached the registry", sorted(authored - merged))
 check("the registry carries no rule rules.json does not author", sorted(merged - authored))
-# `02` §10.2. `optional` lets a column be absent from the file, and a Tier 2 rule is SQL run against
+# Part 02 §10.2. `optional` lets a column be absent from the file, and a Tier 2 rule is SQL run against
 # that file -- so a rule naming one does not miss a check, it fails to parse, and the run meant to
 # find defects reports an error of its own. The match is on identifiers rather than text: string
 # literals and comments are stripped, and a name matches only whole, so `some_metadata_key` and a
-# quoted 'metadata' are not hits. `02` §10.2 records what this rests on -- every column bearing one of
+# quoted 'metadata' are not hits. Part 02 §10.2 records what this rests on -- every column bearing one of
 # these names is optional -- and R94 §6 what would break it.
 _OPTIONAL = {c["name"] for t_ in (*T.values(), *EXT_T.values())
              for c in t_["columns"] if c["presence"] == "optional"}
@@ -328,7 +328,7 @@ def _identifiers(sql):
     return set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", body))
 
 
-check("no Tier 2 rule names an optional column (`02` §10.2)",
+check("no Tier 2 rule names an optional column (Part 02 §10.2)",
       sorted({(r["id"], c) for t_ in (*T.values(), *EXT_T.values()) for r in t_["rules"]
               for c in _OPTIONAL & _identifiers(r["sql"])}),
       lambda b: f"{b[0]} names {b[1]}, which is optional and may be absent from the file")
@@ -364,13 +364,13 @@ NAMING_EXCEPTIONS = {
     "core.array_channels.offset": "as core.array_assets.offset, per channel (R19 §2)",
     "core.units.n_spikes": "a count, not a plural duration -- the shape R50 §3 renamed step_ticks for",
     "core.source_files.size_bytes": "a quantity in bytes, not a plural of `size_byte`",
-    "core.media_frames.pts": "the container's own initialism for one timestamp, not a plural (`01` §3.18)",
+    "core.media_frames.pts": "the container's own initialism for one timestamp, not a plural (Part 01 §3.18)",
     # A metric's name is the vocabulary people search by, so renaming one makes the column match
     # nothing anyone's code expects. Unlike `sync_spike_8`, none of these is a parameter glued on.
     "aind_unit_qc.metrics.rp_violations": "the sorter's own metric name; a count of violations",
     "aind_unit_qc.waveform_metrics.num_negative_peaks": "the sorter's own metric name; a count of peaks",
     "aind_unit_qc.waveform_metrics.num_positive_peaks": "as num_negative_peaks",
-    # `02` §8.3: each carries `core.intervals.interval_kind` as part of the shared key, so it holds
+    # Part 02 §8.3: each carries `core.intervals.interval_kind` as part of the shared key, so it holds
     # a discriminator's value without being one -- and the name must match the parent's column for
     # the composite reference to read.
     # R100 §2.1: `_kind` reads as a category and every column carrying it holds one -- an
@@ -379,7 +379,7 @@ NAMING_EXCEPTIONS = {
     "core.array_dimensions.coordinate_resource": "names the table whose rows are the axis's positions, not a kind of thing (R100 §2.1)",
     "analysis.array_dimensions.coordinate_resource": "as core.array_dimensions.coordinate_resource",
     "dynamic_foraging.trials.interval_kind":
-        "carries core.intervals.interval_kind as a shared-key column, not a discriminator (`02` §8.3)",
+        "carries core.intervals.interval_kind as a shared-key column, not a discriminator (Part 02 §8.3)",
     "vr_foraging.sites.interval_kind": "as dynamic_foraging.trials.interval_kind",
 }
 
@@ -400,7 +400,7 @@ NAMING = {
     # R50 §3: `step_ticks` read as a coordinate and was a duration. A plural integer is the shape
     # that confusion takes, so it is flagged and a real count says so here.
     "no integer column is plural": lambda n, t, role: not (n.endswith("s") and t in INTEGERS),
-    # `02` §8.3. A discriminator holds a dotted resource ID, so it is a string by construction,
+    # Part 02 §8.3. A discriminator holds a dotted resource ID, so it is a string by construction,
     # and the `_kind` suffix is what R49 chose for the first one.
     "a _kind column is a discriminator": lambda n, t, role: not (
         n.endswith("_kind") and role != "discriminator"),
@@ -424,7 +424,7 @@ print(f"      {len(NAMING)} conventions over {sum(len(t['columns']) for t in ALL
       f"{len(NAMING_EXCEPTIONS)} declared exceptions")
 
 
-#: `02` §8.2. Name columns that name a **kind** of thing rather than one assigned identifier's
+#: Part 02 §8.2. Name columns that name a **kind** of thing rather than one assigned identifier's
 #: value, and are therefore expected to repeat. Declared rather than inferred, for the reason
 #: NAMING_EXCEPTIONS is: a set absorbing whatever has no `*_id` sibling today would absorb the
 #: next identifier whose name column was added without one.
@@ -439,13 +439,13 @@ NAMES_A_KIND = {
     "vr_foraging.sessions.curriculum_name": "as auto_train_curriculum_name",
     "vr_foraging.sessions.curriculum_stage_name": "which stage of it",
     "core.coordinate_frame_axes.axis_name": "what the source called the field, repeated across "
-                                            "every frame that read the same one (`01` §3.24)",
+                                            "every frame that read the same one (Part 01 §3.24)",
 }
 
-# `02` §8.2. Which `*_name` columns carry the uniqueness obligation: the ones naming an assigned
+# Part 02 §8.2. Which `*_name` columns carry the uniqueness obligation: the ones naming an assigned
 # identifier of their own table. No rule can enforce it -- a writer numbering per distinct name
-# has already merged two things into one row, and that merge is what `01` §3.5 requires of four
-# streams naming one serial -- so the registry says which columns it falls on and `02` §8.2 states
+# has already merged two things into one row, and that merge is what Part 01 §3.5 requires of four
+# streams naming one serial -- so the registry says which columns it falls on and Part 02 §8.2 states
 # the counts. Everything else must be declared above, so a new name column is a decision.
 named = {}
 for tid, tbl in ALL.items():
@@ -459,11 +459,11 @@ check("a name column names an assigned identifier, or is declared to name a kind
 check("every column declared to name a kind of thing still exists and still names one",
       sorted(n for n in NAMES_A_KIND if named.get(n, True)))
 core_unique = sum(1 for n, paired in named.items() if paired and not n.startswith(tuple(EXT)))
-print(f"      {sum(named.values())} name columns must be unique within a packet (`02` §8.2), "
+print(f"      {sum(named.values())} name columns must be unique within a packet (Part 02 §8.2), "
       f"{core_unique} of them in core and analysis; {len(NAMES_A_KIND)} name a kind of thing")
 
 
-# `00` §2.4. Which tables a reader must carry a session discriminator on: the ones reaching
+# Part 00 §2.4. Which tables a reader must carry a session discriminator on: the ones reaching
 # `core.sessions` through their declared references. A property of the registry, decided with no
 # packet in hand, and the stricter of the two available tests -- every table carrying a
 # `session_id` reaches the table, while eight reach it without carrying the column, so the graph
@@ -477,7 +477,7 @@ def session_scoped(tables):
         if name == "core.sessions":
             return True
         if name in seen:
-            return False          # a self-reference is well-founded (`01` §3.5) and not a route
+            return False          # a self-reference is well-founded (Part 01 §3.5) and not a route
         seen.add(name)
         return any(reaches(m, seen) for m in edges.get(name, ()))
 
@@ -486,23 +486,23 @@ def session_scoped(tables):
 
 scoped = session_scoped(T)
 carries = {n for n, t in T.items() if any(c["name"] == "session_id" for c in t["columns"])}
-check("every table carrying session_id reaches core.sessions (`00` §2.4)", sorted(carries - scoped))
-# `02` §7.1's two halves, neither of which anything checked. The column and the reference are
+check("every table carrying session_id reaches core.sessions (Part 00 §2.4)", sorted(carries - scoped))
+# Part 02 §7.1's two halves, neither of which anything checked. The column and the reference are
 # separate obligations and the second is the one that bites: Tier 1 generates one anti-join per
 # declared reference and nothing from a column's name, so a `session_id` in no reference is a
 # foreign key no rule can see -- which is how 418,618,218 rows came to hold an unvalidated session
 # key. `core.sessions` is the one exemption, having nothing to reference but itself.
 #
-# The second check runs over the extensions too, and is deliberately weaker there than `02` §7.1's
+# The second check runs over the extensions too, and is deliberately weaker there than Part 02 §7.1's
 # letter: it asks that `session_id` be part of *some* declared reference rather than of a direct one
 # to `core.sessions`. Four extension tables carry it inside a composite reference to another
-# session-scoped table, which gives Tier 1 the anti-join `02` §7.1's reasoning asks for while not
-# being the reference `02` §7.1 names. Whether the letter or the reasoning governs is a question for
+# session-scoped table, which gives Tier 1 the anti-join Part 02 §7.1's reasoning asks for while not
+# being the reference Part 02 §7.1 names. Whether the letter or the reasoning governs is a question for
 # a revision; enforcing the letter here would mean adding a redundant reference to those four.
-check("every session-scoped table carries session_id (`02` §7.1)", sorted(scoped - carries))
+check("every session-scoped table carries session_id (Part 02 §7.1)", sorted(scoped - carries))
 _in_a_reference = {n for n, t in ALL.items()
                    for r in t["references"] if "session_id" in r["columns"]}
-check("every table carrying session_id declares it in a reference (`02` §7.1)",
+check("every table carrying session_id declares it in a reference (Part 02 §7.1)",
       sorted({n for n, t in ALL.items()
               if n != "core.sessions" and any(c["name"] == "session_id" for c in t["columns"])}
              - _in_a_reference))
@@ -515,7 +515,7 @@ print(f"      {len(scoped)} of {len(T)} core and analysis tables are session-sco
       f"{len(set(T) - scoped)} are not ({', '.join(sorted(set(T) - scoped))}); "
       f"{len(scoped - carries)} reach core.sessions without carrying the column")
 
-# `02` §8.3, §2.3.2. What a discriminator declares, checked where the meta-schema cannot: the
+# Part 02 §8.3, §2.3.2. What a discriminator declares, checked where the meta-schema cannot: the
 # enum constrains the value but not that a discriminator has one, and `resolves` on anything else
 # is a declaration that decides nothing.
 _disc = []
@@ -534,9 +534,9 @@ for _r, _t in ALL.items():
                 _disc.append(f"{_r}.{_c['name']}: discriminates {_paired}, which is not a column here")
 check("a discriminator declares what it resolves to", sorted(_disc))
 
-# `02` §8.3. Three resolution shapes and only one was declared: `discriminates` separates a paired
+# Part 02 §8.3. Three resolution shapes and only one was declared: `discriminates` separates a paired
 # value from the other two, leaving by-position and shared-key indistinguishable, so `generate`
-# read every discriminator without a paired value as shared-key and emitted `02` §8.3's reverse
+# read every discriminator without a paired value as shared-key and emitted Part 02 §8.3's reverse
 # check for it. `positions_in` is the declaration that was missing.
 _position = []
 for _r, _t in ALL.items():
@@ -551,10 +551,10 @@ for _r, _t in ALL.items():
         if "discriminates" in _c:
             _position.append(f"{_r}.{_c['name']}: declares both positions_in and discriminates, "
                              "which are different resolution shapes")
-check("a by-position discriminator names the column holding its position column (`02` §8.3)",
+check("a by-position discriminator names the column holding its position column (Part 02 §8.3)",
       sorted(_position))
 
-# `02` §8.3: a discriminator may sit on the table whose rows it specialises, or one declared
+# Part 02 §8.3: a discriminator may sit on the table whose rows it specialises, or one declared
 # reference away. Where it is away, `discriminates_via` names the *referencing* column as
 # `resource.column` -- a reference carries no identifier of its own, so there is nothing else to
 # name, and naming the referencing side settles the direction by construction.
@@ -578,7 +578,7 @@ for _r, _t in ALL.items():
             _via.append(f"{_r}.{_c['name']}: {_from}.{_col} is no declared reference to {_r}")
 check("a discriminator away from its rows names the reference", sorted(_via))
 
-# `02` §8.3. A paired value is a string, and not by accident: one column resolves against
+# Part 02 §8.3. A paired value is a string, and not by accident: one column resolves against
 # several kinds, and an assigned key is matched by its `*_name` where a carried one is matched by
 # the number itself, so the union it joins mixes types by construction.
 check("a paired value is a string",
@@ -588,13 +588,13 @@ check("a paired value is a string",
              if _c.get("discriminates") and any(
                  x["name"] == _c["discriminates"] and x["type"] != "string" for x in _t["columns"])))
 
-# `02` §8.3: a paired value holds one identifier, so it can only name a resource whose key is one
-# column. Reported rather than enforced -- the kind vocabulary is open (`02` §8.3), so what this can
+# Part 02 §8.3: a paired value holds one identifier, so it can only name a resource whose key is one
+# column. Reported rather than enforced -- the kind vocabulary is open (Part 02 §8.3), so what this can
 # say is which resources are namable at all, which is otherwise found by a check quietly matching
 # no branch.
 NAMABLE = {_r: _t["primary_key"][0] for _r, _t in ALL.items()
            if _t.get("primary_key") and len(_t["primary_key"]) == 1}
-# `02` §8.3: which column a paired value matches follows from the key's identity, so the split
+# Part 02 §8.3: which column a paired value matches follows from the key's identity, so the split
 # is a property of the registry and is reported rather than rediscovered per consumer.
 _by_name = {_r for _r, _k in NAMABLE.items()
             if next(c for c in ALL[_r]["columns"] if c["name"] == _k).get("identity") == "assigned"
@@ -612,7 +612,7 @@ _unnamable = sorted(_r for _r, _k in NAMABLE.items() if _r not in _by_name
 for _r in _unnamable:
     print(f"      note  {_r} has a single-column key but no name to match, so a scope cannot name it")
 
-# `02` §8.4: a declared unit or clock source must resolve. Structural -- decidable from the
+# Part 02 §8.4: a declared unit or clock source must resolve. Structural -- decidable from the
 # registry with no packet in hand, which is where this format puts a check it can make without
 # data. The point is that a wrong `clock_from` converts ticks on the wrong clock silently.
 def _resolves(resource, spec, value):
@@ -668,7 +668,7 @@ _readme = (HERE / "README.md").read_text()
 check("README's generated regions are current",
       [] if render.fill(_readme, render.regions(REG)) == _readme else ["README.md is stale; run build.py"])
 
-# `02` §9.2: the registry validates against its published meta-schema.
+# Part 02 §9.2: the registry validates against its published meta-schema.
 try:
     import jsonschema
     meta = json.loads((HERE / "registry.schema.json").read_text())
@@ -683,7 +683,7 @@ try:
     manifest = json.loads((HERE / "manifest.schema.json").read_text())
     jsonschema.Draft202012Validator.check_schema(manifest)
     check("manifest schema is valid JSON Schema", [])
-    # `04` §5.5's sidecar is specified the way the manifest is, so it is checked the way the
+    # Part 04 §5.5's sidecar is specified the way the manifest is, so it is checked the way the
     # manifest is: valid JSON Schema here, vendored by build.py, compared by the loop above.
     _sources = json.loads((HERE / "sources.schema.json").read_text())
     jsonschema.Draft202012Validator.check_schema(_sources)

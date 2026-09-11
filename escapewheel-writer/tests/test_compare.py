@@ -1,4 +1,4 @@
-"""Comparing a build against the packet it replaces (`05` §3.5)."""
+"""Comparing a build against the packet it replaces (Part 05 §3.5)."""
 
 from __future__ import annotations
 

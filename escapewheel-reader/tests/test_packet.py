@@ -121,7 +121,7 @@ def test_codec_check_names_what_is_missing(packet_root):
 
 
 def test_a_missing_codec_disqualifies_only_that_resource(packet_root):
-    """`03` §6.4: a reader must not refuse a packet over a codec it will never need."""
+    """Part 03 §6.4: a reader must not refuse a packet over a codec it will never need."""
     pkt = _with_array(packet_root, ["wavpack"])
     assert pkt.unopenable() == {"array.probe0_ap": ("wavpack",)}
     assert pkt.table("core.intervals").num_rows == 2  # tables stay readable
@@ -181,8 +181,8 @@ def test_a_packet_in_a_store_resolves_its_tables_there(packet_root):
 
 
 def test_a_rewrite_reaches_bytes_the_manifest_names_elsewhere(packet_root, tmp_path):
-    """`04` §5.1 makes reachability the reader's situation, and a committed packet records the
-    writer's -- so a caller redirects rather than editing bytes `04` §5.1 makes immutable."""
+    """Part 04 §5.1 makes reachability the reader's situation, and a committed packet records the
+    writer's -- so a caller redirects rather than editing bytes Part 04 §5.1 makes immutable."""
     import json
     import shutil
 
@@ -202,7 +202,7 @@ def test_a_rewrite_reaches_bytes_the_manifest_names_elsewhere(packet_root, tmp_p
 
 
 def test_the_packet_roots_default_document_is_read(packet_root):
-    """`04` §5.5: under the root so a copy carries it, outside the manifest so it may be edited."""
+    """Part 04 §5.5: under the root so a copy carries it, outside the manifest so it may be edited."""
     import json
 
     (packet_root / "sources.json").write_text(
@@ -215,7 +215,7 @@ def test_the_packet_roots_default_document_is_read(packet_root):
 
 
 def test_a_caller_document_wins_over_the_packets_own(packet_root):
-    """`04` §5.5's order: the caller's first, so a mirror is named without editing the packet."""
+    """Part 04 §5.5's order: the caller's first, so a mirror is named without editing the packet."""
     import json
 
     (packet_root / "sources.json").write_text(
@@ -226,7 +226,7 @@ def test_a_caller_document_wins_over_the_packets_own(packet_root):
 
 
 def test_a_document_of_an_unknown_version_is_refused(packet_root, tmp_path):
-    """`04` §5.5: reading it as if it were this version is how a location silently goes wrong."""
+    """Part 04 §5.5: reading it as if it were this version is how a location silently goes wrong."""
     import json
 
     import pytest

@@ -21,7 +21,7 @@ from .tables import TablesSource
 from .video import VideoSource
 from .waveforms import WaveformSource
 
-#: Entry-point group a distribution registers a source adapter under. `07` names one CLI and the
+#: Entry-point group a distribution registers a source adapter under. Part 07 names one CLI and the
 #: three packages share it through `escapewheel.commands`; a source is the same problem one layer
 #: down -- an extension's table needs an adapter that knows a raw format this package never will.
 #:
@@ -30,7 +30,7 @@ from .waveforms import WaveformSource
 SOURCE_GROUP = "escapewheel.sources"
 
 #: The built-in kinds a recipe may name, by the name it names them. `session.build` maps a kind to
-#: a constructed adapter; this maps it to the class, which is what `05` §3.4's `PRODUCES` hangs on
+#: a constructed adapter; this maps it to the class, which is what Part 05 §3.4's `PRODUCES` hangs on
 #: and what a recipe check reads with nothing open.
 ADAPTERS: dict[str, Any] = {
     "session": SessionSource,

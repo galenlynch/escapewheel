@@ -47,7 +47,7 @@ def recipe_with(**session):
 
 
 def recipe_for(subject_id, **overrides):
-    """A recipe declaring one subject, which is all `05` §3.6's comparison reads."""
+    """A recipe declaring one subject, which is all Part 05 §3.6's comparison reads."""
     return _recipe(subject={"subject_id": subject_id}, overrides=overrides or None)
 
 
@@ -91,7 +91,7 @@ def test_no_declared_start_is_not_a_disagreement():
 
 
 def test_a_subject_the_source_contradicts_is_refused():
-    """`05` §3.6. One recipe declared 786867 against a session stating 776259, and every packet
+    """Part 05 §3.6. One recipe declared 786867 against a session stating 776259, and every packet
     built from it asserted 6,781 units from an animal that was never in the rig."""
     with pytest.raises(SourceDefect, match="786867"):
         _harvest(Spec(), Stub(subject_id="776259"), Context(session_id="s001"), recipe_for("786867"))
@@ -104,7 +104,7 @@ def test_a_subject_the_source_agrees_with_passes_silently():
 
 
 def test_a_source_stating_no_subject_leaves_the_declaration_unchecked():
-    """`05` §3.6: silence is a fact about the source, not a disagreement -- but it is reported,
+    """Part 05 §3.6: silence is a fact about the source, not a disagreement -- but it is reported,
     so a build log tells a verified subject from an asserted one."""
     source = Stub(subject_id=None)
     _harvest(Spec(), source, Context(session_id="s001"), recipe_for("776259"))
@@ -112,7 +112,7 @@ def test_a_source_stating_no_subject_leaves_the_declaration_unchecked():
 
 
 def test_an_override_lets_the_recipe_win_and_says_why():
-    """`05` §3.6. The refusal is what an override lifts, and the reason is what it leaves behind."""
+    """Part 05 §3.6. The refusal is what an override lifts, and the reason is what it leaves behind."""
     source = Stub(subject_id="776259")
     recipe = recipe_for("786867", **{"subject.subject_id": "the session names the wrong animal"})
     _harvest(Spec(), source, Context(session_id="s001"), recipe)
@@ -120,7 +120,7 @@ def test_an_override_lets_the_recipe_win_and_says_why():
 
 
 def test_an_override_that_changes_nothing_is_reported():
-    """`05` §3.6: a stale override costs a line of the log, not a build."""
+    """Part 05 §3.6: a stale override costs a line of the log, not a build."""
     source = Stub(subject_id="776259")
     recipe = recipe_for("776259", **{"subject.subject_id": "no longer needed"})
     _harvest(Spec(), source, Context(session_id="s001"), recipe)
@@ -128,7 +128,7 @@ def test_an_override_that_changes_nothing_is_reported():
 
 
 def test_a_number_and_a_string_naming_one_subject_agree():
-    """`05` §3.6: `session.json` states 776259 as a number; comparing what was written would refuse."""
+    """Part 05 §3.6: `session.json` states 776259 as a number; comparing what was written would refuse."""
     source = Stub(subject_id=776259)
     _harvest(Spec(), source, Context(session_id="s001"), recipe_for("776259"))
     assert source.notes == []

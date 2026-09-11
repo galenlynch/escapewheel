@@ -1,6 +1,6 @@
 """Does a session with several interval kinds want one base table, or one table per kind?
 
-`01` §3.10 argues for a base table on the strength of a polymorphic query -- align to every
+Part 01 §3.10 argues for a base table on the strength of a polymorphic query -- align to every
 interval in a session without knowing the paradigm -- and R54 §5 records that nothing does that
 yet, so the argument is unmeasured. This builds both shapes over the same rows and asks what each
 costs a consumer.
@@ -30,7 +30,7 @@ def col(name, type_, presence, role, **extra):
 
 
 def base_registry():
-    """`01` §3.10: one `core.intervals`, keyed by (session, kind, id)."""
+    """Part 01 §3.10: one `core.intervals`, keyed by (session, kind, id)."""
     registry = json.loads(json.dumps(REGISTRY))
     registry["tables"]["core.intervals"] = {
         "columns": [
@@ -49,7 +49,7 @@ def base_registry():
         ],
         "sort": ["session_id", "interval_kind", "interval_id"],
         "rules": [],
-        "since": "`01` §3.10",
+        "since": "Part 01 §3.10",
     }
     return registry
 
@@ -63,7 +63,7 @@ def detail(extension_id, table, extra, *, based):
     references = [{"columns": ["session_id"], "resource": "core.sessions",
                    "resource_columns": ["session_id"]}]
     if based:
-        # `02` §8.3: the named resource declares the reference back, which is what makes the
+        # Part 02 §8.3: the named resource declares the reference back, which is what makes the
         # join mechanical rather than inferred from names matching.
         references.append({"columns": ["session_id", "interval_id"], "resource": "core.intervals",
                            "resource_columns": ["session_id", "interval_id"]})
@@ -137,14 +137,14 @@ def build(root, *, based):
 
 
 def ask(root, *, based):
-    """The two questions `01` §3.10 claims the base table answers, and what each costs."""
+    """The two questions Part 01 §3.10 claims the base table answers, and what each costs."""
     from escapewheel_reader import open_packet
 
     packet = open_packet(root)
     out = {}
 
     # Generic on purpose: a consumer that has never heard of either extension. Naming them would
-    # answer a different question -- `01` §3.10's claim is about not having to.
+    # answer a different question -- Part 01 §3.10's claim is about not having to.
     t = time.perf_counter()
     if based:
         every = packet.table("core.intervals")

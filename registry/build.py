@@ -35,14 +35,14 @@ TYPES = {
     "string": "string", "int32": "int32", "int64": "int64", "float32": "float32",
     "float64": "float64", "bool": "bool", "timestamp": "timestamp", "date": "date",
     "date or timestamp": "date",                      # R4 §3.6
-    "struct/map/json_string": "json_string",          # `03` §5.5
+    "struct/map/json_string": "json_string",          # Part 03 §5.5
 }
 
 
 def presence(required: str, typ: str) -> str:
-    """02's yes/no/conditional -> `02` §6's three states.
+    """02's yes/no/conditional -> Part 02 §6's three states.
 
-    json_string columns are optional because `03` §5.5 confines JSON to optional columns:
+    json_string columns are optional because Part 03 §5.5 confines JSON to optional columns:
     a conforming reader must satisfy every required column without a parser.
     """
     if required == "yes":
@@ -94,12 +94,12 @@ UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34,
 #: name in the registry carries two roles. R50's renames are what made that true -- before them
 #: `supersedes` held a run ID without saying so, and `step_ticks` read as a coordinate while
 #: holding a duration.
-#: Names that exist only between `02` and the revision that renames them (R5 §5, R8 §2). They
+#: Names that exist only between Part 02 and the revision that renames them (R5 §5, R8 §2). They
 #: need a role because they pass through `col`, and they are `data` for the same reason their
 #: renamed forms are: R8 §2 made them strings, and a string cannot be an offset (R48 §2.4).
 TRANSIENT = ("local_electrode_index", "local_channel_index", "local_unit_index")
 
-#: Names on tables and columns a revision withdraws, which `02` still defines and which therefore
+#: Names on tables and columns a revision withdraws, which Part 02 still defines and which therefore
 #: pass through `col` before being struck. They carry their honest role rather than a placeholder,
 #: so that reviving one would not revive a wrong classification with it.
 WITHDRAWN = {
@@ -140,7 +140,7 @@ for _role, _names in {
     "sequence_position": (
         "anchor_index",
     ),
-    # `02` §8.3. A column a consumer resolves to a table, which `data` said nothing about -- so
+    # Part 02 §8.3. A column a consumer resolves to a table, which `data` said nothing about -- so
     # nothing checked that `scope_kind` held a resource ID at all.
     "discriminator": (
         "detail_kind", "interval_kind", "scope_kind",
@@ -224,29 +224,29 @@ IDENTITY: dict[str, str] = {
 }
 
 
-#: `02` §8.3, §2.3.2. What a discriminator declares: whether an unresolvable value is a defect or
+#: Part 02 §8.3, §2.3.2. What a discriminator declares: whether an unresolvable value is a defect or
 #: a fact, and which column holds the paired value where the shape is paired rather than shared-key.
 #: Required and with no default, for R48 §2.2's reason.
 DISCRIMINATOR: dict[str, dict[str, str]] = {
-    # `02` §8.3: which table carries this device's kind-specific facts. `optional` because most
-    # devices have none, and because core declares no such table -- an extension does (`02` §8.3),
-    # so a packet built without one names a resource it does not carry, which `02` §8.3 makes a
+    # Part 02 §8.3: which table carries this device's kind-specific facts. `optional` because most
+    # devices have none, and because core declares no such table -- an extension does (Part 02 §8.3),
+    # so a packet built without one names a resource it does not carry, which Part 02 §8.3 makes a
     # fact rather than a defect.
     "device_kind": {"resolves": "optional"},
     # R49 §2.2: a run may be about a rig or a camera the packet does not hold, so a kind naming
     # nothing is what the packet has to say, not a finding against it.
     "scope_kind": {"resolves": "optional", "discriminates": "scope"},
-    # `01` §3.10: an interval whose kind names no resource is uninterpretable -- the row says a
-    # span exists and nothing says what it was. `02` §8.3's shared-key shape, so no
+    # Part 01 §3.10: an interval whose kind names no resource is uninterpretable -- the row says a
+    # span exists and nothing says what it was. Part 02 §8.3's shared-key shape, so no
     # `discriminates`: the detail table joins on the whole key rather than on a paired value.
     "interval_kind": {"resolves": "required"},
-    # `02` §12.3: a calibration whose shape core does not define points at the table that does. A
+    # Part 02 §12.3: a calibration whose shape core does not define points at the table that does. A
     # kind naming a table the packet does not carry says the content is unrecorded rather than
     # that the row is wrong, which is R49 §2.2's judgement. Shared-key, so no `discriminates`:
-    # a detail table is keyed by its calibration and so has a composite key (`02` §8.3).
+    # a detail table is keyed by its calibration and so has a composite key (Part 02 §8.3).
     "detail_kind": {"resolves": "optional"},
     # R100 §2.1, §2.3: the axis has no positions where the named resource is absent, so the row
-    # is uninterpretable. `02` §8.3's third shape, which `positions_in` is what declares -- naming
+    # is uninterpretable. Part 02 §8.3's third shape, which `positions_in` is what declares -- naming
     # the column whose value is the position column in the named resource, as `discriminates`
     # names the column whose value is a key.
     "coordinate_resource": {"resolves": "required", "positions_in": "coordinate_position_column"},
@@ -260,15 +260,15 @@ def discriminator_of(name: str) -> dict[str, str]:
     except KeyError:
         raise SystemExit(
             f"column {name!r} is a discriminator and declares no `resolves`; add it to "
-            "DISCRIMINATOR (`02` §8.3). The choice is required or optional."
+            "DISCRIMINATOR (Part 02 §8.3). The choice is required or optional."
         ) from None
 
 
-#: `02` §8.4. A unit a column's name already encodes, declared from the name at one point so a
+#: Part 02 §8.4. A unit a column's name already encodes, declared from the name at one point so a
 #: new column carrying one cannot be added without it by forgetting -- the discipline `role_of`
 #: and `identity_of` apply to role and identity. A unit that varies row to row is not here; it
 #: is `unit_from`, which names the column carrying it and must be declared at the call site.
-#: `02` §8.4: a declared unit is a UCUM code, so `Ohm` and `By` rather than the words.
+#: Part 02 §8.4: a declared unit is a UCUM code, so `Ohm` and `By` rather than the words.
 UNIT_SUFFIX = {"_um": "um", "_hz": "Hz", "_ohm": "Ohm", "_bytes": "By"}
 
 
@@ -291,10 +291,10 @@ def identity_of(name: str) -> str:
         ) from None
 
 
-#: `02` §9.3. Which of three vocabularies a string column's values are drawn from. Keyed by
-#: column name, because `02` §9.3 requires one name to carry one vocabulary in every table that
+#: Part 02 §9.3. Which of three vocabularies a string column's values are drawn from. Keyed by
+#: column name, because Part 02 §9.3 requires one name to carry one vocabulary in every table that
 #: holds it -- which is the drift R101 §2.3 measured, `coordinate_frame` open on one table and
-#: undeclared on the other. A discriminator declares none: `02` §8.3 fixes its value space.
+#: undeclared on the other. A discriminator declares none: Part 02 §8.3 fixes its value space.
 VOCABULARY: dict[str, str] = {}
 for _vocab, _names in {
     "closed": ("normalized_label", "quality_label", "sex", "status"),
@@ -320,11 +320,11 @@ for _vocab, _names in {
 }.items():
     VOCABULARY |= dict.fromkeys(_names, _vocab)
 
-#: `02` §9.3. Where a column's values are spelled, never what they may be: a validator MUST NOT
-#: dereference one (`04` §5.3) nor reject a value for being absent from it. An array because a
+#: Part 02 §9.3. Where a column's values are spelled, never what they may be: a validator MUST NOT
+#: dereference one (Part 04 §5.3) nor reject a value for being absent from it. An array because a
 #: strain is drawn from two registries, MGI for mouse and RGD for rat.
 UCUM = {"name": "UCUM", "uri": "https://ucum.org/ucum.html"}
-#: `02` §9.3. A name beside the URI, because the name is a fact and not a substring: neither
+#: Part 02 §9.3. A name beside the URI, because the name is a fact and not a substring: neither
 #: `informatics.jax.org` nor `rgd.mcw.edu` contains the name of the registry it serves, so no rule
 #: derives one from the other. R53 §2.3.1's shape one level over -- the identity a document
 #: resolves, and the name a person reads.
@@ -341,14 +341,14 @@ AUTHORITY: dict[str, tuple[dict[str, str], ...]] = {
 
 #: R101 §3.5. An open column's description states the **form** its values take, and names the
 #: nomenclature where one fixes the spelling. What these replaced restated the column's own name
-#: ("Species.", "Manufacturer."), gave one example ("e.g. mp4."), or said "etc." of a set `02` §9.3
+#: ("Species.", "Manufacturer."), gave one example ("e.g. mp4."), or said "etc." of a set Part 02 §9.3
 #: closed -- none of which tells a writer whether to write `Mus musculus` or `mouse`.
-_SEMANTIC = ("What quantity the asset holds. Open (`02` §9.3): a value this standard does not define "
+_SEMANTIC = ("What quantity the asset holds. Open (Part 02 §9.3): a value this standard does not define "
              "is a label and carries no contract, the meaning living in the device rather than in "
-             "the format (`01` §3.17).")
+             "the format (Part 01 §3.17).")
 _KIND = ("Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the "
-         "meanings `02` §9.3 declares. Open, so an unrecognised value is conforming -- but a value "
-         "outside the set MUST NOT be used for data the set describes (`02` §9.3).")
+         "meanings Part 02 §9.3 declares. Open, so an unrecognised value is conforming -- but a value "
+         "outside the set MUST NOT be used for data the set describes (Part 02 §9.3).")
 _FRAME = ("The space these coordinates are in, and the atlas where that space is one (R59 §2.2). "
           "Open. Which way the axes point is stated nowhere.")
 _MANUF = ("The manufacturer's own name for itself, as the source states it. Open, and compared "
@@ -374,7 +374,7 @@ DESCRIPTIONS: dict[tuple[str, str], str] = {
         "The unit of `core.calibration_points.output_value`, as a UCUM code.",
     ("core.clocks", "origin"):
         "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is "
-        "sample 0, and a writer MUST NOT re-base a source's index (`01` §2.2). Open.",
+        "sample 0, and a writer MUST NOT re-base a source's index (Part 01 §2.2). Open.",
     ("core.devices", "manufacturer"): _MANUF,
     ("core.probes", "manufacturer"): _MANUF,
     ("core.electrode_coordinates", "coordinate_frame"): _FRAME,
@@ -393,7 +393,7 @@ DESCRIPTIONS: dict[tuple[str, str], str] = {
     ("core.subjects", "species"):
         "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells "
         "it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- "
-        "`01` §3.4 admits a preparation, and a phantom or a simulation has no species.",
+        "Part 01 §3.4 admits a preparation, and a phantom or a simulation has no species.",
     ("core.subjects", "strain"):
         "The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain "
         "letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks "
@@ -402,9 +402,9 @@ DESCRIPTIONS: dict[tuple[str, str], str] = {
         "The genotype as the source states it, in MGI allele nomenclature where it uses one.",
     ("core.processing_runs", "activity_type"):
         "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, "
-        "`materialization`. Open (`02` §9.3), so a pipeline names its own.",
+        "`materialization`. Open (Part 02 §9.3), so a pipeline names its own.",
     ("core.processing_runs", "status"):
-        "Whether the run completed: `succeeded`, `failed` or `partial`, with the meanings `02` §9.3 "
+        "Whether the run completed: `succeeded`, `failed` or `partial`, with the meanings Part 02 §9.3 "
         "declares. Closed -- a validator rejects any other value.",
 }
 
@@ -415,7 +415,7 @@ def vocabulary_of(name: str) -> str:
         return VOCABULARY[name]
     except KeyError:
         raise SystemExit(
-            f"string column {name!r} declares no vocabulary; add it to VOCABULARY (`02` §9.3). "
+            f"string column {name!r} declares no vocabulary; add it to VOCABULARY (Part 02 §9.3). "
             "The choice is closed (an enum a validator enforces), open (values comparable between "
             "packets) or free (a name, a description, a digest -- not a vocabulary at all)."
         ) from None
@@ -432,12 +432,12 @@ def role_of(name: str) -> str:
         ) from None
 
 #: R56. Where a coordinate's clock comes from, and where a value's unit does, for the columns
-#: convention does not settle. A coordinate beside a `clock_id` needs no entry -- `02` §8.4 makes
+#: convention does not settle. A coordinate beside a `clock_id` needs no entry -- Part 02 §8.4 makes
 #: that the default -- so these are exactly the cases that were prose.
 CONTEXT: dict[tuple[str, str], dict[str, str]] = {
     # Two coordinates on two clocks in one table, distinguished only by a description until now.
     ("core.clock_anchors", "parent_tick"): {"clock_from": "core.clocks.parent_clock_id"},
-    # The clock is named, and not `clock_id` (`01` §2.1).
+    # The clock is named, and not `clock_id` (Part 01 §2.1).
     ("core.sessions", "t_zero_tick"): {"clock_from": "reference_clock_id"},
     # R38 §3 gave the sorting run a clock precisely so a unit's ticks have one.
     # The stream's clock, reached through the stream (R25 §2).
@@ -598,7 +598,7 @@ def build() -> dict:
     tables["core.array_dimensions"] = {
         "columns": [col("array_asset_id", "string", "required", "Array asset ID."),
                     col("axis_index", "int64", "required",
-                        "0-based axis position in stored order (`03` §6.2)."),
+                        "0-based axis position in stored order (Part 03 §6.2)."),
                     col("dimension_name", "string", "required", "Axis name.")],
         "primary_key": ["array_asset_id", "axis_index"],
         "references": [{"columns": ["array_asset_id"], "resource": "core.array_assets",
@@ -698,8 +698,8 @@ def build() -> dict:
                        {"columns": ["source_file_id"], "resource": "core.source_files",
                         "resource_columns": ["source_file_id"]}], "rules": [], "since": SINCE[0]}
 
-    # `03` §5.3's ordering rule is `03` §5.3's, and R93 §3.3 removed the `sort` field it was
-    # declared through: a table's stored order is its primary key's unless `03` §5.4 names
+    # Part 03 §5.3's ordering rule is Part 03 §5.3's, and R93 §3.3 removed the `sort` field it was
+    # declared through: a table's stored order is its primary key's unless Part 03 §5.4 names
     # another, and that list is `escapewheel_reader`'s rather than the registry's.
 
     # ---- R18 §2 : units drift in and out of a recording -----------------------------------------
@@ -733,7 +733,7 @@ def build() -> dict:
              "Acquisition time offset within one sample period, in sample periods.")]:
         entry = col(name, typ, "nullable", desc)
         if name == "offset":
-            # `02` §8.4: an offset is in the converted value's unit, which this table carries
+            # Part 02 §8.4: an offset is in the converted value's unit, which this table carries
             # per channel. `conversion` is not: it is a ratio of two units, not either one.
             entry["unit_from"] = "unit"
         add_col("core.array_channels", entry, after="channel_label")
@@ -749,8 +749,8 @@ def build() -> dict:
                     dict(col("coordinate_basis", "string", "required",
                              "What the coordinate asserts: `planned` where the probe was meant to "
                              "go, `measured` where it was, `nominal` where it is by construction "
-                             "and nothing aimed or observed it (`01` §3.8). A consumer that does "
-                             "not recognise a basis MUST NOT treat it as measured (`01` §3.8).",
+                             "and nothing aimed or observed it (Part 01 §3.8). A consumer that does "
+                             "not recognise a basis MUST NOT treat it as measured (Part 01 §3.8).",
                              since="R58 §2.1"), vocabulary="open"),
                     col("region_id", "int32", "nullable",
                         "The atlas structure this position falls in, numbered by the atlas that "
@@ -791,7 +791,7 @@ def build() -> dict:
              "Which column of that resource holds the 0-based position.")]:
         entry = col(name, typ, "nullable", desc)
         if name in ("origin_value", "step_value"):
-            # `02` §8.4: both are in the axis's own unit, which this table carries per axis.
+            # Part 02 §8.4: both are in the axis's own unit, which this table carries per axis.
             entry["unit_from"] = "coordinate_unit"
         add_col("core.array_dimensions", entry, after="dimension_name")
     T("core.array_dimensions")["references"].append(
@@ -813,7 +813,7 @@ def build() -> dict:
     # session of this size -- and per stream another copy. The window is a property of the
     # device, so it lives on the clock, and the ticks need no clock column because the key is
     # the clock. That is what keeps every containment check a same-clock comparison, which is
-    # the conversion `01` §2.2 could not write.
+    # the conversion Part 01 §2.2 could not write.
     SINCE[0] = "R38 §2.1"
     tables["core.clock_observation_intervals"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
@@ -957,7 +957,7 @@ def build() -> dict:
     SINCE[0] = "R28 §2-4"
     # `default_electrode_id` is the peak channel and not the set, and nothing said where a unit
     # is. NWB relates the two through three index spaces in one row; naming the electrode is
-    # the alternative `03` §5.5's physical floor already implies.
+    # the alternative Part 03 §5.5's physical floor already implies.
     unit_key = ["session_id", "unit_id", "sorting_run_id", "curation_id"]
     unit_ref = {"columns": unit_key, "resource": "core.units", "resource_columns": unit_key}
     tables["core.unit_electrodes"] = {
@@ -987,8 +987,8 @@ def build() -> dict:
                     dict(col("coordinate_basis", "string", "required",
                              "What the coordinate asserts: `planned` where the probe was meant to "
                              "go, `measured` where it was, `nominal` where it is by construction "
-                             "and nothing aimed or observed it (`01` §3.8). A consumer that does "
-                             "not recognise a basis MUST NOT treat it as measured (`01` §3.8).",
+                             "and nothing aimed or observed it (Part 01 §3.8). A consumer that does "
+                             "not recognise a basis MUST NOT treat it as measured (Part 01 §3.8).",
                              since="R58 §2.1"), vocabulary="open"),
                     col("region_id", "int32", "nullable",
                         "The atlas structure this position falls in, numbered by the atlas that "
@@ -1026,9 +1026,9 @@ def build() -> dict:
     # ---- R65 §2.1 : an array names the instrument that made it -----------------------------------
     # core.probes has named its device since 02; an array asset was the only acquired thing in core
     # that could not. Nullable, because a derived array has no instrument and a referenced one may
-    # come from a producer the packet cannot attribute. Placed before the `00` §3 mirror, so the
+    # come from a producer the packet cannot attribute. Placed before the Part 00 §3 mirror, so the
     # analysis copy gains it too -- its reference stays pointing at core.devices, which is right:
-    # there is no analysis.devices and `09` §2 lets a layer reference core's tables.
+    # there is no analysis.devices and Part 09 §2 lets a layer reference core's tables.
     SINCE[0] = "R65 §2.1"
     add_col("core.array_assets",
             col("device_id", "int32", "nullable", "The device that produced this array."),
@@ -1051,7 +1051,7 @@ def build() -> dict:
 
     # ---- R70 §2.1 : an asset declares the rate its timestamps count at ---------------------------
     # R68 §2.4 left the time base to the container, which is reachable only while the referenced
-    # file is -- the one thing `04` §5.1 does not promise. Rational and expressed as a rate, in the
+    # file is -- the one thing Part 04 §5.1 does not promise. Rational and expressed as a rate, in the
     # shape core.clocks.tick_rate_num already uses, so a consumer needs no second convention.
     SINCE[0] = "R70 §2.1"
     # Reversed, because each inserts directly after `format` and the numerator reads first.
@@ -1080,7 +1080,7 @@ def build() -> dict:
             if r["resource"].startswith("core.array_") else r
             for r in mirror["references"]]
         mirror["rules"] = []
-        # The mirror and its columns exist in this namespace because of `00` §3, whatever put
+        # The mirror and its columns exist in this namespace because of Part 00 §3, whatever put
         # them in core. Carrying the original's provenance would send a reader to a revision
         # that says nothing about the analysis layer.
         mirror["since"] = SINCE[0]
@@ -1090,7 +1090,7 @@ def build() -> dict:
 
     # ---- 06 : spikes on the reference clock -------------------------------------------------
     # The columns 06 defined carry no `since`, which under R29 §2 means exactly that. Only
-    # time_bucket_tick is new, and only the order is overridden -- `03` §5.4 replaces 03's
+    # time_bucket_tick is new, and only the order is overridden -- Part 03 §5.4 replaces 03's
     # recommendation for this table alone, because a common clock is what makes ordering by
     # time meaningful and core does not have one.
     SINCE[0] = None
@@ -1158,7 +1158,7 @@ def build() -> dict:
     tables["core.preferred_runs"] = {
         "columns": [col("session_id", "string", "required", "Session ID."),
                     col("activity_type", "string", "required",
-                        "Which kind of output this preference is about. Open, as `02` §9.3 leaves it."),
+                        "Which kind of output this preference is about. Open, as Part 02 §9.3 leaves it."),
                     col("scope_kind", "string", "required", "The resource whose primary key "
                         "`scope` holds, as a dotted resource ID (R49 §2.2). Open.", since="R49 §2.1"),
                     col("scope", "string", "required",
@@ -1181,7 +1181,7 @@ def build() -> dict:
     # What the run is about, so `core.preferred_runs` has something to join to. Without it the
     # ambiguity rule groups by activity while the preference is keyed by activity and scope, and
     # twelve probes sorted once each are indistinguishable from one probe sorted twelve times.
-    # Nullable because provenance is SHOULD (`01` §2.4); a run that omits it is undeterminable
+    # Nullable because provenance is SHOULD (Part 01 §2.4); a run that omits it is undeterminable
     # rather than unique.
     SINCE[0] = "R44 §2.1"
     add_col("core.processing_runs",
@@ -1190,7 +1190,7 @@ def build() -> dict:
                 "session_id itself where the run is session-wide. Open, as activity_type is."),
             after="activity_type")
 
-    # `02` described these only as "Trial start tick" / "Trial stop tick", so a consumer
+    # Part 02 described these only as "Trial start tick" / "Trial stop tick", so a consumer
     # counting events in a trial had to choose `<` or `<=` and the packet did not say which.
     # No overlap rule is added: R25 §7's reasoning stands, since trials need not partition a
     # session and in some paradigms may nest by design.
@@ -1205,7 +1205,7 @@ def build() -> dict:
     add_col("core.processing_runs",
             col("scope_kind", "string", "nullable",
                 "The resource whose primary key `scope` holds, as a dotted resource ID -- "
-                "`core.probes`, `core.array_assets`. Open (`02` §9.3); a value naming no declared "
+                "`core.probes`, `core.array_assets`. Open (Part 02 §9.3); a value naming no declared "
                 "resource means the scope is not a packet resource. Set with `scope` or not at all."),
             after="scope")
 
@@ -1251,7 +1251,7 @@ def build() -> dict:
             ("analysis.array_assets", "session_id", "core.sessions", "session_id"),
             ("analysis.array_assets", "clock_id", "core.clocks", "clock_id"),
             # Transitively implied by the composite reference into core.units, so the anti-join
-            # will never fire -- but `02` §8.4 resolves a unit through a reference the table
+            # will never fire -- but Part 02 §8.4 resolves a unit through a reference the table
             # *declares*, and core.spike_events.amplitude is in the unit its sorting run names
             # (R11 §2). Declaring it is what makes that hop available.
             ("core.spike_events", "sorting_run_id", "core.sorting_runs", "sorting_run_id")]:
@@ -1275,7 +1275,7 @@ def build() -> dict:
             entry = col(f"{base}_name", "string", "nullable",
                         f"What `{column['name']}` stands for: the identifier a source or an earlier "
                         f"packet used for this {base.replace('_', ' ')}. The only bridge between two "
-                        "packets that numbered it differently (`05` §8).")
+                        "packets that numbered it differently (Part 05 §8).")
             spec["columns"].insert(spec["columns"].index(column) + 1, entry)
 
     # ---- R56 : a column declares its unit and its clock ---------------------------------
@@ -1289,14 +1289,14 @@ def build() -> dict:
     # ---- R54 §2 : a trial is one kind of interval ---------------------------------------------
     # One base table holding many kinds, discriminated by the resource that specialises each. The
     # kind is part of the key (R54 §2.2), so every kind keeps its source's own numbering and
-    # trial 0 and block 0 are different rows. `02` §8.3's shared-key shape: a detail table carries
+    # trial 0 and block 0 are different rows. Part 02 §8.3's shared-key shape: a detail table carries
     # the kind as a constant column and references all three, so the join is declared rather than
     # inferred and R46's generated anti-join enforces it.
     SINCE[0] = "R54 §2.1"
     rename("core.trials", "trial_id", "interval_id")
     add_col("core.trials", col("interval_kind", "string", "required",
                                "The resource that specialises this interval, as a dotted resource "
-                               "ID. Open (`02` §9.3); resolved as `02` §8.3's shared key."),
+                               "ID. Open (Part 02 §9.3); resolved as Part 02 §8.3's shared key."),
             after="session_id")
     # R54 §2.3: a task's shape is not the format's. `dynamic_foraging.trials` already carries
     # `choice` and `rewarded` with a closed vocabulary core cannot declare -- `none` is not a
@@ -1315,7 +1315,7 @@ def build() -> dict:
     # ---- R81 §2 : the packet numbers its units -----------------------------------------------
     # `unit_id` was carried, so it repeated across runs -- 810 distinct values over 6,781
     # (unit_id, sorting_run_id) pairs -- and identity grew to four columns to compensate. It also
-    # duplicated `local_unit_label` exactly, in 6,781 of 6,781 rows, which `02` §6 forbids.
+    # duplicated `local_unit_label` exactly, in 6,781 of 6,781 rows, which Part 02 §6 forbids.
     SINCE[0] = "R81 §2"
     one = ["unit_id"]
     T("core.units")["primary_key"] = one
@@ -1342,14 +1342,14 @@ def build() -> dict:
         # run and the curation, so the fact is one hop away rather than gone.
         table["references"] = [r for r in table["references"]
                                if not set(r["columns"]) & {"sorting_run_id", "curation_id"}]
-    # R81 §2.4: `03` §5.3's override named two columns that no longer exist. Numbering by
+    # R81 §2.4: Part 03 §5.3's override named two columns that no longer exist. Numbering by
     # (run, curation, label) makes ascending unit_id run-major, so the clustering is unchanged
     # and the key, the sort and the uniqueness check finally agree -- R47 §2's outcome.
     T("core.spike_events")["primary_key"] = ["session_id", "unit_id", "t_tick"]
     T("analysis.spike_events")["primary_key"] = ["session_id", "unit_id", "t_tick"]
     # R81 §5: `amplitude` named its unit through `core.sorting_runs.amplitude_unit`, which was one
     # hop while the spike carried `sorting_run_id`. It is now two -- spike to unit to run -- and
-    # `02` §8.4 permits one, so the declaration is dropped rather than made to name a hop that
+    # Part 02 §8.4 permits one, so the declaration is dropped rather than made to name a hop that
     # cannot be followed. The same shape as the gap R70 §4 left and recorded.
     for column in T("core.spike_events")["columns"]:
         column.pop("unit_from", None)
@@ -1388,16 +1388,16 @@ def build() -> dict:
             col("parent_port", "string", "nullable",
                 "Which port, dock or slot of `parent_device_id` this device attached to. Null "
                 "where the attachment is stated and its coordinate is not. Establishes nothing "
-                "about identity: two rows may share a parent and a port (`01` §3.5)."),
+                "about identity: two rows may share a parent and a port (Part 01 §3.5)."),
             after="parent_device_id")
 
     SINCE[0] = "R88 §2.1"
     # A table reaching `core.sessions` through its declared references is session-scoped (R86
     # §2.1), which 33 of 35 are, and until now they used four conventions between them. Eight
-    # held no session column at all, so `00` §2.4's discriminator had nothing to derive from and
+    # held no session column at all, so Part 00 §2.4's discriminator had nothing to derive from and
     # the reader refused; six held one and declared no reference, so Tier 1 generated no
     # anti-join and 418,618,218 rows across the two packets carried a session key nothing
-    # validated. `core.devices` and `core.processing_runs` were nullable for a question `00` §2.4
+    # validated. `core.devices` and `core.processing_runs` were nullable for a question Part 00 §2.4
     # now answers, and neither is null in any packet built.
     SESSION_COLUMN = (
         "analysis.array_dimensions", "core.array_channels", "core.array_dimensions",
@@ -1410,7 +1410,7 @@ def build() -> dict:
         "core.unit_electrodes", "core.unit_observation_intervals", "core.unit_quality_labels",
     )
     for resource in SESSION_COLUMN:
-        # First, as the sixteen tables already doing this have it. `02` §7.1: a writer fills it
+        # First, as the sixteen tables already doing this have it. Part 02 §7.1: a writer fills it
         # from the parent it is exactly one hop from, so the column costs no new read.
         T(resource)["columns"].insert(0, col("session_id", "int32", "required", "Session ID."))
     for resource in (*SESSION_COLUMN, *SESSION_REFERENCE):
@@ -1419,7 +1419,7 @@ def build() -> dict:
              "resource_columns": ["session_id"]})
     SINCE[0] = "R88 §2.1"
     for resource in ("core.devices", "core.processing_runs"):
-        # `02` hedged these as "if session-scoped", written before anything could compute scope.
+        # Part 02 hedged these as "if session-scoped", written before anything could compute scope.
         amend(resource, "session_id", presence="required")
 
     # ---- R89 §2 : a packet records the calibrations of its instruments ------------------------
@@ -1437,15 +1437,15 @@ def build() -> dict:
             col("calibration_name", "string", "required",
                 "What `calibration_id` stands for: the identifier a source or an earlier packet "
                 "used for this calibration. Required, and composed by the writer where the source "
-                "names none, since `02` §8.2 makes two calibrations sharing a name one row."),
+                "names none, since Part 02 §8.2 makes two calibrations sharing a name one row."),
             col("calibration_type", "string", "required",
                 "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open "
-                "(`02` §9.3). Named `_type` rather than `_kind` because a `_kind` column is a "
-                "discriminator (`02` §8.3), and this holds a value that resolves to no table."),
+                "(Part 02 §9.3). Named `_type` rather than `_kind` because a `_kind` column is a "
+                "discriminator (Part 02 §8.3), and this holds a value that resolves to no table."),
             col("calibrated_at", "timestamp", "nullable",
                 "When the calibration was measured, which is not when it was in force: R89 §1.2 "
                 "measures 133 and 302 days between them. Null where the source states none, since "
-                "what a source did not say is not invented (`01` §3.5)."),
+                "what a source did not say is not invented (Part 01 §3.5)."),
             col("description", "string", "nullable", "What the source said the calibration was."),
             col("input_unit", "string", "nullable",
                 "The unit of measure of `core.calibration_points.input_value`. On the calibration "
@@ -1459,7 +1459,7 @@ def build() -> dict:
             col("detail_kind", "string", "nullable",
                 "A table carrying a calibration shape core does not define, as a dotted resource "
                 "ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records "
-                "that the content is elsewhere rather than that the row is wrong (`02` §12.3)."),
+                "that the content is elsewhere rather than that the row is wrong (Part 02 §12.3)."),
         ],
         "primary_key": ["calibration_id"],
         "references": [{"columns": ["session_id"], "resource": "core.sessions",
@@ -1469,7 +1469,7 @@ def build() -> dict:
         "rules": [], "since": SINCE[0]}
 
     # R89 §2.2: the devices a calibration covers are a repeated value, so a child table and not a
-    # column (`02` §6). One `device_id` on the calibration would record six calibrations of the
+    # column (Part 02 §6). One `device_id` on the calibration would record six calibrations of the
     # rig's manipulators where it performed one -- R67 §3's defect with its multiplicity reversed.
     SINCE[0] = "R89 §2.2"
     tables["core.calibration_devices"] = {
@@ -1486,7 +1486,7 @@ def build() -> dict:
                         "resource_columns": ["device_id"]}],
         "rules": [], "since": SINCE[0]}
 
-    # R89 §2.3: the measured curve, where `rig.json` holds two parallel JSON lists `02` §6 forbids.
+    # R89 §2.3: the measured curve, where `rig.json` holds two parallel JSON lists Part 02 §6 forbids.
     SINCE[0] = "R89 §2.3"
     _points = [col("session_id", "int32", "required", "Session ID."),
                col("calibration_id", "int32", "required", "The calibration this point belongs to."),
@@ -1497,7 +1497,7 @@ def build() -> dict:
                col("input_value", "float64", "required", "The setting the point was measured at."),
                col("output_value", "float64", "required", "What the instrument then delivered.")]
     # Declared here rather than in CONTEXT, which is consumed above -- these columns do not exist
-    # when that block runs. `02` §8.4's one-hop `resource.column` form, resolved through the
+    # when that block runs. Part 02 §8.4's one-hop `resource.column` form, resolved through the
     # reference to `core.calibrations` below, and its first use for a unit rather than a clock.
     _points[3]["unit_from"] = "core.calibrations.input_unit"
     _points[4]["unit_from"] = "core.calibrations.output_unit"
@@ -1519,17 +1519,17 @@ def build() -> dict:
     SINCE[0] = "R91 §3.1"
     add_col("core.event_streams",
             col("event_type", "string", "required",
-                "What kind of event this stream emits. Open (`02` §9.3); a stream emits one kind, so a "
+                "What kind of event this stream emits. Open (Part 02 §9.3); a stream emits one kind, so a "
                 "source emitting several on one channel is written as several streams."),
             after="name")
     add_col("core.event_streams",
             col("detail_kind", "string", "nullable",
                 "A table specialising this stream's events, as a dotted resource ID. Open, and "
                 "`resolves: optional`, so a kind the packet cannot resolve records that the detail "
-                "is elsewhere (`02` §8.3). Resolved against `core.events`' key by `02` §8.3's shared "
+                "is elsewhere (Part 02 §8.3). Resolved against `core.events`' key by Part 02 §8.3's shared "
                 "key, through the reference `discriminates_via` names."),
             after="event_type")
-    # `02` §8.3: the discriminator sits a reference away from the rows it specialises, so it names
+    # Part 02 §8.3: the discriminator sits a reference away from the rows it specialises, so it names
     # the referencing column. Set after `col`, which classifies from the name alone.
     next(c for c in T("core.event_streams")["columns"]
          if c["name"] == "detail_kind")["discriminates_via"] = "core.events.stream_id"
@@ -1540,16 +1540,16 @@ def build() -> dict:
     T("core.events")["references"] = [r for r in T("core.events")["references"]
                                       if r["resource"] != "core.clocks"]
     T("core.events")["primary_key"] = ["session_id", "stream_id", "t_tick"]
-    # `02` §8.4's one-hop form: with no `clock_id` on the row, §2.2's default no longer applies.
+    # Part 02 §8.4's one-hop form: with no `clock_id` on the row, §2.2's default no longer applies.
     next(c for c in T("core.events")["columns"]
          if c["name"] == "t_tick")["clock_from"] = "core.event_streams.clock_id"
 
     # ---- R95 §3.1 : one name column per table -------------------------------------------------
     # R53 §2.3.1 generates a `<base>_name` for every assigned identifier in a key, and seven tables
-    # already declared a `name` from `02`, so they carried both -- equal on every row of every
-    # packet that writes them. The generated column has `05` §8's meaning and the declared one has
-    # `02`'s presence, so one survives with both: the generated name keeps its own description and
-    # takes the presence `02` gave, and `name` is struck.
+    # already declared a `name` from Part 02, so they carried both -- equal on every row of every
+    # packet that writes them. The generated column has Part 05 §8's meaning and the declared one has
+    # Part 02's presence, so one survives with both: the generated name keeps its own description and
+    # takes the presence Part 02 gave, and `name` is struck.
     SINCE[0] = "R95 §3.1"
     for resource, spec in tables.items():
         declared = next((c for c in spec["columns"] if c["name"] == "name"), None)
@@ -1558,13 +1558,13 @@ def build() -> dict:
         generated = next((c for c in spec["columns"]
                           if c["name"].endswith("_name") and c.get("since") == "R53 §2.3.1"), None)
         if generated is None:
-            raise SystemExit(f"`02` §8.2: {resource} declares `name` and no generated name to merge it into")
+            raise SystemExit(f"Part 02 §8.2: {resource} declares `name` and no generated name to merge it into")
         generated["presence"] = declared["presence"]
         generated["since"] = SINCE[0]
         spec["columns"].remove(declared)
 
     # ---- R96 §3 : a unit declares what its spikes are counted on and measured in --------------
-    # Both facts belong to the sorting run and a spike cannot reach it: `02` §8.4 admits one hop and
+    # Both facts belong to the sorting run and a spike cannot reach it: Part 02 §8.4 admits one hop and
     # spike -> unit -> run is two. They move to `core.units`, which a spike references directly, so
     # each resolves in the one hop the format allows.
     SINCE[0] = "R96 §3.1"
@@ -1581,7 +1581,7 @@ def build() -> dict:
                                             if r["resource"] != "core.clocks"]
     # After the ticks it interprets rather than beside `amplitude_unit`, which is only where the
     # clause above happened to leave off: a `clock_id` outside the primary key sits next to the
-    # coordinates that resolve against it (`02` §8.4), as it does on `core.intervals`,
+    # coordinates that resolve against it (Part 02 §8.4), as it does on `core.intervals`,
     # `core.media_frames` and both `array_dimensions`.
     add_col("core.units", col("clock_id", "int32", "required",
                               "The clock every tick of this unit is counted on."),
@@ -1606,16 +1606,16 @@ def build() -> dict:
         amend("core.unit_observation_intervals", _bound, clock_from="core.units.clock_id")
 
     # ---- R97 §3 : the free-form metadata column -----------------------------------------------
-    # Where the primary key decides the column, it is generated rather than declared (`02` §8.6). A
+    # Where the primary key decides the column, it is generated rather than declared (Part 02 §8.6). A
     # key holding an identifier of its own -- carried or assigned, and not part of a declared
     # reference -- makes the row a thing, and a thing may carry what its source said about it; a key
     # made entirely of other tables' identifiers makes the row a relationship, and nothing can be
     # said about a relationship that is not a fact about one of its ends. Both bands drop whatever
-    # `02` or a revision gave them and take what this pass emits, so a table added later carries the
+    # Part 02 or a revision gave them and take what this pass emits, so a table added later carries the
     # column without anyone remembering to, and a hand declaration of the wrong type cannot survive.
     #
     # Between the bands the declaration is a judgement and is left alone: `core.events` is the one
-    # table that makes it, beside the `payload` `01` §3.12 keeps.
+    # table that makes it, beside the `payload` Part 01 §3.12 keeps.
     #
     # Runs after every key change above, since the key is what it reads.
     SINCE[0] = "R97 §3.1"
@@ -1639,7 +1639,7 @@ def build() -> dict:
     # §3.4: one text for every declaration, replacing the sixteen reading "Additional metadata."
     # and the four naming their own table. The generated ones carry it already, so what this reaches
     # is the judgement `core.events` makes; it also stamps every column with the clause that settled
-    # the wording. `02` §6's third presence state is what §3.2 spends, so a `metadata` column is
+    # the wording. Part 02 §6's third presence state is what §3.2 spends, so a `metadata` column is
     # `optional` and a declaration outside the generated bands may not leave one otherwise.
     SINCE[0] = "R97 §3.4"
     for resource, spec in tables.items():
@@ -1669,18 +1669,18 @@ def build() -> dict:
     # ---- R99 §3 : a packet records its clock alignment in columns ----------------------------
     # Three facts a consumer needs to place a tick were content of `core.processing_runs.parameters`,
     # an untyped `json_string`: a map keyed by `clock_name` whose values carried coordinates on two
-    # clocks. `02` §5.2 forbids that shape as a column and `01` §3.9 already converted
+    # clocks. Part 02 §5.2 forbids that shape as a column and Part 01 §3.9 already converted
     # `core.clocks.transform_to_parent` out of it, so they become columns and a table.
     SINCE[0] = "R99 §3.1"
     add_col("core.sessions", col("alignment_bound", "float64", "nullable",
                                  "How far past its anchors the writer mapped, in median anchor "
-                                 "intervals (`01` §3.9). Null means the default of one."))
+                                 "intervals (Part 01 §3.9). Null means the default of one."))
     amend("core.sessions", "alignment_bound", unit="{median_anchor_interval}")
 
     SINCE[0] = "R99 §3.2"
     for _end in ("first", "last"):
         add_col("core.clocks", col(f"withheld_{_end}_anchor", "bool", "nullable",
-                                   f"Whether `02` §12.6's terminal-anchor test withheld this clock's "
+                                   f"Whether Part 02 §12.6's terminal-anchor test withheld this clock's "
                                    f"{_end} anchor. Null means the test did not run."))
 
     SINCE[0] = "R99 §3.3"
@@ -1701,14 +1701,14 @@ def build() -> dict:
                         "resource_columns": ["clock_id"]}],
         "rules": [],
     }
-    # `02` §8.4's one-hop form, declared here rather than in CONTEXT, which is consumed before a
+    # Part 02 §8.4's one-hop form, declared here rather than in CONTEXT, which is consumed before a
     # block this late runs. `core.clock_anchors.parent_tick` carries the same pair of clocks.
     amend("core.clock_phase_steps", "parent_tick", clock_from="core.clocks.parent_clock_id")
     amend("core.clock_phase_steps", "shift_seconds", unit="s")
     amend("core.clock_phase_steps", "anchor_interval_span", unit="{anchor_interval}")
 
     # ---- R101 §3 : a column declares what its values mean --------------------------------------
-    # `02` §9.3 made a vocabulary open unless a column declared an `enum`, so 84 of 102 string
+    # Part 02 §9.3 made a vocabulary open unless a column declared an `enum`, so 84 of 102 string
     # columns said nothing and a column nobody had classified read exactly like one deliberately
     # left open. Set directly rather than through `amend`: what a column's values are drawn from
     # has not changed, only whether the registry says so, and restamping 95 columns would erase
@@ -1724,7 +1724,7 @@ def build() -> dict:
           description="The subject's sex. Null where the source states none, states it unknown, "
                       "or describes a preparation that has none.")
 
-    # §3.8: `02` §9.3 reserved four kinds with declared meanings and the registry never received them.
+    # §3.8: Part 02 §9.3 reserved four kinds with declared meanings and the registry never received them.
     SINCE[0] = "R101 §3.8"
     for _t in ("core.array_assets", "analysis.array_assets"):
         amend(_t, "kind", reserved_values=["raw", "ap", "lfp", "waveform"])
@@ -1756,7 +1756,7 @@ def build() -> dict:
     SINCE[0] = "R102 §3.2"
     add_col("core.media_assets", col("device_id", "int32", "nullable",
             "The device that recorded this asset. A writer names it where its source states one, "
-            "and MUST NOT infer it from a file name (`01` §3.5)."), after="format")
+            "and MUST NOT infer it from a file name (Part 01 §3.5)."), after="format")
     T("core.media_assets")["references"].append(
         {"columns": ["device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
 
@@ -1773,7 +1773,7 @@ def build() -> dict:
               reserved_values=["wideband", "ap", "lfp"],
               description="Which band of a sampled signal this array holds: `wideband` unfiltered, "
                           "`ap` the action-potential band, `lfp` the local field potential band, "
-                          "with `02` §9.3's meanings. A conventional shorthand for a filter the packet "
+                          "with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet "
                           "does not record. Open, and null where the signal was not split.")
 
     SINCE[0] = "R103 §3.4"
@@ -1782,8 +1782,8 @@ def build() -> dict:
               description="What quantity the asset holds, where the row's declared facts do not "
                           "already say. Null is the ordinary case: a writer MUST NOT fill it where "
                           "the device, the unit, the channel map or the dimensions carry the "
-                          "answer. Open (`02` §9.3): an unrecognised value is a label carrying no "
-                          "contract (`01` §3.17).")
+                          "answer. Open (Part 02 §9.3): an unrecognised value is a label carrying no "
+                          "contract (Part 01 §3.17).")
 
     # ---- R104 §3 : a device declares what kind of thing it is ----------------------------------
     # `core.devices` is one flat table for a probe, a headstage, a basestation, a sniff detector
@@ -1793,9 +1793,9 @@ def build() -> dict:
     SINCE[0] = "R104 §3.1"
     add_col("core.devices", col("device_kind", "string", "nullable",
             "The table carrying this device's kind-specific facts, as a dotted resource ID. Its "
-            "primary key begins `device_id`, so resolution is `02` §8.3's shared-key join. Core "
-            "declares no such table (`02` §8.3); an extension does, and a value naming a resource "
-            "the packet does not carry is a fact rather than a defect (`02` §8.3)."),
+            "primary key begins `device_id`, so resolution is Part 02 §8.3's shared-key join. Core "
+            "declares no such table (Part 02 §8.3); an extension does, and a value naming a resource "
+            "the packet does not carry is a fact rather than a defect (Part 02 §8.3)."),
             after="parent_port")
 
     # ---- R105 §3 : a coordinate is a value on a declared axis -----------------------------------
@@ -1824,17 +1824,17 @@ def build() -> dict:
     tables["core.coordinate_frame_axes"] = {
         "columns": [col("session_id", "int32", "required", "Session."),
                     col("coordinate_frame", "string", "required", "The frame these axes belong to."),
-                    col("axis_index", "int64", "required", "Which axis, 0-based (`02` §8.1.1)."),
+                    col("axis_index", "int64", "required", "Which axis, 0-based (Part 02 §8.1.1)."),
                     col("axis_name", "string", "required",
                         "Whatever the source called the field these values came from, verbatim "
-                        "(`02` §9.3). A writer MUST NOT normalise it or replace it with what the "
+                        "(Part 02 §9.3). A writer MUST NOT normalise it or replace it with what the "
                         "quantity is conventionally taken to be."),
                     col("axis_direction", "string", "nullable",
                         "Which way the values increase -- `right`, `anterior`, `superior`. Null "
                         "where the source does not state it, which no inference may fill (R105 "
                         "§3.4)."),
                     col("unit", "string", "nullable",
-                        "The axis's unit, as a UCUM code (`02` §8.4).")],
+                        "The axis's unit, as a UCUM code (Part 02 §8.4).")],
         "primary_key": ["session_id", "coordinate_frame", "axis_index"],
         "references": [{"columns": ["session_id", "coordinate_frame"],
                         "resource": "core.coordinate_frames",
@@ -1859,7 +1859,7 @@ def build() -> dict:
                             "The frame, naming a `core.coordinate_frames` row of this session; "
                             "with `coordinate_basis` it completes the parent's key."),
                         col("coordinate_basis", "string", "required",
-                            "What the coordinate asserts (`01` §3.8)."),
+                            "What the coordinate asserts (Part 01 §3.8)."),
                         col("axis_index", "int64", "required",
                             "Which of the frame's axes this value is on."),
                         col("axis_value", "float64", "required", "The value, in the axis's unit.")],
@@ -1887,7 +1887,7 @@ def build() -> dict:
     amend("core.probes", "target_region",
           description="The structure the probe was aimed at, as an atlas acronym where the source "
                       "gives one. Open, and not resolvable: no column here names the atlas, which "
-                      "only a coordinate frame does (`01` §3.24).")
+                      "only a coordinate frame does (Part 01 §3.24).")
 
     # ---- R101 §3.1 and §3.6, run after every block so a later table's columns are classified too ----
     for _spec in tables.values():
@@ -1925,10 +1925,10 @@ def build() -> dict:
         "What quantity the asset holds, where the row's declared facts do not already say. Null is "
         "the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map "
         "or the dimensions carry the answer. An unrecognised value is a label carrying no contract "
-        "(`01` §3.17).")
+        "(Part 01 §3.17).")
     _BAND_107 = (
         "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the "
-        "action-potential band, `lfp` the local field potential band, with `02` §9.3's meanings. A "
+        "action-potential band, `lfp` the local field potential band, with Part 02 §9.3's meanings. A "
         "conventional shorthand for a filter the packet does not record. Null where the signal was "
         "not split.")
     _MANUF_107 = ("The manufacturer's own name for itself, as the source states it, compared "
@@ -1945,30 +1945,30 @@ def build() -> dict:
         ("core.probes", "manufacturer"): _MANUF_107,
         ("core.calibrations", "calibration_type"):
             "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named "
-            "`_type` rather than `_kind` because a `_kind` column is a discriminator (`02` §8.3), "
+            "`_type` rather than `_kind` because a `_kind` column is a discriminator (Part 02 §8.3), "
             "and this holds a value that resolves to no table.",
         ("core.calibrations", "detail_kind"):
             "A table carrying a calibration shape core does not define, as a dotted resource ID. A "
             "kind the packet cannot resolve records that the content is elsewhere rather than that "
-            "the row is wrong (`02` §12.3).",
+            "the row is wrong (Part 02 §12.3).",
         ("core.event_streams", "detail_kind"):
             "A table specialising this stream's events, as a dotted resource ID. A kind the packet "
-            "cannot resolve records that the detail is elsewhere (`02` §8.3). Resolved against "
-            "`core.events`' key by `02` §8.3's shared key, through the reference `discriminates_via` "
+            "cannot resolve records that the detail is elsewhere (Part 02 §8.3). Resolved against "
+            "`core.events`' key by Part 02 §8.3's shared key, through the reference `discriminates_via` "
             "names.",
         ("core.event_streams", "event_type"):
             "What kind of event this stream emits. A stream emits one kind, so a source emitting "
             "several on one channel is written as several streams.",
         ("core.intervals", "interval_kind"):
             "The resource that specialises this interval, as a dotted resource ID, resolved as "
-            "`02` §8.3's shared key.",
+            "Part 02 §8.3's shared key.",
         ("core.preferred_runs", "activity_type"):
             "Which kind of output this preference is about, in the vocabulary "
-            "`core.processing_runs.activity_type` uses (`02` §9.3).",
+            "`core.processing_runs.activity_type` uses (Part 02 §9.3).",
         ("core.probes", "target_region"):
             "The structure the probe was aimed at, as an atlas acronym where the source gives one. "
             "Not resolvable: no column here names the atlas, which only a coordinate frame does "
-            "(`01` §3.24).",
+            "(Part 01 §3.24).",
         ("core.processing_runs", "activity_type"):
             "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, "
             "`materialization`. A pipeline names its own.",
@@ -1983,7 +1983,7 @@ def build() -> dict:
         # The three values leave with the claim: unlike `band` above, this listed them and cited
         # their meanings elsewhere, so the list restated the `enum` and added nothing.
         ("core.processing_runs", "status"):
-            "Whether the run completed, with the meanings `02` §9.3 declares.",
+            "Whether the run completed, with the meanings Part 02 §9.3 declares.",
         ("core.units", "amplitude_unit"):
             "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- "
             "microvolts, or ADC counts.",
@@ -1992,8 +1992,8 @@ def build() -> dict:
 
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column
-    # by name and no clause of `02` or `03` states an order, so no revision mandates this and the
-    # specification says nothing about it (DEVELOPING.md §4). `02` §7.1 settled that the column
+    # by name and no clause of Part 02 or Part 03 states an order, so no revision mandates this and the
+    # specification says nothing about it (DEVELOPING.md §4). Part 02 §7.1 settled that the column
     # exists and left where it goes unsaid, so it went two ways -- 24 tables led with it and 12
     # placed it after the identifier they own.
     #
@@ -2035,13 +2035,13 @@ def build() -> dict:
     # Held while the schema is unreleased. Version discipline is Phase 6, and a bump per
     # revision numbers churn rather than releases.
     #
-    # Holding it is safe because the thing `02` §9.2 protects -- a packet carrying a registry that
+    # Holding it is safe because the thing Part 02 §9.2 protects -- a packet carrying a registry that
     # identifies its content -- can only be broken by an *amendment*, which is the one case
     # where a packet ends up retaining two. A packet built fresh embeds exactly one, so no
     # version can be ambiguous inside it. `PacketWriter._install_registry` refuses the
     # amendment that would create the ambiguity, so the bump happens when it is forced rather
     # than on a schedule.
-    # `02` §9.2: first, so what governs the document is visible without reading it. Read from
+    # Part 02 §9.2: first, so what governs the document is visible without reading it. Read from
     # the meta-schema rather than repeated, since a copy is what goes stale.
     return {"$schema": json.loads((HERE / "registry.schema.json").read_text())["$id"],
             "registry_version": "0.1.0",

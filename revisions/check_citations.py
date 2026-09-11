@@ -3,14 +3,14 @@
 A citation is the load-bearing part of a revision: an implementer follows it to the rule. Nothing
 checked them, and a wrong one is invisible to every other tool -- `ledger.py` sees that a clause
 has a disposition, and a grep for the revision sees a document that exists. Four were found by hand
-in one session: `02` §10.3 cited twice for a waiver that is §10.1's, R30 §3.2 credited with a
-five-column layout it states in seven, `07` cited for an Iceberg deferral that is `00` §7.3's, and
+in one session: Part 02 §10.3 cited twice for a waiver that is §10.1's, R30 §3.2 credited with a
+five-column layout it states in seven, Part 07 cited for an Iceberg deferral that is Part 00 §7.3's, and
 six references to a draft's §5 left pointing at Consequence after it was restructured.
 
 Three forms are resolved:
 
     R92 §2.2        against revisions/R92-*.md
-    `03` §5.4       against escapewheel_poc_docs_v0.2/03_*.md
+    Part 03 §5.4       against escapewheel_poc_docs_v0.2/03_*.md
     §3.1            against the citing document itself
 
 What fails the build is a revision-to-revision citation that does not resolve, anywhere, and a
@@ -24,7 +24,7 @@ reference whose antecedent is the previous clause ("R86 ... its §1.1"), which r
 resolves to nothing mechanically. Worth seeing, since the same shape is how a reference to another
 document's §7.3 gets read as this document's §7.
 
-Every tracked Python file is checked too, not only the revisions. `00` §10.1 sends a comment to the
+Every tracked Python file is checked too, not only the revisions. Part 00 §10.1 sends a comment to the
 part that states its rule, so a citation in the source is load-bearing in the same way -- and until
 this scanned them, five were broken: four naming section 56 of Part 00 and section 92 of Part 01,
 both v0.1 *line* numbers carried into section form, and one naming a section R70 never had. None
@@ -34,15 +34,15 @@ error, as in a draft: the source is live.
 Those are spelled out in prose rather than written as citations, because this file is one of the
 files it reads.
 
-A part named by its number alone is an error in a part, a revision or a draft, which `00` §10.4
+A part named by its number alone is an error in a part, a revision or a draft, which Part 00 §10.4
 requires and no other check can see: both spellings resolve to the same section. A source file is
 read for whether its citations resolve and never for how they are spelled, since a specification
 does not impose a comment style on code it does not own.
 
-The parts are also checked for the numbering `00` §10.3 requires. `headings` returns a set, which is
-what hid `05` carrying two sections numbered 11 through five accepted revisions -- a duplicate
+The parts are also checked for the numbering Part 00 §10.3 requires. `headings` returns a set, which is
+what hid Part 05 carrying two sections numbered 11 through five accepted revisions -- a duplicate
 vanishes into a set and the citation still resolves. Two sections with one number fail the build and
-sections that do not ascend are reported, which is the MUST and the SHOULD of `00` §10.3.
+sections that do not ascend are reported, which is the MUST and the SHOULD of Part 00 §10.3.
 
     python check_citations.py            # report
     python check_citations.py --quiet    # errors only
@@ -65,13 +65,14 @@ HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
 NUMBER = re.compile(r"^R(\d+)-")
 #: `R92 §2.2`, `R92 §2`. The section may end a sentence, so the trailing dot is trimmed.
 REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
-#: "`03` §5.4" and "Part 03 §5.4". Two digits, not `0` and a digit: R93 added Part 10, and a
-#: pattern written before it read every `10` §x as an unprefixed local reference, which is the
+#: `Part 03 §5.4` and the bare `03` §5.4 it replaced, both resolved. Two digits, not `0` and a
+#: digit: R93 added Part 10, and a
+#: pattern written before it read every Part 10 §x as an unprefixed local reference, which is the
 #: bucket that does not fail the build.
 PART = re.compile(r"(?:`(\d\d)`|Part (\d\d)) §(\d+(?:\.\d+)*)")
 #: Any §, so the ones the two above did not claim can be treated as local.
 ANY = re.compile(r"§(\d+(?:\.\d+)*)")
-#: A part named by its number alone, which `00` §10.4 forbids in a part or a revision. Every
+#: A part named by its number alone, which Part 00 §10.4 forbids in a part or a revision. Every
 #: backticked two-digit string in those documents is a part, so nothing yet needs excusing.
 NUMBERED = re.compile(r"`(\d\d)`")
 
@@ -89,7 +90,7 @@ def numbering(text: str) -> tuple[list[str], list[tuple[str, str]]]:
     """A part's repeated section numbers, and each adjacent pair that fails to ascend.
 
     Compared as tuples of integers, so `1.10` follows `1.9` and a nested section follows its
-    parent. Every repeat is also a non-ascending pair; both are returned because `00` §10.3 makes
+    parent. Every repeat is also a non-ascending pair; both are returned because Part 00 §10.3 makes
     the first an error and the second a report.
     """
     found = HEADING.findall(text)
@@ -114,7 +115,7 @@ def part(number: str) -> Path | None:
 def numbered(path: Path, text: str) -> tuple[list[str], set[str]]:
     """Each part this document names by its number alone, and which exemptions that used.
 
-    `00` §10.4 binds a part and a revision and nothing else, so an implementation's source is read
+    Part 00 §10.4 binds a part and a revision and nothing else, so an implementation's source is read
     for whether its citations resolve and never for how they are spelled.
     """
     found, used = [], set()
@@ -188,7 +189,7 @@ def main() -> int:
     broken, historical = 0, 0
     excused: set[str] = set()
 
-    # `00` §10.3's numbering, checked before any citation: a duplicate number makes a citation
+    # Part 00 §10.3's numbering, checked before any citation: a duplicate number makes a citation
     # ambiguous rather than unresolvable, so nothing downstream can see it.
     for target in sorted(PARTS.glob("[0-9][0-9]_*.md")):
         repeated, descending = numbering(target.read_text())
@@ -203,7 +204,7 @@ def main() -> int:
     for path in paths + code:
         draft = path.parent.name == "drafts" or path.suffix == ".py"
         errors, parts, loose = check(path)
-        # `00` §10.4 binds a part and a revision; a source file is read only for resolution.
+        # Part 00 §10.4 binds a part and a revision; a source file is read only for resolution.
         if path.suffix == ".md":
             spelled, fired = numbered(path, path.read_text())
             errors += spelled

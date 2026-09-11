@@ -1,6 +1,6 @@
 """A declared clock, and the only sanctioned way to turn seconds into ticks.
 
-Time in a packet is integer ticks on a declared clock (`03`); float seconds are derived.
+Time in a packet is integer ticks on a declared clock (Part 03); float seconds are derived.
 An importer therefore has to get from its source's seconds to ticks, and there are exactly
 two ways to do that:
 
@@ -89,7 +89,7 @@ class Clock:
         derivation as a note because the packet has nowhere to carry its ±1 s uncertainty.
         Derive it only where an independent check exists; omit it rather than guess.
     parent_clock_id : str, optional
-        The clock this one aligns to (`01` §3.9). The alignment itself lives elsewhere -- in
+        The clock this one aligns to (Part 01 §3.9). The alignment itself lives elsewhere -- in
         `transform_slope`/`transform_offset` or in `core.clock_anchors`, never both -- so a
         parent alone declares parentage without claiming the relation has been measured.
     metadata : dict, optional
@@ -209,12 +209,12 @@ class Clock:
         Returns
         -------
         dict
-            The row. One rate form, never both (`02` §12.4): the rational where there is one,
+            The row. One rate form, never both (Part 02 §12.4): the rational where there is one,
             and `tick_rate_hz` only for a source that states no exact rate. Writing both made
             the float a copy of `tick_rate_num`, since `tick_rate_den` is 1 on every clock
             either packet holds, and left two columns free to disagree with nothing to see it.
         """
-        # No `clock_name`. `02` §8.2 makes it what `clock_id` stands for -- the identifier a source
+        # No `clock_name`. Part 02 §8.2 makes it what `clock_id` stands for -- the identifier a source
         # used, `harp` -- and the numbering fills it from exactly that when the row leaves it
         # unset. Writing `name` here put a human label in it, `HARP`, so nothing could resolve a
         # recipe's spelling back to a clock and `analysis.spike_events` could not be materialized.
@@ -233,7 +233,7 @@ class Clock:
         if self.parent_clock_id is not None:
             row["parent_clock_id"] = self.parent_clock_id
         # The label has no column of its own, and `core.clocks` declares `metadata` because its
-        # key is an identifier of its own (`02` §8.6), so it travels there rather than being lost.
+        # key is an identifier of its own (Part 02 §8.6), so it travels there rather than being lost.
         extra = dict(self.metadata) if self.metadata else {}
         if self.name and self.name != self.clock_id:
             extra.setdefault("label", self.name)

@@ -21,7 +21,7 @@ python3 generate.py                                            # print the emitt
 
 | File | Role |
 |---|---|
-| `registry.json` | Registry content in R2 §3 format. Three tables, transcribed from `02` once. |
+| `registry.json` | Registry content in R2 §3 format. Three tables, transcribed from Part 02 once. |
 | `generate.py` | Registry → checks. Four cases, no per-table code. |
 | `validate.py` | Schema layer (R2 §7.4 shim) plus the generated SQL, executed by DuckDB. |
 | `fixture.py` | A conforming packet and one with three deliberate defects. |

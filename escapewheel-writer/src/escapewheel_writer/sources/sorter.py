@@ -62,7 +62,7 @@ STREAM = re.compile(
 #: A quad-base probe is sorted as four shank streams that share one physical device.
 SHANK = re.compile(r"^(?P<serial>.+?)-(?P<shank>\d+)$")
 
-#: `02` §9.3: a source's own label is open, the projection onto the closed set is declared.
+#: Part 02 §9.3: a source's own label is open, the projection onto the closed set is declared.
 #: `non_soma` projects to null rather than being forced into `noise` -- bombcell means
 #: "a real waveform recorded off-soma", which is not the same claim as "not a unit".
 PROJECTION: dict[str, str | None] = {
@@ -134,7 +134,7 @@ class SortedStream:
         A quad-base probe reaches Open Ephys as four streams (`...45883-1` through `-4`), and
         everything downstream keeps them apart: SpikeInterface sorts each separately, giving
         four unit-id spaces that each start at 0, and an NWB writes four electrode groups.
-        `01` §3.5 admits exactly this: where a source presents several recording entities from
+        Part 01 §3.5 admits exactly this: where a source presents several recording entities from
         one physical object, each is a Probe and all name the same Device. So `probe_id` names the
         recording entity and `serial_number` carries the object, which is where a grouping belongs
         rather than inside an identifier that would have to be parsed.
@@ -185,7 +185,7 @@ class SorterSource:
         What was dropped, coerced, or found inconsistent.
     """
 
-    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
+    #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
     PRODUCES = frozenset(
@@ -203,7 +203,7 @@ class SorterSource:
         }
     )
 
-    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
+    #: Part 05 §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -237,7 +237,7 @@ class SorterSource:
     def streams(self) -> list[SortedStream]:
         """Every curated stream, sorted by the id its rows will carry.
 
-        The order is the one `core.spike_events` is stored in (`03` §5.3), so spike batches can
+        The order is the one `core.spike_events` is stored in (Part 03 §5.3), so spike batches can
         be yielded stream by stream without a global sort.
         """
         found = [_parse(child) for child in self.root.iterdir() if child.is_dir()]
@@ -328,12 +328,12 @@ class SorterSource:
         return f"{self.prefix}{stream.device}"
 
     def _unit_id(self, stream: SortedStream, label: int, width: int) -> str:
-        """Compose the name the writer numbers, ordered as `02` §12.1 requires.
+        """Compose the name the writer numbers, ordered as Part 02 §12.1 requires.
 
         `unit_id` is assigned, so the sorter's label cannot be it: a sorter numbers from zero
         within each run and a run is one probe, which put 810 distinct labels across 6,781 units
         on the measured session. The number must follow ascending
-        `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces it (`05` §8),
+        `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces it (Part 05 §8),
         and `PacketWriter._preassign` assigns in sorted-name order -- so the name is those three,
         with the label zero-padded to `width` to make its text order its numeric one. Run and
         curation ids are themselves assigned in sorted-name order, which is what makes ordering
@@ -400,7 +400,7 @@ class SorterSource:
         `started_at` stays null. The sorter stamps a naive datetime, and unlike a rig's wall
         clock there is no zone to localize it to -- it came off whatever machine ran the sort,
         which is not the rig and is not recorded. The raw string travels in `metadata` so
-        nothing is lost, and `03`'s rule that a wall-clock column is UTC-adjusted stays true.
+        nothing is lost, and Part 03's rule that a wall-clock column is UTC-adjusted stays true.
         """
         rows = []
         for stream in self.streams():
@@ -448,8 +448,8 @@ class SorterSource:
         `curation_versions` already report -- so this restates nothing the packet must derive.
 
         `supersedes` stays null. A first import supersedes nothing, and a writer that does not
-        know what a run replaced must not guess (`01` §3.20). `scope` is set, because a run whose
-        subject is unrecorded is undeterminable rather than unique (`01` §2.4).
+        know what a run replaced must not guess (Part 01 §3.20). `scope` is set, because a run whose
+        subject is unrecorded is undeterminable rather than unique (Part 01 §2.4).
         """
         rows = []
         for stream in self.streams():
@@ -493,7 +493,7 @@ class SorterSource:
     def curation_versions(self) -> list[dict[str, Any]]:
         """`core.curation_versions`, one per stream.
 
-        Merges and splits are counted, not replayed. `02` has no table for a curation
+        Merges and splits are counted, not replayed. Part 02 has no table for a curation
         operation, and inventing one to hold a list is a schema decision an adapter is not
         entitled to make.
         """
@@ -539,7 +539,7 @@ class SorterSource:
         lengths = recorded.get("num_samples") or []
         if len(lengths) != 1:
             # Each segment restarts the counter, so a multi-segment recording is more than one
-            # clock (`01` §3.9) and its length is not one interval on this one.
+            # clock (Part 01 §3.9) and its length is not one interval on this one.
             self.notes.append(f"{stream.key}: {len(lengths)} recording segments; no observation window written")
             return None
         return int(lengths[0])
@@ -565,7 +565,7 @@ class SorterSource:
         `NWBSource._electrode_ids` composes, and a name is what makes the two agree without
         this adapter having to run after that one.
 
-        `02` §12.2 forbids inferring the list, so a stream whose analyzer states none contributes
+        Part 02 §12.2 forbids inferring the list, so a stream whose analyzer states none contributes
         no rows and says so.
         """
         rows = []
@@ -588,7 +588,7 @@ class SorterSource:
     def observation_intervals(self) -> list[dict[str, Any]]:
         """`core.clock_observation_intervals`, one window per stream's sample clock.
 
-        `01` §2.2: a sample clock's window is the extent of the recording it counts, which for
+        Part 01 §2.2: a sample clock's window is the extent of the recording it counts, which for
         a clock whose origin is sample 0 is `[0, length - 1]`. It is deliberately not derived
         from the spikes -- a denominator taken from the numerator makes every rate identical --
         and it is the fact that makes the window independent of what the sorting found: a unit
@@ -794,7 +794,7 @@ class SorterSource:
         separately, and on every stream measured that list is exactly the manually labelled
         set -- so the label makes removal queryable. That coincidence is a property of this
         pipeline and not a rule, so a stream where it breaks is reported: the packet would
-        then be hiding a removal no label records, and `02` has no column to put one in.
+        then be hiding a removal no label records, and Part 02 has no column to put one in.
         """
         curation = self._json(stream, "curation.json")
         ids = self._unit_ids(stream)
@@ -840,7 +840,7 @@ class SorterSource:
         """`core.spike_events`, streamed in the registry's sort order.
 
         Yielded stream by stream in `sorting_run_id` order, and within a stream sorted by
-        `(unit_id, t_tick)`. That is exactly `03`'s ordering for this table, so no global sort
+        `(unit_id, t_tick)`. That is exactly Part 03's ordering for this table, so no global sort
         is ever needed -- each curated folder is one `(sorting_run, curation)` group, and the
         groups are disjoint.
 
@@ -933,7 +933,7 @@ class SorterSource:
         return sum(n if self.sample is None else min(n, self.sample) for n in held)
 
     def offers(self) -> dict[str, int]:
-        """Which resources this source supplies from its root, and how many rows (`05` §1)."""
+        """Which resources this source supplies from its root, and how many rows (Part 05 §1)."""
         return {
             **{resource: len(rows) for resource, rows in self.records().items()},
             "core.spike_events": self.spike_count,

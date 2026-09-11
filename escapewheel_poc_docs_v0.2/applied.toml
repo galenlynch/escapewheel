@@ -2508,7 +2508,7 @@ note = "check_citations.py refuses a colliding number and reports sections that 
 
 [clause."R113 §2.1"]
 disposition = "rationale"
-note = "why a backticked number misreads: `00` §10.2 puts a registry field and a part in one sentence under the same markup"
+note = "why a backticked number misreads: Part 00 §10.2 puts a registry field and a part in one sentence under the same markup"
 
 [clause."R113 §2.2"]
 disposition = "rationale"
@@ -2517,7 +2517,7 @@ note = "that R111 and R112 disagreed on one day, which is the measurement rather
 [clause."R113 §3.1"]
 disposition = "applied"
 where = [{ part = "00", section = "10.4" }]
-note = "the spelling, and why an implementation's source is not bound where `00` §10.1 binds it"
+note = "the spelling, and why an implementation's source is not bound where Part 00 §10.1 binds it"
 
 [clause."R113 §3.2"]
 disposition = "applied"

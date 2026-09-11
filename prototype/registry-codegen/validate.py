@@ -11,7 +11,7 @@ import pyarrow.parquet as pq
 
 from generate import generate, load, sql_name
 
-# Registry type -> the pyarrow type a conforming writer must emit (`03` §5.5).
+# Registry type -> the pyarrow type a conforming writer must emit (Part 03 §5.5).
 ARROW = {"string": "string", "int32": "int32", "int64": "int64", "float32": "float",
          "float64": "double", "bool": "bool", "date": "date32[day]",
          "timestamp": "timestamp[us, tz=UTC]", "json_string": "string"}

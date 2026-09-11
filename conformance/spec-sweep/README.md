@@ -9,4 +9,4 @@ python3 conformance/spec-sweep/compliance.py  # 02 against R3's rules
 ```
 
 `sweep.py` writes `tables02.json`, the parsed column set, which `compliance.py` reads.
-Re-run both after any revision touching `02` or `09`.
+Re-run both after any revision touching Part 02 or Part 09.

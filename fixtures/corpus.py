@@ -49,7 +49,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
                            "session_id_coordinate_frame_axis_index_resolves"),
 }
 
-#: Packets whose expected finding is advisory (`02` §10.2). Advisory rules are off by default --
+#: Packets whose expected finding is advisory (Part 02 §10.2). Advisory rules are off by default --
 #: enabling them must never change whether a packet passed -- so these run with them on, and
 #: the `info` level they carry keeps the verdict unchanged either way.
 #: R82 §2 made both mandatory errors, so nothing here needs the advisory pass any more.

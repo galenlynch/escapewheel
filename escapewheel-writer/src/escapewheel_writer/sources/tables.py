@@ -12,7 +12,7 @@ deliberate: `uv run export.py` and `python -m package.export` and `/opt/venv/bin
 all just commands, so isolating an adapter's dependencies is the recipe author's choice rather
 than a tool this package requires anyone to adopt.
 
-Rows arrive as names, not numbers. `05` §8 assigns identifiers packet-wide before anything is
+Rows arrive as names, not numbers. Part 05 §8 assigns identifiers packet-wide before anything is
 staged, so a process outside this one cannot know them and does not need to: it writes
 `session_id` as `"ecephys_776259"` and the writer turns that into an `int32`.
 """
@@ -55,11 +55,11 @@ class TablesSource:
         as large as a core one, and R2 §7's own reason for the streaming path applies here.
     """
 
-    #: `05` §3.4's exception: empty, because what this source supplies is named by the recipe
+    #: Part 05 §3.4's exception: empty, because what this source supplies is named by the recipe
     #: entry and is not a property of the adapter at all.
     PRODUCES: frozenset[str] = frozenset()
 
-    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
+    #: Part 05 §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -100,7 +100,7 @@ class TablesSource:
             )
 
     def offers(self) -> dict[str, int]:
-        """`05` Stage 1: how many rows of each resource. Read from the footer, not the data."""
+        """Part 05 Stage 1: how many rows of each resource. Read from the footer, not the data."""
         self._prepare()
         return {resource: pq.ParquetFile(path).metadata.num_rows for resource, path in self.tables.items()}
 
@@ -111,7 +111,7 @@ class TablesSource:
     def batches(self) -> dict[str, Iterator[pa.RecordBatch]]:
         """Each resource as a stream of Arrow batches, in the order the file holds them.
 
-        Order is the file's own. `03` §5.3's sort is applied by the writer where a table comes
+        Order is the file's own. Part 03 §5.3's sort is applied by the writer where a table comes
         through the records path, and checked by the validator's physical-order shim either way
         (R12 §4) -- so a file in the wrong order is a finding rather than a silent acceptance.
         """

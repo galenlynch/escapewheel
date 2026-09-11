@@ -92,12 +92,12 @@ and refuses when two sortings coexist with no declared preference. `table("core.
 rows and returns them. Keep that split: it is where the escape hatch lives, and it is why the
 guard can afford to be strict.
 
-## A note on `07`
+## A note on Part 07
 
-`07`'s API sketch predates most of the revisions. Where it disagrees with an accepted revision
+Part 07's API sketch predates most of the revisions. Where it disagrees with an accepted revision
 the revision wins, and `CLAUDE.md`'s *Deviations from 07's API* records each case — a criterion
 naming a column R3 removed is superseded, not unmet. Check there before implementing something
-`07` describes.
+Part 07 describes.
 
 ## Both paths, or neither
 

@@ -1,7 +1,7 @@
 """Many packets presented as one relation (R86).
 
 `open_packet` gives one packet's own tables under their own names, which is what a consumer of
-one session wants and what `05` §8 makes unsafe to concatenate: an assigned identifier is
+one session wants and what Part 05 §8 makes unsafe to concatenate: an assigned identifier is
 unique within its packet and means nothing outside it, so two packets both hold `unit_id` 0 and
 neither value names the other's unit.
 
@@ -31,11 +31,11 @@ from .sql import sql_name
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from duckdb import DuckDBPyConnection
 
-#: The table session scope is measured against (`00` §2.4).
+#: The table session scope is measured against (Part 00 §2.4).
 SESSIONS = "core.sessions"
 
 #: The columns a dataset projects onto every session-scoped table. `session_key` is the
-#: discriminator `00` §2.4 requires; `session_name` is the label it permits beside one, and
+#: discriminator Part 00 §2.4 requires; `session_name` is the label it permits beside one, and
 #: promises nothing about what two packets' matching labels denote.
 PROJECTED = ("session_key", "session_name")
 
@@ -43,11 +43,11 @@ PROJECTED = ("session_key", "session_name")
 class MultiSessionUnresolved(PacketError):
     """A packet holds several sessions and a scoped table cannot say which row is whose.
 
-    `00` §2.4 requires a discriminator on every session-scoped table, and eight of the 33 reached
+    Part 00 §2.4 requires a discriminator on every session-scoped table, and eight of the 33 reached
     `core.sessions` without carrying `session_id`, so their rows could only be attributed by
-    joining -- which `07` §7 measures at 2.22x and does not specify.
+    joining -- which Part 07 §7 measures at 2.22x and does not specify.
 
-    `02` §7.1 closed that: every session-scoped table now carries the column, so a **conforming**
+    Part 02 §7.1 closed that: every session-scoped table now carries the column, so a **conforming**
     packet cannot reach this. It is kept rather than removed because a packet built before R88
     can, and refusing such a packet loudly is what a reader owes one it cannot attribute. R86
     §2.4's projection now covers all 33 tables rather than 25.
@@ -55,7 +55,7 @@ class MultiSessionUnresolved(PacketError):
 
 
 def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
-    """Return every table reaching `core.sessions` through its declared references (`00` §2.4).
+    """Return every table reaching `core.sessions` through its declared references (Part 00 §2.4).
 
     A property of the registry, decided with no packet in hand. The stricter of the two
     available tests: every table carrying a `session_id` reaches `core.sessions`, while eight
@@ -78,7 +78,7 @@ def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
         if name == SESSIONS:
             return True
         if name in seen:
-            # A self-reference is well-founded (`01` §3.5) and is not a route to anywhere.
+            # A self-reference is well-founded (Part 01 §3.5) and is not a route to anywhere.
             return False
         seen.add(name)
         return any(reaches(m, seen) for m in edges.get(name, ()))
@@ -94,7 +94,7 @@ class Session:
     ----------
     session_key : int
         The discriminator. Numbered by the dataset as it opened the packets, so it is stable
-        for one dataset and means nothing outside it -- exactly as `05` §8 says of every
+        for one dataset and means nothing outside it -- exactly as Part 05 §8 says of every
         assigned identifier.
     packet_id : str
         The packet this session was read from.
@@ -114,12 +114,12 @@ class Dataset:
     """Several packets, presented as one relation per resource.
 
     The discriminator is **the packet a row came from together with the row's `session_id`**
-    (`00` §2.4). Both are known for certain -- the reader opened the file, and the identifier is
+    (Part 00 §2.4). Both are known for certain -- the reader opened the file, and the identifier is
     unique within it -- so their pair is unique by construction and nothing has to be assumed
     about the world. A `*_name` is never used for it: measured across two packets sharing no
     session, no animal and no probe, 6 of 13 name columns hold a value appearing in both.
 
-    Identity is **carried, not joined on** (`00` §2.4). Within one packet an assigned identifier
+    Identity is **carried, not joined on** (Part 00 §2.4). Within one packet an assigned identifier
     is already unique, so a query over one session joins on it alone; a query spanning sessions
     joins on `(session_key, unit_id)`, which is where the second column buys correctness rather
     than costing 2.93x for nothing.
@@ -151,7 +151,7 @@ class Dataset:
     def _number(packets: Sequence[Packet]) -> list[Session]:
         """Read each packet's `core.sessions` and assign the discriminators.
 
-        A handful of rows per packet, which is what makes `07` §7's projection affordable:
+        A handful of rows per packet, which is what makes Part 07 §7's projection affordable:
         the reader knows every session's key and label before the first query runs.
         """
         numbered, key = [], 0
@@ -173,7 +173,7 @@ class Dataset:
     def _scope(packets: Sequence[Packet]) -> frozenset[str]:
         """Return the union of what each packet's own registry says is session-scoped.
 
-        Each packet embeds the registry it was written against (`02` §9.2), so two packets built
+        Each packet embeds the registry it was written against (Part 02 §9.2), so two packets built
         against different revisions can disagree. The union is what keeps a table scoped once
         any packet says it is, which is the safe direction: carrying the discriminator on a
         table that did not need it costs 1.02x, and omitting it where it was needed is wrong.
@@ -197,7 +197,7 @@ class Dataset:
 
     @property
     def scoped(self) -> frozenset[str]:
-        """Which resources carry a session discriminator (`00` §2.4)."""
+        """Which resources carry a session discriminator (Part 00 §2.4)."""
         return self._scoped
 
     def __repr__(self) -> str:
@@ -216,7 +216,7 @@ class Dataset:
         """Register each resource as one view over every packet that holds it.
 
         A session-scoped view carries `session_key` and `session_name`, projected as scalar
-        expressions over `session_id` rather than joined from `core.sessions` (`07` §7). A
+        expressions over `session_id` rather than joined from `core.sessions` (Part 07 §7). A
         projection is pruned when a query does not select it, so it costs 1.02x where the join
         a reader writes first costs 2.22x.
 
@@ -284,7 +284,7 @@ class Dataset:
         target = f"{base}/**/*.parquet" if resource.is_partitioned else base
         source = f"SELECT * FROM '{target}'"
         if resource_id not in self._scoped:
-            # `00` §2.4: MUST NOT carry a discriminator on a table that is not session-scoped.
+            # Part 00 §2.4: MUST NOT carry a discriminator on a table that is not session-scoped.
             return source
         return f"SELECT *, {self._identity(packet, resource_id)} FROM '{target}'"
 
@@ -292,7 +292,7 @@ class Dataset:
         """Return the projected `session_key` and `session_name` for one packet's rows.
 
         A scalar expression over a column already being scanned, so a query not selecting it
-        has the expression pruned and reads nothing extra (`07` §7).
+        has the expression pruned and reads nothing extra (Part 07 §7).
         """
         held = self._by_packet[packet.manifest.packet_id]
         if "session_id" in _column_names(packet, resource_id):
@@ -307,8 +307,8 @@ class Dataset:
         if len(held) != 1:
             raise MultiSessionUnresolved(
                 f"{resource_id} is session-scoped, carries no session_id, and "
-                f"{packet.manifest.packet_id} holds {len(held)} sessions; `00` §2.4 requires a "
-                "discriminator and `07` §7 specifies no join to derive one"
+                f"{packet.manifest.packet_id} holds {len(held)} sessions; Part 00 §2.4 requires a "
+                "discriminator and Part 07 §7 specifies no join to derive one"
             )
         only = next(iter(held.values()))
         label = _literal(only.session_name)
@@ -360,7 +360,7 @@ class Dataset:
     def _stamp(self, packet: Packet, resource_id: str, table: pa.Table) -> pa.Table:
         """Append `session_key` and `session_name` to one packet's rows.
 
-        Entirely in Arrow: a lookup over the packet's handful of sessions, then a take. `07` §7
+        Entirely in Arrow: a lookup over the packet's handful of sessions, then a take. Part 07 §7
         forbids converting a column to host objects, and this runs over `core.spike_events` --
         286,896,563 rows in the measured session.
         """

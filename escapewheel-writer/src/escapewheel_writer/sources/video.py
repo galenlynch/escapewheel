@@ -18,7 +18,7 @@ hardware clock, the reconstruction agrees to 35-85 ms over 85 minutes, against t
 replaces.
 
 Three cameras of one session are 10 GB as MP4 and 80 GB as the AVI they were encoded from, so a
-packet that copied them would be mostly video (`04` §5.1). What it owns instead is one row per
+packet that copied them would be mostly video (Part 04 §5.1). What it owns instead is one row per
 frame on a declared clock, which is the part no player can supply: an MP4 knows its own
 presentation timestamps and nothing about the rig's clock.
 
@@ -33,12 +33,12 @@ Each camera writes a CSV beside its video, one line per frame and three columns:
 - the **camera's own clock** in nanoseconds, which is what the repair was checked against.
 
 `pts` carries none of the three. It is the frame's presentation timestamp in the **container**,
-an integer of the container's own time base (`01` §3.18), which is what locates a row in the file a
-consumer opens. The asset declares the rate those timestamps count at (`01` §3.18), so
+an integer of the container's own time base (Part 01 §3.18), which is what locates a row in the file a
+consumer opens. The asset declares the rate those timestamps count at (Part 01 §3.18), so
 `pts * pts_rate_den / pts_rate_num` is seconds of video without opening it, where `t_tick` is the
 same frame on the rig clock.
 
-Frames are numbered in presentation order (`01` §3.18), which is why the container index is sorted
+Frames are numbered in presentation order (Part 01 §3.18), which is why the container index is sorted
 before it is read: packets arrive in decode order, and this stream displaces one by up to three
 positions from where it is shown.
 """
@@ -61,7 +61,7 @@ from .store import source_root
 BATCH_ROWS = 500_000
 
 #: The container this adapter references. A camera here writes both an AVI and an MP4 of one
-#: capture; the MP4 is what the portable profile names (`03` §2) and what a reader will open.
+#: capture; the MP4 is what the portable profile names (Part 03 §2) and what a reader will open.
 SUFFIX = ".mp4"
 
 #: What the timing CSV's columns hold, in order. Written by `foraging.bonsai`'s CsvWriter as
@@ -91,10 +91,10 @@ class VideoSource(Compensates):
         URI, which resolves only on the machine that built it.
     """
 
-    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
+    #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
     PRODUCES = frozenset({"core.media_assets", "core.media_frames"})
 
-    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
+    #: Part 05 §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -127,7 +127,7 @@ class VideoSource(Compensates):
         return beside if beside.is_file() else None
 
     def _uri(self, video: Path) -> str:
-        """Where this video is addressed, absolutely (`04` §5.1)."""
+        """Where this video is addressed, absolutely (Part 04 §5.1)."""
         if self.uri_base:
             return f"{self.uri_base}/{video.name}"
         return video.resolve().as_uri()
@@ -142,7 +142,7 @@ class VideoSource(Compensates):
                 media_asset_id=name,
                 uri=self._uri(video),
                 format=SUFFIX.lstrip("."),
-                # `04` §5.2: a writer records only what it looked at. A local path can be sized;
+                # Part 04 §5.2: a writer records only what it looked at. A local path can be sized;
                 # a remote base says nothing about what is actually there.
                 size_bytes=video.stat().st_size if local else None,
             )
@@ -177,11 +177,11 @@ class VideoSource(Compensates):
         return rows
 
     def _pts_rate(self, video: Path) -> dict[str, int]:
-        """Return what a consumer needs to read this asset's `pts` column as time (`01` §3.18).
+        """Return what a consumer needs to read this asset's `pts` column as time (Part 01 §3.18).
 
         A container states a *time base* -- seconds per timestamp -- and core carries the
         reciprocal, so `core.media_assets` agrees with `core.clocks` about what a rational rate
-        looks like. The inversion happens here, once, which is the boundary `01` §3.18 puts it at.
+        looks like. The inversion happens here, once, which is the boundary Part 01 §3.18 puts it at.
 
         Rational rather than a float, for the reason R33 gives: 1/90000 has no exact decimal and a
         rounded one accumulates over the millions of frames a session holds.
@@ -274,7 +274,7 @@ class VideoSource(Compensates):
             return sum(block.count(b"\n") for block in iter(lambda: handle.read(1 << 22), b""))
 
     def offers(self) -> dict[str, int]:
-        """`05` Stage 1: how many rows of each resource this root holds."""
+        """Part 05 Stage 1: how many rows of each resource this root holds."""
         videos = self.videos()
         return {
             "core.media_assets": len(videos),

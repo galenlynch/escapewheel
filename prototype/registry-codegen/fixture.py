@@ -17,9 +17,9 @@ def write(out: Path, name: str, table: pa.Table):
     pq.write_table(table, out / f"{name}.parquet", compression="zstd")
 
 
-#: The kind these intervals are, as `01` §3.10 requires: a dotted resource ID naming the table
-#: that specialises them. This packet does not carry it, which `01` §3.10a makes an error -- the
-#: generator here does not implement the discriminator checks `02` §8.3 adds, and the limits
+#: The kind these intervals are, as Part 01 §3.10 requires: a dotted resource ID naming the table
+#: that specialises them. This packet does not carry it, which Part 01 §3.10a makes an error -- the
+#: generator here does not implement the discriminator checks Part 02 §8.3 adds, and the limits
 #: section says so rather than the fixture pretending otherwise.
 KIND = "dynamic_foraging.trials"
 

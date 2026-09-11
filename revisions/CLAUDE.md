@@ -334,12 +334,12 @@ touches.
    questions, and both have a stated answer.
 
    **Which part** is R93 §4's test, which settles it without appeal to judgement: a clause is
-   `03`'s where it would change if the profile changed, `07`'s where it would change if the
-   reference implementation changed, `10`'s where it is a number rather than a rule and neither of
-   those claims it, and `02`'s where none of them does. An ordering rule changes under Iceberg, so
-   it is `03`'s; a tick being `int64` is true under any profile, so it is `02`'s. `00` §9's table
+   Part 03's where it would change if the profile changed, Part 07's where it would change if the
+   reference implementation changed, Part 10's where it is a number rather than a rule and neither of
+   those claims it, and Part 02's where none of them does. An ordering rule changes under Iceberg, so
+   it is Part 03's; a tick being `int64` is true under any profile, so it is Part 02's. Part 00 §9's table
    says what each part binds, and a clause about what a concept *means* rather than how it is
-   computed is `01`'s.
+   computed is Part 01's.
 
    **Which section** is by subject, never by what is last. `headings.toml` is the map — every
    section number of every part with the subject it carries — so read that part's entry and put
@@ -348,20 +348,20 @@ touches.
    Where a clause genuinely fits no section, add a section at the **end of the part**, which
    renumbers nothing either, rather than filing it under a heading that does not describe it.
 
-   A new concept is the exception, with a rule of its own: append it to `01` §3 as the next
+   A new concept is the exception, with a rule of its own: append it to Part 01 §3 as the next
    number, because that section is a flat list of concepts and inserting one renumbers the
-   concepts every later part cites. That rule is about `01` §3 and no other section.
+   concepts every later part cites. That rule is about Part 01 §3 and no other section.
 
    Appending to whichever section comes last is what the subject rule prevents, and it had already
-   happened three times before anyone stated it: R81, R83 and R89 each added to `02` §12, so a
+   happened three times before anyone stated it: R81, R83 and R89 each added to Part 02 §12, so a
    section then titled "Ordering" came to hold unit identity, channel indices and calibration,
-   with 40 of its 44 lines about none of them. R93 §3.1 repaired it by sending ordering to `03`,
+   with 40 of its 44 lines about none of them. R93 §3.1 repaired it by sending ordering to Part 03,
    which is why that section is now "Rules for particular resources" and carries seven subsections
    a later clause can be placed among.
 5a. **`python revisions/impact.py`** once the parts are edited, before moving on. It maps each
    changed line to the section it falls in and lists every file citing that section, which is the
    only way to find them: `check_citations.py` asks whether a citation resolves, and a citation
-   into a rewritten section resolves perfectly. R110 rewrote `03` §5.5, which **16 files cite,
+   into a rewritten section resolves perfectly. R110 rewrote Part 03 §5.5, which **16 files cite,
    three of them the writer's own source**, and one of those still named `R68 §3` — the
    miscitation R110's appraisal had just struck from the revision — for two more commits.
 6. **`escapewheel_poc_docs_v0.2/applied.toml`**, one entry per clause. `ledger.py` demands a
@@ -381,7 +381,7 @@ touches.
 
 A part's column tables are **generated**: mark the resource with
 `<!-- columns: core.foo -->` / `<!-- /columns -->` and run
-`python escapewheel_poc_docs_v0.2/columns.py`. Never retype a column list. `06` §4's kept
+`python escapewheel_poc_docs_v0.2/columns.py`. Never retype a column list. Part 06 §4's kept
 `sorting_run_id` and `curation_id` for four revisions after R81 §2.3 removed them, and nothing
 could see it: the ledger records where a clause landed, not whether the prose still agrees.
 

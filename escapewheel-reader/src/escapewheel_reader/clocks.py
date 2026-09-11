@@ -4,7 +4,7 @@ Lives in the reader because both reading and writing need it and there must be o
 packet whose spikes are mapped at write time and a caller mapping the same spikes at read
 time have to agree, and two implementations of a piecewise map agree only by luck.
 
-This is R13 §3's piecewise-linear mapping with `01` §3.9's bound, and it is the only place
+This is R13 §3's piecewise-linear mapping with Part 01 §3.9's bound, and it is the only place
 that arithmetic is written. A spike's tick is exact on its probe's clock and means nothing
 beside another probe's; the anchors are what relate them, and this turns the relation into
 numbers.
@@ -16,7 +16,7 @@ Let *m* be the median interval between a clock's anchors.
 
 1. Between two anchors no more than 2*m* apart, linear interpolation on that pair.
 2. Beyond the terminal anchors, ``parent(a) + rate * (t - a)`` where *a* is the nearer
-   terminal anchor and `rate` is fitted over the whole sequence (`01` §3.9). Both halves
+   terminal anchor and `rate` is fitted over the whole sequence (Part 01 §3.9). Both halves
    matter and for different reasons. The *rate* is global because a terminal segment's slope
    comes from two anchors and degrades to ~0.9 ms; the *offset* is the terminal anchor's own
    parent tick because a global fit's intercept carries the session's clock wander -- ±1.7 ms
@@ -24,8 +24,8 @@ Let *m* be the median interval between a clock's anchors.
    anchor drops p95 extrapolation error from 525 µs to 258 µs (R37 §2).
 3. Anywhere further than *m* from every anchor -- past the ends, or inside a wider gap -- the
    mapping is undefined by default, and this returns a mask saying so rather than a plausible
-   number. `01` §3.9 makes the real bound one on *error*: a caller that has measured its own
-   clocks may widen `bound`, and one that has not gets `01` §3.9's distance unchanged.
+   number. Part 01 §3.9 makes the real bound one on *error*: a caller that has measured its own
+   clocks may widen `bound`, and one that has not gets Part 01 §3.9's distance unchanged.
 
 The mask is not a formality. On a real session the first sync pulse arrives 18,000 to 28,000
 samples after the recording starts, so the spikes in that window have no defined parent tick
@@ -45,7 +45,7 @@ from .dictionaries import values, where
 from .errors import NoTimeOrigin
 
 #: How far from an anchor the mapping stays defined, as a multiple of the median anchor
-#: interval (`01` §3.9). One, so that the same threshold covers a gap between anchors and the
+#: interval (Part 01 §3.9). One, so that the same threshold covers a gap between anchors and the
 #: unanchored ends -- the bound and the region it has to cover are the same quantity, because
 #: a free-running sync pulse leaves less than one interval at each end by construction.
 BOUND = 1.0
@@ -122,7 +122,7 @@ def align(
     parent = np.rint(np.interp(ticks, anchor_t, anchor_p)).astype(np.int64)
 
     # Outside the anchor span np.interp clamps to the terminal value, which is a wrong answer
-    # rather than a missing one, so both ends are recomputed. `01` §3.9: the globally fitted
+    # rather than a missing one, so both ends are recomputed. Part 01 §3.9: the globally fitted
     # rate, applied from the terminal anchor's own parent tick. The fit's intercept is not
     # used -- it is the one place a line has to represent the whole session's wander at once,
     # and it misses local truth by an amount that does not shrink with distance.
@@ -151,8 +151,8 @@ def extrapolation_error(
 ) -> dict[str, float]:
     """Measure :func:`align`'s out-of-range estimator at a given distance, in parent ticks.
 
-    `01` §3.9 makes the bound one on error rather than on distance, and requires a writer that
-    wants more than `01` §3.9's one median interval to *measure* it at the distance it intends
+    Part 01 §3.9 makes the bound one on error rather than on distance, and requires a writer that
+    wants more than Part 01 §3.9's one median interval to *measure* it at the distance it intends
     to use. This is that measurement: every interior anchor stands in for a terminal one, the
     §3.1 estimator predicts the anchor `distance` median intervals further on, and the spread
     of the residuals is what the tolerance is compared against.
@@ -222,13 +222,13 @@ def anchors(packet: Any) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]
 def declared_bound(packet: Any) -> float:
     """Return the alignment bound the packet's writer established, or `BOUND`.
 
-    `01` §3.9 lets a writer map further than one median anchor interval once it has *measured*
+    Part 01 §3.9 lets a writer map further than one median anchor interval once it has *measured*
     the estimator at the distance it intends to use, and R99 §3.1 puts that bound in
     `core.sessions.alignment_bound`. Reading it is what makes a consumer's mapping match the
     writer's: a packet whose spikes were placed at a bound of two and whose reader maps at one
     disagrees with itself about which of its own rows have a time.
 
-    A null column is a packet that stayed within `01` §3.9's default, which is `BOUND`. Where a
+    A null column is a packet that stayed within Part 01 §3.9's default, which is `BOUND`. Where a
     packet holds several sessions the widest wins, since the reader presents them as one relation
     (R86) and a tick placed under the wider bound has to stay placed.
 
@@ -362,7 +362,7 @@ def default_clock(packet: Any, present: list[Any]) -> Any:
 
 
 def tick_rate(packet: Any, clock_id: Any) -> tuple[int, int]:
-    """Return a clock's rational tick rate, which `01` §2.1 prefers to `tick_rate_hz`."""
+    """Return a clock's rational tick rate, which Part 01 §2.1 prefers to `tick_rate_hz`."""
     clocks = packet.table("core.clocks")
     names = clocks.column("clock_id").to_pylist()
     if clock_id not in names:
@@ -376,7 +376,7 @@ def tick_rate(packet: Any, clock_id: Any) -> tuple[int, int]:
 
 
 def origin(packet: Any, session_id: str | None = None) -> tuple[int, int, int]:
-    """Return the session's time origin and the reference clock's rational rate (`05` §7).
+    """Return the session's time origin and the reference clock's rational rate (Part 05 §7).
 
     Read from `core.sessions.t_zero_tick` rather than recomputed: the writer took the minimum
     across clocks through R13's mapping, which is arithmetic a reader should not have to repeat
@@ -398,14 +398,14 @@ def origin(packet: Any, session_id: str | None = None) -> tuple[int, int, int]:
     ------
     NoTimeOrigin
         If the packet declares none, or if sessions declare different origins and none was
-        named. `01` §2.1 requires refusing rather than inventing one.
+        named. Part 01 §2.1 requires refusing rather than inventing one.
     """
     cache = getattr(packet, "_origin_cache", None)
     if cache is not None and session_id in cache:
         return cache[session_id]  # type: ignore[no-any-return]
     sessions = packet.table("core.sessions")
     if "t_zero_tick" not in sessions.column_names:
-        raise NoTimeOrigin("core.sessions carries no t_zero_tick, so seconds are undefined (`01` §2.1)")
+        raise NoTimeOrigin("core.sessions carries no t_zero_tick, so seconds are undefined (Part 01 §2.1)")
     declared = {
         session: tick
         for session, tick in zip(
@@ -415,12 +415,12 @@ def origin(packet: Any, session_id: str | None = None) -> tuple[int, int, int]:
     }
     if session_id is not None:
         if session_id not in declared:
-            raise NoTimeOrigin(f"session {session_id!r} declares no t_zero_tick (`01` §2.1)")
+            raise NoTimeOrigin(f"session {session_id!r} declares no t_zero_tick (Part 01 §2.1)")
         found_tick = int(declared[session_id])
     else:
         found = sorted(set(declared.values()))
         if not found:
-            raise NoTimeOrigin("no session declares a t_zero_tick, so seconds are undefined (`01` §2.1)")
+            raise NoTimeOrigin("no session declares a t_zero_tick, so seconds are undefined (Part 01 §2.1)")
         if len(found) > 1:
             raise NoTimeOrigin(f"sessions declare different origins {found}; name a session_id")
         found_tick = int(found[0])
@@ -433,10 +433,10 @@ def origin(packet: Any, session_id: str | None = None) -> tuple[int, int, int]:
 def on_clock(packet: Any, table: pa.Table, clock: str | None = None, *, bound: float | None = None) -> pa.Table:
     """Return `table` with its ticks on one clock.
 
-    A row whose tick the anchors cannot place is **dropped**, which is what `01` §3.9 leaves
+    A row whose tick the anchors cannot place is **dropped**, which is what Part 01 §3.9 leaves
     undefined and what `analysis.spike_events` does with the same rows. Reading `core` through
     this and reading the materialized table therefore agree -- which is why the bound defaults to
-    the one the packet's writer established and recorded, not the default `01` §3.9 states. A reader
+    the one the packet's writer established and recorded, not the default Part 01 §3.9 states. A reader
     mapping at a narrower bound than the writer used drops rows the packet's own derived table
     kept, and the two disagree about which spikes exist.
 
@@ -481,7 +481,7 @@ def on_clock(packet: Any, table: pa.Table, clock: str | None = None, *, bound: f
 def seconds(packet: Any, table: pa.Table, *, session_id: str | None = None) -> pa.Table:
     """Add a `t_second` column to a table whose ticks are on the reference clock.
 
-    `01` §2.1: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the declared
+    Part 01 §2.1: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the declared
     rational so nothing is lost to the rounded `tick_rate_hz`.
 
     The tick stays. Seconds are derived and this does not pretend otherwise -- a caller that
@@ -517,7 +517,7 @@ def seconds(packet: Any, table: pa.Table, *, session_id: str | None = None) -> p
     present = _present(_flat(table.column("clock_id"))) if table.num_rows else [reference]
     if present != [reference]:
         raise NotAligned(
-            f"seconds are defined on {reference!r} (`01` §2.1), but these ticks are on "
+            f"seconds are defined on {reference!r} (Part 01 §2.1), but these ticks are on "
             f"{present}; map them with on_clock first"
         )
     offset = pc.subtract(table.column("t_tick"), pa.scalar(start, pa.int64()))

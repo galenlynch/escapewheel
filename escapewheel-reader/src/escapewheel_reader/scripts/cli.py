@@ -1,6 +1,6 @@
 """Command-line access to a packet.
 
-``07`` names the CLI ``escapewheel`` with subcommands spanning several phases. This package
+Part 07 names the CLI ``escapewheel`` with subcommands spanning several phases. This package
 provides the reader's share -- ``ls`` and ``sql`` -- and discovers the rest through the
 ``escapewheel.commands`` entry-point group, so validating and importing arrive with their own
 packages rather than being vendored here.
@@ -85,7 +85,7 @@ def build_parser() -> argparse.ArgumentParser:
 def _extend(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     """Let installed packages contribute their own subcommands.
 
-    ``07`` names a single CLI, ``escapewheel``. Two distributions cannot both claim it under
+    Part 07 names a single CLI, ``escapewheel``. Two distributions cannot both claim it under
     ``[project.scripts]`` -- the last one installed wins silently, and the other's
     subcommands vanish -- so later packages register a callable here instead, and this
     command grows as they are installed.

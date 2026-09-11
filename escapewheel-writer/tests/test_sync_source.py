@@ -130,7 +130,7 @@ def test_a_stream_may_decline_a_clock(source):
 
 
 def test_a_counter_that_goes_backwards_is_refused(tmp_path):
-    """`01` §3.9: a reset mid-recording is two clocks, and this is not one of them."""
+    """Part 01 §3.9: a reset mid-recording is two clocks, and this is not one of them."""
     events = tmp_path / "Record Node 109" / "experiment1" / "recording1" / "events"
     ttl = syncfixture.stream(events, "Neuropix-PXI-100.probeA", first_sample=1000, aligned=True)
     ts = np.load(ttl / "timestamps.npy")
@@ -213,7 +213,7 @@ def test_a_node_qualified_first_sample_wins(source, tmp_path):
     assert source._first_sample(stream) == 222
 
 
-# -- the terminal-anchor test (`02` §12.6) -----------------------------------------------
+# -- the terminal-anchor test (Part 02 §12.6) -----------------------------------------------
 
 #: Enough anchors for `suspect_terminals` to have an interior to judge against.
 LONG = 200

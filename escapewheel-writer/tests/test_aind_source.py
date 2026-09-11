@@ -298,7 +298,7 @@ def test_a_water_calibration_becomes_a_row_with_both_units(asset):
     row, = rig(asset, [WATER]).calibrations()
     assert row["calibration_name"] == "Lick spout Left"
     assert (row["input_unit"], row["output_unit"]) == ("s", "ul")
-    # Open (`02` §9.3): the type is what the source called the quantity it measured.
+    # Open (Part 02 §9.3): the type is what the source called the quantity it measured.
     assert row["calibration_type"] == "water_volume"
     assert row["calibrated_at"] == datetime(2024, 11, 27, 8, tzinfo=timezone.utc)
 
@@ -331,7 +331,7 @@ def test_six_modules_citing_one_file_are_one_calibration(tmp_path):
 
 
 def test_an_array_calibration_records_that_its_content_is_elsewhere(tmp_path):
-    """`02` §12.3: this adapter does not read the `.npy`, so the row is unrecorded, not absent."""
+    """Part 02 §12.3: this adapter does not read the `.npy`, so the row is unrecorded, not absent."""
     source = SessionSource(build(tmp_path, streams=modules("46100")), zone=PACIFIC)
     row, = source.calibrations()
     assert (row["array_asset_id"], row["detail_kind"], row["metadata"]) == (None, None, None)
@@ -344,7 +344,7 @@ def test_a_module_stating_no_transform_yields_no_calibration(tmp_path):
 
 
 def test_a_transform_with_no_date_is_null_rather_than_invented(tmp_path):
-    """`01` §3.5. Three `stick_microscopes` state a calibration and no date for it."""
+    """Part 01 §3.5. Three `stick_microscopes` state a calibration and no date for it."""
     source = SessionSource(build(tmp_path, streams=modules("46100", date=None)), zone=PACIFIC)
     assert source.calibrations()[0]["calibrated_at"] is None
 

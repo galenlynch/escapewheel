@@ -1,13 +1,13 @@
 """Reach an external resource's bytes, wherever they are.
 
-`04` §5.1 makes referencing the expected form for a large resource, and in production that means
+Part 04 §5.1 makes referencing the expected form for a large resource, and in production that means
 an object store. What a packet may then say about those bytes is bounded by two things.
 
-**Nothing here runs by default.** `04` §5.3 keeps structural validation off the network:
+**Nothing here runs by default.** Part 04 §5.3 keeps structural validation off the network:
 reachability, credentials and whether the caller is offline are properties of a situation, not
 of a packet. Every function in this module is reached only from an explicitly requested mode.
 
-**What is verified is a point in time.** `03` §8: immutability covers packet-owned bytes,
+**What is verified is a point in time.** Part 03 §8: immutability covers packet-owned bytes,
 and an external resource may change or vanish without the packet changing at all. So these
 return what was true when they looked, which is what `verified_at` records beside them.
 
@@ -16,7 +16,7 @@ resolves to a local path or is handed to DuckDB as a URI; a Zarr array is handed
 own library opens it. What needs a store client is R36's verification -- list a prefix, and hash
 its members -- and both users of it are on that side: this package checks what a manifest claims,
 and `escapewheel-writer` establishes it in the first place through its `verify` setting. The writer
-depends on this package already, because `05`'s commit is validate-then-rename.
+depends on this package already, because Part 05's commit is validate-then-rename.
 
 A local path needs no library. Any other scheme goes through fsspec, which is not a dependency
 of this package -- the `remote` extra brings it, and a backend for the scheme is separate again
@@ -57,7 +57,7 @@ def local_path(uri: str) -> Path:
     return Path(unquote(urlparse(uri).path)) if urlparse(uri).scheme == "file" else Path(uri)
 
 
-#: How many of a prefix's members to read at once when digesting (`04` §5.4). Object stores are
+#: How many of a prefix's members to read at once when digesting (Part 04 §5.4). Object stores are
 #: latency-bound per object, so this is the difference between a minute and eight over a
 #: session's LFP; the value is modest because a store also rate-limits, and the gain is mostly
 #: had by the eighth worker.
@@ -83,7 +83,7 @@ def _filesystem(uri: str) -> tuple[Any, str]:
 
 @dataclass(frozen=True)
 class StoreDigest:
-    """A content hash the store computed itself, in the store's own algorithm (`04` §5.4).
+    """A content hash the store computed itself, in the store's own algorithm (Part 04 §5.4).
 
     Never a substitute for sha256: it answers whether anything changed in place, not whether
     these are the bytes a manifest describes.

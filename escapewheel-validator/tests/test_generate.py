@@ -1,7 +1,7 @@
 
 
 def test_a_tree_digest_does_not_depend_on_enumeration_order(tmp_path):
-    """`04` §5.4 sorts the member keys, which is what makes the digest reproducible.
+    """Part 04 §5.4 sorts the member keys, which is what makes the digest reproducible.
 
     Two implementations enumerate an object-store prefix and a local directory in different
     orders; a digest that folded them in arrival order would disagree between them.
@@ -38,7 +38,7 @@ def test_changing_one_member_changes_the_tree_digest(tmp_path):
 
 
 def test_adding_a_member_changes_the_tree_digest(tmp_path):
-    """`04` §5.4: the declared members and the digested listing cannot disagree."""
+    """Part 04 §5.4: the declared members and the digested listing cannot disagree."""
     from escapewheel_validator.stores import digest
 
     prefix = tmp_path / "array.zarr"

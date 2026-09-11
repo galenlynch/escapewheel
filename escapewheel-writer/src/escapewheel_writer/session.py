@@ -1,6 +1,6 @@
 """Build a packet from a recipe.
 
-This is `05` Stages 2-6 with the parameters supplied rather than written into the code. The
+This is Part 05 Stages 2-6 with the parameters supplied rather than written into the code. The
 recipe says which sources exist and which resources each is responsible for; this module
 orders them, runs them, keeps what each one owns, and commits.
 
@@ -64,7 +64,7 @@ CONSUMES: dict[str, tuple[str, ...]] = {
 }
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
-#: staged packet. `05` stage 8 calls these optional, so a recipe that names none is complete.
+#: staged packet. Part 05 stage 8 calls these optional, so a recipe that names none is complete.
 MATERIALIZERS: dict[str, str] = {"analysis.spike_events": "spike_events"}
 
 
@@ -87,7 +87,7 @@ MATERIALIZERS: dict[str, str] = {"analysis.spike_events": "spike_events"}
 #: So the row group is both the fetch unit and the prune unit for us, and pruning is what costs.
 BATCH_ROWS = 1_000_000
 
-#: The most error a mapping may carry before `01` §3.9 calls it undefined, in **seconds**.
+#: The most error a mapping may carry before Part 01 §3.9 calls it undefined, in **seconds**.
 #:
 #: A duration rather than a tick count, because it is a claim about time and not about one
 #: clock's granularity. Three milliseconds is R40's default: above every measured p95 by a
@@ -130,9 +130,9 @@ class Context:
         electrode table being parsed once per adapter.
     stated : dict
         Resource to source kind to the rows that kind produced, for the resources a preference
-        arbitrates. Held so `05` §3.4 can compare the winner's row against the one it displaced;
+        arbitrates. Held so Part 05 §3.4 can compare the winner's row against the one it displaced;
         bounded to those resources, because a preference may only name one more than one source
-        produces (`05` §3.3) and every such resource is metadata-scale.
+        produces (Part 05 §3.3) and every such resource is metadata-scale.
     """
 
     session_id: str
@@ -153,13 +153,13 @@ class Context:
     #: `core.clock_observation_intervals` rows, whatever source produced them, since R39's
     #: origin is a minimum across all of them and no single adapter sees them all.
     observed: list[dict[str, Any]] = field(default_factory=list)
-    #: What `_bound_for` measured, for the import run's parameters (`01` §3.9, §4).
+    #: What `_bound_for` measured, for the import run's parameters (Part 01 §3.9, §4).
     measured_bound: dict[str, Any] = field(default_factory=dict)
     #: The anchors and the bound, once `alignment` has settled them.
     _alignment: tuple[dict[str, Any], float] | None = None
     #: What the build itself observed, reported beside the adapters' own notes.
     notes: list[str] = field(default_factory=list)
-    #: `05` §3.6: `block.field` to the registry type the packet stores it as, so a declared
+    #: Part 05 §3.6: `block.field` to the registry type the packet stores it as, so a declared
     #: value and a stated one are compared after both are normalized, not as they were written.
     fact_types: dict[str, str] = field(default_factory=dict)
 
@@ -306,17 +306,17 @@ def _reference_clock(recipe: Recipe, context: Context) -> Any:
     raise RecipeError(f"no [[clock]] declares {wanted!r}, which [session].reference_clock_id names")
 
 
-#: `05` §3.6: facts whose difference refuses a build rather than being reported. A subject is not
-#: scoped to a session (`00` §2.4), so a wrong one agrees with another packet's animal instead of
+#: Part 05 §3.6: facts whose difference refuses a build rather than being reported. A subject is not
+#: scoped to a session (Part 00 §2.4), so a wrong one agrees with another packet's animal instead of
 #: colliding with the true value, and nothing downstream can detect it.
 REFUSES_ON_DIFFERENCE = frozenset({"subject.subject_id"})
 
-#: The recipe block each resource's fields are declared in, for `05` §3.6's comparison type.
+#: The recipe block each resource's fields are declared in, for Part 05 §3.6's comparison type.
 FACT_BLOCKS = {"session": "core.sessions", "subject": "core.subjects"}
 
 
 def _fact_types(registry: Mapping[str, Any]) -> dict[str, str]:
-    """`block.field` to the registry type the packet stores it as (`05` §3.6)."""
+    """`block.field` to the registry type the packet stores it as (Part 05 §3.6)."""
     return {
         f"{block}.{column['name']}": column["type"]
         for block, resource in FACT_BLOCKS.items()
@@ -343,7 +343,7 @@ def _normalized(value: Any, declared_type: str | None) -> Any:
 
 
 def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) -> None:
-    """Compare what the recipe declares against what this source states (`05` §3.6).
+    """Compare what the recipe declares against what this source states (Part 05 §3.6).
 
     Reported rather than refused, except where the fact identifies something a reader resolves
     across packets: a recipe correcting a source is the ordinary case (R87 §1.3), and refusing on
@@ -356,7 +356,7 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
         want, stated = declared[fact], getattr(source, attribute, None)
         reason = recipe.overrides.get(fact)
         if stated is None:
-            # `05` §3.6: silence is a fact about the source, not a disagreement -- but it is
+            # Part 05 §3.6: silence is a fact about the source, not a disagreement -- but it is
             # reported, so a build log tells a verified fact from an asserted one.
             notes.append(f"{fact} {want!r} went unchecked; {spec.kind} states none")
             continue
@@ -370,7 +370,7 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
         elif fact in REFUSES_ON_DIFFERENCE:
             raise SourceDefect(
                 f"{fact} is {want!r} and {getattr(source, 'path', spec.kind)} states {stated!r}; "
-                "a declared fact differs from the source that states it, with no override (`05` §3.6)"
+                "a declared fact differs from the source that states it, with no override (Part 05 §3.6)"
             )
         else:
             notes.append(f"{fact} is {want!r} and {spec.kind} states {stated!r}; the recipe's value is used")
@@ -387,7 +387,7 @@ def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) ->
             }
             for row in source.units()
         }
-        # `02` §12.4 makes the two rate forms exclusive, so a clock states one or the other and
+        # Part 02 §12.4 makes the two rate forms exclusive, so a clock states one or the other and
         # this reads whichever it states. The rational is the common case; the float is what a
         # source that measured its rate rather than declaring it records.
         context.clocks.update(
@@ -396,7 +396,7 @@ def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) ->
              for c in source.clocks()})
     _compare_declared_facts(spec, source, context, recipe)
     if spec.kind == "session":
-        # `05` §3.6: both ends come from the declared stream windows rather than from the
+        # Part 05 §3.6: both ends come from the declared stream windows rather than from the
         # recipe, because a hand-entered start transcribes the source's own derivation rather
         # than competing with it. Reported, never discarded silently.
         began, ended = source.extent()
@@ -441,13 +441,13 @@ def _bound_for(
     tolerance: float,
     rate: float,
 ) -> tuple[float, dict[str, Any]]:
-    """Choose the bound to map at, measuring it as `01` §3.9 requires.
+    """Choose the bound to map at, measuring it as Part 01 §3.9 requires.
 
     A packet whose earliest data sits inside one median anchor interval of its first anchor
-    needs nothing; `01` §3.9's default covers it and this returns it unmeasured. Where it does
-    not -- and withholding a displaced first anchor (`02` §12.6) is what usually makes it not --
+    needs nothing; Part 01 §3.9's default covers it and this returns it unmeasured. Where it does
+    not -- and withholding a displaced first anchor (Part 02 §12.6) is what usually makes it not --
     the writer may go further only by measuring the estimator at the distance it intends to
-    use and finding its **95th percentile** within `tolerance` (`01` §3.9). The median is not a
+    use and finding its **95th percentile** within `tolerance` (Part 01 §3.9). The median is not a
     statement about what a consumer may rely on.
 
     Parameters
@@ -459,7 +459,7 @@ def _bound_for(
         ends count: a session whose sync train stops well before its recording does needs the
         bound at the far end, and only the window says so.
     tolerance : float
-        The most error the mapping may carry, in seconds (`01` §3.9).
+        The most error the mapping may carry, in seconds (Part 01 §3.9).
     rate : float
         The parent clock's rate in hertz, which turns that duration into the parent ticks the
         measurement is in.
@@ -488,7 +488,7 @@ def _bound_for(
         "distance": distance,
         "tolerance_seconds": tolerance,
         # Every statistic, so a reader may judge the packet by a stricter rule than the
-        # writer applied (`01` §3.9).
+        # writer applied (Part 01 §3.9).
         "p95_error_seconds": round(worst / rate, 9),
         "median_error_seconds": round(max((m["median"] for m in measured.values() if m), default=0.0) / rate, 9),
         "max_error_seconds": round(max((m["max"] for m in measured.values() if m), default=0.0) / rate, 9),
@@ -504,10 +504,10 @@ def _time_origin(
     by_clock: Mapping[str, tuple[NDArray[np.int64], NDArray[np.int64]]],
     bound: float,
 ) -> int | None:
-    """`01` §2.1: the earliest observation start among the session's clocks, on the reference.
+    """Part 01 §2.1: the earliest observation start among the session's clocks, on the reference.
 
     Returns None where any clock's window start cannot be mapped, since a minimum taken over
-    some of the clocks is not the minimum `05` §7 requires a writer to declare -- and R39
+    some of the clocks is not the minimum Part 05 §7 requires a writer to declare -- and R39
     §2.4 says an origin the writer cannot compute is one it must not state.
     """
     from escapewheel_reader.clocks import align
@@ -760,11 +760,11 @@ def build(
         registry,
         packet_id=recipe.packet_id,
         description=recipe.description,
-        # `09` §2: the recipe names them, so a source may own an extension's table exactly as it
+        # Part 09 §2: the recipe names them, so a source may own an extension's table exactly as it
         # owns a core one. Which is what keeps declaring an extension from being harder than
         # adding a column to core -- the gradient that leaves NWB's own mechanism unused.
         extensions=[load_extension(named, base=recipe.path.parent) for named in recipe.extensions],
-        # `02` §7.1's fill needs the session before any source runs, and `core.sessions` is staged
+        # Part 02 §7.1's fill needs the session before any source runs, and `core.sessions` is staged
         # last: three tables reached validation with a null `session_id` because of the order.
         session=session_id,
         # An extension reaches the writer across a file or a subprocess, so what it says about its
@@ -772,7 +772,7 @@ def build(
         encoding_exceptions=_encoding_exceptions(recipe),
     )
 
-    # `05` §3.1: the recipe supplies `core.subjects` only where no source owns it, so a packet
+    # Part 05 §3.1: the recipe supplies `core.subjects` only where no source owns it, so a packet
     # whose NWB claims the table gets the row that file states rather than a hand-typed one.
     if recipe.subject and "core.subjects" not in recipe.owners:
         writer.add("core.subjects", [dict(recipe.subject)])
@@ -803,7 +803,7 @@ def build(
                 writer.reference_array(resource_id, array)
                 say(f"  referenced {resource_id} ({array.physical_profile}, {', '.join(array.codecs) or 'no codec'})")
         # Any adapter may reference media, not only this kind: a source says so by defining
-        # `external_media`, and what kind it happens to be is not the question (`04` §5.1).
+        # `external_media`, and what kind it happens to be is not the question (Part 04 §5.1).
         for resource_id, media in getattr(source, "external_media", dict)().items():
             writer.reference_media(resource_id, media)
             size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
@@ -862,7 +862,7 @@ def _import_run(
 ) -> dict[str, Any]:
     """Build the `core.processing_runs` row for this import, carrying the recipe as its parameters.
 
-    `05` Stage 3 wants normalization deterministic in declared parameters. Putting the recipe
+    Part 05 Stage 3 wants normalization deterministic in declared parameters. Putting the recipe
     itself in `parameters` is what makes the run record answerable rather than merely present:
     a reader can see what produced the packet, and `code_uri` names the file it came from.
 
@@ -887,8 +887,8 @@ def _import_run(
             {
                 "recipe": recipe.document,
                 "compensations": describe(compensations or []),
-                # `02` §12.6 and §4: what the terminal-anchor test withheld, and the measurement
-                # that justifies mapping further than `01` §3.9's default.
+                # Part 02 §12.6 and §4: what the terminal-anchor test withheld, and the measurement
+                # that justifies mapping further than Part 01 §3.9's default.
                 **_alignment_parameters(context),
             },
             default=str,
@@ -917,7 +917,7 @@ def _add_records(
     for resource, rows in _records(spec, source, context).items():
         produced[resource] = len(rows)
         if resource in _ARBITRATED:
-            # Kept rather than counted, so `05` §3.4 can compare what the winner staged against
+            # Kept rather than counted, so Part 05 §3.4 can compare what the winner staged against
             # what the source it displaced stated. Only where a preference arbitrates, which is
             # what keeps this bounded.
             context.stated.setdefault(resource, {})[spec.kind] = rows
@@ -931,7 +931,7 @@ def _add_records(
     return produced
 
 
-#: `05` §3.4 reaches a resource a preference arbitrates, which is not every resource one names:
+#: Part 05 §3.4 reaches a resource a preference arbitrates, which is not every resource one names:
 #: `_resolve_ownership` checks `SHARED` first and returns, so for a resource in both tables the
 #: preference decides nothing and the sources hold *different* rows (R108 §4). Comparing those
 #: would report a probe clock against a reference clock and call the difference a loss.
@@ -954,19 +954,19 @@ def _encoding_exceptions(recipe: Recipe) -> dict[str, dict[str, tuple[str, ...]]
 
 
 def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Recipe) -> None:
-    """Refuse where preferring a source discarded a value another source stated (`05` §3.4).
+    """Refuse where preferring a source discarded a value another source stated (Part 05 §3.4).
 
-    `05` §3.4 spends a preference to buy silence about a discarded row, on the premise that the
+    Part 05 §3.4 spends a preference to buy silence about a discarded row, on the premise that the
     loser's copy is redundant. A preference is declared before either source is opened, so nothing
     checked the premise: one naming a source that turns out to state less, or nothing at all, buys
     the same silence and loses the difference. A preferred source producing no rows while another
     does is the limiting case, every value being discarded.
 
-    Compared over declared columns. `metadata` is schemaless by design (`02` §8.6), so two sources
-    filling it differently is not a difference this can weigh, and `02` §8.6 already binds it.
+    Compared over declared columns. `metadata` is schemaless by design (Part 02 §8.6), so two sources
+    filling it differently is not a difference this can weigh, and Part 02 §8.6 already binds it.
 
     A build refuses rather than composing the row from both, which would be a fact no source stated
-    (`05` §3.4). The recipe resolves it: name the fact in `[overrides]` with its reason (`05` §3.6),
+    (Part 05 §3.4). The recipe resolves it: name the fact in `[overrides]` with its reason (Part 05 §3.6),
     prefer the other source, or fix the one that states less.
     """
     kinds = {spec.kind for spec in recipe.sources}
@@ -1003,7 +1003,7 @@ def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Rec
                 )
     if lost:
         raise SourceDefect(
-            "preferring a source discarded a fact another stated (`05` §3.4). Declare it in "
+            "preferring a source discarded a fact another stated (Part 05 §3.4). Declare it in "
             "[overrides] with a reason, prefer the other source, or fix the one that states less:"
             "\n  " + "\n  ".join(sorted(set(lost)))
         )
@@ -1043,12 +1043,12 @@ def _note_unclaimed(spec: SourceSpec, source: Any, produced: Mapping[str, int]) 
 
 
 def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None]) -> None:
-    """Put `02` §12.6's terminal-anchor test on each clock it examined (R99 §3.2).
+    """Put Part 02 §12.6's terminal-anchor test on each clock it examined (R99 §3.2).
 
     The sync source computes this and emits only the reference clock's row; the probe clock rows
     are the sorter's, and `CONSUMES` runs the sorter first, so they are already staged. Three
     states are the point: a clock the test never reached keeps both columns null, where one it
-    reached and kept records `false` (`06` §4).
+    reached and kept records `false` (Part 06 §4).
     """
     withheld = getattr(context.sources.get("sync"), "withheld", None)
     if not withheld:
@@ -1075,23 +1075,23 @@ def _declare_origin(context: Context, say: Callable[[str], None]) -> None:
     if not (context.observed and context.reference):
         return
     by_clock, bound = context.alignment()
-    # R99 §3.1: a null column is a writer that stayed within `01` §3.9's default, so only a
+    # R99 §3.1: a null column is a writer that stayed within Part 01 §3.9's default, so only a
     # measured widening is recorded. Set before the origin, which may decline to be stated.
     if bound != BOUND:
         context.session_extra["alignment_bound"] = bound
         say(f"  alignment_bound {bound:g} median anchor intervals (R99 §3.1)")
     origin = _time_origin(context, context.observed, by_clock, bound)
     if origin is None:
-        say("  no t_zero_tick: a clock's observation start does not map to the reference (`01` §2.2)")
+        say("  no t_zero_tick: a clock's observation start does not map to the reference (Part 01 §2.2)")
         return
     context.session_extra["t_zero_tick"] = origin
-    say(f"  t_zero_tick {origin:,} on {context.reference.clock_id} (`01` §2.1)")
+    say(f"  t_zero_tick {origin:,} on {context.reference.clock_id} (Part 01 §2.1)")
 
 
 def _alignment_parameters(context: Context | None) -> dict[str, Any]:
     """Return the measurement behind the run's alignment decisions, or nothing.
 
-    `02` §12.6 draws the line: the three facts a consumer needs to place a tick are columns, and
+    Part 02 §12.6 draws the line: the three facts a consumer needs to place a tick are columns, and
     what justified them stays here. So this holds the error distribution and the distance it was
     measured at, and no longer the bound, the withheld anchors or the phase steps.
     """

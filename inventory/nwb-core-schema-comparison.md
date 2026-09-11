@@ -46,7 +46,7 @@ No change needed.
 
 ### 2.3 `Subject.age` — an alternative to date of birth
 
-"Can be supplied instead of `date_of_birth`." R4 §3.4 struck `age_at_session` from `09` as a
+"Can be supplied instead of `date_of_birth`." R4 §3.4 struck `age_at_session` from Part 09 as a
 reconciliation rather than a feature, noting the redaction argument and deferring. NWB
 supports it explicitly for that reason. Worth revisiting; not urgent.
 

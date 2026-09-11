@@ -43,10 +43,10 @@ class Check:
 
 
 def concerns(check: Check, written: Collection[str]) -> bool:
-    """Whether `03` §9.4 obliges `check` to run when `written` are the resources just written.
+    """Whether Part 03 §9.4 obliges `check` to run when `written` are the resources just written.
 
     A check must run when it is attached to one of them, or when its query names one. Anything
-    else reads only files an amendment may not modify (`03` §9.2) and `04` §5.1 declares immutable,
+    else reads only files an amendment may not modify (Part 03 §9.2) and Part 04 §5.1 declares immutable,
     so it can only reach the verdict it reached before.
 
     The test is syntactic, over the flattened name a query must use (R2 §7), because that is
@@ -68,7 +68,7 @@ def adjacency_settles_uniqueness(resource: str, table: Mapping[str, Any]) -> boo
     itself, or one the registry declares `determined_by` a subset of the key: a column that is a
     function of the key takes the same value in both rows, so it cannot separate them.
 
-    `analysis.spike_events` is the case that needs the second clause. `03` §5.4 sorts it by
+    `analysis.spike_events` is the case that needs the second clause. Part 03 §5.4 sorts it by
     `(session_id, clock_id, time_bucket_tick, …)` so a time filter and a unit filter both prune,
     which puts two non-key columns ahead of the key — but `clock_id` is the session's reference
     clock and `time_bucket_tick` is a function of `t_tick`, so neither varies between rows that
@@ -80,8 +80,8 @@ def adjacency_settles_uniqueness(resource: str, table: Mapping[str, Any]) -> boo
     the only correct check.
     """
     key = table.get("primary_key")
-    # `03` §5.3: a table with no override is in its primary key's order. R93 §3.3 removed the
-    # registry field that used to say so, and `03` §5.4's list says it instead.
+    # Part 03 §5.3: a table with no override is in its primary key's order. R93 §3.3 removed the
+    # registry field that used to say so, and Part 03 §5.4's list says it instead.
     sort = stored_order(resource, table)
     if not key or not sort:
         return False
@@ -92,7 +92,7 @@ def adjacency_settles_uniqueness(resource: str, table: Mapping[str, Any]) -> boo
     return all(column in key or determined.get(column, {object()}) <= set(key) for column in sort[: max(positions) + 1])
 
 
-#: A dotted resource ID: two lowercase snake_case names. `02` §8.3 makes this checkable without
+#: A dotted resource ID: two lowercase snake_case names. Part 02 §8.3 makes this checkable without
 #: knowing which resources exist, which is what nothing did -- `scope_kind` could hold an empty
 #: string and no rule would see it.
 RESOURCE_ID = r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$"
@@ -108,7 +108,7 @@ def _discriminator(
     specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
     specs: Mapping[str, Any] | None = None,
 ) -> list[Check]:
-    """Build the checks one discriminator column implies (`02` §8.3).
+    """Build the checks one discriminator column implies (Part 02 §8.3).
 
     Three, and they fail for different reasons: the value is not a resource ID at all, it names a
     resource the packet does not declare, or it names one that exists and holds no such row. Only
@@ -132,7 +132,7 @@ def _discriminator(
     checks.append(
         Check(
             f"{resource}.{column['name']}.kind_declared",
-            # `02` §8.3. Where an unresolvable kind is a fact rather than a defect it is still
+            # Part 02 §8.3. Where an unresolvable kind is a fact rather than a defect it is still
             # reported: R49 §2.5's union passed it in silence, which is what let an extension
             # kind go unchecked without anything saying so.
             "error" if column.get("resolves") == "required" else "info",
@@ -142,8 +142,8 @@ def _discriminator(
         )
     )
 
-    # `02` §8.3: the third shape. The named resource's rows *are* the positions, so there is no key
-    # correspondence and `02` §8.3's reverse check does not apply -- which R90 said twice and neither
+    # Part 02 §8.3: the third shape. The named resource's rows *are* the positions, so there is no key
+    # correspondence and Part 02 §8.3's reverse check does not apply -- which R90 said twice and neither
     # sentence could be acted on, by-position and shared-key being indistinguishable until
     # `positions_in` declared the difference. What is checkable instead is that the column named
     # holds a position: the registry knows each resource's `structural_index` columns, so they
@@ -178,28 +178,28 @@ def _discriminator(
             )
         return checks
 
-    # A paired value lives in the named table's key space (`02` §8.3), so it resolves value-to-key.
+    # A paired value lives in the named table's key space (Part 02 §8.3), so it resolves value-to-key.
     paired = column.get("discriminates")
     if paired is None:
-        # A shared-key discriminator: the reference `02` §8.3 requires of the named table
-        # generates the anti-join from detail to discriminated row. `02` §8.3 adds the direction a
+        # A shared-key discriminator: the reference Part 02 §8.3 requires of the named table
+        # generates the anti-join from detail to discriminated row. Part 02 §8.3 adds the direction a
         # foreign key cannot point -- a row naming a kind with no counterpart in it, which is
-        # `01` §3.10a's "a kind that resolves to nothing is a name again" and which every other
+        # Part 01 §3.10a's "a kind that resolves to nothing is a name again" and which every other
         # check passes. Only where `resolves` is required: an optional kind naming nothing is a
         # fact (R49), not a defect.
         if column.get("resolves") != "required" or not table.get("primary_key"):
             return checks
         # Only a resource that could *be* a specialisation: one declaring a reference back over
-        # the discriminated table's whole key, which is what `02` §8.3 requires of a named
+        # the discriminated table's whole key, which is what Part 02 §8.3 requires of a named
         # resource. Without the filter this generates one check per declared resource, and 34 of
-        # the 35 name a core table that could never carry the key (`02` §8.3).
+        # the 35 name a core table that could never carry the key (Part 02 §8.3).
         for kind, mapping in sorted((specialises or {}).get(resource, ()), key=lambda pair: pair[0]):
             on = " AND ".join(f"s.{quote(mapping[c])} = d.{quote(c)}" for c in table["primary_key"])
             checks.append(
                 Check(
                     f"{resource}.{column['name']}.{sql_name(kind)}_is_specialised",
                     "error",
-                    f"a row names {kind} and has no counterpart there (`02` §8.3)",
+                    f"a row names {kind} and has no counterpart there (Part 02 §8.3)",
                     f"SELECT {', '.join(quote(c) for c in table['primary_key'])} FROM {name} d "
                     f"WHERE d.{col} = '{kind}' "
                     f"AND NOT EXISTS (SELECT 1 FROM {sql_name(kind)} s WHERE {on})",
@@ -208,7 +208,7 @@ def _discriminator(
             )
         return checks
     # Only a resource a paired value can actually name: one with a single-column key, which is
-    # what `_resolve_column` returns a column for (`02` §8.3).
+    # what `_resolve_column` returns a column for (Part 02 §8.3).
     joinable = {k: key for k, key in kinds.items() if k in included and key is not None}
     if not joinable:
         return checks
@@ -251,7 +251,7 @@ def generate(
     registry : Mapping
         A parsed registry document.
     advisory : bool, default False
-        Include rules marked ``advisory`` (`02` §10.2). They never carry ``error``, so
+        Include rules marked ``advisory`` (Part 02 §10.2). They never carry ``error``, so
         enabling them cannot change whether a packet passed.
     only : set of str, optional
         Restrict to these resources. Checks referring to a resource outside the set are
@@ -259,13 +259,13 @@ def generate(
         table, and a foreign key into an absent one cannot be evaluated.
     resolvable : set of str, optional
         Resources a reference may resolve against, beyond this registry's own tables. An
-        extension registry needs core's tables here, since it declares none of them and `09` §2
+        extension registry needs core's tables here, since it declares none of them and Part 09 §2
         lets it reference them.
     kinds : Mapping, optional
-        Every resource a discriminator may name (`02` §8.3), mapped to the column a paired value
+        Every resource a discriminator may name (Part 02 §8.3), mapped to the column a paired value
         joins to -- the `*_name` where the key is assigned, the key where it is carried (R55
-        §2.3.3). Supplied by the caller rather than read from this registry, because `02` §8.3
-        requires the resolution to reach the packet's *extension* kinds -- the case `02` §8.3
+        §2.3.3). Supplied by the caller rather than read from this registry, because Part 02 §8.3
+        requires the resolution to reach the packet's *extension* kinds -- the case Part 02 §8.3
         designed the mechanism for and whose hand-written union quietly matched no branch.
 
     Returns
@@ -277,7 +277,7 @@ def generate(
     tables: Mapping[str, Any] = registry["tables"]
     included = set(tables) if only is None else set(only)
     # What a reference may point at, which is not the same as what gets checks. An extension
-    # declares its own tables and references core's (`09` §2), so without this its foreign keys
+    # declares its own tables and references core's (Part 09 §2), so without this its foreign keys
     # generate nothing and an orphan validates clean -- the gap R46 closed for core.
     reachable = included if resolvable is None else set(resolvable) | included
 

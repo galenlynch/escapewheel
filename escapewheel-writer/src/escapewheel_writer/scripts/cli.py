@@ -4,7 +4,7 @@
 ``escapewheel.commands`` group, so installing this package makes the subcommands appear rather
 than competing for the command name.
 
-The three follow `05`'s stages. ``inspect`` is Stage 1 -- what a source offers, before anything
+The three follow Part 05's stages. ``inspect`` is Stage 1 -- what a source offers, before anything
 is staged. ``init`` turns several inspections into a recipe draft, so the ownership decisions a
 build depends on are made from what the sources actually hold rather than from memory.
 ``import`` is Stages 2-6.
@@ -72,7 +72,7 @@ def _open(kind: str, root: Path, session_id: str) -> Any:
 
 
 def _inspect(args: argparse.Namespace) -> int:
-    """Report what one source offers (`05` Stage 1)."""
+    """Report what one source offers (Part 05 Stage 1)."""
     source = _open(args.kind, args.root, args.session_id)
     offered = source.offers()
     print(f"{args.kind}  {args.root}")
@@ -183,7 +183,7 @@ def _wins(kind: str, offering: list[str]) -> bool:
 
 
 def _import(args: argparse.Namespace) -> int:
-    """Build and commit a packet from a recipe (`05` Stages 2-6)."""
+    """Build and commit a packet from a recipe (Part 05 Stages 2-6)."""
     recipe = Recipe.load(args.recipe)
     registry_path = args.registry or recipe.registry
     if registry_path is None:
@@ -245,7 +245,7 @@ def _import(args: argparse.Namespace) -> int:
 
 
 def _say_verdict(out: Path, report: Any) -> None:
-    """Report core's verdict and the extensions' apart, as `05` §5.4 keeps them.
+    """Report core's verdict and the extensions' apart, as Part 05 §5.4 keeps them.
 
     A packet stays core-conformant carrying an extension whose rules a validator cannot run, so
     one total conflates two verdicts and reads as a packet that committed despite an error.
@@ -260,7 +260,7 @@ def _say_verdict(out: Path, report: Any) -> None:
 
 
 def _verify(args: argparse.Namespace) -> int:
-    """Record what is true about a committed packet's external resources (`04` §5.2)."""
+    """Record what is true about a committed packet's external resources (Part 04 §5.2)."""
     from ..verify import verify
 
     report, manifest = verify(args.packet, level=args.level)
@@ -274,7 +274,7 @@ def _verify(args: argparse.Namespace) -> int:
 
 
 def _prune(args: argparse.Namespace) -> int:
-    """Remove what a committed packet no longer names (`03` §9.5)."""
+    """Remove what a committed packet no longer names (Part 03 §9.5)."""
     from ..prune import prune
 
     plan = prune(
@@ -301,7 +301,7 @@ def _prune(args: argparse.Namespace) -> int:
 
 
 def _extension(args: argparse.Namespace) -> int:
-    """Draft an extension registry from tables that already exist (`09` §2)."""
+    """Draft an extension registry from tables that already exist (Part 09 §2)."""
     from ..scaffold import draft
 
     tables = {}
@@ -349,7 +349,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     init.set_defaults(func=_init)
 
     extension = subcommands.add_parser("extension", help="draft an extension registry from tables that already exist")
-    extension.add_argument("extension_id", help="namespace every table is prefixed by (`09` §2)")
+    extension.add_argument("extension_id", help="namespace every table is prefixed by (Part 09 §2)")
     extension.add_argument(
         "--table",
         action="append",
@@ -368,7 +368,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         "--level",
         choices=("size", "members", "sha256"),
         default="members",
-        help="how much to establish; sha256 reads every byte, which is the cost `04` §5.2 puts "
+        help="how much to establish; sha256 reads every byte, which is the cost Part 04 §5.2 puts "
         "at publication rather than in a build (default: members)",
     )
     verifier.set_defaults(func=_verify)

@@ -310,7 +310,7 @@ class SyncSource:
         Streams skipped, and why.
     """
 
-    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
+    #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
     PRODUCES = frozenset(
@@ -322,7 +322,7 @@ class SyncSource:
         }
     )
 
-    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
+    #: Part 05 §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -346,7 +346,7 @@ class SyncSource:
         self.prefix = prefix
         self.notes: list[str] = []
         #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters. Every
-        #: clock aligned appears here, dropping nothing included (`06` §4).
+        #: clock aligned appears here, dropping nothing included (Part 06 §4).
         self.withheld: dict[str, dict[str, Any]] = {}
         #: Clock ID to phase steps found in the parent's alignment, for the run's parameters.
         #: Reported, never corrected: whether a step also moved the devices timestamped on the
@@ -585,7 +585,7 @@ class SyncSource:
             raise SourceDefect(
                 f"{stream.key}: sync pulses do not increase on both clocks, so interpolation "
                 "between them is undefined (R13 §3). A counter that reset mid-recording is two "
-                "clocks, not one (`01` §3.9)"
+                "clocks, not one (Part 01 §3.9)"
             )
         # The window HARP was observed over is the whole pulse train, recorded before the test
         # below removes anchors: withholding one is a statement about how well its parent tick
@@ -593,7 +593,7 @@ class SyncSource:
         self._observed.append((int(parents[0]), int(parents[-1])))
         drop_first, drop_last, residuals = suspect_terminals(ticks, parents)
         withheld = ["first"] * drop_first + ["last"] * drop_last
-        # Recorded for every clock, including the ones that dropped nothing (`06` §4): a count
+        # Recorded for every clock, including the ones that dropped nothing (Part 06 §4): a count
         # of zero is the evidence that the bound was sufficient, and a packet that says nothing
         # is indistinguishable from one that never looked.
         self.withheld[clock] = {"anchors": withheld, "n_withheld": len(withheld), **residuals}
@@ -666,7 +666,7 @@ class SyncSource:
         return {resource: rows for resource, rows in built.items() if rows}
 
     def offers(self) -> dict[str, int]:
-        """Which resources this source supplies from its root, and how many rows (`05` §1)."""
+        """Which resources this source supplies from its root, and how many rows (Part 05 §1)."""
         return {resource: len(rows) for resource, rows in self.records().items()}
 
     def into(self, writer: Any, *, clock_id_for: Any = None) -> dict[str, int]:

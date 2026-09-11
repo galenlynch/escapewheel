@@ -32,7 +32,7 @@ def _validate(args: argparse.Namespace) -> int:
         print(f"  {finding.level:8s} {where}{finding.check}: {finding.message}")
         for row in finding.rows:
             print(f"           {tuple(row)}")
-    # `05` §5.4: the two verdicts are separate, so printing one total would say a packet failed when
+    # Part 05 §5.4: the two verdicts are separate, so printing one total would say a packet failed when
     # its core is conformant and an extension nobody is required to hold is not.
     core_errors = sum(f.level == "error" and f.extension is None for f in report.findings)
     status = "passed" if report.passed else "failed"
@@ -67,14 +67,14 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     parser.add_argument(
         "--external",
         action="store_true",
-        help="reach external resources and check their size and codecs (`04` §5.3 level 3a); "
+        help="reach external resources and check their size and codecs (Part 04 §5.3 level 3a); "
         "off by default because reachability is your situation, not the packet's",
     )
     parser.add_argument(
         "--store-digests",
         action="store_true",
         help="also compare each declared member's store digest with what the store reports now "
-        "(`04` §5.4); implies --external and costs only the listing it already does",
+        "(Part 04 §5.4); implies --external and costs only the listing it already does",
     )
     parser.add_argument(
         "--checksums",

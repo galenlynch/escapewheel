@@ -58,7 +58,7 @@ from the recipe and the registry, with no data in hand.
 
 ## An importer is not one step
 
-`05` is explicit: *"do not combine source parsing, normalization, validation, and writing into
+Part 05 is explicit: *"do not combine source parsing, normalization, validation, and writing into
 one opaque step."* The modules are that decomposition, and the rule that keeps it honest is
 that **an adapter never writes a file** — its return type is records, not a path.
 
@@ -76,7 +76,7 @@ sorter's units before it can attach a unit to an electrode.
 
 ## Commit is atomic
 
-`05` Stage 5: write staged resources, validate them where they stand, move them into place, and
+Part 05 Stage 5: write staged resources, validate them where they stand, move them into place, and
 rename the manifest **last**. Until that rename the root holds no manifest at all, so a reader
 finds nothing rather than a partial import claiming to be valid. A commit that finds errors
 raises `CommitRefused` and leaves `staging/` for inspection.

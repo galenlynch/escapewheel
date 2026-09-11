@@ -1,12 +1,12 @@
 """Stage, validate, and commit a packet.
 
-`05`'s core principle is that **validation is importation**: copying or converting bytes is
+Part 05's core principle is that **validation is importation**: copying or converting bytes is
 only staging, and a resource is not imported until it has passed the checks for its schema.
 This module is the writer and committer halves of that pipeline. It knows nothing about NWB,
 SpikeInterface, or any other source -- adapters hand it records, and it turns them into a
 packet or refuses to.
 
-The commit sequence is `05` Stage 5's, and its ordering is the whole guarantee:
+The commit sequence is Part 05 Stage 5's, and its ordering is the whole guarantee:
 
 1. write staged resources under ``staging/``;
 2. validate them there;
@@ -59,23 +59,23 @@ def _version() -> str:
     return __version__
 
 
-#: Where a manifest lives once committed (`04`).
+#: Where a manifest lives once committed (Part 04).
 MANIFEST = "packet.json"
 
-#: `04` §5.5's default source resolution document. Written at the packet root and **not** a packet
-#: resource: under the root so a copy carries it, outside the manifest so `04` §5.1's immutability
+#: Part 04 §5.5's default source resolution document. Written at the packet root and **not** a packet
+#: resource: under the root so a copy carries it, outside the manifest so Part 04 §5.1's immutability
 #: does not reach it and a moved mirror is fixed by editing it in place.
 SOURCES = "sources.json"
 
-#: The version of that document this writer emits (`04` §5.5).
+#: The version of that document this writer emits (Part 04 §5.5).
 SOURCES_VERSION = "escapewheel-sources-v0.1"
 
-#: Where a packet embeds the registry it was written against (`02` §9.2).
+#: Where a packet embeds the registry it was written against (Part 02 §9.2).
 REGISTRY_PATH = "schemas/logical_schemas.json"
-#: Where an extension registry lives in a packet (`09` §2, `09` §6).
+#: Where an extension registry lives in a packet (Part 09 §2, Part 09 §6).
 EXTENSIONS_PATH = "extensions"
 
-#: `03`'s portable profile.
+#: Part 03's portable profile.
 PROFILE = "escapewheel-portable-v0.1"
 
 
@@ -203,7 +203,7 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
 
     Each batch becomes exactly one row group, so the caller controls row-group boundaries as
     well as order. That is what lets `analysis.spike_events` keep every row group inside a
-    single time bucket (`03` §5.4) — cutting at a fixed row count instead would let a group
+    single time bucket (Part 03 §5.4) — cutting at a fixed row count instead would let a group
     straddle two buckets and span twice the intended time range — and it is what lets a caller
     size row groups for the store the packet will live on.
     """
@@ -266,11 +266,11 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
     return written
 
 
-#: Core tables an amendment may extend (`03` §9.2). Append-only by nature: a row records that
+#: Core tables an amendment may extend (Part 03 §9.2). Append-only by nature: a row records that
 #: something ran, and a later run does not change what an earlier one did.
 PROVENANCE = ("core.processing_runs", "core.source_files", "core.processing_run_inputs")
 
-#: Where superseded manifests are retained (`03` §9.3).
+#: Where superseded manifests are retained (Part 03 §9.3).
 MANIFESTS = "manifests"
 
 
@@ -278,7 +278,7 @@ def _bump(version: str) -> str:
     """Return the next packet version.
 
     Patch level, so a packet under development stays inside one minor series while the
-    structure moves. `03` §9.1 requires only that the new version sort strictly after the
+    structure moves. Part 03 §9.1 requires only that the new version sort strictly after the
     superseded one, and §8 leaves what it *means* open, so nothing here rests on the choice.
     """
     major, minor, patch, *_ = (*version.split("."), "0", "0", "0")
@@ -309,7 +309,7 @@ class StagedArray:
 
 @dataclass(frozen=True)
 class ExternalArray:
-    """A dense array the packet references rather than owns (`04` §5.1).
+    """A dense array the packet references rather than owns (Part 04 §5.1).
 
     Referencing is the expected form for a large one. Copying duplicates the bulk of a dataset
     for no gain, and transcoding to the portable floor throws away the acquisition's own
@@ -317,17 +317,17 @@ class ExternalArray:
     R20 replaces its timestamps.
 
     `sha256`, `size_bytes`, `members` and `verified_at` record what was true when someone
-    looked, not a promise about now: immutability covers packet-owned bytes only (`03` §8),
+    looked, not a promise about now: immutability covers packet-owned bytes only (Part 03 §8),
     and an external array may change or vanish without the packet changing at all.
 
-    `members` is `04` §5.4's record of what the prefix held, each entry carrying whatever the
+    `members` is Part 04 §5.4's record of what the prefix held, each entry carrying whatever the
     store said about itself. It is a record and not a resolution rule -- a reader hands the URI
     to Zarr, which addresses chunks by key and never enumerates.
     """
 
     array_asset_id: str
     uri: str
-    #: `04` §5.5: the body of data these bytes belong to. Where set, `uri` is a path relative to
+    #: Part 04 §5.5: the body of data these bytes belong to. Where set, `uri` is a path relative to
     #: wherever that source turns out to be rather than a location, and a resolution document
     #: says where that is.
     source: str | None = None
@@ -341,7 +341,7 @@ class ExternalArray:
 
 @dataclass(frozen=True)
 class ExternalMedia:
-    """An image or video the packet references rather than owns (`04` §5.1).
+    """An image or video the packet references rather than owns (Part 04 §5.1).
 
     The same bargain `ExternalArray` makes, for the same reason: three behaviour cameras of one
     session are 10 GB as MP4 and 80 GB as the AVI they were encoded from, so a packet that copied
@@ -356,7 +356,7 @@ class ExternalMedia:
     media_asset_id: str
     uri: str
     format: str
-    #: `04` §5.5, as on `ExternalArray`.
+    #: Part 04 §5.5, as on `ExternalArray`.
     source: str | None = None
     sha256: str | None = None
     size_bytes: int | None = None
@@ -364,7 +364,7 @@ class ExternalMedia:
 
 
 def _check_reference(resource_id: str, uri: str, source: str | None) -> None:
-    """Refuse a referenced URI that does not match how it will be resolved (`04` §5.1, `04` §5.5).
+    """Refuse a referenced URI that does not match how it will be resolved (Part 04 §5.1, Part 04 §5.5).
 
     Absolute where the entry names no source, because a relative one would resolve against a
     packet the bytes do not live in. Relative where it names one, because the source supplies
@@ -378,14 +378,14 @@ def _check_reference(resource_id: str, uri: str, source: str | None) -> None:
 
 
 def _digest(path: Path) -> str:
-    """`04` §5.4: what the packet says its own bytes are.
+    """Part 04 §5.4: what the packet says its own bytes are.
 
     Recorded for every packet-owned resource and not optional, because the promise it makes
-    checkable is not optional either: `04` §5.1 declares these bytes immutable and `03` §9.4 spends
+    checkable is not optional either: Part 04 §5.1 declares these bytes immutable and Part 03 §9.4 spends
     that, bounding revalidation after an amendment to what the amendment wrote. Costs 0.5% of a
     build -- the bytes were just written, so they are in page cache and hash at ~2 GB/s.
 
-    A prefix goes through `04` §5.4's canonical listing, a single file is its own bytes; `digest`
+    A prefix goes through Part 04 §5.4's canonical listing, a single file is its own bytes; `digest`
     already distinguishes them.
     """
     from escapewheel_validator.stores import digest
@@ -415,7 +415,7 @@ class PacketWriter:
     Parameters
     ----------
     registry : Mapping
-        The registry to write against. It is embedded in the packet (`02` §9.2), so the packet
+        The registry to write against. It is embedded in the packet (Part 02 §9.2), so the packet
         stays readable when the reference registry moves on.
     packet_id : str
         The packet's identifier.
@@ -443,17 +443,17 @@ class PacketWriter:
         #: resource to columns (`encoding.encodings`). Core names no extension table, so this is
         #: how one says what its measurements do without core being edited to know it exists.
         self._encoding_exceptions = dict(encoding_exceptions or {})
-        #: What `03` §5.5's rules cost where they guessed wrong, reported at commit. A rule is a
+        #: What Part 03 §5.5's rules cost where they guessed wrong, reported at commit. A rule is a
         #: good guess and an exception is how it is corrected, so a column more than
         #: `encoding.TOLERANCE` off its best is said aloud rather than silently paid for.
         self._encoding_notes: list[str] = []
         #: The session every session-scoped table's rows belong to, which `_with_session` fills
-        #: from (`02` §7.1). Given rather than read back out of `core.sessions`, because a build adds
+        #: from (Part 02 §7.1). Given rather than read back out of `core.sessions`, because a build adds
         #: that table last: reading it back left every table added before it unfilled, and only the
         #: adapters that happened to emit the column themselves were saved by it.
         self._session = session
         self._registry = registry
-        #: Extension registries this packet carries (`09` §2), by `extension_id`. An extension is a
+        #: Extension registries this packet carries (Part 09 §2), by `extension_id`. An extension is a
         #: registry document in R2's format, so everything below resolves a resource against core
         #: and then these -- there is no second code path for an extension's tables.
         self._extensions: dict[str, Mapping[str, Any]] = {}
@@ -462,13 +462,13 @@ class PacketWriter:
             for resource_id in document["tables"]:
                 if not resource_id.startswith(f"{extension_id}."):
                     raise ValueError(
-                        f"{resource_id} is not namespaced by {extension_id!r}; `09` §2 requires it, "
+                        f"{resource_id} is not namespaced by {extension_id!r}; Part 09 §2 requires it, "
                         "and an extension MUST NOT define a table in core or analysis"
                     )
                 if resource_id in registry["tables"]:
-                    raise ValueError(f"{resource_id} redefines a core table, which `09` §2 forbids")
+                    raise ValueError(f"{resource_id} redefines a core table, which Part 09 §2 forbids")
             self._extensions[extension_id] = document
-        #: Assigns the integer every identifier holds (`05` §8). One per packet, shared by every
+        #: Assigns the integer every identifier holds (Part 05 §8). One per packet, shared by every
         #: adapter, because two sources numbering the same probe differently is a defect no
         #: foreign key can see: both values resolve, to different rows.
         self.keys = Keys()
@@ -476,13 +476,13 @@ class PacketWriter:
         self._description = description
         self._tables: dict[str, list[Mapping[str, Any]]] = {}
         self._batches: dict[str, Iterable[pa.RecordBatch]] = {}
-        #: `03` §9.3's retention policy, written into every manifest. One kept version and no age
+        #: Part 03 §9.3's retention policy, written into every manifest. One kept version and no age
         #: limit: a packet that is never amended retains nothing, and a packet is archival where
         #: a table is operational, so age alone never expires a manifest.
         self._retention: dict[str, Any] = {"keep_versions": 1}
-        #: `04` §5.5: where each named source was read from, written to `sources.json` at commit.
+        #: Part 04 §5.5: where each named source was read from, written to `sources.json` at commit.
         #: A record of where the writer looked, never a resolution rule binding a later reader --
-        #: the same standing `03` §8 gives `sha256` and `verified_at`.
+        #: the same standing Part 03 §8 gives `sha256` and `verified_at`.
         self._sources: dict[str, str] = {}
         #: Rows each resource was written with, filled as `_stage` writes them. A streamed
         #: table has no count until then, so anything reported earlier is the source's estimate.
@@ -557,12 +557,12 @@ class PacketWriter:
     def _with_session(
         self, resource_id: str, records: Sequence[Mapping[str, Any]]
     ) -> Sequence[Mapping[str, Any]]:
-        """Fill `session_id` on a session-scoped table's rows that omit it (`02` §7.1).
+        """Fill `session_id` on a session-scoped table's rows that omit it (Part 02 §7.1).
 
         Filled centrally rather than in each of the eight adapters, because the value is the
-        session this build is for: `02` §7.1 puts it in the adapter the build constructed, and
-        that is one value here. It is not inferred from a name, which `02` §7.1 forbids and
-        `01` §3.5 forbids a consumer for the same reason.
+        session this build is for: Part 02 §7.1 puts it in the adapter the build constructed, and
+        that is one value here. It is not inferred from a name, which Part 02 §7.1 forbids and
+        Part 01 §3.5 forbids a consumer for the same reason.
 
         Only where the packet holds one session, so a multi-session build cannot be stamped with
         whichever session went first; there, an adapter states it and this does nothing. The
@@ -583,7 +583,7 @@ class PacketWriter:
         return [r if r.get("session_id") is not None else {"session_id": session, **r} for r in records]
 
     def _session_batch(self, spec: Mapping[str, Any], batch: pa.RecordBatch) -> pa.RecordBatch:
-        """Fill `session_id` on a streamed batch, as `_with_session` does for records (`02` §7.1).
+        """Fill `session_id` on a streamed batch, as `_with_session` does for records (Part 02 §7.1).
 
         The records path filled it and this one did not, so a table large enough to stream reached
         validation with nulls in a required column: `core.media_frames` at 7,570,450 rows, on the
@@ -702,7 +702,7 @@ class PacketWriter:
         self._after_stage.append(report)
 
     def derives(self, resource_id: str, sources: Sequence[str]) -> None:
-        """Record which resources one was derived from (`06`).
+        """Record which resources one was derived from (Part 06).
 
         An analysis resource MUST declare lineage to core, and the manifest's `derived_from`
         is where it goes -- not a table, because the claim is about a resource and not about
@@ -731,8 +731,8 @@ class PacketWriter:
     def add_array(self, resource_id: str, array: StagedArray) -> None:
         """Add a dense array, to be written into the packet as Zarr v3.
 
-        Packet-owned, so `zarr_v3` (`03` §6.1) -- v2 is permitted only for a resource the packet
-        references rather than owns. The codecs it uses are declared per resource (`03` §6.4), so
+        Packet-owned, so `zarr_v3` (Part 03 §6.1) -- v2 is permitted only for a resource the packet
+        references rather than owns. The codecs it uses are declared per resource (Part 03 §6.4), so
         a reader checks this array's own list before opening it and must not refuse the packet
         over a codec used only by something it never touches.
 
@@ -754,10 +754,10 @@ class PacketWriter:
         self._staged_arrays[resource_id] = array
 
     def reference_array(self, resource_id: str, array: ExternalArray) -> None:
-        """Record a dense array the packet references rather than owns (`04` §5.1).
+        """Record a dense array the packet references rather than owns (Part 04 §5.1).
 
         No bytes are copied and none are read: structural validation must not reach the network
-        (`04` §5.3), so what this records is a claim. A validator reports it as `info` in its
+        (Part 04 §5.3), so what this records is a claim. A validator reports it as `info` in its
         default mode and checks it only when asked.
 
         Parameters
@@ -771,7 +771,7 @@ class PacketWriter:
         ------
         ValueError
             If this resource already has an array, or if the URI does not match how it resolves:
-            absolute where no `source` is named, relative where one is (`04` §5.5).
+            absolute where no `source` is named, relative where one is (Part 04 §5.5).
         """
         if resource_id in self._staged_arrays or resource_id in self._referenced_arrays:
             raise ValueError(f"{resource_id} already has an array")
@@ -779,7 +779,7 @@ class PacketWriter:
         self._referenced_arrays[resource_id] = array
 
     def reference_media(self, resource_id: str, media: ExternalMedia) -> None:
-        """Record a media asset the packet references rather than owns (`04` §5.1).
+        """Record a media asset the packet references rather than owns (Part 04 §5.1).
 
         No bytes are copied and none are read, exactly as `reference_array`: what this records is
         a claim about a URI, checked only in a mode that asks for it.
@@ -795,7 +795,7 @@ class PacketWriter:
         ------
         ValueError
             If this resource already has media, or if the URI does not match how it resolves
-            (`04` §5.5).
+            (Part 04 §5.5).
         """
         if resource_id in self._referenced_media:
             raise ValueError(f"{resource_id} already has media")
@@ -803,9 +803,9 @@ class PacketWriter:
         self._referenced_media[resource_id] = media
 
     def produced_by(self, resource_id: str, processing_run_id: str) -> None:
-        """Name the run that produced a resource (`04` §3).
+        """Name the run that produced a resource (Part 04 §3).
 
-        `06` requires a derived resource to declare its transform parameters and software
+        Part 06 requires a derived resource to declare its transform parameters and software
         version, and R31 puts them in a `core.processing_runs` row that the manifest points at.
         The run itself is added like any other table; this records the link, which lives in the
         manifest because it is a fact about a resource rather than about any row.
@@ -959,7 +959,7 @@ class PacketWriter:
             extension_id = self.extension_of(resource_id)
             entry = {
                 "resource_id": resource_id,
-                # `05` §5.4: an extension table's entry says so and names its owner, so a reader
+                # Part 05 §5.4: an extension table's entry says so and names its owner, so a reader
                 # knows what it holds without parsing the extension's registry.
                 "layer": "extension" if extension_id else namespace,
                 **({"extension_id": extension_id} if extension_id else {}),
@@ -976,14 +976,14 @@ class PacketWriter:
             if run := self._runs.get(resource_id):
                 # The name, not the assigned number: a manifest identifies by name throughout
                 # -- `packet_id`, `sessions`, every `resource_id` -- because it is read before
-                # any table and a number resolves against nothing. `02` §5.3's `*_name` columns
-                # are the bridge, and `05` §5.3's check crosses it.
+                # any table and a number resolves against nothing. Part 02 §5.3's `*_name` columns
+                # are the bridge, and Part 05 §5.3's check crosses it.
                 entry["processing_run_id"] = run
             entries.append(entry)
         return entries
 
     def _preassign(self) -> None:
-        """Assign a number to every name this packet uses, before any table is built (`05` §8).
+        """Assign a number to every name this packet uses, before any table is built (Part 05 §8).
 
         Numbering as each table is staged would let the order tables happen to be written in
         decide the numbers: `core.sessions` names a `reference_clock_id` and is staged before
@@ -1031,11 +1031,11 @@ class PacketWriter:
             "registry_version": self._registry["registry_version"],
             "created_at": now,
             "sessions": sessions,
-            # `03` §6.4 declares codecs per resource; the top-level list is their union, so a
+            # Part 03 §6.4 declares codecs per resource; the top-level list is their union, so a
             # reader can answer "can I open this packet at all" without walking every entry.
             "required_codecs": sorted({c for e in entries for c in e.get("codecs", [])}),
             "resources": [dict(e) for e in entries],
-            # `03` §9.3: declared rather than left to a default, because `prune` reads it and a
+            # Part 03 §9.3: declared rather than left to a default, because `prune` reads it and a
             # packet that says nothing makes the operator's policy invisible to the operation.
             "retention": dict(self._retention),
             "validation": validation,
@@ -1047,7 +1047,7 @@ class PacketWriter:
         return manifest
 
     def declare_source(self, name: str, uri: str) -> None:
-        """Record where a named body of referenced data was read from (`04` §5.5).
+        """Record where a named body of referenced data was read from (Part 04 §5.5).
 
         An adapter that references bytes belonging to a nameable asset calls this once and then
         gives each resource a `source` and a path relative to it. What the packet stores is the
@@ -1064,9 +1064,9 @@ class PacketWriter:
         self._sources[name] = uri
 
     def _write_sources(self, root: Path) -> None:
-        """Write `04` §5.5's default resolution document, where any resource names a source.
+        """Write Part 04 §5.5's default resolution document, where any resource names a source.
 
-        Before the manifest, because `05` §6 makes publishing the catalog what makes a commit
+        Before the manifest, because Part 05 §6 makes publishing the catalog what makes a commit
         visible: everything a reader may look for is in place first. Skipped entirely when no
         resource names a source, since a document locating nothing is worse than none -- it
         would answer a lookup the caller meant to answer itself.
@@ -1100,7 +1100,7 @@ class PacketWriter:
         ----------
         root : str or Path
             The packet root. Created if absent; an existing packet is refused rather than
-            overwritten, because immutability covers packet-owned bytes (`04` §5.1).
+            overwritten, because immutability covers packet-owned bytes (Part 04 §5.1).
         limits : Mapping, optional
             DuckDB settings bounding validation, passed through to the validator. The default
             of 4 GB is not enough for every packet: a uniqueness check over 10^8 rows can
@@ -1152,9 +1152,9 @@ class PacketWriter:
             *self._reference_media(),
         ]
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
-        # `03` §5.5's rules are good guesses, and a column one guesses wrong
+        # Part 03 §5.5's rules are good guesses, and a column one guesses wrong
         # about is said aloud rather than silently paid for. A report, not a refusal: every
-        # encoding is permitted (`03` §5.5), so the packet is conforming whichever it got.
+        # encoding is permitted (Part 03 §5.5), so the packet is conforming whichever it got.
         for note in sorted(set(self._encoding_notes)):
             say(f"  encoding: {note}")
         for report in self._after_stage:
@@ -1165,7 +1165,7 @@ class PacketWriter:
         self._install_extensions(staging)
 
         # 2. derive whatever the caller asked for from the staged packet, before anything is
-        #    validated or promoted. `05` stages 8 and 9 put materialization inside the import
+        #    validated or promoted. Part 05 stages 8 and 9 put materialization inside the import
         #    pipeline, and a staged packet is already openable -- it needs a manifest, which is
         #    written here anyway. Doing it now costs one validation over the finished packet;
         #    doing it after the commit costs a second manifest, a version bump and a
@@ -1174,7 +1174,7 @@ class PacketWriter:
         (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, None), indent=2) + "\n")
         if materialize:
             # Row counts, not just names: a materializer adds its own `core.processing_runs`
-            # row (`04` §3), and that table was staged in the pass above. Restaging only what is
+            # row (Part 04 §3), and that table was staged in the pass above. Restaging only what is
             # new would leave the run record in memory and the resource pointing at a run the
             # packet does not contain -- which is exactly what the validator then says.
             def counts() -> dict[str, int]:
@@ -1231,7 +1231,7 @@ class PacketWriter:
         """Add resources to a committed packet, as a new packet version (R32).
 
         An amendment modifies no file the superseded manifest names. A table that gains rows is
-        written as a **new file** and the amended manifest names that one, so `04` §5.1's
+        written as a **new file** and the amended manifest names that one, so Part 04 §5.1's
         immutability holds literally rather than by exception.
 
         The sequence is `commit`'s, with the swap at the end doing more work: the added
@@ -1246,14 +1246,14 @@ class PacketWriter:
         packet_version : str, optional
             The new version. Defaults to bumping the minor component.
         limits : Mapping, optional
-            DuckDB settings bounding validation. `03` §9.4 narrows an amendment to the rules
+            DuckDB settings bounding validation. Part 03 §9.4 narrows an amendment to the rules
             attached to a written resource or naming one, but every table is still registered
             alongside it, so a surviving rule may read anything the packet holds.
 
         Returns
         -------
         Report
-            The validation report for the **whole** packet, not only what was added (`03` §9.4).
+            The validation report for the **whole** packet, not only what was added (Part 03 §9.4).
 
         Raises
         ------
@@ -1261,7 +1261,7 @@ class PacketWriter:
             If `root` holds no committed manifest. Use `commit` to create a packet.
         ValueError
             If the amendment would replace a core resource other than a provenance table, which
-            is a new packet rather than a new version of this one (`03` §9.2).
+            is a new packet rather than a new version of this one (Part 03 §9.2).
         CommitRefused
             If validation found errors. The packet stays at its previous version.
         """
@@ -1274,7 +1274,7 @@ class PacketWriter:
         standing = {e["resource_id"] for e in superseded["resources"]}
         if clash := sorted(r for r in added & standing if not r.startswith("analysis.") and r not in PROVENANCE):
             raise ValueError(
-                f"amending would replace {clash}; a packet whose core data changes is a new packet (`03` §9.2)"
+                f"amending would replace {clash}; a packet whose core data changes is a new packet (Part 03 §9.2)"
             )
 
         self._absorb_provenance(root, superseded)
@@ -1288,7 +1288,7 @@ class PacketWriter:
         # Validate with the added resources still under staging/, so nothing occupies a final
         # path until it has passed. The candidate is derived from the superseded manifest, not
         # rebuilt: every packet-level field this amendment does not change carries over, which
-        # is what keeps the session inventory and description from silently vanishing (`03` §9.3).
+        # is what keeps the session inventory and description from silently vanishing (Part 03 §9.3).
         kept = [e for e in superseded["resources"] if e["resource_id"] not in added]
         candidate = dict(superseded)
         candidate["resources"] = kept + [dict(e, uri=f"staging/{e['uri']}") for e in entries]
@@ -1297,7 +1297,7 @@ class PacketWriter:
         candidate["supersedes"] = superseded["packet_version"]
 
         # The registry goes in before validation, not after: the validator compares the
-        # manifest's declared registry_version against the copy the packet carries (`02` §9.2), so
+        # manifest's declared registry_version against the copy the packet carries (Part 02 §9.2), so
         # a candidate declaring the new version against the old embedded copy fails on a
         # mismatch that says nothing about the data. Rolled back if this does not pass, which
         # leaves the packet exactly as it was.
@@ -1306,7 +1306,7 @@ class PacketWriter:
             # Both halves of the amendment are bounded by what it writes (R35). Physical order
             # is re-read only for those files, and only the rules attached to one or naming one
             # re-run. A file the amendment does not name is byte-identical to one already
-            # verified -- `03` §9.2 forbids modifying it and `04` §5.1 declares it immutable -- so
+            # verified -- Part 03 §9.2 forbids modifying it and Part 04 §5.1 declares it immutable -- so
             # its order cannot have changed and a rule reading only it is already answered.
             written = {e["resource_id"] for e in entries}
             report = validate(
@@ -1345,7 +1345,7 @@ class PacketWriter:
         return report
 
     def _absorb_provenance(self, root: Path, superseded: Mapping[str, Any]) -> None:
-        """Carry a provenance table's existing rows into the amendment (`03` §9.2).
+        """Carry a provenance table's existing rows into the amendment (Part 03 §9.2).
 
         R32 permits *adding rows* to these tables, and a resource is staged from whatever this
         writer holds -- so amending with one new run and nothing else would rewrite the table
@@ -1363,12 +1363,12 @@ class PacketWriter:
             if collide:
                 raise ValueError(
                     f"amending {resource_id} would rewrite existing row(s) {collide[:3]}; an amendment adds "
-                    "rows to a provenance table, it does not revise them (`03` §9.2)"
+                    "rows to a provenance table, it does not revise them (Part 03 §9.2)"
                 )
             self._tables[resource_id] = [*existing, *self._tables[resource_id]]
 
     def _retain(self, root: Path, superseded: Mapping[str, Any], amended: Mapping[str, Any]) -> None:
-        """Keep every manifest a packet has had (`03` §9.3).
+        """Keep every manifest a packet has had (Part 03 §9.3).
 
         A superseded file is only interpretable if the manifest that named it still exists;
         without these, an orphan and a stray are indistinguishable and a `sha256` recorded
@@ -1381,7 +1381,7 @@ class PacketWriter:
             path.write_text(json.dumps(manifest, indent=2) + "\n")
 
     def _install_extensions(self, root: Path) -> None:
-        """Write each extension registry into the packet, beside the core one (R17 §5, `09` §6).
+        """Write each extension registry into the packet, beside the core one (R17 §5, Part 09 §6).
 
         A packet embeds the registry it was written against so it stays self-describing; an
         extension is a registry document, so it is embedded the same way and for the same reason.
@@ -1405,7 +1405,7 @@ class PacketWriter:
         }
 
     def _install_registry(self, root: Path) -> Callable[[], None]:
-        """Put this writer's registry in the packet, retaining the superseded copy (`03` §9.3).
+        """Put this writer's registry in the packet, retaining the superseded copy (Part 03 §9.3).
 
         Returns a callable that undoes it, because this has to happen *before* validation --
         the validator checks the embedded copy against the manifest's declared version -- and a
@@ -1420,7 +1420,7 @@ class PacketWriter:
         if already.is_file() and json.loads(already.read_text()) != self._registry:
             raise ValueError(
                 f"{already.name} is retained with different content; installing this registry would leave "
-                f"two different {self._registry['registry_version']} in one packet (`03` §9.3). Bump "
+                f"two different {self._registry['registry_version']} in one packet (Part 03 §9.3). Bump "
                 "registry_version, or rebuild the packet so it retains only one."
             )
 
@@ -1431,7 +1431,7 @@ class PacketWriter:
                 if embedded != self._registry:
                     raise ValueError(
                         f"registry {embedded['registry_version']} differs from the packet's copy at the same "
-                        "version; two registries that cannot be told apart make `02` §9.2 vacuous (`03` §9.3)"
+                        "version; two registries that cannot be told apart make Part 02 §9.2 vacuous (Part 03 §9.3)"
                     )
                 return lambda: None
             keep = installed.with_name(f"logical_schemas.{embedded['registry_version']}.json")

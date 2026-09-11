@@ -1,20 +1,20 @@
 """A citation of a requirement names the part that states it, not the revision that introduced it.
 
-`00` §10.1 binds every citation of a requirement in an implementation's source. `check_citations.py`
+Part 00 §10.1 binds every citation of a requirement in an implementation's source. `check_citations.py`
 answers whether a citation resolves; this answers whether it points at the right kind of document,
 which no other tool can see -- a citation of a revision clause that landed in a part resolves
 perfectly and still sends a reader to the change record.
 
 The ledger is the map. Where `applied.toml` disposes a clause `applied`, its `where` lists the parts
-and sections that state it, so the replacement is mechanical: `R88 §2.1` becomes `02` §7.1.
+and sections that state it, so the replacement is mechanical: `R88 §2.1` becomes Part 02 §7.1.
 
 Only a clause disposed `applied` is reported. A clause the registry carries is read from the
 registry, one disposed `rationale` decided nothing and so states no requirement, and a Motivation
-or an Open section is the reasoning itself -- `00` §10.2 sends a reader to the revision for all
-three, so they are not citations `00` §10.1 binds.
+or an Open section is the reasoning itself -- Part 00 §10.2 sends a reader to the revision for all
+three, so they are not citations Part 00 §10.1 binds.
 
 What is not mechanical is whether a citation of an `applied` clause is of the **requirement** or of
-the **reasoning** behind it, and `00` §10.2 permits the second. So a citation that stays carries a reason in `EXEMPT`, keyed by the
+the **reasoning** behind it, and Part 00 §10.2 permits the second. So a citation that stays carries a reason in `EXEMPT`, keyed by the
 shape or the site rather than left to be rediscovered -- `registry/check.py`'s discipline for
 `NAMING_EXCEPTIONS`, whose entries are checked to still be needed so the list cannot go stale.
 
@@ -44,19 +44,19 @@ REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
 #: its exemption with it rather than leaving a permanent excuse behind.
 EXEMPT: tuple[tuple[str, str, str], ...] = (
     ("registry/build.py", r'SINCE\[0\] = "',
-     "the stamp that becomes a column's `since`, whose value names a revision by design (`02` §9.4)"),
+     "the stamp that becomes a column's `since`, whose value names a revision by design (Part 02 §9.4)"),
     ("registry/build.py", r'since="',
      "the same stamp, written inline on a column"),
     ("registry/", r"^\s*# ----",
      "a block marker saying which revision's block follows; both files are organised by revision"),
     ("escapewheel_poc_docs_v0.2/ledger.py", r".",
-     "the ledger keys on revision clauses, which is what makes it the map `00` §10.1 resolves through"),
+     "the ledger keys on revision clauses, which is what makes it the map Part 00 §10.1 resolves through"),
     ("revisions/", r".",
-     "a revision citing another revision (`00` §10.2)"),
+     "a revision citing another revision (Part 00 §10.2)"),
 )
 
 
-#: Individual citations of the **reasoning** a part does not carry, which `00` §10.2 permits: a
+#: Individual citations of the **reasoning** a part does not carry, which Part 00 §10.2 permits: a
 #: measurement, or what a revision did to the format on its way to the present. Keyed by file and
 #: clause rather than by line, since a line number moves and this pairing does not.
 REASONING: tuple[tuple[str, str, str], ...] = (
@@ -96,8 +96,8 @@ REASONING: tuple[tuple[str, str, str], ...] = (
 
 
 def cited(entry: dict) -> list[str]:
-    """Each target of an `applied` entry, spelled as a citation: `02` §7.1."""
-    return [f"`{t['part']}` §{t['section']}" for t in entry.get("where", [])]
+    """Each target of an `applied` entry, spelled as `00` §10.4 requires: Part 02 §7.1."""
+    return [f"Part {t['part']} §{t['section']}" for t in entry.get("where", [])]
 
 
 def rollup(clauses: dict[str, dict]) -> dict[str, list[str]]:

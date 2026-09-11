@@ -1,14 +1,14 @@
-"""Verify a committed packet where its bytes now live, and record what was found (`04` §5.2).
+"""Verify a committed packet where its bytes now live, and record what was found (Part 04 §5.2).
 
-`05`'s commit records only what the build could reach, and a packet built where its data will
-not live records nothing about that data -- correctly, since `04` §5.2 requires a writer that
+Part 05's commit records only what the build could reach, and a packet built where its data will
+not live records nothing about that data -- correctly, since Part 04 §5.2 requires a writer that
 cannot reach a URI to record nothing rather than guess. This is the step that closes it: once
 the bytes have landed, reach them, and write down what was true.
 
 It is the smallest thing R32 calls a new version. No file is written, no resource is added, and
 no recorded fact about a packet-owned file changes except one that was missing. What changes is
 what the manifest says about resources the packet does **not** own, which is exactly the class
-`03` §8 dates rather than promises.
+Part 03 §8 dates rather than promises.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from escapewheel_validator.stores import StoreUnreachable, digest, listing
 from .writer import MANIFEST, MANIFESTS, NotCommitted, _bump, _version
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
-#: records `04` §5.4's per-member listing with whatever content hash the store handed over, and
+#: records Part 04 §5.4's per-member listing with whatever content hash the store handed over, and
 #: `sha256` also digests every byte. `members` is the default because it is the strongest thing
 #: available for the price of the listing.
 LEVELS = ("size", "members", "sha256")
@@ -71,7 +71,7 @@ def verify(
         A packet root holding a committed manifest.
     level : {"size", "members", "sha256"}, default "members"
         How much to establish. `sha256` reads every byte -- 88 s for a session's LFP against
-        S3 -- which is the cost `04` §5.2 puts here rather than in a build.
+        S3 -- which is the cost Part 04 §5.2 puts here rather than in a build.
     packet_version : str, optional
         The new version. Defaults to bumping the patch component, as an amendment does.
 
@@ -112,7 +112,7 @@ def verify(
     candidate["supersedes"] = superseded["packet_version"]
 
     # Level 3 against what was just recorded, and nothing else. This writes no file and adds no
-    # resource, so every packet-owned verdict is determined by immutability exactly as `03` §9.4
+    # resource, so every packet-owned verdict is determined by immutability exactly as Part 03 §9.4
     # says -- `scan` and `recheck` are empty for the same reason an amendment narrows them to
     # what it wrote, and here that is nothing. What is worth checking is what just changed.
     report = validate(

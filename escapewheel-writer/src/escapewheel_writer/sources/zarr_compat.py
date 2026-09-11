@@ -4,7 +4,7 @@ AIND writes approximately all of its NWB output as NWB-Zarr (`zarr_format: 2`), 
 everything an importer needs from one -- table columns, timestamps, scalar metadata -- is a
 one-dimensional array. Decoding those from their chunk bytes with the codecs they declare
 takes `numcodecs` and nothing else, so this package depends on neither `zarr`, `hdmf-zarr`,
-nor `pynwb`. `07` permits PyNWB at the import boundary; not needing it is better, and it
+nor `pynwb`. Part 07 permits PyNWB at the import boundary; not needing it is better, and it
 also sidesteps two faults that make zarr-python 3.3 refuse these files outright. Both are
 measured in `inventory/nwb-zarr-776259-2025-04-09.md` §1; neither is exotic, and any reader
 of these files meets them:

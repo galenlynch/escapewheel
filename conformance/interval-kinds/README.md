@@ -1,6 +1,6 @@
 # Interval kinds — one base table, or one table per kind?
 
-`05` Stage 1 for a design decision rather than a dataset. R54 §2.1 argues for a base
+Part 05 Stage 1 for a design decision rather than a dataset. R54 §2.1 argues for a base
 `core.intervals` on the strength of a **polymorphic query** — align to every interval in a session
 without knowing the paradigm — and R54 §5 records that nothing does that yet, so the argument was
 unmeasured. This builds both shapes over the same rows and asks what each costs a consumer.

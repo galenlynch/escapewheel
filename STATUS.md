@@ -27,9 +27,9 @@ Phases are `07_reference_api_and_implementation_plan.md`'s plan of record.
 | 0 Spec fixtures | **complete** | Single-session packet plus a 25-variant corpus carrying one extension; `fixtures/`. |
 | 1 Manifest and table reader | **complete** | `escapewheel-reader`; 156 tests, mypy strict. Ticks come back on the packet's reference clock by default, and `seconds=True` derives R39 §2.3's seconds from the declared origin or refuses. `TableResource` and `ArrayResource`, each with its heavy dependency behind an extra. |
 | 2 Validator | **complete** | `escapewheel-validator`, its own package since 2026-08-27; 87 tests. Corpus passes through it. R15 §4 level 2 checks packet-owned arrays against their own Zarr metadata; level 3 runs under `external=True`, reachable as `validate --external` and `--checksums`, and reports the fields it compared rather than asserting a resource was checked. R35 §5 bounds an amendment's rules to what it writes. |
-| 3 NWB source importer | **complete** | Four adapters: `NWBSource` (tables the NWB is authority for, plus R28's unit-electrode and CCF links), `SessionSource` (`tick_zero_utc`, observation intervals), `SorterSource` (units, spikes, per-stream clocks), `SyncSource` (anchors), plus `WaveformSource`. The session recipe and `escapewheel inspect` / `init` / `import` replace the ad-hoc scripts: 776259 commits clean from `session.toml` in 2.5 min, and the recipe lands in `core.processing_runs.parameters`, closing `05` Stage 3. |
-| 4 Analysis materializations | **complete** | `analysis.spike_events` (R30) materialised and amended into both packets. The success criterion is met — PSTH measured three ways, 2026-09-01, all bin-identical. The other six `06` names are **not** oversights: `spikes_by_trial`, `trials_wide` and `unit_condition_rates` were measured and declined by R43; `good_units` was already a view; `binned_spikes` and the spectrogram are Phase 5. |
-| 5 Dense arrays | **complete** | `core.waveform_mean`, a sparse int16 template array, `(6781, 26, 150)` in 26 MB, packet-owned Zarr v3. Layout measured in `conformance/zarr-probe/waveforms.py`: the chunk is the unit of the question, the shard the unit of the object, and the compressor goes *inside* the shard. **LFP is referenced, not copied** (R14 §2.3, R21 §3.2): twelve Zarr v2 arrays, 6.8 GB the packet points at, with R20's regular-tick axis replacing 767 MB of timestamps with three integers per series and `core.array_channels` carrying R19's per-channel `inter_sample_shift`. Both success criteria are met: `pkt.array("core.waveform_mean")` opens it, and the structural agreement is validated — rank against `core.array_dimensions`, codecs against the store, `zarr_format`, transpose ban. `07`'s "dtype/shape" wording is superseded, since R3 §3.3 struck both columns. Media assets are not Phase 5 scope: `07` never names them. |
+| 3 NWB source importer | **complete** | Four adapters: `NWBSource` (tables the NWB is authority for, plus R28's unit-electrode and CCF links), `SessionSource` (`tick_zero_utc`, observation intervals), `SorterSource` (units, spikes, per-stream clocks), `SyncSource` (anchors), plus `WaveformSource`. The session recipe and `escapewheel inspect` / `init` / `import` replace the ad-hoc scripts: 776259 commits clean from `session.toml` in 2.5 min, and the recipe lands in `core.processing_runs.parameters`, closing Part 05 Stage 3. |
+| 4 Analysis materializations | **complete** | `analysis.spike_events` (R30) materialised and amended into both packets. The success criterion is met — PSTH measured three ways, 2026-09-01, all bin-identical. The other six Part 06 names are **not** oversights: `spikes_by_trial`, `trials_wide` and `unit_condition_rates` were measured and declined by R43; `good_units` was already a view; `binned_spikes` and the spectrogram are Phase 5. |
+| 5 Dense arrays | **complete** | `core.waveform_mean`, a sparse int16 template array, `(6781, 26, 150)` in 26 MB, packet-owned Zarr v3. Layout measured in `conformance/zarr-probe/waveforms.py`: the chunk is the unit of the question, the shard the unit of the object, and the compressor goes *inside* the shard. **LFP is referenced, not copied** (R14 §2.3, R21 §3.2): twelve Zarr v2 arrays, 6.8 GB the packet points at, with R20's regular-tick axis replacing 767 MB of timestamps with three integers per series and `core.array_channels` carrying R19's per-channel `inter_sample_shift`. Both success criteria are met: `pkt.array("core.waveform_mean")` opens it, and the structural agreement is validated — rank against `core.array_dimensions`, codecs against the store, `zarr_format`, transpose ban. Part 07's "dtype/shape" wording is superseded, since R3 §3.3 struck both columns. Media assets are not Phase 5 scope: Part 07 never names them. |
 | 6 Release and version discipline | **partial** | `escapewheel verify` records what is true about external resources (R36 §2.4); `escapewheel prune` removes what a committed packet no longer names (R61 §3). What remains is the `registry_version` decision. |
 | 7 Iceberg experiment | not started | Explicitly last; MUST NOT be required earlier. |
 
@@ -100,9 +100,9 @@ It is not a whole session. Units and spikes are absent because their ticks canno
 recovered from this NWB, and the dense arrays are Phase 5. Every tick in it round-trips to
 the source's stored seconds bit-exactly.
 
-The packet root carries **no extension**. `03`'s layout names it `packet_root/` and a packet
+The packet root carries **no extension**. Part 03's layout names it `packet_root/` and a packet
 is identified by `packet.json`, which is what `open_packet` and `PacketWriter.commit`
-both key on — neither reads the directory name. `07` and `08` write `session_001.nwbpkt` in
+both key on — neither reads the directory name. Part 07 and Part 08 write `session_001.nwbpkt` in
 examples only, never normatively. The suffix is dropped because on Linux it carries no
 machinery — it is a NeXTSTEP/macOS bundle convention that Launch Services implements and
 nothing else does, so it implies an atomicity no tool enforces, while `Path.suffix`,
@@ -319,7 +319,7 @@ time-sorted copy is 61% larger, not the same size.
 
 Bucketing time coarsely and sorting by unit within each bucket leaves both columns with
 informative row-group statistics. The bucket is a stored `time_bucket` column, not an
-expression, because `03` declares order as a column list and R12's shim verifies against it.
+expression, because Part 03 declares order as a column list and R12's shim verifies against it.
 
 PyArrow, warm seconds, 247.8 M rows:
 
@@ -358,11 +358,11 @@ That is the same boundary R30 draws.
 
 ### Decided
 
-- `core.spike_events` keeps `03`'s unit-major order and 1 M row groups. Only the encoding
+- `core.spike_events` keeps Part 03's unit-major order and 1 M row groups. Only the encoding
   changes: dictionary -> `DELTA_BINARY_PACKED` (783 -> 610 MB, −22%), or -> `PLAIN` (~10%) if
   R3 §2.1's native-reader argument is to be preserved. Parked pending the Julia question.
 - `analysis.spike_events` takes delta unconditionally.
-- `03` mandates nothing about encodings and calls row-group size a starting point to "adjust
+- Part 03 mandates nothing about encodings and calls row-group size a starting point to "adjust
   after profiling", so none of this needs a revision. Changing the *order* would.
 
 ### Decided and built, 2026-08-28
@@ -432,7 +432,7 @@ Three defects the implementation surfaced, all fixed:
   reported *"check could not run: Out of Memory"*, which is not a statement about the data.
   Both now take `limits`; this ran at 9 GB.
 
-Two revisions were forced by the work and are now **accepted**: **R31** maps `06`'s
+Two revisions were forced by the work and are now **accepted**: **R31** maps Part 06's
 materialization activity onto `core.processing_runs` plus the manifest's `processing_run_id`,
 and **R32** defines the amendment itself.
 
@@ -734,11 +734,11 @@ Carried from the revisions, none blocking the registry.
   The NWB is not wholly right either — its `date_of_birth` carries `−07:53`, Pacific Local
   Mean Time. Of three stored offsets, two are wrong in different directions, so `NWBSource`
   checks each against the declared zone and reports disagreement rather than resolving it.
-- **`analysis.spike_events`'s purpose is unrecorded.** `06` gives it a schema and says it
+- **`analysis.spike_events`'s purpose is unrecorded.** Part 06 gives it a schema and says it
   flattens `core.unit_spike_chunks`, which R5 withdrew — so the columns survived and the
   reason for them did not. The registry carries the table and `escapewheel_writer.materialize`
   builds it, but as spikes on the session's reference clock, which is a different purpose
-  from the one `06` states. That change wants a revision; until one exists the table carries
+  from the one Part 06 states. That change wants a revision; until one exists the table carries
   no `since`, which R29 §2 reads as *came from the specification unamended* and is true of
   the schema if not of the intent.
 - **External verification is exercised against S3 and against a filesystem** (R36).
@@ -762,10 +762,10 @@ Carried from the revisions, none blocking the registry.
   carried, so ADC-count amplitudes cannot be converted to physical units from the packet
   alone. Add `conversion` when an importer needs it.
 - **`core.media_frames.frame_index` ordering is unstated.** Presentation order is the
-  near-certain intent, but `02` does not say so, and a convention read two ways misaligns
+  near-certain intent, but Part 02 does not say so, and a convention read two ways misaligns
   media against neural data silently. Worth one sentence of normative text; `pts` and
   `dropped` need a real media import before they can be resolved. Media appears in no phase
-  of `07`, so nothing currently exercises the table (R10 §6).
+  of Part 07, so nothing currently exercises the table (R10 §6).
 
 ## Working alongside Aind.Behavior.VrForaging.Packaging
 
@@ -810,7 +810,7 @@ on any adapter note.
   dispatch table waits until a second vintage of some source actually exists, because until
   then it is a mechanism with one branch.
 - **`nwbize()`-style co-located NWB projection** — one object owning both the table and its NWB
-  representation, so they cannot drift. Only matters when `00`'s NWB projection is built, which
+  representation, so they cannot drift. Only matters when Part 00's NWB projection is built, which
   is itself deferred. Noted as the pattern to use then.
 
 **Considered and skipped.**
@@ -852,7 +852,7 @@ should delay Phases 3-6.
   available test that the checks say what they mean rather than what DuckDB happens to do.
   What it costs is the honest question: the Tier 2 SQL is authored against DuckDB, and
   anything relying on a DuckDB-specific spelling would surface as a portability defect —
-  which is the point, not an obstacle. Not v0.1: `03`'s portable profile MUST be readable
+  which is the point, not an obstacle. Not v0.1: Part 03's portable profile MUST be readable
   without a server, so this is a convenience export, never a physical profile.
 
 ## Deferred by decision

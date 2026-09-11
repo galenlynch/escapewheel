@@ -1,12 +1,12 @@
 # Source inventories
 
-`05` Stage 1 requires discovery to produce a source inventory before anything is staged:
+Part 05 Stage 1 requires discovery to produce a source inventory before anything is staged:
 what source objects exist, what format they are, and which core resources they are
 candidates for. Nothing is committed on the strength of an inventory — it is what the
 normalization and validation stages are written against.
 
 These are prose inventories of specific datasets. The machine-readable form is
-`escapewheel inspect-source --out source_inventory.json` (`07`), which does not exist yet.
+`escapewheel inspect-source --out source_inventory.json` (Part 07), which does not exist yet.
 
 | File | Dataset |
 |---|---|

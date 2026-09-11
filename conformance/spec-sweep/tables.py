@@ -26,33 +26,33 @@ STEPS = [
     ("R16 §2  + core.unit_quality_labels",     set(), {"core.unit_quality_labels"}),
     ("R18 §2  + core.unit_observation_intervals", set(), {"core.unit_observation_intervals"}),
     ("R19 §3  + core.electrode_coordinates",   set(), {"core.electrode_coordinates"}),
-    ("`00` §3  + analysis.array_assets",        set(), {"analysis.array_assets"}),
-    ("`00` §3  + analysis.array_dimensions",    set(), {"analysis.array_dimensions"}),
+    ("Part 00 §3  + analysis.array_assets",        set(), {"analysis.array_assets"}),
+    ("Part 00 §3  + analysis.array_dimensions",    set(), {"analysis.array_dimensions"}),
     ("R23 §2  + core.event_streams",           set(), {"core.event_streams"}),
     ("R25 §2  + core.event_stream_observation_intervals", set(), {"core.event_stream_observation_intervals"}),
     ("R28 §2  + core.unit_electrodes",         set(), {"core.unit_electrodes"}),
     ("R28 §3  + core.unit_coordinates",        set(), {"core.unit_coordinates"}),
     ("R38 §2.1 + core.clock_observation_intervals", set(), {"core.clock_observation_intervals"}),
-    ("`01` §2.4 + core.preferred_runs",         set(), {"core.preferred_runs"}),
+    ("Part 01 §2.4 + core.preferred_runs",         set(), {"core.preferred_runs"}),
     # R54 §2.3 withdraws the child table R3 §3.2 added: no packet ever populated it, and a
     # trial tag is a task's vocabulary, which R43 §3 sends to an extension.
     ("R54 §2.3 − core.trial_tags",             {"core.trial_tags"}, set()),
-    ("`01` §3.10 core.trials -> core.intervals", {"core.trials"}, {"core.intervals"}),
+    ("Part 01 §3.10 core.trials -> core.intervals", {"core.trials"}, {"core.intervals"}),
     ("06      + analysis.spike_events",        set(), {"analysis.spike_events"}),
     # R83 §2.1: a channel index a source emits counts the channels its run kept, and nothing
     # held that list, so no packet could resolve one.
     ("R83 §2.1 + core.sorting_run_channels",   set(), {"core.sorting_run_channels"}),
-    # `02` §12.3: a calibration is what someone measured about an instrument so that its numbers can
+    # Part 02 §12.3: a calibration is what someone measured about an instrument so that its numbers can
     # be interpreted, and nothing in the specification recorded one. Three resources, because the
-    # devices a calibration covers and the points of its curve are both repeated values (`02` §6).
+    # devices a calibration covers and the points of its curve are both repeated values (Part 02 §6).
     ("R89 §2.1 + core.calibrations",           set(), {"core.calibrations"}),
     ("R89 §2.2 + core.calibration_devices",    set(), {"core.calibration_devices"}),
     ("R89 §2.3 + core.calibration_points",     set(), {"core.calibration_points"}),
     ("R99 §3.3 + core.clock_phase_steps",      set(), {"core.clock_phase_steps"}),
-    ("`01` §3.24 + core.coordinate_frames",     set(), {"core.coordinate_frames"}),
-    ("`02` §12.7 + core.coordinate_frame_axes", set(), {"core.coordinate_frame_axes"}),
-    ("`01` §3.8 + core.electrode_coordinate_values", set(), {"core.electrode_coordinate_values"}),
-    ("`01` §3.8 + core.unit_coordinate_values", set(), {"core.unit_coordinate_values"}),
+    ("Part 01 §3.24 + core.coordinate_frames",     set(), {"core.coordinate_frames"}),
+    ("Part 02 §12.7 + core.coordinate_frame_axes", set(), {"core.coordinate_frame_axes"}),
+    ("Part 01 §3.8 + core.electrode_coordinate_values", set(), {"core.electrode_coordinate_values"}),
+    ("Part 01 §3.8 + core.unit_coordinate_values", set(), {"core.unit_coordinate_values"}),
 ]
 
 if not PARSED.exists():

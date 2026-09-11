@@ -126,14 +126,14 @@ def test_channels_name_electrodes_and_carry_the_acquisition_offset(nwb):
 
 
 def test_conversion_stays_on_the_asset(nwb):
-    """One value per series here, so repeating it down the channels would buy nothing (`02` §6)."""
+    """One value per series here, so repeating it down the channels would buy nothing (Part 02 §6)."""
     got = _source(nwb).records(rates=RATES)
     assert got["core.array_assets"][0]["conversion"] == pytest.approx(2.34e-06)
     assert all(r.get("conversion") is None for r in got["core.array_channels"])
 
 
 def test_the_reference_declares_zarr_v2_and_its_codec(nwb):
-    """`03` §6.1: only an external resource may be v2, and `03` §6.4 declares its codecs per resource."""
+    """Part 03 §6.1: only an external resource may be v2, and Part 03 §6.4 declares its codecs per resource."""
     array = _source(nwb).external_arrays()["core.45883-1.lfp"]
     assert array.physical_profile == "zarr_v2"
     assert array.codecs == ("blosc",)
@@ -146,7 +146,7 @@ def test_a_uri_base_replaces_the_local_path(nwb):
 
 
 def test_an_unreachable_store_leaves_the_claim_unmade(nwb):
-    """`04` §5.2: bytes beside the writer are not the bytes a remote URI names, so a store it
+    """Part 04 §5.2: bytes beside the writer are not the bytes a remote URI names, so a store it
     cannot reach records nothing rather than what it measured of a local copy."""
     source = _source(nwb, uri_base="s3://bucket/s.nwb")
     array = source.external_arrays()["core.45883-1.lfp"]
@@ -155,7 +155,7 @@ def test_an_unreachable_store_leaves_the_claim_unmade(nwb):
 
 
 def test_a_reachable_store_is_sized_whole(nwb):
-    """`04` §5.4: a dense array asset is a prefix, so its size counts the metadata too."""
+    """Part 04 §5.4: a dense array asset is a prefix, so its size counts the metadata too."""
     array = _source(nwb).external_arrays()["core.45883-1.lfp"]
     on_disk = sum(
         f.stat().st_size
@@ -196,7 +196,7 @@ def test_an_nwb_with_no_lfp_group_yields_nothing(tmp_path):
 
 
 def test_offers_counts_the_channels_it_can_supply(nwb):
-    """`05` Stage 1 must name every resource a recipe has this source own, and the recipe
+    """Part 05 Stage 1 must name every resource a recipe has this source own, and the recipe
     owns `core.array_channels`. It was left out, so `inspect` under-reported the source."""
     source = _source(nwb)
     assert source.offers()["core.array_channels"] == len(source.array_channels())
@@ -219,7 +219,7 @@ def test_init_can_draft_an_lfp_source(nwb):
 
 
 def test_members_records_what_the_prefix_held(nwb):
-    """`04` §5.4: the listing already enumerates, so recording it costs no extra request."""
+    """Part 04 §5.4: the listing already enumerates, so recording it costs no extra request."""
     from escapewheel_validator.stores import listing
 
     array = _source(nwb, verify="members").external_arrays()["core.45883-1.lfp"]
@@ -243,6 +243,6 @@ def test_size_records_no_members(nwb):
 
 
 def test_a_digest_also_records_the_members_it_digested(nwb):
-    """`04` §5.4: where both are present the digested listing must be the declared one."""
+    """Part 04 §5.4: where both are present the digested listing must be the declared one."""
     array = _source(nwb, verify="sha256").external_arrays()["core.45883-1.lfp"]
     assert array.sha256 is not None and array.members is not None

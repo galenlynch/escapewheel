@@ -145,7 +145,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
@@ -154,7 +154,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (`01` \u00a73.17).",
+          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 \u00a73.17).",
           "vocabulary": "open",
           "since": "R107 \u00a73.1"
         },
@@ -163,7 +163,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with `02` \u00a79.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split.",
+          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 \u00a79.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split.",
           "vocabulary": "open",
           "since": "R107 \u00a73.1",
           "reserved_values": [
@@ -336,7 +336,7 @@
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "0-based axis position in stored order (`03` \u00a76.2).",
+          "description": "0-based axis position in stored order (Part 03 \u00a76.2).",
           "since": "R20 \u00a75"
         },
         {
@@ -615,7 +615,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
@@ -624,7 +624,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (`01` \u00a73.17).",
+          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 \u00a73.17).",
           "vocabulary": "open",
           "since": "R107 \u00a73.1"
         },
@@ -633,7 +633,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with `02` \u00a79.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split.",
+          "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 \u00a79.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split.",
           "vocabulary": "open",
           "since": "R107 \u00a73.1",
           "reserved_values": [
@@ -947,7 +947,7 @@
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "0-based axis position in stored order (`03` \u00a76.2).",
+          "description": "0-based axis position in stored order (Part 03 \u00a76.2).",
           "since": "R3 \u00a73.1-3.3"
         },
         {
@@ -1313,7 +1313,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since `02` \u00a78.2 makes two calibrations sharing a name one row.",
+          "description": "What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since Part 02 \u00a78.2 makes two calibrations sharing a name one row.",
           "since": "R89 \u00a72.1",
           "vocabulary": "free"
         },
@@ -1322,7 +1322,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (`02` \u00a78.3), and this holds a value that resolves to no table.",
+          "description": "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (Part 02 \u00a78.3), and this holds a value that resolves to no table.",
           "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
@@ -1331,7 +1331,7 @@
           "type": "timestamp",
           "presence": "nullable",
           "role": "data",
-          "description": "When the calibration was measured, which is not when it was in force: R89 \u00a71.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (`01` \u00a73.5).",
+          "description": "When the calibration was measured, which is not when it was in force: R89 \u00a71.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (Part 01 \u00a73.5).",
           "since": "R89 \u00a72.1"
         },
         {
@@ -1387,7 +1387,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "discriminator",
-          "description": "A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (`02` \u00a712.3).",
+          "description": "A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (Part 02 \u00a712.3).",
           "resolves": "optional",
           "since": "R107 \u00a73.1"
         },
@@ -1728,7 +1728,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
@@ -1759,7 +1759,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (`01` \u00a72.2).",
+          "description": "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (Part 01 \u00a72.2).",
           "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
@@ -1815,7 +1815,7 @@
           "type": "bool",
           "presence": "nullable",
           "role": "data",
-          "description": "Whether `02` \u00a712.6's terminal-anchor test withheld this clock's first anchor. Null means the test did not run.",
+          "description": "Whether Part 02 \u00a712.6's terminal-anchor test withheld this clock's first anchor. Null means the test did not run.",
           "since": "R99 \u00a73.2"
         },
         {
@@ -1823,7 +1823,7 @@
           "type": "bool",
           "presence": "nullable",
           "role": "data",
-          "description": "Whether `02` \u00a712.6's terminal-anchor test withheld this clock's last anchor. Null means the test did not run.",
+          "description": "Whether Part 02 \u00a712.6's terminal-anchor test withheld this clock's last anchor. Null means the test did not run.",
           "since": "R99 \u00a73.2"
         }
       ],
@@ -1944,7 +1944,7 @@
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "Which axis, 0-based (`02` \u00a78.1.1).",
+          "description": "Which axis, 0-based (Part 02 \u00a78.1.1).",
           "since": "R105 \u00a73.2"
         },
         {
@@ -1952,7 +1952,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Whatever the source called the field these values came from, verbatim (`02` \u00a79.3). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be.",
+          "description": "Whatever the source called the field these values came from, verbatim (Part 02 \u00a79.3). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be.",
           "since": "R105 \u00a73.2",
           "vocabulary": "open"
         },
@@ -1970,7 +1970,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The axis's unit, as a UCUM code (`02` \u00a78.4).",
+          "description": "The axis's unit, as a UCUM code (Part 02 \u00a78.4).",
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
@@ -2107,7 +2107,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
@@ -2251,7 +2251,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
@@ -2312,7 +2312,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (`01` \u00a73.5).",
+          "description": "Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (Part 01 \u00a73.5).",
           "since": "R85 \u00a72.1",
           "vocabulary": "open"
         },
@@ -2321,7 +2321,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "discriminator",
-          "description": "The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is `02` \u00a78.3's shared-key join. Core declares no such table (`02` \u00a78.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (`02` \u00a78.3).",
+          "description": "The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is Part 02 \u00a78.3's shared-key join. Core declares no such table (Part 02 \u00a78.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (Part 02 \u00a78.3).",
           "resolves": "optional",
           "since": "R104 \u00a73.1"
         },
@@ -2406,7 +2406,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What the coordinate asserts (`01` \u00a73.8).",
+          "description": "What the coordinate asserts (Part 01 \u00a73.8).",
           "since": "R105 \u00a73.3",
           "vocabulary": "open"
         },
@@ -2508,7 +2508,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (`01` \u00a73.8). A consumer that does not recognise a basis MUST NOT treat it as measured (`01` \u00a73.8).",
+          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (Part 01 \u00a73.8). A consumer that does not recognise a basis MUST NOT treat it as measured (Part 01 \u00a73.8).",
           "since": "R58 \u00a72.1",
           "vocabulary": "open"
         },
@@ -2611,7 +2611,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
@@ -2787,7 +2787,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
@@ -2805,7 +2805,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "discriminator",
-          "description": "A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (`02` \u00a78.3). Resolved against `core.events`' key by `02` \u00a78.3's shared key, through the reference `discriminates_via` names.",
+          "description": "A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (Part 02 \u00a78.3). Resolved against `core.events`' key by Part 02 \u00a78.3's shared key, through the reference `discriminates_via` names.",
           "resolves": "optional",
           "since": "R107 \u00a73.1",
           "discriminates_via": "core.events.stream_id"
@@ -2990,7 +2990,7 @@
           "type": "string",
           "presence": "required",
           "role": "discriminator",
-          "description": "The resource that specialises this interval, as a dotted resource ID, resolved as `02` \u00a78.3's shared key.",
+          "description": "The resource that specialises this interval, as a dotted resource ID, resolved as Part 02 \u00a78.3's shared key.",
           "resolves": "required",
           "since": "R107 \u00a73.1"
         },
@@ -3093,7 +3093,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
@@ -3102,7 +3102,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (`01` \u00a73.17).",
+          "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 \u00a73.17).",
           "vocabulary": "open",
           "since": "R107 \u00a73.1"
         },
@@ -3128,7 +3128,7 @@
           "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (`01` \u00a73.5).",
+          "description": "The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (Part 01 \u00a73.5).",
           "identity": "assigned",
           "since": "R102 \u00a73.2"
         },
@@ -3339,7 +3339,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Which kind of output this preference is about, in the vocabulary `core.processing_runs.activity_type` uses (`02` \u00a79.3).",
+          "description": "Which kind of output this preference is about, in the vocabulary `core.processing_runs.activity_type` uses (Part 02 \u00a79.3).",
           "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
@@ -3460,7 +3460,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
@@ -3511,7 +3511,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The structure the probe was aimed at, as an atlas acronym where the source gives one. Not resolvable: no column here names the atlas, which only a coordinate frame does (`01` \u00a73.24).",
+          "description": "The structure the probe was aimed at, as an atlas acronym where the source gives one. Not resolvable: no column here names the atlas, which only a coordinate frame does (Part 01 \u00a73.24).",
           "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
@@ -3639,7 +3639,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
@@ -3730,7 +3730,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Whether the run completed, with the meanings `02` \u00a79.3 declares.",
+          "description": "Whether the run completed, with the meanings Part 02 \u00a79.3 declares.",
           "enum": [
             "succeeded",
             "failed",
@@ -3870,7 +3870,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
@@ -3960,7 +3960,7 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "How far past its anchors the writer mapped, in median anchor intervals (`01` \u00a73.9). Null means the default of one.",
+          "description": "How far past its anchors the writer mapped, in median anchor intervals (Part 01 \u00a73.9). Null means the default of one.",
           "since": "R99 \u00a73.1",
           "unit": "{median_anchor_interval}"
         }
@@ -4132,7 +4132,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
@@ -4265,7 +4265,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
@@ -4416,7 +4416,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
@@ -4425,7 +4425,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- `01` \u00a73.4 admits a preparation, and a phantom or a simulation has no species.",
+          "description": "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- Part 01 \u00a73.4 admits a preparation, and a phantom or a simulation has no species.",
           "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
@@ -4540,7 +4540,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What the coordinate asserts (`01` \u00a73.8).",
+          "description": "What the coordinate asserts (Part 01 \u00a73.8).",
           "since": "R105 \u00a73.3",
           "vocabulary": "open"
         },
@@ -4645,7 +4645,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (`01` \u00a73.8). A consumer that does not recognise a basis MUST NOT treat it as measured (`01` \u00a73.8).",
+          "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (Part 01 \u00a73.8). A consumer that does not recognise a basis MUST NOT treat it as measured (Part 01 \u00a73.8).",
           "since": "R58 \u00a72.1",
           "vocabulary": "open"
         },
@@ -5027,7 +5027,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (`05` \u00a78).",
+          "description": "What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
           "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },

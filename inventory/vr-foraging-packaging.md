@@ -1,6 +1,6 @@
 # Aind.Behavior.VrForaging.Packaging — pipeline inventory
 
-`05` Stage 1, for a **pipeline** rather than a dataset. Most AIND behaviour data will arrive
+Part 05 Stage 1, for a **pipeline** rather than a dataset. Most AIND behaviour data will arrive
 through this, so what it emits is the import surface that matters. Read at the state of
 2026-08-26; three-version dispatch means these details are versioned and will move.
 
@@ -61,8 +61,8 @@ Independently arrived at, which is worth more than agreement by construction:
 
 | | Packaging | Escapewheel |
 |---|---|---|
-| Primary tabular format | Parquet | Parquet (`03`) |
-| NWB's role | a secondary projection built from the same processors | a compatibility projection, deferred (`00`) |
+| Primary tabular format | Parquet | Parquet (Part 03) |
+| NWB's role | a secondary projection built from the same processors | a compatibility projection, deferred (Part 00) |
 | Event representation | `event_name`, `data` (JSON), `timestamp` | `core.events`: `event_type`, `payload`, `t_tick` |
 | Join key | `session_id` on every table | `core.sessions.session_id`, referenced from nine tables |
 | Provenance | three versions in parquet schema metadata, readable without pandas | `core.processing_runs`, plus `registry_version` in the manifest |
@@ -89,7 +89,7 @@ Independently arrived at, which is worth more than agreement by construction:
   `core.events` is where we put those, because absence is a fact about the interval rather than
   a null to carry — and the same argument holds here.
 - **The export is rewritten, not versioned.** `clean=True` removes the previous run.
-  `03` treats a committed packet as immutable and R32 makes an addition a new version.
+  Part 03 treats a committed packet as immutable and R32 makes an addition a new version.
 
 ## 5. Consequence for the importer
 

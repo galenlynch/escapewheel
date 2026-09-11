@@ -14,7 +14,7 @@ reading one of their tables needs nothing installed.
 ## Why these, and why they are not core
 
 Measured on `ecephys_776259_2025-04-09`, comparing what each NWB `DynamicTable` carries against
-what `02` models by name:
+what Part 02 models by name:
 
 ```
 NWB DynamicTable  columns  unmodelled
@@ -30,7 +30,7 @@ the thing: **a `DynamicTable` accretes, and what accretes is a task's or a pipel
 not a format's.** R17 §1 measured the same file and put it plainly — most columns in it conform to
 nothing.
 
-That is exactly what an extension is for, and it is why R43 §3, R16 §5, R9 §2 and `09` §2.3 all
+That is exactly what an extension is for, and it is why R43 §3, R16 §5, R9 §2 and Part 09 §2.3 all
 send their columns here.
 
 ## What varies is what belongs on the row
@@ -125,8 +125,8 @@ duplication buy otherwise-unavailable access — removes seven of `Site`'s field
 | `last_stop_duration` | `choice_cue_tick - last_stop_tick` |
 
 The four `Json[Any]` fields on `SessionMetadata` — `session`, `rig`, `task_logic`, `trainer_state`
-— are not dropped but *rehomed*: they are the rig and task configuration, which `03` places in
-`docs/` and `04` binds as sidecar documents. R3 §2.1 confines JSON to optional columns and these
+— are not dropped but *rehomed*: they are the rig and task configuration, which Part 03 places in
+`docs/` and Part 04 binds as sidecar documents. R3 §2.1 confines JSON to optional columns and these
 are required, so a column was never available to them.
 
 ## A denormalization is kept only if it is checked

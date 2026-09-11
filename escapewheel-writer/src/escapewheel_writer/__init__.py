@@ -1,6 +1,6 @@
 """Write Escapewheel packets.
 
-`05`: **validation is importation**. Copying bytes is staging; a resource is imported only
+Part 05: **validation is importation**. Copying bytes is staging; a resource is imported only
 once it has passed its checks. `PacketWriter` stages, validates, and commits in that order,
 renaming the manifest last so a reader never finds a partial import claiming to be valid.
 

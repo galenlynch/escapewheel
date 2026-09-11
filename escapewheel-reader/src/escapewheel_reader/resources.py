@@ -30,11 +30,11 @@ if TYPE_CHECKING:  # pragma: no cover
     import polars as pl
 
 
-#: Where a Zarr array keeps its metadata. v3 names it `zarr.json`; v2, which `03` §6.1 permits
+#: Where a Zarr array keeps its metadata. v3 names it `zarr.json`; v2, which Part 03 §6.1 permits
 #: an external array to use, names it `.zarray`. Both are JSON.
 #:
 #: `physical_profile` -> Zarr version, for a remote array whose documents cannot be read
-#: without a backend for its scheme (`03` §6.1).
+#: without a backend for its scheme (Part 03 §6.1).
 _ZARR_PROFILES: dict[str, Literal[2, 3]] = {"zarr_v2": 2, "zarr_v3": 3}
 _ZARR_METADATA: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
 
@@ -76,7 +76,7 @@ def _resolve(resource: Resource, root: Location) -> Path:
 def _store(resource: Resource, root: Location) -> str:
     """Return what to hand a Zarr store: the URI itself when remote, else the resolved path.
 
-    An external array is expected to be the large one (`04` §5.1), and in production that means
+    An external array is expected to be the large one (Part 04 §5.1), and in production that means
     an object store rather than a filesystem. Zarr opens such a URI directly given a backend
     for it, so resolving to a `Path` first would be the thing that made it unopenable.
     """
@@ -89,7 +89,7 @@ def _store(resource: Resource, root: Location) -> str:
 def _codec_names(codecs: Iterable[Mapping[str, Any]]) -> list[str]:
     """Flatten a Zarr v3 codec pipeline to names, outermost first.
 
-    The mandatory `bytes` codec is dropped, matching what a manifest declares (`03` §6.4). A
+    The mandatory `bytes` codec is dropped, matching what a manifest declares (Part 03 §6.4). A
     sharding codec is reported together with the codecs nested inside it, because reading one
     chunk needs all of them.
 
@@ -180,7 +180,7 @@ class TableResource:
         already takes. A store URI goes through `pyarrow.fs`, which pyarrow ships -- reading a
         remote table needs no dependency the read path did not already have.
 
-        **Credentials are the caller's, deliberately.** `04` §5.1 makes reachability a property
+        **Credentials are the caller's, deliberately.** Part 04 §5.1 makes reachability a property
         of the reader's situation rather than of the packet, so this takes whatever the
         filesystem's own default chain finds and never configures one.
 
@@ -307,7 +307,7 @@ class ArrayResource:
     Metadata and values have different costs, and this class keeps them apart. A Zarr array's
     metadata is a JSON document in the store, so shape, dtype, chunking, fill value and codecs
     are all answerable with no Zarr library present -- which is what lets a validator check
-    `04` §5.3's level 2 without taking a dependency on the thing it is checking. Only
+    Part 04 §5.3's level 2 without taking a dependency on the thing it is checking. Only
     :meth:`read` needs Zarr, behind the ``arrays`` extra.
     """
 
@@ -367,7 +367,7 @@ class ArrayResource:
 
         `path` is the local answer and raises for a scheme it cannot reach. This is the one to
         pass on: an external array is expected to be the large one, and in production that is
-        an object store (`04` §5.1).
+        an object store (Part 04 §5.1).
 
         Returns
         -------
@@ -381,7 +381,7 @@ class ArrayResource:
         """Which Zarr version the store actually uses, 3 or 2.
 
         Read from the store, never from the manifest's ``physical_profile``: the two agreeing
-        is what `04` §5.3's level 2 checks, so taking the manifest's word would make the check
+        is what Part 04 §5.3's level 2 checks, so taking the manifest's word would make the check
         compare a value with itself.
 
         Returns
@@ -396,7 +396,7 @@ class ArrayResource:
         """
         where = self.location
         if self._resource.is_external:
-            # The manifest's word, and only here. `03` §8 frames an external resource's
+            # The manifest's word, and only here. Part 03 §8 frames an external resource's
             # declaration as a claim rather than a verified fact, and there is nothing the
             # packet owns to compare it against.
             declared = str(self._resource.entry.get("physical_profile", ""))
@@ -404,7 +404,7 @@ class ArrayResource:
                 return _ZARR_PROFILES[declared]
             raise ResourceUnreadableError(f"{self.resource_id}: {where} is external and declares no Zarr version")
         # A packet-owned array is read from the store whether that store is a disk or a
-        # bucket: taking the manifest's word would make `04` §5.3's level 2 compare a value with
+        # bucket: taking the manifest's word would make Part 04 §5.3's level 2 compare a value with
         # itself, and where the packet sits does not change what the check is for.
         for version, name in _ZARR_METADATA.items():
             if where.join(name).exists():
@@ -421,7 +421,7 @@ class ArrayResource:
 
         A remote array is read through Zarr, which needs the ``arrays`` extra and a backend for
         the URI's scheme. A local one is the JSON document itself, so shape, dtype, chunking
-        and codecs cost nothing and need no library at all -- which is the property `03` §5.5
+        and codecs cost nothing and need no library at all -- which is the property Part 03 §5.5
         protects and the reason `arrays` is an extra in the first place.
 
         Returns
@@ -440,7 +440,7 @@ class ArrayResource:
 
     @property
     def shape(self) -> tuple[int, ...]:
-        """The array's shape, in stored axis order (`03` §6.2)."""
+        """The array's shape, in stored axis order (Part 03 §6.2)."""
         return tuple(int(n) for n in self.metadata()["shape"])
 
     @property
@@ -476,7 +476,7 @@ class ArrayResource:
 
     @property
     def fill_value(self) -> Any:
-        """The value an unwritten chunk reads as. `03` §6.1 requires one to be declared."""
+        """The value an unwritten chunk reads as. Part 03 §6.1 requires one to be declared."""
         return self.metadata().get("fill_value")
 
     @property

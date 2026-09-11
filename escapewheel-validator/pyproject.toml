@@ -35,7 +35,7 @@ remote = ["fsspec>=2024.6"]
 s3 = ["s3fs>=2024.6"]
 
 [project.entry-points."escapewheel.commands"]
-# `07` names one CLI. escapewheel-reader owns the console script and discovers this group, so
+# Part 07 names one CLI. escapewheel-reader owns the console script and discovers this group, so
 # two packages never compete for the `escapewheel` name under [project.scripts].
 validate = "escapewheel_validator.scripts.cli:register"
 

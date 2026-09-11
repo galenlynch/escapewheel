@@ -37,7 +37,7 @@ def test_a_store_location_has_no_path():
 
 
 def test_a_rewrite_redirects_an_absolute_uri():
-    """`04` §5.1 makes reachability the caller's situation; this is how the caller says so."""
+    """Part 04 §5.1 makes reachability the caller's situation; this is how the caller says so."""
     root = Location.of("/data/packet", {"file:///mnt/Data/ephys/": "s3://bucket/ephys/"})
     assert root.resolve("file:///mnt/Data/ephys/session.nwb/lfp").uri == "s3://bucket/ephys/session.nwb/lfp"
 
@@ -79,14 +79,14 @@ def test_a_local_location_reads_its_own_bytes(tmp_path):
 
 
 def test_a_source_resolves_through_a_document(tmp_path):
-    """`04` §5.5: the entry names a body of data, the document says where that is."""
+    """Part 04 §5.5: the entry names a body of data, the document says where that is."""
     root = Location.of(tmp_path, sources={"raw_nwb": "s3://bucket/session.nwb"})
     where = root.resolve("processing/ecephys/LFP/data", "raw_nwb")
     assert where.uri == "s3://bucket/session.nwb/processing/ecephys/LFP/data"
 
 
 def test_a_source_no_document_locates_is_refused(tmp_path):
-    """`04` §5.5: a fact about the reader's situation, raised where the bytes are asked for."""
+    """Part 04 §5.5: a fact about the reader's situation, raised where the bytes are asked for."""
     from escapewheel_reader import UnresolvedSource
 
     with pytest.raises(UnresolvedSource, match="raw_nwb"):
@@ -94,6 +94,6 @@ def test_a_source_no_document_locates_is_refused(tmp_path):
 
 
 def test_an_entry_naming_no_source_is_unchanged(tmp_path):
-    """`04` §5.5: silence keeps today's meaning, so every existing packet still resolves."""
+    """Part 04 §5.5: silence keeps today's meaning, so every existing packet still resolves."""
     root = Location.of(tmp_path, sources={"raw_nwb": "s3://bucket/x"})
     assert root.resolve("tables/core/units.parquet").path == Path(tmp_path) / "tables/core/units.parquet"

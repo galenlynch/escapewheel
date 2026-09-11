@@ -166,11 +166,11 @@ These are not local preferences; changing them breaks conformance.
 
 ### Deviations from 07's API
 
-`07`'s example reads `core.unit_spike_chunks` and sums an `n_spikes` list column. R5
+Part 07's example reads `core.unit_spike_chunks` and sums an `n_spikes` list column. R5
 withdrew that table, so `spike_times()` filters the flat `core.spike_events` instead, and
 returns `clock_id` alongside `t_tick` — a tick has no meaning without its clock.
 
-`07` Phase 5 wants `core.array_assets` validated "against actual Zarr dtype/shape". **Both
+Part 07 Phase 5 wants `core.array_assets` validated "against actual Zarr dtype/shape". **Both
 columns were struck** — R3 §3.3 lists `shape` and `dtype` as `removed`, because the Zarr array
 declares them and R3 §3.0 forbids restating what the data declares. What survives is the
 agreement that is *not* recoverable from the array alone, and the validator checks it: rank
@@ -194,7 +194,7 @@ dependency to get one.
 
 ### A packet root may be a store prefix
 
-`00` §56 admits three forms -- a local directory, an object-store prefix, or a release manifest
+Part 00 §56 admits three forms -- a local directory, an object-store prefix, or a release manifest
 pointing at distributed assets -- and `open_packet` takes any of them. `Location` resolves a
 declared URI against the root: relative under it, absolute where it says, and `file:` as the
 spelling of a path it is. `Packet.root` is the local answer and refuses a store; `Packet.location`
@@ -250,7 +250,7 @@ Registration is idempotent and re-entrant: `_register` asks the connection what 
 and re-runs `register_views` afterwards, so a view skipped for want of an input gains it when
 that input is registered by a later query.
 
-`07` names the CLI `escapewheel`, which this package claims under `[project.scripts]`. Later
+Part 07 names the CLI `escapewheel`, which this package claims under `[project.scripts]`. Later
 packages **cannot** also claim it — two distributions declaring the same console script is a
 conflict, and the last one installed wins silently. So they register a callable under the
 `escapewheel.commands` entry-point group instead, and `cli._extend` loads them at parse time.

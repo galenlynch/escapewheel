@@ -85,7 +85,7 @@ def test_a_failing_packet_is_not_committed(tmp_path, registry, minimal):
 
 
 def test_tables_are_written_in_the_registry_order(tmp_path, registry, minimal):
-    """`03` §5.3: sorted by the primary key, whatever order the adapter emitted."""
+    """Part 03 §5.3: sorted by the primary key, whatever order the adapter emitted."""
     out_of_order = [{"subject_id": s, "species": "Mus musculus", "sex": "male"} for s in ("m004", "m002", "m003")]
     root = tmp_path / "s001"
     _write(root, registry, {**minimal, "core.subjects": out_of_order + minimal["core.subjects"]})
@@ -105,7 +105,7 @@ def test_a_packet_without_sessions_is_refused(tmp_path, registry):
 
 
 def test_a_naive_timestamp_is_refused(tmp_path, registry, minimal):
-    """`03` requires a UTC offset; assuming one would be a guess."""
+    """Part 03 requires a UTC offset; assuming one would be a guess."""
     from escapewheel_writer.arrow import NaiveTimestamp
 
     naive = {**minimal, "core.sessions": [{**minimal["core.sessions"][0], "session_start_time": "2026-08-27T00:00:00"}]}
@@ -127,7 +127,7 @@ def test_an_unknown_resource_is_refused(registry):
 
 
 def test_committing_over_a_packet_is_refused(tmp_path, registry, minimal):
-    """Immutability covers packet-owned bytes (`04` §5.1)."""
+    """Immutability covers packet-owned bytes (Part 04 §5.1)."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     with pytest.raises(FileExistsError):
@@ -325,11 +325,11 @@ def _amend(root, registry, tables, **kwargs):
 
 
 def _runs(**overrides):
-    """A materialization activity (`04` §3), which is what an amendment normally carries."""
+    """A materialization activity (Part 04 §3), which is what an amendment normally carries."""
     return [
         {
             "processing_run_id": "run1",
-            # `02` §7.1: a run is session-scoped, and an amendment names the session it is for
+            # Part 02 §7.1: a run is session-scoped, and an amendment names the session it is for
             # rather than inheriting one -- the packet it amends may hold more than one.
             "session_id": "s001",
             "activity_type": "materialization",
@@ -352,7 +352,7 @@ def test_an_amendment_adds_a_resource(tmp_path, registry, minimal):
 
 
 def test_an_amendment_re_runs_only_the_rules_its_resources_implicate(tmp_path, registry, minimal):
-    """`03` §9.4. What it writes is what it must re-check; everything else is immutable."""
+    """Part 03 §9.4. What it writes is what it must re-check; everything else is immutable."""
     import escapewheel_writer.writer as module
 
     root = tmp_path / "s001"
@@ -391,7 +391,7 @@ def test_an_amendment_bumps_the_version_and_says_what_it_supersedes(tmp_path, re
 
 
 def test_an_amendment_keeps_packet_level_fields(tmp_path, registry, minimal):
-    """`03` §9.3: derived from the superseded manifest, not rebuilt. A writer handed only the
+    """Part 03 §9.3: derived from the superseded manifest, not rebuilt. A writer handed only the
     added resource knows nothing about the sessions the packet already declared."""
     root = tmp_path / "s001"
     _write(root, registry, minimal, description="a packet")
@@ -418,7 +418,7 @@ def test_amending_an_uncommitted_root_is_refused(tmp_path, registry, minimal):
 
 
 def test_an_amendment_may_not_replace_a_core_resource(tmp_path, registry, minimal):
-    """`03` §9.2: a packet whose core data changes is a new packet, not a new version."""
+    """Part 03 §9.2: a packet whose core data changes is a new packet, not a new version."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     with pytest.raises(ValueError, match="new packet"):
@@ -443,7 +443,7 @@ def test_a_failed_amendment_leaves_the_packet_at_its_old_version(tmp_path, regis
 
 
 def test_an_amendment_installs_a_newer_registry_and_retains_the_old(tmp_path, registry, minimal):
-    """`03` §9.3: the embedded copy must describe the added resource, and the superseded one
+    """Part 03 §9.3: the embedded copy must describe the added resource, and the superseded one
     is kept so a packet at the old version stays interpretable."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
@@ -486,7 +486,7 @@ def test_a_registry_that_changed_without_its_version_is_refused(tmp_path, regist
 
 
 def test_a_registry_colliding_with_a_retained_copy_is_refused(tmp_path, registry, minimal):
-    """`03` §9.3: two different registries at one version inside one packet would make its own
+    """Part 03 §9.3: two different registries at one version inside one packet would make its own
     retained manifests name something that no longer identifies anything."""
     import copy
 
@@ -519,7 +519,7 @@ def _waveforms(units=8, channels=4, samples=10):
 
 
 def _array_tables(uri: str = "arrays/core/waveform_means.zarr") -> dict[str, list[dict]]:
-    """The rows an array must be accompanied by: `03` §6.2 requires every axis to be named."""
+    """The rows an array must be accompanied by: Part 03 §6.2 requires every axis to be named."""
     return {
         "core.array_assets": [
             {
@@ -560,7 +560,7 @@ def test_an_array_is_written_as_zarr_v3(tmp_path, registry, minimal):
         if r["resource_id"] == "core.waveform_means"
     )
     assert entry["kind"] == "dense_array_asset"
-    assert entry["physical_profile"] == "zarr_v3"  # `03` §6.1: packet-owned must be v3
+    assert entry["physical_profile"] == "zarr_v3"  # Part 03 §6.1: packet-owned must be v3
     # Sharding is a codec, and the manifest must say so: a reader without sharding support
     # would otherwise read `["blosc"]` and discover the shard only on opening the array.
     assert entry["codecs"] == ["sharding_indexed", "blosc"]
@@ -589,7 +589,7 @@ def test_the_array_reads_back_identically(tmp_path, registry, minimal):
 
 
 def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal):
-    """A partial shard is not a regular chunk grid, which `03` §6.1 requires."""
+    """A partial shard is not a regular chunk grid, which Part 03 §6.1 requires."""
     from escapewheel_writer.writer import StagedArray
 
     root = tmp_path / "s001"
@@ -605,7 +605,7 @@ def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal
 
 
 def test_a_codec_outside_the_floor_is_written_and_declared(tmp_path):
-    """`03` §6.4: a writer MAY use any Zarr codec so long as the manifest names it.
+    """Part 03 §6.4: a writer MAY use any Zarr codec so long as the manifest names it.
 
     The floor is a reader obligation -- `Packet.unopenable` is where a reader finds out it
     cannot open an array -- so refusing here would enforce against a writer a rule written for
@@ -663,7 +663,7 @@ def test_an_array_that_fits_one_object_is_not_sharded():
 
 
 def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
-    """The streaming path's boundary guarantee, which `03` §5.4 and S3 sizing both rest on.
+    """The streaming path's boundary guarantee, which Part 03 §5.4 and S3 sizing both rest on.
 
     pyarrow's own default is 2**20 rows per row group, so a larger batch is silently cut into
     several. That would put `analysis.spike_events` row groups across time-bucket boundaries and
@@ -749,7 +749,7 @@ def test_a_batch_says_which_of_the_two_causes_it_hit(tmp_path, registry, minimal
 
 
 def test_an_optional_column_absent_from_the_first_batch_says_so(tmp_path, registry, minimal):
-    """The other cause: `schema` omits an optional column no first batch carries (`02` §6).
+    """The other cause: `schema` omits an optional column no first batch carries (Part 02 §6).
 
     Nothing is undeclared here, so the fix is to the stream rather than to a registry, which is
     why the two read differently.
@@ -794,7 +794,7 @@ def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, regist
     writer.add("core.processing_runs", [_run("run_import")])
 
     def derive(packet, target):
-        # `04` §3: a materialization records what produced it, which its own rule checks.
+        # Part 04 §3: a materialization records what produced it, which its own rule checks.
         target.add(
             "core.processing_runs",
             [dict(_run("run_derived", "materialization"),
@@ -816,7 +816,7 @@ def _run(run_id, activity="import"):
     """One `core.processing_runs` row.
 
     The activity is a parameter because R82 §2.2 makes two runs of one activity declare their
-    scopes, and a derived run is a materialization rather than a second import (`04` §3).
+    scopes, and a derived run is a materialization rather than a second import (Part 04 §3).
     """
     return {
         "processing_run_id": run_id,
@@ -827,7 +827,7 @@ def _run(run_id, activity="import"):
 
 
 def test_a_referenced_array_is_declared_external_and_copied_nowhere(tmp_path, registry, minimal):
-    """`04` §5.1: the bytes stay where they are and the packet says where that is."""
+    """Part 04 §5.1: the bytes stay where they are and the packet says where that is."""
     from escapewheel_writer.writer import ExternalArray
 
     root = tmp_path / "s001"
@@ -867,7 +867,7 @@ def test_a_relative_reference_is_refused(tmp_path, registry):
 
 
 def test_a_referenced_codec_joins_required_codecs(tmp_path, registry, minimal):
-    """`04` §3: the top-level list is the union, so a reader can answer the whole-packet question."""
+    """Part 04 §3: the top-level list is the union, so a reader can answer the whole-packet question."""
     from escapewheel_writer.writer import ExternalArray
 
     root = tmp_path / "s001"
@@ -883,7 +883,7 @@ def test_a_referenced_codec_joins_required_codecs(tmp_path, registry, minimal):
 
 
 def test_no_catalog_names_a_resource_that_is_not_in_place(tmp_path, registry, minimal):
-    """`05` §6: a reader sees the previous catalog or the new one, never a partial one.
+    """Part 05 §6: a reader sees the previous catalog or the new one, never a partial one.
 
     The invariant is about visibility, not about the mechanism: whatever primitive publishes the
     catalog, every resource it names must already be at its final location. Checked by reading
@@ -901,7 +901,7 @@ def test_no_catalog_names_a_resource_that_is_not_in_place(tmp_path, registry, mi
 
 
 def test_a_refused_commit_publishes_no_catalog(tmp_path, registry, minimal):
-    """`05` §6 again, from the other side: a failed commit leaves the previous state visible.
+    """Part 05 §6 again, from the other side: a failed commit leaves the previous state visible.
 
     Here there is no previous state, so nothing at all may be published -- a catalog naming
     resources that failed validation is the thing the ordering exists to prevent.
@@ -922,7 +922,7 @@ def test_a_refused_commit_publishes_no_catalog(tmp_path, registry, minimal):
 
 
 def test_a_referenced_source_reaches_the_default_document(tmp_path, registry, minimal):
-    """`04` §5.5: written at the packet root, and not declared as a resource."""
+    """Part 04 §5.5: written at the packet root, and not declared as a resource."""
     from escapewheel_writer.writer import ExternalArray
 
     root = tmp_path / "s001"
@@ -949,7 +949,7 @@ def test_a_referenced_source_reaches_the_default_document(tmp_path, registry, mi
     entry = next(r for r in manifest["resources"] if r["resource_id"] == "core.probe0.lfp")
     assert entry["source"] == "raw_nwb"
     assert entry["uri"] == "processing/ecephys/LFP/data"
-    # Not a packet resource: nothing in the manifest names it, which is what keeps `04` §5.1's
+    # Not a packet resource: nothing in the manifest names it, which is what keeps Part 04 §5.1's
     # immutability off it and lets a moved mirror be corrected in place.
     assert not any(r.get("uri") == "sources.json" for r in manifest["resources"])
 
@@ -996,7 +996,7 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
 
 
 def test_an_inefficient_encoding_is_reported(tmp_path, registry, minimal):
-    """`03` §5.5's rules are good guesses, and a column it guesses wrong about is said aloud.
+    """Part 03 §5.5's rules are good guesses, and a column it guesses wrong about is said aloud.
 
     Collected and never read is how this mechanism failed first: the notes were appended in two
     places and emitted in none, so the report existed and reached nobody. Both halves are pinned
@@ -1015,7 +1015,7 @@ def test_inefficient_finds_a_column_encoded_worse_than_it_could_be(registry):
     """An ascending integer is what delta exists for, so calling it anything else is reported.
 
     The check is over what a caller says it chose, not over what a rule would choose, so a writer
-    that ignores `03` §5.5 entirely still learns what its choice cost.
+    that ignores Part 03 §5.5 entirely still learns what its choice cost.
     """
     ramp = pa.table({"t_tick": pa.array(range(1_000_000, 1_020_000), type=pa.int64())})
     assert inefficient("core.pretend", ramp, delta=[], plain=["t_tick"]), "delta is far smaller"

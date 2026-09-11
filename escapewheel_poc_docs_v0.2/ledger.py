@@ -28,7 +28,7 @@ property neither audit had.
 An `applied` entry's `where` is a list of `{ part, section }` targets, each with an optional `note`
 saying which piece of the clause landed there. Every one is resolved against that part's own
 headings, so a clause cannot be recorded as placed in a section that does not exist -- the defect
-one step along from no `where` at all, and the one that let R111 §3.5 name two sections of `01`
+one step along from no `where` at all, and the one that let R111 §3.5 name two sections of Part 01
 that part has never carried.
 
 The other dispositions leave `where` free text or absent, because nothing resolves it: a `registry`

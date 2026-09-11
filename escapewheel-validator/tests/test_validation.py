@@ -68,9 +68,9 @@ def test_wrong_column_type_is_caught_before_any_query(packet_root):
 
 
 def test_physical_order_is_an_error(packet_root):
-    """`03` §5.3. A waiver may not rest on a property nothing requires.
+    """Part 03 §5.3. A waiver may not rest on a property nothing requires.
 
-    `02` §10.1 skips the uniqueness query for a table whose order settles its key, so the order
+    Part 02 §10.1 skips the uniqueness query for a table whose order settles its key, so the order
     is what a correctness check is discharged by and a departure fails the packet.
     """
     events = pq.read_table(packet_root / "tables" / "core" / "events.parquet")
@@ -138,7 +138,7 @@ def test_nullable_foreign_keys_are_guarded(packet_root):
 
 
 def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
-    """`02` §8.6, at `info`. The column may be absent from the file, so this can never fail."""
+    """Part 02 §8.6, at `info`. The column may be absent from the file, so this can never fail."""
     path = packet_root / "schemas" / "logical_schemas.json"
     registry = json.loads(path.read_text())
     registry["tables"]["core.trials"]["columns"].append(
@@ -169,7 +169,7 @@ def test_a_filled_metadata_column_is_not_reported(packet_root):
 
 
 def test_a_by_position_discriminator_gets_no_reverse_check(packet_root):
-    """`02` §8.3. `02` §8.3 excludes the third shape, and `positions_in` is what says it is one."""
+    """Part 02 §8.3. Part 02 §8.3 excludes the third shape, and `positions_in` is what says it is one."""
     registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
     trials = registry["tables"]["core.trials"]
     trials["columns"].append(
@@ -249,7 +249,7 @@ def test_external_resources_are_reported_as_unverified(packet_root):
 
 
 def test_advisory_rules_are_off_by_default(packet_root):
-    """An advisory rule does not run unless asked (`02` §10.2)."""
+    """An advisory rule does not run unless asked (Part 02 §10.2)."""
     registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
     registry["tables"]["core.trials"]["rules"].append(
         {
@@ -317,7 +317,7 @@ def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatc
     assert _offending(connection, "SELECT clock_id, tick_zero_utc FROM core_clocks WHERE FALSE") == []
 
 
-# -- materialization provenance (`05` §5.3) ------------------------------------------------
+# -- materialization provenance (Part 05 §5.3) ------------------------------------------------
 
 
 def _declare(root, **overrides):
@@ -340,7 +340,7 @@ def _declare(root, **overrides):
 
 
 def test_an_analysis_resource_without_a_run_is_an_error(packet_root):
-    """`04` §3: a derived resource that does not say how it was derived is not conforming."""
+    """Part 04 §3: a derived resource that does not say how it was derived is not conforming."""
     _declare(packet_root)
     report = validate(open_packet(packet_root))
     assert any(f.check == "provenance.no_processing_run" for f in report.findings)
@@ -394,7 +394,7 @@ def test_validation_leaves_nothing_in_the_packet(packet_root):
     assert {p.name for p in packet_root.iterdir()} == before
 
 
-# -- packet-owned arrays (`04` §5.3, level 2) ------------------------------------------------
+# -- packet-owned arrays (Part 04 §5.3, level 2) ------------------------------------------------
 #
 # These are shim checks, not SQL (R12 §4): a query cannot see a chunk grid. The store below
 # is a real Zarr v3 array with no chunk files, which is valid -- every chunk reads as
@@ -481,7 +481,7 @@ def test_an_array_declaring_its_codecs_correctly_is_clean(packet_root):
 
 
 def test_an_omitted_sharding_codec_is_caught(packet_root):
-    """Sharding is a codec. A manifest omitting it understates what a reader needs (`03` §6.4)."""
+    """Sharding is a codec. A manifest omitting it understates what a reader needs (Part 03 §6.4)."""
     _add_array(packet_root, declared=["blosc"])
     report = validate(open_packet(packet_root))
     assert "array.codecs_disagree_with_store" in _checks(report)
@@ -494,7 +494,7 @@ def test_a_declared_codec_the_store_does_not_use_is_caught(packet_root):
 
 
 def test_a_packet_owned_array_must_be_zarr_v3(packet_root):
-    """`03` §6.1 allows v2 only for an array the packet references."""
+    """Part 03 §6.1 allows v2 only for an array the packet references."""
     v2 = {"zarr_format": 2, "shape": [4, 2, 3], "chunks": [1, 2, 3], "dtype": "<i2", "fill_value": 0}
     store = packet_root / "arrays" / "core" / "wf.zarr"
     _add_array(packet_root, declared=[])
@@ -504,7 +504,7 @@ def test_a_packet_owned_array_must_be_zarr_v3(packet_root):
 
 
 def test_an_array_without_a_fill_value_is_caught(packet_root):
-    """`03` §6.1 requires one: without it an unwritten chunk has no defined value."""
+    """Part 03 §6.1 requires one: without it an unwritten chunk has no defined value."""
     _add_array(packet_root, declared=["sharding_indexed", "blosc"], document=_zarr_v3(fill_value=None))
     assert "array.no_fill_value" in _checks(validate(open_packet(packet_root)))
 
@@ -515,7 +515,7 @@ def test_an_irregular_chunk_grid_is_caught(packet_root):
 
 
 def test_a_rank_the_dimensions_do_not_cover_is_caught(packet_root):
-    """`03` §6.2: axis_index enumerates every stored axis, so two rows cannot describe rank 3."""
+    """Part 03 §6.2: axis_index enumerates every stored axis, so two rows cannot describe rank 3."""
     _add_array(packet_root, declared=["sharding_indexed", "blosc"], axes=2)
     assert "array.rank_disagrees_with_dimensions" in _checks(validate(open_packet(packet_root)))
 
@@ -602,7 +602,7 @@ def test_a_column_determined_by_the_key_cannot_separate_duplicates():
     """
     from escapewheel_validator.generate import adjacency_settles_uniqueness
 
-    # R93 §3.3 took the order out of the registry, so the resource names it: `03` §5.4's entry
+    # R93 §3.3 took the order out of the registry, so the resource names it: Part 03 §5.4's entry
     # for this one is what puts two non-key columns ahead of the key.
     table = {
         "primary_key": ["session_id", "unit_id", "t_tick"],
@@ -664,7 +664,7 @@ def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
     assert [f.check for f in report.findings] == ["schema.column_type"]
 
 
-# -- `03` §9.4: an amendment re-runs only the rules its own resources implicate ---------------
+# -- Part 03 §9.4: an amendment re-runs only the rules its own resources implicate ---------------
 
 
 def _check(sql, resource="core.units"):
@@ -676,7 +676,7 @@ def test_a_rule_attached_to_a_written_resource_runs():
 
 
 def test_a_rule_whose_query_names_a_written_resource_runs():
-    """The syntactic test is what makes `03` §9.4's objection answerable without the registry
+    """The syntactic test is what makes Part 03 §9.4's objection answerable without the registry
     promising that no existing rule references a resource added later."""
     sql = "SELECT c.unit_id FROM core_units c LEFT JOIN analysis_spike_events p ON c.unit_id = p.unit_id"
     assert concerns(_check(sql), {"analysis.spike_events"})
@@ -687,7 +687,7 @@ def test_a_rule_reading_only_untouched_resources_may_be_skipped():
 
 
 def test_the_test_errs_toward_running():
-    """`03` §9.4: a match inside a comment costs time, a missed one costs correctness."""
+    """Part 03 §9.4: a match inside a comment costs time, a missed one costs correctness."""
     sql = "SELECT * FROM core_units -- nothing to do with analysis_spike_events"
     assert concerns(_check(sql), {"analysis.spike_events"})
 
@@ -752,7 +752,7 @@ def _external(root, **overrides):
 
 
 def test_an_external_resource_is_reported_as_unverified_by_default(packet_root):
-    """`04` §5.3: structural validation must not reach for bytes the packet does not own."""
+    """Part 04 §5.3: structural validation must not reach for bytes the packet does not own."""
     report = validate(open_packet(_external(packet_root)))
     assert report.passed
     assert [f.check for f in report.findings if f.level == "info"] == ["external.unverified"]
@@ -795,7 +795,7 @@ def test_an_unreachable_resource_is_a_warning_not_an_error(packet_root):
 
 
 def test_a_codec_outside_its_versions_floor_is_reported(packet_root):
-    """`03` §6.4: gzip is in `03` §6.4's baseline and Zarr.jl reads it in v3 and not in v2."""
+    """Part 03 §6.4: gzip is in Part 03 §6.4's baseline and Zarr.jl reads it in v3 and not in v2."""
     root = _external(packet_root, codecs=["gzip"])
     report = validate(open_packet(root))
     assert report.passed, "outside the floor is conforming, just not portable"
@@ -808,7 +808,7 @@ def test_the_same_codec_inside_the_v3_floor_is_not_reported(packet_root):
 
 
 def test_a_requested_digest_with_nothing_recorded_says_so(packet_root):
-    """`04` §5.2: a packet need not record a sha256, and every packet built so far records none.
+    """Part 04 §5.2: a packet need not record a sha256, and every packet built so far records none.
     Asking for checksums and finding nothing to compare must not report a clean verification."""
     report = validate(open_packet(_external(packet_root)), external=True, checksums=True)
     assert report.passed, "a claim the packet never made is not a failure"
@@ -847,7 +847,7 @@ def test_the_summary_names_what_it_compared(packet_root):
 
 
 def _with_members(root, *, mutate=None):
-    """Declare `04` §5.4 members for the external resource, as a writer at verify="members" would."""
+    """Declare Part 04 §5.4 members for the external resource, as a writer at verify="members" would."""
     from escapewheel_validator.stores import listing
 
     manifest = json.loads((root / "packet.json").read_text())
@@ -873,7 +873,7 @@ def test_a_member_the_store_does_not_hold_is_an_error(packet_root):
 
 
 def test_a_member_size_that_disagrees_is_caught_where_the_total_would_not(packet_root):
-    """Two members changing in opposite directions leave `size_bytes` correct. `04` §5.4."""
+    """Two members changing in opposite directions leave `size_bytes` correct. Part 04 §5.4."""
 
     def swap(entry):
         entry["members"][0]["size_bytes"] += 10
@@ -920,7 +920,7 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
     assert "external.store_digest" in {f.check for f in changed.findings}
 
 
-# -- `02` §6: an external array's shape against what the packet's tables assert ------------
+# -- Part 02 §6: an external array's shape against what the packet's tables assert ------------
 
 
 def test_an_external_arrays_rank_is_checked_against_the_dimensions(packet_root):
@@ -1027,7 +1027,7 @@ def test_packet_owned_digests_are_checked(packet_root):
 
 
 def test_a_packet_owned_file_that_changed_is_an_error(packet_root):
-    """`03` §9.4 bounds revalidation on immutability. This is what checks the premise."""
+    """Part 03 §9.4 bounds revalidation on immutability. This is what checks the premise."""
     root = _record_owned_digests(packet_root, corrupt="core.trials")
     assert validate(open_packet(root)).passed, "not read without checksums"
     report = validate(open_packet(root), checksums=True)
@@ -1105,7 +1105,7 @@ def test_an_extensions_closed_vocabulary_is_enforced(packet_root):
 
 
 def test_an_extension_reference_into_core_resolves(packet_root):
-    """`09` §2 lets an extension reference core. Without the cross-registry link the anti-join is
+    """Part 09 §2 lets an extension reference core. Without the cross-registry link the anti-join is
     never generated and an orphan validates clean -- the gap R46 closed for core."""
     root = _extension(packet_root, mutate=lambda r: r["trial_id"].__setitem__(0, "no_such_trial"))
     report = validate(open_packet(root))
@@ -1113,7 +1113,7 @@ def test_an_extension_reference_into_core_resolves(packet_root):
 
 
 def test_an_extension_finding_does_not_fail_core(packet_root):
-    """`05` §5.4. A core validator need not hold the schema at all, so holding it must not be able
+    """Part 05 §5.4. A core validator need not hold the schema at all, so holding it must not be able
     to fail a packet that passes without it."""
     root = _extension(packet_root, mutate=lambda r: r["choice"].__setitem__(0, "sideways"))
     report = validate(open_packet(root))
@@ -1133,7 +1133,7 @@ def test_an_extension_the_packet_does_not_carry_is_reported_not_run(packet_root)
 
 
 def test_an_unreadable_extension_registry_is_ignored_by_the_reader(packet_root):
-    """`09` §6 makes checking declared files the validator's job; a reader must not refuse core
+    """Part 09 §6 makes checking declared files the validator's job; a reader must not refuse core
     over an extension it cannot parse."""
     root = _extension(packet_root)
     (root / "extensions" / "task.json").write_text("{not json")
@@ -1141,7 +1141,7 @@ def test_an_unreadable_extension_registry_is_ignored_by_the_reader(packet_root):
 
 
 def _discriminated(role="discriminator", **extra):
-    """A one-table registry whose `k_kind` discriminates `k` (`02` §8.3)."""
+    """A one-table registry whose `k_kind` discriminates `k` (Part 02 §8.3)."""
     column = {"name": "k_kind", "type": "string", "presence": "nullable", "role": role, **extra}
     return {
         "tables": {
@@ -1160,7 +1160,7 @@ def _discriminated(role="discriminator", **extra):
 
 
 def test_a_discriminator_is_checked_for_being_a_resource_id():
-    """`02` §8.3. Nothing checked this: `scope_kind` could hold an empty string and no rule saw it."""
+    """Part 02 §8.3. Nothing checked this: `scope_kind` could hold an empty string and no rule saw it."""
     checks = generate(_discriminated(resolves="optional", discriminates="k"))
     ids = {c.id for c in checks}
     assert "core.runs.k_kind.is_a_resource_id" in ids
@@ -1173,7 +1173,7 @@ def test_a_data_column_generates_no_discriminator_checks():
 
 
 def test_resolves_decides_the_level_not_whether_the_check_exists():
-    """`02` §8.3. An optional kind naming nothing is a fact, and reported; R49 §2.5 passed it in silence."""
+    """Part 02 §8.3. An optional kind naming nothing is a fact, and reported; R49 §2.5 passed it in silence."""
     kinds = {"core.sessions": "session_id"}
     optional = generate(_discriminated(resolves="optional", discriminates="k"), kinds=kinds)
     required = generate(_discriminated(resolves="required", discriminates="k"), kinds=kinds)
@@ -1184,7 +1184,7 @@ def test_resolves_decides_the_level_not_whether_the_check_exists():
 
 
 def test_a_shared_key_discriminator_generates_no_value_resolution():
-    """`02` §8.3: the named table's own reference carries that integrity, pointing the other way."""
+    """Part 02 §8.3: the named table's own reference carries that integrity, pointing the other way."""
     checks = generate(_discriminated(resolves="required"), kinds={"core.sessions": "session_id"})
     assert not [c for c in checks if c.id.endswith("k_kind.resolves")]
 
@@ -1238,7 +1238,7 @@ def _reference(root, **overrides):
 
 
 def test_a_named_source_no_document_locates_is_reported_not_failed(packet_root):
-    """`04` §5.5: which mirrors a reader can reach is the reader's situation, not a defect."""
+    """Part 04 §5.5: which mirrors a reader can reach is the reader's situation, not a defect."""
     _reference(packet_root)
     report = validate(open_packet(packet_root))
     assert report.passed
@@ -1248,7 +1248,7 @@ def test_a_named_source_no_document_locates_is_reported_not_failed(packet_root):
 
 
 def test_a_located_source_is_counted_as_located(packet_root):
-    """`04` §5.5: the packet root's own document is consulted, and says which are reachable."""
+    """Part 04 §5.5: the packet root's own document is consulted, and says which are reachable."""
     _reference(packet_root)
     (packet_root / "sources.json").write_text(
         json.dumps(
@@ -1264,7 +1264,7 @@ def test_a_located_source_is_counted_as_located(packet_root):
 
 
 def test_a_source_with_an_absolute_uri_is_refused(packet_root):
-    """`04` §5.5: naming a source and an absolute URI means the source would do nothing."""
+    """Part 04 §5.5: naming a source and an absolute URI means the source would do nothing."""
     _reference(packet_root, uri="s3://elsewhere/data")
     report = validate(open_packet(packet_root))
     assert not report.passed
@@ -1272,7 +1272,7 @@ def test_a_source_with_an_absolute_uri_is_refused(packet_root):
 
 
 def test_a_source_on_a_packet_owned_resource_is_refused(packet_root):
-    """`04` §5.5: a source locates bytes the packet does not own."""
+    """Part 04 §5.5: a source locates bytes the packet does not own."""
     _reference(packet_root, external=False)
     report = validate(open_packet(packet_root))
     assert not report.passed
@@ -1280,7 +1280,7 @@ def test_a_source_on_a_packet_owned_resource_is_refused(packet_root):
 
 
 def test_declaring_the_resolution_document_as_a_resource_is_refused(packet_root):
-    """`04` §5.5: inside the manifest, immutability would freeze the file that must stay editable."""
+    """Part 04 §5.5: inside the manifest, immutability would freeze the file that must stay editable."""
     path = packet_root / "packet.json"
     entry = json.loads(path.read_text())
     entry["resources"].append(

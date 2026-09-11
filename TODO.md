@@ -110,8 +110,8 @@ fork. What it should generate:
 
 **What the instructions must state**, because each is a rule an author will otherwise break:
 
-- The document is a registry document in `02`'s format, namespaced (R17 §2, `09` §5.2), and the
-  packet declares it in the catalog (`09` §5.3).
+- The document is a registry document in Part 02's format, namespaced (R17 §2, Part 09 §5.2), and the
+  packet declares it in the catalog (Part 09 §5.3).
 - Every column declares a type, a presence and a role (R2 §5, R48 §2.1); a string column declares
   its vocabulary (R101 §3.1); an identifier declares `carried` or `assigned` (R53 §2.3); a
   session-scoped table carries `session_id` and declares the reference (R88 §2.1).
@@ -130,7 +130,7 @@ fork. What it should generate:
 command is an argument list, so `uv run`, a pinned interpreter and a container are all just
 commands, and that freedom is what R109 §3.1 exists to protect. Print for a person on stdout and
 put anything a build should parse in the report file. Do not restate what the build already
-derives: rows per table come from the Parquet footer at `05` Stage 1.
+derives: rows per table come from the Parquet footer at Part 05 Stage 1.
 
 ## 1₊₄. The actor audit is done, and what it found
 
@@ -139,17 +139,17 @@ against R111 §3.1's line — a reader is bound by what it **returns**, a consum
 **concludes** — and against §3.2, where a build is one run of a writer. **Seven were repointed**,
 which is the yield the by-part test predicted:
 
-- `01` §7 — "a **reader** MUST NOT assume any base beyond what the origin declares" became a
+- Part 01 §7 — "a **reader** MUST NOT assume any base beyond what the origin declares" became a
   consumer. R45 §3 copies a tick verbatim, so no reader converts one; assuming a base is a
   conclusion about the value, not a property of what came back.
-- `00` §5 and `06` §1 — "A **consumer** MAY delete and recompute any of them" became a writer.
+- Part 00 §5 and Part 06 §1 — "A **consumer** MAY delete and recompute any of them" became a writer.
   Regenerating an analysis resource is a write, and no consumer mutates a packet.
-- `03` §6's revalidation and `05` §11's deterministic-build mode left **implementation** for a
+- Part 03 §6's revalidation and Part 05 §11's deterministic-build mode left **implementation** for a
   validator and a writer: R111 §3.2 keeps that word for a requirement binding every actor alike,
   and neither did.
-- `09` §8's five anti-patterns were one `implementation MUST NOT` list binding three actors, and
+- Part 09 §8's five anti-patterns were one `implementation MUST NOT` list binding three actors, and
   are now a reader's one, a writer's three and a build's one.
-- `09` §5.8 said "a build MUST NOT fail a build", which R109 introduced. It fails, or it does not.
+- Part 09 §5.8 said "a build MUST NOT fail a build", which R109 introduced. It fails, or it does not.
 
 **What the sweep did not find is the result worth keeping.** Every `build` clause was already
 correct — all 24 are about one run against one recipe — and 36 of 37 consumer clauses were right,
@@ -180,8 +180,8 @@ fork. What it should generate:
 
 **What the instructions must state**, because each is a rule an author will otherwise break:
 
-- The document is a registry document in `02`'s format, namespaced (R17 §2, `09` §5.2), and the
-  packet declares it in the catalog (`09` §5.3).
+- The document is a registry document in Part 02's format, namespaced (R17 §2, Part 09 §5.2), and the
+  packet declares it in the catalog (Part 09 §5.3).
 - Every column declares a type, a presence and a role (R2 §5, R48 §2.1); a string column declares
   its vocabulary (R101 §3.1); an identifier declares `carried` or `assigned` (R53 §2.3); a
   session-scoped table carries `session_id` and declares the reference (R88 §2.1).
@@ -200,7 +200,7 @@ fork. What it should generate:
 command is an argument list, so `uv run`, a pinned interpreter and a container are all just
 commands, and that freedom is what R109 §3.1 exists to protect. Print for a person on stdout and
 put anything a build should parse in the report file. Do not restate what the build already
-derives: rows per table come from the Parquet footer at `05` Stage 1.
+derives: rows per table come from the Parquet footer at Part 05 Stage 1.
 
 ## 1₊₄. Audit the clauses that already name an actor
 
@@ -217,17 +217,17 @@ or what a consumer **concludes**; repoint it where the answer disagrees with the
 writing side, where a build is one run of a writer (R111 §3.2), so the question is whether the
 obligation belongs to the run or to whatever performs it.
 
-**The measured starting point.** §2.2's finding is that the split already follows the part — `01`
-binds 19 clauses to a consumer and 2 to a reader, `03` binds 6 to a reader and none to a consumer —
+**The measured starting point.** §2.2's finding is that the split already follows the part — Part 01
+binds 19 clauses to a consumer and 2 to a reader, Part 03 binds 6 to a reader and none to a consumer —
 so an actor out of place for its part is the cheap test. It returns **10 suspects**, of which seven
 are correct on reading and **three are arguable in both directions**:
 
-- `01` §7 — "a **reader** MUST NOT assume any base beyond what the origin declares" reads as
+- Part 01 §7 — "a **reader** MUST NOT assume any base beyond what the origin declares" reads as
   interpretation until R3 §6 and R48 make base conversion the reader's job at the boundary.
-- `00` §5 and `06` §1 — "A **consumer** MAY delete and recompute any of them" sits oddly, no
+- Part 00 §5 and Part 06 §1 — "A **consumer** MAY delete and recompute any of them" sits oddly, no
   consumer mutating a packet, though each sentence before it already states the artifact fact.
 
-**The trigger.** The next revision that moves an obligation across `05` §10's two conformance
+**The trigger.** The next revision that moves an obligation across Part 05 §10's two conformance
 classes, since a misattributed actor is exactly what corrupts that boundary, and R111 §3.2 is what
 made it decidable in the first place.
 
@@ -272,7 +272,7 @@ So the corpus proves that an implementation agrees about the **format** and prov
 - `fixtures/build.py` calls `pq.write_table` directly and never constructs a `PacketWriter`, so no
   corpus packet passes through the encoding rules at all. Measured: `core.spike_events.t_tick` is
   `RLE_DICTIONARY` in every corpus packet, which is the encoding R68 §3 wrote its SHOULD against and
-  `03` §5.5 now tells a writer not to use.
+  Part 03 §5.5 now tells a writer not to use.
 
 The second is the sharper statement of the whole item. Every rule this repository has added about
 how a packet is *written* — encodings, assigned identifiers, session fill, physical order — is
@@ -294,7 +294,7 @@ that each pass their own tests, which is what an end-to-end test catches and a u
 
 So the work is one test in `escapewheel-writer/tests/`: a small recipe with synthetic sources, run
 through `session.py`, asserting the packet it produces — including that its encodings are the ones
-`03` §5.5 asks for, which is the assertion no corpus packet can make. Sized at an afternoon, not a
+Part 03 §5.5 asks for, which is the assertion no corpus packet can make. Sized at an afternoon, not a
 restructuring, and best done after the two open drafts are accepted, since it would assert what they
 define and a test may not cite a draft any more than a revision may.
 
@@ -428,7 +428,7 @@ natural.
   checks it would cover. The validator's own tests cover every path. Worth revisiting when the
   fixture next needs an array for another reason.
 - **A second trials table from another paradigm** would settle whether an interval's task columns
-  belong in core. R54 struck the four `02` defined and nothing wrote, so the question is now about
+  belong in core. R54 struck the four Part 02 defined and nothing wrote, so the question is now about
   what an extension carries rather than what core does.
 
 ---
@@ -497,7 +497,7 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 - **`core.events.payload` no longer smuggles `trial_id`.** The NWB source stops writing it, and the
   comment where it did records that R11 §5 struck the column. Payload now travels only where the
   stream's data varies.
-- **An interval's task columns are gone from core.** R54 struck the four `02` defined and nothing
+- **An interval's task columns are gone from core.** R54 struck the four Part 02 defined and nothing
   wrote, so `choice`, `rewarded`, `stimulus_id` and `condition_id` appear nowhere in the registry.
 - **`registry/tables.html` is tracked.** The note saying it was deliberately untracked is stale.
 - **The recipes no longer say `owns` where two sources each hold part.** See §1.

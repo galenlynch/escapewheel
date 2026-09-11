@@ -24,7 +24,7 @@ When behaviour here seems arbitrary, the reason is there.
 
 | Sibling | Contents |
 |---|---|
-| `nwb_lake_poc_docs/` | The frozen specification. Never edited. `05` is the import and validation pipeline. |
+| `nwb_lake_poc_docs/` | The frozen specification. Never edited. Part 05 is the import and validation pipeline. |
 | `revisions/` | R1–R36, all accepted. Where they disagree with the frozen docs, the revision binds. |
 | `registry/` | `logical_schemas.json` (33 tables), its meta-schema, and the manifest JSON Schema. |
 | `fixtures/` | The conformance corpus — 16 packets with expected findings as data. |
@@ -166,7 +166,7 @@ cd ../fixtures && uv run --no-cache --with ../escapewheel-validator --with duckd
 
 ## The CLI
 
-`07` names one command, `escapewheel`. `escapewheel-reader` owns the console script; this package
+Part 07 names one command, `escapewheel`. `escapewheel-reader` owns the console script; this package
 registers under the `escapewheel.commands` entry-point group instead, because two distributions
 declaring the same `[project.scripts]` name is a conflict in which the last one installed
 wins silently.

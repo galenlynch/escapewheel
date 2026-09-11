@@ -197,7 +197,7 @@ swallowed.**
    validation refused the commit. Caught by a rule, not by a crash.
 
 **Two usability gaps found.** `escapewheel inspect nwb` cannot run: it needs `interval_kind` and
-`inspect` has no way to pass an option, so `05` Stage 1 is unavailable for the central adapter.
+`inspect` has no way to pass an option, so Part 05 Stage 1 is unavailable for the central adapter.
 And the Zarr message in (1) should distinguish an absent path from an unsupported encoding.
 
 **No adapter needed changing.** Every difference was absorbed by a recipe option or reported as a

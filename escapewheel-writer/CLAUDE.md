@@ -9,7 +9,7 @@ validated packet on disk, and the source adapters that produce those records.
 
 **Delivered.** `PacketWriter` — records in, validated packet out. It stages under
 `staging/`, validates there, moves resources into place, and renames the manifest **last**
-(`05` Stage 5), so a reader never finds a partial import claiming to be valid. Schema, column
+(Part 05 Stage 5), so a reader never finds a partial import claiming to be valid. Schema, column
 order and physical sort all come from the registry, which is embedded in the packet (R2 §8).
 Wall-clock values without a UTC offset are refused rather than assumed (`arrow.NaiveTimestamp`).
 
@@ -29,7 +29,7 @@ R19's per-channel `inter_sample_shift` and the electrode behind each position.
 
 ### The importer is not one step
 
-`05` is explicit: *"Do not combine source parsing, normalization, validation, and writing
+Part 05 is explicit: *"Do not combine source parsing, normalization, validation, and writing
 into one opaque step."* The decomposition it names is the module layout —
 
 ```
@@ -55,7 +55,7 @@ Measured in `../inventory/nwb-zarr-776259-2025-04-09.md`:
 | aind-data-schema JSONs | subject, rig, procedures, session identity |
 
 So there is no `escapewheel import <file>`. The unit of work is a **session recipe** naming
-several sources, and the recipe doubles as the parameters `05` Stage 3 requires normalization
+several sources, and the recipe doubles as the parameters Part 05 Stage 3 requires normalization
 to be deterministic in — which is what `core.processing_runs.parameters` now carries, so a
 committed packet says what produced it and `code_uri` names the recipe by digest.
 
@@ -123,7 +123,7 @@ returns the validator's `Report`. A commit that finds errors raises `CommitRefus
 `staging/` in place for inspection, with no manifest at the root at all.
 
 `PacketWriter` is the product; the adapters are thin. It owns sort order (R10), the physical
-floor (R3 — primitive columns only), staging layout, and `05` Stage 5's atomic commit:
+floor (R3 — primitive columns only), staging layout, and Part 05 Stage 5's atomic commit:
 write staged resources, validate them, write a *candidate* manifest, move resources into
 final paths, rename the candidate to `packet.json` **last**.
 
@@ -200,7 +200,7 @@ spill format, each of which has already been changed and reverted on evidence.
 
 ### Design decisions carried from the specification
 
-- **Validation is importation** (`05`). Copying bytes is staging. Staged resources MUST NOT
+- **Validation is importation** (Part 05). Copying bytes is staging. Staged resources MUST NOT
   appear as committed canonical resources in the manifest.
 - **Time is integer ticks on a declared clock.** Every event, interval, spike time and dense
   time axis carries `clock_id` and an integer `*_tick`. Float seconds are derived only. This
@@ -211,11 +211,11 @@ spill format, each of which has already been changed and reverted on evidence.
 - **Referencing is expected for large resources** (R14, R15). A resource the packet does not
   own sets `external: true` with an absolute URI, and declares its own codecs.
 - **Sort every table by its primary key** (R10) except `core.spike_events` and `core.events`,
-  whose orderings `03` overrides.
+  whose orderings Part 03 overrides.
 
 ## The CLI
 
-`07` names one command, `escapewheel`. `escapewheel-reader` owns the console script; this package
+Part 07 names one command, `escapewheel`. `escapewheel-reader` owns the console script; this package
 registers under the `escapewheel.commands` entry-point group, as `escapewheel-validator` does. Two
 distributions declaring the same `[project.scripts]` name is a conflict in which the last one
 installed wins silently.
@@ -237,10 +237,10 @@ to say where the time went rather than leaving a caller to guess.
 
 | Sibling | Contents |
 |---|---|
-| `nwb_lake_poc_docs/` | The frozen specification. Never edited. `05` is the import pipeline. |
+| `nwb_lake_poc_docs/` | The frozen specification. Never edited. Part 05 is the import pipeline. |
 | `revisions/` | R1–R36, all accepted. Where they disagree with the frozen docs, the revision binds. |
 | `registry/` | `logical_schemas.json` (33 tables) — what a written table must look like. |
-| `inventory/` | `05` Stage 1 inventories of the real datasets this will import. |
+| `inventory/` | Part 05 Stage 1 inventories of the real datasets this will import. |
 | `escapewheel-reader/` | The read path. |
 | `escapewheel-validator/` | Phase 2. The committer calls this; it is not reimplemented here. |
 

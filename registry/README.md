@@ -113,7 +113,7 @@ inline-versus-sibling open, to be decided when the content was generated; inline
 a table's whole contract is readable in one place.
 
 <!-- BEGIN generated: rules -->
-77 rules over 27 tables: 68 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (`02` §10.2), off unless asked for.
+77 rules over 27 tables: 68 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
 
 | Table | Rules |
 |---|---:|

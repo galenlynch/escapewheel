@@ -35,7 +35,7 @@ def manifest_schema() -> dict[str, Any]:
 
 
 def sources_schema() -> dict[str, Any]:
-    """Load the bundled JSON Schema for a source resolution document (`04` §5.5).
+    """Load the bundled JSON Schema for a source resolution document (Part 04 §5.5).
 
     Vendored from `registry/` the way the manifest's is, because a wheel cannot read a file from
     another repository.
@@ -100,7 +100,7 @@ class Resource:
 
     @property
     def source(self) -> str | None:
-        """The body of data this resource belongs to, if it names one (`04` §5.5).
+        """The body of data this resource belongs to, if it names one (Part 04 §5.5).
 
         Where present, `uri` is a path relative to wherever that source turns out to be, and a
         resolution document says where that is. Neither field is a location.
@@ -137,7 +137,7 @@ class Manifest:
     required_codecs : tuple of str
         Zarr codecs a reader must support to open this packet's arrays.
     extensions : Mapping
-        Extension registries the packet declares (`09` §6, `09` §2), by `extension_id`. Empty is
+        Extension registries the packet declares (Part 09 §6, Part 09 §2), by `extension_id`. Empty is
         the common case and is conforming: core is interpretable without any.
     resources : tuple of Resource
         Every declared resource.

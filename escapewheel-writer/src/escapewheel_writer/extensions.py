@@ -1,12 +1,12 @@
 """Find the extension registries a recipe names.
 
-`09` §2 makes an extension a registry document, and `09` §6 has the packet carry it. Between the
+Part 09 §2 makes an extension a registry document, and Part 09 §6 has the packet carry it. Between the
 two sits a mechanical question this module answers: **where does a build get the document from?**
 
 Two answers, because there are two situations. A document being drafted is a file beside the
 recipe, named by its path. A document someone else maintains arrives in an installed
 distribution, which has no path a recipe could name -- so it registers under an entry-point
-group, the same way `07`'s single CLI is assembled from three packages and a source adapter is
+group, the same way Part 07's single CLI is assembled from three packages and a source adapter is
 found (`escapewheel_writer.sources.SOURCE_GROUP`).
 
 Note what a distribution is **for**. It carries the registry document and, where the raw source

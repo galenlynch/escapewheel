@@ -170,7 +170,7 @@ def test_a_clock_without_a_rate_is_refused(tmp_path, observed_packet):
 
 
 def test_a_packet_without_observation_tables_invents_nothing(packet_root):
-    """Conforming under `01` §2.4, so this is empty rather than an error or a guessed extent."""
+    """Conforming under Part 01 §2.4, so this is empty rather than an error or a guessed extent."""
     packet = open_packet(packet_root)
     assert clock_windows(packet).num_rows == 0
     assert unit_windows(packet).num_rows == 0

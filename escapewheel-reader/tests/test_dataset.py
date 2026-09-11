@@ -73,7 +73,7 @@ def test_a_table_referencing_sessions_directly_is_scoped():
 
 
 def test_a_table_reaching_sessions_through_a_parent_is_scoped():
-    """`00` §2.4. Eight core tables reach it without carrying a `session_id` of their own."""
+    """Part 00 §2.4. Eight core tables reach it without carrying a `session_id` of their own."""
     registry = _registry(**{"core.units": ("core.sessions",), "core.spikes": ("core.units",)})
     assert session_scoped(registry) == {"core.sessions", "core.units", "core.spikes"}
 
@@ -88,7 +88,7 @@ def test_a_table_sessions_references_is_not_scoped():
 
 
 def test_a_self_reference_is_not_a_route_to_sessions():
-    """`01` §3.5's chain is well-founded, and a device is not scoped by pointing at itself."""
+    """Part 01 §3.5's chain is well-founded, and a device is not scoped by pointing at itself."""
     assert session_scoped(_registry(**{"core.devices": ("core.devices",)})) == {"core.sessions"}
 
 
@@ -119,7 +119,7 @@ def test_the_identifier_collides_and_the_pair_does_not(two):
 
 
 def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
-    """`00` §2.4 MUST NOT: `core.subjects` is not session-scoped, so it gets no key."""
+    """Part 00 §2.4 MUST NOT: `core.subjects` is not session-scoped, so it gets no key."""
     subjects = pa.table({"subject_id": pa.array([7], type=pa.int32()), "subject_name": pa.array(["m001"])})
     for root in (packet_root, _second(packet_root, tmp_path)):
         pq.write_table(subjects, root / "tables/core/subjects.parquet")
@@ -161,7 +161,7 @@ def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
 
 
 def test_one_packet_gets_the_same_shape_as_many(packet_root):
-    """`00` §2.4. An analysis later pointed at twenty sessions must meet the same relation."""
+    """Part 00 §2.4. An analysis later pointed at twenty sessions must meet the same relation."""
     one = open_dataset([packet_root])
     assert one.table("core.units").column("session_key").to_pylist() == [0, 0]
 
@@ -175,7 +175,7 @@ def test_a_dataset_needs_a_packet():
 
 
 def test_the_sql_view_projects_the_identity(two):
-    """`07` §7. A scalar CASE over a column already scanned, so an unused key is pruned."""
+    """Part 07 §7. A scalar CASE over a column already scanned, so an unused key is pruned."""
     duckdb = pytest.importorskip("duckdb")
     assert duckdb
     con = two.duckdb(tables=["core.units"])
@@ -227,7 +227,7 @@ def test_a_resource_no_packet_holds_is_not_a_view(two):
 
 
 def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_root, tmp_path):
-    """`00` §2.4 wants a discriminator; §2.4 specifies no join, so this is refused not guessed."""
+    """Part 00 §2.4 wants a discriminator; §2.4 specifies no join, so this is refused not guessed."""
     root = tmp_path / "two_sessions"
     shutil.copytree(packet_root, root)
     i32 = pa.int32()

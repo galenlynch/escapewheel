@@ -1,7 +1,7 @@
 """Who cites the specification sections a change touches.
 
 A part's section is the statement of record, so editing one silently invalidates whatever pointed
-at it. `03` §5.5 carries 15 citations across the writer, the parts and the revisions, and R110
+at it. Part 03 §5.5 carries 15 citations across the writer, the parts and the revisions, and R110
 rewrote it without any of them being read. `check_citations.py` answers the other direction — does
 this citation resolve — and cannot see that a resolved citation now points at different prose.
 
@@ -27,7 +27,8 @@ PARTS = ROOT / "escapewheel_poc_docs_v0.2"
 #: A heading that opens a numbered section, at any depth.
 HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
 
-#: "`03` §5.4" and "Part 03 §5.4", the two spellings the parts and the code use.
+#: `Part 03 §5.4`, which `00` §10.4 requires, and the bare `03` §5.4 it replaced: a citation
+#: written before that clause still resolves, so both are read here.
 CITATION = re.compile(r"(?:`(\d\d)`|Part (\d\d))\s+§(\d+(?:\.\d+)*)")
 
 #: Searched for citers. The combined rendering is excluded: it is generated from the parts, so a

@@ -1,6 +1,6 @@
 """Build analysis resources from a packet's core ones.
 
-`06` splits transformations two ways: a view where the work is cheap, a materialized table
+Part 06 splits transformations two ways: a view where the work is cheap, a materialized table
 where it is expensive or frequently reused. Clock alignment alone sits on the cheap side --
 29 M spikes a second, so a query touching a few units pays single-digit milliseconds. What
 justifies materializing is not the arithmetic but the **layout**: a common clock is what makes
@@ -10,7 +10,7 @@ cannot express such an order (R30 §6).
 What the analysis layer costs
 -----------------------------
 
-An analysis resource MUST declare lineage to core (`06`), which is the manifest's
+An analysis resource MUST declare lineage to core (Part 06), which is the manifest's
 `derived_from`, and it is disposable: nothing here is canonical, and a packet without it is
 complete.
 
@@ -50,16 +50,16 @@ RESOURCE = "analysis.spike_events"
 class Collided(NotAligned):
     """Two spikes of one unit convert to the same reference tick, so the table cannot be built.
 
-    `06` §4. This table is keyed on the converted tick, and a conversion preserves distinctness
+    Part 06 §4. This table is keyed on the converted tick, and a conversion preserves distinctness
     only where it expands -- a reference clock slower than a probe's collapses spikes that were
     distinct on the probe. Refusing costs nothing usable: a histogram over collapsed spikes
     undercounts them, so a clock that coarse makes this table the wrong instrument rather than a
-    broken one, and `06` §2 makes not building it an ordinary outcome.
+    broken one, and Part 06 §2 makes not building it an ordinary outcome.
     """
 
 
 def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) -> None:
-    """Raise where two consecutive spikes of one unit share a converted tick (`06` §4).
+    """Raise where two consecutive spikes of one unit share a converted tick (Part 06 §4).
 
     Core sorts by `(session_id, unit_id, t_tick)` and the mapping is monotone, so a collision is
     always between neighbours; `carry` is the previous batch's last row, since a pair split
@@ -104,7 +104,7 @@ def _tick_rate(packet: Any, clock_id: str) -> int:
 
 
 def _clock_id(packet: Any, reference: Any) -> Any:
-    """Resolve a clock a recipe named to the identifier this packet assigned it (`05` §8).
+    """Resolve a clock a recipe named to the identifier this packet assigned it (Part 05 §8).
 
     A recipe is written before any identifier exists, so it names a clock by name -- as its
     own `[[clock]]` blocks and every `parent_clock_id` do. `reference_clock` returns an id
@@ -191,9 +191,9 @@ class _Buckets:
     76.6 s.
 
     Bucketing by time and sorting by unit inside each bucket needs no global sort, because
-    `core.spike_events` is already ordered by `(session_id, unit_id, t_tick)` (`03` §5.4)
-    (`03` §5.3, `03`). Visiting it in that order and appending each row to its bucket's file
-    leaves every file in exactly the intra-bucket order `03` §5.4 declares. What remains is to
+    `core.spike_events` is already ordered by `(session_id, unit_id, t_tick)` (Part 03 §5.4)
+    (Part 03 §5.3, Part 03). Visiting it in that order and appending each row to its bucket's file
+    leaves every file in exactly the intra-bucket order Part 03 §5.4 declares. What remains is to
     concatenate the files in bucket order, which is a second pass and no comparisons.
     """
 
@@ -253,7 +253,7 @@ class _Buckets:
         """Yield every bucket's rows in bucket order, in batches of at most `BATCH_ROWS`.
 
         A batch never spans two buckets, so each becomes a row group lying inside one bucket
-        (`03` §5.4). Row groups cut at a fixed row count would straddle boundaries and span
+        (Part 03 §5.4). Row groups cut at a fixed row count would straddle boundaries and span
         twice the intended time range.
         """
         # A bucket that never exceeded the budget has no writer and never reached disk; it is
@@ -287,7 +287,7 @@ def spike_events(
 ) -> Iterator[pa.RecordBatch]:
     """`analysis.spike_events` -- core spikes on the reference clock, bucketed by time.
 
-    A spike whose tick falls further than the bound from any anchor is **dropped**: `01` §3.9
+    A spike whose tick falls further than the bound from any anchor is **dropped**: Part 01 §3.9
     leaves it undefined, and a derived table is the wrong place to record that a value is
     missing.
 
@@ -300,10 +300,10 @@ def spike_events(
         The clock to map onto. Defaults to `core.sessions.reference_clock_id` (R27 §2).
     bound : float, optional
         Passed to :func:`~escapewheel_reader.clocks.align`. Defaults to what the packet's own
-        import run measured (`01` §3.9), so a table derived here places the same spikes the
+        import run measured (Part 01 §3.9), so a table derived here places the same spikes the
         packet's `t_zero_tick` was taken over.
     bucket_seconds : int
-        Bucket width, in seconds of the reference clock. A transform parameter `06` requires
+        Bucket width, in seconds of the reference clock. A transform parameter Part 06 requires
         the packet to declare, not something a reader can recover from the data.
     scratch : Path, optional
         Where the per-bucket spill files go. Defaults to a temporary directory beside the
@@ -314,7 +314,7 @@ def spike_events(
         pass can emit in order -- and the partition either fits in memory or goes to disk.
     dropped : list of int, optional
         A one-element list the count of unmappable spikes is accumulated into, since a
-        generator cannot return one. `06` §4 requires the producing run to record it.
+        generator cannot return one. Part 06 §4 requires the producing run to record it.
         Held with identifiers as dictionary codes it is 36 bytes a row, so a session of 287 M
         spikes wants 10.4 GB; the same rows spill to 0.5 GB of Parquet instead. Zero, the
         default, holds no more than one batch per bucket, because whether ten gigabytes is
@@ -325,7 +325,7 @@ def spike_events(
     Yields
     ------
     pyarrow.RecordBatch
-        In `03` §5.4's order, at most `BATCH_ROWS` rows, never spanning two buckets.
+        In Part 03 §5.4's order, at most `BATCH_ROWS` rows, never spanning two buckets.
 
     Raises
     ------
@@ -372,7 +372,7 @@ def spike_events(
                 {"t_tick": batch.column("t_tick"), "clock_id": pa.array(on_clock[units])}
             )
             parent, keep = mapped(timed, reference, by_clock, bound)
-            # `06` §4: counted whether or not any are dropped. A recorded zero is the
+            # Part 06 §4: counted whether or not any are dropped. A recorded zero is the
             # evidence the bound was sufficient; silence is what let a reader and this
             # writer disagree about which spikes exist without either noticing.
             dropped[0] += int(keep.size - keep.sum())
@@ -426,7 +426,7 @@ def into(
     memory_budget: int | str = 0,
     scratch: Path | None = None,
 ) -> str:
-    """Add `analysis.spike_events` to a writer, with the provenance `06` and R31 require.
+    """Add `analysis.spike_events` to a writer, with the provenance Part 06 and R31 require.
 
     Three things are recorded, across the two places R9 left provenance in: the source
     resources as the manifest's `derived_from`, the run as a `core.processing_runs` row, and
@@ -434,7 +434,7 @@ def into(
 
     `bucket_seconds` goes in `parameters` because it cannot be recovered from the data -- a
     table whose buckets all happen to be non-empty looks the same at 300 s as at 299 s
-    (`04` §3). So does the count of spikes this could not place (`06` §4), which is otherwise
+    (Part 04 §3). So does the count of spikes this could not place (Part 06 §4), which is otherwise
     invisible: a derived table one row short looks exactly like a derived table. `memory_budget`
     and `scratch` do not: they change how the rows are produced, not which rows they are, and
     recording them would make two identical packets claim different provenance.
@@ -473,7 +473,7 @@ def into(
                 "activity_type": "materialization",
                 # R44 §2.1: session-wide, so the session is the scope. Both stay null on a
                 # multi-session packet rather than naming one of several, because a writer that
-                # cannot determine a fact records nothing (`04` §5.2). `02` §8.3: the pair is set
+                # cannot determine a fact records nothing (Part 04 §5.2). Part 02 §8.3: the pair is set
                 # together or not at all.
                 "scope_kind": "core.sessions" if session else None,
                 "scope": session,
@@ -483,7 +483,7 @@ def into(
                     "bucket_seconds": bucket_seconds,
                     "bound": bound,
                     "reference_clock_id": reference,
-                    # `06` §4. Recorded even when zero: that a bound was sufficient is a
+                    # Part 06 §4. Recorded even when zero: that a bound was sufficient is a
                     # fact about this packet, not an assumption a reader should have to make.
                     "spikes_without_a_defined_mapping": dropped[0],
                 },

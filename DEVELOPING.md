@@ -14,7 +14,7 @@ which files a person writes, the rest is a straight line.
 |---|---|
 | `nwb_lake_poc_docs/02_core_logical_schemas.md` | the **frozen** starting point. Never edited, including to fix errors |
 | `revisions/R<N>-*.md` | every change to the schema since, as an argued document |
-| `registry/build.py` | one block per revision, applying it to the parsed `02` |
+| `registry/build.py` | one block per revision, applying it to the parsed Part 02 |
 | `registry/rules.json` | Tier 2 rules — the checks structure cannot imply |
 | `registry/registry.schema.json` | the meta-schema a registry document validates against |
 | `registry/manifest.schema.json` | the JSON Schema for `packet.json` |
@@ -60,8 +60,8 @@ CI runs the same command.
 Nothing here needs doing by hand in normal work — `verify.py` does it — but this is the order, and
 the order matters.
 
-1. **`parse02.py`** reads the frozen `02` and returns its tables as structure. This is the only
-   thing that ever reads `02`.
+1. **`parse02.py`** reads the frozen Part 02 and returns its tables as structure. This is the only
+   thing that ever reads Part 02.
 2. **`build.py`** applies each accepted revision's block, in revision order, to that structure.
    Each block sets `SINCE[0] = "R<N> §<x>"` first, which stamps every column it creates or amends
    (R29) *and* records that the revision was applied, so `derived_from` cannot omit it.
@@ -71,7 +71,7 @@ the order matters.
    of every table carrying it.
 
    **Column order is a convention of this registry and not a conformance requirement** — a
-   validator resolves a column by name, and no clause of `02` or `03` states an order — so no
+   validator resolves a column by name, and no clause of Part 02 or Part 03 states an order — so no
    revision mandates one and `check.py` is what holds it. Three conventions, each chosen so a
    reader meets the same shape in every table:
 
@@ -179,5 +179,5 @@ itself. If you find yourself editing a number, check whether something can compu
 every number that was hand-maintained here went stale, several of them twice in one day.
 
 `registry/tables.md` is the readable registry: every table, every column, its type, presence,
-role, unit, and the revision that introduced it. Read it to see what a table is **now**; read `02`
+role, unit, and the revision that introduced it. Read it to see what a table is **now**; read Part 02
 plus the revisions to see **why**. `registry/README.md` carries the counts, generated.

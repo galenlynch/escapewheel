@@ -3,7 +3,7 @@
 A citation names a part and a section number, and `revisions/check_citations.py` resolves it
 against the headings that exist. That check is blind to the failure that costs most: a section
 keeping its number while its subject changes, which every citation of it survives and none of them
-still means. R110 rewrote `03` §5.5, which 19 files cite, and nothing asked whether any of them
+still means. R110 rewrote Part 03 §5.5, which 19 files cite, and nothing asked whether any of them
 still held.
 
 `headings.toml` is what makes that visible. It records the heading each section number carries, so

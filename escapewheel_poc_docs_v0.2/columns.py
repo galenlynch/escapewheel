@@ -1,9 +1,9 @@
 """Expand each part's column tables from the registry, so the spec restates nothing.
 
-`02` §6 forbids a table restating what the data declares, and the same argument applies one level
+Part 02 §6 forbids a table restating what the data declares, and the same argument applies one level
 up: a part that retypes a resource's columns is a second declaration, agreeing with
 `registry/logical_schemas.json` only until someone edits one of them. R81 §2.3 removed
-`sorting_run_id` and `curation_id` from `analysis.spike_events` and `06` §4's hand-written table
+`sorting_run_id` and `curation_id` from `analysis.spike_events` and Part 06 §4's hand-written table
 kept both for four revisions, which nothing could see -- the ledger records where a clause landed,
 not whether the prose still agrees with it.
 

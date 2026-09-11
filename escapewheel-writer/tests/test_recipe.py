@@ -233,7 +233,7 @@ def test_what_the_recipe_itself_supplies_is_not_noted(tmp_path):
 
 
 def test_rows_another_source_owns_are_noted_without_a_preference(tmp_path):
-    """`05` §3.4. Two sources holding disjoint parts of one resource; `owns` keeps one silently."""
+    """Part 05 §3.4. Two sources holding disjoint parts of one resource; `owns` keeps one silently."""
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
                                         'owns = ["core.units"]\n'
                                         '\n[[source]]\nkind = "sync"\nroot = "y"\n'
@@ -260,10 +260,10 @@ def test_a_preference_is_what_makes_a_discard_silent(tmp_path):
 
 
 def test_a_preferred_resource_draws_a_refusal_rather_than_a_note(tmp_path):
-    """`05` §3.4 replaces the note for a preferred resource with something stronger.
+    """Part 05 §3.4 replaces the note for a preferred resource with something stronger.
 
-    `05` §3.1 took `core.subjects` out of the recipe-supplied set so `05` §3.5's warning could see
-    it, and a preference then exempts it from `05` §3.4's report. What makes that sound is not the
+    Part 05 §3.1 took `core.subjects` out of the recipe-supplied set so Part 05 §3.5's warning could see
+    it, and a preference then exempts it from Part 05 §3.4's report. What makes that sound is not the
     silence but the refusal: `_refuse_a_discarded_fact` fails the build where the displaced source
     stated a value the preferred one did not, which a note only mentioned.
     """
@@ -296,10 +296,10 @@ def _contest(tmp_path):
 
 
 def test_a_preference_names_a_resource_more_than_one_source_produces(tmp_path):
-    """`05` §3.3: an uncontested entry arbitrates nothing and exempts a report never due.
+    """Part 05 §3.3: an uncontested entry arbitrates nothing and exempts a report never due.
 
     `core.unit_electrodes` sat here until the sorter stopped producing that table, and nothing
-    noticed. This is `02` §4's discipline for a declared naming exception, one table over.
+    noticed. This is Part 02 §4's discipline for a declared naming exception, one table over.
     """
     uncontested = {
         resource: [kind for kind in sorted(ADAPTERS) if resource in produces(kind)]
@@ -321,7 +321,7 @@ def test_a_shared_resource_is_not_compared(tmp_path, registry):
 
 
 def test_a_preference_that_discards_a_stated_fact_is_refused(tmp_path, registry):
-    """`05` §3.4: the premise a preference buys silence on is now checked."""
+    """Part 05 §3.4: the premise a preference buys silence on is now checked."""
     context = Context(session_id="s001")
     context.stated["core.probes"] = {
         "nwb": [{"probe_id": "probeA", "probe_type": None}],
@@ -332,7 +332,7 @@ def test_a_preference_that_discards_a_stated_fact_is_refused(tmp_path, registry)
 
 
 def test_a_preferred_source_that_stages_nothing_is_refused(tmp_path, registry):
-    """`05` §3.4's limiting case: every value discarded, not just one."""
+    """Part 05 §3.4's limiting case: every value discarded, not just one."""
     context = Context(session_id="s001")
     context.stated["core.probes"] = {"sorter": [{"probe_id": "probeA"}]}
     context.stated["core.probes"]["nwb"] = []
@@ -341,7 +341,7 @@ def test_a_preferred_source_that_stages_nothing_is_refused(tmp_path, registry):
 
 
 def test_two_sources_that_agree_are_not_refused(tmp_path, registry):
-    """Agreement is the ordinary case, and `metadata` is never compared (`05` §3.4)."""
+    """Agreement is the ordinary case, and `metadata` is never compared (Part 05 §3.4)."""
     context = Context(session_id="s001")
     context.stated["core.probes"] = {
         "nwb": [{"probe_id": "probeA", "probe_type": "NP2000", "metadata": '{"a": 1}'}],
@@ -354,7 +354,7 @@ def test_two_sources_that_agree_are_not_refused(tmp_path, registry):
 
 
 def test_a_source_that_declares_no_owns_takes_what_it_produces(tmp_path, registry):
-    """Silence means the whole of PRODUCES, not nothing (`05` §3.4)."""
+    """Silence means the whole of PRODUCES, not nothing (Part 05 §3.4)."""
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'))
     owns = set(recipe.sources[0].owns)
     assert "core.units" in owns and "core.unit_quality_labels" in owns and "core.spike_events" in owns
@@ -414,7 +414,7 @@ def test_what_a_source_produces_is_what_it_can_emit():
 
     for kind, adapter in ADAPTERS.items():
         declared = set(getattr(adapter, "PRODUCES", ()))
-        assert declared or kind == "tables", f"{kind} declares no PRODUCES (`05` §3.4)"
+        assert declared or kind == "tables", f"{kind} declares no PRODUCES (Part 05 §3.4)"
         assert all(r.count(".") == 1 for r in declared), f"{kind} declares a malformed resource ID"
 
 
@@ -424,13 +424,13 @@ NWB = '\n[[source]]\nkind = "nwb"\nroot = "s"\nzone = "UTC"\nowns = ["core.probe
 
 
 def test_a_declared_fact_a_source_states_is_reported_before_any_io(tmp_path, registry):
-    """`05` §3.5. The base recipe declares `[subject].subject_id` and the NWB states it."""
+    """Part 05 §3.5. The base recipe declares `[subject].subject_id` and the NWB states it."""
     problems = levels(Recipe.load(write(tmp_path, NWB)).check(registry))
     assert any("subject.subject_id is declared and nwb states it" in m for m in problems.get("warning", []))
 
 
 def test_an_override_is_recorded_rather_than_warned(tmp_path, registry):
-    """`05` §3.5: a field an override covers is information; the build will apply it."""
+    """Part 05 §3.5: a field an override covers is information; the build will apply it."""
     body = '\n[overrides]\n"subject.subject_id" = "the file names the wrong animal"\n' + NWB
     problems = levels(Recipe.load(write(tmp_path, body)).check(registry))
     assert any("subject.subject_id is declared and overrides nwb" in m for m in problems.get("info", []))
@@ -438,14 +438,14 @@ def test_an_override_is_recorded_rather_than_warned(tmp_path, registry):
 
 
 def test_an_override_with_no_reason_is_refused(tmp_path, registry):
-    """`05` §3.6: a bare marker would silence a difference without saying why."""
+    """Part 05 §3.6: a bare marker would silence a difference without saying why."""
     body = '\n[overrides]\n"subject.subject_id" = "   "\n' + NWB
     problems = levels(Recipe.load(write(tmp_path, body)).check(registry))
     assert any("carries no reason" in m for m in problems.get("error", []))
 
 
 def test_an_override_of_a_fact_nothing_states_is_reported_not_refused(tmp_path, registry):
-    """`05` §3.6: a stale override leaves the packet correct, so it costs a line of the log."""
+    """Part 05 §3.6: a stale override leaves the packet correct, so it costs a line of the log."""
     body = (
         '\n[overrides]\n"subject.subject_id" = "why"\n'
         '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'
@@ -456,7 +456,7 @@ def test_an_override_of_a_fact_nothing_states_is_reported_not_refused(tmp_path, 
 
 
 def test_a_source_that_cannot_say_what_it_states_is_refused(tmp_path, registry, monkeypatch):
-    """`05` §3.4: an adapter declaring nothing must not read as one that states nothing."""
+    """Part 05 §3.4: an adapter declaring nothing must not read as one that states nothing."""
     from escapewheel_writer import sources
 
     class Mute:
@@ -468,7 +468,7 @@ def test_a_source_that_cannot_say_what_it_states_is_refused(tmp_path, registry, 
 
 
 def test_a_stated_fact_with_no_accessor_is_refused(tmp_path, registry, monkeypatch):
-    """`05` §3.4: the declaration is checked against the class, so it cannot drift unseen."""
+    """Part 05 §3.4: the declaration is checked against the class, so it cannot drift unseen."""
     from escapewheel_writer import sources
 
     class Absent:

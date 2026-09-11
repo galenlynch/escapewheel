@@ -1,6 +1,6 @@
 """Render the registry as markdown, so a table can be read without reading JSON.
 
-What a table looks like *now* is currently answerable only by reading `02` and then the
+What a table looks like *now* is currently answerable only by reading Part 02 and then the
 revisions that amended it, or by reading generated JSON. Neither is a document. This is
 generated from `logical_schemas.json` at build time, so it states the registry's content and
 cannot drift from it.
@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 REGISTRY = HERE / "logical_schemas.json"
 OUT = HERE / "tables.md"
 
-#: `02` §6's three presence states, rendered so the required ones stand out in a scan.
+#: Part 02 §6's three presence states, rendered so the required ones stand out in a scan.
 PRESENCE = {"required": "**required**", "nullable": "nullable", "optional": "optional"}
 
 
@@ -33,7 +33,7 @@ def _code(names: Any) -> str:
 
 
 def _declares(column: dict[str, Any]) -> str:
-    """Render every declaration a column carries about its values (`02` §9.3).
+    """Render every declaration a column carries about its values (Part 02 §9.3).
 
     The descriptions used to say these, because this table showed none of them and it is what a
     person reads. Generated from the field, so the two cannot disagree.
@@ -56,7 +56,7 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
     """Render one table: its columns, then everything that constrains them."""
     out = [f"### `{name}`", ""]
     if introduced := spec.get("since"):
-        note = f"*Introduced by {introduced} (R29 §2). A column with no revision came from `02` unamended.*"
+        note = f"*Introduced by {introduced} (R29 §2). A column with no revision came from Part 02 unamended.*"
         out += [note, ""]
 
     out += ["| Column | Type | Presence | Declares | Since | Description |",
@@ -179,7 +179,7 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
         "rules": (f"{len(rules)} rules over {len(by_table)} tables: {levels['error']} error, "
                   f"{levels['warning']} warning, {levels['info']} info — the "
                   f"{sum(1 for r in rules if r.get('advisory'))} at `info` being the advisory ones "
-                  f"(`02` §10.2), off unless asked for.\n\n"
+                  f"(Part 02 §10.2), off unless asked for.\n\n"
                   "| Table | Rules |\n|---|---:|\n"
                   + "\n".join(f"| `{n}` | {len(t['rules'])} |" for n, t in by_table)),
     }
