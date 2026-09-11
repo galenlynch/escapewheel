@@ -108,22 +108,31 @@ allocation: R109 §3.1 binds a writer to build from a document and rows, and des
 extension delivers without requiring it of the extension. An adapter is a class and cannot run
 itself out of process; whoever ships it can.
 
-**What matters is the process boundary; the transport is a declared protocol with a floor.** The
-profile names the protocols by which rows cross it. An adapter **MUST** declare which it speaks, a
-build **MUST** support **`files`**, and a build meeting an adapter that speaks none it supports
-**MUST** refuse, naming both sides' protocols, before any source is opened.
+**What matters is the process boundary; a transport is a protocol, and protocols come in groups.** A
+profile names a group for each way an adapter reaches a build, and the protocols in it. An adapter
+**MUST** declare and support **at least one** protocol in a group; a build **MUST** support **every**
+protocol in every group its profile names.
 
-`escapewheel-portable-v0.1` names two:
+`escapewheel-portable-v0.1` names one group, **out of process**, holding two:
 
-| protocol | rows cross as | a build |
-|---|---|---|
-| `files` | Parquet the recipe names, one per resource | MUST support |
-| `stream` | a sequence of Arrow IPC streams on standard output | MAY support |
+| protocol | rows cross as |
+|---|---|
+| `files` | Parquet the recipe names, one per resource |
+| `stream` | a sequence of Arrow IPC streams on standard output |
 
-`files` is the floor because R109 §3.2 already requires it of an extension, because both packaged
-sessions use it, and because it is the one protocol that works where a build did not launch the
-adapter at all. A protocol added later is additive: an adapter naming only what it named before
-keeps working, which is why this is a declaration rather than a default.
+**The asymmetry is the point.** There is one build and there will be many adapters, so the build
+carries breadth once and an adapter author implements whichever protocol suits the source in hand —
+`files` where an extraction is worth keeping, `stream` where it should leave nothing behind — and
+never both. Neither is a floor the other is measured against, and no negotiation can fail, because
+a build already supports everything a conforming adapter may choose. A build meeting an adapter
+that declares no protocol of the group **MUST** refuse it, naming the group: that adapter does not
+conform, and refusing before any source is opened is where R63 §2.2 puts a recipe a build cannot
+satisfy.
+
+It is also how the contract grows without carrying a version. Adding a protocol to a group costs
+every build work and costs no adapter anything, since one declaring what it declared before still
+declares something a build supports. Adding a **group** — an in-process protocol, or one reaching
+an adapter the build did not launch — leaves every existing adapter and build alone.
 
 `stream` earns its place by leaving nothing behind, and by never touching a disk: a pipe is memory,
 so the largest table costs no write and no read. A file is an artifact the build did not ask for and
@@ -268,9 +277,16 @@ build supplies no location and the adapter returns the URI its source already ha
 ## 5. Consequence
 
 Part 05 §3 gains an in-process declaration, Part 05 §3.7 gains what a build captures where rows are
-on standard output, Part 07 §4 gains the transports a build accepts, what its own sentence does not
-cover, and that an array crosses as a reference, and Part 09 §5.7 gains that an extension may use
-them too and that a command is carried as a list.
+on standard output, Part 03 §1 gains the protocol group the portable profile names, Part 07 §4
+gains that an adapter declares a protocol and that an array crosses as a reference, and Part 09
+§5.7 gains that an extension may use any protocol of the group and that a command is carried as a
+list.
+
+**What the reference implementation owes is both protocols, once.** A build supports every protocol
+in the group, so it reads Parquet the recipe names — which `tables.py` does today, as
+`{resource: path}` with a batch iterator each — and reads a sequence of Arrow IPC streams, which is
+new. Each of the ten adapters it ships then declares one, and an adapter author outside it
+implements one.
 
 The array is the smaller half of the implementation. `StagedArray` already carries the four layout
 fields and the identifier; what changes is that the adapter writes the values and returns the

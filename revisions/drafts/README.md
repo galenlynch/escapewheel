@@ -59,12 +59,15 @@ measured why: `StagedArray` carries `values, array_asset_id, chunks, shard, code
 
 **Two questions remain open on #2, and both are about the contract rather than a clause.**
 
-*Settled: the transport is a declared protocol with a floor,* not a default with an exception,
-which is the shape Part 03 §6.4 already uses for codecs. The profile names `files` and `stream`, an
-adapter declares which it speaks, a build MUST support `files`, and a build meeting an adapter that
-speaks none it supports refuses naming both sides' lists. Adding a protocol later is additive, so
-the set is where a version would otherwise have to go: an adapter naming what it named before keeps
-working.
+*Settled: a transport is a protocol, and protocols come in groups.* A profile names a group for
+each way an adapter reaches a build. An adapter **MUST** support at least one protocol in a group;
+a build **MUST** support every protocol in every group the profile names.
+`escapewheel-portable-v0.1` names one group, out of process, holding `files` and `stream`. The
+asymmetry is deliberate: there is one build and there will be many adapters, so the build carries
+breadth once and an adapter author implements the one protocol that suits the source in hand and
+never both. No negotiation can fail. Adding a protocol costs every build work and no adapter
+anything, and adding a group leaves both alone, which is where a version would otherwise have to
+go.
 
 *Settled: how many resources cross one stream.* An Arrow IPC stream carries one schema and an
 adapter returns thirteen resources on the NWB fixture. Streams concatenate — each ends with an
