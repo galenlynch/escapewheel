@@ -254,6 +254,27 @@ guessing. R88 §2.1 then made the column required on every scoped table, so **no
 current registry reaches that branch** — it guards a packet built against an older one, and
 `tests/test_dataset.py` exercises it against a registry that omits the column.
 
+### A discriminator is resolved here, not by every caller (Part 02 §8.3)
+
+`discriminators.py` offers what Part 02 §8.3 asks a reader to offer: read the kind, take that
+resource's key from the registry, join. The reason it names is that a discriminator nothing reads
+is a free-form name with extra steps, and the join is not obvious — it takes **three shapes**, and
+reading one as another is what that section's exclusion exists to stop.
+
+`declared` reports what the packet's **own** registries declare, core and extensions together,
+because a kind naming an extension table is the case the mechanism exists for and building over
+core alone is the defect R55 was written for. `kinds` counts what the rows name, `resolved` joins
+one of them, and `unresolved` reports what a packet names and does not hold — at the level the
+section assigns, a defect where `resolves` is `required` and a fact where it is `optional`, and
+apart from a row declaring no kind at all, which is **undeterminable** and wants the missing half
+recorded rather than the value corrected.
+
+Two details are easy to get wrong and are why this lives here. A shared-key join goes against the
+**discriminated** table, which `discriminates_via` moves away from the one carrying the column:
+`core.event_streams.detail_kind` specialises `core.events`. And a paired value is a `string` where
+the named key is an `int32` a packet mints, so it matches that resource's `*_name` and not its key
+(R53 §2.5).
+
 ### Registration is not free over a store
 
 DuckDB binds a view when it is created, and binding a Parquet view reads that file's footer.

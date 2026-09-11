@@ -34,15 +34,15 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ### What stands between here and a production trial
 
-1. **Offer what a reader SHOULD offer.** The reader and consumer obligations were walked on
+1. **Resolve a channel index for a caller.** The reader and consumer obligations were walked on
    2026-09-11 against the parts, which R111 made the statement of record: **58 normative
-   sentences** name a reader or a consumer, and one was unmet — the codec floor, now fixed (§2
-   below). What remains is two the reference reader does not implement at all rather than
-   implements wrongly. Part 02 §8.3 says **a reader SHOULD offer** discriminator resolution —
-   read the kind, take that resource's key from the registry, join — and nothing here does, so
-   every consumer of a `core.intervals.interval_kind` writes it again. Part 02 §12.2 is the same
-   shape for `extremum_channel_index` through `core.sorting_run_channels`, where resolving it
-   wrongly named the wrong electrode for 5,071 of 6,781 units (R83 §1).
+   sentences** name a reader or a consumer. One was unmet — the codec floor, fixed — and Part 02
+   §8.3's SHOULD is now offered by `escapewheel_reader.discriminators`. What remains is Part 02
+   §12.2: `extremum_channel_index` counts the channels a sorting run **kept**, and resolving it
+   against the contact list named the wrong electrode for **5,071 of 6,781 units** (R83 §1).
+   Nothing here resolves it through `core.sorting_run_channels`, and a consumer meeting an index
+   for a run that declares no channels MUST report it unresolvable rather than resolve it
+   anyway — which is a rule nobody can follow against an API that does not offer the resolution.
 2. **Bump `registry_version` when the schema settles.** It is held at `0.1.0` by decision, not by
    oversight: the field is for compatibility and follows semantic versioning, and R48, R53, R56
    and R59 would each have forced a major increment. While the hold lasts, two packets declaring
