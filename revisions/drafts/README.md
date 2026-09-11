@@ -63,8 +63,16 @@ crosses a boundary unchanged. Whether an array-producing adapter writes its arra
 reference, or whether array producers stay in process against #2 §3.3's default, is #2's to settle,
 and #1's closed list was written around the three adapters the answer decides.
 
-One shape question remains in #1: the units a prior source produced are keyed by a pair today, and
-a mapping with tuple keys needs a record form before it crosses.
+`conformance/adapter-boundary/` is the evidence, and #1 carries what it settled: a build passes a
+collection as records rather than as a mapping. Measured, the units handed the waveform adapter are
+keyed by a pair and refuse to serialise, and the electrodes beside them are keyed by an integer,
+serialise, and come back with **string** keys — a lookup that misses silently, and only where an
+adapter runs elsewhere.
+
+What the same probe could not settle is the array. It also confirmed #1's closed list on the
+adapter that receives the most: everything the NWB adapter is passed crosses in 271 bytes of JSON,
+and it returns 33 rows across 13 resources identical to the ones it returns constructed with a
+`Clock` and a `ZoneInfo` today.
 
 **Settled 2026-09-11 in #1's favour of the boundary**: #1 §3.1 now states what a build passes as
 data — a root URI the adapter opens for itself, the reference clock's identifier and rate, first

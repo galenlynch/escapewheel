@@ -102,10 +102,17 @@ what survives the crossing.
 | the session's reference clock | its identifier and its rational tick rate |
 | the first sample of each stream | one integer per stream name |
 | the clocks declared before it runs | each identifier with its rate |
-| the units a prior source produced | their source names and the identifiers assigned to them |
+| the units a prior source produced | a row each: the source's names for it, and the identifiers assigned |
 | a recipe option | the value the recipe carries |
 
 A profile adding to that list amends this section.
+
+**A mapping is not what a build passes; rows are.** A build **MUST** pass a collection as records
+carrying its key as columns, because a mapping's keys are a type the crossing does not keep:
+`conformance/adapter-boundary/` measures the units a build hands the waveform adapter, keyed by a
+pair, refused outright, and the electrodes beside them, keyed by an integer, accepted and returned
+with **string** keys. The second is the one to fear — a lookup that silently misses, and only where
+an adapter runs elsewhere.
 
 A build **MUST NOT** offer one of its own objects as an alternative to what an adapter declared. An
 adapter that accepts a `Clock` *and* can read a clock's row has two ways in, and which one a build
