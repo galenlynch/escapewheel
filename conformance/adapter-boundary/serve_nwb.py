@@ -19,6 +19,17 @@ from escapewheel_writer.sources.nwb import NWBSource
 NEEDS = ("root", "reference_clock", "zone", "session_id", "wanted")
 
 
+def as_table(rows: list[dict]) -> pa.Table:
+    """Records as a table, taking the columns from every row rather than from the first.
+
+    `pa.Table.from_pylist` infers the schema from the leading row and drops what later rows carry,
+    which loses a column a source populates for some rows only. Types are the build's to settle
+    against the registry, so nothing here needs one.
+    """
+    columns = list(dict.fromkeys(name for row in rows for name in row))
+    return pa.Table.from_pylist([{c: row.get(c) for c in columns} for row in rows])
+
+
 def build(supplied: dict) -> NWBSource:
     """Construct the adapter from values, rebuilding the writer's classes on this side."""
     clock = Clock(**supplied["reference_clock"])
@@ -42,7 +53,7 @@ class Served(fl.FlightServerBase):
         asked = list(wanted) if wanted else list(rows)
         # A resource this source has nothing for arrives empty rather than not arriving, so a build
         # reads absence as the run having failed and never as the source having nothing to say.
-        self.tables = {r: pa.Table.from_pylist(rows.get(r, [])) for r in asked}
+        self.tables = {r: as_table(rows.get(r, [])) for r in asked}
 
     def list_flights(self, context, criteria):
         """Stage 1: what this source offers per resource, and how many rows (Part 05 §4.1)."""

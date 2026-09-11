@@ -97,7 +97,40 @@ and reads its rows over Flight. `serve_nwb.py` is the adapter side: it rebuilds 
     ['core.clock_anchors'] is not in this session, and in process the adapter omits it;
     over the boundary it arrives at 0 rows
 
-The fourth resource is the one that makes absence mean something. `NWBSource` declares 18 resources
+All three protocols now run the same adapter over all eighteen resources, and agree:
+
+    a build supplies ['reference_clock', 'root', 'session_id', 'wanted', 'zone']
+      as 721 bytes of JSON, naming all 18 resources this adapter produces
+
+    flight-v0.1
+      18 resources, 33 rows, 5 empty, complete=True, 243 ms
+      identical to the adapter in process: True
+    files-v0.1
+      18 resources, 33 rows, 5 empty, complete=True, 351 ms
+      identical to the adapter in process: True
+    stream-v0.1
+      18 resources, 33 rows, 5 empty, complete=True, 259 ms
+      identical to the adapter in process: True
+
+    all three protocols report the same Stage 1: True
+    in process the adapter omits 5 of 18: ['core.array_assets', 'core.array_dimensions',
+      'core.clock_anchors', 'core.unit_coordinate_values', 'core.unit_coordinates']
+    over every protocol they arrive at 0 rows
+
+**Running all eighteen is what found the defect.** At four resources every protocol agreed with the
+in-process adapter; at eighteen all three lost the same two columns. `pa.Table.from_pylist` takes
+its schema from the leading row, and `core.electrode_coordinates` carries R59's `region_id` and
+`region_label` on one electrode of three, the first without them — so both columns left every
+delivery and nothing raised. `arrow.py` gets it right in process, taking the union of the keys and
+the registry's declared types; the three probe adapters each reached for the naive call instead,
+which is the argument for shipping the conversion with the protocol rather than leaving it to each
+adapter.
+
+**Stage 1 costs each protocol something different.** Flight answers from `ListFlights`, files from
+the Parquet footers, and the stream only by reading the delivery — the same ranking the draft gives,
+now measured against a real adapter rather than argued.
+
+The fourth resource in the earlier run is the one that makes absence mean something. `NWBSource` declares 18 resources
 and `records()` returns 13 against this fixture, omitting the five it has nothing for and returning
 none of them empty — so today a resource that never arrives is a crash and a source with nothing to
 say, indistinguishably. Delivered empty it costs a name and no schema: zero columns, and 144 bytes

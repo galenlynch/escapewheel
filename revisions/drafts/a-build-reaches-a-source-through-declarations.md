@@ -431,6 +431,22 @@ transport carries them and the receiving end returns records again — which is 
 source reads files and yields batches today, so the interface is re-established on this side of the
 boundary by machinery that already exists.
 
+**Turning records into a table is where a column goes missing.** Every out-of-process protocol
+carries a table, so something must build one, and the obvious call is wrong: `pa.Table.from_pylist`
+takes its columns from the leading row and drops what later rows carry. Measured over the NWB
+adapter's `core.electrode_coordinates`, one electrode in three carries R59's `region_id` and
+`region_label` and the first does not, so both columns left the delivery and nothing raised. An
+adapter **MUST** take a delivery's columns from every row of a resource, and a build **MUST NOT**
+read an absent column as a source having produced none — Part 02 §5's three presence states are
+decided against the registry on arrival, not by whichever row happened to be first.
+
+The registry is also why an adapter needs no types. A column null in every row infers as Arrow's
+`null`, an integer as `int64` where the registry may say `int32`, and both are settled by the build,
+which holds the declaration and is where R53's numbering already happens (§3.7). `arrow.py` is the
+reference for that reconciliation in process today: it takes the union of the keys and the
+registry's declared types, which is exactly what an out-of-process adapter must not be left to
+reinvent (§3.9).
+
 What the out-of-process route gives up is the property Part 07 §4 names. Testing an adapter that
 delivers over a transport means running it, so the filesystem or the pipe is back, and an in-process
 adapter is the only one testable without either. **That is the trade** — a solvable environment
@@ -723,6 +739,10 @@ identifier; what changes is that the producer writes the values and returns the 
 today it hands the values over and the writer writes them. `LFPSource` needs nothing —
 `external_arrays` is already the shape — and `add_array` keeps its signature for an in-process
 adapter that has not been converted.
+
+§3.9's shipped implementation is what keeps §3.6's conversion from being rewritten per adapter, and
+the naive one is what an author reaches for: the three probe adapters each used it and each lost the
+same two columns until a run over all eighteen resources found them.
 
 The reference implementation owes a command it does not have: `escapewheel` runs `inspect`, `init`,
 `extension`, `verify`, `prune` and `import`, and none of them runs one adapter and hands over its

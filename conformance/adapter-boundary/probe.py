@@ -37,7 +37,13 @@ ZONE = "America/Los_Angeles"
 
 def today(root: Path) -> NWBSource:
     """The adapter as `session.py` constructs it: a Clock object and a ZoneInfo."""
-    clock = Clock("harp", session_id=SESSION, name="HARP", tick_rate_num=31_250, origin="HARP epoch")
+    clock = Clock(
+        "harp",
+        session_id=SESSION,
+        name="HARP",
+        tick_rate_num=31_250,
+        origin="HARP epoch",
+    )
     return NWBSource(root, clock=clock, zone=ZoneInfo(ZONE), interval_kind=KIND)
 
 
@@ -50,15 +56,23 @@ def across(root: Path) -> tuple[NWBSource, str]:
     """
     supplied = {
         "root": str(root),
-        "reference_clock": {"clock_id": "harp", "session_id": SESSION, "name": "HARP",
-                            "tick_rate_num": 31_250, "tick_rate_den": 1, "origin": "HARP epoch"},
+        "reference_clock": {
+            "clock_id": "harp",
+            "session_id": SESSION,
+            "name": "HARP",
+            "tick_rate_num": 31_250,
+            "tick_rate_den": 1,
+            "origin": "HARP epoch",
+        },
         "zone": ZONE,
         "options": {"interval_kind": KIND},
     }
     wire = json.dumps(supplied)
     got = json.loads(wire)
     clock = Clock(**got["reference_clock"])
-    return NWBSource(got["root"], clock=clock, zone=ZoneInfo(got["zone"]), **got["options"]), wire
+    return NWBSource(
+        got["root"], clock=clock, zone=ZoneInfo(got["zone"]), **got["options"]
+    ), wire
 
 
 def main() -> int:
@@ -72,7 +86,9 @@ def main() -> int:
         same = mine == theirs
         rows = sum(len(v) for v in mine.values())
         print(f"inputs crossed as {len(wire)} bytes of JSON")
-        print(f"records: {len(mine)} resources, {rows} rows, identical across the boundary: {same}")
+        print(
+            f"records: {len(mine)} resources, {rows} rows, identical across the boundary: {same}"
+        )
         if not same:
             for key in sorted(set(mine) | set(theirs)):
                 if mine.get(key) != theirs.get(key):
@@ -93,18 +109,31 @@ def waveforms(tmp: Path) -> None:
     root = tmp / "session.nwb"
     units = fixture.group(root / "units")
     fixture._wide(units / "waveform_mean", fixture._dense(fixture.SUPPORT))
-    fixture.array(units / "device_name", ["probeA"] * fixture.UNITS, filter_id="vlen-utf8")
+    fixture.array(
+        units / "device_name", ["probeA"] * fixture.UNITS, filter_id="vlen-utf8"
+    )
     fixture.array(units / "ks_unit_id", numpy.arange(fixture.UNITS, dtype="<i8"))
-    fixture.array(units / "electrodes", numpy.arange(fixture.UNITS * fixture.CHANNELS, dtype="<i8"))
-    fixture.array(units / "electrodes_index",
-                  numpy.arange(1, fixture.UNITS + 1, dtype="<i8") * fixture.CHANNELS)
-    fixture.array(units / "extremum_channel_index", numpy.array(fixture.EXTREMUM, dtype="<i8"))
+    fixture.array(
+        units / "electrodes",
+        numpy.arange(fixture.UNITS * fixture.CHANNELS, dtype="<i8"),
+    )
+    fixture.array(
+        units / "electrodes_index",
+        numpy.arange(1, fixture.UNITS + 1, dtype="<i8") * fixture.CHANNELS,
+    )
+    fixture.array(
+        units / "extremum_channel_index", numpy.array(fixture.EXTREMUM, dtype="<i8")
+    )
     (root / ".zgroup").write_text(json.dumps({"zarr_format": 2}))
 
     supplied = {
-        "units": {("probeA", str(u)): {"unit_id": u, "sorting_run_id": 1, "curation_id": 1}
-                  for u in range(fixture.UNITS)},
-        "electrodes": {row: 100 + row for row in range(fixture.UNITS * fixture.CHANNELS)},
+        "units": {
+            ("probeA", str(u)): {"unit_id": u, "sorting_run_id": 1, "curation_id": 1}
+            for u in range(fixture.UNITS)
+        },
+        "electrodes": {
+            row: 100 + row for row in range(fixture.UNITS * fixture.CHANNELS)
+        },
     }
     print("\nwaveform adapter, what a build supplies:")
     for name, value in supplied.items():
@@ -112,19 +141,26 @@ def waveforms(tmp: Path) -> None:
         wrote = _dumps(value)
         # A mapping that writes down is not a mapping that comes back: JSON has string keys, so
         # an integer one returns as a string and the adapter looks a row up with the wrong type.
-        survives = wrote == "yes" and list(json.loads(json.dumps(value))) == [str(k) for k in value] \
+        survives = (
+            wrote == "yes"
+            and list(json.loads(json.dumps(value))) == [str(k) for k in value]
             and list(json.loads(json.dumps(value))) != list(value)
+        )
         note = "; keys return as strings" if survives else ""
         print(f"    {name}: keyed by {type(key).__name__}, json.dumps: {wrote}{note}")
 
     source = WaveformSource(root, session_id="s1", **supplied)
     staged = source.staged_arrays()
-    print(f"\nstaged_arrays: {len(staged)} object(s), type {type(staged[0]).__name__ if staged else '—'}")
+    print(
+        f"\nstaged_arrays: {len(staged)} object(s), type {type(staged[0]).__name__ if staged else '—'}"
+    )
     for item in staged:
         values = getattr(item, "values", None)
         print(f"    {item.array_asset_id}: fields {[f.name for f in fields(item)]}")
-        print(f"      values is {type(values).__name__}, "
-              f"{getattr(values, 'nbytes', '?')} bytes, shape {getattr(values, 'shape', '?')}")
+        print(
+            f"      values is {type(values).__name__}, "
+            f"{getattr(values, 'nbytes', '?')} bytes, shape {getattr(values, 'shape', '?')}"
+        )
         print(f"      json.dumps: {_dumps(item.__dict__)}")
 
 
@@ -155,12 +191,16 @@ def streams() -> None:
     try:
         while True:
             reader = pa.ipc.open_stream(child.stdout)
-            got[reader.schema.metadata[b"resource_id"].decode()] = reader.read_all().num_rows
+            got[reader.schema.metadata[b"resource_id"].decode()] = (
+                reader.read_all().num_rows
+            )
     except pa.ArrowInvalid:
         pass
     child.wait()
-    print(f"\nthree resources over one pipe, three schemas: {got}, exit {child.returncode}")
+    print(
+        f"\nthree resources over one pipe, three schemas: {got}, exit {child.returncode}"
+    )
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
