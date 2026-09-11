@@ -355,7 +355,8 @@ that language too, and the Arrow implementations carrying Flight are a subset of
 An adapter that emits everything it has and lets the build discard is paying a cost R63 §1.2
 measures at one resource in five, and an adapter whose discovery costs an extraction is paying what
 the NWB adapter's `offers` pays in process today, counting rows by computing them. Both are costs a
-working adapter can carry.
+working adapter can carry. What the stream costs on the failing path is larger and is §3.10's: a
+build learns that a run failed and not which resource, where Flight names the one it asked for.
 
 A recipe declares files where persistence is the point — an extraction expensive enough to reuse
 across builds, or one whose output should still be there to inspect after a failure. That is not a
@@ -551,11 +552,26 @@ build can repeat and cannot read. Raised instead as a Flight error carrying one 
 `extra_info` it cannot parse, and reports the message alone, since an adapter that raised an
 ordinary exception is the common case rather than a defect.
 
-**A transfer that fails partway delivers no rows.** Two batches of a four-row table had already
-crossed when the adapter raised, and the build was left holding **0 rows** — the client discards
-what it has rather than returning a short table. A build **MUST NOT** stage a resource whose
-transfer failed, and this is what lets it apply that rule without counting: a resource arrives whole
-or not at all, so a partial table is not a state the boundary can produce.
+**What a failed transfer leaves a build depends on the protocol, and only one of them discards.**
+Over `flight-v0.1`, two batches of a four-row table had crossed when the adapter raised and the
+build was left holding **0 rows**: the client discards what it has rather than returning a short
+table. Over `stream-v0.1` nothing discards. A command killed after writing four rows and before the
+end-of-stream marker delivers **4 of 4 rows that parse clean**, because a reader treats end of file
+as end of stream, and the read then ends with the same message a finished run ends with — so a
+build holds a table the adapter had not finished writing and the bytes do not say so.
+
+**The exit code is what says a run succeeded.** A build **MUST NOT** stage any resource from a
+command that exited non-zero, whatever arrived on standard output, and that includes a resource
+that arrived whole: a command dying between two resources delivers the first one complete and valid.
+A build **MUST** also report a stream it cannot parse as a failure where the command exited zero,
+which is the one case the bytes do carry — a stream stopped inside a message fails naming how many
+bytes short it was, where every clean end reports a null schema message instead.
+
+The asymmetry is an argument for `flight-v0.1` and against owning any framing. With the stream a
+build learns that the run failed and not which resource; with Flight the failure is an error on the
+call, so the resource it was asked for is named. Getting that from the stream means a build reading
+the end-of-stream marker itself rather than handing the bytes to a reader, which is the ownership
+§3.3 declines.
 
 **A report is carried the way the protocol carries everything else.** Part 09 §5.8 has an extension
 write a JSON report at a path the recipe names, carrying a `problems` array whose entries each have
@@ -568,6 +584,14 @@ with that JSON as one result. A build **MUST** ask after it has read the rows an
 exits, and **MUST NOT** ask one that did not name the action — measured, an adapter implementing no
 action lists none and raises on being asked anyway, so the declaration is what a build reads and the
 error is what it avoids.
+
+**A report file says nothing about which run wrote it.** Part 09 §5.8 has a build report what a
+report contains where one is present, and a file at a path the recipe names is present after any run
+that ever wrote one, so last week's findings are reported as this build's and nothing distinguishes
+them. The two protocols that carry a report on the wire cannot have the defect, since what comes
+back was asked for by this run. A build **MUST** therefore remove the path before it runs the
+command, and **MUST** treat a report it did not see appear as absent. Nothing reads one yet — R109
+§3.6 is specified and unimplemented — so the correction costs a clause and no rebuild.
 
 Reporting is the same in all three, which is the point: a build files an adapter's findings beside
 an extension's and beside its own, at Part 05 §9's levels, without knowing which protocol brought

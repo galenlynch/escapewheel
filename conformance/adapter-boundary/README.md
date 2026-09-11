@@ -155,3 +155,36 @@ returned none, so a build never holds part of a resource and needs no count to k
 no file; a build asks after the rows and before the adapter exits. `app_metadata` on the Stage 1
 `FlightInfo` carries bytes too and is the wrong place — Stage 1 runs before the extraction a finding
 would be about.
+
+## What a failure carries over the stream, where nothing discards
+
+`stream_failures.py` is the same experiment against `stream-v0.1`: rows on standard output as
+concatenated IPC streams, one per resource, and a command that stops at four different points.
+
+    **A run that finishes.** 7 of 7 rows, exit 0, parse error
+      Tried reading schema message, was null or length 0
+
+    **The command dies between two resources.** The first is complete and valid:
+      the build holds {'core.sessions': 1}, exit 1, parse error
+      Tried reading schema message, was null or length 0
+
+    **The command dies after the rows and before the end-of-stream marker.**
+      the build holds {'core.sessions': 1, 'core.units': 4}, exit 1
+      parse error: Tried reading schema message, was null or length 0
+
+    **The command is killed inside a batch.** What had already been decoded stays decoded:
+      the build holds {'core.sessions': 1, 'core.units': 0}, exit 1
+      parse error: Expected to read 200 metadata bytes, but only read 120
+
+**A reader treats end of file as end of stream.** The end-of-stream marker was withheld and all four
+rows arrived anyway, reported with the same parse error a clean finish reports. Flight discarded a
+partial transfer; the stream does not, so the draft's claim that a partial table is not a state the
+boundary can produce was true of the protocol it had been measured against and false of this one.
+
+**Only the exit code separates the three.** A finished run, a run that died between two resources
+and a run that died before its last marker all end `Tried reading schema message, was null or length
+0`. A build that reads the bytes to decide whether a run succeeded gets the wrong answer twice in
+three.
+
+**A truncated message is the one case the bytes do carry**, failing with how many bytes short it
+was. That is what a build reports where the command nonetheless exited zero.
