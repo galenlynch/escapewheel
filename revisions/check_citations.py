@@ -1,4 +1,4 @@
-"""Every citation in a revision or a draft resolves to a section that exists.
+"""Every citation resolves to a section that exists, and every part is numbered so one can.
 
 A citation is the load-bearing part of a revision: an implementer follows it to the rule. Nothing
 checked them, and a wrong one is invisible to every other tool -- `ledger.py` sees that a clause
@@ -24,6 +24,21 @@ reference whose antecedent is the previous clause ("R86 ... its §1.1"), which r
 resolves to nothing mechanically. Worth seeing, since the same shape is how a reference to another
 document's §7.3 gets read as this document's §7.
 
+Every tracked Python file is checked too, not only the revisions. `00` §10.1 sends a comment to the
+part that states its rule, so a citation in the source is load-bearing in the same way -- and until
+this scanned them, five were broken: four naming section 56 of Part 00 and section 92 of Part 01,
+both v0.1 *line* numbers carried into section form, and one naming a section R70 never had. None
+resolved and nothing reported them. A part citation that does not resolve in a tracked file is an
+error, as in a draft: the source is live.
+
+Those are spelled out in prose rather than written as citations, because this file is one of the
+files it reads.
+
+The parts are also checked for the numbering `00` §10.3 requires. `headings` returns a set, which is
+what hid `05` carrying two sections numbered 11 through five accepted revisions -- a duplicate
+vanishes into a set and the citation still resolves. Two sections with one number fail the build and
+sections that do not ascend are reported, which is the MUST and the SHOULD of `00` §10.3.
+
     python check_citations.py            # report
     python check_citations.py --quiet    # errors only
 """
@@ -32,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -57,6 +73,20 @@ def headings(text: str) -> set[str]:
     return set(HEADING.findall(text))
 
 
+def numbering(text: str) -> tuple[list[str], list[tuple[str, str]]]:
+    """A part's repeated section numbers, and each adjacent pair that fails to ascend.
+
+    Compared as tuples of integers, so `1.10` follows `1.9` and a nested section follows its
+    parent. Every repeat is also a non-ascending pair; both are returned because `00` §10.3 makes
+    the first an error and the second a report.
+    """
+    found = HEADING.findall(text)
+    keys = [tuple(int(part) for part in number.split(".")) for number in found]
+    repeated = sorted({n for n in found if found.count(n) > 1}, key=lambda n: keys[found.index(n)])
+    descending = [(found[i], found[i + 1]) for i in range(len(keys) - 1) if keys[i + 1] <= keys[i]]
+    return repeated, descending
+
+
 def document(number: str) -> Path | None:
     """The accepted revision with this number, if one exists."""
     found = sorted(HERE.glob(f"R{number}-*.md"))
@@ -79,9 +109,13 @@ def part(number: str) -> Path | None:
 
 
 def check(path: Path) -> tuple[list[str], list[str], list[str]]:
-    """Return this document's unresolved revision citations, part citations and local references."""
+    """Return this document's unresolved revision citations, part citations and local references.
+
+    A source file declares no sections, so an unprefixed `§N` in one resolves to its enclosing
+    prose rather than to a heading and is not reported.
+    """
     text = path.read_text()
-    own = headings(text)
+    own = headings(text) if path.suffix == ".md" else None
     errors, parts, loose = [], [], []
     claimed: set[tuple[int, int]] = set()
 
@@ -103,12 +137,19 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
                 parts.append(f"`{name}` §{section} — {target.name} has no §{section}")
 
     spans = [(a, b) for a, b in claimed]
-    for match in ANY.finditer(text):
+    for match in ANY.finditer(text) if own is not None else ():
         if any(a <= match.start() < b for a, b in spans):
             continue
         if match.group(1) not in own:
             loose.append(f"§{match.group(1)} — unprefixed, and this document has no such section")
     return errors, parts, sorted(set(loose))
+
+
+def sources() -> list[Path]:
+    """Every tracked Python file, which is where a citation of a part has to resolve."""
+    listed = subprocess.run(["git", "ls-files", "*.py"], cwd=HERE.parent,
+                            capture_output=True, text=True, check=True).stdout.split()
+    return [HERE.parent / name for name in listed if (HERE.parent / name).is_file()]
 
 
 def main() -> int:
@@ -123,24 +164,40 @@ def main() -> int:
     # long as any tracked document is open. `is_file()` is false for a dangling link and true for
     # a real one, so this skips the lock and nothing else.
     paths = [p for p in paths if p.is_file()]
+    code = sources()
     broken, historical = 0, 0
-    for path in paths:
-        draft = path.parent.name == "drafts"
+
+    # `00` §10.3's numbering, checked before any citation: a duplicate number makes a citation
+    # ambiguous rather than unresolvable, so nothing downstream can see it.
+    for target in sorted(PARTS.glob("[0-9][0-9]_*.md")):
+        repeated, descending = numbering(target.read_text())
+        for number in repeated:
+            print(f"  BROKEN  {target.name}: two sections numbered {number}")
+            broken += 1
+        if not args.quiet:
+            for before, after in descending:
+                if before != after:
+                    print(f"  order   {target.name}: §{after} follows §{before}")
+
+    for path in paths + code:
+        draft = path.parent.name == "drafts" or path.suffix == ".py"
         errors, parts, loose = check(path)
         if draft:
             errors += parts
         else:
             historical += len(parts)
         broken += len(errors)
+        shown = path.relative_to(HERE.parent) if path.suffix == ".py" else path.name
         for line in errors:
-            print(f"  BROKEN  {path.name}: {line}")
+            print(f"  BROKEN  {shown}: {line}")
         if not args.quiet:
             for line in parts if not draft else []:
-                print(f"  v0.1    {path.name}: {line}")
+                print(f"  v0.1    {shown}: {line}")
             for line in loose:
-                print(f"  loose   {path.name}: {line}")
+                print(f"  loose   {shown}: {line}")
     tail = f", {historical} citing the frozen v0.1 numbering" if historical else ""
-    print(f"{len(paths)} documents, {broken} unresolved citation(s){tail}")
+    print(f"{len(paths)} documents and {len(code)} source files, "
+          f"{broken} unresolved citation(s){tail}")
     return 1 if broken else 0
 
 

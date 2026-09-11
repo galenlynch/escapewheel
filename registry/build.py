@@ -1350,7 +1350,7 @@ def build() -> dict:
     # R81 §5: `amplitude` named its unit through `core.sorting_runs.amplitude_unit`, which was one
     # hop while the spike carried `sorting_run_id`. It is now two -- spike to unit to run -- and
     # R56 §2.2 permits one, so the declaration is dropped rather than made to name a hop that
-    # cannot be followed. The same shape as the gap R70 §5 left and recorded.
+    # cannot be followed. The same shape as the gap R70 §4 left and recorded.
     for column in T("core.spike_events")["columns"]:
         column.pop("unit_from", None)
 

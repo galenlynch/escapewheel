@@ -2428,4 +2428,4 @@ where = "00_architecture.md §10.3"
 [clause."R112 §3.5"]
 disposition = "applied"
 where = "00_architecture.md §10.3"
-note = "the numbering check is owed; check_citations.py resolves a citation and does not yet refuse a colliding number"
+note = "check_citations.py refuses a colliding number and reports sections that do not ascend"

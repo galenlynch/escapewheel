@@ -156,9 +156,15 @@ written into `02`. The disposition is struck and `applied` now requires a `where
 cannot be counted as placed without naming the part that places it.
 
 Nothing about a packet changes, and no rule this specification states moves. What moves is the
-direction a reader is sent when they ask what binds them. §3.5's numbering check is owed:
-`check_citations.py` resolves a citation and does not yet refuse a part carrying two sections with
-one number.
+direction a reader is sent when they ask what binds them.
+
+`check_citations.py` gains both of the things §3.1 and §3.5 need of it. It refuses a part carrying
+two sections with one number and reports one whose sections do not ascend, which `headings`
+returning a **set** is what hid. And it reads **133 tracked Python files** rather than the
+revisions alone, where it finds **five broken part citations** nothing had reported: four naming
+line numbers of `00` and `01` as though they were sections, and one naming a section R70 never had.
+Every part is clean of both numbering defects today, so the check is a ratchet rather than a
+repair.
 
 Citing a part is only maintainable if a change to one can find its citers, which nothing could do:
 `check_citations.py` asks whether a citation resolves, and a citation into a rewritten section

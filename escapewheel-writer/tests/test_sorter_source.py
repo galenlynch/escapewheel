@@ -75,7 +75,8 @@ def test_quad_base_shanks_are_separate_probes(source):
     SpikeInterface sorts each shank separately -- four unit-id spaces that each start at 0 --
     and an NWB writes one electrode group per shank, so `probe_id` follows the shank. The
     physical device is recovered from `serial_number` rather than by parsing an identifier.
-    `01` §92 admits both readings: a Probe is an instrument "or logical recording probe".
+    `01` §3.5 admits both: several recording entities from one physical object are each a
+    Probe, and all name the same Device.
     """
     probes = rows_of(source, "core.probes")
     assert len(probes) == 2
