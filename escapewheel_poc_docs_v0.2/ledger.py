@@ -25,6 +25,11 @@ A clause with no entry is **undisposed**, and this script exits non-zero listing
 revision therefore adds failures until someone says where each of its clauses went, which is the
 property neither audit had.
 
+An `applied` entry's `where` is resolved against the part's own headings, through `moves.toml`, so
+a clause cannot be recorded as placed in a section that does not exist -- the defect one step along
+from no `where` at all, and the one that let R111 §3.5 name two sections of `01` that part has
+never carried. A `where` this cannot account for is reported rather than parsed as far as it goes.
+
     python ledger.py            # report
     python ledger.py --summary  # counts only
 """
@@ -32,16 +37,74 @@ property neither audit had.
 from __future__ import annotations
 
 import argparse
+import functools
 import re
 from pathlib import Path
 
 import tomllib
+
+from moves import resolve
 
 HERE = Path(__file__).resolve().parent
 REVISIONS = HERE.parent / "revisions"
 LEDGER = HERE / "applied.toml"
 
 DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
+
+#: `## 3.` and `### 3.1 ` alike, which is every section a part declares.
+HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
+#: One target of a `where`: a part, spelled as a number or as its filename, and a section.
+TARGET = re.compile(r"^(\d\d)(?:_\w+\.md)? §(\d+(?:\.\d+)*)$")
+#: A section named against whichever part the piece before it set.
+SAME_PART = re.compile(r"^§(\d+(?:\.\d+)*)$")
+
+
+def targets(where: str) -> tuple[list[tuple[str, str]], list[str]]:
+    """Each (part, section) a `where` names, and every piece of it that names neither.
+
+    Pieces are separated by `,` or `;`, and one naming no part takes the part before it, so
+    `02_core_logical_schemas.md §8.4, §9.3` names two sections of `02`. The whole field must be
+    accounted for, because a pattern scanning it for two adjacent digits finds them inside a
+    section number: `05 §10 §12` reads as part 05 and then as part **10**, inventing a target and
+    hiding the real one in the same pass.
+    """
+    found, unparsed, part = [], [], None
+    for piece in (p.strip() for p in re.split(r"[,;]", where)):
+        whole, same = TARGET.match(piece), SAME_PART.match(piece)
+        if whole:
+            part = whole.group(1)
+            found.append((part, whole.group(2)))
+        elif same and part is not None:
+            found.append((part, same.group(1)))
+        elif piece:
+            unparsed.append(piece)
+    return found, unparsed
+
+
+@functools.cache
+def sections(part: str) -> frozenset[str] | None:
+    """Every section number a part declares, or None where no part carries that number."""
+    found = sorted(HERE.glob(f"{part}_*.md"))
+    return frozenset(HEADING.findall(found[0].read_text())) if found else None
+
+
+def unresolved(ledger: dict[str, dict[str, str]]) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """Every `applied` target naming no section, and every `where` piece naming no target."""
+    dangling, unparsed = [], []
+    for key, entry in sorted(ledger.items(), key=lambda kv: int(kv[0][1:].split()[0])):
+        if entry.get("disposition") != "applied":
+            continue
+        found, loose = targets(entry.get("where", ""))
+        unparsed += [(key, piece) for piece in loose]
+        for part, section in found:
+            declared = sections(part)
+            if declared is None:
+                dangling.append((key, f"`{part}` — no part has that number"))
+            # The move table is consulted only where the section is absent, as `check_citations.py`
+            # consults it: a number that still exists means what it says, whatever has moved.
+            elif section not in declared and resolve(part, section) not in declared:
+                dangling.append((key, f"`{part}` §{section} — that part declares no such section"))
+    return dangling, unparsed
 
 
 def clauses() -> dict[str, str]:
@@ -117,6 +180,7 @@ def main() -> int:
     # the state the withdrawn `implementation` disposition made permanent for 23 clauses.
     placeless = sorted(k for k, d in ledger.items()
                        if d.get("disposition") == "applied" and not d.get("where"))
+    dangling, unparsed = unresolved(ledger)
 
     counts: dict[str, int] = {}
     for entry in ledger.values():
@@ -126,18 +190,25 @@ def main() -> int:
         print(f"  {counts[name]:>4}  {name}")
     print(f"  {len(undisposed):>4}  undisposed")
 
+    # Undisposed clauses are a backlog and can run to hundreds, so `--summary` holds them back.
+    # The rest are defects in what the ledger already claims, and there is nothing to read
+    # instead of them.
     if not args.summary:
         for key, title in sorted(undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])):
             print(f"    UNDISPOSED  {key:<12} {title[:62]}")
-        for key in stale:
-            print(f"    STALE       {key:<12} the ledger disposes a clause no revision states")
-        for key, value in sorted(bad.items()):
-            print(f"    BAD         {key:<12} disposition {value!r} is not one of {sorted(DISPOSITIONS)}")
-        for key in placeless:
-            print(f"    PLACELESS   {key:<12} applied, but `where` names no part")
+    for key in stale:
+        print(f"    STALE       {key:<12} the ledger disposes a clause no revision states")
+    for key, value in sorted(bad.items()):
+        print(f"    BAD         {key:<12} disposition {value!r} is not one of {sorted(DISPOSITIONS)}")
+    for key in placeless:
+        print(f"    PLACELESS   {key:<12} applied, but `where` names no part")
+    for key, target in dangling:
+        print(f"    DANGLING    {key:<12} {target}")
+    for key, piece in unparsed:
+        print(f"    UNPARSED    {key:<12} `where` says {piece!r}, which names no part and section")
 
     over = max(0, len(undisposed) - baseline)
-    failures = over + len(stale) + len(bad) + len(placeless)
+    failures = over + len(stale) + len(bad) + len(placeless) + len(dangling) + len(unparsed)
     if len(undisposed) < baseline:
         text = LEDGER.read_text()
         LEDGER.write_text(re.sub(r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text))
@@ -145,8 +216,10 @@ def main() -> int:
         return 0
     if not failures:
         print(f"\nok — {len(undisposed)} undisposed, at the recorded high-water mark")
+    elif over:
+        print(f"\n{over} clause(s) need a disposition; the mark is {baseline}")
     else:
-        print(f"\n{failures} clause(s) need a disposition; the mark is {baseline}")
+        print(f"\n{failures} disposition(s) vouch for something that is not there")
     return 1 if failures else 0
 
 

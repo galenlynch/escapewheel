@@ -356,7 +356,10 @@ touches.
    miscitation R110's appraisal had just struck from the revision — for two more commits.
 6. **`escapewheel_poc_docs_v0.2/applied.toml`**, one entry per clause. `ledger.py` demands a
    disposition for every §2 subsection and for any other section carrying a MUST or a SHOULD, and
-   fails equally on an entry naming a clause that no longer exists.
+   fails equally on an entry naming a clause that no longer exists. An `applied` entry's `where`
+   names a part and a section per target, separated by `,` within a part and `;` between parts, and
+   every one is resolved against that part's headings: a section that does not exist fails, and so
+   does a field the parser cannot account for. Annotation goes in `note`, which nothing parses.
 7. **`python escapewheel_poc_docs_v0.2/combine.py`** for the single-file rendering.
 8. **`python verify.py`.** Every stage but the three clean-tree ones must pass before committing;
    those compare against the committed state and so clear only on the commit itself.
