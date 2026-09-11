@@ -66,6 +66,12 @@ emits, and a way to name which resources are wanted. Left unspecified, a stream 
 by extracting — which is what the NWB adapter's `offers()` costs in process today, computing every
 record to count them — and emits everything it has for the build to discard.
 
+**None of that saves the adapter the extraction, which is a separate question.** A footer answers
+cheaply only after the file exists, and a `DoGet` per descriptor fetches selectively from an adapter
+that may already have computed everything to list them. What saves the work is being told the wanted
+set before starting, which a build knows from `owns` before any I/O (R63 §2.2) and can pass over any
+protocol.
+
 `flight.py` serves three resources over a **Unix socket** — `Location.for_grpc_unix`, so no port
 and no network exposure — and a client lists them by descriptor and fetches each: **119 ms
 including the server's process start**. Flight ships in the standard pyarrow wheel. What a build

@@ -185,13 +185,20 @@ discovery from a Parquet footer and selection by which files the recipe names, s
 to say which resources are wanted — and both are ours to specify, name and version. **That is the
 trade: own more protocol, or need gRPC bindings.**
 
-**Which to reach for follows from that.** Where an extraction is worth keeping, `files-v0.1` is
-both the cheapest to write and the one that already answers everything: a footer holds the row
-count and the recipe's paths are the selection, which is why `TablesSource.offers` reads
-`num_rows` from metadata and never opens the data. Where nothing should be left behind and the
-source is small enough that extracting to discover costs little, `stream-v0.1` is a hundred lines.
-Where it is not — a source whose extraction is expensive, or one a recipe narrows — `flight-v0.1`
-is what asks before fetching.
+**None of this saves an adapter work, and that is a different question.** A Parquet footer answers
+cheaply only once the file exists, so `files-v0.1` saves nothing where a command had to produce it;
+`DoGet` fetches one descriptor but an adapter that computed everything to list them has already
+done the work. What saves an adapter work is being **told what is wanted before it starts**, and a
+build knows: R63 §2.2 settles ownership from `owns` and `PRODUCES` before any I/O, which is why
+R63 §2.3 can report an unclaimed resource before a byte is read. So the wanted set is something a
+build **supplies**, over any protocol, and `a-writer-requires-no-knowledge-of-a-particular-source`
+carries it as one more thing an adapter may declare it needs.
+
+**Which to reach for, then, is about what a source is, not about saving it work.** Where an
+extraction already exists or is worth keeping, `files-v0.1` is the cheapest to write and answers
+discovery from a footer. Where nothing should be left behind, `stream-v0.1` is a hundred lines.
+Where a build wants to ask rather than be told — a source whose shape it does not know until it
+looks — `flight-v0.1` is the one with the vocabulary for it.
 
 The line is worth naming: **the moment a stream needs to be asked, it is becoming Flight.** A
 reporting invocation, a way to name what is wanted, a schema for the answer — each is a thing Flight

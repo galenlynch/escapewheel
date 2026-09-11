@@ -103,10 +103,18 @@ what survives the crossing.
 | the first sample of each stream | one integer per stream name |
 | the clocks declared before it runs | each identifier with its rate |
 | the units a prior source produced | a row each: the source's names for it, and the identifiers assigned |
+| which resources are wanted | the resource IDs the recipe leaves it owning, so it produces no more |
 | somewhere to write an array | a location under the staging area, where the adapter produces one |
 | a recipe option | the value the recipe carries |
 
 A profile adding to that list amends this section.
+
+**The wanted set is what saves an adapter work.** A build settles ownership before any source is
+opened (R63 §2.2), so it knows which of a source's resources it will keep, and an adapter told that
+extracts no more — where one that is not produces everything and a build discards, which R63 §1.2
+measures at one resource in five. It is a value a build computes, so it belongs here rather than in
+a transport: telling an adapter what is wanted is the same act whether its rows travel as files, as
+a stream, or over a connection.
 
 **A mapping is not what a build passes; rows are.** A build **MUST** pass a collection as records
 carrying its key as columns, because a mapping's keys are a type the crossing does not keep:
