@@ -48,10 +48,13 @@ constructor. #2 §3.3 makes **out of process the default**, where §3.2 gives an
 list and §3.5 has even an identifier cross as a name. Under both, the ordinary adapter cannot be
 given three of the five things #1 says a build supplies it.
 
-**Neither can be accepted until that is settled**, and settling it is a decision rather than an
-edit: either #1's list is restated in what survives a process boundary — a root URI, a clock's
-declaration, first samples as numbers — or #1 is scoped to #2's in-process opt-in, which leaves the
-default case unspecified. Both touch Part 05 §3 by appending, which renumbers nothing either way.
+**Settled 2026-09-11 in #1's favour of the boundary**: #1 §3.1 now states what a build passes as
+data — a root URI the adapter opens for itself, the reference clock's identifier and rate, first
+samples as integers — and forbids a build requiring an adapter to accept a live handle. Sharing one
+open store per root survives as an optimisation a build MAY apply in its own process, which it
+MUST NOT make part of a declaration. So #1's contract holds on both sides of #2's boundary, and the
+in-process path is an optimisation rather than a second interface. Both touch Part 05 §3 by
+appending, which renumbers nothing either way.
 
 **None moves a count in the generated block.** No core table, column, reference, rule or vocabulary
 changes. Every number in each is measured against the parts, the registries and the three

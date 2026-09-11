@@ -80,17 +80,38 @@ a static declaration read with nothing open, in the shape `PRODUCES` and `STATES
 build **MUST** supply exactly what an adapter declares and **MUST NOT** decide it from the kind's
 name.
 
+The reference spelling is `NEEDS`, a set of names beside `PRODUCES` and `STATES` on the class, and
+it lives in Part 07 §4 with them rather than here: what a conforming build must do is read a
+declaration, and what this implementation calls it is the reference implementation's business
+(R87 §2.2 places `STATES` the same way).
+
 A build **MUST** refuse a recipe naming an adapter that declares something the build cannot supply,
 before any source is opened, which is where R63 §2.2 already refuses a recipe it cannot satisfy.
 
-What may be declared is closed, because a build can only hand over what it holds: an object store
-for the root, the session's reference clock, the first sample of each stream, the recipe options the
-adapter accepts, and the kinds whose output it reads. A profile adding to that list amends this
-section.
+**Everything a build supplies is data.** A build **MUST NOT** require an adapter to accept a live
+handle — an open store, a connection, an object of the writer's own — because an adapter need not
+run in the writer's process, and what reaches one that does not is an argument list, which carries
+values. What may be declared is closed for the same reason: a build can pass only what survives the
+crossing.
 
-The last of those is what orders a build rather than what it hands over, and it is declared here
-for the same reason as the rest: `CONSUMES` records that the NWB adapter reads the sorter's clocks,
-which is a fact about the NWB adapter held where the NWB adapter is not.
+| an adapter declares it needs | a build passes |
+|---|---|
+| the root as a location | the URI, which the adapter opens for itself |
+| the session's reference clock | its identifier and its rational tick rate |
+| the first sample of each stream | one integer per stream name |
+| the clocks declared before it runs | each identifier with its rate |
+| the units a prior source produced | their source names and the identifiers assigned to them |
+| a recipe option | the value the recipe carries |
+
+A profile adding to that list amends this section.
+
+Sharing one open store per root is an optimisation a build **MAY** apply to adapters running in its
+own process, and **MUST NOT** be what a declaration names: a store two adapters share is a fact
+about one build's arrangements rather than about either adapter.
+
+Separately, an adapter **MUST** declare the kinds whose output it reads, which orders a build rather
+than being passed to it. `CONSUMES` records that the NWB adapter reads the sorter's clocks, which is
+a fact about the NWB adapter held where the NWB adapter is not.
 
 ### 3.2 A recipe declares a preference between two sources
 
@@ -122,12 +143,16 @@ refused naming both sources, where a built-in winner applied one silently.
 Part 05 §3 gains a preference table, Part 05 §3.4 gains what an adapter declares, and Part 07 §4 gains what a
 build supplies one.
 
-The reference implementation loses five tables that name a kind — `_SHARED_SOURCES`, `SAMPLED`,
-`REQUIRED_OPTIONS`, `CONSUMES` and `PREFERRED` — and gains one declaration per adapter. Both
-packaged recipes gain two lines, `core.probes` to `nwb` and `core.subjects` to `session`, which is
-the whole of what §2.3 measures needing arbitration. Neither packet's rows change: the same source wins each contest,
-declared where a reader of the recipe can see it.
+Concretely: `session.py`'s fifty-line ladder of `if spec.kind == "…"` branches, each constructing
+one adapter with a different set of extras, becomes one construction that reads `NEEDS` and passes
+the values it names. The five tables that name a kind go with it — `_SHARED_SOURCES`, `SAMPLED`,
+`REQUIRED_OPTIONS`, `CONSUMES` and `PREFERRED` — against one `NEEDS` and one `CONSUMES` per
+adapter, ten of each.
 
-What §3.1 fixes for a registered adapter is §2.2's asymmetry. One can produce a resource today and
-never reach an object store, because the branches that supply one test for a literal kind; after
-this it declares what it needs and a build either supplies it or refuses the recipe.
+Both packaged recipes gain two lines, `core.probes` to `nwb` and `core.subjects` to `session`,
+which is the whole of what §2.3 measures needing arbitration. Neither packet's rows change: the
+same source wins each contest, declared where a reader of the recipe can see it.
+
+A registered adapter gains what §2.2 measures it lacking. One can produce a resource today and
+never reach a root it must open for itself, because the branches that pass one test for a literal
+kind; after this it declares what it needs and a build either passes it or refuses the recipe.
