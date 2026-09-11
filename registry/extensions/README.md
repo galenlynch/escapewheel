@@ -30,7 +30,7 @@ the thing: **a `DynamicTable` accretes, and what accretes is a task's or a pipel
 not a format's.** R17 §1 measured the same file and put it plainly — most columns in it conform to
 nothing.
 
-That is exactly what an extension is for, and it is why R43 §3, R16 §5, R9 §2 and Part 09 §2.3 all
+That is exactly what an extension is for, and it is why R43 §3, R16 §5, R9 §2 and Part 09 §2's third tier all
 send their columns here.
 
 ## What varies is what belongs on the row

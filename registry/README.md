@@ -20,7 +20,7 @@ to see what a table looks like now; read Part 02 plus the revisions to see why.
 | `manifest.schema.json` | JSON Schema for `packet.json` (R2 §10). |
 
 The two schemas are hand-written here and **vendored** by the distributions that use them — a
-wheel cannot read a file from another repository. Those copies are *build artifacts*, written by
+wheel cannot read a file from another distribution. Those copies are *build artifacts*, written by
 `build.py` and compared by `check.py`, not files to maintain:
 
 ```

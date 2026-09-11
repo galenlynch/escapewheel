@@ -127,7 +127,7 @@ Only the user moves a revision from Proposed to Accepted.
 stage catches this, which is why that stage exists.
 
 **A stale vendored schema.** `registry.schema.json` and `manifest.schema.json` are copied into two
-other packages because a wheel cannot read a file from another repository. A stale copy has broken
+other packages because a wheel cannot read a file from another distribution. A stale copy has broken
 every packet three times — R48, R53 and R56 — and each time it surfaced as a hundred findings
 about the *data* rather than one about the copy. `build.py` writes them and `check.py` compares
 them, so the class is closed; do not edit a vendored copy.

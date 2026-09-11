@@ -1,7 +1,7 @@
 # Zarr cross-language conformance probe
 
 Produces the evidence cited in
-[R3 §7.4](../../revisions/R3-cross-language-physical-floor.md).
+[R3 §7.3](../../revisions/R3-cross-language-physical-floor.md).
 
 Writes Zarr arrays from `zarr-python` under a range of codec configurations, then reads
 each back from `Zarr.jl` and verifies values by element sum. Re-run this against newer

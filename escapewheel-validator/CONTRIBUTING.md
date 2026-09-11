@@ -13,7 +13,7 @@ package belongs in a different repository, and the design is what makes that tru
 **Rules are data, not code** (R2 §7).
 
 - **Tier 1 is generated** from structure — required-column presence, primary keys, foreign keys,
-  closed vocabularies. 211 checks over 35 tables, none hand-written. If your check is one of
+  closed vocabularies, none of them hand-written. If your check is one of
   those four shapes, it already exists the moment the registry declares the column.
 - **Tier 2 is hand-written SQL**, and it lives in `../registry/rules.json`, **not here**. Adding
   one is editing a JSON file in the registry and running `build.py`. Nothing in this package
@@ -94,7 +94,7 @@ Use it when the requirement binds the **consumer** rather than the packet. R41 �
 ## Testing
 
 Tests build their own minimal packet in `tmp_path` (`tests/conftest.py`) rather than depending on
-`../fixtures/`, whose output is gitignored and lives in another repository. That conftest is a
+`../fixtures/`, whose built packets are gitignored. That conftest is a
 near-copy of the reader's — **deliberate duplication, so both suites run standalone.** Keep it
 that way.
 

@@ -21,8 +21,8 @@ from parse02 import parse
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "logical_schemas.json"
 
-#: Where each hand-written schema is vendored. A sibling distribution cannot read a file from
-#: another repository, so it carries a copy -- which makes the copy an output of this build.
+#: Where each hand-written schema is vendored. A wheel cannot read a file from another
+#: distribution, so each carries a copy -- which makes the copy an output of this build.
 VENDORED = {
     "registry.schema.json": HERE.parent / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
     "manifest.schema.json": HERE.parent / "escapewheel-reader/src/escapewheel_reader/schemas/manifest.schema.json",

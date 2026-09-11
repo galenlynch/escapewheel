@@ -15,7 +15,7 @@ R1–R41, R43–R72 and R74–R113 accepted. R42 and R73 withdrawn. 3 drafts are
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
-30 conformance packets
+28 conformance packets
 <!-- END facts: corpus -->
 
 <!-- BEGIN facts: extensions -->
@@ -139,7 +139,7 @@ against R111 §3.1's line — a reader is bound by what it **returns**, a consum
 **concludes** — and against §3.2, where a build is one run of a writer. **Seven were repointed**,
 which is the yield the by-part test predicted:
 
-- Part 01 §7 — "a **reader** MUST NOT assume any base beyond what the origin declares" became a
+- Part 01 §3.9 — "a **reader** MUST NOT assume any base beyond what the origin declares" became a
   consumer. R45 §3 copies a tick verbatim, so no reader converts one; assuming a base is a
   conclusion about the value, not a property of what came back.
 - Part 00 §5 and Part 06 §1 — "A **consumer** MAY delete and recompute any of them" became a writer.
@@ -222,7 +222,7 @@ binds 19 clauses to a consumer and 2 to a reader, Part 03 binds 6 to a reader an
 so an actor out of place for its part is the cheap test. It returns **10 suspects**, of which seven
 are correct on reading and **three are arguable in both directions**:
 
-- Part 01 §7 — "a **reader** MUST NOT assume any base beyond what the origin declares" reads as
+- Part 01 §3.9 — "a **reader** MUST NOT assume any base beyond what the origin declares" reads as
   interpretation until R3 §6 and R48 make base conversion the reader's job at the boundary.
 - Part 00 §5 and Part 06 §1 — "A **consumer** MAY delete and recompute any of them" sits oddly, no
   consumer mutating a packet, though each sentence before it already states the artifact fact.

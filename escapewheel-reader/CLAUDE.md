@@ -27,25 +27,40 @@ backend for the scheme (`s3fs` for `s3://`) — neither of which this package de
 
 ## Where the specification lives
 
-This repository implements a specification maintained in sibling repositories under
-`../` — it does not define one. When behaviour here seems arbitrary, the reason is there.
+This package implements a specification kept in sibling **directories** of the same repository,
+under `../` — it does not define one. When behaviour here seems arbitrary, the reason is there.
+Version control has been one repository at the root since 2026-09-04; it was ten, coupled by
+relative paths git could not see.
 
-| Sibling | Contents |
+| Directory | Contents |
 |---|---|
-| `nwb_lake_poc_docs/` | The frozen specification. Never edited. |
-| `revisions/` | R1–R36, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (33 tables), its meta-schema, and the manifest JSON Schema. |
-| `fixtures/` | Phase 0 packets and the conformance corpus — 16 packets with expected findings as data. |
+| `nwb_lake_poc_docs/` | The frozen v0.1 specification. Never edited. |
+| `escapewheel_poc_docs_v0.2/` | The editable parts, which are what bind. |
+| `revisions/` | One file per accepted change. Where a revision and the frozen docs disagree, the revision binds. |
+| `registry/` | `logical_schemas.json`, its meta-schema, and the manifest JSON Schema. |
+| `fixtures/` | Phase 0 packets and the conformance corpus, each with its expected findings as data. |
 | `conformance/` | Probes producing the measured evidence the revisions cite. |
 | `escapewheel-validator/` | Phase 2. Depends on this package; adds `escapewheel validate`. |
 | `escapewheel-writer/` | Phase 3. Depends on the validator; adds `escapewheel import`. |
 
-`src/escapewheel_reader/schemas/manifest.schema.json` is a **vendored copy** from `registry/`.
-Re-copy it when the manifest schema changes there; it is not generated at build time.
+<!-- BEGIN facts: revisions -->
+R1–R41, R43–R72 and R74–R113 accepted. R42 and R73 withdrawn. 3 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+<!-- END facts: revisions -->
+<!-- BEGIN facts: registry -->
+43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
+<!-- END facts: registry -->
+<!-- BEGIN facts: corpus -->
+28 conformance packets
+<!-- END facts: corpus -->
+
+`src/escapewheel_reader/schemas/manifest.schema.json` is a copy of `registry/manifest.schema.json`,
+and `registry/build.py` writes it: a wheel cannot read a file from another distribution, so the copy
+is an output of that build rather than something to re-copy by hand. `verify.py` regenerates and
+then demands a clean tree, so a stale copy fails.
 
 ## Scope
 
-`07_reference_api_and_implementation_plan.md` sets the phase plan. This package is Phase 1.
+Part 07 sets the phase plan. This package is Phase 1.
 
 **Delivered.** `open_packet`; manifest parsing and JSON Schema validation; resource listing
 and URI resolution; `TableResource` for reading, lazy `dataset()` access, DuckDB
@@ -116,8 +131,8 @@ These are not local preferences; changing them breaks conformance.
 - **Resources resolve through the manifest, never by filename convention.** A packet that
   partitions a table or relocates a file stays readable. `Packet.path()` is the only place
   that touches the filesystem layout.
-- **Resource IDs are dotted; SQL identifiers are not.** `core.trials` registers as
-  `core_trials` (`sql.sql_name`). Column identifiers in emitted SQL are quoted
+- **Resource IDs are dotted; SQL identifiers are not.** `core.intervals` registers as
+  `core_intervals` (`sql.sql_name`). Column identifiers in emitted SQL are quoted
   unconditionally — `core.array_assets.offset` is a DuckDB reserved word, and every engine
   reserves a different set. `sql` is public rather than private precisely because
   `escapewheel-validator` must produce the same names; one implementation, so they cannot drift.
@@ -148,8 +163,8 @@ These are not local preferences; changing them breaks conformance.
   24.8 ms selecting one unit from nine million spikes. The named accessors are typed sugar
   over it. `scan()` returns a lazy dataset for what constraints cannot express.
 
-  This shape was chosen over adding a second, faster name for users to discover. Five of the
-  30 tables grow large — `spike_events`, `events`, `media_frames`, `trials`, `trial_tags` —
+  This shape was chosen over adding a second, faster name for users to discover. A handful of
+  tables grow large — `core.spike_events`, `core.events`, `core.media_frames`, `core.intervals` —
   and under R1's multi-session extension every table scales with session count, so a
   read-everything default would be wrong in the general case rather than in a corner.
 - **No registry is bundled.** Reading never needs one; `Packet` exposes the copy a packet
@@ -194,7 +209,7 @@ dependency to get one.
 
 ### A packet root may be a store prefix
 
-Part 00 §56 admits three forms -- a local directory, an object-store prefix, or a release manifest
+Part 00 §2.4 admits three forms -- a local directory, an object-store prefix, or a release manifest
 pointing at distributed assets -- and `open_packet` takes any of them. `Location` resolves a
 declared URI against the root: relative under it, absolute where it says, and `file:` as the
 spelling of a path it is. `Packet.root` is the local answer and refuses a store; `Packet.location`
@@ -217,7 +232,7 @@ packaged sessions, **4,505 `unit_id` values name a unit in both** and both sessi
 `open_dataset` is the second entry point. It numbers every session it opens and projects
 `session_key` and `session_name` onto every **session-scoped** table -- one reaching
 `core.sessions` through its declared references, which `dataset.session_scoped` computes from the
-registry a packet embeds, 33 of 35. The two that are not, `core.subjects` and `core.source_files`,
+registry a packet embeds, 41 of 43. The two that are not, `core.subjects` and `core.source_files`,
 get no key, because R86 §2.2 forbids one where the row is not a session's.
 
 The discriminator comes from **provenance, never from a label**: the packet a row came from plus
@@ -232,10 +247,12 @@ joins on `unit_id` alone, because widening the key costs 2.93x over 286,896,563 
 The shape does not depend on how many packets are open, so an analysis written against one session
 and later pointed at twenty meets the same relation rather than a differently shaped one.
 
-**What R86 requires and does not specify.** 8 of the 33 scoped tables reach `core.sessions`
-without carrying `session_id`. For a single-session packet the packet's one session answers for
-every row; for a multi-session packet only a join would, which R86 §2.4 declines to specify, so
-`Dataset` raises `MultiSessionUnresolved` naming the table rather than guessing.
+**What R86 requires and does not specify.** A scoped table that reaches `core.sessions` without
+carrying `session_id` leaves a multi-session packet with only a join to answer with, which R86 §2.4
+declines to specify, so `Dataset` raises `MultiSessionUnresolved` naming the table rather than
+guessing. R88 §2.1 then made the column required on every scoped table, so **no table in the
+current registry reaches that branch** — it guards a packet built against an older one, and
+`tests/test_dataset.py` exercises it against a registry that omits the column.
 
 ### Registration is not free over a store
 
@@ -260,11 +277,12 @@ which package provides it rather than failing as an argparse "invalid choice".
 ## Testing
 
 Tests build their own minimal packet in `tmp_path` (see `tests/conftest.py`) rather than
-depending on `../fixtures/`, whose output is gitignored and lives in another repository. Keep
-it that way — this package must be testable standalone.
+depending on `../fixtures/`, whose built packets are gitignored. Keep it that way — this package
+must be testable with nothing else built.
 
-For an end-to-end check against a real packet, `../fixtures/packets/valid` is a
-17-table single-session packet; `../fixtures/corpus.py` runs the full conformance corpus.
+For an end-to-end check against a real packet, `python ../fixtures/build.py` writes
+`../fixtures/packets/valid`, a single-session packet holding every core table;
+`../fixtures/corpus.py` runs the full conformance corpus.
 
 ## Commands
 

@@ -23,7 +23,7 @@ uv run --with '../escapewheel-validator' --with duckdb escapewheel validate pack
 
 ## The valid packet
 
-20 of the registry's 29 tables, 71 rows. One session, one subject, two clocks with a
+30 of the registry's 43 tables, 142 rows. One session, one subject, two clocks with a
 declared transform between them, one probe with four electrodes, two trials, four events,
 one sorting run, one curation version, two units and their spikes, and provenance.
 
@@ -65,7 +65,7 @@ packet in the wrong order is conforming, only slower (R10 §2).
 
 ## Validation layers
 
-Four, in Part 09 §10's order — see `escapewheel_validator`:
+Four, in the validator's own order — what each owes is Part 05 §5's:
 
 1. **Manifest shape** against `manifest.schema.json`, when the packet is opened.
 2. **The embedded registry** against the meta-schema, and its version against the manifest's.

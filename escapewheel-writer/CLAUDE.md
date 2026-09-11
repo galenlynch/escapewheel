@@ -25,7 +25,7 @@ R19's per-channel `inter_sample_shift` and the electrode behind each position.
 
 ## Scope
 
-`07_reference_api_and_implementation_plan.md` sets the phase plan. This package is Phase 3.
+Part 07 sets the phase plan. This package is Phase 3.
 
 ### The importer is not one step
 
@@ -235,14 +235,26 @@ to say where the time went rather than leaving a caller to guess.
 
 ## Where the specification lives
 
-| Sibling | Contents |
+| Directory | Contents |
 |---|---|
-| `nwb_lake_poc_docs/` | The frozen specification. Never edited. Part 05 is the import pipeline. |
-| `revisions/` | R1–R36, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (33 tables) — what a written table must look like. |
+| `nwb_lake_poc_docs/` | The frozen v0.1 specification. Never edited. |
+| `escapewheel_poc_docs_v0.2/` | The editable parts, which are what bind. Part 05 is the import pipeline. |
+| `revisions/` | One file per accepted change. Where a revision and the frozen docs disagree, the revision binds. |
+| `registry/` | `logical_schemas.json` — what a written table must look like. |
 | `inventory/` | Part 05 Stage 1 inventories of the real datasets this will import. |
 | `escapewheel-reader/` | The read path. |
 | `escapewheel-validator/` | Phase 2. The committer calls this; it is not reimplemented here. |
+
+<!-- BEGIN facts: revisions -->
+R1–R41, R43–R72 and R74–R113 accepted. R42 and R73 withdrawn. 3 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+<!-- END facts: revisions -->
+<!-- BEGIN facts: registry -->
+43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
+<!-- END facts: registry -->
+<!-- BEGIN facts: corpus -->
+28 conformance packets
+<!-- END facts: corpus -->
+
 
 ## Commands
 

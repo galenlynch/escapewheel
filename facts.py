@@ -1,4 +1,4 @@
-"""Fill the counts in the root documents from the things they count.
+"""Fill the counts in this repository's documents from the things they count.
 
 Every number in `CLAUDE.md`, `STATUS.md` and `TODO.md` was hand-maintained, and every one of them
 went stale: 35 tables against 34, 292 columns against 315, 282 checks against 299, 24 corpus
@@ -6,7 +6,7 @@ packets against 26, "R43-R53 accepted" against R43-R70. They were corrected thre
 day and drifted again within the same day, which is the signature of a number that should not be
 typed.
 
-Each document carries regions delimited by `<!-- BEGIN facts: NAME -->` and `<!-- END facts: NAME
+Any tracked Markdown file may carry regions delimited by `<!-- BEGIN facts: NAME -->` and `<!-- END facts: NAME
 -->`; this script fills them from the registry, the revisions and the corpus. `verify.py` runs it
 and then demands a clean git tree, so a stale count fails the build.
 
@@ -20,14 +20,31 @@ from __future__ import annotations
 import ast
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 REGISTRY = ROOT / "registry/logical_schemas.json"
-DOCUMENTS = ("CLAUDE.md", "STATUS.md", "TODO.md", "DEVELOPING.md")
 
 REGION = re.compile(r"(<!-- BEGIN facts: (\w+) -->\n).*?(<!-- END facts: \2 -->)", re.DOTALL)
+
+
+def documents() -> list[Path]:
+    """Every tracked Markdown file carrying a region, found rather than listed.
+
+    A list of filenames here is a second thing to maintain, and the distributions' own guidance
+    is what proved it: each carried hand-typed counts of tables, packets and accepted revisions,
+    none of which any list named, and all of which were years of revisions out of date.
+    """
+    listed = subprocess.run(["git", "ls-files", "*.md"], cwd=ROOT,
+                            capture_output=True, text=True, check=True).stdout.split()
+    found = []
+    for name in listed:
+        path = ROOT / name
+        if path.is_file() and "<!-- BEGIN facts:" in path.read_text(errors="replace"):
+            found.append(path)
+    return found
 
 
 def _check_counts() -> tuple[int, int]:
@@ -58,6 +75,23 @@ def _clause_count() -> int:
     import ledger
 
     return len(ledger.clauses())
+
+
+def _corpus_count() -> int:
+    """Packets in the conformance corpus, counted from the mapping that names them.
+
+    Parsed rather than matched on indentation: a line-anchored pattern over the text between
+    `EXPECTED` and the first `}` also counts the strings *inside* an entry, which put the corpus
+    two packets above its real size in every document that states it.
+    """
+    tree = ast.parse((ROOT / "fixtures/corpus.py").read_text())
+    for node in tree.body:
+        # Annotated, so `ast.Assign` alone does not find it.
+        targets = node.targets if isinstance(node, ast.Assign) else [getattr(node, "target", None)]
+        if isinstance(node, ast.Assign | ast.AnnAssign) and any(
+                getattr(t, "id", None) == "EXPECTED" for t in targets):
+            return len(node.value.keys)
+    raise SystemExit("fixtures/corpus.py declares no EXPECTED mapping")
 
 
 def _revision_span(numbers: set[int]) -> str:
@@ -100,7 +134,7 @@ def facts() -> dict[str, str]:
     extensions = sorted(p.stem for p in (ROOT / "registry/extensions").glob("*.json"))
     per_document, whole = _check_counts()
     decision_clauses = _clause_count()
-    corpus = len(re.findall(r'^\s+"', (ROOT / "fixtures/corpus.py").read_text().split("EXPECTED")[1].split("}")[0], re.MULTILINE))
+    corpus = _corpus_count()
 
     return {
         "registry": (f"{len(tables)} tables, {len(columns)} columns, {references} references, "
@@ -128,9 +162,9 @@ def facts() -> dict[str, str]:
 def main() -> int:
     """Fill every marked region, reporting which documents changed."""
     filled = facts()
-    changed = []
-    for name in DOCUMENTS:
-        path = ROOT / name
+    changed, found = [], documents()
+    for path in found:
+        name = str(path.relative_to(ROOT))
         before = path.read_text()
         named = {n for _, n, _ in REGION.findall(before)}
         if unknown := named - set(filled):
@@ -139,7 +173,7 @@ def main() -> int:
         if after != before:
             path.write_text(after)
             changed.append(name)
-    print(f"filled {len(DOCUMENTS)} document(s)" + (f"; changed {', '.join(changed)}" if changed else "; no change"))
+    print(f"filled {len(found)} document(s)" + (f"; changed {', '.join(changed)}" if changed else "; no change"))
     for key, value in sorted(filled.items()):
         print(f"  {key:<11} {value}")
     return 0

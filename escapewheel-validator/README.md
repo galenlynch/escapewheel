@@ -30,15 +30,25 @@ report.passed, report.errors, report.warnings
 
 ## What runs
 
-241 checks over 33 tables, of which **192 are generated and 49 hand-written**:
+Most of what runs is generated rather than written. The registry the packet embeds decides how
+much, so the counts below are the current reference registry's and a packet carrying an older one
+gets its own.
 
-| | Count | Comes from |
-|---|---|---|
-| required-column non-null | 130 | `presence: required` |
-| foreign-key anti-join | 46 | `references`, with a null guard where the column is nullable |
-| primary-key uniqueness | 13 | `primary_key` — the other 20 tables are settled by a streaming scan |
-| closed vocabulary | 3 | `enum` |
-| Tier 2 | 49 | SQL the structure cannot imply, authored in `registry/rules.json` |
+<!-- BEGIN facts: registry -->
+43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
+<!-- END facts: registry -->
+<!-- BEGIN facts: tier1 -->
+167 not-null, 111 foreign-key, 4 closed-vocabulary and 16 discriminator checks, plus one uniqueness check per table whose sort does not begin with its primary key
+<!-- END facts: tier1 -->
+
+| | Comes from |
+|---|---|
+| required-column non-null | `presence: required` |
+| foreign-key anti-join | `references`, with a null guard where the column is nullable |
+| primary-key uniqueness | `primary_key`, and only where a streaming scan does not already settle it |
+| closed vocabulary | `enum` |
+| discriminator | `role: discriminator`, two checks each (R55 §2.4) |
+| Tier 2 | SQL the structure cannot imply, authored in `registry/rules.json` |
 
 ## SQL and the shim
 

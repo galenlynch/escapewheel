@@ -19,16 +19,28 @@ construction rather than by discipline.
 
 ### Where the specification lives
 
-This repository implements a specification maintained in sibling repositories under `../`.
-When behaviour here seems arbitrary, the reason is there.
+This package implements a specification kept in sibling **directories** of the same repository,
+under `../`. Version control has been one repository at the root since 2026-09-04. When behaviour
+here seems arbitrary, the reason is there.
 
-| Sibling | Contents |
+| Directory | Contents |
 |---|---|
-| `nwb_lake_poc_docs/` | The frozen specification. Never edited. Part 05 is the import and validation pipeline. |
-| `revisions/` | R1–R36, all accepted. Where they disagree with the frozen docs, the revision binds. |
-| `registry/` | `logical_schemas.json` (33 tables), its meta-schema, and the manifest JSON Schema. |
-| `fixtures/` | The conformance corpus — 16 packets with expected findings as data. |
+| `nwb_lake_poc_docs/` | The frozen v0.1 specification. Never edited. |
+| `escapewheel_poc_docs_v0.2/` | The editable parts, which are what bind. Part 05 is the import and validation pipeline. |
+| `revisions/` | One file per accepted change. Where a revision and the frozen docs disagree, the revision binds. |
+| `registry/` | `logical_schemas.json`, its meta-schema, and the manifest JSON Schema. |
+| `fixtures/` | The conformance corpus, each packet with its expected findings as data. |
 | `escapewheel-reader/` | The read path. This package's only runtime dependency of substance. |
+
+<!-- BEGIN facts: revisions -->
+R1–R41, R43–R72 and R74–R113 accepted. R42 and R73 withdrawn. 3 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+<!-- END facts: revisions -->
+<!-- BEGIN facts: registry -->
+43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
+<!-- END facts: registry -->
+<!-- BEGIN facts: corpus -->
+28 conformance packets
+<!-- END facts: corpus -->
 
 `stores.py` lives here rather than in the reader because **no read path uses it**: a table
 resolves to a local path or is refused, a Zarr array is handed its URI and `zarr` opens it with
@@ -46,7 +58,7 @@ reads are concurrent, so the choice is dependency weight and scheme coverage rat
 
 ## Scope
 
-`07_reference_api_and_implementation_plan.md` sets the phase plan. This package is Phase 2.
+Part 07 sets the phase plan. This package is Phase 2.
 
 **Delivered.** Tier 1 checks generated from each table's structure, Tier 2 rules read from
 the registry the packet embeds, the schema and physical-ordering layers SQL cannot express,
@@ -84,7 +96,7 @@ Finding     one failure: level, check id, message, and the rows that caused it
 ### The ordering scan reads strings as codes
 
 `_check_ordering` compares a table's sort columns row by row, so how they are held decides its
-cost wherever one is a string: `core.events` sorts on `event_type`, `core.trial_tags` on `tag`,
+cost wherever one is a string: `core.events` sorts on `event_type` and
 `core.session_experimenters` on `experimenter`. It reads them with `read_dictionary` and
 `_ranked` compares the *rank* of each dictionary value as int32 — never the codes, which are
 unordered, and never the dictionary itself, which `pc.less` decodes on both sides every call.
@@ -152,13 +164,12 @@ These are not local preferences; changing them breaks conformance.
 ## Testing
 
 Tests build their own minimal packet in `tmp_path` (`tests/conftest.py`) rather than
-depending on `../fixtures/`, whose output is gitignored and lives in another repository. That
-conftest is a near-copy of the reader's — deliberate duplication, so both suites run
+depending on `../fixtures/`, whose built packets are gitignored. That conftest is a near-copy of the reader's — deliberate duplication, so both suites run
 standalone. `tests/test_cli.py` goes through `escapewheel_reader.scripts.cli.main`, so a pass
 proves the entry-point wiring rather than just the handler.
 
-For an end-to-end check, `../fixtures/corpus.py` runs 16 packets whose expected findings are
-recorded as data. Run it after changing the registry, the generator, or any rule.
+For an end-to-end check, `../fixtures/corpus.py` runs the whole corpus, each packet's expected
+findings recorded as data. Run it after changing the registry, the generator, or any rule.
 
 ```bash
 cd ../fixtures && uv run --no-cache --with ../escapewheel-validator --with duckdb python corpus.py

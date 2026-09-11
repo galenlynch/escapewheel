@@ -66,7 +66,7 @@ and it is kept conforming: `registry/check.py` validates it against the meta-sch
 demonstration that the format drives the tooling is worth nothing on input the format rejects.
 It went 16 errors out of conformance once, unnoticed, which is why the check exists.
 
-- Three of the 34 tables; no `rules` beyond one example.
+- Three of the registry's tables; no `rules` beyond one example.
 - **No discriminator checks.** `core.intervals.interval_kind` names an extension table (R54 §2.1)
   that this packet does not carry, which R54 §2.4a makes an error and R55 §2.4's generated checks
   would catch. `generate.py` implements not-null, uniqueness, references and Tier 2 pass-through;
@@ -77,4 +77,4 @@ It went 16 errors out of conformance once, unnoticed, which is why the check exi
 - Python only. The Julia equivalent rewrites `generate.py` and reuses everything else;
   a shared conformance corpus is what would keep the two honest.
 - `registry.json` is hand-written here. The real content artifact is generated against
-  R2's format and covers all 34 tables.
+  R2's format and covers every table.
