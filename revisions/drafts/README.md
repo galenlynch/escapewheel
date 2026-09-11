@@ -40,9 +40,18 @@ status table that no appraisal has read; #1 has not been appraised at all. Every
 three is measured against a registry that has moved since — R112 and R113 were accepted after they
 were written — and re-measuring is the first of those checks.
 
-**#1 and #2 were one draft and were split at 3,801 words.** They amend disjoint sections and neither
-depends on the other: #1 says what a build learns *about* a source, #2 says how a source's rows reach
-it. Both touch Part 05 §3 by appending, which renumbers nothing either way.
+**#1 and #2 were one draft and were split at 3,801 words**, and the split is where they stopped
+being read against each other. They are not disjoint. #1 §3.1 closes the list of what a build
+supplies an adapter — an object store for the root, the session's reference clock, the first sample
+of each stream — and a build supplies the first of those as a live `SourceStore` handed to a
+constructor. #2 §3.3 makes **out of process the default**, where §3.2 gives an adapter an argument
+list and §3.5 has even an identifier cross as a name. Under both, the ordinary adapter cannot be
+given three of the five things #1 says a build supplies it.
+
+**Neither can be accepted until that is settled**, and settling it is a decision rather than an
+edit: either #1's list is restated in what survives a process boundary — a root URI, a clock's
+declaration, first samples as numbers — or #1 is scoped to #2's in-process opt-in, which leaves the
+default case unspecified. Both touch Part 05 §3 by appending, which renumbers nothing either way.
 
 **None moves a count in the generated block.** No core table, column, reference, rule or vocabulary
 changes. Every number in each is measured against the parts, the registries and the three
