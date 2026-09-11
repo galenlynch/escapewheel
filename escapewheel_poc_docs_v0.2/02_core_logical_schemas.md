@@ -103,7 +103,9 @@ Duplication is permitted only where it buys otherwise-unavailable access. Axis n
 
 A table declares each foreign key as a reference naming the target resource, this table's columns, and the target's columns. A reference MAY be composite, nullable, or self-referencing (R46 §2).
 
-A reference MUST relate columns of the same role, and of the same identity where both are identifiers. Relating an assigned identifier to a carried one resolves to nothing.
+A reference MUST relate columns of the same type, of the same role, and of the same identity where both are identifiers (R114 §3). A join is on values: two columns of different types resolve to each other not at all, and relating an assigned identifier to a carried one resolves to nothing.
+
+Where §5.3 requires `int64` of an identifier whose distinct values may exceed `int32`, every column referencing it is `int64` too — the escape is taken on both sides or on neither, since a narrow column referencing a wide one truncates silently (R114 §3).
 
 ### 7.1 Session scope
 

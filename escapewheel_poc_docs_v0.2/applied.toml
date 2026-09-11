@@ -2531,3 +2531,16 @@ note = "the spelling, and why an implementation's source is not bound where Part
 disposition = "applied"
 where = [{ part = "00", section = "10.4" }]
 note = "the check, and the exception it must admit for a two-digit number that is not a part"
+
+[clause."R114 §2.1"]
+disposition = "rationale"
+note = "why the type shares the reason the role and identity rules were written for: a reference promises two columns hold the same values"
+
+[clause."R114 §2.2"]
+disposition = "rationale"
+note = "that R53 §2.1 would have gone unseen, which is the measurement rather than a rule"
+
+[clause."R114 §3"]
+disposition = "applied"
+where = [{ part = "02", section = "7" }]
+note = "the type joins the role and identity in the reference rule, and the paragraph beside it takes 5.3's int64 escape on both sides or neither"

@@ -13,7 +13,7 @@ part number here as it does there.
 This document set specifies the Escapewheel proof-of-principle data packet. It is v0.1 with every accepted revision applied:
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R113 accepted. R42 and R73 withdrawn. 3 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R114 accepted. R42 and R73 withdrawn. 2 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
@@ -839,7 +839,9 @@ Duplication is permitted only where it buys otherwise-unavailable access. Axis n
 
 A table declares each foreign key as a reference naming the target resource, this table's columns, and the target's columns. A reference MAY be composite, nullable, or self-referencing (R46 §2).
 
-A reference MUST relate columns of the same role, and of the same identity where both are identifiers. Relating an assigned identifier to a carried one resolves to nothing.
+A reference MUST relate columns of the same type, of the same role, and of the same identity where both are identifiers (R114 §3). A join is on values: two columns of different types resolve to each other not at all, and relating an assigned identifier to a carried one resolves to nothing.
+
+Where §5.3 requires `int64` of an identifier whose distinct values may exceed `int32`, every column referencing it is `int64` too — the escape is taken on both sides or on neither, since a narrow column referencing a wide one truncates silently (R114 §3).
 
 ### 7.1 Session scope
 

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-11 |
 | **Amends** | Part 02 §7 (a reference's two sides agree on type, as they already agree on role and identity) |
 | **Depends on** | R2 §6 (a reference names the target resource and both sides' columns), R48 §2.3 (a reference relates columns of the same role), R53 §2.3 (an identifier declares `carried` or `assigned`), R53 §2.4 (an identifier is `int64` where its distinct values may exceed `int32`) |
 | **Profile** | all |

@@ -108,6 +108,17 @@ def structural(tables, universe, prefix=""):
     c_("reference arity matches",
        [(n, r["resource"]) for n, t in tables.items() for r in t["references"]
         if len(r["columns"]) != len(r["resource_columns"])])
+    # Part 02 §7. A join is on values, so two columns of different types resolve to each other not
+    # at all -- `string` "7" and `int32` 7 are not one value, and nothing else here compares them.
+    # R53 §2.1 is the case: it made every identifier `int32` where all 110 had been `string`, and
+    # an extension still declaring `string` matched on role, on identity and on target, which is
+    # every other thing this file asks of a reference.
+    types = {(n, c["name"]): c["type"] for n, t in universe.items() for c in t["columns"]}
+    c_("a reference relates columns of the same type",
+       [(n, a, types.get((n, a)), r["resource"], b, types.get((r["resource"], b)))
+        for n, t in tables.items() for r in t["references"]
+        for a, b in zip(r["columns"], r["resource_columns"])
+        if types.get((n, a)) != types.get((r["resource"], b))])
     # Part 02 §7. A structural index may also be a foreign-key component, so a client converting one
     # side and not the other would break the join. Both sides sharing a role is what makes
     # converting every structural_index column join-preserving by construction.

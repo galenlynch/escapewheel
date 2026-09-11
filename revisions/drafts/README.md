@@ -18,9 +18,8 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | words | appraised | why here |
 |---|---|---|---|---|
-| 1 | `both-sides-of-a-reference-carry-one-type` | 816 | appraised 2026-09-11 | depends on nothing below; extends a sentence Part 02 §7 already carries, and every registry here already satisfies it |
-| 2 | `a-writer-requires-no-knowledge-of-a-particular-source` | 1,160 | not since the split | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
-| 3 | `an-adapters-rows-cross-a-process-boundary` | 2,925 | not since the split | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in Part 05 §3.7 and Part 09 §5.7 |
+| 1 | `a-writer-requires-no-knowledge-of-a-particular-source` | 1,160 | not since the split | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
+| 2 | `an-adapters-rows-cross-a-process-boundary` | 2,925 | not since the split | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in Part 05 §3.7 and Part 09 §5.7 |
 
 Each cites a part for every requirement it states, which R112 §3.1 requires of a Decision.
 
@@ -41,8 +40,8 @@ status table that no appraisal has read; #1 has not been appraised at all. Every
 three is measured against a registry that has moved since — R112 and R113 were accepted after they
 were written — and re-measuring is the first of those checks.
 
-**#2 and #3 were one draft and were split at 3,801 words.** They amend disjoint sections and neither
-depends on the other: #2 says what a build learns *about* a source, #3 says how a source's rows reach
+**#1 and #2 were one draft and were split at 3,801 words.** They amend disjoint sections and neither
+depends on the other: #1 says what a build learns *about* a source, #2 says how a source's rows reach
 it. Both touch Part 05 §3 by appending, which renumbers nothing either way.
 
 **None moves a count in the generated block.** No core table, column, reference, rule or vocabulary
