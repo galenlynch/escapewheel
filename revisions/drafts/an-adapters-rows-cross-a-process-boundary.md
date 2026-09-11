@@ -175,6 +175,19 @@ Where the stream is used, standard output carries rows and cannot also carry a d
 intact, since the diagnosis a command prints was always the thing worth keeping and stderr is where
 a command that also emits data must print it.
 
+**An adapter MAY report the way an extension does.** Part 09 §5.8 already has an extension write a
+JSON report at a path the recipe names, carrying a `problems` array whose entries each have a
+`level` of `error`, `warning` or `info`, a message, and optionally the resource the finding is
+about. An adapter **MAY** write the same report on the same terms, and a build treats it the same
+way: reporting what it contains, requiring none, failing on none it cannot parse, and ignoring what
+it can derive for itself.
+
+Standard error stays what a failure carries. What the report adds is a finding a build can file
+beside its own — Part 05 §9's levels are the ones §5.8 already uses — where a diagnosis on stderr
+is a string a build can only repeat. An adapter and an extension reach a build by the same
+protocols, and having them describe a problem two different ways is a difference with no argument
+behind it.
+
 The same holds for an extension's rows, and R109 §3.2 is narrower than its own reason: it has an
 extension deliver Parquet and names a subprocess for converting a raw source, where the argument it
 rests on — a dependency closure that must not become the writer's — is answered by the boundary
