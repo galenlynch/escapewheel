@@ -13,16 +13,18 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Scope
 
-The specification is eleven parts, numbered 00 through 10, and a citation of one names it by that
-number (Part 00 §10.1). Two spellings of that name are in use across the tracked documents and the
-three distributions' source: **`Part 02 §5.2` at 32 sites and `` `02` §5.2 `` at 1,462**, with a
-further 146 and 636 naming a part and no section at all.
+The specification is eleven parts, listed by number in Part 00 §9, and a citation of a requirement
+names the part that states it (Part 00 §10.1). Neither section says how that name is written, and
+two spellings are in use across the tracked documents and source: **`Part 02 §5.2` at 32 sites and
+`` `02` §5.2 `` at 1,462**, with a further 146 and 636 naming a part and no section at all. Every
+count here excludes this document, whose own specimens of the second spelling are quotations of
+what §3.1 forbids rather than citations subject to it.
 
-Nothing says which to write. The parts themselves carry 20 of the first and 15 of the second, so
-the document a reader meets with no context is where the two are most evenly split.
+The parts themselves carry 20 of the first and 15 of the second, so the document a reader meets
+with no context is where the two are most evenly split.
 
-This part states which spelling a citation uses, in the section that already says which document a
-citation names.
+This revision states which spelling a citation uses, in the section that already says which
+document a citation names.
 
 ## 2. Background
 
@@ -40,7 +42,7 @@ The number alone also says nothing about what it numbers. Two digits in backtick
 who has not memorised the numbering to infer that a document is being named, where the word says
 it in four characters.
 
-### 2.2 Two revisions accepted on one day spelled it both ways
+### 2.2 R111 and R112 spelled it both ways on one day
 
 R111 wrote `Part 02 §5.2` in three parts and R112 wrote `` `02` §5.2 `` in two, both accepted on
 2026-09-10. Neither form is giving way to the other: 8 of the 20 word-form citations in the parts
@@ -59,10 +61,14 @@ A citation of a part — in a part, in an implementation's source, in a packet's
 a revision — **MUST** write the word `Part` before the number, as `Part 02 §5.2`, and **MUST NOT**
 name the part by its number alone, with or without backticks.
 
-Respelling the parts alone was the cheaper alternative and fixes the smaller half: 14 sites against
-2,098, and it leaves the collision of §2.1 exactly where it happens, since **1,016 of the 1,462**
-citations are in the three distributions' source, where the backticks in the same sentence mark a
-column.
+That list is wider than Part 00 §10.1's, which binds a revision's Decision and not the rest of it,
+and wider deliberately: §10.1 restricts where a requirement **must** be cited from, where a
+spelling has no reason to stop at one section of one kind of document.
+
+Respelling the parts alone was the cheaper alternative and fixes the smaller half: the 16 sites in
+the parts against 2,098, and it leaves the collision of §2.1 exactly where it happens, since **1,038 of the 1,462**
+citations are in tracked Python — 778 of those in the three distributions — where the backticks in
+the same sentence mark a column.
 
 ### 3.2 A tool refuses a part named by its number alone
 
@@ -70,10 +76,16 @@ A tool that checks citations **MUST** report a part named by its number alone, i
 revision, in a draft or in a tracked source file. Both spellings resolve to the same section, so no
 other check can see which was written.
 
+A two-digit number in backticks is not certainly a part, so the check **MUST** admit an exception
+carrying the reason it is not one, and **MUST** report an exception that matches nothing — the
+discipline `registry/check.py` applies to `NAMING_EXCEPTIONS`, so the list cannot go stale. It
+starts empty: no backticked two-digit number outside the range 00 to 10 appears anywhere in the
+repository, so nothing yet needs excusing.
+
 ## 4. What this does not change
 
-- **A section is still `§5.2`.** The section sign, the numbering and an unprefixed `§5.2` naming a
-  section of the citing document are all unchanged.
+- **An unprefixed `§5.2` still names a section of the citing document.** §3.1 binds the spelling of
+  a part's name, and a citation carrying no part name is not one.
 - **Structured data names a part as data, not as a citation.** `applied.toml` records where a clause
   landed as `part = "02"`, and Part 00 §9's table lists the numbers in a column; neither is prose a
   reader follows.
@@ -81,10 +93,17 @@ other check can see which was written.
 
 ## 5. Consequence
 
-Part 00 §10 gains a subsection, and **2,098 references are respelled** — 1,462 naming a section and
-636 naming a part alone — across the parts, the revisions, the drafts, the root documents and the
-three distributions' source.
+Part 00 §10 gains a subsection and **2,098 references are respelled**, across the parts, the
+revisions, the drafts, the root documents and the tracked source. **135 of them are
+in generated artifacts** — 51 in `registry/logical_schemas.json` alone, with the rest in the
+manifest schema and the copies the reader and validator carry — so those are respelled by editing
+`registry/build.py` and regenerating, which `verify.py`'s clean-tree stage then confirms.
 
-The sweep is mechanical and not blind. A backticked two-digit number is not always a part, since a
-value may be written the same way, so each match is read before it is rewritten and
-`check_citations.py` confirms that every citation the sweep produces still resolves.
+Four shapes need reading rather than substituting. **51** carry a JSON-escaped section sign
+(`` `05` \u00a78 ``), which `check_citations.py`'s own pattern does not match and so has never
+resolved; **34** name a part and a stage rather than a section (`` `05` Stage 5 ``); **4** are
+ranges (`` `00` ``–`` `09` ``), which take a plural; and **4** are doubled for reStructuredText.
+
+Three tools carry the spelling and all three change. `check_citations.py` and `impact.py` accept
+either form, so each must stop accepting one, and `repoint.py` **emits** the old form when it names
+the part a citation should move to.
