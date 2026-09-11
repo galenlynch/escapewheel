@@ -89,7 +89,7 @@ def test_registry_is_optional(packet_root):
     assert open_packet(packet_root).registry is None
 
 
-def _with_array(packet_root, codecs):
+def _with_array(packet_root, codecs, profile=None):
     """Add an external array resource declaring `codecs`."""
     import json
 
@@ -103,6 +103,7 @@ def _with_array(packet_root, codecs):
             "uri": "s3://example/probe0.zarr",
             "external": True,
             "codecs": codecs,
+            **({"physical_profile": profile} if profile else {}),
         }
     )
     entry["required_codecs"] = codecs
@@ -130,6 +131,24 @@ def test_a_missing_codec_disqualifies_only_that_resource(packet_root):
 
 def test_unopenable_is_empty_when_everything_reads(packet_root):
     assert _with_array(packet_root, ["gzip"]).unopenable() == {}
+
+
+def test_the_floor_is_read_for_the_version_the_resource_declares(packet_root):
+    """Part 03 §6.4 states the floor per Zarr version, and `blosc` is in v2's.
+
+    A single set is the v3 row applied to both, which refuses a conforming v2 array the reader
+    can in fact open -- and Part 03 §6.1 asks for the pair precisely because readability differs
+    between the versions.
+    """
+    pkt = _with_array(packet_root, ["blosc"], profile="zarr_v2")
+    pkt.check_codecs("array.probe0_ap")
+    assert pkt.unopenable() == {}
+
+
+def test_an_unsupported_codec_names_the_version_it_was_judged_against(packet_root):
+    pkt = _with_array(packet_root, ["wavpack"], profile="zarr_v2")
+    with pytest.raises(UnsupportedCodecError, match="zarr_v2 codecs"):
+        pkt.check_codecs("array.probe0_ap")
 
 
 def test_sessions_and_repr(packet_root):

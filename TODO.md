@@ -34,13 +34,15 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ### What stands between here and a production trial
 
-1. **Walk the reader and consumer obligations.** A compliance scan on 2026-09-04 read the 240
-   normative sentences the accepted revisions then carried and walked every one binding a writer
-   or a validator: three writer obligations were unmet — R40 §2.3's withheld-anchor count
-   including zero, R61 §2.2's retention block, and R54 §2.5's routinely-filled
-   `core.intervals.metadata`, 450 of 450 rows — and all three are fixed. It did not walk the 33
-   binding a reader or a consumer, and nothing has since. Most are prohibitions on whoever reads
-   a packet rather than on this codebase, but the reference reader is a consumer too.
+1. **Offer what a reader SHOULD offer.** The reader and consumer obligations were walked on
+   2026-09-11 against the parts, which R111 made the statement of record: **58 normative
+   sentences** name a reader or a consumer, and one was unmet — the codec floor, now fixed (§2
+   below). What remains is two the reference reader does not implement at all rather than
+   implements wrongly. Part 02 §8.3 says **a reader SHOULD offer** discriminator resolution —
+   read the kind, take that resource's key from the registry, join — and nothing here does, so
+   every consumer of a `core.intervals.interval_kind` writes it again. Part 02 §12.2 is the same
+   shape for `extremum_channel_index` through `core.sorting_run_channels`, where resolving it
+   wrongly named the wrong electrode for 5,071 of 6,781 units (R83 §1).
 2. **Bump `registry_version` when the schema settles.** It is held at `0.1.0` by decision, not by
    oversight: the field is for compatibility and follows semantic versioning, and R48, R53, R56
    and R59 would each have forced a major increment. While the hold lasts, two packets declaring
