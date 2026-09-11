@@ -82,6 +82,7 @@ def main() -> int:
         # crosses. The waveform adapter is where to look: it stages arrays, and its two build-
         # supplied inputs are mappings keyed by a tuple and by an integer.
         waveforms(Path(tmp))
+    streams()
     return 0
 
 
@@ -136,5 +137,30 @@ def _dumps(value: object) -> str:
     return "yes"
 
 
+def streams() -> None:
+    """Whether many resources cross one pipe as Arrow, and how.
+
+    An IPC stream carries one schema by construction, and an adapter returns thirteen resources on
+    the NWB fixture. Streams concatenate, though: each ends with an end-of-stream marker, so a
+    reader opens one, reads to it, and opens the next on what is left. The resource identifier
+    rides in the schema's own key-value metadata, so nothing is framed that Arrow does not frame.
+    """
+    import subprocess
+
+    import pyarrow as pa
+
+    script = HERE / "emit.py"
+    child = subprocess.Popen([sys.executable, str(script)], stdout=subprocess.PIPE)
+    got: dict[str, int] = {}
+    try:
+        while True:
+            reader = pa.ipc.open_stream(child.stdout)
+            got[reader.schema.metadata[b"resource_id"].decode()] = reader.read_all().num_rows
+    except pa.ArrowInvalid:
+        pass
+    child.wait()
+    print(f"\nthree resources over one pipe, three schemas: {got}, exit {child.returncode}")
+
 if __name__ == "__main__":
     raise SystemExit(main())
+

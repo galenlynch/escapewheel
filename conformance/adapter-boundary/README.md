@@ -39,3 +39,18 @@ The three adapters handed an open store today — `nwb`, `waveforms`, `lfp` — 
 big binary, and two of them stage arrays. The third does not: `LFPSource.external_arrays()` returns
 **references rather than bytes**, which is R14's external-resource model and crosses a boundary
 unchanged. That is the shape of an answer and it is already in the tree.
+
+## Many resources cross one pipe, and Arrow frames them
+
+An IPC stream carries **one schema** by construction, and the NWB adapter returns thirteen
+resources. Streams concatenate: each ends with an end-of-stream marker, so a reader opens one,
+reads to it, and opens the next on what is left — on a pipe as well as a buffer, since nothing
+seeks. The resource identifier rides in the schema's own key-value metadata.
+
+`probe.py` runs `emit.py` as a subprocess and reads **three resources with three different schemas
+back off one non-seekable pipe**, in order and with the right row counts. Nothing is framed that
+Arrow does not frame, and no length prefix or header is invented.
+
+A pipe is also memory, so this route touches no disk. Where an adapter is not a child of the
+build — another host, a scheduler — a port would be the shape, and Arrow Flight is its standard;
+that is a protocol to add rather than a change to these two.

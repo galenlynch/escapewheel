@@ -59,20 +59,18 @@ measured why: `StagedArray` carries `values, array_asset_id, chunks, shard, code
 
 **Two questions remain open on #2, and both are about the contract rather than a clause.**
 
-*Is one route enough?* R109 §3.2 already has an extension deliver rows **as Parquet, one file per
-table**, both packaged sessions use that route, and `tables.py` implements it as
-`{resource: path}` with a batch iterator per resource. #2 adds an Arrow IPC stream on standard
-output and makes it the default, so a build must implement both forever and an adapter author must
-choose. What the stream buys is that it leaves no artifact; what it costs is a second route and the
-only genuinely unspecified thing in the contract — an adapter returns **13 resources** on the NWB
-fixture, and one standard output carries one stream, so how many resources cross and how they are
-framed is not stated. The file route answers that by construction.
+*Settled: the transport is a declared protocol with a floor,* not a default with an exception,
+which is the shape Part 03 §6.4 already uses for codecs. The profile names `files` and `stream`, an
+adapter declares which it speaks, a build MUST support `files`, and a build meeting an adapter that
+speaks none it supports refuses naming both sides' lists. Adding a protocol later is additive, so
+the set is where a version would otherwise have to go: an adapter naming what it named before keeps
+working.
 
-*What version of the contract is this?* An adapter and a build are two programs that version
-independently and must agree on a vocabulary of terms a build passes, a transport, and a framing.
-Nothing in either draft says what agreement is in force. That is the defect `extends_registry` was
-reaching for one level up, and an IPC contract needs it more than a registry does, because the two
-sides are not shipped together.
+*Settled: how many resources cross one stream.* An Arrow IPC stream carries one schema and an
+adapter returns thirteen resources on the NWB fixture. Streams concatenate — each ends with an
+end-of-stream marker — and the resource identifier rides in the schema's key-value metadata, so
+nothing is framed that Arrow does not frame. `conformance/adapter-boundary/` sends three resources
+with three schemas over a real pipe and reads all three back.
 
 **The two land together.** #2 §3.6 has a build supply a location, so #1's closed list carries it,
 and #1's list was written around the three store-handed adapters — `nwb`, `waveforms`, `lfp` — which

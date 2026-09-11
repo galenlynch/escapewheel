@@ -108,16 +108,34 @@ allocation: R109 §3.1 binds a writer to build from a document and rows, and des
 extension delivers without requiring it of the extension. An adapter is a class and cannot run
 itself out of process; whoever ships it can.
 
-**What matters is the process boundary; the transport is a choice with a default.** A build **MUST**
-accept rows as an **Arrow IPC stream** on the command's standard output, and **MUST** accept them as
-**files the recipe names**. Absent a declaration the stream is what a build uses. A writer **MAY**
-offer another transport and **MUST NOT** require one.
+**What matters is the process boundary; the transport is a declared protocol with a floor.** The
+profile names the protocols by which rows cross it. An adapter **MUST** declare which it speaks, a
+build **MUST** support **`files`**, and a build meeting an adapter that speaks none it supports
+**MUST** refuse, naming both sides' protocols, before any source is opened.
 
-The stream is the default because it leaves nothing behind. A file is an artifact the build did not
-ask for and does not own: it outlives the build, goes stale against the source it came from, and is
-the shape three copies of one extraction already took in this project. A stream lasts as long as the
-build and is the batches the staging path already consumes, so the largest table costs no write and
-no read.
+`escapewheel-portable-v0.1` names two:
+
+| protocol | rows cross as | a build |
+|---|---|---|
+| `files` | Parquet the recipe names, one per resource | MUST support |
+| `stream` | a sequence of Arrow IPC streams on standard output | MAY support |
+
+`files` is the floor because R109 §3.2 already requires it of an extension, because both packaged
+sessions use it, and because it is the one protocol that works where a build did not launch the
+adapter at all. A protocol added later is additive: an adapter naming only what it named before
+keeps working, which is why this is a declaration rather than a default.
+
+`stream` earns its place by leaving nothing behind, and by never touching a disk: a pipe is memory,
+so the largest table costs no write and no read. A file is an artifact the build did not ask for and
+does not own — it outlives the build, goes stale against the source it came from, and is the shape
+three copies of one extraction already took in this project — which is also why a recipe may want
+one, and why neither protocol is the other's replacement.
+
+**An Arrow IPC stream carries one schema, and an adapter returns many resources.** They concatenate:
+each ends with an end-of-stream marker, so a reader opens one, reads to it, and opens the next on
+what is left, and the resource identifier rides in the schema's own key-value metadata. Nothing is
+framed that Arrow does not frame. `conformance/adapter-boundary/` sends three resources with three
+schemas over a real pipe and reads all three back, which is the measurement this clause rests on.
 
 A recipe declares files where persistence is the point — an extraction expensive enough to reuse
 across builds, or one whose output should still be there to inspect after a failure. That is not a
