@@ -16,7 +16,8 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 R63 §2.1 has a source adapter declare `PRODUCES` and R87 §2.2 has it declare `STATES`, both read
 before any I/O. Everything else a build needs to know about an adapter is written down centrally
 instead: which resource it wins when two sources offer one, whether it is handed an object store,
-whether it may be sampled, and which recipe options it cannot be constructed without.
+whether it may be sampled, which recipe options it cannot be constructed without, and whose output
+it reads.
 
 Measured across the writer package, 102 string literals match one of the ten built-in kind names
 and **80 of them name a kind** — the other 22 are a registry document's `tables` key, a clock named
@@ -26,7 +27,8 @@ behaviour**, 50 of them in the one that drives a build.
 
 This part moves each piece to whoever knows it: an adapter's own properties to the adapter, and an
 arbitration between two of them to the recipe. How an adapter reaches a build at all is
-`an-adapters-rows-cross-a-process-boundary`'s, and neither part depends on the other.
+`an-adapters-rows-cross-a-process-boundary`'s, and the two meet at what a build passes: §3.1 makes
+that data, so the same contract holds whether an adapter runs in the writer's process or its own.
 
 ## 2. Background
 
@@ -45,7 +47,7 @@ a build read them with nothing open (R63 §2.1). Nothing distinguishes those fou
 except where they were written. The fifth, `PREFERRED`, is not an adapter's own property at all,
 and §2.3 is about where it goes instead.
 
-### 2.2 A registered adapter reaches no object store
+### 2.2 A registered adapter is given less than a built-in
 
 An adapter may already come from another distribution: `escapewheel.sources` is an entry-point group
 and a build consults it after its own ten kinds. What it does with one is call
@@ -54,8 +56,8 @@ so `video` receives the reference clock, `sync` receives first samples, and thre
 object store; a registered kind receives none of them, because the branches that supply them test
 for a literal name.
 
-So a registered adapter can produce a resource and cannot read from an object store, which is the
-case R80 makes ordinary.
+So a registered adapter can produce a resource and cannot be told where to read it from, which is
+the case R80 makes ordinary by putting a resource's bytes wherever a resolution document says.
 
 ### 2.3 A preference is a claim about a pair, not a property of either
 
@@ -140,14 +142,20 @@ refused naming both sources, where a built-in winner applied one silently.
 
 ## 5. Consequence
 
-Part 05 §3 gains a preference table, Part 05 §3.4 gains what an adapter declares, and Part 07 §4 gains what a
-build supplies one.
+Part 05 §3 gains a preference table, Part 05 §3.4 gains what an adapter declares, and Part 07 §4
+gains `NEEDS` and `CONSUMES` — its sentence reads "two static declarations" today and becomes
+four.
 
-Concretely: `session.py`'s fifty-line ladder of `if spec.kind == "…"` branches, each constructing
-one adapter with a different set of extras, becomes one construction that reads `NEEDS` and passes
-the values it names. The five tables that name a kind go with it — `_SHARED_SOURCES`, `SAMPLED`,
-`REQUIRED_OPTIONS`, `CONSUMES` and `PREFERRED` — against one `NEEDS` and one `CONSUMES` per
-adapter, ten of each.
+Concretely: `session.py` constructs an adapter in **56 lines carrying ten `spec.kind` branches**,
+one per built-in, each passing a different set of extras. That becomes one construction that reads
+`NEEDS` and passes the values it names. The five tables that name a kind go with it —
+`_SHARED_SOURCES`, `SAMPLED`, `REQUIRED_OPTIONS`, `CONSUMES` and `PREFERRED` — against one `NEEDS`
+and one `CONSUMES` per adapter, ten of each.
+
+**What it costs is three adapters.** `nwb`, `waveforms` and `lfp` are handed an open store today
+and must open the root themselves, which is the one place §3.1's ban on a live handle is not free.
+Sharing stays available: a build running them in its own process may still pass one cache between
+them, because that is an arrangement rather than a declaration.
 
 Both packaged recipes gain two lines, `core.probes` to `nwb` and `core.subjects` to `session`,
 which is the whole of what §2.3 measures needing arbitration. Neither packet's rows change: the

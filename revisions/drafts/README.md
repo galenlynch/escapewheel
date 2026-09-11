@@ -18,7 +18,7 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | words | appraised | why here |
 |---|---|---|---|---|
-| 1 | `a-writer-requires-no-knowledge-of-a-particular-source` | 1,355 | appraised 2026-09-11 | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
+| 1 | `a-writer-requires-no-knowledge-of-a-particular-source` | 1,729 | appraised 2026-09-11, re-checked after the rewrite | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
 | 2 | `an-adapters-rows-cross-a-process-boundary` | 2,925 | not since the split | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in Part 05 §3.7 and Part 09 §5.7 |
 
 Each cites a part for every requirement it states, which R112 §3.1 requires of a Decision.
