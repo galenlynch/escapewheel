@@ -859,3 +859,35 @@ should delay Phases 3-6.
 
 Not oversights. Non-linear clock alignment (R3 §3.4), `age_at_session` (R4 §3.4), analysis-layer
 schemas (R2 §12), extension schemas (R2 §12), and the Iceberg profile (Phase 7).
+
+## Reviewed and declined, 2026-09-04
+
+Two external reviews recommended changing interval closure and identifier width. Both were
+declined, and the reasons are recorded because the arguments for them are good ones and will be
+made again.
+
+**Intervals stay closed (R45 §2.1).** Half-open composes and matches array slicing, and the
+review's case for it is sound in general. It does not hold here. Measured across the built packet,
+nothing tiles as an interval pair — trials are separated by an inter-trial gap of 6,250–7,031
+ticks, there is one clock observation window, and the stream windows overlap; the one thing that
+does tile, `analysis.spike_events`'s 15 time buckets, is a single `time_bucket_tick` column with no
+closure to choose. What closed buys is that both columns hold the same kind of value, an observed
+tick: half-open would make `stop_tick` a bound, and for a sample clock where tick 0 *is* sample 0
+the stop of an N-sample recording is sample N, which was never acquired — so
+`core.clock_observation_intervals` would say a clock was observing at a tick it was not. It is also
+the safer end: a closed interval reaching `INT64_MAX` has no half-open form. Half-open's real
+advantage is that `stop - start` is what a reader expects to work; that hazard is symmetric, and
+the format states and validates its convention.
+
+**Identifiers stay `int32` with R53 §2.4's escape.** The review read the compiled spec, which had
+dropped that escape and said flatly `int32`; restoring it was compiler repair. Widening every
+identifier is a different change, and R53 §2.4 already covers the case the width argument is about
+— an identifier whose distinct values may exceed `int32` MUST be `int64`, which no core table
+approaches. What the review got right and is kept is the separable half: R76 makes an out-of-range
+conversion fail rather than wrap, which is the actual hazard, since a wrapped `int32` is a valid
+`int32` that passes every rule in the registry.
+
+**What would reopen either.** For intervals, a table whose rows must partition a session, where
+closed makes adjacency `next.start == prev.stop + 1` and someone will get it wrong. For widths, an
+extension that genuinely exceeds `int32` — at which point R53 §2.4 applies and nothing needs
+reopening at all.

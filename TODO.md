@@ -34,14 +34,19 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ### What stands between here and a production trial
 
-1. **Package a second session.** Every adapter has been developed and validated against exactly
-   one, `ecephys_786867`. R59 already measured that `ecephys_776259` emits `ccf_id`/`ccf_acronym`
-   where 786867 emits `brain_region_id`, so this is where the next defects are.
-2. **Decide what `registry_version` is for.** Held at `0.1.0` while the schema moves; two packets
-   claiming one version with incompatible schemas is what the field exists to prevent. Free to
-   settle now, expensive once anyone outside holds a packet.
-3. **Run the compliance scan against the implementation.** The equivalent against the spec found
-   ten missing rules; nothing has run it against the registry, writer and validator.
+1. **Walk the reader and consumer obligations.** A compliance scan on 2026-09-04 read the 240
+   normative sentences the accepted revisions then carried and walked every one binding a writer
+   or a validator: three writer obligations were unmet — R40 §2.3's withheld-anchor count
+   including zero, R61 §2.2's retention block, and R54 §2.5's routinely-filled
+   `core.intervals.metadata`, 450 of 450 rows — and all three are fixed. It did not walk the 33
+   binding a reader or a consumer, and nothing has since. Most are prohibitions on whoever reads
+   a packet rather than on this codebase, but the reference reader is a consumer too.
+2. **Bump `registry_version` when the schema settles.** It is held at `0.1.0` by decision, not by
+   oversight: the field is for compatibility and follows semantic versioning, and R48, R53, R56
+   and R59 would each have forced a major increment. While the hold lasts, two packets declaring
+   `0.1.0` can carry incompatible schemas, so the embedded registry is the authority and
+   `registry_version` alone cannot decide compatibility (Part 02 §9.2). Lift the hold at release
+   and increment on the next breaking change.
 
 ---
 
