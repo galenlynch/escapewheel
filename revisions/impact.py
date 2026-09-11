@@ -14,6 +14,7 @@ is stale, which needs reading: what it removes is having to find them first.
 
 from __future__ import annotations
 
+import functools
 import re
 import subprocess
 import sys
@@ -65,24 +66,32 @@ def touched(ref: str | None) -> dict[str, set[str]]:
     return changed
 
 
-def citers(part: str, section: str) -> list[str]:
-    """Every file citing this part and section, as `path:line`."""
-    found = []
+@functools.cache
+def index() -> dict[tuple[str, str], tuple[str, ...]]:
+    """Every citation of a part section in the searched trees, as (part, section) to `path:line`.
+
+    One pass over the tree, not one per section: a commit changing 51 sections walked it 51 times.
+    """
+    found: dict[tuple[str, str], list[str]] = defaultdict(list)
     for root in SEARCHED:
-        for p in sorted((ROOT / root).rglob("*")):
-            if p.suffix not in {".py", ".md", ".json"} or ".venv" in str(p):
+        for path in sorted((ROOT / root).rglob("*")):
+            if path.suffix not in {".py", ".md", ".json"} or ".venv" in str(path):
                 continue
-            if "Implementation_Spec" in p.name:
+            if "Implementation_Spec" in path.name:
                 continue
             try:
-                lines = p.read_text().splitlines()
+                lines = path.read_text().splitlines()
             except (UnicodeDecodeError, OSError):
                 continue
             for n, line in enumerate(lines, 1):
                 for m in CITATION.finditer(line):
-                    if (m.group(1) or m.group(2)) == part and m.group(3) == section:
-                        found.append(f"{p.relative_to(ROOT)}:{n}")
-    return found
+                    found[m.group(1) or m.group(2), m.group(3)].append(f"{path.relative_to(ROOT)}:{n}")
+    return {key: tuple(value) for key, value in found.items()}
+
+
+def citers(part: str, section: str) -> list[str]:
+    """Every file citing this part and section, as `path:line`."""
+    return list(index().get((part, section), ()))
 
 
 def main() -> int:

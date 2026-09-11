@@ -360,6 +360,11 @@ touches.
    a list of `{ part = "02", section = "7.1" }` targets, each taking an optional `note` saying which
    piece of the clause landed there, and every one is resolved against that part's own headings, so
    a section that does not exist fails.
+6a. **`python escapewheel_poc_docs_v0.2/headings.py`** where a heading changed. It prints every
+   file citing that section and rewrites `headings.toml`; committing that file is the record the
+   citations were read. Adding or renumbering a section needs the same run, which is what makes a
+   rewritten heading visible at all -- `check_citations.py` resolves a number and cannot see that
+   the section behind it is now about something else.
 7. **`python escapewheel_poc_docs_v0.2/combine.py`** for the single-file rendering.
 8. **`python verify.py`.** Every stage but the three clean-tree ones must pass before committing;
    those compare against the committed state and so clear only on the commit itself.
