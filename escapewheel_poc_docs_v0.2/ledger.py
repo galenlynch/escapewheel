@@ -34,6 +34,13 @@ that part has never carried.
 The other dispositions leave `where` free text or absent, because nothing resolves it: a `registry`
 entry names the artifact that carries the clause, and `superseded` names its replacement in `by`.
 
+A section that exists is not a section that says the right thing, and `05` §8 held four clauses
+belonging to §11 while resolving perfectly. So each `applied` target is also checked against what
+the part states there: a part cites the revision that set each rule it carries (`00` §10.2), so a
+target whose section names its revision is the part confirming the claim. It corroborates rather
+than proves -- a later revision resetting the same rule replaces the citation -- so the count is a
+ratchet beside the undisposed one, free to fall and refused when it rises.
+
     python ledger.py            # report
     python ledger.py --summary  # counts only
 """
@@ -55,6 +62,8 @@ DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 
 #: `## 3.` and `### 3.1 ` alike, which is every section a part declares.
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
+#: The same, keeping the depth, so a section's own text can be cut from its subsections'.
+NUMBERED = re.compile(r"^(#{1,4}) (\d+(?:\.\d+)*)\.?(?:\s|$)")
 
 
 def targets(where: object) -> tuple[list[tuple[str, str]], list[str]]:
@@ -83,6 +92,57 @@ def sections(part: str) -> frozenset[str] | None:
     """Every section number a part declares, or None where no part carries that number."""
     found = sorted(HERE.glob(f"{part}_*.md"))
     return frozenset(HEADING.findall(found[0].read_text())) if found else None
+
+
+@functools.cache
+def bodies(part: str) -> dict[str, str]:
+    """Each section of a part, mapped to its own text and its subsections'.
+
+    A section runs to the next heading at its depth or shallower, so `§9` carries `§9.1` and
+    `§9.2` while `§9.2` carries neither its parent's preamble nor its siblings.
+    """
+    found = sorted(HERE.glob(f"{part}_*.md"))
+    if not found:
+        return {}
+    lines = found[0].read_text().splitlines()
+    marks = [(n, m.group(2)) for n, line in enumerate(lines) if (m := NUMBERED.match(line))]
+    out = {}
+    for index, (start, number) in enumerate(marks):
+        depth = number.count(".")
+        end = next((s for s, other in marks[index + 1:] if other.count(".") <= depth), len(lines))
+        out[number] = "\n".join(lines[start:end])
+    return out
+
+
+def corroborated(revision: str, part: str, section: str) -> bool:
+    """Whether the part confirms the ledger's claim by citing the revision where it says.
+
+    A part cites the revision that set each rule it states, which `00` §10.2 permits as
+    provenance and R112 §2.2 makes the reason citing a part loses nothing. So the ledger's claim
+    that a clause landed somewhere is checkable against the section itself: `05` §8 named three
+    R75 clauses and cites R75 nowhere, because those clauses are §11's.
+
+    A parent counts for a subsection, since a rule stated once in a section's preamble covers the
+    subsections that qualify it, and a later revision resetting the same rule replaces the
+    citation -- which is why this corroborates rather than proves.
+    """
+    text = bodies(part)
+    here = text.get(section, "")
+    parent = text.get(section.rsplit(".", 1)[0], "") if "." in section else ""
+    return any(re.search(rf"\b{revision}[ ,)§]", body) for body in (here, parent) if body)
+
+
+def uncorroborated(ledger: dict[str, dict]) -> list[tuple[str, str]]:
+    """Every `applied` target whose section does not cite the revision that claims to have landed there."""
+    out = []
+    for key, entry in sorted(ledger.items(), key=lambda kv: int(kv[0][1:].split()[0])):
+        if entry.get("disposition") != "applied":
+            continue
+        revision = key.split()[0]
+        for part, section in targets(entry.get("where", []))[0]:
+            if not corroborated(revision, part, section):
+                out.append((key, f"`{part}` §{section}"))
+    return out
 
 
 def unresolved(ledger: dict[str, dict]) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
@@ -176,6 +236,10 @@ def main() -> int:
     placeless = sorted(k for k, d in ledger.items()
                        if d.get("disposition") == "applied" and not d.get("where"))
     dangling, unparsed = unresolved(ledger)
+    # What the section itself says, as far as anything can check it: a part cites the revision
+    # that set each rule it states, so a target citing it is the part confirming the claim.
+    thin = uncorroborated(ledger)
+    mark = tomllib.loads(LEDGER.read_text()).get("baseline", {}).get("uncorroborated", 0)
 
     counts: dict[str, int] = {}
     for entry in ledger.values():
@@ -184,6 +248,7 @@ def main() -> int:
     for name in sorted(counts):
         print(f"  {counts[name]:>4}  {name}")
     print(f"  {len(undisposed):>4}  undisposed")
+    print(f"  {len(thin):>4}  applied, in a section that does not cite the revision")
 
     # Undisposed clauses are a backlog and can run to hundreds, so `--summary` holds them back.
     # The rest are defects in what the ledger already claims, and there is nothing to read
@@ -191,6 +256,8 @@ def main() -> int:
     if not args.summary:
         for key, title in sorted(undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])):
             print(f"    UNDISPOSED  {key:<12} {title[:62]}")
+        for key, target in thin:
+            print(f"    UNCORROBORATED {key:<12} {target} states no such provenance")
     for key in stale:
         print(f"    STALE       {key:<12} the ledger disposes a clause no revision states")
     for key, value in sorted(bad.items()):
@@ -203,16 +270,25 @@ def main() -> int:
         print(f"    MALFORMED   {key:<12} `where` holds {piece}")
 
     over = max(0, len(undisposed) - baseline)
-    failures = over + len(stale) + len(bad) + len(placeless) + len(dangling) + len(unparsed)
-    if len(undisposed) < baseline:
+    thinner = max(0, len(thin) - mark)
+    failures = over + thinner + len(stale) + len(bad) + len(placeless) + len(dangling) + len(unparsed)
+    lowered = {"undisposed": (baseline, len(undisposed)), "uncorroborated": (mark, len(thin))}
+    if any(now < was for was, now in lowered.values()):
         text = LEDGER.read_text()
-        LEDGER.write_text(re.sub(r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text))
-        print(f"\nratchet lowered: {baseline} -> {len(undisposed)}; commit applied.toml")
+        for field, (was, now) in lowered.items():
+            text = re.sub(rf"(?m)^{field} = \d+$", f"{field} = {min(was, now)}", text)
+            if now < was:
+                print(f"ratchet lowered: {field} {was} -> {now}")
+        LEDGER.write_text(text)
+        print("commit applied.toml")
         return 0
     if not failures:
         print(f"\nok — {len(undisposed)} undisposed, at the recorded high-water mark")
     elif over:
         print(f"\n{over} clause(s) need a disposition; the mark is {baseline}")
+    elif thinner:
+        print(f"\n{thinner} applied target(s) land where the part does not cite the revision; "
+              f"the mark is {mark}")
     else:
         print(f"\n{failures} disposition(s) vouch for something that is not there")
     return 1 if failures else 0

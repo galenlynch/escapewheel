@@ -1,6 +1,8 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
 undisposed = 0
+# Applied targets the part does not corroborate by citing the revision. Same rule: may shrink.
+uncorroborated = 85
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -322,15 +324,15 @@ note = "restates that 05's staging discipline is unchanged"
 
 [clause."R75 §2.1"]
 disposition = "applied"
-where = [{ part = "05", section = "8" }]
+where = [{ part = "05", section = "11" }]
 
 [clause."R75 §2.2"]
 disposition = "applied"
-where = [{ part = "05", section = "8" }]
+where = [{ part = "05", section = "11" }]
 
 [clause."R75 §2.3"]
 disposition = "applied"
-where = [{ part = "05", section = "8" }]
+where = [{ part = "05", section = "11" }]
 
 [clause."R76 §2.1"]
 disposition = "applied"
