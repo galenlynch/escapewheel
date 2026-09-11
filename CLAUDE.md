@@ -192,11 +192,23 @@ Revision numbers are reserved even where the document is not yet written:
 `NWB_Lake_POC_v0.1_Implementation_Spec.md` is generated: a concatenation of `README.md` and Parts 00–09
 delimited by `<!-- BEGIN <file> -->` / `<!-- END <file> -->`.
 
-**A citation of a part is written `Part 02 §5.2`.** Part 00 §10.4 binds that spelling in a part and
-in a revision and deliberately leaves an implementation's source alone, since a specification does
-not impose a comment style on code it does not own. This repository follows it everywhere anyway,
-so the reference implementation does not read against the specification it implements;
-`revisions/check_citations.py` enforces it where the clause binds and reports nothing elsewhere.
+**Cite the specification the way it says to.** Part 00 §10 is the rule, and it binds a part and a
+revision; this repository follows it in source, in the developer documentation and in commit
+messages too, so nothing here reads against the specification it implements.
+
+- **A requirement is cited from the part that states it** (§10.1), never from the revision that
+  introduced it — the part's sentence is what binds, and naming an actor exempts nothing.
+  `revisions/repoint.py` checks the source against the ledger and fails the build.
+- **A revision is cited for what a part does not carry** (§10.2): the measurement behind a rule,
+  the alternative rejected and why, the defect that prompted the change. Three uses name a revision
+  and are sound — a registry column's `since`, the ledger that maps a clause to where it landed,
+  and a revision citing another.
+- **A part is numbered by appending** (§10.3) — a section at the end of the part, a subsection at
+  the end of its section, never inserted between two that exist and never two with one number.
+  `revisions/check_citations.py` refuses a duplicate and reports a sequence that does not ascend.
+- **A part is written `Part 02 §5.2`** (§10.4), never `` `02` §5.2 ``: a backtick marks a literal a
+  program can hold, and a part number is not one. Two spellings ran to 1,494 citations before
+  R113 chose between them, because every check resolved both.
 
 **Invoke the `prose` skill before writing a docstring or a comment, too.** The same reader is on
 the other end of both: someone implementing against this months from now, deciding what a function

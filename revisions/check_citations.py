@@ -82,9 +82,22 @@ ANY = re.compile(r"§(\d+(?:\.\d+)*)")
 #: backticked two-digit string in those documents is a part, so nothing yet needs excusing.
 NUMBERED = re.compile(r"`(\d\d)`")
 
-#: Sites where a backticked two-digit number is not a part, each with why. Checked to still match
-#: something, so an entry cannot outlive the text it excuses.
-NOT_A_PART: tuple[tuple[str, str], ...] = ()
+#: Sites where a backticked two-digit number is not a part, or is a specimen of the spelling
+#: `00` §10.4 replaced, each with why. Matched as a substring of the line, and checked to still
+#: match something, so an entry cannot outlive the text it excuses.
+NOT_A_PART: tuple[tuple[str, str, str], ...] = (
+    ("R113", "at 340**",
+     "the revision that chose the spelling, quoting the one it replaced"),
+    ("R113", "in two, both accepted on",
+     "the same, showing which of two revisions wrote which"),
+    ("R113", "one sentence, two backticked tokens",
+     "the exhibit: a registry field and a part under one markup"),
+    ("R113", "becomes", "the possessive form the sweep had to rewrite by hand"),
+    ("R113", "name a part and a stage rather than a section",
+     "a shape that takes more than inserting the word"),
+    ("CLAUDE.md", "a backtick marks a literal a",
+     "the house rule, quoting the spelling it forbids"),
+)
 
 
 def headings(text: str) -> set[str]:
@@ -127,8 +140,8 @@ def numbered(path: Path, text: str) -> tuple[list[str], set[str]]:
     found, used = [], set()
     for number, line in ((m, text[:m.start()].count("\n") + 1) for m in NUMBERED.finditer(text)):
         whole = text.splitlines()[line - 1]
-        excuse = next((why for site, why in NOT_A_PART
-                       if path.name.startswith(site) and why in whole), None)
+        excuse = next((reason for site, marker, reason in NOT_A_PART
+                       if path.name.startswith(site) and marker in whole), None)
         if excuse is not None:
             used.add(excuse)
             continue
@@ -257,9 +270,9 @@ def main() -> int:
                 print(f"  loose   {shown}: {line}")
     # An exemption that matches nothing is as wrong as a missing one: it excuses text that has
     # gone, and the next reader takes it for a live case.
-    for _, why in NOT_A_PART:
-        if why not in excused:
-            print(f"  STALE   an exemption for {why!r} matches nothing")
+    for site, _, reason in NOT_A_PART:
+        if reason not in excused:
+            print(f"  STALE   {site}'s exemption for {reason!r} matches nothing")
             broken += 1
 
     tail = f", {historical} citing the frozen v0.1 numbering" if historical else ""
