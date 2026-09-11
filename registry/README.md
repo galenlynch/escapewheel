@@ -11,7 +11,7 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 <!-- END generated: counts -->
 
 `tables.md` is the same content as markdown, rendered by `render.py` at build time. Read it
-to see what a table looks like now; read `02` plus the revisions to see why.
+to see what a table looks like now; read Part 02 plus the revisions to see why.
 
 | File | Contents |
 |---|---|
@@ -160,7 +160,7 @@ against empty tables, which is what surfaced the collision.
 ## Not yet present
 
 - **`sort` on every table.** R10 §2 gives 21 of 34 an ordering, primary-key by default with
-  `03`'s two overrides; the rest are null rather than invented.
+  Part 03's two overrides; the rest are null rather than invented.
 - **Array and manifest checks** belonging to the shim rather than SQL: Zarr rank against
   `core.array_dimensions`, `channel_index` within its axis extent, checksums,
   `required_codecs` against reader capability.

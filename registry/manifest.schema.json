@@ -35,7 +35,7 @@
       "type": "string"
     },
     "extensions": {
-      "description": "Extension registries this packet carries (`09` \u00a76, R17). Each is a registry document in R2's format, namespaced by its extension_id. A core validator verifies the declared file exists and MUST NOT require its schema.",
+      "description": "Extension registries this packet carries (Part 09 \u00a75.3, R17). Each is a registry document in R2's format, namespaced by its extension_id. A core validator verifies the declared file exists and MUST NOT require its schema.",
       "type": "object",
       "additionalProperties": {
         "type": "object",

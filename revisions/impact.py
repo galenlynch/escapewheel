@@ -27,7 +27,7 @@ PARTS = ROOT / "escapewheel_poc_docs_v0.2"
 #: A heading that opens a numbered section, at any depth.
 HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
 
-#: `Part 03 §5.4`, which `00` §10.4 requires, and the bare `03` §5.4 it replaced: a citation
+#: `Part 03 §5.4`, which Part 00 §10.4 requires, and the bare `03` §5.4 it replaced: a citation
 #: written before that clause still resolves, so both are read here.
 CITATION = re.compile(r"(?:`(\d\d)`|Part (\d\d))\s+§(\d+(?:\.\d+)*)")
 

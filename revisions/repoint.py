@@ -96,7 +96,7 @@ REASONING: tuple[tuple[str, str, str], ...] = (
 
 
 def cited(entry: dict) -> list[str]:
-    """Each target of an `applied` entry, spelled as `00` §10.4 requires: Part 02 §7.1."""
+    """Each target of an `applied` entry, spelled as Part 00 §10.4 requires: Part 02 §7.1."""
     return [f"Part {t['part']} §{t['section']}" for t in entry.get("where", [])]
 
 
