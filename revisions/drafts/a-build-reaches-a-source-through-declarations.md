@@ -546,8 +546,9 @@ stream, because a build holds the registry and rows are what an adapter is for. 
 only unambiguous reading of absence: without it a missing resource is a crash under every protocol
 and *also* a source with nothing to say under all three, and no build can tell which.
 
-An empty table says the adapter looked. It does not say the source is empty — an extraction that silently produced nothing delivers the same rows —
-and a build wanting that difference reads §3.11's report.
+An empty table says the adapter looked, and it does not say the source is empty: an extraction that
+silently produced nothing delivers the same rows, and a build wanting that difference reads
+§3.11's report.
 
 **The data does not say whether a delivery finished.** Measured in
 `conformance/adapter-boundary/stream_failures.py`, a command killed after writing four rows and
