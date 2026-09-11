@@ -183,6 +183,15 @@ an adapter — ship the thing an author would otherwise write badly — and the 
 `escapewheel extension check <document>`, the invariants already written, run against a document
 and the core registry a packet embeds.
 
+**The rest of the parallel is already there**, which is worth saying so nobody builds it twice. An
+extension's *rows* cross by the same protocols an adapter's do, and §3.7 ships both ends for either.
+Its *document* is already drafted for it by `escapewheel extension`, which reads what a Parquet file
+can tell it and names what it cannot, so a human finishes a draft rather than starting one — and
+that is not R109 §3.2's forbidden derivation, because what the extension delivers is the human's
+document and not a function of the rows. The document already carries its own versions too:
+`extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
+(R57 §2.1). Checking is the only half that never shipped.
+
 ## 1a. The packets' physical layout and encoding
 
 **Not started.** Several tables have changed shape substantially — R105's four coordinate tables at

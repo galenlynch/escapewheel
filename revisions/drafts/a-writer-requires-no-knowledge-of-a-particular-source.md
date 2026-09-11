@@ -150,6 +150,10 @@ refused naming both sources, where a built-in winner applied one silently.
 
 - **No table, column, reference, rule or vocabulary changes, and no packet is rebuilt.** This binds
   where a build learns about a source, so what changes is who may add one.
+- **An extension declares nothing of its own here.** An extension reaches a build as a source
+  (R109 §3.2), so the adapter delivering its rows is what declares `NEEDS`, and for the `tables`
+  kind that is a root and the resources the recipe names. What an extension owes is its registry
+  document, which this part does not touch.
 - **`PRODUCES` and `STATES` are untouched.** R63 §2.1 and R87 §2.2 stand; §3.1 says the rest of what
   an adapter needs is declared the same way, not that those two change shape.
 

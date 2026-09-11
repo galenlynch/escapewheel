@@ -287,14 +287,17 @@ build supplies no location and the adapter returns the URI its source already ha
 ### 3.7 A writer ships each protocol so an adapter need not write one
 
 A writer **SHOULD** ship an implementation of each protocol its profile names, covering both ends,
-and an adapter **MAY** use it rather than write its own. Nobody should hand-roll a framing that is
-already specified and already implemented, and an adapter that does is where the two ends drift
-apart first.
+and **whoever speaks one MAY use it** rather than write their own — an adapter, and an extension
+delivering its rows over the same protocols (§3.1). Nobody should hand-roll a framing that is
+already specified and already implemented, and the side that does is where the two ends drift apart
+first.
 
-Using it **MUST NOT** be a condition of conformance. §3.1 specifies each protocol so an adapter can
+Using it **MUST NOT** be a condition of conformance. §3.1 specifies each protocol so either can
 speak one with nothing of the writer's installed, in any language, which is what R109 §3.1 asks and
 what a shipped implementation would otherwise quietly undo — the point is to spare an author the
-work, not to decide what they may build against.
+work, not to decide what they may build against. An extension is the case that makes this sharp:
+R109 §3.1 requires no code of one at all, so an implementation it *must* import would contradict
+the clause this part rests on.
 
 **An adapter out of process may import whatever version it was written against.** §2.1's coupling is
 a *shared* environment, and the boundary is what unshares it: an adapter depending on the writer at
