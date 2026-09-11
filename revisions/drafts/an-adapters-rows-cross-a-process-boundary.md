@@ -125,6 +125,7 @@ reading of an old one.
 |---|---|
 | `files-v0.1` | Parquet the recipe names, one per resource |
 | `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
+| `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource |
 
 **A build supports the members a profile names, and MUST NOT infer one version from another.**
 Semantic versioning says what a change was, which is what an author needs to decide a number; it
@@ -171,11 +172,31 @@ key**, `resource_id`. Everything else is Arrow: the container, the schema, the b
 terminator that separates one resource from the next, and the metadata field the key lives in. A
 protocol that owned more would be a format to maintain; these are a spelling of two.
 
-A third thing was considered and rejected. Arrow **Flight** is the standard for many datasets over
-one connection and names each with a descriptor, which would leave us owning nothing at all — and it
-is gRPC, a listener, a port and an auth surface for a child process reading a file on the same
-machine. It is what a group reaching an adapter the build did not launch would use, and adding that
-group is §3.1's mechanism rather than a change to this one.
+**`flight-v0.1` is the protocol to reach for, because it is the only one that can answer Stage 1.**
+Part 05 §4.1 requires a build to report, per source, what it offers per resource and how many rows,
+without writing to the packet. Flight answers that with `ListFlights`: a `FlightDescriptor` per
+resource, its schema, and its row count, **before any data moves**. `files-v0.1` answers it from a
+Parquet footer. `stream-v0.1` cannot answer it at all — rows are what a stream carries, so
+discovering costs extracting, and a build out of process would have to run the source to find out
+what it holds.
+
+It buys two more things a pipe has no way to offer. A build **fetches only what the recipe's `owns`
+names**, by asking for those descriptors, where a stream delivers everything a source has and the
+build discards the rest — and R63 §1.2 measured a recipe naming four resources of five, so the
+difference is one extraction in five wasted. And it can stop: a build that fails early cancels
+rather than draining.
+
+It also owns the least. A descriptor is the format's, so the `resource_id` key is unnecessary, and
+what a build supplies is the **socket path**, which it already passes in an argument list. Measured
+in `conformance/adapter-boundary/`, a server over a **Unix socket** — no port, no network exposure,
+shipped in the standard pyarrow wheel — serves three resources by descriptor in **119 ms including
+the process start**.
+
+`stream-v0.1` stays for the reason R3 §2.1 has been arguing from the beginning. A raw IPC stream is
+implementable wherever there is an Arrow binding at all; Flight needs gRPC bindings for that
+language too, and the Arrow implementations carrying Flight are a subset of those carrying IPC. An
+author working where Flight is not available writes a stream and loses Stage 1 to an extraction,
+which is a price to pay knowingly rather than a reason to own a worse protocol for everyone.
 
 A recipe declares files where persistence is the point — an extraction expensive enough to reuse
 across builds, or one whose output should still be there to inspect after a failure. That is not a

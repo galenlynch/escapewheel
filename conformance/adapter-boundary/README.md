@@ -54,3 +54,21 @@ Arrow does not frame, and no length prefix or header is invented.
 A pipe is also memory, so this route touches no disk. Where an adapter is not a child of the
 build — another host, a scheduler — a port would be the shape, and Arrow Flight is its standard;
 that is a protocol to add rather than a change to these two.
+
+## Arrow Flight answers Stage 1; a stream cannot
+
+Part 05 §4.1 has a build report, per source, what it offers per resource and how many rows, without
+writing to the packet. `ListFlights` is that: a descriptor per resource with its schema and row
+count, before any data moves. A stream carries rows, so out of process, discovering costs
+extracting — and the NWB adapter's `offers()` shows the shape of that cost today, computing every
+record to count them.
+
+`flight.py` serves three resources over a **Unix socket** — `Location.for_grpc_unix`, so no port
+and no network exposure — and a client lists them by descriptor and fetches each: **119 ms
+including the server's process start**. Flight ships in the standard pyarrow wheel. What a build
+supplies is the socket path, which it already passes in an argument list, so this protocol invents
+nothing at all where `stream-v0.1` invents a metadata key.
+
+The reason to keep the stream is the one R3 §2.1 has argued from the beginning: a raw IPC stream is
+implementable wherever there is an Arrow binding, and Flight additionally needs gRPC bindings for
+that language, which fewer Arrow implementations carry.
