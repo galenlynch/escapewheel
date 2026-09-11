@@ -2434,6 +2434,8 @@ A validator MUST check that a declared registry exists. It MUST NOT require an e
 
 An extension is validated on core's terms and its verdict is reported separately (R17 §4). A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension's failure invalidate core.
 
+Separate verdicts are not an absent one. The **packet's** verdict is the conjunction of core's and every extension's, so a validator MUST NOT report a packet whose core passes and whose extension fails as conforming (R72 §2.4) — an extension's canonical resources are part of what the packet holds (Part 00 §3), and a failure among them is a failure of the packet. A consumer MAY still read core from such a packet, and MUST NOT read the packet's verdict as though the failure were external to it.
+
 ### 5.5 Independent versioning
 
 An extension carries its own version, independent of `registry_version` (R17 §5).

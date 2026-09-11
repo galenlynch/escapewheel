@@ -9,7 +9,7 @@ undisposed = 0
 # later one that reset it -- Part 03 §6.4 carries R3 §7.2's codec floor and credits R21 §3, which
 # made it per-version. What the number catches is a target that is simply wrong, which is how
 # eight were found: four clauses filed at Part 05 §8, which is Stage 7: Materialize.
-uncorroborated = 78
+uncorroborated = 77
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
 # `python ledger.py` fails while any binding clause has no entry here.
@@ -310,8 +310,8 @@ note = "restated whole in R90 §3; was a paired-value discriminator keeps R55 §
 
 [clause."R72 §2.4"]
 disposition = "applied"
-where = [{ part = "00", section = "3" }]
-note = "R71 §2.1 states the canonical set the conjunction follows from. The conjunction itself -- a packet whose core passes and whose extension fails is not conforming -- is stated in no part: Part 05 §5.4 and Part 09 §5.4 give separable verdicts and neither combines them, and Part 00 §3 is the layer model, which says nothing of it. Writing it down needs a revision"
+where = [{ part = "09", section = "5.4" }]
+note = "the conjunction was filed at Part 00 §3, which states R71 §2.1's canonical set that it follows from and says nothing of a verdict; it is stated beside R17 §4's separability, which is what R72 §2.4 adds to"
 
 [clause."R74 §2.1"]
 disposition = "applied"
