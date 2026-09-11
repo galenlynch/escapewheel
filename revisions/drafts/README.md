@@ -18,14 +18,23 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | words | appraised | why here |
 |---|---|---|---|---|
-| 1 | `an-extension-declares-the-core-it-was-authored-against` | 1,297 | no | rests on R17 §5 for what an extension declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
+| 1 | `an-extension-declares-the-core-it-was-authored-against` | 1,088 | appraised 2026-09-11; **replace, do not accept** | rests on R17 §5 for what an extension declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
 | 2 | `a-writer-requires-no-knowledge-of-a-particular-source` | 1,160 | not since the split | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
 | 3 | `an-adapters-rows-cross-a-process-boundary` | 2,925 | not since the split | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in Part 05 §3.7 and Part 09 §5.7 |
 
 Each cites a part for every requirement it states, which R112 §3.1 requires of a Decision.
 
-**What stands between each of these and acceptance is the pre-acceptance checks** in
-`../CLAUDE.md`, which none has been through in its current form. #2 and #3 were appraised as one
+**#1's appraisal recommends replacing it.** The defect it names is real and nothing catches it:
+18 column pairs join an extension to core, Part 02 §7 requires a reference to relate columns of the
+same role and the same identity and says nothing of their type, and `registry/check.py` follows
+that exactly. R53 §2.1 turned `unit_id` from `string` to `int32` and an extension still declaring
+`string` would pass every check there is. But `extends_registry` does not catch it — it records
+that an author had a different registry, and §3.2 then reports rather than refuses, where the
+disagreement itself is computable from what a packet already embeds. One sentence extending
+Part 02 §7 to the type, and one line in `check.py`, catch it exactly.
+
+**What stands between the other two and acceptance is the pre-acceptance checks** in
+`../CLAUDE.md`, which neither has been through in its current form. #2 and #3 were appraised as one
 document forty minutes before they were split, so each now carries a Scope, a Consequence and a
 status table that no appraisal has read; #1 has not been appraised at all. Every number in all
 three is measured against a registry that has moved since — R112 and R113 were accepted after they
