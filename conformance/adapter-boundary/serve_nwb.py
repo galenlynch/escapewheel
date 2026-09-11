@@ -39,11 +39,10 @@ class Served(fl.FlightServerBase):
     ) -> None:
         super().__init__(fl.Location.for_grpc_unix(location))
         rows = source.records()
-        self.tables = {
-            r: pa.Table.from_pylist(v)
-            for r, v in rows.items()
-            if not wanted or r in wanted
-        }
+        asked = list(wanted) if wanted else list(rows)
+        # A resource this source has nothing for arrives empty rather than not arriving, so a build
+        # reads absence as the run having failed and never as the source having nothing to say.
+        self.tables = {r: pa.Table.from_pylist(rows.get(r, [])) for r in asked}
 
     def list_flights(self, context, criteria):
         """Stage 1: what this source offers per resource, and how many rows (Part 05 §4.1)."""

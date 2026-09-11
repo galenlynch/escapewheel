@@ -89,10 +89,19 @@ and reads its rows over Flight. `serve_nwb.py` is the adapter side: it rebuilds 
 `ZoneInfo` from the values it was sent and receives no object of the writer's.
 
     a build supplies ['reference_clock', 'root', 'session_id', 'wanted', 'zone']
-      as 367 bytes of JSON, naming 3 of the 18 resources this adapter produces
-    Stage 1, before any rows move: {'core.sessions': 1, 'core.probes': 1, 'core.electrodes': 2}
-    fetched 3 resource(s), 4 rows, 204 ms including the adapter's process start
+      as 389 bytes of JSON, naming 4 of the 18 resources this adapter produces
+    Stage 1, before any rows move: {'core.sessions': 1, 'core.probes': 1,
+                                    'core.electrodes': 2, 'core.clock_anchors': 0}
+    fetched 4 resource(s), 4 rows, 194 ms including the adapter's process start
     rows identical to the same adapter in process: True
+    ['core.clock_anchors'] is not in this session, and in process the adapter omits it;
+    over the boundary it arrives at 0 rows
+
+The fourth resource is the one that makes absence mean something. `NWBSource` declares 18 resources
+and `records()` returns 13 against this fixture, omitting the five it has nothing for and returning
+none of them empty — so today a resource that never arrives is a crash and a source with nothing to
+say, indistinguishably. Delivered empty it costs a name and no schema: zero columns, and 144 bytes
+as a stream.
 
 **Three things the draft does not say, found by needing them.**
 

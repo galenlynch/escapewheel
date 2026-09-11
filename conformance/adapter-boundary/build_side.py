@@ -23,6 +23,7 @@ sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer"))
 sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer/tests"))
 
 import nwbfixture
+
 import serve_nwb
 
 SESSION = "mini_2025-04-09"
@@ -68,7 +69,13 @@ def main() -> int:
             },
             "zone": "America/Los_Angeles",
             "session_id": SESSION,
-            "wanted": ["core.sessions", "core.probes", "core.electrodes"],
+            # The fourth is one this session has nothing for, to see how its absence arrives.
+            "wanted": [
+                "core.sessions",
+                "core.probes",
+                "core.electrodes",
+                "core.clock_anchors",
+            ],
         }
         supplied = supply(serve_nwb.NEEDS, context)
         supplied["options"] = {"interval_kind": "task.trials"}
@@ -107,8 +114,13 @@ def main() -> int:
         )
 
         here = serve_nwb.build({**supplied, "root": str(root)}).records()
-        same = all(got[name].to_pylist() == here[name] for name in got)
+        same = all(got[name].to_pylist() == here.get(name, []) for name in got)
         print(f"rows identical to the same adapter in process: {same}")
+        absent = [r for r in context["wanted"] if r not in here]
+        print(
+            f"{absent} is not in this session, and in process the adapter omits it; "
+            f"over the boundary it arrives at {got[absent[0]].num_rows} rows"
+        )
         child.terminate()
         child.wait()
     return 0

@@ -356,7 +356,7 @@ An adapter that emits everything it has and lets the build discard is paying a c
 measures at one resource in five, and an adapter whose discovery costs an extraction is paying what
 the NWB adapter's `offers` pays in process today, counting rows by computing them. Both are costs a
 working adapter can carry. What the stream costs on the failing path is larger and is §3.11's: a
-build learns that a run failed and not which resource, where Flight names the one it asked for.
+truncated resource passes as whole, so a build blames the wrong one, where Flight cannot.
 
 A recipe declares files where persistence is the point — an extraction expensive enough to reuse
 across builds, or one whose output should still be there to inspect after a failure. That is not a
@@ -532,15 +532,19 @@ later version still names `stream-v0.1` in its group and still reads it.
 R63 §2.2 settles which resources each source owns before any source is opened, which is what lets a
 contradictory recipe be refused. A build therefore already holds the set it is waiting for when an
 adapter starts: no adapter declares it, no protocol carries it, and it is the same set whether or
-not §3.1's wanted term was supplied. A run succeeded when every resource in that set arrived. A
-build **MUST** refuse where one did not, naming the source by the name the recipe gave it rather
-than by its adapter, since two sources may run the same one.
+not §3.1's wanted term was supplied. A run succeeded when every resource in that set arrived and
+the process exited clean. A build **MUST** refuse where either fails, naming the source by the name
+the recipe gave it rather than by its adapter, since two sources may run the same one.
 
 **A source with no rows for a resource delivers it empty.** An adapter **MUST** deliver every
-resource it was asked for, empty where the source has nothing for it, rather than omitting it. The
-rule costs an adapter a schema it already holds and buys the only unambiguous reading of absence:
-without it a missing resource is a crash under every protocol and *also* a source with nothing to
-say under two of them, and no build can tell which. An empty table says the adapter looked. It does
+resource the wanted term named it, or every resource it produces where no wanted term was supplied,
+empty where the source has nothing for one rather than omitting it. Delivering empty is delivering:
+an empty Parquet file under `files-v0.1`, a stream carrying no batches under `stream-v0.1`, and a
+descriptor listed in Stage 1 at zero rows under `flight-v0.1`. It costs an adapter a name and no
+schema — measured, an empty delivery carries **zero columns** and crosses as **144 bytes** of
+stream, because a build holds the registry and rows are what an adapter is for. What it buys is the
+only unambiguous reading of absence: without it a missing resource is a crash under every protocol
+and *also* a source with nothing to say under all three, and no build can tell which. An empty table says the adapter looked. It does
 not say the source is empty — an extraction that silently produced nothing delivers the same rows —
 and a build wanting that difference reads §3.11's report.
 
@@ -570,6 +574,11 @@ its size before it sends declares none, which a build **MUST** read as unknown r
 adapter can only fill after materialising its rows is a count bought by giving up the streaming that
 named the protocol.
 
+The test also settles what R63 §4 left open, which is whether `PRODUCES` should be checked against
+what an adapter emits. It is, at the moment it matters and against a real source: a declaration
+naming a resource the code never produces fails the build that relies on it, where R63 priced the
+answer at a fixture per adapter.
+
 ### 3.11 A build reports what the protocol carries
 
 A build that captures standard error and nothing else reports nothing at all for a failure over
@@ -595,16 +604,18 @@ not arrive, not which one did not arrive first.
 **The report is one shape on three carriers.** Part 09 §5.8 has an extension write a JSON report
 carrying a `problems` array whose entries each have a `level` of `error`, `warning` or `info`, a
 `message`, and optionally the `resource` the finding is about. An adapter **MAY** write the same
-report on the same terms, and a build **MUST** ask for it after a failure as it does after a
-success. What differs per protocol is only where it is handed over: a file at a path the recipe
+report on the same terms, and a build **MUST** look for one after a failure as it does after a
+success, since the run that went wrong is the one with something to say. What differs per protocol
+is only where it is handed over: a file at a path the recipe
 names under `files-v0.1` and `stream-v0.1`, where rows have taken standard output and a file is the
 channel left, and `DoAction("report")` under `flight-v0.1`, where the connection is that channel and
 no file outlives the run. An adapter with a report **MUST** name `report` among its actions and a
 build **MUST NOT** ask one that did not, since an adapter implementing no action lists none and
 raises on being asked anyway.
 
-A build owns the adapter's process and terminates it once it has the rows and the report, so an
-adapter **MUST NOT** rely on running code after its last response.
+A build that started a process owns it, and terminates it once it has the rows and the report, so an
+adapter **MUST NOT** rely on running code after its last response. A `files-v0.1` source whose rows
+were written before the build began has no process and no report beyond the file.
 
 **An adapter MAY attach one finding to the failing call.** A plain exception is what an adapter gets
 for doing nothing and it does cross — as a **1,108-character** string with the adapter's Python
@@ -629,11 +640,13 @@ put there is one the adapter must know before doing the work, and what a build w
 which resources are offered, their schemas and their row counts — is in the `FlightInfo` already. A
 build **MUST** ignore `app_metadata`, which leaves the field to a later version of the protocol.
 
-What a build learns about *why* is the one thing a protocol does decide. With `stream-v0.1` a build
-learns that the run failed and not which resource, where a Flight failure is an error on the call
-and names the resource it was asked for. Getting that from the stream means a build reading the
-end-of-stream marker itself rather than handing the bytes to a reader, which is the ownership §3.3
-declines — so it stands as what the stream costs, not as something to repair.
+Which resource a failure belongs to is the one thing a protocol does decide, and `stream-v0.1`
+decides it wrongly. §3.10's set says which resources are missing, and the resource an adapter died
+*inside* is not among them: truncated at a message boundary it arrives short and parses clean, so a
+build blames the first resource that never appeared while the damaged one passes as whole. A Flight
+failure is an error on the call for a named resource and cannot misattribute. Reading the
+end-of-stream marker would close it, and that is the framing §3.3 declines to own, so it stands as
+what the stream costs rather than as something to repair.
 
 ## 4. What this does not change
 
@@ -716,11 +729,15 @@ no backslash. One naming an interpreter by an absolute Windows path would not, a
 missing executable rather than as a malformed command. The fix is a TOML array and the deletion of
 the split.
 
-§3.10's completeness test costs the ten adapters one habit each. An adapter that has nothing for a
-resource returns nothing for it today, and must return it empty instead, which is a schema each
-already holds and no extraction it does not already do. It buys the check a build has never had:
-`records()` is trusted whole, so a source that quietly produced fewer resources than it owns has
-been reaching a packet since R63 §2.3 reduced that case to a warning.
+§3.10's completeness test costs the ten adapters one habit each, and the habit is universal.
+`NWBSource` declares **18** resources in `PRODUCES` and `records()` returns **13** against the
+fixture session, omitting the five the session has nothing for and returning **none** of them empty
+— so every absence this adapter produces today is the ambiguous kind. Returning them empty is a key
+with an empty list behind it, measured in `conformance/adapter-boundary/build_side.py`: asked for
+`core.clock_anchors`, which the fixture session does not have, the adapter out of process answers
+Stage 1 with that resource at **0 rows** where in process it omits the key. It buys the check a
+build has never had: `records()` is trusted whole, so a source that quietly produced fewer
+resources than it owns has been reaching a packet since R63 §2.3 reduced that case to a warning.
 
 Nothing here forces the ten adapters apart, and §2.2's grouping is why the option is worth having.
 An adapter reading one institute's metadata schema or one tool's directory layout can move to that
