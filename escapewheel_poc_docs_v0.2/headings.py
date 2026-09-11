@@ -10,9 +10,9 @@ still held.
 a changed heading is a diff, and the report naming every file citing that section comes with it --
 `revisions/impact.py` run for whoever made the change rather than remembered by them.
 
-A number that moved is `moves.toml`'s business and a section that no longer exists is
-`check_citations.py`'s. This answers the third question neither can: whether §5.5 is still about
-what its citers took it for.
+A section that no longer exists is `check_citations.py`'s business, since a citation of it stops
+resolving. This answers the question that one cannot: whether §5.5 is still about what its citers
+took it for.
 
     python headings.py            # rewrite the record, reporting what changed and who cites it
     python headings.py --check    # the same, failing instead of rewriting

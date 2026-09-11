@@ -93,15 +93,6 @@ def document(number: str) -> Path | None:
     return found[0] if found else None
 
 
-def moved(number: str, section: str) -> str:
-    """The section this one became, where a part has renumbered (`moves.toml`)."""
-    import sys
-    sys.path.insert(0, str(PARTS))
-    from moves import resolve
-
-    return resolve(number, section)
-
-
 def part(number: str) -> Path | None:
     """The v0.2 part with this number."""
     found = sorted(PARTS.glob(f"{number}_*.md"))
@@ -133,8 +124,7 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
         if target is None:
             parts.append(f"`{name}` §{section} — no such part")
         elif section not in headings(target.read_text()):
-            if moved(name, section) not in headings(target.read_text()):
-                parts.append(f"`{name}` §{section} — {target.name} has no §{section}")
+            parts.append(f"`{name}` §{section} — {target.name} has no §{section}")
 
     spans = [(a, b) for a, b in claimed]
     for match in ANY.finditer(text) if own is not None else ():

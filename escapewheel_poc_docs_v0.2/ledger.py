@@ -27,9 +27,9 @@ property neither audit had.
 
 An `applied` entry's `where` is a list of `{ part, section }` targets, each with an optional `note`
 saying which piece of the clause landed there. Every one is resolved against that part's own
-headings, through `moves.toml`, so a clause cannot be recorded as placed in a section that does not
-exist -- the defect one step along from no `where` at all, and the one that let R111 §3.5 name two
-sections of `01` that part has never carried.
+headings, so a clause cannot be recorded as placed in a section that does not exist -- the defect
+one step along from no `where` at all, and the one that let R111 §3.5 name two sections of `01`
+that part has never carried.
 
 The other dispositions leave `where` free text or absent, because nothing resolves it: a `registry`
 entry names the artifact that carries the clause, and `superseded` names its replacement in `by`.
@@ -46,8 +46,6 @@ import re
 from pathlib import Path
 
 import tomllib
-
-from moves import resolve
 
 HERE = Path(__file__).resolve().parent
 REVISIONS = HERE.parent / "revisions"
@@ -99,9 +97,7 @@ def unresolved(ledger: dict[str, dict]) -> tuple[list[tuple[str, str]], list[tup
             declared = sections(part)
             if declared is None:
                 dangling.append((key, f"`{part}` — no part has that number"))
-            # The move table is consulted only where the section is absent, as `check_citations.py`
-            # consults it: a number that still exists means what it says, whatever has moved.
-            elif section not in declared and resolve(part, section) not in declared:
+            elif section not in declared:
                 dangling.append((key, f"`{part}` §{section} — that part declares no such section"))
     return dangling, unparsed
 
