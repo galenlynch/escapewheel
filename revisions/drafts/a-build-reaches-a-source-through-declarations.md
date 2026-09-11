@@ -656,8 +656,8 @@ an in-process declaration and when a source's delivery is complete; Part 05 §3.
 adapter declares; and Part 05 §3.5 and §3.7 gain what a build captures from a failure and what an
 adapter may report about a run. Part 09 §5.8's report gains the connection as a carrier beside the
 file, and the rule that a build clears the path before the run that writes it. Part 07 §4 gains
-`NEEDS`, `CONSUMES`, the protocol an adapter declares and how an array crosses — its sentence reads "two
-static declarations" today and becomes four. Part 09 §5.7 gains that an extension may use any
+`NEEDS`, `CONSUMES`, the protocol an adapter declares and how an array crosses — its sentence
+reads "two static declarations" today and becomes four. Part 09 §5.7 gains that an extension may use any
 protocol of the group and that a command is carried as a list.
 
 **What a build tells a source.** `session.py` constructs an adapter in **56 lines carrying ten
