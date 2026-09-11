@@ -49,8 +49,10 @@ list and §3.5 has even an identifier cross as a name. Under both, the ordinary 
 given three of the five things #1 says a build supplies it.
 
 **The array crossing is settled in #2 §3.6: an array crosses as a reference.** An adapter writes it
-and returns the identifier, the layout it chose and a location, where a build supplies the location
-for an array the packet will own and none for one it references. `conformance/adapter-boundary/`
+and returns the identifier, the layout it chose and a location. The build names that location and it
+is **in staging**, so the array is written once and nothing moves it again but the rename Part 05 §6
+already performs at commit; for an array the packet references rather than owns, the build supplies
+none and the adapter returns the URI its source already has. `conformance/adapter-boundary/`
 measured why: `StagedArray` carries `values, array_asset_id, chunks, shard, codecs, fill_value` and
 **five of the six cross already**, so returning those five beside a location is the whole change.
 `lfp` needs none of it — `external_arrays` is already that shape, which is R14's external resource.

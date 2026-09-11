@@ -215,9 +215,14 @@ a build can make.
 
 An adapter's rows cross as records and its arrays **MUST NOT**. A dense array crosses as a
 **reference**: the array_asset_id, the layout an adapter chose for it — chunking, sharding, codecs,
-fill value — and a location. A build **MUST** supply that location where an array is one the packet
-will own, and an adapter **MUST** write the array there and return the reference rather than the
-measurement.
+fill value — and a location.
+
+**The build names the location, and it is in staging.** Where the packet will own the array, a build
+**MUST** supply a location under the staging area Part 05 §1 already requires, and an adapter
+**MUST** write the array there and return the reference rather than the measurement. Writing it
+anywhere else costs a copy: staging is where the array has to be before it is validated, and commit
+moves it to its final path by the rename Part 05 §6 already performs. Told where, an adapter writes
+the array once and nothing moves it again but that rename.
 
 Measured on the waveform adapter, this is what the crossing already almost is.
 `conformance/adapter-boundary/` reports `StagedArray`'s six fields — `values`, `array_asset_id`,

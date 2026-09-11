@@ -103,7 +103,7 @@ what survives the crossing.
 | the first sample of each stream | one integer per stream name |
 | the clocks declared before it runs | each identifier with its rate |
 | the units a prior source produced | a row each: the source's names for it, and the identifiers assigned |
-| somewhere to write an array | a location the packet will own, where the adapter produces one |
+| somewhere to write an array | a location under the staging area, where the adapter produces one |
 | a recipe option | the value the recipe carries |
 
 A profile adding to that list amends this section.
