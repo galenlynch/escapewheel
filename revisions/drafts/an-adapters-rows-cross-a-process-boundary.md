@@ -113,12 +113,18 @@ profile names a group for each way an adapter reaches a build, and the protocols
 **MUST** declare and support **at least one** protocol in a group; a build **MUST** support **every**
 protocol in every group its profile names.
 
+**A protocol carries its version in its name**, as every other identifier this specification hands
+out does — `escapewheel-portable-v0.1`, `core.trials.v0.1`. A protocol that changes how rows cross
+is a **new member of the group**, not a new reading of an old member, so evolving one costs the same
+as adding one and neither side has to negotiate a version it may not know. A profile **MUST NOT**
+change what a named protocol means.
+
 `escapewheel-portable-v0.1` names one group, **out of process**, holding two:
 
 | protocol | rows cross as |
 |---|---|
-| `files` | Parquet the recipe names, one per resource |
-| `stream` | a sequence of Arrow IPC streams on standard output |
+| `files-v1` | Parquet the recipe names, one per resource |
+| `stream-v1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
 
 **The asymmetry is the point.** There is one build and there will be many adapters, so the build
 carries breadth once and an adapter author implements whichever protocol suits the source in hand —
@@ -129,10 +135,16 @@ that declares no protocol of the group **MUST** refuse it, naming the group: tha
 conform, and refusing before any source is opened is where R63 §2.2 puts a recipe a build cannot
 satisfy.
 
-It is also how the contract grows without carrying a version. Adding a protocol to a group costs
-every build work and costs no adapter anything, since one declaring what it declared before still
-declares something a build supports. Adding a **group** — an in-process protocol, or one reaching
-an adapter the build did not launch — leaves every existing adapter and build alone.
+It is also how the contract grows. Adding a protocol to a group costs every build work and costs no
+adapter anything, since one declaring what it declared before still declares something a build
+supports; a revised protocol is added the same way, as `stream-v2` beside `stream-v1`. Adding a
+**group** — an in-process protocol, or one reaching an adapter the build did not launch — leaves
+every existing adapter and build alone.
+
+Retiring a protocol is the one change that costs an adapter author anything, and it is a **profile**
+change: the group is the profile's, so dropping `stream-v1` from `escapewheel-portable-v0.1` is not
+something a build decides. An adapter declaring a protocol no group of the profile names is refused
+as one declaring none.
 
 `stream` earns its place by leaving nothing behind, and by never touching a disk: a pipe is memory,
 so the largest table costs no write and no read. A file is an artifact the build did not ask for and

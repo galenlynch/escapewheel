@@ -62,12 +62,15 @@ measured why: `StagedArray` carries `values, array_asset_id, chunks, shard, code
 *Settled: a transport is a protocol, and protocols come in groups.* A profile names a group for
 each way an adapter reaches a build. An adapter **MUST** support at least one protocol in a group;
 a build **MUST** support every protocol in every group the profile names.
-`escapewheel-portable-v0.1` names one group, out of process, holding `files` and `stream`. The
-asymmetry is deliberate: there is one build and there will be many adapters, so the build carries
-breadth once and an adapter author implements the one protocol that suits the source in hand and
-never both. No negotiation can fail. Adding a protocol costs every build work and no adapter
-anything, and adding a group leaves both alone, which is where a version would otherwise have to
-go.
+`escapewheel-portable-v0.1` names one group, out of process, holding `files-v1` and `stream-v1`.
+The asymmetry is deliberate: there is one build and there will be many adapters, so the build
+carries breadth once and an adapter author implements the one protocol that suits the source in
+hand and never both. No negotiation can fail.
+
+Each protocol carries its version in its name, as `escapewheel-portable-v0.1` and `core.trials.v0.1`
+do, and a profile MUST NOT change what a named one means. So a protocol that changes how rows cross
+joins the group as `stream-v2` beside `stream-v1`, and evolving one costs what adding one costs.
+Retiring one is a profile change rather than a build's decision.
 
 *Settled: how many resources cross one stream.* An Arrow IPC stream carries one schema and an
 adapter returns thirteen resources on the NWB fixture. Streams concatenate — each ends with an
