@@ -107,9 +107,14 @@ what survives the crossing.
 
 A profile adding to that list amends this section.
 
-Sharing one open store per root is an optimisation a build **MAY** apply to adapters running in its
-own process, and **MUST NOT** be what a declaration names: a store two adapters share is a fact
-about one build's arrangements rather than about either adapter.
+A build **MUST NOT** offer one of its own objects as an alternative to what an adapter declared. An
+adapter that accepts a `Clock` *and* can read a clock's row has two ways in, and which one a build
+takes becomes a property of where the adapter is running — the coupling this part exists to remove,
+reintroduced as a fast path.
+
+Sharing survives without being passed. `store_for` already keys its cache on the **resolved root**,
+so three adapters pointed at one root open it once because they ask for the same thing, not because
+one object reached all three. What moves is where that cache lives.
 
 Separately, an adapter **MUST** declare the kinds whose output it reads, which orders a build rather
 than being passed to it. `CONSUMES` records that the NWB adapter reads the sorter's clocks, which is
@@ -152,10 +157,16 @@ one per built-in, each passing a different set of extras. That becomes one const
 `_SHARED_SOURCES`, `SAMPLED`, `REQUIRED_OPTIONS`, `CONSUMES` and `PREFERRED` — against one `NEEDS`
 and one `CONSUMES` per adapter, ten of each.
 
-**What it costs is three adapters.** `nwb`, `waveforms` and `lfp` are handed an open store today
-and must open the root themselves, which is the one place §3.1's ban on a live handle is not free.
-Sharing stays available: a build running them in its own process may still pass one cache between
-them, because that is an arrangement rather than a declaration.
+**What it costs is three adapters, a cache and a conversion.** `nwb`, `waveforms` and `lfp` are
+handed an open store today and must open the root themselves; `store_for` already takes a root and
+keys on the resolved one, so what moves is where its cache lives — out of the build's context and
+under `store_for`, where an adapter asking for a root already opened gets that store without
+anyone passing one.
+
+The conversion is the NWB adapter's. It calls `Clock.ticks` to turn a source's seconds into ticks,
+and `Clock` is a `core.clocks` row with methods on it, so the arithmetic moves to the rate that row
+carries. The writer's class stays available to an adapter that has it and stops being what the
+interface names, which is the whole of §3.1 applied to the adapter that receives the most.
 
 Both packaged recipes gain two lines, `core.probes` to `nwb` and `core.subjects` to `session`,
 which is the whole of what §2.3 measures needing arbitration. Neither packet's rows change: the
