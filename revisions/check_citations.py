@@ -24,6 +24,12 @@ reference whose antecedent is the previous clause ("R86 ... its §1.1"), which r
 resolves to nothing mechanically. Worth seeing, since the same shape is how a reference to another
 document's §7.3 gets read as this document's §7.
 
+Every other tracked document and source file is checked too, not only the revisions. The parts are
+among them: they carry **428 citations** of each other and of the revisions that set their rules,
+which were read for numbering alone until this included them, and one named a section of a
+revision that has never had one. A broken part citation there is an error, as in a draft, because
+the parts are the statement of record.
+
 Every tracked Python file is checked too, not only the revisions. Part 00 §10.1 sends a comment to the
 part that states its rule, so a citation in the source is load-bearing in the same way -- and until
 this scanned them, five were broken: four naming section 56 of Part 00 and section 92 of Part 01,
@@ -166,11 +172,34 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
     return errors, parts, sorted(set(loose))
 
 
-def sources() -> list[Path]:
-    """Every tracked Python file, which is where a citation of a part has to resolve."""
-    listed = subprocess.run(["git", "ls-files", "*.py"], cwd=HERE.parent,
+#: Read for citations but not for spelling or numbering: the frozen v0.1 specification, which is
+#: never edited, and the rendering generated from the v0.2 parts.
+SKIPPED = ("nwb_lake_poc_docs/",)
+
+
+def elsewhere() -> list[Path]:
+    """Every other tracked document and source file a citation has to resolve in.
+
+    A citation is load-bearing wherever it is written. Reading the revisions and the Python alone
+    left the developer documentation unchecked, and seven citations in it resolved to nothing --
+    two naming line numbers of the frozen v0.1 as though they were sections, and one naming a
+    section of Part 09 that part has never carried. Spelled in prose rather than as citations,
+    since this file is one of the files it reads.
+    """
+    listed = subprocess.run(["git", "ls-files"], cwd=HERE.parent,
                             capture_output=True, text=True, check=True).stdout.split()
-    return [HERE.parent / name for name in listed if (HERE.parent / name).is_file()]
+    found = []
+    for name in listed:
+        path = HERE.parent / name
+        if name.startswith(SKIPPED) or "Implementation_Spec" in name:
+            continue
+        if path.suffix not in {".py", ".md"} or not path.is_file():
+            continue
+        # The revisions and the drafts are read in their own pass.
+        if name.startswith(("revisions/R", "revisions/drafts/")):
+            continue
+        found.append(path)
+    return found
 
 
 def main() -> int:
@@ -185,7 +214,7 @@ def main() -> int:
     # long as any tracked document is open. `is_file()` is false for a dangling link and true for
     # a real one, so this skips the lock and nothing else.
     paths = [p for p in paths if p.is_file()]
-    code = sources()
+    code = elsewhere()
     broken, historical = 0, 0
     excused: set[str] = set()
 
@@ -202,7 +231,11 @@ def main() -> int:
                     print(f"  order   {target.name}: §{after} follows §{before}")
 
     for path in paths + code:
-        draft = path.parent.name == "drafts" or path.suffix == ".py"
+        # A draft is what gets accepted next and a part is the statement of record, so a broken
+        # part citation in either is an error rather than history. The 428 citations the parts
+        # carry were read for numbering alone until this included them, and one named a section
+        # of R55 that revision has never had.
+        draft = path.parent.name == "drafts" or path.suffix == ".py" or path.parent == PARTS
         errors, parts, loose = check(path)
         # Part 00 §10.4 binds a part and a revision; a source file is read only for resolution.
         if path.suffix == ".md":
@@ -230,7 +263,7 @@ def main() -> int:
             broken += 1
 
     tail = f", {historical} citing the frozen v0.1 numbering" if historical else ""
-    print(f"{len(paths)} documents and {len(code)} source files, "
+    print(f"{len(paths)} revisions and {len(code)} other tracked files, "
           f"{broken} unresolved citation(s){tail}")
     return 1 if broken else 0
 

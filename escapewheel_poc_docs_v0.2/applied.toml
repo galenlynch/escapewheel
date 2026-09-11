@@ -723,9 +723,8 @@ disposition = "registry"
 note = "the identity field, carried or assigned, on every identifier column"
 
 [clause."R53 §2.5"]
-disposition = "applied"
-where = [{ part = "05", section = "8" }]
-note = "R75 §2.1 requires identifier assignment to be a function of recipe and sources"
+disposition = "rationale"
+note = "states no requirement and carries no RFC 2119 keyword: that an identifier is stable for the life of a packet is a consequence of R32 §3's ban on an amendment modifying what it did not write (Part 03 §9.1), and that an assigned one is not stable across packets is the cost, whose remedy is §2.3.1's `*_name` (Part 02 §8.2). It was disposed `applied` at Part 05 §8, which is Stage 7: Materialize"
 
 [clause."R53 §2.6"]
 disposition = "registry"

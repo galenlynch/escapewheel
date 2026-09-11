@@ -88,7 +88,7 @@ A report is JSON. An optional `problems` array carries an entry per finding, eac
 
 A core table MUST NOT declare a foreign key into an extension's table.
 
-The reasons are separable verdicts (§5.4) and independent versioning (§5.5). "Interpretable when no extension is present" is *not* among them: a packet embeds its extension registries, so they are present whenever the resources are (R55 §5).
+The reasons are separable verdicts (§5.4) and independent versioning (§5.5). "Interpretable when no extension is present" is *not* among them: a packet embeds its extension registries, so they are present whenever the resources are (R55 §2.6).
 
 ### 6.2 Core may name an extension
 

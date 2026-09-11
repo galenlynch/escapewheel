@@ -361,7 +361,11 @@ touches.
 5a. **`python revisions/impact.py`** once the parts are edited, before moving on. It maps each
    changed line to the section it falls in and lists every file citing that section, which is the
    only way to find them: `check_citations.py` asks whether a citation resolves, and a citation
-   into a rewritten section resolves perfectly. R110 rewrote Part 03 §5.5, which **16 files cite,
+   into a rewritten section resolves perfectly. It searches **every tracked file**, which is what
+   makes this the step that keeps the developer documentation current: naming four `src`
+   directories left 234 citations across 38 files unreachable — every `CLAUDE.md`, every root
+   document and every test — and a sweep later found those documents describing a specification
+   of R1–R36 over 33 tables. R110 rewrote Part 03 §5.5, which **16 files cite,
    three of them the writer's own source**, and one of those still named `R68 §3` — the
    miscitation R110's appraisal had just struck from the revision — for two more commits.
 6. **`escapewheel_poc_docs_v0.2/applied.toml`**, one entry per clause. `ledger.py` demands a

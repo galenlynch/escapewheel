@@ -31,10 +31,12 @@ HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
 #: written before that clause still resolves, so both are read here.
 CITATION = re.compile(r"(?:`(\d\d)`|Part (\d\d))\s+§(\d+(?:\.\d+)*)")
 
-#: Searched for citers. The combined rendering is excluded: it is generated from the parts, so a
-#: citation inside it is one of theirs counted twice.
-SEARCHED = ("escapewheel-reader/src", "escapewheel-writer/src", "escapewheel-validator/src",
-            "registry", "conformance", "fixtures", "revisions", "escapewheel_poc_docs_v0.2")
+#: Not searched. Everything else tracked is, because a citation is load-bearing wherever it is
+#: written: a test asserting `03` §5.5's rule and a CLAUDE.md explaining it both go stale when
+#: that section is rewritten. Listing directories instead left **234 citations across 38 files**
+#: unreachable -- every CLAUDE.md, every root document and every test -- so the one tool that
+#: finds what a change invalidates could not name the documents a sweep later found stale.
+SKIPPED = ("nwb_lake_poc_docs/",)
 
 
 def sections(path: Path) -> list[tuple[int, str, str]]:
@@ -74,19 +76,23 @@ def index() -> dict[tuple[str, str], tuple[str, ...]]:
     One pass over the tree, not one per section: a commit changing 51 sections walked it 51 times.
     """
     found: dict[tuple[str, str], list[str]] = defaultdict(list)
-    for root in SEARCHED:
-        for path in sorted((ROOT / root).rglob("*")):
-            if path.suffix not in {".py", ".md", ".json"} or ".venv" in str(path):
-                continue
-            if "Implementation_Spec" in path.name:
-                continue
-            try:
-                lines = path.read_text().splitlines()
-            except (UnicodeDecodeError, OSError):
-                continue
-            for n, line in enumerate(lines, 1):
-                for m in CITATION.finditer(line):
-                    found[m.group(1) or m.group(2), m.group(3)].append(f"{path.relative_to(ROOT)}:{n}")
+    listed = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True,
+                            check=True).stdout.split()
+    for name in listed:
+        # The combined rendering is generated from the parts, so a citation inside it is one of
+        # theirs counted twice.
+        if name.startswith(SKIPPED) or "Implementation_Spec" in name:
+            continue
+        path = ROOT / name
+        if path.suffix not in {".py", ".md", ".json"} or not path.is_file():
+            continue
+        try:
+            lines = path.read_text().splitlines()
+        except (UnicodeDecodeError, OSError):
+            continue
+        for n, line in enumerate(lines, 1):
+            for m in CITATION.finditer(line):
+                found[m.group(1) or m.group(2), m.group(3)].append(f"{name}:{n}")
     return {key: tuple(value) for key, value in found.items()}
 
 
