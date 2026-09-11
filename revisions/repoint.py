@@ -5,8 +5,8 @@ answers whether a citation resolves; this answers whether it points at the right
 which no other tool can see -- a citation of a revision clause that landed in a part resolves
 perfectly and still sends a reader to the change record.
 
-The ledger is the map. Where `applied.toml` disposes a clause `applied`, its `where` names the part
-and section that states it, so the replacement is mechanical: `R88 §2.1` becomes `02` §7.1.
+The ledger is the map. Where `applied.toml` disposes a clause `applied`, its `where` lists the parts
+and sections that state it, so the replacement is mechanical: `R88 §2.1` becomes `02` §7.1.
 
 Only a clause disposed `applied` is reported. A clause the registry carries is read from the
 registry, one disposed `rationale` decided nothing and so states no requirement, and a Motivation
@@ -38,12 +38,6 @@ LEDGER = ROOT / "escapewheel_poc_docs_v0.2" / "applied.toml"
 
 #: `R92 §2.2`. The same spelling `check_citations.py` resolves.
 REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
-#: Each part and section a `where` names. A clause may land in more than one place -- R2 §6 in
-#: three -- and a `where` also names things that are not sections at all, such as the version
-#: strings R84 §2.2 changed, so every occurrence is collected rather than the whole field matched.
-WHERE = re.compile(r"\b(\d\d)(?:_\w+\.md)? (§\d+(?:\.\d+)*(?:(?:[,;] ?| and )§\d+(?:\.\d+)*)*)")
-#: A section within one of those groups: "§5.3, §5.4" names two of the same part.
-SECTION = re.compile(r"§(\d+(?:\.\d+)*)")
 
 #: Sites where naming a revision is the point, each with why. A pattern is matched against the
 #: whole line. Every entry is checked to still match something, so a site that goes away takes
@@ -101,6 +95,11 @@ REASONING: tuple[tuple[str, str, str], ...] = (
 )
 
 
+def cited(entry: dict) -> list[str]:
+    """Each target of an `applied` entry, spelled as a citation: `02` §7.1."""
+    return [f"`{t['part']}` §{t['section']}" for t in entry.get("where", [])]
+
+
 def rollup(clauses: dict[str, dict]) -> dict[str, list[str]]:
     """Each section-level key, mapped to every part section its own subsections landed in.
 
@@ -114,10 +113,7 @@ def rollup(clauses: dict[str, dict]) -> dict[str, list[str]]:
         parent = key.split(".")[0] if "." in key.split("§")[1] else None
         if parent is None:
             continue
-        found = [f"`{part}` §{section}"
-                 for part, group in WHERE.findall(entry.get("where", ""))
-                 for section in SECTION.findall(group)]
-        for candidate in found:
+        for candidate in cited(entry):
             if candidate not in out.setdefault(parent, []):
                 out[parent].append(candidate)
     return {k: v for k, v in out.items() if k not in clauses and v}
@@ -136,9 +132,7 @@ def ledger() -> dict[str, list[str]]:
     for key, entry in clauses.items():
         if entry.get("disposition") != "applied":
             continue
-        found = [f"`{part}` §{section}"
-                 for part, group in WHERE.findall(entry.get("where", ""))
-                 for section in SECTION.findall(group)]
+        found = cited(entry)
         if found:
             out[key] = found
     out.update({k: v for k, v in rollup(clauses).items() if k not in out})

@@ -12,7 +12,7 @@ note = "a column, key or reference the registry declares"
 
 [clause."R6 §2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 note = "restored 2026-09-04; was dropped"
 
 [clause."R19 §2.1"]
@@ -42,24 +42,24 @@ note = "a column, key or reference the registry declares"
 
 [clause."R36 §2.2"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.4"
+where = [{ part = "04", section = "5.4" }]
 note = "restored 2026-09-04; Part 04 §5.4 had declared it undefined"
 
 [clause."R36 §2.4"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.2"
+where = [{ part = "04", section = "5.2" }]
 
 [clause."R38 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.2"
+where = [{ part = "01", section = "2.2" }]
 
 [clause."R39 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.1"
+where = [{ part = "01", section = "2.1" }]
 
 [clause."R40 §2.3"]
 disposition = "applied"
-where = "06_analysis_layer.md §4"
+where = [{ part = "06", section = "4" }]
 note = "also 01 §3.9 and 02 §12.6, where a clock records the anchors it withheld"
 
 [clause."R44 §2.1"]
@@ -69,11 +69,11 @@ note = "a column, key or reference the registry declares"
 
 [clause."R45 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.3"
+where = [{ part = "01", section = "2.3" }]
 
 [clause."R45 §2.5"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 note = "restored 2026-09-04 with R6"
 
 [clause."R46 §2.1"]
@@ -108,12 +108,12 @@ note = "a column, key or reference the registry declares"
 
 [clause."R52 §2.1"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.4"
+where = [{ part = "04", section = "5.4" }]
 note = "restored 2026-09-04; compiled as MUST where R52 §2.1 says SHOULD"
 
 [clause."R52 §2.3"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §10"
+where = [{ part = "03", section = "10" }]
 
 [clause."R53 §2.1"]
 disposition = "registry"
@@ -127,7 +127,7 @@ note = "a column, key or reference the registry declares"
 
 [clause."R53 §2.4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §5.3"
+where = [{ part = "02", section = "5.3" }]
 note = "restored 2026-09-04; was dropped"
 
 [clause."R55 §2.5"]
@@ -137,7 +137,7 @@ note = "restated whole in R90 §3; was 02_core_logical_schemas.md §8.3"
 
 [clause."R58 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.8"
+where = [{ part = "01", section = "3.8" }]
 
 [clause."R59 §2.1"]
 disposition = "registry"
@@ -156,56 +156,56 @@ note = "a column, key or reference the registry declares"
 
 [clause."R61 §2.2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.3"
+where = [{ part = "03", section = "9.3" }]
 note = "restored 2026-09-04; the default survived, the declaration did not"
 
 [clause."R63 §2.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.5"
+where = [{ part = "05", section = "3.5" }]
 
 [clause."R64 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.8"
+where = [{ part = "01", section = "3.8" }]
 
 [clause."R65 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.17"
+where = [{ part = "01", section = "3.17" }]
 
 [clause."R66 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.5"
+where = [{ part = "01", section = "3.5" }]
 
 [clause."R66 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.5"
+where = [{ part = "01", section = "3.5" }]
 
 [clause."R67 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.5"
+where = [{ part = "01", section = "3.5" }]
 
 [clause."R67 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.5"
+where = [{ part = "01", section = "3.5" }]
 
 [clause."R67 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.5"
+where = [{ part = "01", section = "3.5" }]
 
 [clause."R68 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 
 [clause."R68 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 
 [clause."R69 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 
 [clause."R69 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 
 [clause."R69 §2.3"]
 disposition = "registry"
@@ -214,75 +214,75 @@ note = "core.media_frames.pts_increasing_in_frame_index"
 
 [clause."R70 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 
 [clause."R70 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 
 [clause."R70 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 
 [clause."R10 §2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.3"
+where = [{ part = "03", section = "5.3" }]
 note = "restored 2026-09-04; had been compiled as a MUST with order declared normative"
 
 [clause."R12 §2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.3"
+where = [{ part = "03", section = "5.3" }]
 note = "restored 2026-09-04; the warning level had been lost"
 
 [clause."R14 §2.3"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.1"
+where = [{ part = "04", section = "5.1" }]
 note = "restored 2026-09-04; the converse had been compiled as an implication"
 
 [clause."R21 §3.3"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.4"
+where = [{ part = "03", section = "6.4" }]
 note = "restored 2026-09-04; the reader floor table was absent entirely"
 
 [clause."R30 §3.2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.4"
+where = [{ part = "03", section = "5.4" }]
 
 [clause."R30 §3.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.4"
+where = [{ part = "03", section = "5.4" }]
 
 [clause."R32 §2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.1"
+where = [{ part = "03", section = "9.1" }]
 
 [clause."R32 §3"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.2"
+where = [{ part = "03", section = "9.2" }]
 
 [clause."R32 §4"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.3"
+where = [{ part = "03", section = "9.3" }]
 
 [clause."R32 §4.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.3"
+where = [{ part = "03", section = "9.3" }]
 
 [clause."R71 §2.1"]
 disposition = "applied"
-where = "00_architecture.md §3"
+where = [{ part = "00", section = "3" }]
 
 [clause."R71 §2.2"]
 disposition = "applied"
-where = "00_architecture.md §4.1"
+where = [{ part = "00", section = "4.1" }]
 
 [clause."R71 §2.3"]
 disposition = "applied"
-where = "06_analysis_layer.md §2"
+where = [{ part = "06", section = "2" }]
 
 [clause."R71 §2.4"]
 disposition = "applied"
-where = "00_architecture.md §3"
+where = [{ part = "00", section = "3" }]
 
 [clause."R72 §2.1"]
 disposition = "superseded"
@@ -301,20 +301,20 @@ note = "restated whole in R90 §3; was a paired-value discriminator keeps R55 §
 
 [clause."R72 §2.4"]
 disposition = "applied"
-where = "00_architecture.md §3"
+where = [{ part = "00", section = "3" }]
 note = "R71 §2.1 states the canonical set the conjunction follows from"
 
 [clause."R74 §2.1"]
 disposition = "applied"
-where = "05_validation_and_import.md §6"
+where = [{ part = "05", section = "6" }]
 
 [clause."R74 §2.2"]
 disposition = "applied"
-where = "05_validation_and_import.md §6"
+where = [{ part = "05", section = "6" }]
 
 [clause."R74 §2.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §6"
+where = [{ part = "05", section = "6" }]
 
 [clause."R74 §2.4"]
 disposition = "rationale"
@@ -322,23 +322,23 @@ note = "restates that 05's staging discipline is unchanged"
 
 [clause."R75 §2.1"]
 disposition = "applied"
-where = "05_validation_and_import.md §8"
+where = [{ part = "05", section = "8" }]
 
 [clause."R75 §2.2"]
 disposition = "applied"
-where = "05_validation_and_import.md §8"
+where = [{ part = "05", section = "8" }]
 
 [clause."R75 §2.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §8"
+where = [{ part = "05", section = "8" }]
 
 [clause."R76 §2.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §5.3"
+where = [{ part = "02", section = "5.3" }]
 
 [clause."R76 §2.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §5.3"
+where = [{ part = "02", section = "5.3" }]
 note = "R53 §2.4's escape, restored to the same paragraph"
 
 [clause."R76 §2.3"]
@@ -347,7 +347,7 @@ note = "R53 §2.3's carried identity; a writer that reassigns declares the ident
 
 [clause."R76 §2.4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §5.3"
+where = [{ part = "02", section = "5.3" }]
 
 [clause."R1 §2"]
 disposition = "registry"
@@ -355,45 +355,45 @@ note = "the manifest.sessions rule is core.sessions.manifest_sessions_match; the
 
 [clause."R2 §2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §6"
+where = [{ part = "02", section = "6" }]
 note = "restored 2026-09-04; the third presence state, optional, had been dropped"
 
 [clause."R3 §2.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.5"
+where = [{ part = "03", section = "5.5" }]
 note = "restored 2026-09-04; the Parquet compression floor and tick encoding were absent"
 
 [clause."R26 §2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §10.2"
+where = [{ part = "02", section = "10.2" }]
 note = "restored 2026-09-04; a report must say whether advisory rules ran"
 
 [clause."R31 §3"]
 disposition = "applied"
-where = "04_packet_catalog.md §3"
+where = [{ part = "04", section = "3" }]
 note = "restored 2026-09-04; compiled as SHOULD where R31 §3 says MUST"
 
 [clause."R35 §2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.4"
+where = [{ part = "03", section = "9.4" }]
 note = "restored 2026-09-04; only the second of the two re-run conditions had survived"
 
 [clause."R57 §2.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.2"
+where = [{ part = "02", section = "9.2" }]
 note = "restored 2026-09-04; the info finding for an unheld meta-schema was absent"
 
 [clause."R77 §2.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.4"
+where = [{ part = "02", section = "8.4" }]
 
 [clause."R77 §2.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.4"
+where = [{ part = "02", section = "8.4" }]
 
 [clause."R77 §2.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.4"
+where = [{ part = "02", section = "9.4" }]
 
 [clause."R56 §2.1"]
 disposition = "superseded"
@@ -449,25 +449,25 @@ note = "declared: core.preferred_runs"
 
 [clause."R3 §7.2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.4"
+where = [{ part = "03", section = "6.4" }]
 note = "the baseline none/gzip/zstd; restored with R21 §3.3's table"
 
 [clause."R14 §2.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.4"
+where = [{ part = "03", section = "6.4" }]
 note = "the reader floor, restored 2026-09-04 as R21 §3.3's per-version table"
 
 [clause."R14 §2.3.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §8"
+where = [{ part = "03", section = "8" }]
 
 [clause."R15 §2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.4"
+where = [{ part = "03", section = "6.4" }]
 
 [clause."R15 §3"]
 disposition = "applied"
-where = "04_packet_catalog.md §3"
+where = [{ part = "04", section = "3" }]
 note = "required_codecs as the union, for a whole-packet capability answer"
 
 [clause."R21 §2"]
@@ -476,20 +476,20 @@ note = "the measurement that the floor is version-dependent; §3.3 is the rule"
 
 [clause."R21 §3.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.1"
+where = [{ part = "03", section = "6.1" }]
 
 [clause."R21 §3.2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.1"
+where = [{ part = "03", section = "6.1" }]
 note = "restored 2026-09-04; the prohibition and the reader's version check were absent"
 
 [clause."R14 §2.2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.4"
+where = [{ part = "03", section = "6.4" }]
 
 [clause."R14 §2.3.2"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.3"
+where = [{ part = "04", section = "5.3" }]
 
 [clause."R14 §2.4"]
 disposition = "rationale"
@@ -497,39 +497,39 @@ note = "transcoding is left to the writer; states no obligation"
 
 [clause."R26 §3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §10.2"
+where = [{ part = "02", section = "10.2" }]
 
 [clause."R26 §4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §10.2"
+where = [{ part = "02", section = "10.2" }]
 note = "restored 2026-09-04; the guarantee was present only as an explanation"
 
 [clause."R36 §2.1"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.4"
+where = [{ part = "04", section = "5.4" }]
 note = "size_bytes as the sum of member sizes, restored with R36 §2.2"
 
 [clause."R36 §2.3"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.3"
+where = [{ part = "04", section = "5.3" }]
 
 [clause."R51 §2.1"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.4"
+where = [{ part = "04", section = "5.4" }]
 note = "restored 2026-09-04; the members-equal-the-digested-listing rule was absent"
 
 [clause."R51 §2.2"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.4"
+where = [{ part = "04", section = "5.4" }]
 
 [clause."R51 §2.3"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.4"
+where = [{ part = "04", section = "5.4" }]
 note = "restored 2026-09-04; the third verification level was absent"
 
 [clause."R51 §2.4"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.4"
+where = [{ part = "04", section = "5.4" }]
 note = "restored 2026-09-04; a store-digest pass must not be called a checksum verification"
 
 [clause."R51 §4"]
@@ -541,16 +541,16 @@ note = "states that the digest covers what R14 §2.3 already scopes"
 
 [clause."R52 §2.4"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.4"
+where = [{ part = "03", section = "9.4" }]
 
 [clause."R32 §5"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.4"
+where = [{ part = "03", section = "9.4" }]
 note = "restored 2026-09-04; the whole-packet baseline R35 bounds was absent"
 
 [clause."R32 §6"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.5"
+where = [{ part = "03", section = "9.5" }]
 note = "restored 2026-09-04; an amendment deletes nothing"
 
 [clause."R32 §7"]
@@ -558,16 +558,16 @@ disposition = "rationale"
 
 [clause."R35 §4"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.4"
+where = [{ part = "03", section = "9.4" }]
 
 [clause."R35 §5"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.4"
+where = [{ part = "03", section = "9.4" }]
 note = "restored 2026-09-04; the over-inclusive requirement was absent"
 
 [clause."R35 §6"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.4"
+where = [{ part = "03", section = "9.4" }]
 note = "restored 2026-09-04; the fallback when immutability cannot be shown was absent"
 
 [clause."R35 §7"]
@@ -575,18 +575,18 @@ disposition = "rationale"
 
 [clause."R61 §2.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.5"
+where = [{ part = "03", section = "9.5" }]
 
 [clause."R61 §2.3"]
 disposition = "rationale"
 
 [clause."R61 §3"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §9.6"
+where = [{ part = "03", section = "9.6" }]
 
 [clause."R6 §4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 note = "restored 2026-09-04; tick_zero_utc and session_start_time must not be conflated"
 
 [clause."R13 §2"]
@@ -594,11 +594,11 @@ disposition = "rationale"
 
 [clause."R13 §4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 
 [clause."R27 §3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 
 [clause."R27 §5"]
 disposition = "rationale"
@@ -606,22 +606,22 @@ note = "superseded in substance by R37 §3 and R40 §2, which the spec states"
 
 [clause."R27 §5.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 note = "restored 2026-09-04; an unmappable tick is reported, not dropped"
 
 [clause."R27 §6"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 note = "restored 2026-09-04; the prohibition on a reset within one clock was absent"
 
 [clause."R27 §6.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 note = "restored 2026-09-04; acquisition order is how a reset is visible at all"
 
 [clause."R27 §6.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 note = "restored 2026-09-04; a derived binding must not span a reset"
 
 [clause."R27 §9"]
@@ -633,11 +633,11 @@ note = "the measurement; §3 is the rule"
 
 [clause."R37 §3.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 
 [clause."R37 §3.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.6"
+where = [{ part = "02", section = "12.6" }]
 
 [clause."R37 §3.3"]
 disposition = "superseded"
@@ -662,28 +662,28 @@ note = "within_observation, in rules.json"
 
 [clause."R39 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.1"
+where = [{ part = "01", section = "2.1" }]
 
 [clause."R39 §2.2"]
 disposition = "applied"
-where = "05_validation_and_import.md §7"
+where = [{ part = "05", section = "7" }]
 
 [clause."R39 §2.4"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.2"
+where = [{ part = "01", section = "2.2" }]
 note = "the shim checks it, not a SQL rule (R12 §4)"
 
 [clause."R40 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 
 [clause."R40 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 
 [clause."R45 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.3"
+where = [{ part = "01", section = "2.3" }]
 
 [clause."R45 §2.3"]
 disposition = "rationale"
@@ -695,7 +695,7 @@ note = "core.trials became core.intervals; the closure rule is stated for every 
 
 [clause."R48 §2.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §7"
+where = [{ part = "02", section = "7" }]
 
 [clause."R48 §2.4"]
 disposition = "rationale"
@@ -706,7 +706,7 @@ note = "core.processing_runs.scope_kind and core.preferred_runs.scope_kind"
 
 [clause."R49 §2.4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 note = "restored 2026-09-04; scope and scope_kind agree, and neither is undeterminable"
 
 [clause."R49 §2.5"]
@@ -724,7 +724,7 @@ note = "the identity field, carried or assigned, on every identifier column"
 
 [clause."R53 §2.5"]
 disposition = "applied"
-where = "05_validation_and_import.md §8"
+where = [{ part = "05", section = "8" }]
 note = "R75 §2.1 requires identifier assignment to be a function of recipe and sources"
 
 [clause."R53 §2.6"]
@@ -776,7 +776,7 @@ note = "restated whole in R90 §3; was 02_core_logical_schemas.md §8.3"
 
 [clause."R58 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.8"
+where = [{ part = "01", section = "3.8" }]
 
 [clause."R58 §2.3"]
 disposition = "superseded"
@@ -785,15 +785,15 @@ note = "R60 §2.2 strikes it: one coordinate exists per electrode, frame and bas
 
 [clause."R59 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.8"
+where = [{ part = "01", section = "3.8" }]
 
 [clause."R59 §2.4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.8"
+where = [{ part = "01", section = "3.8" }]
 
 [clause."R60 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.8"
+where = [{ part = "01", section = "3.8" }]
 
 [clause."R60 §2.3"]
 disposition = "rationale"
@@ -814,16 +814,16 @@ note = "core.source_files, core.processing_runs, core.processing_run_inputs; the
 
 [clause."R9 §5"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.4"
+where = [{ part = "01", section = "2.4" }]
 
 [clause."R9 §6"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 note = "covered by the general open-vocabulary rule; activity_type declares no enum"
 
 [clause."R31 §2"]
 disposition = "applied"
-where = "04_packet_catalog.md §3"
+where = [{ part = "04", section = "3" }]
 
 [clause."R31 §4"]
 disposition = "rationale"
@@ -831,7 +831,7 @@ note = "reconciles R9's SHOULD with 06's MUST; both stand and the spec states ea
 
 [clause."R31 §5"]
 disposition = "applied"
-where = "05_validation_and_import.md §5.3"
+where = [{ part = "05", section = "5.3" }]
 note = "restored 2026-09-04; a manifest-to-table claim is the shim's, not a foreign key"
 
 [clause."R31 §6"]
@@ -843,15 +843,15 @@ note = "processing_run_id on core.sorting_runs and core.curation_versions"
 
 [clause."R41 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.20"
+where = [{ part = "01", section = "3.20" }]
 
 [clause."R41 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.4"
+where = [{ part = "01", section = "2.4" }]
 
 [clause."R41 §2.4"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.4"
+where = [{ part = "01", section = "2.4" }]
 note = "restored 2026-09-04; the positive half -- use the preference -- was absent"
 
 [clause."R41 §2.5"]
@@ -860,11 +860,11 @@ note = "currency is not a version; R32 versions the bundle"
 
 [clause."R44 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.4"
+where = [{ part = "01", section = "2.4" }]
 
 [clause."R44 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.4"
+where = [{ part = "01", section = "2.4" }]
 note = "restored 2026-09-04; one unscoped run makes the whole group undeterminable"
 
 [clause."R44 §2.4"]
@@ -882,11 +882,11 @@ disposition = "rationale"
 
 [clause."R3 §3.0"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §6"
+where = [{ part = "02", section = "6" }]
 
 [clause."R3 §3.4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 
 [clause."R3 §4"]
 disposition = "registry"
@@ -894,14 +894,14 @@ note = "core.units gains n_spikes, first_spike_tick, last_spike_tick"
 
 [clause."R3 §5.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.2"
+where = [{ part = "03", section = "6.2" }]
 
 [clause."R3 §5.2"]
 disposition = "rationale"
 
 [clause."R3 §6"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.1.1"
+where = [{ part = "02", section = "8.1.1" }]
 note = "restored 2026-09-04; the index base R45 §2.5 and R48 both build on was absent"
 
 [clause."R3 §6.1"]
@@ -910,7 +910,7 @@ note = "core.array_channels gains its axis binding"
 
 [clause."R3 §7.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.1"
+where = [{ part = "03", section = "6.1" }]
 note = "restored 2026-09-04; the regular chunk grid was absent"
 
 [clause."R3 §7.3"]
@@ -925,21 +925,21 @@ disposition = "registry"
 
 [clause."R20 §3"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.3"
+where = [{ part = "03", section = "6.3" }]
 
 [clause."R20 §4"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.3"
+where = [{ part = "03", section = "6.3" }]
 note = "restored 2026-09-04; the rate and a regular tick axis must agree"
 
 [clause."R20 §5.1"]
 disposition = "applied"
-where = "00_architecture.md §3"
+where = [{ part = "00", section = "3" }]
 note = "restored 2026-09-04; a layer references inward only"
 
 [clause."R33 §2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §6.3"
+where = [{ part = "03", section = "6.3" }]
 note = "restored 2026-09-04; the denominator's positivity and lowest terms were absent"
 
 [clause."R33 §5"]
@@ -947,7 +947,7 @@ disposition = "rationale"
 
 [clause."R18 §4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.13.1"
+where = [{ part = "01", section = "3.13.1" }]
 note = "restored 2026-09-04; a rate's denominator was stated nowhere"
 
 [clause."R18 §5"]
@@ -972,7 +972,7 @@ note = "core.event_stream_observation_intervals carries no clock_id"
 
 [clause."R25 §4"]
 disposition = "applied"
-where = "01_semantic_standard.md §2.2"
+where = [{ part = "01", section = "2.2" }]
 note = "restored 2026-09-04; a session's extent is wall clock, not a tick hull"
 
 [clause."R47 §2.1"]
@@ -994,7 +994,7 @@ note = "core.clock_anchors keeps anchor_index"
 
 [clause."R54 §2.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.10"
+where = [{ part = "01", section = "3.10" }]
 
 [clause."R54 §2.2"]
 disposition = "registry"
@@ -1006,15 +1006,15 @@ note = "five columns struck and core.trial_tags withdrawn"
 
 [clause."R54 §2.4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.10"
+where = [{ part = "01", section = "3.10" }]
 
 [clause."R54 §2.5"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §6"
+where = [{ part = "02", section = "6" }]
 
 [clause."R54 §2.6"]
 disposition = "applied"
-where = "05_validation_and_import.md §4"
+where = [{ part = "05", section = "4" }]
 
 [clause."R54 §4"]
 disposition = "rationale"
@@ -1022,16 +1022,16 @@ note = "the preconditions R54 required before acceptance; all met"
 
 [clause."R30 §2"]
 disposition = "applied"
-where = "06_analysis_layer.md §4"
+where = [{ part = "06", section = "4" }]
 
 [clause."R30 §4"]
 disposition = "applied"
-where = "06_analysis_layer.md §4"
+where = [{ part = "06", section = "4" }]
 note = "restored 2026-09-04; the MUST survived only as its consequence"
 
 [clause."R43 §2"]
 disposition = "applied"
-where = "06_analysis_layer.md §5"
+where = [{ part = "06", section = "5" }]
 
 [clause."R43 §2.1"]
 disposition = "rationale"
@@ -1052,17 +1052,21 @@ disposition = "rationale"
 
 [clause."R2 §3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §2"
+where = [{ part = "02", section = "2" }]
 note = "an ordered list of columns; ordering is why an array and not an object"
 
 [clause."R2 §5"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §6"
+where = [{ part = "02", section = "6" }]
 note = "restored 2026-09-04 with the third presence state"
 
 [clause."R2 §6"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §2, §7; 03_portable_physical_profile.md §5.3"
+where = [
+    { part = "02", section = "2" },
+    { part = "02", section = "7" },
+    { part = "03", section = "5.3" },
+]
 
 [clause."R2 §7.4"]
 disposition = "rationale"
@@ -1070,15 +1074,15 @@ note = "why the rules are SQL rather than code"
 
 [clause."R2 §8"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.2"
+where = [{ part = "02", section = "9.2" }]
 
 [clause."R2 §9"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.2"
+where = [{ part = "02", section = "9.2" }]
 
 [clause."R7 §2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §2"
+where = [{ part = "02", section = "2" }]
 
 [clause."R7 §3.1"]
 disposition = "registry"
@@ -1086,22 +1090,22 @@ note = "the specific keys, including core.source_files keyed by id and not uri"
 
 [clause."R17 §2"]
 disposition = "applied"
-where = "09_metadata_and_extensions.md §2"
+where = [{ part = "09", section = "2" }]
 
 [clause."R17 §4"]
 disposition = "applied"
-where = "05_validation_and_import.md §5.4"
+where = [{ part = "05", section = "5.4" }]
 
 [clause."R57 §2.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.2"
+where = [{ part = "02", section = "9.2" }]
 
 [clause."R57 §2.3"]
 disposition = "rationale"
 
 [clause."R1 §4"]
 disposition = "applied"
-where = "04_packet_catalog.md §3"
+where = [{ part = "04", section = "3" }]
 
 [clause."R1 §5"]
 disposition = "rationale"
@@ -1123,11 +1127,11 @@ note = "core.processing_runs.created_at"
 
 [clause."R4 §4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.9"
+where = [{ part = "01", section = "3.9" }]
 
 [clause."R5 §2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.14"
+where = [{ part = "01", section = "3.14" }]
 
 [clause."R5 §3"]
 disposition = "registry"
@@ -1143,11 +1147,11 @@ note = "local_*_label columns become string"
 
 [clause."R8 §3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 
 [clause."R8 §4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 
 [clause."R10 §6"]
 disposition = "registry"
@@ -1171,7 +1175,7 @@ note = "the dangling exception struck"
 
 [clause."R15 §4"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.3"
+where = [{ part = "04", section = "5.3" }]
 note = "the levels, as R36 §2.3's finer 1/2/3a/3b/3c"
 
 [clause."R15 §5"]
@@ -1192,11 +1196,11 @@ disposition = "rationale"
 
 [clause."R22 §3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 
 [clause."R22 §4"]
 disposition = "applied"
-where = "05_validation_and_import.md §5.2"
+where = [{ part = "05", section = "5.2" }]
 note = "the projection is a function, checked as a Tier 2 rule"
 
 [clause."R23 §5"]
@@ -1241,16 +1245,16 @@ note = "offset is not renamed"
 
 [clause."R56 §2.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.4"
+where = [{ part = "02", section = "8.4" }]
 
 [clause."R56 §2.4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.4"
+where = [{ part = "02", section = "8.4" }]
 note = "written there 2026-09-10; the five structural checks had reached no part"
 
 [clause."R56 §2.5"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.4"
+where = [{ part = "02", section = "8.4" }]
 
 [clause."R56 §4"]
 disposition = "rationale"
@@ -1261,37 +1265,37 @@ note = "schemas/semantic_version.txt struck"
 
 [clause."R62 §2.2"]
 disposition = "applied"
-where = "04_packet_catalog.md §3"
+where = [{ part = "04", section = "3" }]
 
 [clause."R63 §2.1"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.4"
+where = [{ part = "05", section = "3.4" }]
 
 [clause."R63 §2.2"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.4"
+where = [{ part = "05", section = "3.4" }]
 
 [clause."R63 §2.4"]
 disposition = "rationale"
 
 [clause."R65 §2.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.17"
+where = [{ part = "01", section = "3.17" }]
 
 [clause."R65 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.17"
+where = [{ part = "01", section = "3.17" }]
 
 [clause."R65 §2.4"]
 disposition = "rationale"
 
 [clause."R66 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.5"
+where = [{ part = "01", section = "3.5" }]
 
 [clause."R67 §2.4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.5"
+where = [{ part = "01", section = "3.5" }]
 note = "restored 2026-09-04; what the chain is for was absent"
 
 [clause."R67 §3"]
@@ -1299,7 +1303,7 @@ disposition = "rationale"
 
 [clause."R68 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 
 [clause."R68 §2.4"]
 disposition = "superseded"
@@ -1308,7 +1312,7 @@ note = "R70 §2.4 reverses it; the base is carried in core"
 
 [clause."R68 §2.5"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 note = "restored 2026-09-04; seeking by pts was absent"
 
 [clause."R68 §4"]
@@ -1317,7 +1321,7 @@ note = "migration is regeneration"
 
 [clause."R69 §2.4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 
 [clause."R70 §2.4"]
 disposition = "rationale"
@@ -1328,11 +1332,11 @@ disposition = "rationale"
 
 [clause."R78 §2.1"]
 disposition = "applied"
-where = "06_analysis_layer.md §2"
+where = [{ part = "06", section = "2" }]
 
 [clause."R78 §2.2"]
 disposition = "applied"
-where = "06_analysis_layer.md §2"
+where = [{ part = "06", section = "2" }]
 
 [clause."R78 §2.3"]
 disposition = "rationale"
@@ -1340,36 +1344,40 @@ note = "the four withdrawals stand; they failed the first two grounds"
 
 [clause."R79 §2.1"]
 disposition = "applied"
-where = "05_validation_and_import.md §10"
+where = [{ part = "05", section = "10" }]
 
 [clause."R79 §2.2"]
 disposition = "applied"
-where = "05_validation_and_import.md §10"
+where = [{ part = "05", section = "10" }]
 
 [clause."R79 §2.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §10"
+where = [{ part = "05", section = "10" }]
 
 [clause."R80 §2.1"]
 disposition = "applied"
-where = "04_packet_catalog.md §4.1, §5.5; 03_portable_physical_profile.md §4"
+where = [
+    { part = "04", section = "4.1" },
+    { part = "04", section = "5.5" },
+    { part = "03", section = "4" },
+]
 
 [clause."R80 §2.2"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.5"
+where = [{ part = "04", section = "5.5" }]
 note = "the document's shape is published as registry/sources.schema.json, which the spec names rather than restates"
 
 [clause."R80 §2.3"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.5"
+where = [{ part = "04", section = "5.5" }]
 
 [clause."R80 §2.4"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.5"
+where = [{ part = "04", section = "5.5" }]
 
 [clause."R80 §2.5"]
 disposition = "applied"
-where = "04_packet_catalog.md §5.5"
+where = [{ part = "04", section = "5.5" }]
 
 [clause."R80 §2.6"]
 disposition = "rationale"
@@ -1394,7 +1402,7 @@ note = "also stated in 02_core_logical_schemas.md §12.1"
 
 [clause."R81 §2.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.1"
+where = [{ part = "02", section = "12.1" }]
 
 [clause."R81 §2.3"]
 disposition = "registry"
@@ -1402,11 +1410,15 @@ where = "the six unit-keyed tables and their references narrowed to ['unit_id']"
 
 [clause."R81 §2.4"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.3, §5.4; 02_core_logical_schemas.md §9"
+where = [
+    { part = "03", section = "5.3" },
+    { part = "03", section = "5.4" },
+    { part = "02", section = "9" },
+]
 
 [clause."R81 §2.5"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9"
+where = [{ part = "02", section = "9" }]
 
 [clause."R81 §2.6"]
 disposition = "rationale"
@@ -1428,11 +1440,11 @@ note = "also stated in 05_validation_and_import.md §11"
 
 [clause."R82 §2.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §11"
+where = [{ part = "05", section = "11" }]
 
 [clause."R82 §2.4"]
 disposition = "applied"
-where = "05_validation_and_import.md §11"
+where = [{ part = "05", section = "11" }]
 
 [clause."R83 §2.1"]
 disposition = "registry"
@@ -1441,11 +1453,11 @@ note = "also listed in 02_core_logical_schemas.md §11.5"
 
 [clause."R83 §2.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.2"
+where = [{ part = "02", section = "12.2" }]
 
 [clause."R83 §2.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.2"
+where = [{ part = "02", section = "12.2" }]
 
 [clause."R83 §2.4"]
 disposition = "registry"
@@ -1462,17 +1474,24 @@ note = "three open questions; the MUST is the requirement §5 declines to impose
 
 [clause."R84 §2.1"]
 disposition = "applied"
-where = "07_reference_implementation.md §2, §2.1"
-note = "the distribution table names all three; the console script and the entry-point group are 2.1's"
+where = [
+    { part = "07", section = "2", note = "the distribution table names all three" },
+    { part = "07", section = "2.1", note = "the console script and the entry-point group" },
+]
 
 [clause."R84 §2.2"]
 disposition = "applied"
-where = "00_architecture.md §2.3; 03_portable_physical_profile.md §1; 04_packet_catalog.md §3, §5.5"
-note = "the profile identifier in 00 and 03, the two standard version fields and the sources schema URI in 04; an extension's `extends` value and the published $ids are the registry's, read from registry/*.schema.json"
+where = [
+    { part = "00", section = "2.3", note = "the portable profile identifier" },
+    { part = "03", section = "1", note = "the same, as the `profile_id` a manifest declares" },
+    { part = "04", section = "3", note = "the two standard version fields" },
+    { part = "04", section = "5.5", note = "the source resolution document's schema URI" },
+]
+note = "an extension's `extends` value and the published $ids are the registry's, read from registry/*.schema.json"
 
 [clause."R84 §2.3"]
 disposition = "applied"
-where = "04_packet_catalog.md §1"
+where = [{ part = "04", section = "1" }]
 
 [clause."R84 §2.4"]
 disposition = "rationale"
@@ -1493,82 +1512,84 @@ note = "also stated in 01_semantic_standard.md §3.5; the openephys and nwb adap
 
 [clause."R85 §2.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.2; 01_semantic_standard.md §3.5"
-note = "02 §8.2 is that a name is unique within its packet; 01 §3.5 is that a port establishes no identity"
+where = [
+    { part = "02", section = "8.2", note = "a name is unique within its packet" },
+    { part = "01", section = "3.5", note = "a port establishes no identity" },
+]
 
 [clause."R85 §2.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.5"
+where = [{ part = "01", section = "3.5" }]
 
 [clause."R86 §2.1"]
 disposition = "applied"
-where = "00_architecture.md §2.4"
+where = [{ part = "00", section = "2.4" }]
 note = "registry/check.py computes the scope and reports the 33 and the 2"
 
 [clause."R86 §2.2"]
 disposition = "applied"
-where = "00_architecture.md §2.4"
+where = [{ part = "00", section = "2.4" }]
 note = "escapewheel_reader.dataset.Dataset carries it; the projection is per-packet, never from a name"
 
 [clause."R86 §2.3"]
 disposition = "applied"
-where = "00_architecture.md §2.4"
+where = [{ part = "00", section = "2.4" }]
 
 [clause."R86 §2.4"]
 disposition = "applied"
-where = "07_reference_implementation.md §7"
+where = [{ part = "07", section = "7" }]
 
 [clause."R87 §2.1"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.6"
+where = [{ part = "05", section = "3.6" }]
 
 [clause."R87 §2.2"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.4"
+where = [{ part = "05", section = "3.4" }]
 note = "the spelling is 07 §4's; 05 requires only what a build can determine"
 
 [clause."R87 §2.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.5"
+where = [{ part = "05", section = "3.5" }]
 
 [clause."R87 §2.4"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.6"
+where = [{ part = "05", section = "3.6" }]
 
 [clause."R87 §2.5"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.6"
+where = [{ part = "05", section = "3.6" }]
 
 [clause."R87 §2.6"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.6"
+where = [{ part = "05", section = "3.6" }]
 
 [clause."R87 §2.7"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.6"
+where = [{ part = "05", section = "3.6" }]
 
 [clause."R87 §2.8"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.1"
+where = [{ part = "05", section = "3.1" }]
 
 [clause."R88 §2.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §7.1"
+where = [{ part = "02", section = "7.1" }]
 note = "the rule in 02; the columns themselves in the registry"
 
 [clause."R88 §2.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §7.1"
+where = [{ part = "02", section = "7.1" }]
 note = "fourteen references to core.sessions, six over columns that already existed"
 
 [clause."R88 §2.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §7.1"
+where = [{ part = "02", section = "7.1" }]
 note = "written there 2026-09-10; the prohibition on inferring a session from a name had reached no part"
 
 [clause."R88 §2.4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.3"
+where = [{ part = "02", section = "12.3" }]
 
 [clause."R89 §2.1"]
 disposition = "registry"
@@ -1591,7 +1612,7 @@ note = "also stated in 02_core_logical_schemas.md §12.3"
 
 [clause."R89 §2.5"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.3"
+where = [{ part = "02", section = "12.3" }]
 note = "the consumer MUST read an empty calibration as unrecorded; also 01_semantic_standard.md §3.23"
 
 [clause."R89 §2.6"]
@@ -1613,42 +1634,45 @@ note = "the case wanting the column a reference away; informative"
 
 [clause."R90 §3.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 
 [clause."R90 §3.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 note = "`discriminates_via` in registry.schema.json, checked by registry/check.py"
 
 [clause."R90 §3.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 note = "struck the role on dynamic_foraging.trials.interval_kind and vr_foraging.sites.interval_kind; the R48 §2.3 exemption is in check.py"
 
 [clause."R90 §3.4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 
 [clause."R90 §3.5"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 
 [clause."R90 §3.6"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 
 [clause."R90 §3.7"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 
 [clause."R90 §3.8"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 note = "generated by escapewheel_validator.generate, forward and reverse"
 
 [clause."R90 §3.9"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3, 00_architecture.md §3"
+where = [
+    { part = "02", section = "8.3" },
+    { part = "00", section = "3" },
+]
 
 [clause."R91 §2.1"]
 disposition = "rationale"
@@ -1678,7 +1702,7 @@ note = "also stated in 01_semantic_standard.md §3.11; the override rows go from
 
 [clause."R91 §3.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.12"
+where = [{ part = "01", section = "3.12" }]
 note = "core adds no mark column; a stream names the table declaring its marks"
 
 [clause."R91 §3.4"]
@@ -1691,22 +1715,22 @@ note = "what the restructure leaves alone; its MUST NOT cites §3.3's clause rat
 
 [clause."R92 §2.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §10.1"
+where = [{ part = "02", section = "10.1" }]
 note = "uniqueness leaves the generated list and becomes an obligation about the fact; the physical condition is struck"
 
 [clause."R92 §2.2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.3"
+where = [{ part = "03", section = "5.3" }]
 note = "the adjacency rule, at error; determined_by is defined in 02 §8.5, which this clause introduces"
 
 [clause."R92 §2.3"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.3"
+where = [{ part = "03", section = "5.3" }]
 note = "the ordering scan verifies each determined_by declaration it relies on"
 
 [clause."R92 §2.4"]
 disposition = "applied"
-where = "06_analysis_layer.md §4"
+where = [{ part = "06", section = "4" }]
 note = "a writer MUST NOT materialize analysis.spike_events where the conversion collides two spikes of one unit"
 
 [clause."R92 §3.1"]
@@ -1719,12 +1743,16 @@ note = "what the part leaves alone; its MUST is R30 §3.2's, restated as standin
 
 [clause."R93 §3.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §5.3"
+where = [{ part = "02", section = "5.3" }]
 note = "Part 02 names no storage technology except to place a rule outside its own scope; its §13 is struck, ordering and partitioning go to 03, and INT96 was already in 03 §5.5"
 
 [clause."R93 §3.2"]
 disposition = "applied"
-where = "00_architecture.md §2.3, §7.3; 03_portable_physical_profile.md §1"
+where = [
+    { part = "00", section = "2.3" },
+    { part = "00", section = "7.3" },
+    { part = "03", section = "1" },
+]
 note = "what a profile is, what a second one must satisfy, and that no Part 01 or 02 clause may depend on one"
 
 [clause."R93 §3.3"]
@@ -1734,17 +1762,17 @@ note = "03 §5.4 is an override's only statement; escapewheel_reader.ordering ho
 
 [clause."R93 §3.4"]
 disposition = "applied"
-where = "10_performance_notes.md §1"
+where = [{ part = "10", section = "1" }]
 note = "Part 10 added, informative, versioned; each measurement records its date and says where the toolchain was not kept"
 
 [clause."R93 §3.5"]
 disposition = "applied"
-where = "07_reference_implementation.md §7"
+where = [{ part = "07", section = "7" }]
 note = "the boundary with Part 10: a number that would change with this implementation stays in 07"
 
 [clause."R93 §3.6"]
 disposition = "applied"
-where = "00_architecture.md §9"
+where = [{ part = "00", section = "9" }]
 note = "the contents table, appended so no part or section identifier moves"
 
 [clause."R93 §2"]
@@ -1753,7 +1781,7 @@ note = "where the boundary is crossed; informative, and its SHOULDs are the ones
 
 [clause."R94 §3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §10.2"
+where = [{ part = "02", section = "10.2" }]
 note = "also enforced in registry/check.py, which matches identifiers with literals and comments stripped"
 
 [clause."R94 §2"]
@@ -1774,17 +1802,17 @@ note = "four identifiers numbered independently coincide; a fact about a packet,
 
 [clause."R95 §3.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.2"
+where = [{ part = "02", section = "8.2" }]
 note = "one name column per table; build.py merges the generated name and the declared one after the R53 §2.3.1 pass"
 
 [clause."R95 §3.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.4"
+where = [{ part = "02", section = "12.4" }]
 note = "core.clocks.tick_rate_one_form refuses both forms; the writer emits the rational, or the float where a rate was measured"
 
 [clause."R95 §3.3"]
 disposition = "applied"
-where = "07_reference_implementation.md §4"
+where = [{ part = "07", section = "4" }]
 note = "at info, bounded by row-group statistics"
 
 [clause."R96 §2.1"]
@@ -1847,12 +1875,12 @@ note = "1.9 kB of footer unprojected, 11.95x projected, over 5,000,000 rows shap
 
 [clause."R97 §3.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.6"
+where = [{ part = "02", section = "8.6" }]
 note = "the key decides both bounds; build.py emits the column from it and check.py enforces it against core and every extension, which added one to aind_opto.stimulations and dynamic_foraging.blocks. The info report is escapewheel_validator._check_unfilled_metadata"
 
 [clause."R97 §3.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.6"
+where = [{ part = "02", section = "8.6" }]
 note = "no rule checks it; the writer-side comparison is 07 §4, and the two keys the NWB adapter restated and the one the Open Ephys adapter did are no longer written"
 
 [clause."R98 §2.1"]
@@ -1873,17 +1901,17 @@ note = "the corpus writes both refinement tables across 26 packets and never the
 
 [clause."R98 §3.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.5"
+where = [{ part = "02", section = "12.5" }]
 note = "core.clocks.observation_declared checks the anchored and reference branches; a clock aligned by transform_slope alone is reached by the obligation and not by the rule"
 
 [clause."R98 §3.2"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.3"
+where = [{ part = "05", section = "3.3" }]
 note = "recipe.SHARED gains core.clock_observation_intervals and core.clock_anchors, and both recipes declare the first under contributes"
 
 [clause."R98 §3.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.4"
+where = [{ part = "05", section = "3.4" }]
 note = "session._note_unclaimed compares against declared preferences rather than against every source's claims"
 
 [clause."R99 §2.1"]
@@ -1915,7 +1943,7 @@ note = "parent_tick declares clock_from inline, CONTEXT being consumed before a 
 
 [clause."R99 §3.4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.6"
+where = [{ part = "02", section = "12.6" }]
 note = "parameters keeps the evidence and none of the three facts; 02 §5.2 now names both json_string columns"
 
 [clause."R100 §2.1"]
@@ -1930,7 +1958,7 @@ note = "the position check is generatable because positions_in names the column 
 
 [clause."R100 §2.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 note = "positions_in in registry.schema.json and build.py's DISCRIMINATOR; check.py checks the column exists and is not declared beside discriminates; generate skips R90 §3.8's reverse branch"
 
 [clause."R100 §2.4"]
@@ -1965,12 +1993,12 @@ note = "core.array_assets.kind held dense_array_asset, a manifest resource kind 
 
 [clause."R101 §3.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 note = "build.py's VOCABULARY and vocabulary_of refuse an unclassified name; registry.schema.json requires the field of every string column but a discriminator and forbids it elsewhere; 4 closed, 39 open, 52 free, 7 discriminators declaring none"
 
 [clause."R101 §3.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 note = "check.py refuses a discriminator declaring a vocabulary; R55 §2.1 fixes the value space to the declared resource IDs"
 
 [clause."R101 §3.5"]
@@ -1980,7 +2008,10 @@ note = "25 open columns stating no form, plus core.processing_runs.status whose 
 
 [clause."R101 §3.6"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.4, §9.3"
+where = [
+    { part = "02", section = "8.4" },
+    { part = "02", section = "9.3" },
+]
 note = "authority in registry.schema.json and build.py's AUTHORITY, on species, strain, sex and the eight unit columns; UNIT_SUFFIX gives Ohm and By, and the two packet-relative units become UCUM annotations; check.py checks the URI, the UCUM code and one-name-one-vocabulary"
 
 [clause."R101 §3.7"]
@@ -1995,17 +2026,17 @@ note = "raw, ap, lfp, waveform with R8 §4's meanings; coordinate_frame's three 
 
 [clause."R101 §3.9"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 note = "enum male/female/hermaphrodite/other with FHIR as authority, unknown carried as null"
 
 [clause."R101 §3.10"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.6"
+where = [{ part = "03", section = "5.6" }]
 note = "one null and no second marker, NaN a value rather than an absence on 30 of 330 columns, and no sentinel meaning absent"
 
 [clause."R101 §3.11"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 note = "a synonym stays uncheckable, so R8 §4 binds a writer and no rule (R67 §2.4)"
 
 [clause."R102 §2.1"]
@@ -2025,17 +2056,17 @@ note = "rig.json declares two camera assemblies with serials 23022730 and 230227
 
 [clause."R102 §3.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.17"
+where = [{ part = "01", section = "3.17" }]
 note = "processing_run_id on core.array_assets and analysis.array_assets, int32 nullable, each with its declared reference to core.processing_runs; the manifest's field keeps R9 §4's meaning for resources that are not rows"
 
 [clause."R102 §3.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.18"
+where = [{ part = "01", section = "3.18" }]
 note = "device_id on core.media_assets, int32 nullable, referencing core.devices; null where the source states none, and a consumer reports the instrument unrecorded rather than parsing the asset's name"
 
 [clause."R102 §3.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.5"
+where = [{ part = "01", section = "3.5" }]
 note = "a writer records every instrument its source declares, identity being the serial (R67 §2.2); where a camera was pointed has no column and stays in metadata"
 
 [clause."R103 §2.1"]
@@ -2060,7 +2091,7 @@ note = "no source records the filter: ElectricalSeries.filtering is empty for al
 
 [clause."R103 §3.2"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.17"
+where = [{ part = "01", section = "3.17" }]
 note = "band is nullable; a consumer must not infer one from semantic_type, the device or the sample rate, none of which is the statement"
 
 [clause."R103 §3.3"]
@@ -2070,7 +2101,7 @@ note = "waveform struck, the set going from four values to three with raw respel
 
 [clause."R103 §3.4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.17"
+where = [{ part = "01", section = "3.17" }]
 note = "semantic_type nullable on all three asset tables, filled only where the row's declared facts cannot say what the asset holds; nothing checks it, so it binds a writer and no validator (R67 §2.4)"
 
 [clause."R104 §2.1"]
@@ -2090,12 +2121,12 @@ note = "01 §3.17 names no instruments and core.probes is not the counter-exampl
 
 [clause."R104 §3.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 note = "device_kind on core.devices, string nullable, role discriminator with resolves optional and no vocabulary (R101 §3.3); the detail table's key begins device_id, so resolution is R90 §3.5's shared-key join"
 
 [clause."R104 §3.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.3"
+where = [{ part = "02", section = "8.3" }]
 note = "core declares no device detail table; check.py checks that no core table but core.devices is keyed beginning device_id, taking structural invariants from 28 to 29"
 
 [clause."R104 §3.3"]
@@ -2130,27 +2161,27 @@ note = "a Stage 1 survey found the sources name the field each value came from a
 
 [clause."R105 §3.1"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.24"
+where = [{ part = "01", section = "3.24" }]
 note = "core.coordinate_frames keyed (session_id, coordinate_frame), with atlas and atlas_version as declared facts rather than a spelling of the name; both coordinate tables now reference it, so a frame no packet declares is an orphan Tier 1 reports, and 02 §11.9 indexes the two frame tables"
 
 [clause."R105 §3.2"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §12.7"
+where = [{ part = "02", section = "12.7" }]
 note = "core.coordinate_frame_axes keyed (session_id, coordinate_frame, axis_index), one row per axis; axis_name required and axis_direction nullable, with core.coordinate_frame_axes.axis_names_distinct taking Tier 2 rules from 76 to 77"
 
 [clause."R105 §3.3"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.8"
+where = [{ part = "01", section = "3.8" }]
 note = "core.electrode_coordinate_values and core.unit_coordinate_values, each keyed by its parent's key plus axis_index and referencing the axis row, so a value on an undeclared axis is an orphan; x_um, y_um and z_um struck from both parents, and axis_value declares unit_from of core.coordinate_frame_axes.unit through R56 §2.3's one hop"
 
 [clause."R105 §3.4"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.24"
+where = [{ part = "01", section = "3.24" }]
 note = "axis_name is whatever the source called the field, verbatim (R22 §3), so the source's column name becomes a value in the packet; unit is known by construction, and axis_direction MUST be left null where the source does not state it, which binds the writer and no validator (R67 §2.4)"
 
 [clause."R105 §3.5"]
 disposition = "applied"
-where = "01_semantic_standard.md §3.24"
+where = [{ part = "01", section = "3.24" }]
 note = "a consumer needing an axis's direction where none is declared reports the coordinate unusable rather than assuming a convention, which is R83 §2.3's rule for a run declaring no channels"
 
 [clause."R106 §2.1"]
@@ -2170,7 +2201,7 @@ note = "the column declared vocabulary open on an int32, the one place in the re
 
 [clause."R106 §3.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §8.7"
+where = [{ part = "02", section = "8.7" }]
 note = "a writer that can decode MUST store the decoded value; one that cannot stores the token verbatim in a string column declaring an open vocabulary, an integer being unable to declare a vocabulary at all (§9.3). No rule checks either half, nothing structural telling a code from a count"
 
 [clause."R106 §3.2"]
@@ -2210,7 +2241,7 @@ note = "R56 §1 opens on the same defect one field over -- R48 gave a column a r
 
 [clause."R107 §3.1"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §3"
+where = [{ part = "02", section = "3" }]
 note = "one MUST NOT replaces R101 §3.5's second and third sentences and R48 §2.5, enforced by one new check.py invariant taking the structural checks from 29 to 30 and reaching `vocabulary`, `resolves` and `enum` exactly; naming a declared value is not restating one where the description says what that value means, which is why core.array_assets.band keeps `wideband`, `ap` and `lfp` and core.processing_runs.status loses its three"
 
 [clause."R107 §3.2"]
@@ -2220,12 +2251,12 @@ note = "core.intervals.interval_kind, both scope_kinds and both detail_kinds sto
 
 [clause."R107 §3.3"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 note = "authority becomes an array of {name, uri}, both required, on 12 columns naming 5 nomenclatures; R53 §2.3.1's shape one level over, since neither informatics.jax.org nor rgd.mcw.edu contains the name of the registry it serves and no rule derives MGI or RGD from a URI"
 
 [clause."R107 §3.4"]
 disposition = "applied"
-where = "02_core_logical_schemas.md §9.3"
+where = [{ part = "02", section = "9.3" }]
 note = "tables.md renders each field, generated so the two cannot disagree"
 
 [clause."R107 §3.5"]
@@ -2255,22 +2286,22 @@ note = "the NWB and subject.json agree on every declared column for both animals
 
 [clause."R108 §3.1"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.4"
+where = [{ part = "05", section = "3.4" }]
 note = "a build refuses where a passed-over row holds a non-null value in a column the preferred row leaves null, or the preferred source stages nothing; over declared columns only, metadata being schemaless. Bounded by §3.4: every preferred resource is metadata-scale, and core.clock_anchors at 754,222 rows carries no preference"
 
 [clause."R108 §3.2"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.4"
+where = [{ part = "05", section = "3.4" }]
 note = "a build MUST NOT compose a row from more than one source; the merged row would be a fact no source stated, which is the inference R83 §2.2, R67 §2.4 and R105 §3.4 each refuse"
 
 [clause."R108 §3.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.4"
+where = [{ part = "05", section = "3.4" }]
 note = "an [overrides] entry silences §3.1's refusal for the fact it names, a second use of R87 §2.5's table: there the recipe is authoritative over a source, here the preferred source over the one it displaced. Per fact, which is the granularity §3.1's refusal names"
 
 [clause."R108 §3.4"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.3"
+where = [{ part = "05", section = "3.3" }]
 note = "a preference MUST NOT name a resource only one source produces; core.unit_electrodes is struck from recipe.PREFERRED, five entries becoming four, and one test enumerates the table against every adapter's PRODUCES so it cannot go stale again"
 
 [clause."R109 §2.1"]
@@ -2295,37 +2326,37 @@ note = "67 notes in ecephys_776259's build and 49 in ecephys_786867's, of which 
 
 [clause."R109 §3.1"]
 disposition = "applied"
-where = "09_metadata_and_extensions.md §5.6"
+where = [{ part = "09", section = "5.6" }]
 note = "a writer MUST be able to build from a registry document and rows as files alone, and MUST NOT require an extension to be installed, importable or resolvable; code is a MAY that MUST NOT be the ordinary case, which is what makes 09 §5.1's 'needs no code' a promise"
 
 [clause."R109 §3.2"]
 disposition = "applied"
-where = "09_metadata_and_extensions.md §5.7"
+where = [{ part = "09", section = "5.7" }]
 note = "an extension delivers a registry document and Parquet, with a command where a raw source needs converting; identifiers arrive as names (R53 §2.5). An extension MUST NOT derive the document from the rows it delivers -- aind_unit_qc.waveform_metrics declares 13 columns where the extraction delivers 10, and a derived document would assert the extension has no half_width"
 
 [clause."R109 §3.3"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.7"
+where = [{ part = "05", section = "3.7" }]
 note = "a non-zero exit MUST fail the build and the build MUST name the source, not the first missing resource: one tables source's command produces six tables across two extensions in both recipes, so naming an extension would be wrong about half of them"
 
 [clause."R109 §3.4"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.7"
+where = [{ part = "05", section = "3.7" }]
 note = "a build MUST capture both streams and report them with a failure, and SHOULD keep them readable on success; to a file rather than memory, so a long command still streams. Binds the build alone -- §2.4 measures that the account exists and only its custody is missing"
 
 [clause."R109 §3.5"]
 disposition = "applied"
-where = "09_metadata_and_extensions.md §5.8"
+where = [{ part = "09", section = "5.8" }]
 note = "an extension MAY validate its own tables on core's terms (R17 §4) and a build MUST NOT rely on it, its own validation running over every staged resource whatever produced it"
 
 [clause."R109 §3.6"]
 disposition = "applied"
-where = "09_metadata_and_extensions.md §5.8"
+where = [{ part = "09", section = "5.8" }]
 note = "a report is optional to produce and reported when present, R51 §2.2's shape for store_digest; it carries what a build cannot derive -- what the command read, skipped and why -- since rows per table come from the footer at Stage 1. JSON with problems[] at R2 §7.3's levels and read[], and unrecognised keys MUST NOT be refused"
 
 [clause."R109 §3.7"]
 disposition = "applied"
-where = "09_metadata_and_extensions.md §5.7"
+where = [{ part = "09", section = "5.7" }]
 note = "an extension's command MUST be a function of its inputs, splitting determinism as R75 does: §2.1 binds what the program computes, §2.2 leaves pinning the environment a build property no packet is judged on. An extension that cannot be delivers a file produced beforehand. Nothing checks it, which is R67 §2.4's shape"
 
 [clause."R110 §2.1"]
@@ -2355,27 +2386,27 @@ note = "measuring every column three ways over a 65,536-row sample costs about 0
 
 [clause."R110 §3.1"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.5"
+where = [{ part = "03", section = "5.5" }]
 note = "a writer SHOULD delta-encode, and SHOULD NOT dictionary-encode, the first column of a table's sort order whose role is identifier; session_id is skipped, being one value in a single-session packet and 0.03 bits a row under RLE"
 
 [clause."R110 §3.2"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.5"
+where = [{ part = "03", section = "5.5" }]
 note = "a writer SHOULD NOT dictionary-encode a floating-point column, and SHOULD write one whose values repeat as a declared exception"
 
 [clause."R110 §3.3"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.5"
+where = [{ part = "03", section = "5.5" }]
 note = "a writer MUST be able to override each rule per column and every override MUST record what it measured and on what; a writer SHOULD refuse an exception naming a column no table declares, which is decidable with no packet in hand"
 
 [clause."R110 §3.4"]
 disposition = "applied"
-where = "05_validation_and_import.md §3.8"
+where = [{ part = "05", section = "3.8" }]
 note = "a recipe MAY declare a column's encoding in an [encoding] table keyed resource.column, each entry naming delta, plain or dictionary and carrying a reason. The recipe rather than the extension because a writer requires no code of an extension (R109 §3.1), and rather than the schema because an encoding is a fact about one packet's values"
 
 [clause."R110 §3.5"]
 disposition = "applied"
-where = "03_portable_physical_profile.md §5.5"
+where = [{ part = "03", section = "5.5" }]
 note = "a writer SHOULD report at info a column costing more than 1.5x the smallest encoding available to it, over a sample of the rows it wrote. A report and not a refusal, since every encoding is permitted and a packet is conforming whichever it uses"
 
 [clause."R111 §2.1"]
@@ -2395,12 +2426,54 @@ note = "45 clauses named neither an actor nor the part they constrain: 8 whose s
 
 [clause."R111 §3.3"]
 disposition = "applied"
-where = "00_architecture.md §2.8"
+where = [{ part = "00", section = "2.8" }]
 note = "the roster itself -- writer, reader, validator, consumer, and build/adapter/implementation resolving to them -- lands here as definitions carrying no modal, which is why only the rules that bind it are disposed. Every requirement binds an actor or states a property of an artifact, and an artifact predicate MUST name the part it constrains and put the constraint in an active verb -- a wall-clock column MUST NOT use INT96, over INT96 MUST NOT be used. Binds whoever writes this specification; a clause failing it is corrected rather than reported"
 
 [clause."R111 §3.5"]
 disposition = "applied"
-where = "00 §4.1, §5.1, §7.3; 01 §3.5, §3.8, §3.9; 02 §4, §5.2, §8.1.1, §8.2, §8.3, §8.6, §8.7, §10.3; 03 §4, §5.5, §6.2, §8.1, §9.4, §9.5, §9.6; 04 §5.4, §5.5; 05 §2, §3.2, §3.4, §3.5, §4.2, §4.3, §5.3, §5.4, §10, §11; 06 §2, §4; 09 §5.2, §5.4, §5.7, §5.8, §8, §8.1"
+where = [
+    { part = "00", section = "4.1" },
+    { part = "00", section = "5.1" },
+    { part = "00", section = "7.3" },
+    { part = "01", section = "3.5" },
+    { part = "01", section = "3.8" },
+    { part = "01", section = "3.9" },
+    { part = "02", section = "4" },
+    { part = "02", section = "5.2" },
+    { part = "02", section = "8.1.1" },
+    { part = "02", section = "8.2" },
+    { part = "02", section = "8.3" },
+    { part = "02", section = "8.6" },
+    { part = "02", section = "8.7" },
+    { part = "02", section = "10.3" },
+    { part = "03", section = "4" },
+    { part = "03", section = "5.5" },
+    { part = "03", section = "6.2" },
+    { part = "03", section = "8.1" },
+    { part = "03", section = "9.4" },
+    { part = "03", section = "9.5" },
+    { part = "03", section = "9.6" },
+    { part = "04", section = "5.4" },
+    { part = "04", section = "5.5" },
+    { part = "05", section = "2" },
+    { part = "05", section = "3.2" },
+    { part = "05", section = "3.4" },
+    { part = "05", section = "3.5" },
+    { part = "05", section = "4.2" },
+    { part = "05", section = "4.3" },
+    { part = "05", section = "5.3" },
+    { part = "05", section = "5.4" },
+    { part = "05", section = "10" },
+    { part = "05", section = "11" },
+    { part = "06", section = "2" },
+    { part = "06", section = "4" },
+    { part = "09", section = "5.2" },
+    { part = "09", section = "5.4" },
+    { part = "09", section = "5.7" },
+    { part = "09", section = "5.8" },
+    { part = "09", section = "8" },
+    { part = "09", section = "8.1" },
+]
 note = "33 clauses gain an actor -- 13 a writer, 6 a validator, 4 a consumer, 3 a build, 1 a reader, and the 8 abstract-subject ones -- and 12 name the part of the artifact they constrain, actively. Three judgement calls settled in the revision: 00 §4.1 binds a writer, 03 §7's stray binds a writer, and 04 §5's unresolved source splits between a reader and a validator"
 
 
@@ -2418,17 +2491,17 @@ note = "05 carried two sections numbered 11 through five accepted revisions"
 
 [clause."R112 §3.1"]
 disposition = "applied"
-where = "00_architecture.md §10.1"
+where = [{ part = "00", section = "10.1" }]
 
 [clause."R112 §3.2"]
 disposition = "applied"
-where = "07_reference_implementation.md §2.3"
+where = [{ part = "07", section = "2.3" }]
 
 [clause."R112 §3.4"]
 disposition = "applied"
-where = "00_architecture.md §10.3"
+where = [{ part = "00", section = "10.3" }]
 
 [clause."R112 §3.5"]
 disposition = "applied"
-where = "00_architecture.md §10.3"
+where = [{ part = "00", section = "10.3" }]
 note = "check_citations.py refuses a colliding number and reports sections that do not ascend"

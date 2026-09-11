@@ -8,7 +8,7 @@ revision is cited elsewhere in the spec, so a citation sweep sees it and a reade
 The fix is a ledger rather than another audit. Every clause of every accepted revision that
 carries RFC 2119 force appears in `applied.toml` with one of four dispositions:
 
-    applied         stated in the compiled spec; `where` names the part and section
+    applied         stated in the compiled spec; `where` lists the parts and sections
     registry        delegated to registry/logical_schemas.json or rules.json
     superseded      a later revision replaced it; `by` names which
     rationale       decided nothing, so there is nothing to place
@@ -25,10 +25,14 @@ A clause with no entry is **undisposed**, and this script exits non-zero listing
 revision therefore adds failures until someone says where each of its clauses went, which is the
 property neither audit had.
 
-An `applied` entry's `where` is resolved against the part's own headings, through `moves.toml`, so
-a clause cannot be recorded as placed in a section that does not exist -- the defect one step along
-from no `where` at all, and the one that let R111 §3.5 name two sections of `01` that part has
-never carried. A `where` this cannot account for is reported rather than parsed as far as it goes.
+An `applied` entry's `where` is a list of `{ part, section }` targets, each with an optional `note`
+saying which piece of the clause landed there. Every one is resolved against that part's own
+headings, through `moves.toml`, so a clause cannot be recorded as placed in a section that does not
+exist -- the defect one step along from no `where` at all, and the one that let R111 §3.5 name two
+sections of `01` that part has never carried.
+
+The other dispositions leave `where` free text or absent, because nothing resolves it: a `registry`
+entry names the artifact that carries the clause, and `superseded` names its replacement in `by`.
 
     python ledger.py            # report
     python ledger.py --summary  # counts only
@@ -53,32 +57,27 @@ DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 
 #: `## 3.` and `### 3.1 ` alike, which is every section a part declares.
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
-#: One target of a `where`: a part, spelled as a number or as its filename, and a section.
-TARGET = re.compile(r"^(\d\d)(?:_\w+\.md)? §(\d+(?:\.\d+)*)$")
-#: A section named against whichever part the piece before it set.
-SAME_PART = re.compile(r"^§(\d+(?:\.\d+)*)$")
 
 
-def targets(where: str) -> tuple[list[tuple[str, str]], list[str]]:
-    """Each (part, section) a `where` names, and every piece of it that names neither.
+def targets(where: object) -> tuple[list[tuple[str, str]], list[str]]:
+    """Each (part, section) an `applied` entry's `where` names, and every target that is malformed.
 
-    Pieces are separated by `,` or `;`, and one naming no part takes the part before it, so
-    `02_core_logical_schemas.md §8.4, §9.3` names two sections of `02`. The whole field must be
-    accounted for, because a pattern scanning it for two adjacent digits finds them inside a
-    section number: `05 §10 §12` reads as part 05 and then as part **10**, inventing a target and
-    hiding the real one in the same pass.
+    A target is a table of `part` and `section`, with an optional `note` saying which piece of the
+    clause landed there. The field was prose until the shape was pinned, and the cost was that
+    every consumer parsed it differently and partially -- a field naming two parts read as naming
+    none, and a pattern scanning one for two adjacent digits read `05 §10 §12` as part 05 and then
+    part **10**, inventing a target in the same pass as it lost a real one.
     """
-    found, unparsed, part = [], [], None
-    for piece in (p.strip() for p in re.split(r"[,;]", where)):
-        whole, same = TARGET.match(piece), SAME_PART.match(piece)
-        if whole:
-            part = whole.group(1)
-            found.append((part, whole.group(2)))
-        elif same and part is not None:
-            found.append((part, same.group(1)))
-        elif piece:
-            unparsed.append(piece)
-    return found, unparsed
+    if not isinstance(where, list):
+        return [], [f"{where!r}, which is not a list of targets"]
+    found, malformed = [], []
+    for target in where:
+        if (isinstance(target, dict) and isinstance(target.get("part"), str)
+                and isinstance(target.get("section"), str)):
+            found.append((target["part"], target["section"]))
+        else:
+            malformed.append(f"{target!r}, which is not a `part` and a `section`")
+    return found, malformed
 
 
 @functools.cache
@@ -88,13 +87,13 @@ def sections(part: str) -> frozenset[str] | None:
     return frozenset(HEADING.findall(found[0].read_text())) if found else None
 
 
-def unresolved(ledger: dict[str, dict[str, str]]) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
-    """Every `applied` target naming no section, and every `where` piece naming no target."""
+def unresolved(ledger: dict[str, dict]) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """Every `applied` target naming no section, and every one that is not a target at all."""
     dangling, unparsed = [], []
     for key, entry in sorted(ledger.items(), key=lambda kv: int(kv[0][1:].split()[0])):
         if entry.get("disposition") != "applied":
             continue
-        found, loose = targets(entry.get("where", ""))
+        found, loose = targets(entry.get("where", []))
         unparsed += [(key, piece) for piece in loose]
         for part, section in found:
             declared = sections(part)
@@ -205,7 +204,7 @@ def main() -> int:
     for key, target in dangling:
         print(f"    DANGLING    {key:<12} {target}")
     for key, piece in unparsed:
-        print(f"    UNPARSED    {key:<12} `where` says {piece!r}, which names no part and section")
+        print(f"    MALFORMED   {key:<12} `where` holds {piece}")
 
     over = max(0, len(undisposed) - baseline)
     failures = over + len(stale) + len(bad) + len(placeless) + len(dangling) + len(unparsed)
