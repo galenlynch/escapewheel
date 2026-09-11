@@ -48,6 +48,24 @@ constructor. #2 §3.3 makes **out of process the default**, where §3.2 gives an
 list and §3.5 has even an identifier cross as a name. Under both, the ordinary adapter cannot be
 given three of the five things #1 says a build supplies it.
 
+**Neither is ready: an adapter that produces a dense array has no way across the boundary.** Gaming
+#1's closed list through the NWB adapter settled its inputs — a root URI it opens itself, the
+reference clock's row, an IANA zone string, the units a prior source produced, and recipe options —
+and found its output does not cross. `records()` returns `dict[str, list[dict]]` and travels; but
+`staged_arrays()` returns `StagedArray`, a writer class holding a dense array, and #2 says "records"
+throughout and nothing about arrays. `nwb` and `waveforms` both stage arrays, and they are two of
+the three adapters handed a store today, which is not a coincidence: the adapters given a store are
+the ones that read big binary.
+
+The codebase already shows the shape of an answer. The third store-handed adapter, `lfp`, returns
+`external_arrays()` — **references rather than bytes** — which is R14's external-resource model and
+crosses a boundary unchanged. Whether an array-producing adapter writes its array and returns a
+reference, or whether array producers stay in process against #2 §3.3's default, is #2's to settle,
+and #1's closed list was written around the three adapters the answer decides.
+
+One shape question remains in #1: the units a prior source produced are keyed by a pair today, and
+a mapping with tuple keys needs a record form before it crosses.
+
 **Settled 2026-09-11 in #1's favour of the boundary**: #1 §3.1 now states what a build passes as
 data — a root URI the adapter opens for itself, the reference clock's identifier and rate, first
 samples as integers — and forbids a build requiring an adapter to accept a live handle. Sharing one
