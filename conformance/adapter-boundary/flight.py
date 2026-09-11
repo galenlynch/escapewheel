@@ -1,4 +1,5 @@
 import sys
+
 import pyarrow as pa
 import pyarrow.flight as fl
 
