@@ -18,13 +18,14 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | why here |
 |---|---|---|
-| 1 | `an-extension-declares-the-core-it-was-authored-against` | rests on R17 §5 for what an extension declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
-| 2 | `a-writer-requires-no-knowledge-of-a-particular-source` | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
-| 3 | `an-adapters-rows-cross-a-process-boundary` | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in `05` §3.7 and `09` §5.7 |
+| 1 | `a-part-is-cited-by-name-and-number` | depends on nothing below and respells 2,098 citations, so going first spares the other three a second pass — each is written in the spelling it replaces |
+| 2 | `an-extension-declares-the-core-it-was-authored-against` | rests on R17 §5 for what an extension declares and on R109 §3.1 for a writer requiring no code, which is what puts an extension somewhere else |
+| 3 | `a-writer-requires-no-knowledge-of-a-particular-source` | rests on R63 §2.1's `PRODUCES` and R87 §2.2's `STATES` as the shape a declaration takes |
+| 4 | `an-adapters-rows-cross-a-process-boundary` | takes R109 §2.3's argument about a dependency closure and applies it to an adapter, and amends R109's own clauses in `05` §3.7 and `09` §5.7 |
 
 Each cites a part for every requirement it states, which R112 §3.1 requires of a Decision.
 
-**#2 and #3 were one draft and were split at 3,801 words.** They amend disjoint sections and neither
+**#3 and #4 were one draft and were split at 3,801 words.** They amend disjoint sections and neither
 depends on the other: #2 says what a build learns *about* a source, #3 says how a source's rows reach
 it. Both touch `05` §3 by appending, which renumbers nothing either way.
 
