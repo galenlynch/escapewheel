@@ -67,10 +67,9 @@ produces bulk** — `sorter`, at 674.2 MB for `core.spike_events` — and every 
 least data, so the exception is narrow and it is about a table's size rather than about who wrote
 the code that makes it.
 
-### 2.2 What an adapter reads says whose it is, and one boundary runs inside a module
+### 2.2 An adapter's files say whose it is
 
-What an adapter reads says whose it is. `aind.py` reads `rig.json`, `session.json` and
-`subject.json` — one institute's metadata schema. `sorter` reads `si_folder.json` and
+`aind.py` reads `rig.json`, `session.json` and `subject.json` — one institute's metadata schema. `sorter` reads `si_folder.json` and
 `curation.json`, SpikeInterface's layout. `openephys` reads `settings.xml` and `sync` reads
 `sample_numbers.npy` and `sync_messages.txt`, both Open Ephys artifacts, and `harp` reads
 `device.yml`.
@@ -237,9 +236,13 @@ extension delivers without requiring it of the extension. An adapter is a class 
 itself out of process; whoever ships it can.
 
 **What matters is the process boundary; a transport is a protocol, and protocols come in groups.** A
-profile names a group for each way an adapter reaches a build, and the protocols in it. An adapter
+profile names a group for each way rows cross that boundary, and the protocols in it. An adapter
 **MUST** declare and support **at least one** protocol in a group; a build **MUST** support **every**
 protocol in every group its profile names.
+
+Running in the writer's process is not one of them, and §3.5 says why: whether a set of adapters
+installs together is a fact about one machine on one day, so it is the recipe author's to declare
+and not the adapter's. A protocol is what an adapter can promise about itself.
 
 **A protocol carries its version in its name**, semantically versioned and starting at `v0.1`, which
 is the form every other identifier this specification hands out takes —
@@ -578,10 +581,10 @@ ships then declares one protocol.
 
 §3.9's implementation is the rest: every end of every protocol, and the names as constants an
 adapter imports rather than spells. It can live in the writer to begin with. Splitting it into its
-own distribution is a later question and a measurable one — the writer's environment resolves 57
-distributions where `pyarrow`, which the protocols need and none exceeds, requires nothing — but an
-adapter out of process resolves its own environment, so that is a convenience for authors rather
-than anything conformance turns on.
+own distribution is a later question and a measurable one — §2.1's 57 against `pyarrow`, which the
+protocols need and none exceeds, and which requires nothing — but an adapter out of process resolves
+its own environment, so that is a convenience for authors rather than anything conformance turns
+on.
 
 The array is the smaller half. `StagedArray` already carries the four layout fields and the
 identifier; what changes is that the producer writes the values and returns the location, where
@@ -609,8 +612,9 @@ establishes and what nothing before it did.
 
 ## 6. Open
 
-- **Whether the stream removes the reason to opt in at all.** §3.3 offers it for the case a file does
-  not fit and §3.5 leaves the choice to a recipe author, neither with a number. What it would take:
+- **Whether any out-of-process protocol removes the reason to opt in at all.** §3.3 names three and
+  ranks none, and §3.5 leaves the choice to a recipe author; no number stands behind either. What it
+  would take:
   stage `core.spike_events` three ways — in process, through a Parquet intermediate, and over an
   Arrow IPC stream — remembering that the out-of-process rows carry `local_unit_label` rather than
   the `unit_id` a writer assigns, and that R86 §2.3 puts a widened join key at 2.93x over

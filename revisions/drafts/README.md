@@ -18,7 +18,7 @@ Dependencies run downward: a draft may depend on the ones above it and on nothin
 
 | # | draft | words | appraised | why here |
 |---|---|---|---|---|
-| 1 | `a-build-reaches-a-source-through-declarations` | 7,338 | merged and appraised 2026-09-11 | depends on nothing else open |
+| 1 | `a-build-reaches-a-source-through-declarations` | 7,370 | merged and appraised 2026-09-11, then appraised as merged | depends on nothing else open |
 
 **#1 is `a-writer-requires-no-knowledge-of-a-particular-source` and
 `an-adapters-rows-cross-a-process-boundary` merged.** They were split at 3,801 words for length and
