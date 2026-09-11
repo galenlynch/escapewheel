@@ -174,16 +174,23 @@ what survives the crossing.
 | the units a prior source produced | a row each: the source's names for it, and the identifiers assigned |
 | which resources are wanted | the resource IDs the recipe leaves it owning, so it produces no more |
 | somewhere to write an array | a location under the staging area, where the adapter produces one |
-| a recipe option | the value the recipe carries |
+| a recipe option, named | the value the recipe carries under that name |
 
-A profile adding to that list amends this section.
+A profile adding to that list amends this section. An adapter names the options it accepts among
+what it declares, rather than accepting whatever a recipe sets: a build that does not know which
+options reach an adapter cannot refuse a recipe setting one the adapter will ignore, which is
+R63 §2.2's refusal applied to an option instead of a resource.
 
-**The wanted set is what saves an adapter work.** A build settles ownership before any source is
-opened (R63 §2.2), so it knows which of a source's resources it will keep, and an adapter told that
-extracts no more — where one that is not produces everything and a build discards, which R63 §1.2
-measures at one resource in five. It is a value a build computes, so it belongs here rather than in
-a transport: telling an adapter what is wanted is the same act whether its rows travel as files, as
-a stream, or over a connection.
+**The wanted set is a term a build supplies and an adapter MAY act on.** A build settles ownership
+before any source is opened (R63 §2.2), so it knows which of a source's resources it will keep, and
+an adapter told that may extract no more — where one that is not told produces everything and a
+build discards, which R63 §1.2 measures at one resource in five. Acting on it is permitted rather
+than required, because for some sources there is nothing to save: an NWB reaches its eighteen
+resources through one open file, so producing three of them costs what producing all eighteen does,
+and the adapter filters at the end. A build cannot tell the two apart either, since an adapter that
+extracted three and one that extracted eighteen and discarded fifteen return the same rows. It is a
+value a build computes, so it belongs here rather than in a transport: telling an adapter what is
+wanted is the same act whether its rows travel as files, as a stream, or over a connection.
 
 **A mapping is not what a build passes; rows are.** A build **MUST** pass a collection as records
 carrying its key as columns, because a mapping's keys are a type the crossing does not keep:
@@ -519,6 +526,14 @@ neither exceeds, **requires nothing**.
 Where that implementation is published is not this part's business. It may ship inside the writer
 and be split out later if its closure starts to matter to authors; what this part requires is that
 it exist and that using it be optional.
+
+**A build knows an adapter is serving before it asks.** Where a protocol needs the adapter running
+— `flight-v0.1` does, `files-v0.1` and `stream-v0.1` do not — the protocol **MUST** say how a build
+establishes that. `flight-v0.1` says it by **connection**: a build retries the socket until it
+connects or the adapter's process exits, and reports the exit. A readiness line on standard output
+is the obvious alternative and is weaker, because a build waiting for a line that never comes
+cannot tell *not yet* from *never* unless it watches the process as well, which is the whole of
+what retrying the socket already does.
 
 **A protocol's name is importable with it.** An adapter declares a protocol by naming it, and the
 name is a constant the implementation exports rather than a string the adapter spells. Pinning is

@@ -81,3 +81,31 @@ nothing at all where `stream-v0.1` invents a metadata key.
 The reason to keep the stream is the one R3 §2.1 has argued from the beginning: a raw IPC stream is
 implementable wherever there is an Arrow binding, and Flight additionally needs gRPC bindings for
 that language, which fewer Arrow implementations carry.
+
+## The interface, run end to end
+
+`build_side.py` reads the NWB adapter's `NEEDS`, supplies exactly those, launches it out of process
+and reads its rows over Flight. `serve_nwb.py` is the adapter side: it rebuilds `Clock` and
+`ZoneInfo` from the values it was sent and receives no object of the writer's.
+
+    a build supplies ['reference_clock', 'root', 'session_id', 'wanted', 'zone']
+      as 367 bytes of JSON, naming 3 of the 18 resources this adapter produces
+    Stage 1, before any rows move: {'core.sessions': 1, 'core.probes': 1, 'core.electrodes': 2}
+    fetched 3 resource(s), 4 rows, 204 ms including the adapter's process start
+    rows identical to the same adapter in process: True
+
+**Three things the draft does not say, found by needing them.**
+
+**Rendezvous.** Nothing states how a build knows the adapter is listening. Here the server prints
+`ready` on standard output and the build waits for that line — invented for this probe. Retrying the
+connection until it succeeds would do as well, and the two are not interchangeable for a build that
+must distinguish *not yet* from *never*.
+
+**Which recipe options an adapter accepts.** The closed list has "a recipe option" as a row, and an
+adapter's `NEEDS` names terms rather than options, so `interval_kind` had to be passed beside the
+declaration rather than through it. Either an adapter names the options it accepts in the same
+declaration, or a build cannot refuse a recipe that sets one the adapter will ignore.
+
+**Whether the wanted set is honoured.** `serve_nwb.py` computes every resource and filters, so
+naming three of eighteen saved nothing. The saving is available to an adapter and not required of
+one, and nothing a build can check tells the two apart.
