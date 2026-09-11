@@ -57,6 +57,23 @@ measured why: `StagedArray` carries `values, array_asset_id, chunks, shard, code
 **five of the six cross already**, so returning those five beside a location is the whole change.
 `lfp` needs none of it — `external_arrays` is already that shape, which is R14's external resource.
 
+**Two questions remain open on #2, and both are about the contract rather than a clause.**
+
+*Is one route enough?* R109 §3.2 already has an extension deliver rows **as Parquet, one file per
+table**, both packaged sessions use that route, and `tables.py` implements it as
+`{resource: path}` with a batch iterator per resource. #2 adds an Arrow IPC stream on standard
+output and makes it the default, so a build must implement both forever and an adapter author must
+choose. What the stream buys is that it leaves no artifact; what it costs is a second route and the
+only genuinely unspecified thing in the contract — an adapter returns **13 resources** on the NWB
+fixture, and one standard output carries one stream, so how many resources cross and how they are
+framed is not stated. The file route answers that by construction.
+
+*What version of the contract is this?* An adapter and a build are two programs that version
+independently and must agree on a vocabulary of terms a build passes, a transport, and a framing.
+Nothing in either draft says what agreement is in force. That is the defect `extends_registry` was
+reaching for one level up, and an IPC contract needs it more than a registry does, because the two
+sides are not shipped together.
+
 **The two land together.** #2 §3.6 has a build supply a location, so #1's closed list carries it,
 and #1's list was written around the three store-handed adapters — `nwb`, `waveforms`, `lfp` — which
 are the three that read big binary and the three the array answer decides.
