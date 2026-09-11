@@ -109,3 +109,49 @@ declaration, or a build cannot refuse a recipe that sets one the adapter will ig
 **Whether the wanted set is honoured.** `serve_nwb.py` computes every resource and filters, so
 naming three of eighteen saved nothing. The saving is available to an adapter and not required of
 one, and nothing a build can check tells the two apart.
+
+## What a failure carries, run end to end
+
+`failures.py` starts six adapters over `flight-v0.1`, each failing a different way, and reports what
+the build is left holding. The table is synthetic and tiny: what is measured is what crosses a
+process boundary, not what an adapter extracts.
+
+    **The adapter never binds.** A build retrying the socket sees the exit rather than
+    waiting on it: detected in 114 ms, and standard error carries
+      'NWBSource: /mnt/Data/no-such-session holds no NWB file'
+
+    **A plain exception in `do_get`.** What crosses is a string:
+      ArrowInvalid, message 1108 chars, extra_info 0 bytes
+      standard error: 0 bytes
+
+    **A structured failure.** The same call, with the finding attached to it:
+      FlightServerError, message 317 chars, extra_info 125 bytes of JSON
+      parsed: level='error' resource='core.electrodes'
+      standard error: 0 bytes
+
+    **A failure partway through a stream.** Two batches had already crossed:
+      FlightServerError, rows delivered to the build: 0
+
+    **A run that succeeded and has something to say.** Two places carry it in band:
+      Stage 1 `app_metadata`, per resource: 127 bytes, level='warning'
+      `DoAction('report')`, per run, after the rows: 1 problem(s), read [...]
+
+    **An adapter with nothing to say.** Asking costs a build one refused call:
+      ListActions: [], DoAction: ArrowNotImplementedError
+
+**Standard error is empty for both failing modes.** The draft had a build capture standard error and
+report it with a failure, which is right for a command and reports nothing here — a Flight adapter's
+diagnosis travels on the connection. What a build reports has to be named per protocol, which §3.10
+now does.
+
+**A plain exception crosses, badly.** 1,108 characters, the adapter's Python traceback and gRPC's
+debug context pasted inside the message. The same failure raised as a Flight error carrying one
+Part 09 §5.8 `problems` entry is 125 bytes a build parses.
+
+**No rows survive a failed transfer.** Two of four rows had crossed as batches and `read_all`
+returned none, so a build never holds part of a resource and needs no count to know it.
+
+**A report needs a channel the protocol already has.** `DoAction("report")` is one action name and
+no file; a build asks after the rows and before the adapter exits. `app_metadata` on the Stage 1
+`FlightInfo` carries bytes too and is the wrong place — Stage 1 runs before the extraction a finding
+would be about.

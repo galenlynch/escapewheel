@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 03 §1 (the protocol group the portable profile names); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list) |
+| **Amends** | Part 03 §1 (the protocol group the portable profile names); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the two protocols that carry a run report without a file) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole, and a contradiction is refused), R87 §2.2 (an adapter declares which recipe fields it states), R109 §2.3 (a shared process is a shared dependency closure), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -362,25 +362,8 @@ across builds, or one whose output should still be there to inspect after a fail
 lesser route: it is the one R109 §3.2 requires of an extension, and both packaged sessions use it
 today, re-reading a `tables/` directory across several rebuilds without running the extraction again.
 
-Where the stream is used, standard output carries rows and cannot also carry a diagnosis. **Part 05
-§3.7 is amended to match**: a build **MUST** capture standard error and report it with a failure, and
-**MUST NOT** report standard output where the recipe put rows on it. R109 §3.2's reason survives
-intact, since the diagnosis a command prints was always the thing worth keeping and stderr is where
-a command that also emits data must print it.
-
-**An adapter MAY report the way an extension does.** Part 09 §5.8 already has an extension write a
-JSON report at a path the recipe names, carrying a `problems` array whose entries each have a
-`level` of `error`, `warning` or `info`, a message, and optionally the resource the finding is
-about. An adapter **MAY** write the same report on the same terms, and a build treats it the same
-way: reporting what it contains, requiring none, failing on none it cannot parse, and ignoring what
-it can derive for itself.
-
-Standard error stays what a failure carries. What the report adds is a finding a build can file
-beside its own — Part 05 §9's levels are the ones Part 09 §5.8 already uses — where a diagnosis on
-stderr
-is a string a build can only repeat. An adapter and an extension reach a build by the same
-protocols, and having them describe a problem two different ways is a difference with no argument
-behind it.
+How a failure and a finding reach a build is §3.10's, and follows the same rule: what a protocol
+carries is what a build reports.
 
 The same holds for an extension's rows, and R109 §3.2 is narrower than its own reason: it has an
 extension deliver Parquet and names a subprocess for converting a raw source, where the argument it
@@ -530,7 +513,8 @@ it exist and that using it be optional.
 **A build knows an adapter is serving before it asks.** Where a protocol needs the adapter running
 — `flight-v0.1` does, `files-v0.1` and `stream-v0.1` do not — the protocol **MUST** say how a build
 establishes that. `flight-v0.1` says it by **connection**: a build retries the socket until it
-connects or the adapter's process exits, and reports the exit. A readiness line on standard output
+connects or the adapter's process exits, and reports the exit — measured at **114 ms** to detect an
+adapter that failed before binding, against a build that would have waited on that socket forever. A readiness line on standard output
 is the obvious alternative and is weaker, because a build waiting for a line that never comes
 cannot tell *not yet* from *never* unless it watches the process as well, which is the whole of
 what retrying the socket already does.
@@ -541,6 +525,60 @@ then what keeps an old adapter working, and it needs no shim to maintain: the ad
 version it was written against in its own environment, and that version exports `stream-v0.1` and
 speaks it. A profile **MUST NOT** change what a named protocol means (§3.3), so the build at a
 later version still names `stream-v0.1` in its group and still reads it.
+
+### 3.10 A build reports what the protocol carries
+
+A build that captures standard error and nothing else reports nothing at all for a failure over
+`flight-v0.1`. Measured in `conformance/adapter-boundary/failures.py`, an adapter failing inside
+that protocol writes **0 bytes** to standard error, because the diagnosis travels on the connection
+it was asked over; a build looking where a command would have printed one finds an empty string and
+reports a failure with no reason attached. So the obligation binds the protocol rather than a
+stream: a build **MUST** report everything the protocol it used carries about a failure, which is
+standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its
+`extra_info` for `flight-v0.1`.
+
+**Part 05 §3.7 is amended to match.** A build **MUST** capture standard error and report it with a
+failure, and **MUST NOT** report standard output as a diagnosis where the recipe put rows on it.
+R109 §3.2's reason survives intact: the diagnosis a command prints was always the thing worth
+keeping, and standard error is where a command that also emits data must print it.
+
+**An adapter serving `flight-v0.1` SHOULD attach its finding to the failure.** A plain exception is
+what an adapter gets for doing nothing, and it does cross — as a **1,108-character** string in which
+the adapter's Python traceback and gRPC's own debug context are pasted inside the message, which a
+build can repeat and cannot read. Raised instead as a Flight error carrying one Part 09 §5.8
+`problems` entry, the same failure crosses as **125 bytes** of JSON a build parses: a `level`, the
+`resource` the finding is about, and a message. A build **MUST NOT** refuse a failure whose
+`extra_info` it cannot parse, and reports the message alone, since an adapter that raised an
+ordinary exception is the common case rather than a defect.
+
+**A transfer that fails partway delivers no rows.** Two batches of a four-row table had already
+crossed when the adapter raised, and the build was left holding **0 rows** — the client discards
+what it has rather than returning a short table. A build **MUST NOT** stage a resource whose
+transfer failed, and this is what lets it apply that rule without counting: a resource arrives whole
+or not at all, so a partial table is not a state the boundary can produce.
+
+**A report is carried the way the protocol carries everything else.** Part 09 §5.8 has an extension
+write a JSON report at a path the recipe names, carrying a `problems` array whose entries each have
+a `level` of `error`, `warning` or `info`, a `message`, and optionally the `resource` the finding is
+about. An adapter **MAY** write the same report on the same terms under `files-v0.1` and
+`stream-v0.1`, where a file is the only channel left once rows have taken standard output. Under
+`flight-v0.1` the connection is that channel, so no path is named and no file outlives the run: an
+adapter with a report **MUST** name `report` among its actions, and answers `DoAction("report")`
+with that JSON as one result. A build **MUST** ask after it has read the rows and before the adapter
+exits, and **MUST NOT** ask one that did not name the action — measured, an adapter implementing no
+action lists none and raises on being asked anyway, so the declaration is what a build reads and the
+error is what it avoids.
+
+Reporting is the same in all three, which is the point: a build files an adapter's findings beside
+an extension's and beside its own, at Part 05 §9's levels, without knowing which protocol brought
+them. An adapter and an extension reach a build over the same protocols, and having them describe a
+problem two different ways is a difference with no argument behind it.
+
+**A finding does not ride Stage 1.** `FlightInfo` carries an `app_metadata` field and this protocol
+names no meaning for it. A build asks Stage 1 before an adapter has extracted anything, so a finding
+put there is one the adapter must know before doing the work, and what a build wants from Stage 1 —
+which resources are offered, their schemas and their row counts — is in the `FlightInfo` already. A
+build **MUST** ignore `app_metadata`, which leaves the field to a later version of the protocol.
 
 ## 4. What this does not change
 
@@ -560,7 +598,8 @@ later version still names `stream-v0.1` in its group and still reads it.
 
 Part 03 §1 gains the protocol group the portable profile names. Part 05 §3 gains a preference table
 and an in-process declaration, Part 05 §3.4 gains what an adapter declares, and Part 05 §3.5 and
-§3.7 gain what a build captures where a command's output carries rows. Part 07 §4 gains `NEEDS`,
+§3.7 gain what a build captures from a failure and what an adapter may report about a run.
+Part 09 §5.8's report gains the two protocols that carry it without a file. Part 07 §4 gains `NEEDS`,
 `CONSUMES`, the protocol an adapter declares and how an array crosses — its sentence reads "two
 static declarations" today and becomes four. Part 09 §5.7 gains that an extension may use any
 protocol of the group and that a command is carried as a list.
