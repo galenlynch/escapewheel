@@ -113,18 +113,24 @@ profile names a group for each way an adapter reaches a build, and the protocols
 **MUST** declare and support **at least one** protocol in a group; a build **MUST** support **every**
 protocol in every group its profile names.
 
-**A protocol carries its version in its name**, as every other identifier this specification hands
-out does — `escapewheel-portable-v0.1`, `core.trials.v0.1`. A protocol that changes how rows cross
-is a **new member of the group**, not a new reading of an old member, so evolving one costs the same
-as adding one and neither side has to negotiate a version it may not know. A profile **MUST NOT**
-change what a named protocol means.
+**A protocol carries its version in its name**, semantically versioned and starting at `v0.1`, which
+is the form every other identifier this specification hands out takes —
+`escapewheel-portable-v0.1`, `escapewheel-logical-v0.1`. A profile **MUST NOT** change what a named
+protocol means; a protocol that changes how rows cross is a **new member of the group**, not a new
+reading of an old one.
 
 `escapewheel-portable-v0.1` names one group, **out of process**, holding two:
 
 | protocol | rows cross as |
 |---|---|
-| `files-v1` | Parquet the recipe names, one per resource |
-| `stream-v1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
+| `files-v0.1` | Parquet the recipe names, one per resource |
+| `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
+
+**A build supports the members a profile names, and MUST NOT infer one version from another.**
+Semantic versioning says what a change was, which is what an author needs to decide a number; it
+does not say what a build can read, which is decided by the group. Reading `stream-v0.2` is not
+being able to read `stream-v0.1`, and a build that assumed otherwise would be guessing at a framing
+rather than declaring it.
 
 **The asymmetry is the point.** There is one build and there will be many adapters, so the build
 carries breadth once and an adapter author implements whichever protocol suits the source in hand —
@@ -137,12 +143,12 @@ satisfy.
 
 It is also how the contract grows. Adding a protocol to a group costs every build work and costs no
 adapter anything, since one declaring what it declared before still declares something a build
-supports; a revised protocol is added the same way, as `stream-v2` beside `stream-v1`. Adding a
+supports; a revised protocol is added the same way, as `stream-v0.2` beside `stream-v0.1`. Adding a
 **group** — an in-process protocol, or one reaching an adapter the build did not launch — leaves
 every existing adapter and build alone.
 
 Retiring a protocol is the one change that costs an adapter author anything, and it is a **profile**
-change: the group is the profile's, so dropping `stream-v1` from `escapewheel-portable-v0.1` is not
+change: the group is the profile's, so dropping `stream-v0.1` from `escapewheel-portable-v0.1` is not
 something a build decides. An adapter declaring a protocol no group of the profile names is refused
 as one declaring none.
 
