@@ -185,6 +185,19 @@ discovery from a Parquet footer and selection by which files the recipe names, s
 to say which resources are wanted — and both are ours to specify, name and version. **That is the
 trade: own more protocol, or need gRPC bindings.**
 
+**Which to reach for follows from that.** Where an extraction is worth keeping, `files-v0.1` is
+both the cheapest to write and the one that already answers everything: a footer holds the row
+count and the recipe's paths are the selection, which is why `TablesSource.offers` reads
+`num_rows` from metadata and never opens the data. Where nothing should be left behind and the
+source is small enough that extracting to discover costs little, `stream-v0.1` is a hundred lines.
+Where it is not — a source whose extraction is expensive, or one a recipe narrows — `flight-v0.1`
+is what asks before fetching.
+
+The line is worth naming: **the moment a stream needs to be asked, it is becoming Flight.** A
+reporting invocation, a way to name what is wanted, a schema for the answer — each is a thing Flight
+already has a name for, and re-spelling them under our own names is how a protocol that owned one
+metadata key grows into a format to maintain.
+
 Flight also owns the least of the three. A descriptor is the format's, so the `resource_id` key is
 unnecessary, and what a build supplies is the **socket path**, which it already passes in an
 argument list. Measured in `conformance/adapter-boundary/`, a server over a **Unix socket** — no
