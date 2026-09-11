@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 05 §3 (a recipe declares whether a source runs in the writer's process); Part 05 §3.7 (what a build captures where a command's output carries rows); Part 07 §4 (an adapter's return type and the transports a build accepts rows over); Part 09 §5.7 (an extension's rows cross the same boundary by the same transports, and a command is carried as a list) |
+| **Amends** | Part 05 §3 (a recipe declares whether a source runs in the writer's process); Part 05 §3.7 (what a build captures where a command's output carries rows); Part 07 §4 (an adapter's return type, the transports a build accepts rows over, and how an array crosses); Part 09 §5.7 (an extension's rows cross the same boundary by the same transports, and a command is carried as a list) |
 | **Depends on** | R109 §2.3 (a shared process is a shared dependency closure), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files), R109 §3.4 (a build keeps what a command wrote to its streams), R53 §2.5 (a writer mints every assigned identifier), R93 §3.5 (a number that would change with the implementation belongs to Part 07 §7) |
 | **Profile** | all |
 
@@ -211,6 +211,29 @@ comparison: a build that received rows out of process never staged them the othe
 baseline to subtract. What the two routes cost against each other is §6's measurement, not a report
 a build can make.
 
+### 3.6 A dense array crosses as a reference
+
+An adapter's rows cross as records and its arrays **MUST NOT**. A dense array crosses as a
+**reference**: the array_asset_id, the layout an adapter chose for it — chunking, sharding, codecs,
+fill value — and a location. A build **MUST** supply that location where an array is one the packet
+will own, and an adapter **MUST** write the array there and return the reference rather than the
+measurement.
+
+Measured on the waveform adapter, this is what the crossing already almost is.
+`conformance/adapter-boundary/` reports `StagedArray`'s six fields — `values`, `array_asset_id`,
+`chunks`, `shard`, `codecs` and `fill_value` — and **five of the six cross**; the sixth is the
+array. Returning the five beside a location is the whole of the change.
+
+**An array is not rows and no transport makes it rows.** §3.1 has an adapter deliver records as an
+Arrow IPC stream, and a stream that carried a dense array would carry it whole, through the build's
+memory, into a file the build then writes — the copy the staging path exists to avoid. The
+`lfp` adapter is the one of three array-reading adapters that never takes this route: its
+`external_arrays` returns references today, which is R14 §2.3.1's external resource, and the shape
+this section gives every adapter.
+
+Where the array is external — bytes the packet references rather than owns (Part 03 §6.1) — a
+build supplies no location and the adapter returns the URI its source already has.
+
 ## 4. What this does not change
 
 - **No table, column, reference, rule or vocabulary changes, and no packet is rebuilt.** This binds
@@ -221,9 +244,16 @@ a build can make.
 
 ## 5. Consequence
 
-Part 05 §3 gains an in-process declaration, Part 05 §3.7 gains what a build captures where rows are on
-standard output, Part 07 §4 gains the transports a build accepts and what its own sentence does not
-cover, and Part 09 §5.7 gains that an extension may use them too and that a command is carried as a list.
+Part 05 §3 gains an in-process declaration, Part 05 §3.7 gains what a build captures where rows are
+on standard output, Part 07 §4 gains the transports a build accepts, what its own sentence does not
+cover, and that an array crosses as a reference, and Part 09 §5.7 gains that an extension may use
+them too and that a command is carried as a list.
+
+The array is the smaller half of the implementation. `StagedArray` already carries the four layout
+fields and the identifier; what changes is that the adapter writes the values and returns the
+location, where today it hands the values over and the writer writes them. `LFPSource` needs
+nothing: `external_arrays` is already the shape, and `add_array` keeps its signature for an
+in-process adapter that has not been converted.
 
 The reference implementation owes a command it does not have: `escapewheel` runs `inspect`, `init`,
 `extension`, `verify`, `prune` and `import`, and none of them runs one adapter and hands over its

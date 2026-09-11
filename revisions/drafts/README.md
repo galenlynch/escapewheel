@@ -48,20 +48,16 @@ constructor. #2 §3.3 makes **out of process the default**, where §3.2 gives an
 list and §3.5 has even an identifier cross as a name. Under both, the ordinary adapter cannot be
 given three of the five things #1 says a build supplies it.
 
-**Neither is ready: an adapter that produces a dense array has no way across the boundary.** Gaming
-#1's closed list through the NWB adapter settled its inputs — a root URI it opens itself, the
-reference clock's row, an IANA zone string, the units a prior source produced, and recipe options —
-and found its output does not cross. `records()` returns `dict[str, list[dict]]` and travels; but
-`staged_arrays()` returns `StagedArray`, a writer class holding a dense array, and #2 says "records"
-throughout and nothing about arrays. `nwb` and `waveforms` both stage arrays, and they are two of
-the three adapters handed a store today, which is not a coincidence: the adapters given a store are
-the ones that read big binary.
+**The array crossing is settled in #2 §3.6: an array crosses as a reference.** An adapter writes it
+and returns the identifier, the layout it chose and a location, where a build supplies the location
+for an array the packet will own and none for one it references. `conformance/adapter-boundary/`
+measured why: `StagedArray` carries `values, array_asset_id, chunks, shard, codecs, fill_value` and
+**five of the six cross already**, so returning those five beside a location is the whole change.
+`lfp` needs none of it — `external_arrays` is already that shape, which is R14's external resource.
 
-The codebase already shows the shape of an answer. The third store-handed adapter, `lfp`, returns
-`external_arrays()` — **references rather than bytes** — which is R14's external-resource model and
-crosses a boundary unchanged. Whether an array-producing adapter writes its array and returns a
-reference, or whether array producers stay in process against #2 §3.3's default, is #2's to settle,
-and #1's closed list was written around the three adapters the answer decides.
+**The two land together.** #2 §3.6 has a build supply a location, so #1's closed list carries it,
+and #1's list was written around the three store-handed adapters — `nwb`, `waveforms`, `lfp` — which
+are the three that read big binary and the three the array answer decides.
 
 `conformance/adapter-boundary/` is the evidence, and #1 carries what it settled: a build passes a
 collection as records rather than as a mapping. Measured, the units handed the waveform adapter are
