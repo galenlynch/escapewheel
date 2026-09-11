@@ -50,7 +50,7 @@ RESOURCE = "analysis.spike_events"
 class Collided(NotAligned):
     """Two spikes of one unit convert to the same reference tick, so the table cannot be built.
 
-    R92 §2.4. This table is keyed on the converted tick, and a conversion preserves distinctness
+    `06` §4. This table is keyed on the converted tick, and a conversion preserves distinctness
     only where it expands -- a reference clock slower than a probe's collapses spikes that were
     distinct on the probe. Refusing costs nothing usable: a histogram over collapsed spikes
     undercounts them, so a clock that coarse makes this table the wrong instrument rather than a
@@ -59,7 +59,7 @@ class Collided(NotAligned):
 
 
 def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) -> None:
-    """Raise where two consecutive spikes of one unit share a converted tick (R92 §2.4).
+    """Raise where two consecutive spikes of one unit share a converted tick (`06` §4).
 
     Core sorts by `(session_id, unit_id, t_tick)` and the mapping is monotone, so a collision is
     always between neighbours; `carry` is the previous batch's last row, since a pair split
@@ -104,7 +104,7 @@ def _tick_rate(packet: Any, clock_id: str) -> int:
 
 
 def _clock_id(packet: Any, reference: Any) -> Any:
-    """Resolve a clock a recipe named to the identifier this packet assigned it (R53 §2.5).
+    """Resolve a clock a recipe named to the identifier this packet assigned it (`05` §8).
 
     A recipe is written before any identifier exists, so it names a clock by name -- as its
     own `[[clock]]` blocks and every `parent_clock_id` do. `reference_clock` returns an id
@@ -192,8 +192,8 @@ class _Buckets:
 
     Bucketing by time and sorting by unit inside each bucket needs no global sort, because
     `core.spike_events` is already ordered by `(session_id, unit_id, t_tick)` (R81 §2.4)
-    (R10 §2, `03`). Visiting it in that order and appending each row to its bucket's file
-    leaves every file in exactly the intra-bucket order R30 §3.2 declares. What remains is to
+    (`03` §5.3, `03`). Visiting it in that order and appending each row to its bucket's file
+    leaves every file in exactly the intra-bucket order `03` §5.4 declares. What remains is to
     concatenate the files in bucket order, which is a second pass and no comparisons.
     """
 
@@ -253,7 +253,7 @@ class _Buckets:
         """Yield every bucket's rows in bucket order, in batches of at most `BATCH_ROWS`.
 
         A batch never spans two buckets, so each becomes a row group lying inside one bucket
-        (R30 §3.2). Row groups cut at a fixed row count would straddle boundaries and span
+        (`03` §5.4). Row groups cut at a fixed row count would straddle boundaries and span
         twice the intended time range.
         """
         # A bucket that never exceeded the budget has no writer and never reached disk; it is
@@ -287,7 +287,7 @@ def spike_events(
 ) -> Iterator[pa.RecordBatch]:
     """`analysis.spike_events` -- core spikes on the reference clock, bucketed by time.
 
-    A spike whose tick falls further than the bound from any anchor is **dropped**: R27 §5.3
+    A spike whose tick falls further than the bound from any anchor is **dropped**: `01` §3.9
     leaves it undefined, and a derived table is the wrong place to record that a value is
     missing.
 
@@ -314,7 +314,7 @@ def spike_events(
         pass can emit in order -- and the partition either fits in memory or goes to disk.
     dropped : list of int, optional
         A one-element list the count of unmappable spikes is accumulated into, since a
-        generator cannot return one. R40 §2.3 requires the producing run to record it.
+        generator cannot return one. `06` §4 requires the producing run to record it.
         Held with identifiers as dictionary codes it is 36 bytes a row, so a session of 287 M
         spikes wants 10.4 GB; the same rows spill to 0.5 GB of Parquet instead. Zero, the
         default, holds no more than one batch per bucket, because whether ten gigabytes is
@@ -325,7 +325,7 @@ def spike_events(
     Yields
     ------
     pyarrow.RecordBatch
-        In R30 §3.2's order, at most `BATCH_ROWS` rows, never spanning two buckets.
+        In `03` §5.4's order, at most `BATCH_ROWS` rows, never spanning two buckets.
 
     Raises
     ------
@@ -372,7 +372,7 @@ def spike_events(
                 {"t_tick": batch.column("t_tick"), "clock_id": pa.array(on_clock[units])}
             )
             parent, keep = mapped(timed, reference, by_clock, bound)
-            # R40 §2.3: counted whether or not any are dropped. A recorded zero is the
+            # `06` §4: counted whether or not any are dropped. A recorded zero is the
             # evidence the bound was sufficient; silence is what let a reader and this
             # writer disagree about which spikes exist without either noticing.
             dropped[0] += int(keep.size - keep.sum())
@@ -434,7 +434,7 @@ def into(
 
     `bucket_seconds` goes in `parameters` because it cannot be recovered from the data -- a
     table whose buckets all happen to be non-empty looks the same at 300 s as at 299 s
-    (R31 §3). So does the count of spikes this could not place (R40 §2.3), which is otherwise
+    (`04` §3). So does the count of spikes this could not place (`06` §4), which is otherwise
     invisible: a derived table one row short looks exactly like a derived table. `memory_budget`
     and `scratch` do not: they change how the rows are produced, not which rows they are, and
     recording them would make two identical packets claim different provenance.
@@ -473,7 +473,7 @@ def into(
                 "activity_type": "materialization",
                 # R44 §2.1: session-wide, so the session is the scope. Both stay null on a
                 # multi-session packet rather than naming one of several, because a writer that
-                # cannot determine a fact records nothing (R36 §2.4). R49 §2.4: the pair is set
+                # cannot determine a fact records nothing (`04` §5.2). `02` §8.3: the pair is set
                 # together or not at all.
                 "scope_kind": "core.sessions" if session else None,
                 "scope": session,
@@ -483,7 +483,7 @@ def into(
                     "bucket_seconds": bucket_seconds,
                     "bound": bound,
                     "reference_clock_id": reference,
-                    # R40 §2.3. Recorded even when zero: that a bound was sufficient is a
+                    # `06` §4. Recorded even when zero: that a bound was sufficient is a
                     # fact about this packet, not an assumption a reader should have to make.
                     "spikes_without_a_defined_mapping": dropped[0],
                 },

@@ -1,6 +1,6 @@
 """Expand each part's column tables from the registry, so the spec restates nothing.
 
-R3 §3.0 forbids a table restating what the data declares, and the same argument applies one level
+`02` §6 forbids a table restating what the data declares, and the same argument applies one level
 up: a part that retypes a resource's columns is a second declaration, agreeing with
 `registry/logical_schemas.json` only until someone edits one of them. R81 §2.3 removed
 `sorting_run_id` and `curation_id` from `analysis.spike_events` and `06` §4's hand-written table

@@ -47,10 +47,10 @@ class HarpSource:
         The session these devices were used in.
     """
 
-    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
     PRODUCES = frozenset({"core.devices"})
 
-    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -95,7 +95,7 @@ class HarpSource:
                 # serial, and inventing either would assert what nothing states.
                 "manufacturer": None,
                 "model": f"Harp {declared['whoAmI']}" if declared.get("whoAmI") is not None else None,
-                # R66 §2.1: verbatim, unparsed. `hardwareTargets` is this schema's name for the
+                # `01` §3.5: verbatim, unparsed. `hardwareTargets` is this schema's name for the
                 # hardware the firmware targets, which is the revision the device reports.
                 "firmware_version": _clean(declared.get("firmwareVersion")),
                 "hardware_version": _clean(declared.get("hardwareTargets")),

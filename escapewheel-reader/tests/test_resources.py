@@ -103,7 +103,7 @@ def handle_strings(table):
 
 
 
-# -- R14 §2.3: external arrays, which in production live on an object store -----------------
+# -- `04` §5.1: external arrays, which in production live on an object store -----------------
 
 
 def _external_entry(uri):
@@ -154,7 +154,7 @@ def test_a_remote_uri_has_no_local_path():
 
 
 def test_a_remote_array_takes_its_zarr_version_from_the_manifest():
-    """Nothing local exists to read it from, and R14 §2.3.1 already makes it a claim."""
+    """Nothing local exists to read it from, and `03` §8 already makes it a claim."""
     assert _array_resource("s3://bucket/lfp").zarr_format == 2
 
 
@@ -195,7 +195,7 @@ def array_packet(tmp_path, packet_root):
             "uri": "arrays/lfp.zarr",
             "canonical": True,
             "validation_state": "passed",
-            # R15 §2: codecs are declared per resource, so a reader can check before opening.
+            # `03` §6.4: codecs are declared per resource, so a reader can check before opening.
             "codecs": ["bytes", "zstd"],
         }
     )
@@ -225,7 +225,7 @@ def test_array_reports_an_undeclared_resource(array_packet):
 
 
 def test_a_store_uri_pyarrow_cannot_open_is_reported(packet_root):
-    """R14 §2.3: reachability is the reader's situation, so an unreachable store is a readable
+    """`04` §5.1: reachability is the reader's situation, so an unreachable store is a readable
     error and not a traceback from inside pyarrow."""
     import json
 

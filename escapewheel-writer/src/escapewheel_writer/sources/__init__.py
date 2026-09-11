@@ -30,7 +30,7 @@ from .waveforms import WaveformSource
 SOURCE_GROUP = "escapewheel.sources"
 
 #: The built-in kinds a recipe may name, by the name it names them. `session.build` maps a kind to
-#: a constructed adapter; this maps it to the class, which is what R63 §2.1's `PRODUCES` hangs on
+#: a constructed adapter; this maps it to the class, which is what `05` §3.4's `PRODUCES` hangs on
 #: and what a recipe check reads with nothing open.
 ADAPTERS: dict[str, Any] = {
     "session": SessionSource,

@@ -15,7 +15,7 @@ SHANK2 = "experiment1.Neuropix-PXI-100.50720-2"
 def named(label, run=SHANK1):
     """The name the adapter composes for one unit, which the writer turns into its number.
 
-    R81 §2.2 orders the numbering by `(sorting_run_id, curation_id, local_unit_label)`, so the
+    `02` §12.1 orders the numbering by `(sorting_run_id, curation_id, local_unit_label)`, so the
     name is those three and the run is part of it rather than a column beside it.
     """
     return f"{run}|{run}.curated|{label:02d}"
@@ -107,7 +107,7 @@ def test_a_unit_name_is_unique_across_runs(source):
 
 
 def test_a_unit_name_sorts_as_the_numbering_must(source):
-    """R81 §2.2 numbers by ascending `(sorting_run_id, curation_id, local_unit_label)`.
+    """`02` §12.1 numbers by ascending `(sorting_run_id, curation_id, local_unit_label)`.
 
     `PacketWriter._preassign` assigns in sorted-name order, so the name has to sort that way --
     which is what the zero padding is for: unpadded, label 40 would precede label 5 as text.
@@ -152,7 +152,7 @@ def test_every_source_gets_a_row(source):
 
 
 def test_non_soma_projects_to_null_not_noise(source):
-    """R22 §3: "recorded off-soma" is a different claim from "not a unit"."""
+    """`02` §9.3: "recorded off-soma" is a different claim from "not a unit"."""
     row = next(q for q in keyed(rows_of(source, "core.unit_quality_labels"), 2) if q["source"] == "bombcell")
     assert (row["label"], row["normalized_label"]) == ("non_soma", None)
 
@@ -344,7 +344,7 @@ def test_two_labels_in_one_category_are_kept_unprojected(tmp_path):
     assert any("2 labels in category" in note for note in source.notes)
 
 
-# -- observation windows (R38 §2.3) ----------------------------------------------------
+# -- observation windows (`01` §2.2) ----------------------------------------------------
 
 
 def test_a_sample_clock_declares_the_recording_it_counts(source):
@@ -410,7 +410,7 @@ def test_a_sorting_and_its_curation_name_different_runs(source):
 def test_every_run_declares_its_scope(source):
     """R44 §2.1: without it, twelve probes sorted once each look like twelve alternatives."""
     runs = rows_of(source, "core.processing_runs")
-    assert all(r.get("scope") for r in runs), "a run with no scope is undeterminable (R44 §2.3)"
+    assert all(r.get("scope") for r in runs), "a run with no scope is undeterminable (`01` §2.4)"
 
     sorting = [r for r in runs if r["activity_type"] == "spike_sorting"]
     probes = {r["probe_id"] for r in rows_of(source, "core.sorting_runs")}
@@ -428,7 +428,7 @@ def test_a_curation_is_scoped_to_its_sorting_not_its_probe(source):
 
 
 def test_supersedes_is_left_unset(source):
-    """R41 §2.2: a first import supersedes nothing, and a writer must not guess."""
+    """`01` §3.20: a first import supersedes nothing, and a writer must not guess."""
     assert all(r.get("supersedes") is None for r in rows_of(source, "core.processing_runs"))
 
 
@@ -461,7 +461,7 @@ def test_an_electrode_is_named_as_the_nwb_names_it(source):
 
 
 def test_a_stream_without_a_channel_list_contributes_nothing(tmp_path):
-    """R83 §2.2 forbids inferring one, so silence is the only other answer -- and it is reported."""
+    """`02` §12.2 forbids inferring one, so silence is the only other answer -- and it is reported."""
     sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=[(0, 1)], channel_ids=None)
     source = SorterSource(tmp_path, session_id=SESSION)
     assert source.sorting_run_channels() == []

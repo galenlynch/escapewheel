@@ -36,7 +36,7 @@ from escapewheel_reader.ordering import stored_order
 from .generate import adjacency_settles_uniqueness, concerns, generate
 from .stores import StoreUnreachable, digest, listing, read_member
 
-#: Registry column type -> the Arrow type a conforming writer must emit (R3 §2.1).
+#: Registry column type -> the Arrow type a conforming writer must emit (`03` §5.5).
 ARROW_TYPES = {
     "string": "string",
     "int32": "int32",
@@ -65,7 +65,7 @@ class Finding:
     rows : tuple
         Offending rows, truncated. For SQL checks these are the query's result.
     extension : str or None
-        The extension whose table this is about, or None for core. R17 §4 requires the two be
+        The extension whose table this is about, or None for core. `05` §5.4 requires the two be
         reported separately: a finding against an extension's table is not a finding against the
         packet's **core** conformance, because a core validator is not required to hold that
         extension's schema at all.
@@ -108,10 +108,10 @@ class Report:
     def passed(self) -> bool:
         """Whether the packet is valid **as core**. Warnings do not make a packet invalid.
 
-        Advisory rules cannot be ``error`` (R26 §3), so this is invariant under the
+        Advisory rules cannot be ``error`` (`02` §10.2), so this is invariant under the
         ``advisory`` flag: asking for more to read never changes the verdict.
 
-        An extension's findings are excluded (R17 §4). A packet stays core-conformant carrying
+        An extension's findings are excluded (`05` §5.4). A packet stays core-conformant carrying
         extension registries a validator cannot parse, so one it *can* parse must not be able to
         change the core verdict either -- otherwise holding the schema would make a packet fail
         that passes without it.
@@ -186,9 +186,9 @@ def _version() -> str:
 
 
 def registry_meta_schema() -> dict[str, Any]:
-    """R2 §9's published meta-schema, as this distribution vendors it.
+    """`02` §9.2's published meta-schema, as this distribution vendors it.
 
-    Public because R57 §2.1 makes its `$id` something a writer has to state: a document declares
+    Public because `02` §9.2 makes its `$id` something a writer has to state: a document declares
     which meta-schema governs it, and the writer that emits the declaration must not keep its own
     copy of the URI.
     """
@@ -198,7 +198,7 @@ def registry_meta_schema() -> dict[str, Any]:
 
 
 def _check_embedded_registry(packet: Packet, embedded: Mapping[str, Any], report: Report) -> None:
-    """Layer 1: the registry the packet carries (R2 §8, §9)."""
+    """Layer 1: the registry the packet carries (`02` §9.2, §9)."""
     for error in jsonschema.Draft202012Validator(registry_meta_schema()).iter_errors(embedded):
         report.add("error", "registry.schema", f"{'/'.join(str(p) for p in error.path)}: {error.message}")
     declared = packet.manifest.registry_version
@@ -211,7 +211,7 @@ def _check_embedded_registry(packet: Packet, embedded: Mapping[str, Any], report
 
 
 def _check_materialization_provenance(packet: Packet, report: Report) -> None:
-    """Layer 1c: every analysis resource names the run that produced it (R31 §5).
+    """Layer 1c: every analysis resource names the run that produced it (`05` §5.3).
 
     Not SQL, and deliberately. `processing_run_id` lives in the manifest, which no query sees,
     so a Tier 1 foreign key cannot reach it -- a rule written in SQL here would pass silently
@@ -226,7 +226,7 @@ def _check_materialization_provenance(packet: Packet, report: Report) -> None:
         report.add(
             "error",
             "provenance.no_processing_run",
-            f"{resource_id} is derived but names no processing_run_id (R31 §3)",
+            f"{resource_id} is derived but names no processing_run_id (`04` §3)",
         )
 
     named = {r.entry["processing_run_id"] for r in analysis if r.entry.get("processing_run_id")}
@@ -250,14 +250,14 @@ def _check_materialization_provenance(packet: Packet, report: Report) -> None:
         report.add(
             "error",
             "provenance.unknown_processing_run",
-            f"processing_run_id {missing!r} appears in no row of core.processing_runs (R31 §5)",
+            f"processing_run_id {missing!r} appears in no row of core.processing_runs (`05` §5.3)",
         )
 
 
 def _check_time_origin(packet: Packet, report: Report) -> None:
-    """Layer 1d: `t_zero_tick` is the earliest observation start on the reference clock (R39 §2.4).
+    """Layer 1d: `t_zero_tick` is the earliest observation start on the reference clock (`01` §2.2).
 
-    Not SQL, and for the reason R39 §2.4 gives: the minimum is taken across clocks, and getting
+    Not SQL, and for the reason `01` §2.2 gives: the minimum is taken across clocks, and getting
     a clock's `start_tick` onto the reference is R13's anchor-based mapping -- arithmetic no
     query expresses. A packet declaring no origin is conforming and is not checked; one that
     declares a *wrong* origin silently shifts every second a consumer derives, which is why the
@@ -294,7 +294,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
             report.add(
                 "error",
                 "time.origin_unmappable",
-                f"{clock} declares an observation window but no anchors, so the minimum R39 §2.1 "
+                f"{clock} declares an observation window but no anchors, so the minimum `01` §2.1 "
                 "defines cannot be taken",
                 [(clock,)],
             )
@@ -305,7 +305,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
                 "error",
                 "time.origin_unmappable",
                 f"{clock}'s observation start does not map to {reference} within the alignment "
-                "bound, so no origin is defined (R39 §2.4)",
+                "bound, so no origin is defined (`01` §2.2)",
                 [(clock, str(start))],
             )
             return
@@ -320,7 +320,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
             report.add(
                 "error",
                 "time.origin_not_earliest",
-                f"t_zero_tick is {stated} but the earliest observation start on {reference} is {expected} (R39 §2.1)",
+                f"t_zero_tick is {stated} but the earliest observation start on {reference} is {expected} (`01` §2.1)",
                 [(str(stated), str(expected))],
             )
 
@@ -340,7 +340,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "error",
             "array.not_zarr_v3",
             f"{resource.resource_id} is packet-owned but stored as Zarr v{handle.zarr_format}; "
-            "R21 §3.1 allows v2 only for an array the packet references",
+            "`03` §6.1 allows v2 only for an array the packet references",
         )
 
     declared = set(resource.codecs)
@@ -350,7 +350,8 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             detail.append(f"the store uses {', '.join(undeclared)}, which the manifest omits")
         if unused := sorted(declared - actual):
             detail.append(f"the manifest declares {', '.join(unused)}, which the store does not use")
-        report.add("error", "array.codecs_disagree_with_store", f"{resource.resource_id}: {'; '.join(detail)} (R15 §4)")
+        report.add("error", "array.codecs_disagree_with_store",
+                   f"{resource.resource_id}: {'; '.join(detail)} (`04` §5.3)")
 
     if "transpose" in actual:
         report.add(
@@ -364,12 +365,12 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
         report.add(
             "error",
             "array.irregular_chunk_grid",
-            f"{resource.resource_id} declares a {grid!r} chunk grid; R3 §7.1 requires a regular one",
+            f"{resource.resource_id} declares a {grid!r} chunk grid; `03` §6.1 requires a regular one",
         )
 
     if "fill_value" not in metadata:
         report.add(
-            "error", "array.no_fill_value", f"{resource.resource_id} declares no fill_value, which R3 §7.1 requires"
+            "error", "array.no_fill_value", f"{resource.resource_id} declares no fill_value, which `03` §6.1 requires"
         )
 
     asset = resource.entry.get("array_asset_id")
@@ -408,7 +409,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
 
 
 def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
-    """Layer 1c: every packet-owned array against its own Zarr metadata (R15 §4, level 2).
+    """Layer 1c: every packet-owned array against its own Zarr metadata (`04` §5.3, level 2).
 
     Always runs, and needs no Zarr: a Zarr array's metadata is a JSON document in the store,
     which `ArrayResource` parses directly. The packet owns these bytes, so an array it
@@ -431,14 +432,14 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         report.add(
             "error",
             "array.no_array_dimensions_table",
-            f"{len(owned)} packet-owned array(s) but no core.array_dimensions, so no axis is named (R3 §3.0)",
+            f"{len(owned)} packet-owned array(s) but no core.array_dimensions, so no axis is named (`02` §6)",
         )
     for resource in owned:
         _check_one_array(resource, packet.array_resource(resource.resource_id), extents, report)
 
 
-#: The codec floor, per Zarr version (R21 §3.3). A codec's readability is a property of the
-#: pair `(zarr_format, codec)` rather than of the codec: `gzip` is in R3 §7.2's baseline and
+#: The codec floor, per Zarr version (`03` §6.4). A codec's readability is a property of the
+#: pair `(zarr_format, codec)` rather than of the codec: `gzip` is in `03` §6.4's baseline and
 #: Zarr.jl reads it in v3 and not in v2, because the two versions name codecs differently and
 #: the library registers only the v3 spelling. A MUST that one of the two target languages
 #: cannot honour is not a floor, so v2's row omits it.
@@ -449,7 +450,7 @@ FLOOR = {
 
 
 def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = False) -> None:
-    """Layer 1b: manifest-internal codec consistency (R15 §4, level 1).
+    """Layer 1b: manifest-internal codec consistency (`04` §5.3, level 1).
 
     Both sides are manifest fields, so this holds offline. Whether a declared codec matches
     the array's actual metadata is level 2 for packet-owned arrays and level 3 -- the
@@ -463,7 +464,7 @@ def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = F
     declared: set[str] = set()
     for resource in packet.resources():
         declared |= set(resource.codecs)
-        # R14 §2.3's "absolute uri implies external" and R21 §3.2's "zarr_v2 implies external"
+        # `04` §5.1's "absolute uri implies external" and `03` §6.1's "zarr_v2 implies external"
         # are stated in the manifest JSON Schema, which refuses such a packet at open. Saying
         # them again here would be a second, weaker copy that never runs. The floor is not
         # expressible there -- it is a set relation between two fields -- so it lives here.
@@ -473,7 +474,7 @@ def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = F
                 "info",
                 "codec.outside_the_floor",
                 f"{resource.resource_id} uses {', '.join(beyond)}, outside the {profile} floor; "
-                "conforming but not portable by default (R14 §2.2)",
+                "conforming but not portable by default (`03` §6.4)",
             )
     summary = set(packet.manifest.required_codecs)
     if declared != summary:
@@ -485,7 +486,7 @@ def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = F
         report.add("error", "manifest.required_codecs_is_the_union", "; ".join(detail))
 
     # An external resource's codecs, sha256 and size_bytes are claims the default mode does
-    # not verify (R14 §2.3.1, R15 §4). Say so, rather than let "passed" imply otherwise. The
+    # not verify (`03` §8, `04` §5.3). Say so, rather than let "passed" imply otherwise. The
     # requested mode reports what it resolved instead, so the two never both speak.
     if not resolved and (names := [r.resource_id for r in packet.resources() if r.is_external]):
         report.add(
@@ -498,12 +499,12 @@ def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = F
 
 
 def _check_owned_digests(packet: Packet, report: Report) -> None:
-    """R52 §2.3: recompute the digest of every packet-owned resource that records one.
+    """`03` §10: recompute the digest of every packet-owned resource that records one.
 
     A disagreement is an **error**, where the external equivalent is one too but means something
     weaker. An external resource that changed is the world moving under a packet that never
-    promised otherwise (R14 §2.3.1); a packet-owned file that changed is the packet being wrong
-    about itself, and it is the premise R35 §2 spends to bound revalidation.
+    promised otherwise (`03` §8); a packet-owned file that changed is the packet being wrong
+    about itself, and it is the premise `03` §9.4 spends to bound revalidation.
 
     A resource recording no digest is not checked, and the count is reported rather than passed
     over -- every packet built before R52 records none.
@@ -529,14 +530,14 @@ def _check_owned_digests(packet: Packet, report: Report) -> None:
                 "error",
                 "owned.sha256",
                 f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed[:16]}… — "
-                "a packet-owned file is immutable (R14 §2.3) and R35 §2 bounds revalidation on that",
+                "a packet-owned file is immutable (`04` §5.1) and `03` §9.4 bounds revalidation on that",
             )
     if skipped:
         report.add(
             "warning",
             "owned.no_checksum",
             f"{len(skipped)} packet-owned resource(s) record no sha256, so immutability was not "
-            "checked for them (R52 §2.3)",
+            "checked for them (`03` §10)",
             [(name,) for name in skipped[:20]],
         )
     if checked:
@@ -553,13 +554,13 @@ def _check_sources(packet: Packet, report: Report) -> None:
     Three things are structural and one is not. A `source` names a body of data rather than a
     location, so the entry's `uri` MUST be relative to it (R80 §2.1) and the entry MUST be
     external, since the mechanism exists for bytes the packet does not own. `sources.json` MUST
-    NOT be a declared resource (R80 §2.3): being outside the manifest is what keeps R14 §2.3's
+    NOT be a declared resource (`04` §5.5): being outside the manifest is what keeps `04` §5.1's
     immutability off it, and a packet that declared it would freeze the one file that has to
     stay editable.
 
-    Whether a source **resolves** is not structural and is reported rather than failed. R80 §2.4
+    Whether a source **resolves** is not structural and is reported rather than failed. `04` §5.5
     makes an unresolved source a fact about the reader's situation -- which mirrors it can reach
-    -- and R14 §2.3.2 keeps structural validation off the network, so this reports what the
+    -- and `04` §5.3 keeps structural validation off the network, so this reports what the
     packet names and leaves reachability to the mode that asks for it.
     """
     named: dict[str, list[str]] = {}
@@ -570,8 +571,8 @@ def _check_sources(packet: Packet, report: Report) -> None:
                 report.add(
                     "error",
                     "sources.declared",
-                    f"{resource.resource_id} declares {SOURCES_FILENAME} as a resource; R80 §2.3 keeps it "
-                    "outside the manifest so R14 §2.3's immutability does not reach it",
+                    f"{resource.resource_id} declares {SOURCES_FILENAME} as a resource; `04` §5.5 keeps it "
+                    "outside the manifest so `04` §5.1's immutability does not reach it",
                 )
             continue
         named.setdefault(source, []).append(resource.resource_id)
@@ -600,20 +601,20 @@ def _check_sources(packet: Packet, report: Report) -> None:
         f"{len(named) - len(unresolved)} located by a resolution document",
     )
     if unresolved:
-        # A fact, not a defect (R80 §2.4): the packet is conforming and this reader cannot reach
+        # A fact, not a defect (`04` §5.5): the packet is conforming and this reader cannot reach
         # those bytes. Reported so a report says which, rather than leaving it to a later failure.
         report.add(
             "info",
             "sources.unresolved",
-            f"{len(unresolved)} source(s) no available resolution document locates (R80 §2.4)",
+            f"{len(unresolved)} source(s) no available resolution document locates (`04` §5.5)",
             [(name, ", ".join(named[name][:3])) for name in unresolved[:20]],
         )
 
 
 def _resolve_external(packet: Packet, report: Report, checksums: bool = False, store_digests: bool = False) -> None:
-    """Level 3 (R15 §4): resolve external URIs and check what was claimed about them.
+    """Level 3 (`04` §5.3): resolve external URIs and check what was claimed about them.
 
-    Requested explicitly, never by default. R14 §2.3.2 keeps structural validation off the
+    Requested explicitly, never by default. `04` §5.3 keeps structural validation off the
     network because reachability, credentials and whether the validator is offline are
     properties of the reader's situation rather than of the packet.
 
@@ -635,7 +636,7 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False, s
         separately for that reason.
     store_digests : bool, default False
         Also compare each declared member's `store_digest` against what the store reports now
-        (R51 §2.3). The listing already performed carries the values, so this is the same 1.31 s
+        (`04` §5.4). The listing already performed carries the values, so this is the same 1.31 s
         the level below it costs, and it answers a weaker question than `checksums` does.
     """
     checked = 0
@@ -659,7 +660,7 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False, s
             "warning",
             "external.no_checksum",
             f"{len(unchecksummed)} of {checked} resolved resource(s) record no sha256, so a digest "
-            "was asked for and nothing was compared against (R36 §2.4)",
+            "was asked for and nothing was compared against (`04` §5.2)",
             [(name,) for name in unchecksummed],
         )
     if checked:
@@ -726,12 +727,12 @@ def _compare_external(
 
 
 def _compare_members(resource: Any, declared: Any, found: Any, report: Report, store_digests: bool) -> list[str]:
-    """Check a declared member list against what the store holds (R51 §2.1).
+    """Check a declared member list against what the store holds (`04` §5.4).
 
     This is what makes level 3a per-member rather than aggregate: `size_bytes` on the resource is
     a total, so two members changing in opposite directions leave it correct. It is also what
-    enforces R51 §2.1's rule that a digested listing is the declared one -- where the declared
-    members and the store agree, R36 §2.2's canonical listing is the same either way, so `sha256`
+    enforces `04` §5.4's rule that a digested listing is the declared one -- where the declared
+    members and the store agree, `04` §5.4's canonical listing is the same either way, so `sha256`
     and `members` cannot describe different things.
     """
     fields = ["members"]
@@ -786,7 +787,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             "warning",
             "external.no_store_digest",
             f"{resource.resource_id}: {len(skipped)} of {len(claimed)} member(s) not checked -- the "
-            "manifest recorded no store digest, or the store offers none (R51 §2.3)",
+            "manifest recorded no store digest, or the store offers none (`04` §5.4)",
             [(key,) for key in skipped[:20]],
         )
     if compared:
@@ -829,7 +830,7 @@ def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:
     An axis whose coordinates are a rule -- R20's origin and step -- fixes spacing and not
     extent, so its length is None and only its presence is checkable. An axis whose coordinates
     are a table has one row per position, so that table's row count for the asset and axis *is*
-    the axis length. This is the shape a packet asserts without ever storing a shape (R3 §3.0:
+    the axis length. This is the shape a packet asserts without ever storing a shape (`02` §6:
     the array declares its own, and the tables must not restate it).
     """
     # Read only what is there. A column the registry requires and a packet omits is the schema
@@ -887,7 +888,7 @@ def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:
 
 
 def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, Any], report: Report) -> list[str]:
-    """Check an external array's stored shape against what the packet's tables assert (R3 §3.0).
+    """Check an external array's stored shape against what the packet's tables assert (`02` §6).
 
     This is the check that catches a change actually invalidating the packet. A re-generated
     array with a different channel count leaves `core.array_channels` describing positions that
@@ -1114,7 +1115,7 @@ def _ordering_scan(
 
 
 def _duplicated_columns(handle: Any, spec: Mapping[str, Any]) -> list[tuple[str, str]]:
-    """Pairs of this table's columns holding equal values in every row (R95 §3.3).
+    """Pairs of this table's columns holding equal values in every row (`07` §4).
 
     Bounded by the footer, not by a row sample. Two columns can hold equal values in every row
     only if their per-chunk minimum, maximum and null count agree, which Parquet already records,
@@ -1147,7 +1148,7 @@ def _duplicated_columns(handle: Any, spec: Mapping[str, Any]) -> list[tuple[str,
 
 
 def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
-    """R95 §3.3. Reported at `info` and never as a failure.
+    """`07` §4. Reported at `info` and never as a failure.
 
     R95 §2.3 measures why it may not fail: four identifiers numbered independently coincide on
     both packaged sessions, which is a fact about a packet rather than a defect in it.
@@ -1163,11 +1164,11 @@ def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], re
 
 
 def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
-    """R97 §3.1. A declared `metadata` column that no row of the packet fills, at `info`.
+    """`02` §8.6. A declared `metadata` column that no row of the packet fills, at `info`.
 
-    Whether a table in R97 §3.1's middle band declares one is a judgement, and this is the
+    Whether a table in `02` §8.6's middle band declares one is a judgement, and this is the
     evidence against which it is revisited: `core.spike_events` carried the column on
-    286,896,563 rows that no adapter ever filled. Never a failure — R2 §5 makes an optional
+    286,896,563 rows that no adapter ever filled. Never a failure — `02` §6 makes an optional
     column's absence conforming, and a source with nothing unmodelled to say is the ordinary case.
 
     Bounded by the footer. A null count per row group is what Parquet already records, so no
@@ -1196,15 +1197,15 @@ def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, An
 
 
 def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
-    """R101 §3.11. A value outside a column's reserved set, at `info`.
+    """`02` §9.3. A value outside a column's reserved set, at `info`.
 
-    Never a failure: the vocabulary is open (R8 §4) and an unrecognised value is exactly what
+    Never a failure: the vocabulary is open (`02` §9.3) and an unrecognised value is exactly what
     openness admits. What the report is for is the case R101 §2.5 measured — `core.array_assets`
     carried `dense_array_asset`, a manifest resource kind, in the column reserving `raw`, `ap`,
     `lfp` and `waveform`, and nothing could see it because no column declared a set.
 
-    Whether a value is a *synonym* for a reserved one stays uncheckable, so R8 §4's prohibition
-    binds a writer and no rule (R67 §2.4).
+    Whether a value is a *synonym* for a reserved one stays uncheckable, so `02` §9.3's prohibition
+    binds a writer and no rule (`01` §3.5).
     """
     for resource_id, handle in present.items():
         for column in tables[resource_id]["columns"]:
@@ -1233,7 +1234,7 @@ def _check_ordering(
     report: Report,
     scan: Collection[str] | None = None,
 ) -> set[str]:
-    """Layer 3: declared sort order, and the uniqueness that order settles (R10 §2, R12 §2).
+    """Layer 3: declared sort order, and the uniqueness that order settles (`03` §5.3, `03` §5.3).
 
     One pass answers both. A table sorted by its primary key puts duplicates next to each
     other, so comparing neighbours — which this scan already does to find descents — decides
@@ -1260,11 +1261,11 @@ def _check_ordering(
 
 def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], report: Report) -> bool:
     """One table's ordering scan. True where uniqueness must fall back to the aggregate."""
-    # R92 §2.2 puts every table in its key's order unless `03` §5.4 overrides it, and R93 §3.3
+    # `03` §5.3 puts every table in its key's order unless `03` §5.4 overrides it, and R93 §3.3
     # moved that list out of the registry, so both come from `escapewheel_reader.ordering`.
     keys = stored_order(resource_id, spec)
     unique = spec["primary_key"] if adjacency_settles_uniqueness(resource_id, spec) else None
-    # R92 §2.3: the declarations this table's adjacency argument leans on.
+    # `03` §5.3: the declarations this table's adjacency argument leans on.
     determined = [c["name"] for c in spec.get("columns", ())
                   if c["name"] in keys and "determined_by" in c
                   and set(c["determined_by"]) <= set(spec["primary_key"])] if unique else []
@@ -1304,7 +1305,7 @@ def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], r
             if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
                 duplicated.append((start, _row_at(batch, unique, 0)))
             duplicated.extend((start + offset, _row_at(batch, unique, offset)) for offset in repeats)
-            # R92 §2.3. Two rows sharing the key must agree on every column declared a function
+            # `03` §5.3. Two rows sharing the key must agree on every column declared a function
             # of it; where they do not, the declaration is false and the waiver it earns is
             # unearned. Reported apart from the duplicate, because the repair is different.
             for offset in repeats:
@@ -1336,7 +1337,7 @@ def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], r
             [(f"row {i}", str(prev), str(cur)) for i, prev, cur in offending[:ORDER_REPORT]],
         )
         # Adjacency settles uniqueness only for a file actually in order: a duplicate anywhere but
-        # beside its twin is invisible to a scan of neighbours. R92 §2.2 makes the departure an
+        # beside its twin is invisible to a scan of neighbours. `03` §5.3 makes the departure an
         # error, and uniqueness still falls back to the aggregate rather than being skipped.
         return bool(unique)
     if duplicated:
@@ -1471,7 +1472,7 @@ def _spill_beside(packet: Packet) -> Iterator[Path | None]:
     Beside the packet, not inside it. The filesystem has to be the packet's -- `/tmp` is tmpfs
     on several distributions, so spilling there consumes the memory the limit exists to bound
     -- but the packet root is the wrong place to put it: validating a packet would write into
-    a directory whose bytes are supposed to be settled (R14 §2.3), leave it behind, and fail
+    a directory whose bytes are supposed to be settled (`04` §5.1), leave it behind, and fail
     outright on read-only media. Measured on 287 M spikes, the uniqueness check spills 26 GB,
     which is 31x the packet it is checking.
     """
@@ -1572,7 +1573,7 @@ def _resolve_column(spec: Mapping[str, Any]) -> str | None:
 def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, str | None]:
     """Every resource a discriminator may name, mapped to the column a paired value joins to.
 
-    Built from the packet's registry *and* the extension registries it carries, because R49 §2.4
+    Built from the packet's registry *and* the extension registries it carries, because `02` §8.3
     lets a kind name an extension table and R55 §2.5 makes that the case the check must reach --
     the one whose hand-written union over core matched no branch and passed in silence.
     """
@@ -1624,12 +1625,12 @@ def _check_extensions(
     advisory: bool,
     kinds: Mapping[str, str | None] | None = None,
 ) -> None:
-    """Validate each extension registry the packet carries (R17 §4).
+    """Validate each extension registry the packet carries (`05` §5.4).
 
     R17 §3's claim is that nothing here is per-extension: the same `generate` produces an
     extension's Tier 1 checks from its structure and carries its Tier 2 rules, because an
     extension registry *is* a registry document. What this function adds is which tables its
-    references may resolve against -- core's, since R17 §2 lets an extension reference them and
+    references may resolve against -- core's, since `09` §2 lets an extension reference them and
     forbids the reverse -- and the layer its findings are filed under.
 
     Findings are recorded against the extension, so they cannot change the packet's core verdict.
@@ -1698,7 +1699,7 @@ def validate(
     """Validate a packet.
 
     The registry is taken from the packet unless one is supplied. Nothing is bundled: a
-    packet SHOULD embed the registry it was written against (R2 §8), and a bundled copy
+    packet SHOULD embed the registry it was written against (`02` §9.2), and a bundled copy
     would go stale against the reference one.
 
     Parameters
@@ -1723,25 +1724,25 @@ def validate(
         handed to Parquet were ordered" and "the file is ordered", and that gap is closed by
         `_write_stream` making each batch exactly one row group.
     recheck : collection of str, optional
-        Resources this call has just written, restricting the rules to those R35 §5 obliges to
+        Resources this call has just written, restricting the rules to those `03` §9.4 obliges to
         run: the ones attached to such a resource, and the ones whose query names one. `None`,
         the default, runs every rule, which is what a first commit and a packet of unknown
-        provenance both need. An amendment passes what it writes, because R32 §3 forbids it
-        modifying anything else and R14 §2.3 declares those bytes immutable, so a rule reading
+        provenance both need. An amendment passes what it writes, because `03` §9.2 forbids it
+        modifying anything else and `04` §5.1 declares those bytes immutable, so a rule reading
         only them is already answered.
     external : bool, default False
         Resolve external URIs and check the `sha256`, `size_bytes` and `codecs` claimed for
-        them (R15 §4, level 3). Off by default because R14 §2.3.2 forbids structural validation
+        them (`04` §5.3, level 3). Off by default because `04` §5.3 forbids structural validation
         reaching for a resource the packet does not own: whether one is reachable is a property
         of the reader's situation, not of the packet. An unreachable resource is a warning; one
         that resolves and disagrees with its claim is an error.
     checksums : bool, default False
-        Recompute every recorded `sha256`: each packet-owned resource (R52 §2.3), and with
+        Recompute every recorded `sha256`: each packet-owned resource (`03` §10), and with
         `external`, each external one too. Separate because it reads every byte -- 0.60 s for the
         1,209 MB a packet owns, against 75 s for the 6.8 GB of LFP it merely references.
     store_digests : bool, default False
         With `external`, also compare each member's recorded `store_digest` against what the
-        store reports now (R51 §2.3). This is the level between the other two: it costs the
+        store reports now (`04` §5.4). This is the level between the other two: it costs the
         listing already performed, and it answers "has anything changed in place" rather than
         "are these the bytes". A member with nothing recorded, or a store offering nothing, is
         not checked, and the report says how many were skipped.

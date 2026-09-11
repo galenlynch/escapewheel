@@ -1,6 +1,6 @@
 """Does a session with several interval kinds want one base table, or one table per kind?
 
-R54 §2.1 argues for a base table on the strength of a polymorphic query -- align to every
+`01` §3.10 argues for a base table on the strength of a polymorphic query -- align to every
 interval in a session without knowing the paradigm -- and R54 §5 records that nothing does that
 yet, so the argument is unmeasured. This builds both shapes over the same rows and asks what each
 costs a consumer.
@@ -30,7 +30,7 @@ def col(name, type_, presence, role, **extra):
 
 
 def base_registry():
-    """R54 §2.1: one `core.intervals`, keyed by (session, kind, id)."""
+    """`01` §3.10: one `core.intervals`, keyed by (session, kind, id)."""
     registry = json.loads(json.dumps(REGISTRY))
     registry["tables"]["core.intervals"] = {
         "columns": [
@@ -49,7 +49,7 @@ def base_registry():
         ],
         "sort": ["session_id", "interval_kind", "interval_id"],
         "rules": [],
-        "since": "R54 §2.1",
+        "since": "`01` §3.10",
     }
     return registry
 
@@ -137,14 +137,14 @@ def build(root, *, based):
 
 
 def ask(root, *, based):
-    """The two questions R54 §2.1 claims the base table answers, and what each costs."""
+    """The two questions `01` §3.10 claims the base table answers, and what each costs."""
     from escapewheel_reader import open_packet
 
     packet = open_packet(root)
     out = {}
 
     # Generic on purpose: a consumer that has never heard of either extension. Naming them would
-    # answer a different question -- R54 §2.1's claim is about not having to.
+    # answer a different question -- `01` §3.10's claim is about not having to.
     t = time.perf_counter()
     if based:
         every = packet.table("core.intervals")

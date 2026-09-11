@@ -107,7 +107,7 @@ class SessionSource(Compensates):
     >>> source.observation_intervals(harp, ["left_lick_time"])  # doctest: +SKIP
     """
 
-    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
     PRODUCES = frozenset(
@@ -121,7 +121,7 @@ class SessionSource(Compensates):
         }
     )
 
-    #: R87 §2.2: `session.json` names the subject and `subject.json` describes it, and the recipe
+    #: `05` §3.4: `session.json` names the subject and `subject.json` describes it, and the recipe
     #: may declare either by hand. A build compares each against what the recipe says and refuses
     #: only on `subject.subject_id`, which is the one fact a reader resolves across packets.
     STATES: ClassVar[dict[str, str]] = {
@@ -443,9 +443,9 @@ class SessionSource(Compensates):
         both already spell the name as NCBI Taxonomy does, and a writer that guessed one from a
         common name would be inventing a fact (R101 §3.4).
 
-        Everything the standard does not model goes to `metadata` (R97 §3.1), the taxon identifier
+        Everything the standard does not model goes to `metadata` (`02` §8.6), the taxon identifier
         included -- `NCBI:txid10090` is what survives a renaming the name does not (R59 §1), and no
-        column holds one. The name itself is not repeated there, which R97 §3.3 forbids.
+        column holds one. The name itself is not repeated there, which `02` §8.6 forbids.
         """
         document = self._subject
         if not document:
@@ -479,11 +479,11 @@ class SessionSource(Compensates):
 
         Two shapes, because a source states a calibration more than one way (R89 §1.3). A
         `rig.json` entry is a curve, and its type is the quantity its own output label names --
-        the vocabulary is open (R8 §4), so the source's word for what it measured is a value
+        the vocabulary is open (`02` §9.3), so the source's word for what it measured is a value
         rather than something to map onto a closed set. An `ephys_module` states a manipulator
         transform, one calibration cited by every module sharing its file and timestamp (R89
         §1.4), whose content is an array this adapter does not read: the row records that the
-        calibration was in force and that the packet holds nothing further (R89 §2.5).
+        calibration was in force and that the packet holds nothing further (`02` §12.3).
         """
         rows: list[dict[str, Any]] = []
         for entry in self._rig.get("calibrations", []) or []:
@@ -517,7 +517,7 @@ class SessionSource(Compensates):
                 "input_unit": None,
                 "output_unit": None,
                 # R89 §2.4 wants the array asset; this adapter does not read the `.npy`, so the
-                # content is unrecorded (R89 §2.5). The path is `calibration_name`, which is the
+                # content is unrecorded (`02` §12.3). The path is `calibration_name`, which is the
                 # identifier the source used for it, so nothing repeats it in `metadata`.
                 "array_asset_id": None,
                 "detail_kind": None,
@@ -528,7 +528,7 @@ class SessionSource(Compensates):
     def calibration_points(self) -> list[dict[str, Any]]:
         """`core.calibration_points`: the paired series of each calibration that is a curve.
 
-        `rig.json` holds two parallel JSON lists, which R3 §3.0 forbids as a column; a series of
+        `rig.json` holds two parallel JSON lists, which `02` §6 forbids as a column; a series of
         unequal lengths is a defect in the source rather than something to truncate.
         """
         rows: list[dict[str, Any]] = []
@@ -553,7 +553,7 @@ class SessionSource(Compensates):
         """`core.calibration_devices`: the devices each calibration covers.
 
         The assembly name is the device name the acquisition chain gives the same probe, and the
-        writer numbers both from that name (R53 §2.5), so the reference resolves without this
+        writer numbers both from that name (`05` §8), so the reference resolves without this
         adapter seeing `core.devices`. A calibration covering a device the packet does not hold
         gets no row, which is a fact rather than a defect (R89 §2.2) -- which is why the lick
         spouts of a water calibration appear here only if some source built them.
@@ -579,7 +579,7 @@ class SessionSource(Compensates):
     def _calibrated_at(self, raw: str | None, label: str) -> datetime | None:
         """When the calibration was measured, in UTC, or None where the source states none.
 
-        Null rather than invented (R66 §2.1). A stated offset is kept here where `_instant`
+        Null rather than invented (`01` §3.5). A stated offset is kept here where `_instant`
         discards one: a calibration is dated to the day and its offset is the rig's own, where
         `session_start_time` carries an offset this schema gets wrong often enough to distrust.
         A value with no offset falls back to the declared zone.
@@ -689,7 +689,7 @@ def _unit(label: str | None) -> str | None:
 def _quantity(label: str | None) -> str | None:
     """Return a series label's quantity as a vocabulary value: `water volume (ul):` to `water_volume`.
 
-    The vocabulary is open (R8 §4), so what the source called the quantity it measured is a value
+    The vocabulary is open (`02` §9.3), so what the source called the quantity it measured is a value
     rather than something to map onto a closed set this specification does not have.
     """
     if label is None:

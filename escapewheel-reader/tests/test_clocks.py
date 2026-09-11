@@ -55,7 +55,7 @@ def test_further_than_one_interval_is_undefined():
 
 
 def test_the_middle_of_a_wide_gap_is_undefined():
-    """R27 §5.3 applies one threshold both ways: a hole between anchors is the same
+    """`01` §3.9 applies one threshold both ways: a hole between anchors is the same
     epistemic situation as being past the end."""
     gapped_t = np.array([0, AP, 2 * AP, 20 * AP, 21 * AP, 22 * AP], dtype=np.int64)
     gapped_p = (gapped_t.astype(np.float64) * HARP / AP).astype(np.int64)
@@ -86,7 +86,7 @@ def test_extrapolation_uses_the_fitted_rate_not_the_last_segment():
 
 
 def test_extrapolation_starts_at_the_terminal_anchor():
-    """R37 §3.1: the offset is the terminal anchor's parent tick, not a global intercept.
+    """`01` §3.9: the offset is the terminal anchor's parent tick, not a global intercept.
 
     Displacing every anchor by a constant moves the extrapolation by exactly that constant,
     which is what "anchored at the terminal anchor" means and what an intercept-based
@@ -194,7 +194,7 @@ class _Sessions:
 
 
 def test_a_packet_that_says_nothing_maps_at_the_default():
-    """R99 §3.1: a null is a writer that stayed within R27 §5.3's default."""
+    """R99 §3.1: a null is a writer that stayed within `01` §3.9's default."""
     assert declared_bound(_Sessions(None)) == BOUND
 
 

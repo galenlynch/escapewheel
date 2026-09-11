@@ -89,7 +89,7 @@ def test_the_packet_declares_the_extension_and_carries_its_registry(tmp_path, re
 
 
 def test_the_entry_says_which_extension_owns_it(tmp_path, registry, minimal):
-    """R17 §4: a reader knows what it holds without parsing the extension's registry."""
+    """`05` §5.4: a reader knows what it holds without parsing the extension's registry."""
     root = tmp_path / "s001"
     _commit(root, registry, minimal)
     entry = next(
@@ -102,7 +102,7 @@ def test_the_extension_is_validated_and_reported_apart(tmp_path, registry, minim
     root = tmp_path / "s001"
     _commit(root, registry, minimal, choice="sideways")
     report = validate(open_packet(root))
-    assert report.passed, "core conformance is unchanged by an extension's finding (R17 §4)"
+    assert report.passed, "core conformance is unchanged by an extension's finding (`05` §5.4)"
     assert not report.extension_passed("task")
     assert "task.trials.choice.in_vocabulary" in {f.check for f in report.findings}
 
@@ -417,7 +417,7 @@ def test_a_file_source_needs_no_python_of_ours(tmp_path, registry, minimal):
     root = tmp_path / "p"
     assert writer.commit(root).passed
 
-    # The file carried a name; the packet holds the number the writer assigned (R53 §2.5).
+    # The file carried a name; the packet holds the number the writer assigned (`05` §8).
     table = open_packet(root).table("vrf.sites")
     assert table.schema.field("session_id").type == pa.int32()
     assert table.column("site_id").to_pylist() == [0, 1]

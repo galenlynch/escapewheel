@@ -115,7 +115,7 @@ def build(root: Path, *, seconds=(1.0, 2.0), trial_stop=None, session_offset="-0
     text(electrodes / "electrode_name", ["e0", "e0"])  # repeats, as the real file's does
     text(electrodes / "location", ["CA1", "unknown"])
     # The four the AIND exporter adds. R59 §2 promoted the first two to columns of
-    # core.electrode_coordinates and declined the other two, which is the split R97 §3.3
+    # core.electrode_coordinates and declined the other two, which is the split `02` §8.6
     # turns on: only what no column holds may travel in the bag.
     array(electrodes / "ccf_id", np.array([382, 0], dtype=np.int64))
     text(electrodes / "ccf_acronym", ["CA1", "root"])

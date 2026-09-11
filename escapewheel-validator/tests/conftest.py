@@ -42,7 +42,7 @@ def _col(name, type_, presence, **extra):
         # says otherwise, since a fixture invents its own ids rather than carrying anyone's.
         entry.setdefault("identity", "assigned")
     if type_ == "string" and role != "discriminator":
-        # R101 §3.1: required of every string column but a discriminator. `closed` where the
+        # `02` §9.3: required of every string column but a discriminator. `closed` where the
         # fixture declares an `enum`, and otherwise `free` -- a fixture's strings are names and
         # labels, and one meaning to be a vocabulary says so.
         entry.setdefault("vocabulary", "closed" if "enum" in entry else "free")

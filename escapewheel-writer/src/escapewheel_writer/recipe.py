@@ -40,19 +40,19 @@ SAMPLED = frozenset({"sorter"})
 
 RECIPE_SUPPLIES = ("core.sessions", "core.processing_runs")
 
-#: Resources the recipe supplies only where no source owns them (R87 §2.8). `core.subjects` left
+#: Resources the recipe supplies only where no source owns them (`05` §3.1). `core.subjects` left
 #: RECIPE_SUPPLIES because the NWB states every column of it and the row was built and discarded;
 #: a `[subject]` block is now the fallback for a packet whose sources name no subject.
 RECIPE_MAY_SUPPLY = ("core.subjects",)
 
-#: Where a resource goes when more than one adapter can produce it (R63 §2.2). The winner is the
+#: Where a resource goes when more than one adapter can produce it (`05` §3.4). The winner is the
 #: source that knows most about it: the NWB knows a probe's type and manufacturer where the sorter
 #: knows only the stream, and the waveform source is the only one that can see a unit's channel
 #: support. Held here rather than in the scaffolder, so a draft and a build resolve alike.
 PREFERRED = {
     # `subject.json` is the record `general/subject` is a projection of: it carries a
     # `background_strain` key the projection lacks and a date of birth with no timezone. Safe to
-    # declare because R108 §3.1 refuses a build where preferring it drops a fact the NWB stated.
+    # declare because `05` §3.4 refuses a build where preferring it drops a fact the NWB stated.
     "core.subjects": "session",
     "core.probes": "nwb",
 }
@@ -70,7 +70,7 @@ SHARED = frozenset({"core.clocks", "core.clock_anchors", "core.clock_observation
 def states(kind: str) -> Mapping[str, str]:
     """Return the recipe fields an adapter of this kind can state, to the attribute holding each.
 
-    R87 §2.2 puts the obligation on the build rather than on the adapter, so a kind whose adapter
+    `05` §3.4 puts the obligation on the build rather than on the adapter, so a kind whose adapter
     declares nothing is reported by `check` rather than silently treated as stating nothing --
     which is the failure `produces` has, and which R63 §4 left open.
     """
@@ -82,7 +82,7 @@ def states(kind: str) -> Mapping[str, str]:
 
 
 def declares_states(kind: str) -> bool:
-    """Whether this kind's adapter declares `STATES` at all, empty or not (R87 §2.2)."""
+    """Whether this kind's adapter declares `STATES` at all, empty or not (`05` §3.4)."""
     from . import sources
 
     adapter = sources.ADAPTERS.get(kind)
@@ -90,7 +90,7 @@ def declares_states(kind: str) -> bool:
 
 
 def state_accessors(kind: str) -> Mapping[str, str]:
-    """`STATES` entries whose named attribute the adapter class does not expose (R87 §2.2)."""
+    """`STATES` entries whose named attribute the adapter class does not expose (`05` §3.4)."""
     from . import sources
 
     adapter = sources.ADAPTERS.get(kind)
@@ -98,7 +98,7 @@ def state_accessors(kind: str) -> Mapping[str, str]:
 
 
 def produces(kind: str) -> frozenset[str]:
-    """Return what an adapter of this kind can supply (R63 §2.1).
+    """Return what an adapter of this kind can supply (`05` §3.4).
 
     Imported here rather than at module load: `Recipe` is meant to be parseable without the
     adapters, and this is the one thing it needs from them. The adapters cost 0.16 s to import
@@ -133,7 +133,7 @@ class Problem:
     ----------
     level : str
         ``error``, ``warning`` or ``info``. Only an error refuses the recipe; ``info`` records
-        something the build will do, such as an override it will apply (R87 §2.3).
+        something the build will do, such as an override it will apply (`05` §3.5).
     message : str
         What is wrong, naming the recipe's own vocabulary rather than the registry's internals.
     """
@@ -222,7 +222,7 @@ class SourceSpec:
     owns: tuple[str, ...]
     contributes: tuple[str, ...] = ()
     options: Mapping[str, Any] = field(default_factory=dict)
-    #: R63 §2.2: whether the recipe stated `owns`. Silence means the whole of `PRODUCES`, so it
+    #: `05` §3.4: whether the recipe stated `owns`. Silence means the whole of `PRODUCES`, so it
     #: must be distinguishable from an explicit empty list, which narrows to nothing.
     narrowed: bool = True
 
@@ -233,7 +233,7 @@ class SourceSpec:
 
 
 def _resolve_ownership(sources: tuple[SourceSpec, ...]) -> tuple[SourceSpec, ...]:
-    """Fill in `owns` for entries that declared none (R63 §2.2).
+    """Fill in `owns` for entries that declared none (`05` §3.4).
 
     Silence means the whole of that adapter's `PRODUCES`, less what an explicitly narrowed source
     already owns, less what the recipe itself writes, and less what a preference gives to another
@@ -300,13 +300,13 @@ class Recipe:
     digest : str
         ``sha256`` of the file, so a run record can name exactly these parameters.
     extensions : tuple of str
-        Extension registries this packet carries (R17 §2), each named either by a **path** to a
+        Extension registries this packet carries (`09` §2), each named either by a **path** to a
         document beside the recipe, or by the **id** an installed distribution registers under
         `escapewheel.extensions`. Kept as written rather than resolved here, because which one a
         value is cannot be decided without looking at the filesystem and the installed
         distributions -- see `extensions.load`.
     registry : Path or None
-        The registry to write against. Declared here rather than defaulted, because R2 §8 has
+        The registry to write against. Declared here rather than defaulted, because `02` §9.2 has
         the packet embed the registry it was written against -- so which one that is belongs in
         the parameters, not in whichever copy the tool happened to find.
     document : Mapping
@@ -323,7 +323,7 @@ class Recipe:
     description: str | None
     session: Mapping[str, Any]
     subject: Mapping[str, Any]
-    #: R87 §2.5: `block.field` to the reason the recipe's value supersedes the source's.
+    #: `05` §3.6: `block.field` to the reason the recipe's value supersedes the source's.
     overrides: Mapping[str, str]
     #: Parquet encodings this build forces, `resource.column` to `{encoding, reason}`. Declared
     #: here because an extension reaches the writer across a file or a subprocess and cannot hand
@@ -489,7 +489,7 @@ class Recipe:
         claimed = self._claims("claims")
         for resource in RECIPE_SUPPLIES:
             claimed.setdefault(resource, []).append("recipe")
-        # R87 §2.8: the recipe supplies these only where no source owns them, so a `[subject]`
+        # `05` §3.1: the recipe supplies these only where no source owns them, so a `[subject]`
         # block still satisfies a foreign key into `core.subjects` and stops satisfying it the
         # moment a source claims the table.
         for resource in RECIPE_MAY_SUPPLY:
@@ -514,7 +514,7 @@ class Recipe:
             A parsed registry document, supplying the table names and their references.
         extensions : sequence of Mapping
             Extension registries, whose tables a source may also own. An extension's references
-            resolve against core; core's never resolve against an extension, which R17 §2
+            resolve against core; core's never resolve against an extension, which `09` §2
             requires by forbidding core to reference one at all.
 
         Returns
@@ -559,7 +559,7 @@ class Recipe:
         )
 
     def _states_problems(self) -> list[str]:
-        """Adapters a build cannot ask which recipe fields they state (R87 §2.2).
+        """Adapters a build cannot ask which recipe fields they state (`05` §3.4).
 
         Refused rather than defaulted: an adapter that declares nothing would otherwise read as
         one that states nothing, which is the failure R63 §4 records for `PRODUCES`.
@@ -576,12 +576,12 @@ class Recipe:
 
     @property
     def declared_facts(self) -> dict[str, Any]:
-        """`block.field` to the value the recipe declares for it (R87 §2.2)."""
+        """`block.field` to the value the recipe declares for it (`05` §3.4)."""
         blocks = {"session": self.session, "subject": self.subject}
         return {f"{block}.{k}": v for block, fields in blocks.items() for k, v in fields.items()}
 
     def stated_by(self) -> dict[str, list[str]]:
-        """`block.field` to the source kinds in this recipe that state it (R87 §2.2)."""
+        """`block.field` to the source kinds in this recipe that state it (`05` §3.4)."""
         by_field: dict[str, list[str]] = {}
         for kind in sorted({spec.kind for spec in self.sources}):
             for fact in states(kind):
@@ -613,7 +613,7 @@ class Recipe:
         return found
 
     def _declared_fact_problems(self) -> tuple[list[str], list[str], list[str]]:
-        """Errors, warnings and notes about declared facts and their overrides (R87 §2.3, §2.5).
+        """Errors, warnings and notes about declared facts and their overrides (`05` §3.5, §2.5).
 
         Only an empty override reason is an error. A field a source states is a warning because
         agreement is the likely case and only the build can tell, and a stale override costs a
@@ -625,7 +625,7 @@ class Recipe:
         notes: list[str] = []
         for fact, reason in sorted(self.overrides.items()):
             if not str(reason).strip():
-                errors.append(f"[overrides] {fact} carries no reason; an override must say why (R87 §2.5)")
+                errors.append(f"[overrides] {fact} carries no reason; an override must say why (`05` §3.6)")
             if fact not in stated:
                 warnings.append(f"[overrides] {fact} overrides nothing; no source in this recipe states it")
             elif fact not in declared:
@@ -669,7 +669,7 @@ class Recipe:
         return problems
 
     def _unclaimed(self) -> list[str]:
-        """Resources a listed source can produce that nothing in this recipe claims (R63 §2.3).
+        """Resources a listed source can produce that nothing in this recipe claims (`05` §3.5).
 
         A warning and not an error: narrowing is legitimate, and only the recipe's author knows
         whether this one was meant. It is the first of the three ways a recipe loses a resource,

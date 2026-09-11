@@ -18,7 +18,7 @@ hardware clock, the reconstruction agrees to 35-85 ms over 85 minutes, against t
 replaces.
 
 Three cameras of one session are 10 GB as MP4 and 80 GB as the AVI they were encoded from, so a
-packet that copied them would be mostly video (R14 §2.3). What it owns instead is one row per
+packet that copied them would be mostly video (`04` §5.1). What it owns instead is one row per
 frame on a declared clock, which is the part no player can supply: an MP4 knows its own
 presentation timestamps and nothing about the rig's clock.
 
@@ -33,12 +33,12 @@ Each camera writes a CSV beside its video, one line per frame and three columns:
 - the **camera's own clock** in nanoseconds, which is what the repair was checked against.
 
 `pts` carries none of the three. It is the frame's presentation timestamp in the **container**,
-an integer of the container's own time base (R68 §2.2), which is what locates a row in the file a
-consumer opens. The asset declares the rate those timestamps count at (R70 §2.1), so
+an integer of the container's own time base (`01` §3.18), which is what locates a row in the file a
+consumer opens. The asset declares the rate those timestamps count at (`01` §3.18), so
 `pts * pts_rate_den / pts_rate_num` is seconds of video without opening it, where `t_tick` is the
 same frame on the rig clock.
 
-Frames are numbered in presentation order (R69 §2.1), which is why the container index is sorted
+Frames are numbered in presentation order (`01` §3.18), which is why the container index is sorted
 before it is read: packets arrive in decode order, and this stream displaces one by up to three
 positions from where it is shown.
 """
@@ -91,10 +91,10 @@ class VideoSource(Compensates):
         URI, which resolves only on the machine that built it.
     """
 
-    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
     PRODUCES = frozenset({"core.media_assets", "core.media_frames"})
 
-    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -127,7 +127,7 @@ class VideoSource(Compensates):
         return beside if beside.is_file() else None
 
     def _uri(self, video: Path) -> str:
-        """Where this video is addressed, absolutely (R14 §2.3)."""
+        """Where this video is addressed, absolutely (`04` §5.1)."""
         if self.uri_base:
             return f"{self.uri_base}/{video.name}"
         return video.resolve().as_uri()
@@ -142,7 +142,7 @@ class VideoSource(Compensates):
                 media_asset_id=name,
                 uri=self._uri(video),
                 format=SUFFIX.lstrip("."),
-                # R36 §2.4: a writer records only what it looked at. A local path can be sized;
+                # `04` §5.2: a writer records only what it looked at. A local path can be sized;
                 # a remote base says nothing about what is actually there.
                 size_bytes=video.stat().st_size if local else None,
             )
@@ -177,11 +177,11 @@ class VideoSource(Compensates):
         return rows
 
     def _pts_rate(self, video: Path) -> dict[str, int]:
-        """Return what a consumer needs to read this asset's `pts` column as time (R70 §2.1).
+        """Return what a consumer needs to read this asset's `pts` column as time (`01` §3.18).
 
         A container states a *time base* -- seconds per timestamp -- and core carries the
         reciprocal, so `core.media_assets` agrees with `core.clocks` about what a rational rate
-        looks like. The inversion happens here, once, which is the boundary R70 §2.1 puts it at.
+        looks like. The inversion happens here, once, which is the boundary `01` §3.18 puts it at.
 
         Rational rather than a float, for the reason R33 gives: 1/90000 has no exact decimal and a
         rounded one accumulates over the millions of frames a session holds.

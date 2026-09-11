@@ -118,14 +118,14 @@ def test_a_spike_already_on_the_reference_passes_through(tmp_path):
 
 
 def test_an_unmappable_spike_is_dropped(tmp_path):
-    """R27 §5.3 leaves it undefined, and a derived table is the wrong place to say so."""
+    """`01` §3.9 leaves it undefined, and a derived table is the wrong place to say so."""
     far = 1000 + 20 * AP
     out = rows(Fake(tmp_path, ticks=[1000, far], clocks=[PROBE] * 2))
     assert out["t_tick"] == [500_000_000]
 
 
 def test_two_spikes_of_one_unit_on_one_reference_tick_refuse_the_table(tmp_path):
-    """R92 §2.4. The table is keyed on the converted tick, so a collision is unbuildable.
+    """`06` §4. The table is keyed on the converted tick, so a collision is unbuildable.
 
     A conversion preserves distinctness only where it expands; here the two spikes are already
     on the reference clock and pass through, which is the same arrival the writer must refuse.
@@ -143,7 +143,7 @@ def test_two_spikes_of_different_units_on_one_tick_are_fine(tmp_path):
 
 
 def test_a_dropped_spike_is_counted(tmp_path):
-    """R40 §2.3: a derived table one row short looks exactly like a derived table."""
+    """`06` §4: a derived table one row short looks exactly like a derived table."""
     counted: list[int] = [0]
     rows(Fake(tmp_path, ticks=[1000, 1000 + 20 * AP], clocks=[PROBE] * 2), dropped=counted)
     assert counted == [1]
@@ -203,7 +203,7 @@ def test_buckets_come_out_in_time_order(tmp_path):
 
 
 def test_a_batch_never_spans_two_buckets(tmp_path):
-    """R30 §3.2: each batch becomes one row group, and a straddling group would span twice
+    """`03` §5.4: each batch becomes one row group, and a straddling group would span twice
     the intended time range."""
     ticks = list(range(1000, 1000 + 5 * AP, AP // 4))
     packet = Fake(tmp_path, ticks=ticks, clocks=[PROBE] * len(ticks))
@@ -281,7 +281,7 @@ def test_into_records_the_run_that_produced_the_table(tmp_path):
 
 
 def test_the_bucket_width_is_recorded_because_it_cannot_be_recovered(tmp_path):
-    """R31 §3: a table whose buckets are all non-empty looks the same at 300 s as at 299 s."""
+    """`04` §3: a table whose buckets are all non-empty looks the same at 300 s as at 299 s."""
     from escapewheel_writer.materialize import into
 
     writer = Recorder()

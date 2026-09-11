@@ -6,7 +6,7 @@ extension's tables: the exception tables below carry `core.*` and `analysis.*` a
 extension supplying its own passes them to :class:`~escapewheel_writer.writer.PacketWriter`.
 
 That division follows from where the decision has weight. An extension hands the writer Arrow with
-its identifiers as **names**, and R53 §2.5 has the writer mint the integers packet-wide, so the
+its identifiers as **names**, and `05` §8 has the writer mint the integers packet-wide, so the
 columns where an encoding is worth 37x to 79x do not exist in their final form until the writer
 makes them. What an extension owns is its own measurements, which the float rule covers without
 naming anything.
@@ -32,7 +32,7 @@ DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     "core.units": ("n_spikes",),
     # Contiguous 0..n-1 within one asset, and 2.5 M distinct values per camera: the worst case
     # for a dictionary, whose entries then outnumber nothing and cost 1.54 B/row where delta
-    # costs 0.01. `pts` is the same shape once R68 §2.1 makes it an integer -- a frame timeline
+    # costs 0.01. `pts` is the same shape once `01` §3.18 makes it an integer -- a frame timeline
     # advancing by a constant step -- and takes the column from 1.50 B/row to 0.006.
     "core.media_frames": ("frame_index", "pts"),
     # Ascending without being a key column: a run lists its channels in the order it kept them
@@ -40,7 +40,7 @@ DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     # with gaps. Measured 11.1x and 7.4x over the dictionary they would otherwise get.
     "core.sorting_run_channels": ("electrode_id", "channel_index"),
     "core.array_channels": ("electrode_id",),
-    # An interval's identifier is not in its key -- R47 §2 keys on where it starts and R54 §2.1
+    # An interval's identifier is not in its key -- R47 §2 keys on where it starts and `01` §3.10
     # on its kind -- so the leading-identifier rule cannot see it, and it still ascends. 5.6x.
     "core.intervals": ("interval_id",),
 }
@@ -58,7 +58,7 @@ NO_DICTIONARY: dict[str, tuple[str, ...]] = {
     # a second index over what RLE alone encodes. 1.3x.
     "core.electrode_coordinates": ("region_id",),
     # One unit per spike and a few hundred distinct per batch, but the derived table is bucketed
-    # by time (R30 §3.2) rather than clustered by unit, so the runs are short. 1.2x.
+    # by time (`03` §5.4) rather than clustered by unit, so the runs are short. 1.2x.
     "analysis.spike_events": ("unit_id",),
 }
 
@@ -75,7 +75,7 @@ DICTIONARY_COLUMNS: dict[str, tuple[str, ...]] = {
 def leading_identifier(spec: Mapping[str, Any], keys: list[str]) -> str | None:
     """Return the key column whose values ascend across the whole table, if one does.
 
-    A table is sorted by its key (R10 §2), so the first key column ascends and every later one
+    A table is sorted by its key (`03` §5.3), so the first key column ascends and every later one
     only ascends *within* the group above it. `session_id` is skipped because a packet holds one
     session (R1), which makes it constant rather than ascending -- RLE already stores it in
     0.03 bits/row.
@@ -103,7 +103,7 @@ def encodings(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
     `core.clock_anchors.t_tick` from 268.8 KB to 5.2 KB and `core.spike_events.t_tick` from
     660.9 MB to 462.1 MB.
 
-    **The leading identifier of the key takes delta.** R10 §2 sorts a table by its key, so that
+    **The leading identifier of the key takes delta.** `03` §5.3 sorts a table by its key, so that
     column ascends across the whole table where every later key column only ascends within the
     group above it. Measured: `core.units.unit_id` **57x**, `core.unit_coordinates.unit_id` 53x,
     `core.electrode_coordinates.electrode_id` 48x, `core.unit_coordinate_values.unit_id` **75x**.

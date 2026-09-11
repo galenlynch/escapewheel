@@ -17,7 +17,7 @@ Support is passed, not assumed
 Nothing in this module defaults a denominator. :func:`rate` takes a count and a duration and
 neither has a default, because the error this exists to prevent is arithmetic rather than
 access: dividing by the wrong span, not failing to look one up. A packet that declares no
-windows gets an empty table and no invented extent, as R39 §2.3 requires of an absent origin.
+windows gets an empty table and no invented extent, as `01` §2.1 requires of an absent origin.
 
 An accessor returning a single point process also *attaches* its support, so :func:`rate_of`
 can be called on the result without looking anything up. That convenience needs a guard rather
@@ -44,7 +44,7 @@ Ticks are inclusive
 -------------------
 
 `start_tick` and `stop_tick` are both observed (R18 §2, R38 §2.2), so a window covers
-``stop - start + 1`` ticks. R38 §2.3 and §4 describe a probe clock's `stop_tick` as "the
+``stop - start + 1`` ticks. `01` §2.2 and §4 describe a probe clock's `stop_tick` as "the
 recording's length", which reads as exclusive and disagrees with its own column definition by
 one tick; the writer follows the column definition.
 """
@@ -111,7 +111,7 @@ def clock_windows(packet: Any, *, session_id: str | None = None, clock_id: str |
     -------
     pyarrow.Table
         Columns ``session_id``, ``clock_id``, ``start_tick`` and ``stop_tick``. Empty when the
-        packet declares none, which is conforming: R9 §5 makes this optional.
+        packet declares none, which is conforming: `01` §2.4 makes this optional.
     """
     if not _has(packet, CLOCK_INTERVALS):
         return pa.table(

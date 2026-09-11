@@ -103,8 +103,8 @@ TRIAL_MAPPED = frozenset(
 #: The CCF columns this file writes, in the order this adapter puts them on a frame's axes.
 CCF_AXES = ("ccf_ml", "ccf_ap", "ccf_dv")
 
-#: R105 §3.2: each frame's axes in index order, named for the field the values are read from.
-#: The name is carried verbatim (R105 §3.4) -- `rel_x` says the packet's axis 0 holds what this
+#: `02` §12.7: each frame's axes in index order, named for the field the values are read from.
+#: The name is carried verbatim (`01` §3.24) -- `rel_x` says the packet's axis 0 holds what this
 #: file called `rel_x`, which is a fact, where calling it `across_shank` would be a claim no
 #: source supports and calling it `x` would discard where the value came from.
 FRAME_AXES: dict[str, tuple[str, ...]] = {
@@ -113,7 +113,7 @@ FRAME_AXES: dict[str, tuple[str, ...]] = {
 }
 
 
-#: R101 §3.9. `core.subjects.sex` closes to `male`, `female`, `hermaphrodite` and `other`, and NWB
+#: `02` §9.3. `core.subjects.sex` closes to `male`, `female`, `hermaphrodite` and `other`, and NWB
 #: writes `M`/`F`/`U`/`O`. `U` is unknown, which becomes null rather than `other`: recording it as
 #: `other` asserts a sex the source never claimed, where a null column says the source did not say.
 _SEX = {
@@ -125,7 +125,7 @@ _SEX = {
 
 
 def _sex(stated: str | None) -> str | None:
-    """Map a source's spelling onto R101 §3.9's four values, or None where it states none."""
+    """Map a source's spelling onto `02` §9.3's four values, or None where it states none."""
     return _SEX.get(stated.strip().lower()) if stated else None
 
 
@@ -174,7 +174,7 @@ def _alike(a: Any, b: Any) -> bool:
 def _subject_fact(key: str) -> property:
     """Return a `subject.*` fact this file states, from the row `subjects()` already builds.
 
-    R87 §2.2 has a build ask an adapter what it states without opening it, so each fact needs an
+    `05` §3.4 has a build ask an adapter what it states without opening it, so each fact needs an
     attribute of its own for the class-level check to see; the value still comes from one read.
     """
     return property(lambda self: self.subjects()[0].get(key))
@@ -200,7 +200,7 @@ class NWBSource(Compensates):
         sessions into one packet needs the IDs disambiguated.
     trial_metadata : bool, default False
         Carry every unmapped trial column into `core.intervals.metadata` as JSON. **Off**, per
-        R54 §2.5: a writer SHOULD NOT fill that column routinely, because doing so puts a task's
+        `02` §6: a writer SHOULD NOT fill that column routinely, because doing so puts a task's
         varying parameters back into a JSON string that no rule can see and every row must parse
         — which is what an R17 extension's typed columns exist to replace. Turn it on only for a
         session whose task has no extension, and then as a stopgap.
@@ -218,7 +218,7 @@ class NWBSource(Compensates):
     >>> source.into(writer)  # doctest: +SKIP
     """
 
-    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
     PRODUCES = frozenset(
@@ -244,12 +244,12 @@ class NWBSource(Compensates):
         }
     )
 
-    #: R105 §3.4: the unit every coordinate this adapter writes is in. No NWB states one; what
+    #: `01` §3.24: the unit every coordinate this adapter writes is in. No NWB states one; what
     #: makes this the packet's answer is that this adapter passed the values through unconverted,
     #: and R19 §3 declared micrometres when it named the columns `x_um`, `y_um` and `z_um`.
     COORDINATE_UNIT: ClassVar[str] = "um"
 
-    #: R87 §2.2: every column of `core.subjects` this file states. The recipe declares four of
+    #: `05` §3.4: every column of `core.subjects` this file states. The recipe declares four of
     #: them by hand, and until R87 §2.8 the row built from these was discarded unread.
     STATES: ClassVar[dict[str, str]] = {
         "subject.subject_id": "stated_subject_id",
@@ -294,7 +294,7 @@ class NWBSource(Compensates):
         if not isinstance(zone, ZoneInfo):
             raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
         self.root = _resolve(source_root(root))
-        # R54 §2.1: an interval declares the resource that says what it was, and this adapter
+        # `01` §3.10: an interval declares the resource that says what it was, and this adapter
         # cannot know it -- an exported trials table is the task's, and which task it is is a
         # fact about the session rather than about the file. The recipe names it, which is the
         # precondition R54 §4 required before the revision could be implemented at all.
@@ -304,14 +304,14 @@ class NWBSource(Compensates):
         self.zone = zone
         self.prefix = prefix
         self.trial_metadata = trial_metadata
-        #: Where the acquisition records which headstage each probe was in (R67 §2.1). The NWB
+        #: Where the acquisition records which headstage each probe was in (`01` §3.5). The NWB
         #: does not say, and the file that does joins on `custom_probe_name`, which is the name
         #: the NWB gives its Device -- so this reads one extra file for one column rather than
         #: needing a source to write into another source's rows.
         self.attachments = Path(attachments) if attachments else None
         #: Acquisition streams that are signals rather than events, named by the recipe. A
         #: continuously sampled quantity is an array with a time axis, not one row per sample
-        #: carrying its value in JSON -- which R3 §2.1 confines to optional columns and which
+        #: carrying its value in JSON -- which `03` §5.5 confines to optional columns and which
         #: costs 5.9 M rows for one 400 Hz thermistor. Declared rather than inferred: whether a
         #: stream is a signal is a fact about the instrument, not about how many distinct
         #: values one session happened to record.
@@ -483,7 +483,7 @@ class NWBSource(Compensates):
 
     @cached_property
     def _devices(self) -> list[dict[str, Any]]:
-        """`core.devices`, one row per physical instrument (R67 §2.2).
+        """`core.devices`, one row per physical instrument (`01` §3.5).
 
         One row per *object*, not per NWB Device: a quad-base probe presents four Devices with
         one serial number, and recording four rows asserts four probes where the session had
@@ -526,7 +526,7 @@ class NWBSource(Compensates):
                 row |= {"device_id": self.prefix + shared, "device_name": shared}
                 self.notes.append(
                     f"devices: {', '.join(covers)} share serial {row['serial_number']}; "
-                    f"recorded as one device named {shared} (R67 §2.2)"
+                    f"recorded as one device named {shared} (`01` §3.5)"
                 )
             rows.append(row)
         return rows
@@ -597,7 +597,7 @@ class NWBSource(Compensates):
         columns = self._table("general/extracellular_ephys/electrodes")
         if not columns:
             return []
-        # R97 §3.3: `ccf_id` and `ccf_acronym` are excluded because R59 §2 promoted both to
+        # `02` §8.6: `ccf_id` and `ccf_acronym` are excluded because R59 §2 promoted both to
         # columns of `core.electrode_coordinates`. The other two stay: R59 §2 declined to
         # model them, so the bag is where they belong.
         carried = ("ccf_name", "ccf_structure_id_path")
@@ -627,7 +627,7 @@ class NWBSource(Compensates):
     def _signal_device_id(self, name: str) -> str | None:
         """Return the device a signal's description names, or None where it names none.
 
-        R65 §2.1 asks a writer to record which instrument produced an array. This file names it
+        `01` §3.17 asks a writer to record which instrument produced an array. This file names it
         in prose and nowhere else -- `general/devices` lists probes alone -- so the sentence is
         parsed rather than ignored. The device *row* comes from the instrument's own schema
         (`sources.harp`), which is the only place its version is stated; this is the join.
@@ -646,7 +646,7 @@ class NWBSource(Compensates):
     def _electrode_positions(self) -> list[tuple[dict[str, Any], tuple[float | None, ...]]]:
         """Each electrode coordinate paired with its values, in its frame's axis order.
 
-        One pass serves both `core.electrode_coordinates` and its values, which R105 §3.3 makes
+        One pass serves both `core.electrode_coordinates` and its values, which `01` §3.8 makes
         the same position split in two: the parent carries the annotation and the child one row
         per axis.
         """
@@ -685,10 +685,10 @@ class NWBSource(Compensates):
         return [row for row, _values in self._electrode_positions()]
 
     def electrode_coordinate_values(self) -> list[dict[str, Any]]:
-        """`core.electrode_coordinate_values`, one row per axis of each coordinate (R105 §3.3).
+        """`core.electrode_coordinate_values`, one row per axis of each coordinate (`01` §3.8).
 
         An axis this file leaves empty gets no row. That is a position the source did not state
-        on that axis, which R105 §3.3 forbids a consumer reading as a zero.
+        on that axis, which `01` §3.8 forbids a consumer reading as a zero.
         """
         return [
             {
@@ -715,11 +715,11 @@ class NWBSource(Compensates):
         ]
 
     def coordinate_frames(self) -> list[dict[str, Any]]:
-        """`core.coordinate_frames`, one row per frame this file populates (R105 §3.1).
+        """`core.coordinate_frames`, one row per frame this file populates (`01` §3.24).
 
         `atlas` and `atlas_version` are null. No artifact of these sessions names either --
         `ccf_coordinate_transform` is null in the rig, session and processing documents alike --
-        and R105 §3.1 forbids reading one out of the frame's name, `ccf` being a label rather
+        and `01` §3.24 forbids reading one out of the frame's name, `ccf` being a label rather
         than a version.
         """
         return [
@@ -734,10 +734,10 @@ class NWBSource(Compensates):
         ]
 
     def coordinate_frame_axes(self) -> list[dict[str, Any]]:
-        """`core.coordinate_frame_axes`, one row per axis of each populated frame (R105 §3.2).
+        """`core.coordinate_frame_axes`, one row per axis of each populated frame (`02` §12.7).
 
         `axis_direction` is null throughout: which way `rel_x` or `ccf_ml` increases is an
-        interpretation of the source rather than a report of it, and R105 §3.4 requires a writer
+        interpretation of the source rather than a report of it, and `01` §3.24 requires a writer
         to leave it null where its source does not state it.
         """
         return [
@@ -763,7 +763,7 @@ class NWBSource(Compensates):
         """Return the atlas annotation for one coordinate row (R59 §2.1).
 
         Only an atlas frame carries one: the frame is the space the structure id is numbered in
-        (R105 §3.1), and a probe-relative position is in no atlas.
+        (`01` §3.24), and a probe-relative position is in no atlas.
         """
         if frame == "probe":
             return {}
@@ -857,7 +857,7 @@ class NWBSource(Compensates):
         return [row for row, _values in self._unit_positions()]
 
     def unit_coordinate_values(self) -> list[dict[str, Any]]:
-        """`core.unit_coordinate_values`, one row per axis of each unit coordinate (R105 §3.3)."""
+        """`core.unit_coordinate_values`, one row per axis of each unit coordinate (`01` §3.8)."""
         return [
             {
                 "session_id": self.session_id,
@@ -924,7 +924,7 @@ class NWBSource(Compensates):
             ticks, values = self._signal(name)
             del ticks  # the axis is a clock and its anchors, not an array (R20 §2.1)
             # Measured on this thermistor's 5,881,692 samples: delta takes the signal from
-            # 11.8 MB to 3.47, because it is smooth at 400 Hz. R14 §2.2 permits any codec so
+            # 11.8 MB to 3.47, because it is smooth at 400 Hz. `03` §6.4 permits any codec so
             # long as the manifest names it, which `declared_codecs` does, and Zarr.jl carries
             # delta -- R3 §1 targets Python and Julia.
             staged.append(
@@ -949,7 +949,7 @@ class NWBSource(Compensates):
                 {
                     "session_id": self.session_id,
                     "array_asset_id": f"{self.prefix}{name}",
-                    # R65 §2.1: which instrument made this array. Read from the same description
+                    # `01` §3.17: which instrument made this array. Read from the same description
                     # `_signal_devices` declares the device from, so the two cannot disagree.
                     "device_id": self._signal_device_id(name),
                     "array_asset_name": str(attrs.get("description") or name),
@@ -999,14 +999,14 @@ class NWBSource(Compensates):
                 {
                     "clock_id": self._dispatch_clock_id(name),
                     "session_id": self.session_id,
-                    # The float alone (R95 §3.2). This rate is measured from the dispatch
+                    # The float alone (`02` §12.4). This rate is measured from the dispatch
                     # spacing rather than declared, so `round(rate)` invented a rational the
-                    # source never stated -- the rounding R95 §3.2 says this format does not
+                    # source never stated -- the rounding `02` §12.4 says this format does not
                     # do on a source's behalf. R95 §4 keeps the float expressible for exactly
                     # this: a rate someone measured is recorded as measured.
                     "tick_rate_hz": round(rate, 6) if rate else None,
                     "origin": "the device's first dispatched sample; tick k is sample k",
-                    # `clock_name` is left for the numbering to fill from `clock_id` (R95 §3.1);
+                    # `clock_name` is left for the numbering to fill from `clock_id` (`02` §8.2);
                     # what this counter is travels as a label, having no column of its own.
                     "metadata": {"label": f"{name} dispatch counter"},
                     "parent_clock_id": self.clock.clock_id,
@@ -1138,11 +1138,11 @@ class NWBSource(Compensates):
         return rows
 
     def intervals(self) -> list[dict[str, Any]]:
-        """`core.intervals`, one row per trial (R54 §2.1)."""
+        """`core.intervals`, one row per trial (`01` §3.10)."""
         if self.interval_kind is None:
             raise SourceDefect(
                 "core.intervals needs an interval_kind naming the resource that specialises these "
-                "intervals (R54 §2.1); set it on the nwb source"
+                "intervals (`01` §3.10); set it on the nwb source"
             )
         columns = self._table("intervals/trials")
         if not columns:
@@ -1171,7 +1171,7 @@ class NWBSource(Compensates):
                 "stop_tick": int(stop[index]),
                 "clock_id": self.clock.clock_id,
             }
-            # R54 §2.5: off unless a recipe asks. The keys that vary are the ones an extension
+            # `02` §6: off unless a recipe asks. The keys that vary are the ones an extension
             # declares as typed columns, so filling this duplicates them as unqueryable JSON.
             if self.trial_metadata and varying:
                 row["metadata"] = {name: columns[name][index] for name in varying}
@@ -1182,7 +1182,7 @@ class NWBSource(Compensates):
         """Split unmapped trial columns into what varies per trial and what does not.
 
         A task parameter that never changes across a session is not trial data; recording it on
-        every trial restates one fact `n` times, which R3 §3.0 forbids for the same reason a
+        every trial restates one fact `n` times, which `02` §6 forbids for the same reason a
         repeated value becomes a child table. Measured on a real session: 49 of 59 keys are
         constant, so 34,692 of the 41,772 values stored were copies.
 
@@ -1263,7 +1263,7 @@ def _described(parsed: Any, raw: str) -> dict[str, str] | None:
     """Return what a device's description says beyond its model and serial, or nothing.
 
     The raw string is kept only where it did not parse: carrying both a parsed description and
-    the sentence it came from would store one fact twice (R3 §3.0).
+    the sentence it came from would store one fact twice (`02` §6).
     """
     if parsed is None:
         return {"description": raw} if raw else None

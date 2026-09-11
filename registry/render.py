@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 REGISTRY = HERE / "logical_schemas.json"
 OUT = HERE / "tables.md"
 
-#: R2 §5's three presence states, rendered so the required ones stand out in a scan.
+#: `02` §6's three presence states, rendered so the required ones stand out in a scan.
 PRESENCE = {"required": "**required**", "nullable": "nullable", "optional": "optional"}
 
 
@@ -33,7 +33,7 @@ def _code(names: Any) -> str:
 
 
 def _declares(column: dict[str, Any]) -> str:
-    """Render every declaration a column carries about its values (R107 §3.4).
+    """Render every declaration a column carries about its values (`02` §9.3).
 
     The descriptions used to say these, because this table showed none of them and it is what a
     person reads. Generated from the field, so the two cannot disagree.
@@ -179,7 +179,7 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
         "rules": (f"{len(rules)} rules over {len(by_table)} tables: {levels['error']} error, "
                   f"{levels['warning']} warning, {levels['info']} info — the "
                   f"{sum(1 for r in rules if r.get('advisory'))} at `info` being the advisory ones "
-                  f"(R26 §2), off unless asked for.\n\n"
+                  f"(`02` §10.2), off unless asked for.\n\n"
                   "| Table | Rules |\n|---|---:|\n"
                   + "\n".join(f"| `{n}` | {len(t['rules'])} |" for n, t in by_table)),
     }

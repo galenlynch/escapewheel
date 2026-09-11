@@ -37,7 +37,7 @@ def source(nwb, harp):
 
 @pytest.fixture
 def carrying(nwb, harp):
-    """A source asked to carry unmapped trial columns, which R54 §2.5 makes an opt-in."""
+    """A source asked to carry unmapped trial columns, which `02` §6 makes an opt-in."""
     return NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND, trial_metadata=True)
 
 
@@ -82,7 +82,7 @@ def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
             "sorting_run_id": "run",
             "curation_id": "cur",
             "coordinate_frame": "ccf",
-            # R58 §2.1: an exported file records where the probe was found, never where it was
+            # `01` §3.8: an exported file records where the probe was found, never where it was
             # aimed, so an import can only assert `measured`.
             "coordinate_basis": "measured",
         }
@@ -114,7 +114,7 @@ def test_it_reads_the_tables_the_nwb_is_the_authority_for(source):
         "core.probes": 1,
         "core.electrodes": 2,
         "core.electrode_coordinates": 3,  # both electrodes in the probe frame, one in CCF
-        # R105 §3.3: the same three positions as one row per axis -- two shank axes each and
+        # `01` §3.8: the same three positions as one row per axis -- two shank axes each and
         # three CCF axes -- against the two frames and five axis rows they are stated on.
         "core.electrode_coordinate_values": 7,
         "core.coordinate_frames": 2,
@@ -214,7 +214,7 @@ def test_a_date_of_birth_is_the_local_calendar_date(source):
 
 
 def test_a_subjects_sex_lands_inside_the_closed_vocabulary(source):
-    """R101 §3.9 closes `sex` to four values, and a source states its own spelling.
+    """`02` §9.3 closes `sex` to four values, and a source states its own spelling.
 
     Both packaged sessions state `Male`, which reached a committed packet verbatim and is outside
     the set, so the mapping is what stands between a source's spelling and a Tier 1 failure.
@@ -223,7 +223,7 @@ def test_a_subjects_sex_lands_inside_the_closed_vocabulary(source):
     assert [_sex(v) for v in ("M", "Male", "male", "F", "Female", "H", "O")] == [
         "male", "male", "male", "female", "female", "hermaphrodite", "other"
     ]
-    # `U` is unknown, and R101 §3.9 makes that a null rather than `other`: recording it as `other`
+    # `U` is unknown, and `02` §9.3 makes that a null rather than `other`: recording it as `other`
     # asserts a sex the source never claimed, where a null says the source did not say.
     assert [_sex(v) for v in ("U", "unknown", "", None)] == [None, None, None, None]
 
@@ -295,7 +295,7 @@ def test_coordinates_are_rows_per_frame_not_a_padded_triple(source):
 
 
 def test_a_frame_declares_its_axes_by_the_names_it_read_them_from(source):
-    """R105 §3.4: the source's column name becomes a value, verbatim and undirected."""
+    """`01` §3.24: the source's column name becomes a value, verbatim and undirected."""
     axes = source.records()["core.coordinate_frame_axes"]
     assert [(a["coordinate_frame"], a["axis_index"], a["axis_name"]) for a in axes] == [
         ("probe", 0, "rel_x"),
@@ -306,13 +306,13 @@ def test_a_frame_declares_its_axes_by_the_names_it_read_them_from(source):
     ]
     assert {a["axis_direction"] for a in axes} == {None}
     assert {a["unit"] for a in axes} == {"um"}
-    # R105 §3.1: no artifact of these sessions names the atlas, so neither column is filled.
+    # `01` §3.24: no artifact of these sessions names the atlas, so neither column is filled.
     frames = source.records()["core.coordinate_frames"]
     assert {(f["atlas"], f["atlas_version"]) for f in frames} == {(None, None)}
 
 
 def test_an_electrodes_bag_carries_only_what_no_column_holds(source):
-    """R97 §3.3. R59 §2 promoted `ccf_id` and `ccf_acronym` to columns, so both leave the bag."""
+    """`02` §8.6. R59 §2 promoted `ccf_id` and `ccf_acronym` to columns, so both leave the bag."""
     bag = only(source.records()["core.electrodes"], electrode_id="probeA.CH0")["metadata"]
     assert bag == {"ccf_name": "Field CA1", "ccf_structure_id_path": "/997/8/567/"}
     ccf = only(source.records()["core.electrode_coordinates"], electrode_id="probeA.CH0",
@@ -351,7 +351,7 @@ def test_unmapped_trial_columns_travel_as_metadata(carrying):
 
 
 def test_trial_metadata_is_off_unless_asked(source, carrying):
-    """R54 §2.5: filling it routinely puts the extension's typed columns back into JSON."""
+    """`02` §6: filling it routinely puts the extension's typed columns back into JSON."""
     assert "metadata" not in source.records()["core.intervals"][0]
     assert "metadata" in carrying.records()["core.intervals"][0]
 
@@ -365,7 +365,7 @@ def test_a_trial_without_an_interval_is_a_defect_not_a_dropped_row(tmp_path, har
 # -- end to end ----------------------------------------------------------------------
 
 
-#: The minimum an interval kind needs to resolve: R54 §2.1 makes `interval_kind` resolve
+#: The minimum an interval kind needs to resolve: `01` §3.10 makes `interval_kind` resolve
 #: `required`, so a packet carrying intervals and no table saying what they were is refused.
 #: One table, one column, and the reference R55 §2.3.1 requires of a named resource.
 TASK_EXTENSION = {
@@ -395,7 +395,7 @@ TASK_EXTENSION = {
 
 def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
     # Carrying, because the assertions below are about how metadata survives the round trip --
-    # verbatim, with NumPy's scalars coerced to JSON's. R54 §2.5 makes that an opt-in.
+    # verbatim, with NumPy's scalars coerced to JSON's. `02` §6 makes that an opt-in.
     source = carrying
     writer = PacketWriter(registry, packet_id=SESSION, extensions=[TASK_EXTENSION])
     counted = source.into(writer)
@@ -487,12 +487,12 @@ def test_a_condition_is_named_where_the_task_varies_one(source):
 
 
 def test_a_trial_event_column_is_not_repeated_in_metadata(source):
-    """It is in core.events now, so carrying it again would be the duplication R3 §3.0 bans."""
+    """It is in core.events now, so carrying it again would be the duplication `02` §6 bans."""
     metadata = next(t for t in source.intervals()).get("metadata") or {}
     assert "goCue_start_time" not in metadata
 
 
-# -- R3 §3.0: a parameter constant across every trial is recorded once ----------------------
+# -- `02` §6: a parameter constant across every trial is recorded once ----------------------
 
 
 def _split(source, columns, n):

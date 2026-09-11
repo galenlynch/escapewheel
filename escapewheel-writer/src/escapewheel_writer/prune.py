@@ -9,7 +9,7 @@ A stray -- a file no manifest has ever named -- is reported and never removed. A
 files this specification does not govern, and cleanup that deletes the ungoverned is a data-loss
 operation wearing a maintenance name.
 
-Nothing is removed unless a caller asks. R61 §2.1 makes reporting the default because the
+Nothing is removed unless a caller asks. `03` §9.5 makes reporting the default because the
 alternative is a delete whose blast radius is a listing the caller has not read.
 """
 
@@ -24,7 +24,7 @@ from typing import Any
 
 from .writer import MANIFEST, MANIFESTS, REGISTRY_PATH, NotCommitted
 
-#: R61 §2.2. One superseded manifest, and no age limit: a packet is an archival artifact where a
+#: `03` §9.3. One superseded manifest, and no age limit: a packet is an archival artifact where a
 #: table is an operational one, so age alone never expires one.
 KEEP_VERSIONS = 1
 KEEP_DAYS: float | None = None
@@ -84,9 +84,9 @@ def _stamp(manifest: Mapping[str, Any]) -> datetime | None:
 def _names(manifest: Mapping[str, Any], *, installed: Any) -> set[str]:
     """Packet-relative paths one manifest names.
 
-    An external resource is not named: R14 §2.3 puts its bytes outside the packet, so cleanup has
+    An external resource is not named: `04` §5.1 puts its bytes outside the packet, so cleanup has
     no standing over them. The registry is named because a retained manifest is uninterpretable
-    without the one it was written against (R32 §4.1). Its path depends on `installed`, the
+    without the one it was written against (`03` §9.3). Its path depends on `installed`, the
     registry_version the packet currently carries: that one lives at the unversioned path and
     every other at a versioned copy, so a retained manifest written against the current registry
     names the same file the current manifest does.
@@ -121,7 +121,7 @@ def prune(
     apply: bool = False,
     now: datetime | None = None,
 ) -> Plan:
-    """Plan cleanup over a committed packet, and carry it out where asked (R61 §2.1).
+    """Plan cleanup over a committed packet, and carry it out where asked (`03` §9.5).
 
     Parameters
     ----------
@@ -129,7 +129,7 @@ def prune(
         A committed packet.
     keep_versions, keep_days : optional
         Override the packet's declared retention. Both are floors: a manifest is expired only
-        where both permit it (R61 §2.2).
+        where both permit it (`03` §9.3).
     apply : bool, default False
         Remove. The default reports.
 
@@ -158,7 +158,7 @@ def prune(
     installed = current.get("registry_version")
     # Retention is decided first, because an orphan is judged against the manifests that
     # *survive*: a file named only by a manifest being kept is still needed, and deleting it
-    # would leave that manifest uninterpretable -- which is the property R32 §4 retains for.
+    # would leave that manifest uninterpretable -- which is the property `03` §9.3 retains for.
     moment = now or datetime.now(tz=timezone.utc)
     keep, expire, notes = [], [], []
     for index, (path, manifest) in enumerate(reversed(superseded)):  # newest first
@@ -198,7 +198,7 @@ def prune(
     )
     if not apply:
         return plan
-    for path in plan.orphans:  # R61 §2.1: orphans before the manifests that identify them
+    for path in plan.orphans:  # `03` §9.5: orphans before the manifests that identify them
         path.unlink(missing_ok=True)
     for path in plan.expired:
         path.unlink(missing_ok=True)

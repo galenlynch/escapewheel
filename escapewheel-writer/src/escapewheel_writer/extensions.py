@@ -1,6 +1,6 @@
 """Find the extension registries a recipe names.
 
-R17 §2 makes an extension a registry document, and `09` §6 has the packet carry it. Between the
+`09` §2 makes an extension a registry document, and `09` §6 has the packet carry it. Between the
 two sits a mechanical question this module answers: **where does a build get the document from?**
 
 Two answers, because there are two situations. A document being drafted is a file beside the

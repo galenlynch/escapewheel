@@ -63,7 +63,7 @@ def by_name(rows):
 
 
 def test_each_chain_element_that_reports_a_version_is_a_device(source):
-    """R66 §2.3. Two slots give two basestations and two connect boards; three headstages."""
+    """`01` §3.5. Two slots give two basestations and two connect boards; three headstages."""
     rows = by_name(source.devices())
     assert sorted(rows) == [
         "basestation.slot3",
@@ -101,7 +101,7 @@ def test_a_probe_is_attached_by_the_name_the_nwb_gives_its_device(source):
 
 
 def test_the_four_bases_of_one_probe_report_one_dock(source):
-    """R85 §2.3. A port is where something was plugged in, so it cannot tell the four apart."""
+    """`01` §3.5. A port is where something was plugged in, so it cannot tell the four apart."""
     attached = source.attachments()
     assert [attached[f"50213-{base}"] for base in (1, 2)] == [
         {"parent_device_id": "headstage.slot7.port1", "parent_port": "1"}
@@ -109,7 +109,7 @@ def test_the_four_bases_of_one_probe_report_one_dock(source):
 
 
 def test_a_serial_of_zero_is_a_blank_field_rather_than_a_serial(source):
-    """R66 §2.1. `UNKNOWN` is a statement and `0` is Open Ephys leaving the field empty."""
+    """`01` §3.5. `UNKNOWN` is a statement and `0` is Open Ephys leaving the field empty."""
     rows = by_name(source.devices())
     assert rows["basestation.slot3"]["serial_number"] is None
     assert rows["headstage.slot7.port1"]["hardware_version"] == "UNKNOWN"
@@ -127,7 +127,7 @@ def test_unparseable_settings_are_noted_rather_than_raised(tmp_path):
 
 
 def test_the_metadata_bag_does_not_restate_the_port(source):
-    """R97 §3.3. `parent_port` holds the port, so the bag carrying it too would restate a column."""
+    """`02` §8.6. `parent_port` holds the port, so the bag carrying it too would restate a column."""
     rows = by_name(source.devices())
     assert rows["headstage.slot3.port2"]["metadata"] == {"slot": "3"}
     assert rows["connect_board.slot3"]["metadata"] == {"slot": "3"}

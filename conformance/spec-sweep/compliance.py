@@ -9,7 +9,7 @@ print("02 tables NOT restated in 09 §4:", ", ".join(sorted(set(T) - set(covered
 
 R3_COVERED = {"experimenter","tags","shape","dimension_names","dtype","transform_to_parent",
               "spike_ticks","payload","parameters","metadata"}
-print("=== R3 §2.1 compliance: nested-typed columns in 02 ===")
+print("=== `03` §5.5 compliance: nested-typed columns in 02 ===")
 miss = []
 for tbl, cols in sorted(T.items()):
     for c,(ty,req) in cols.items():
@@ -19,13 +19,13 @@ for tbl, cols in sorted(T.items()):
             print(f"  {tbl+'.'+c:44s} {ty:34s} req={req}{flag}")
 print(f"\n  unlisted in R3 §2.2: {len(miss)}")
 
-print("\n=== timestamp/date columns (R3 §2.1 wall-clock rule) ===")
+print("\n=== timestamp/date columns (`03` §5.5 wall-clock rule) ===")
 for tbl, cols in sorted(T.items()):
     for c,(ty,req) in cols.items():
         if "timestamp" in ty or ty.strip()=="date" or "date" in ty:
             print(f"  {tbl+'.'+c:44s} {ty}")
 
-print("\n=== *_index columns (R3 §6 classification) ===")
+print("\n=== *_index columns (`02` §8.1.1 classification) ===")
 STRUCT={"channel_index","frame_index","axis_index"}; LABEL={"local_electrode_index","local_channel_index","local_unit_index"}
 for tbl, cols in sorted(T.items()):
     for c in cols:
@@ -33,7 +33,7 @@ for tbl, cols in sorted(T.items()):
             k = "structural" if c in STRUCT else "source label" if c in LABEL else "UNCLASSIFIED"
             print(f"  {tbl+'.'+c:44s} {k}")
 
-print("\n=== tick columns (R3 §2.1 signed int64) ===")
+print("\n=== tick columns (`03` §5.5 signed int64) ===")
 bad=[]
 for tbl, cols in sorted(T.items()):
     for c,(ty,req) in cols.items():

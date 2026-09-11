@@ -89,7 +89,7 @@ class WaveformSource:
         Prepended to identifiers this adapter mints.
     """
 
-    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
     PRODUCES = frozenset(
@@ -100,7 +100,7 @@ class WaveformSource:
         }
     )
 
-    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -288,7 +288,7 @@ class WaveformSource:
     ) -> dict[str, Any]:
         """One `core.array_assets` row.
 
-        No `dtype` or `shape`: the Zarr array declares both, and R3 §3.0 forbids a table from
+        No `dtype` or `shape`: the Zarr array declares both, and `02` §6 forbids a table from
         restating what the data already says. `conversion` is the one thing the array cannot
         say, so it is the one thing recorded here.
         """

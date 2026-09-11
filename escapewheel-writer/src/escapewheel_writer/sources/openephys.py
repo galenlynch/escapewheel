@@ -5,7 +5,7 @@ board** on that basestation, a **headstage** on a port, and the probe itself. Th
 report their own firmware or hardware version, and the versions differ within one session -- so a
 packet recording only the probe cannot say that two probes ran different acquisition hardware.
 
-R66 §2.3 makes each element that reports its own versions a device in its own right. This adapter
+`01` §3.5 makes each element that reports its own versions a device in its own right. This adapter
 emits those three and **not the probe**, whose device row comes from the NWB: two sources writing
 one row would collide on its key, and the NWB knows the probe's own part number and serial.
 
@@ -29,7 +29,7 @@ from .store import source_root
 SETTINGS = "settings.xml"
 
 #: Each element of the chain: how its identity is formed, which attributes describe it, what it
-#: hangs off (R67 §2.1), and which attribute names the coordinate it hangs off at (R85 §2.1). A
+#: hangs off (`01` §3.5), and which attribute names the coordinate it hangs off at (R85 §2.1). A
 #: basestation is the root -- the PXI chassis it sits in is not described by this file, and
 #: inventing a device for it would assert something unmeasured. A connect board has a parent and
 #: no coordinate: `slot` identifies the basestation and the board alike, so the file states no
@@ -72,7 +72,7 @@ CHAIN = (
 PROBE_PORT = "dock"
 
 #: What a source writes where it has no value. Recorded as given rather than as null, because a
-#: source that reported `UNKNOWN` said something a source that stayed silent did not (R66 §2.1).
+#: source that reported `UNKNOWN` said something a source that stayed silent did not (`01` §3.5).
 UNSET = {"", "0"}
 
 
@@ -87,10 +87,10 @@ class OpenEphysSource:
         The session this hardware was used in.
     """
 
-    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
     PRODUCES = frozenset({"core.devices"})
 
-    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -120,7 +120,7 @@ class OpenEphysSource:
         return found
 
     def devices(self) -> list[dict[str, Any]]:
-        """`core.devices`, one row per distinct chain element (R66 §2.3)."""
+        """`core.devices`, one row per distinct chain element (`01` §3.5)."""
         rows: dict[str, dict[str, Any]] = {}
         for probe in self._probes():
             for kind, key, part, serial, firmware, hardware, parent, port in CHAIN:
@@ -140,12 +140,12 @@ class OpenEphysSource:
                     "firmware_version": _stated(probe.get(firmware)) if firmware else None,
                     "hardware_version": _stated(probe.get(hardware)),
                     "serial_number": _stated(probe.get(serial)),
-                    # R67 §2.1: each element names the one below it in the chain. A basestation
+                    # `01` §3.5: each element names the one below it in the chain. A basestation
                     # is the root here, because nothing in this file describes the PXI chassis.
                     "parent_device_id": _identity(parent, probe) if parent else None,
                     # R85 §2.1: and where the file coordinates that link, which port of it.
                     "parent_port": probe.get(port) if port else None,
-                    # R97 §3.3: what the key states and no column holds. `port` is excluded
+                    # `02` §8.6: what the key states and no column holds. `port` is excluded
                     # because `parent_port` above is the column that holds it.
                     "metadata": {k: probe[k] for k in key if k in probe and k != port} or None,
                 }
@@ -158,7 +158,7 @@ class OpenEphysSource:
         Device, so the two join without going through a serial number -- which matters for a
         quad-base probe, where one serial covers four stream names (R67 §1.2). The dock is the
         probe's `parent_port` (R85 §2.1), and it does not distinguish those four: all four bases
-        report one dock, which is why R85 §2.3 keeps a port out of identity.
+        report one dock, which is why `01` §3.5 keeps a port out of identity.
         """
         return {
             name: {
@@ -193,7 +193,7 @@ def _stated(value: str | None) -> str | None:
     """Return what the file said, or None where it said nothing.
 
     `UNKNOWN` is kept: a source reporting that it does not know is not the same as a source that
-    was never asked, and R66 §2.1 records the value verbatim either way. A serial of `0` is
+    was never asked, and `01` §3.5 records the value verbatim either way. A serial of `0` is
     dropped, because it is this file's way of leaving the field blank rather than a serial.
     """
     return None if value is None or value in UNSET else value

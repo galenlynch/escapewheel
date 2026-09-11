@@ -33,26 +33,26 @@ STEPS = [
     ("R28 §2  + core.unit_electrodes",         set(), {"core.unit_electrodes"}),
     ("R28 §3  + core.unit_coordinates",        set(), {"core.unit_coordinates"}),
     ("R38 §2.1 + core.clock_observation_intervals", set(), {"core.clock_observation_intervals"}),
-    ("R41 §2.3 + core.preferred_runs",         set(), {"core.preferred_runs"}),
+    ("`01` §2.4 + core.preferred_runs",         set(), {"core.preferred_runs"}),
     # R54 §2.3 withdraws the child table R3 §3.2 added: no packet ever populated it, and a
     # trial tag is a task's vocabulary, which R43 §3 sends to an extension.
     ("R54 §2.3 − core.trial_tags",             {"core.trial_tags"}, set()),
-    ("R54 §2.1 core.trials -> core.intervals", {"core.trials"}, {"core.intervals"}),
+    ("`01` §3.10 core.trials -> core.intervals", {"core.trials"}, {"core.intervals"}),
     ("06      + analysis.spike_events",        set(), {"analysis.spike_events"}),
     # R83 §2.1: a channel index a source emits counts the channels its run kept, and nothing
     # held that list, so no packet could resolve one.
     ("R83 §2.1 + core.sorting_run_channels",   set(), {"core.sorting_run_channels"}),
     # R89 §2: a calibration is what someone measured about an instrument so that its numbers can
     # be interpreted, and nothing in the specification recorded one. Three resources, because the
-    # devices a calibration covers and the points of its curve are both repeated values (R3 §3.0).
+    # devices a calibration covers and the points of its curve are both repeated values (`02` §6).
     ("R89 §2.1 + core.calibrations",           set(), {"core.calibrations"}),
     ("R89 §2.2 + core.calibration_devices",    set(), {"core.calibration_devices"}),
     ("R89 §2.3 + core.calibration_points",     set(), {"core.calibration_points"}),
     ("R99 §3.3 + core.clock_phase_steps",      set(), {"core.clock_phase_steps"}),
-    ("R105 §3.1 + core.coordinate_frames",     set(), {"core.coordinate_frames"}),
-    ("R105 §3.2 + core.coordinate_frame_axes", set(), {"core.coordinate_frame_axes"}),
-    ("R105 §3.3 + core.electrode_coordinate_values", set(), {"core.electrode_coordinate_values"}),
-    ("R105 §3.3 + core.unit_coordinate_values", set(), {"core.unit_coordinate_values"}),
+    ("`01` §3.24 + core.coordinate_frames",     set(), {"core.coordinate_frames"}),
+    ("`02` §12.7 + core.coordinate_frame_axes", set(), {"core.coordinate_frame_axes"}),
+    ("`01` §3.8 + core.electrode_coordinate_values", set(), {"core.electrode_coordinate_values"}),
+    ("`01` §3.8 + core.unit_coordinate_values", set(), {"core.unit_coordinate_values"}),
 ]
 
 if not PARSED.exists():

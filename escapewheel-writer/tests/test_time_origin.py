@@ -56,12 +56,12 @@ def test_reaching_further_is_measured_and_recorded():
     assert measured["distance"] == 2
     assert measured["used"] == 2.0
     assert measured["per_clock"]["probe"]["n"] == TICKS.size - 2
-    # R40 §2.2: all three, so a reader may apply a stricter rule than the writer did.
+    # `01` §3.9: all three, so a reader may apply a stricter rule than the writer did.
     assert {"median_error_seconds", "p95_error_seconds", "max_error_seconds"} <= set(measured)
 
 
 def test_the_gate_is_the_95th_percentile_not_the_median():
-    """R40 §2.2: a bound is a statement about what a consumer may rely on."""
+    """`01` §3.9: a bound is a statement about what a consumer may rely on."""
     tail = PARENTS.copy()
     tail[::7] += 900  # a seventh of the anchors badly placed; the median never sees them
     _, measured = _bound_for({"probe": (TICKS, tail)}, {"probe": (0, int(TICKS[-1]))}, TOLERANCE, HARP)
@@ -79,7 +79,7 @@ def test_a_clock_that_cannot_meet_the_tolerance_keeps_the_default():
 
 
 def test_three_milliseconds_admits_what_this_rig_actually_needs():
-    """R40 §2.1: the default is set above the estimator's measured p95, not at its median."""
+    """`01` §3.9: the default is set above the estimator's measured p95, not at its median."""
     bound, measured = _bound_for(BY_CLOCK, {"probe": (0, int(TICKS[-1]))}, TOLERANCE, HARP)
     assert bound == 2.0
     assert measured["p95_error_seconds"] < TOLERANCE / 10
@@ -89,7 +89,7 @@ def test_three_milliseconds_admits_what_this_rig_actually_needs():
 
 
 def test_the_origin_is_the_earliest_start_across_every_clock():
-    """R39 §2.1: no modality is preferred, so the earliest wins wherever it came from."""
+    """`01` §2.1: no modality is preferred, so the earliest wins wherever it came from."""
     intervals = [
         {"clock_id": "probe", "start_tick": 0},
         {"clock_id": "harp", "start_tick": int(PARENTS[0])},
@@ -105,7 +105,7 @@ def test_a_reference_clock_window_is_taken_as_it_stands():
 
 
 def test_an_unmappable_window_yields_no_origin():
-    """R39 §2.4: a minimum over some of the clocks is not the minimum, so nothing is stated."""
+    """`01` §2.2: a minimum over some of the clocks is not the minimum, so nothing is stated."""
     intervals = [{"clock_id": "probe", "start_tick": 0}]
     assert _time_origin(context_on(), intervals, BY_CLOCK, bound=1.0) is None
 
@@ -143,7 +143,7 @@ def _context(withheld):
 
 
 def test_a_clock_the_test_kept_records_false_not_nothing():
-    """R40 §2.3: a silent absence and a recorded zero are different facts."""
+    """`06` §4: a silent absence and a recorded zero are different facts."""
     writer = _Staged()
     _declare_withheld(_context({"probeA": {"anchors": [], "n_withheld": 0}}), writer, lambda _: None)
     (resource, match, values) = writer.calls[0]

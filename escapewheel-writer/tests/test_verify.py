@@ -1,4 +1,4 @@
-"""`escapewheel verify` records what is true once the bytes have landed (R36 §2.4)."""
+"""`escapewheel verify` records what is true once the bytes have landed (`04` §5.2)."""
 
 import json
 
@@ -18,7 +18,7 @@ def _commit(root, registry, tables):
 
 def _external(root, uri):
     """Declare an external array the committed packet says nothing about, as a build that could
-    not reach its store leaves it (R36 §2.4)."""
+    not reach its store leaves it (`04` §5.2)."""
     path = root / "packet.json"
     manifest = json.loads(path.read_text())
     manifest["resources"].append(
@@ -76,7 +76,7 @@ def test_verify_records_what_the_store_holds(tmp_path, registry, minimal):
 
 
 def test_verify_is_a_new_packet_version_that_retains_the_old(tmp_path, registry, minimal):
-    """R32 §4: a superseded file is interpretable only while the manifest naming it survives."""
+    """`03` §9.3: a superseded file is interpretable only while the manifest naming it survives."""
     root = tmp_path / "s001"
     _commit(root, registry, minimal)
     _external(root, _zarr(tmp_path).resolve().as_uri())
@@ -102,7 +102,7 @@ def test_sha256_is_asked_for_separately(tmp_path, registry, minimal):
 
 
 def test_an_unreachable_store_leaves_the_claim_unmade(tmp_path, registry, minimal):
-    """R36 §2.4: a writer that cannot reach a URI records nothing rather than guessing."""
+    """`04` §5.2: a writer that cannot reach a URI records nothing rather than guessing."""
     root = tmp_path / "s001"
     _commit(root, registry, minimal)
     _external(root, "file:///nowhere/at/all.zarr")

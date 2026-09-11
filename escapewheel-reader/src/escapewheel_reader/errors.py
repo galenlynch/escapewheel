@@ -24,7 +24,7 @@ class UnsupportedCodecError(PacketError):
 
 
 class NoTimeOrigin(PacketError):
-    """The packet declares no `t_zero_tick`, so seconds are not defined (R39 §2.3).
+    """The packet declares no `t_zero_tick`, so seconds are not defined (`01` §2.1).
 
     Tick zero, the session's wall-clock start and the first datum are all available and all
     wrong. A consumer that picks one silently produces numbers that cannot be compared with
@@ -35,7 +35,7 @@ class NoTimeOrigin(PacketError):
 class AmbiguousRun(PacketError):
     """Several runs produced the same thing and the packet does not say which to read.
 
-    R41 §2.4. Reading them all concatenated is the failure this prevents: two sortings of one
+    `01` §2.4. Reading them all concatenated is the failure this prevents: two sortings of one
     probe are two complete sets of units, so every count taken over both is wrong and nothing
     about the result says so. Picking the newest, or the first, produces numbers that cannot be
     compared with another consumer's.
@@ -43,7 +43,7 @@ class AmbiguousRun(PacketError):
 
 
 class UnresolvedSource(PacketError):
-    """An external resource names a source no available resolution document locates (R80 §2.4).
+    """An external resource names a source no available resolution document locates (`04` §5.5).
 
     A fact rather than a defect: which mirrors a reader can reach is a property of the reader,
     so the packet is not invalid. It is raised when the bytes are actually asked for, and the

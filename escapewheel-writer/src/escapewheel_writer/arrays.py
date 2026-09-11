@@ -1,7 +1,7 @@
 """Write a dense array into a packet as Zarr v3.
 
-R21 §3.1 requires a packet-owned array to be v3; v2 is permitted only for one the packet
-references. R3 §7.1 pins the rest of the shape: a regular chunk grid, little-endian, an
+`03` §6.1 requires a packet-owned array to be v3; v2 is permitted only for one the packet
+references. `03` §6.1 pins the rest of the shape: a regular chunk grid, little-endian, an
 explicit `fill_value`, and no `transpose` codec -- axes are stored in the order the packet
 declares them, and a column-major binding enumerates them in reverse rather than the format
 rearranging itself.
@@ -44,8 +44,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:  # pragma: no cover
     from .writer import StagedArray
 
-#: R3 §7.2's reader floor: what every conforming reader MUST support. It is a *reader*
-#: obligation and not a writer restriction -- R14 §2.2 generalized the declaration to an open
+#: `03` §6.4's reader floor: what every conforming reader MUST support. It is a *reader*
+#: obligation and not a writer restriction -- `03` §6.4 generalized the declaration to an open
 #: one, so "a writer MAY use any Zarr codec; the manifest MUST name it; a reader MUST check
 #: before opening an array and fail naming what it lacks." Refusing a codec here would enforce
 #: against a writer a floor written for readers, and `escapewheel_reader.Packet.unopenable` is
@@ -53,7 +53,7 @@ if TYPE_CHECKING:  # pragma: no cover
 FLOOR = {"none", "gzip", "zstd"}
 
 #: Array-to-array codecs, which run before the bytes codec rather than after it. Named as the
-#: store names them -- zarr registers numcodecs codecs under a `numcodecs.` prefix, and R15 §4
+#: store names them -- zarr registers numcodecs codecs under a `numcodecs.` prefix, and `04` §5.3
 #: compares the manifest against the store, so `delta` and `numcodecs.delta` are not the same
 #: claim.
 FILTERS = {"numcodecs.delta"}
@@ -149,7 +149,7 @@ def shard_for(
 
 
 def declared_codecs(spec: StagedArray) -> tuple[str, ...]:
-    """Return the codec names a manifest must declare for this array, outermost first (R15 §2).
+    """Return the codec names a manifest must declare for this array, outermost first (`03` §6.4).
 
     Derived from the layout, not from `codecs` alone, because **sharding is a codec**. An array
     written with a shard uses `sharding_indexed` whether or not the caller named it, and a
@@ -172,7 +172,7 @@ def declared_codecs(spec: StagedArray) -> tuple[str, ...]:
 
 
 def _codec(name: str, *, differenced: bool = False) -> Any:
-    """Build one bytes-to-bytes codec by the name a manifest declares (R15 §2).
+    """Build one bytes-to-bytes codec by the name a manifest declares (`03` §6.4).
 
     `differenced` says a delta filter runs first, which decides blosc's shuffle. Bit shuffle
     wins where the high bits go constant, and differencing a smooth signal is what makes them
@@ -219,7 +219,7 @@ def write_zarr(path: Path, spec: StagedArray) -> int:
     Raises
     ------
     ValueError
-        If a declared codec is outside R3 §7.2's permitted set, or the shard is not a whole
+        If a declared codec is outside `03` §6.4's permitted set, or the shard is not a whole
         number of chunks in every axis -- a partial shard is not a regular grid.
     """
     import zarr

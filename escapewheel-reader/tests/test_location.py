@@ -37,7 +37,7 @@ def test_a_store_location_has_no_path():
 
 
 def test_a_rewrite_redirects_an_absolute_uri():
-    """R14 §2.3 makes reachability the caller's situation; this is how the caller says so."""
+    """`04` §5.1 makes reachability the caller's situation; this is how the caller says so."""
     root = Location.of("/data/packet", {"file:///mnt/Data/ephys/": "s3://bucket/ephys/"})
     assert root.resolve("file:///mnt/Data/ephys/session.nwb/lfp").uri == "s3://bucket/ephys/session.nwb/lfp"
 
@@ -86,7 +86,7 @@ def test_a_source_resolves_through_a_document(tmp_path):
 
 
 def test_a_source_no_document_locates_is_refused(tmp_path):
-    """R80 §2.4: a fact about the reader's situation, raised where the bytes are asked for."""
+    """`04` §5.5: a fact about the reader's situation, raised where the bytes are asked for."""
     from escapewheel_reader import UnresolvedSource
 
     with pytest.raises(UnresolvedSource, match="raw_nwb"):

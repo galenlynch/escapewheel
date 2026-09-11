@@ -29,9 +29,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — | R20 §5 | Session ID. |
 | `array_asset_id` | int32 | **required** | — | R20 §5 | Stable array asset ID. |
-| `array_asset_name` | string | **required** | free | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `array_asset_name` | string | **required** | free | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (`05` §8). |
 | `semantic_type` | string | nullable | open | R107 §3.1 | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (`01` §3.17). |
-| `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | R107 §3.1 | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 §4's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
+| `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | R107 §3.1 | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with `02` §9.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
 | `uri` | string | **required** | free | R20 §5 | URI/path to array store. |
 | `format` | string | **required** | open | R20 §5 | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable | — | R20 §5 | Clock for time axis. |
@@ -117,9 +117,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Session ID. |
 | `array_asset_id` | int32 | **required** | — |  | Stable array asset ID. |
-| `array_asset_name` | string | **required** | free | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `array_asset_name` | string | **required** | free | R95 §3.1 | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (`05` §8). |
 | `semantic_type` | string | nullable | open | R107 §3.1 | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (`01` §3.17). |
-| `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | R107 §3.1 | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with R8 §4's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
+| `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | R107 §3.1 | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with `02` §9.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
 | `uri` | string | **required** | free |  | URI/path to array store. |
 | `format` | string | **required** | open |  | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable | — |  | Clock for time axis. |
@@ -260,12 +260,12 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `calibration_id` | int32 | **required** | — | R89 §2.1 | Stable calibration ID. |
 | `calibration_name` | string | **required** | free | R89 §2.1 | What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since R85 §2.2 makes two calibrations sharing a name one row. |
 | `calibration_type` | string | **required** | open | R107 §3.1 | What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (R55 §2.1), and this holds a value that resolves to no table. |
-| `calibrated_at` | timestamp | nullable | — | R89 §2.1 | When the calibration was measured, which is not when it was in force: R89 §1.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (R66 §2.1). |
+| `calibrated_at` | timestamp | nullable | — | R89 §2.1 | When the calibration was measured, which is not when it was in force: R89 §1.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (`01` §3.5). |
 | `description` | string | nullable | free | R89 §2.1 | What the source said the calibration was. |
 | `input_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | R101 §3.6 | The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column (R89 §2.3). |
 | `output_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | R101 §3.6 | The unit of `core.calibration_points.output_value`, as a UCUM code. |
 | `array_asset_id` | int32 | nullable | — | R89 §2.1 | The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics (R89 §2.4). |
-| `detail_kind` | string | nullable | resolves optional | R107 §3.1 | A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (R89 §2.5). |
+| `detail_kind` | string | nullable | resolves optional | R107 §3.1 | A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (`02` §12.3). |
 | `metadata` | json_string | optional | — | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `calibration_id`  
@@ -357,7 +357,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Session ID. |
 | `clock_id` | int32 | **required** | — |  | Stable clock ID. |
-| `clock_name` | string | **required** | free | R95 §3.1 | What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `clock_name` | string | **required** | free | R95 §3.1 | What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (`05` §8). |
 | `tick_rate_hz` | float64 | nullable | — |  | Tick rate as float, required unless exact tick rate provided. |
 | `tick_rate_num` | int64 | nullable | — |  | Exact rational numerator. |
 | `tick_rate_den` | int64 | nullable | — |  | Exact rational denominator. |
@@ -368,8 +368,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `transform_offset` | float64 | nullable | — | R3 §3.4 | Parent-clock tick at this clock's tick 0. |
 | `transform_to_parent` | json_string | optional | — |  | Clock alignment transform. |
 | `metadata` | json_string | optional | — | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
-| `withheld_first_anchor` | bool | nullable | — | R99 §3.2 | Whether R37 §3.2's terminal-anchor test withheld this clock's first anchor. Null means the test did not run. |
-| `withheld_last_anchor` | bool | nullable | — | R99 §3.2 | Whether R37 §3.2's terminal-anchor test withheld this clock's last anchor. Null means the test did not run. |
+| `withheld_first_anchor` | bool | nullable | — | R99 §3.2 | Whether `02` §12.6's terminal-anchor test withheld this clock's first anchor. Null means the test did not run. |
+| `withheld_last_anchor` | bool | nullable | — | R99 §3.2 | Whether `02` §12.6's terminal-anchor test withheld this clock's last anchor. Null means the test did not run. |
 
 **Primary key** — `clock_id`  
 
@@ -400,8 +400,8 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — | R105 §3.2 | Session. |
 | `coordinate_frame` | string | **required** | open | R105 §3.2 | The frame these axes belong to. |
-| `axis_index` | int64 | **required** | — | R105 §3.2 | Which axis, 0-based (R3 §6). |
-| `axis_name` | string | **required** | open | R105 §3.2 | Whatever the source called the field these values came from, verbatim (R22 §3). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be. |
+| `axis_index` | int64 | **required** | — | R105 §3.2 | Which axis, 0-based (`02` §8.1.1). |
+| `axis_name` | string | **required** | open | R105 §3.2 | Whatever the source called the field these values came from, verbatim (`02` §9.3). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be. |
 | `axis_direction` | string | nullable | open | R105 §3.2 | Which way the values increase -- `right`, `anterior`, `superior`. Null where the source does not state it, which no inference may fill (R105 §3.4). |
 | `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | R101 §3.6 | The axis's unit, as a UCUM code (R101 §3.6). |
 
@@ -440,7 +440,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Session ID. |
 | `curation_id` | int32 | **required** | — |  | Stable curation ID. |
-| `curation_name` | string | nullable | free | R53 §2.3.1 | What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `curation_name` | string | nullable | free | R53 §2.3.1 | What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (`05` §8). |
 | `sorting_run_id` | int32 | **required** | — |  | Sorting run ID. |
 | `curator` | string | nullable | free |  | Curator. |
 | `curation_tool` | string | nullable | free |  | Tool. |
@@ -466,15 +466,15 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — | R88 §2.1 | Session if device record is session-scoped. |
 | `device_id` | int32 | **required** | — |  | Stable device ID. |
-| `device_name` | string | **required** | free | R95 §3.1 | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `device_name` | string | **required** | free | R95 §3.1 | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (`05` §8). |
 | `manufacturer` | string | nullable | open | R107 §3.1 | The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers. |
 | `model` | string | nullable | free |  | Model. |
 | `firmware_version` | string | nullable | free | R66 §2.1 | The firmware the instrument was running, verbatim as its source stated it. |
 | `hardware_version` | string | nullable | free | R66 §2.1 | The instrument's hardware revision, verbatim as its source stated it. |
 | `serial_number` | string | nullable | free |  | Serial number. |
 | `parent_device_id` | int32 | nullable | — | R67 §2.1 | The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it. |
-| `parent_port` | string | nullable | open | R85 §2.1 | Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (R85 §2.3). |
-| `device_kind` | string | nullable | resolves optional | R104 §3.1 | The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is R90 §3.5's shared-key join. Core declares no such table (R104 §3.2); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (R55 §2.2). |
+| `parent_port` | string | nullable | open | R85 §2.1 | Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (`01` §3.5). |
+| `device_kind` | string | nullable | resolves optional | R104 §3.1 | The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is `02` §8.3's shared-key join. Core declares no such table (`02` §8.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (R55 §2.2). |
 | `metadata` | json_string | optional | — | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `device_id`  
@@ -498,7 +498,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** | — | R105 §3.3 | Session. |
 | `electrode_id` | int32 | **required** | — | R105 §3.3 | The thing positioned. |
 | `coordinate_frame` | string | **required** | open | R105 §3.3 | The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key. |
-| `coordinate_basis` | string | **required** | open | R105 §3.3 | What the coordinate asserts (R58 §2.1). |
+| `coordinate_basis` | string | **required** | open | R105 §3.3 | What the coordinate asserts (`01` §3.8). |
 | `axis_index` | int64 | **required** | — | R105 §3.3 | Which of the frame's axes this value is on. |
 | `axis_value` | float64 | **required** | — | R105 §3.3 | The value, in the axis's unit. |
 
@@ -519,7 +519,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** | — | R88 §2.1 | Session ID. |
 | `electrode_id` | int32 | **required** | — | R19 §3 | Electrode ID. |
 | `coordinate_frame` | string | **required** | open | R107 §3.1 | The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is. |
-| `coordinate_basis` | string | **required** | open | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
+| `coordinate_basis` | string | **required** | open | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (`01` §3.8). A consumer that does not recognise a basis MUST NOT treat it as measured (`01` §3.8). |
 | `region_id` | int32 | nullable | — | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | open | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
 | `processing_run_id` | int32 | nullable | — | R58 §2.3 | The run that produced this coordinate. |
@@ -539,7 +539,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Session ID. |
 | `electrode_id` | int32 | **required** | — |  | Stable electrode ID. |
-| `electrode_name` | string | nullable | free | R53 §2.3.1 | What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `electrode_name` | string | nullable | free | R53 §2.3.1 | What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (`05` §8). |
 | `probe_id` | int32 | nullable | — |  | Probe ID. |
 | `local_electrode_label` | string | nullable | free | R8 §2 | Opaque source label; undefined base, not an offset. |
 | `local_channel_label` | string | nullable | free | R8 §2 | Opaque source label; undefined base, not an offset. |
@@ -584,9 +584,9 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — | R23 §2-3 | Session ID. |
 | `event_stream_id` | int32 | **required** | — | R23 §2-3 | Stable ID. |
-| `event_stream_name` | string | **required** | free | R95 §3.1 | What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `event_stream_name` | string | **required** | free | R95 §3.1 | What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (`05` §8). |
 | `event_type` | string | **required** | open | R107 §3.1 | What kind of event this stream emits. A stream emits one kind, so a source emitting several on one channel is written as several streams. |
-| `detail_kind` | string | nullable | resolves optional | R107 §3.1 | A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (R90 §3.4). Resolved against `core.events`' key by R90 §3.5's shared key, through the reference `discriminates_via` names. |
+| `detail_kind` | string | nullable | resolves optional | R107 §3.1 | A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (`02` §8.3). Resolved against `core.events`' key by `02` §8.3's shared key, through the reference `discriminates_via` names. |
 | `device_id` | int32 | nullable | — | R23 §2-3 | The device that produced it, where one is identified. |
 | `clock_id` | int32 | **required** | — | R23 §2-3 | The clock its events are timed on. |
 | `processing_run_id` | int32 | nullable | — | R23 §2-3 | The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 §4: the manifest records outputs per resource and cannot distinguish streams within one table. |
@@ -655,7 +655,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Session ID. |
 | `media_asset_id` | int32 | **required** | — |  | Stable media asset ID. |
-| `media_asset_name` | string | **required** | free | R95 §3.1 | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `media_asset_name` | string | **required** | free | R95 §3.1 | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (`05` §8). |
 | `semantic_type` | string | nullable | open | R107 §3.1 | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (`01` §3.17). |
 | `uri` | string | **required** | free |  | Media file URI. |
 | `format` | string | **required** | open | R107 §3.1 | The container format, as the file extension names it: `mp4`, `avi`. |
@@ -711,7 +711,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Declares | Since | Description |
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — | R41 §2.3 | Session ID. |
-| `activity_type` | string | **required** | open | R107 §3.1 | Which kind of output this preference is about, in the vocabulary `core.processing_runs.activity_type` uses (R9 §6). |
+| `activity_type` | string | **required** | open | R107 §3.1 | Which kind of output this preference is about, in the vocabulary `core.processing_runs.activity_type` uses (`02` §9.3). |
 | `scope_kind` | string | **required** | resolves optional | R107 §3.1 | The resource whose primary key `scope` holds, as a dotted resource ID (R49 §2.2). |
 | `scope` | string | **required** | free | R41 §2.3 | What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide. |
 | `processing_run_id` | int32 | **required** | — | R41 §2.3 | The preferred run. |
@@ -737,13 +737,13 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Session ID. |
 | `probe_id` | int32 | **required** | — |  | Stable probe ID. |
-| `probe_name` | string | nullable | free | R95 §3.1 | What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `probe_name` | string | nullable | free | R95 §3.1 | What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (`05` §8). |
 | `device_id` | int32 | nullable | — |  | Associated device. |
 | `probe_type` | string | nullable | open | R107 §3.1 | The probe's model, as the manufacturer names it: `Neuropixels 1.0`. |
 | `manufacturer` | string | nullable | open | R107 §3.1 | The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers. |
 | `serial_number` | string | nullable | free |  | Serial number. |
 | `insertion_name` | string | nullable | free |  | Insertion label. |
-| `target_region` | string | nullable | open | R107 §3.1 | The structure the probe was aimed at, as an atlas acronym where the source gives one. Not resolvable: no column here names the atlas, which only a coordinate frame does (R105 §3.1). |
+| `target_region` | string | nullable | open | R107 §3.1 | The structure the probe was aimed at, as an atlas acronym where the source gives one. Not resolvable: no column here names the atlas, which only a coordinate frame does (`01` §3.24). |
 | `metadata` | json_string | optional | — | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `probe_id`  
@@ -777,7 +777,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — | R88 §2.1 | Session ID if session-scoped. |
 | `processing_run_id` | int32 | **required** | — |  | Stable processing run ID. |
-| `processing_run_name` | string | nullable | free | R53 §2.3.1 | What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `processing_run_name` | string | nullable | free | R53 §2.3.1 | What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (`05` §8). |
 | `activity_type` | string | **required** | open | R107 §3.1 | What kind of work the run did: `import`, `validation`, `sorting`, `curation`, `materialization`. A pipeline names its own. |
 | `scope` | string | nullable | free | R107 §3.1 | What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Read only with the `scope_kind` beside it, which names the table the value keys into (R49 §2.2). |
 | `scope_kind` | string | nullable | resolves optional | R107 §3.1 | The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
@@ -788,7 +788,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `parameters` | json_string | optional | — |  | Parameters. |
 | `started_at` | timestamp | nullable | — |  | Start time. |
 | `ended_at` | timestamp | nullable | — |  | End time. |
-| `status` | string | **required** | closed: `succeeded`, `failed`, `partial` | R107 §3.1 | Whether the run completed, with the meanings R8 §3 declares. |
+| `status` | string | **required** | closed: `succeeded`, `failed`, `partial` | R107 §3.1 | Whether the run completed, with the meanings `02` §9.3 declares. |
 | `metadata` | json_string | optional | — | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `processing_run_id`  
@@ -828,7 +828,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Declares | Since | Description |
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Stable session ID. |
-| `session_name` | string | nullable | free | R53 §2.3.1 | What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `session_name` | string | nullable | free | R53 §2.3.1 | What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (`05` §8). |
 | `subject_id` | int32 | **required** | — |  | Subject ID. |
 | `session_start_time` | timestamp | **required** | — |  | Session start time if known; if unknown use explicit null only in non-strict test packets. |
 | `session_end_time` | timestamp | nullable | — | R25 §2 | When the session ended, UTC. Metadata, not derived from the tables (R25 5). |
@@ -839,7 +839,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `source_session_id` | int32 | nullable | — |  | Source-system session ID if different. |
 | `t_zero_tick` | int64 | nullable | — | R39 §2.2 | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
 | `metadata` | json_string | optional | — | R97 §3.4 | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
-| `alignment_bound` | float64 | nullable | — | R99 §3.1 | How far past its anchors the writer mapped, in median anchor intervals (R27 §5.3). Null means the default of one. |
+| `alignment_bound` | float64 | nullable | — | R99 §3.1 | How far past its anchors the writer mapped, in median anchor intervals (`01` §3.9). Null means the default of one. |
 
 **Primary key** — `session_id`  
 
@@ -886,7 +886,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Session ID. |
 | `sorting_run_id` | int32 | **required** | — |  | Stable sorting run ID. |
-| `sorting_run_name` | string | nullable | free | R53 §2.3.1 | What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `sorting_run_name` | string | nullable | free | R53 §2.3.1 | What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (`05` §8). |
 | `probe_id` | int32 | nullable | — |  | Probe ID. |
 | `sorter_name` | string | nullable | free |  | Sorter name. |
 | `sorter_version` | string | nullable | free |  | Sorter version. |
@@ -911,7 +911,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Declares | Since | Description |
 |---|---|:---:|---|---|---|
 | `source_file_id` | int32 | **required** | — |  | Stable source file ID. |
-| `source_file_name` | string | nullable | free | R53 §2.3.1 | What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `source_file_name` | string | nullable | free | R53 §2.3.1 | What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (`05` §8). |
 | `uri` | string | **required** | free |  | Source URI/path. |
 | `format` | string | nullable | open | R107 §3.1 | The file's format in the producer's own terms, which this specification does not constrain. |
 | `sha256` | string | nullable | free |  | Checksum. |
@@ -947,7 +947,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | Column | Type | Presence | Declares | Since | Description |
 |---|---|:---:|---|---|---|
 | `subject_id` | int32 | **required** | — |  | Stable subject ID. |
-| `subject_name` | string | nullable | free | R53 §2.3.1 | What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `subject_name` | string | nullable | free | R53 §2.3.1 | What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (`05` §8). |
 | `species` | string | nullable | open; [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy) | R101 §3.6 | The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- `01` §3.4 admits a preparation, and a phantom or a simulation has no species. |
 | `strain` | string | nullable | open; [MGI](https://www.informatics.jax.org/), [RGD](https://rgd.mcw.edu/) | R101 §3.6 | The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks such as `Long-Evans`. |
 | `sex` | string | nullable | closed: `male`, `female`, `hermaphrodite`, `other`; [HL7 FHIR administrative gender](https://hl7.org/fhir/valueset-administrative-gender.html) | R101 §3.6 | The subject's sex. Null where the source states none, states it unknown, or describes a preparation that has none. |
@@ -966,7 +966,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** | — | R105 §3.3 | Session. |
 | `unit_id` | int32 | **required** | — | R105 §3.3 | The thing positioned. |
 | `coordinate_frame` | string | **required** | open | R105 §3.3 | The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key. |
-| `coordinate_basis` | string | **required** | open | R105 §3.3 | What the coordinate asserts (R58 §2.1). |
+| `coordinate_basis` | string | **required** | open | R105 §3.3 | What the coordinate asserts (`01` §3.8). |
 | `axis_index` | int64 | **required** | — | R105 §3.3 | Which of the frame's axes this value is on. |
 | `axis_value` | float64 | **required** | — | R105 §3.3 | The value, in the axis's unit. |
 
@@ -987,7 +987,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 | `session_id` | int32 | **required** | — | R28 §2-4 | Session ID. |
 | `unit_id` | int32 | **required** | — | R28 §2-4 | Unit ID. |
 | `coordinate_frame` | string | **required** | open | R107 §3.1 | The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is. |
-| `coordinate_basis` | string | **required** | open | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (R64 §2.1). A consumer that does not recognise a basis MUST NOT treat it as measured (R58 §2.2). |
+| `coordinate_basis` | string | **required** | open | R58 §2.1 | What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (`01` §3.8). A consumer that does not recognise a basis MUST NOT treat it as measured (`01` §3.8). |
 | `region_id` | int32 | nullable | — | R59 §2.1 | The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names. |
 | `region_label` | string | nullable | open | R59 §2.1 | That structure's short name, so a consumer without the atlas can read the annotation. |
 | `processing_run_id` | int32 | nullable | — | R58 §2.3 | The run that produced this coordinate. |
@@ -1080,7 +1080,7 @@ derived from nwb_lake_poc_docs/02_core_logical_schemas.md, revisions R1, R2, R3,
 |---|---|:---:|---|---|---|
 | `session_id` | int32 | **required** | — |  | Session ID. |
 | `unit_id` | int32 | **required** | — |  | Stable unit ID. |
-| `unit_name` | string | nullable | free | R53 §2.3.1 | What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (R53 §2.5). |
+| `unit_name` | string | nullable | free | R53 §2.3.1 | What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (`05` §8). |
 | `probe_id` | int32 | nullable | — |  | Probe ID. |
 | `sorting_run_id` | int32 | **required** | — |  | Sorting run ID. |
 | `curation_id` | int32 | **required** | — |  | Curation ID. |

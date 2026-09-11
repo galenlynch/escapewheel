@@ -16,7 +16,7 @@ import pyarrow.parquet as pq
 HERE = Path(__file__).resolve().parent
 REGISTRY = json.loads((HERE.parent / "registry" / "logical_schemas.json").read_text())
 
-#: The one extension this corpus carries. R54 §2.4a makes an `interval_kind` naming a resource
+#: The one extension this corpus carries. `01` §3.10a makes an `interval_kind` naming a resource
 #: the packet does not declare an error, and no core table specialises an interval -- so a packet
 #: with intervals carries an extension by construction, and the corpus has to as well.
 EXTENSION_ID = "dynamic_foraging"
@@ -42,7 +42,7 @@ def table(resource: str, rows: list[dict]) -> pa.Table:
 
     Columns absent from `rows` are emitted as nulls unless the registry marks them
     optional, in which case they are omitted entirely — exercising all three presence
-    states (R2 §5).
+    states (`02` §6).
     """
     spec = SPECS[resource]
     rows = number(spec, [dict(r) for r in rows])
@@ -70,7 +70,7 @@ def number(spec, rows):
     declared = {c["name"] for c in spec["columns"]}
     # A foreign key numbers in the map of the column it points at. `parent_clock_id` and
     # `clock_id` are both clocks; numbering them apart makes the parent chain name a clock that
-    # does not exist, which is what R27 §3 requires to be well-founded.
+    # does not exist, which is what `01` §3.9 requires to be well-founded.
     target = {
         column: referenced
         for ref in spec.get("references", [])
@@ -114,7 +114,7 @@ def preassign(tables: dict[str, list[dict]]) -> None:
     Assigning as each table is built would let the order tables happen to be written in decide
     the numbers: `core.sessions` names a `reference_clock_id` and is written before
     `core.clocks`, so the clocks would be numbered by the session's mention of one of them.
-    R53 §2.5 wants two builds of the same sources to produce the same packet, and this is what
+    `05` §8 wants two builds of the same sources to produce the same packet, and this is what
     makes that hold across tables as well as within one.
     """
     pending: dict[str, set[str]] = {}
@@ -151,7 +151,7 @@ def content() -> dict[str, list[dict]]:
     # unit_002 drops out between 120k and 150k, so it has no spikes there: the windows
     # declared below and these spikes must agree (core.spike_events.within_observation).
     u2 = [t for t in range(45_000, 300_000, 21_000) if not 120_000 < t < 150_000]
-    # R105 §3.3: a position is one row per axis of its frame, so each is written once here and
+    # `01` §3.8: a position is one row per axis of its frame, so each is written once here and
     # split below into the coordinate row and its values. The `probe` frame has two axes and the
     # `ccf` frame three, which is the arity the frame declares rather than a column count.
     unit_positions = [
@@ -209,7 +209,7 @@ def content() -> dict[str, list[dict]]:
                 (1, "elec_001", (0, 1, 3)),
                 (2, "elec_003", (1, 3)))
             for k, e in enumerate(contacts)],
-        # R105 §3.1: which space a frame name means is a declared row. `ccf` names the atlas and
+        # `01` §3.24: which space a frame name means is a declared row. `ccf` names the atlas and
         # its version; `probe` is nobody's published atlas, so both are null and the description
         # is what a reader without one has.
         "core.coordinate_frames": [
@@ -219,7 +219,7 @@ def content() -> dict[str, list[dict]]:
             {"session_id": "s001", "coordinate_frame": "probe", "atlas": None,
              "atlas_version": None,
              "description": "contact positions on the shank, as the probe file states them"}],
-        # R105 §3.2: `axis_name` is the source's own word for the field, and `axis_direction` is
+        # `02` §12.7: `axis_name` is the source's own word for the field, and `axis_direction` is
         # null on the shank because no source of a probe geometry says which way `rel_x` runs.
         "core.coordinate_frame_axes": [
             {"session_id": "s001", "coordinate_frame": frame, "axis_index": i,
@@ -246,7 +246,7 @@ def content() -> dict[str, list[dict]]:
              "coordinate_basis": "measured", "axis_index": i, "axis_value": value}
             for electrode, frame, values, _region, _label in electrode_positions
             for i, value in enumerate(values)],
-        # In name order, because R53 numbers a name to its rank and R10 §2 sorts by the key --
+        # In name order, because R53 numbers a name to its rank and `03` §5.3 sorts by the key --
         # so the file's order is the names' order, and the child now precedes its parent.
         "core.clocks": [
             {"clock_id": "behavior_s001", "session_id": "s001",
@@ -257,7 +257,7 @@ def content() -> dict[str, list[dict]]:
             {"clock_id": "imec_ap_s001", "session_id": "s001",
              "name": "Neuropixels AP sample clock", "tick_rate_hz": float(AP_HZ),
              "origin": "sample 0 at acquisition start", "tick_zero_utc": START}],
-        # R54 §2.1: the kind is a dotted resource ID naming the table that says what the
+        # `01` §3.10: the kind is a dotted resource ID naming the table that says what the
         # interval was, and §2.4a makes naming one the packet does not carry an error.
         "core.intervals": [
             {"session_id": "s001", "interval_kind": KIND, "interval_id": 1,
@@ -333,8 +333,8 @@ def content() -> dict[str, list[dict]]:
                 (2, "decoder", "mua", "mua", 0.71),
                 # non_soma has no honest projection, so it is null rather than forced (R22 3).
                 (2, "bombcell", "non_soma", None, None))],
-        # R98 §3.1: a clock anything is timestamped on says when it was observing. Each window
-        # contains the per-thing windows below, which R38 §2.3 narrows it with rather than adding to.
+        # `02` §12.5: a clock anything is timestamped on says when it was observing. Each window
+        # contains the per-thing windows below, which `01` §2.2 narrows it with rather than adding to.
         "core.clock_observation_intervals": [
             {"session_id": "s001", "clock_id": "imec_ap_s001", "start_tick": 0, "stop_tick": 300_000},
             {"session_id": "s001", "clock_id": "behavior_s001", "start_tick": 0, "stop_tick": 12_000}],
@@ -366,9 +366,9 @@ def sql_name(resource): return resource.replace(".", "_")
 
 
 def sort_rows(resource: str, rows: list[dict]) -> list[dict]:
-    """Apply the registry's declared physical ordering (R10 §2), as a writer should.
+    """Apply the registry's declared physical ordering (`03` §5.3), as a writer should.
 
-    A resource declaring no sort takes its primary key's order, which R92 §2.2 requires of it:
+    A resource declaring no sort takes its primary key's order, which `03` §5.3 requires of it:
     before that rule the thirteen tables with `sort: null` were written in insertion order and
     the validator scanned none of them.
     """
@@ -382,7 +382,7 @@ def write_packet(out: Path, tables: dict[str, list[dict]], *, raw: dict = None,
                  unsorted: frozenset = frozenset()):
     """Write a packet in 03's portable layout. `raw` supplies pre-built Arrow tables for
     variants that must violate the registry's own schema; `unsorted` names resources
-    written in insertion order, for variants that must violate R10 §2."""
+    written in insertion order, for variants that must violate `03` §5.3."""
     if out.exists():
         shutil.rmtree(out)
     KEYS.clear()
@@ -521,20 +521,20 @@ def variants():
              "t_tick": t, "parent_tick": t * 30}
             for i, t in enumerate([0, 1000, 2000, 3000, 23_000, 24_000, 25_000])]
     def clock_without_window(c):
-        # R98 §3.1: the reference clock declares no observation interval, so nothing timestamped
+        # `02` §12.5: the reference clock declares no observation interval, so nothing timestamped
         # on it has a window to inherit and the session's origin has nothing to be a minimum over.
         c["core.clock_observation_intervals"] = [
             r for r in c["core.clock_observation_intervals"] if r["clock_id"] != "imec_ap_s001"]
 
     def frame_without_axes(c):
-        # R105 §3.3: the frame declares two axes where its coordinates carry three, so every
+        # `01` §3.8: the frame declares two axes where its coordinates carry three, so every
         # `ccf_dv` value names an axis no frame declares and Tier 1's anti-join returns it.
         c["core.coordinate_frame_axes"] = [
             r for r in c["core.coordinate_frame_axes"]
             if not (r["coordinate_frame"] == "ccf" and r["axis_index"] == 2)]
 
     def undeclared_currency(c):
-        # One probe sorted twice with nothing saying which to read (R41 §2.4). Both runs carry
+        # One probe sorted twice with nothing saying which to read (`01` §2.4). Both runs carry
         # a scope, so the packet says enough to know they compete -- which is what separates
         # this from `unscoped_runs` below.
         c["core.processing_runs"][0]["scope_kind"] = "core.sessions"
@@ -550,7 +550,7 @@ def variants():
                  "ended_at": START + timedelta(hours=7)})
     def unscoped_runs(c):
         # Two runs of one activity, neither saying what it is about, so whether they compete
-        # cannot be determined (R44 §2.3). The fix is to record the scopes, not to choose.
+        # cannot be determined (`01` §2.4). The fix is to record the scopes, not to choose.
         for suffix in ("a", "b"):
             c["core.processing_runs"].append(
                 {"processing_run_id": f"run_pose_{suffix}", "session_id": "s001",

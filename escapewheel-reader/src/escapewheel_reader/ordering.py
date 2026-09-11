@@ -3,11 +3,11 @@
 R93 §3.3 removed the per-table `sort` field: it stated a physical property in the logical
 standard's machine form, and a reader could not tell a table with no override from one a later
 build block forgot. `03` §5.4's table is the only statement an override has now, and two actors
-read it -- a writer emits the order (`03` §5.4) and a validator establishes it (R92 §2.2) -- so
+read it -- a writer emits the order (`03` §5.4) and a validator establishes it (`03` §5.3) -- so
 the machine copy lives here, in the package both of them depend on and neither of which depends
 on the other.
 
-Everything not named below is stored in its primary key's order (R92 §2.2).
+Everything not named below is stored in its primary key's order (`03` §5.3).
 """
 
 from __future__ import annotations
@@ -16,8 +16,8 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 #: `03` §5.4. `analysis.spike_events` buckets by time and sorts by unit within each bucket, so a
-#: time filter and a unit filter each prune (R30 §3.2, narrowed to five columns by R81 §2.4). It
-#: satisfies R92 §2.2 because `clock_id` and `time_bucket_tick` are each declared `determined_by`
+#: time filter and a unit filter each prune (`03` §5.4, narrowed to five columns by R81 §2.4). It
+#: satisfies `03` §5.3 because `clock_id` and `time_bucket_tick` are each declared `determined_by`
 #: a subset of the key, so neither can separate two rows that share one.
 OVERRIDES: Mapping[str, tuple[str, ...]] = {
     "analysis.spike_events": ("session_id", "clock_id", "time_bucket_tick", "unit_id", "t_tick"),
@@ -28,7 +28,7 @@ def stored_order(resource: str, table: Mapping[str, Any]) -> list[str]:
     """The columns `resource` is stored by, in order.
 
     Empty where the table declares no primary key and no override, which is the one case with no
-    order to establish (R7 §2 admits a `null` key with a stated reason).
+    order to establish (`02` §2 admits a `null` key with a stated reason).
     """
     if override := OVERRIDES.get(resource):
         return list(override)

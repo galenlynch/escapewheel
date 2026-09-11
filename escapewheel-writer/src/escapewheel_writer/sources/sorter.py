@@ -62,7 +62,7 @@ STREAM = re.compile(
 #: A quad-base probe is sorted as four shank streams that share one physical device.
 SHANK = re.compile(r"^(?P<serial>.+?)-(?P<shank>\d+)$")
 
-#: R22 §3: a source's own label is open, the projection onto the closed set is declared.
+#: `02` §9.3: a source's own label is open, the projection onto the closed set is declared.
 #: `non_soma` projects to null rather than being forced into `noise` -- bombcell means
 #: "a real waveform recorded off-soma", which is not the same claim as "not a unit".
 PROJECTION: dict[str, str | None] = {
@@ -185,7 +185,7 @@ class SorterSource:
         What was dropped, coerced, or found inconsistent.
     """
 
-    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
     PRODUCES = frozenset(
@@ -203,7 +203,7 @@ class SorterSource:
         }
     )
 
-    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -237,7 +237,7 @@ class SorterSource:
     def streams(self) -> list[SortedStream]:
         """Every curated stream, sorted by the id its rows will carry.
 
-        The order is the one `core.spike_events` is stored in (R10 §2), so spike batches can
+        The order is the one `core.spike_events` is stored in (`03` §5.3), so spike batches can
         be yielded stream by stream without a global sort.
         """
         found = [_parse(child) for child in self.root.iterdir() if child.is_dir()]
@@ -328,7 +328,7 @@ class SorterSource:
         return f"{self.prefix}{stream.device}"
 
     def _unit_id(self, stream: SortedStream, label: int, width: int) -> str:
-        """Compose the name the writer numbers, ordered as R81 §2.2 requires.
+        """Compose the name the writer numbers, ordered as `02` §12.1 requires.
 
         `unit_id` is assigned, so the sorter's label cannot be it: a sorter numbers from zero
         within each run and a run is one probe, which put 810 distinct labels across 6,781 units
@@ -448,8 +448,8 @@ class SorterSource:
         `curation_versions` already report -- so this restates nothing the packet must derive.
 
         `supersedes` stays null. A first import supersedes nothing, and a writer that does not
-        know what a run replaced must not guess (R41 §2.2). `scope` is set, because a run whose
-        subject is unrecorded is undeterminable rather than unique (R44 §2.3).
+        know what a run replaced must not guess (`01` §3.20). `scope` is set, because a run whose
+        subject is unrecorded is undeterminable rather than unique (`01` §2.4).
         """
         rows = []
         for stream in self.streams():
@@ -539,7 +539,7 @@ class SorterSource:
         lengths = recorded.get("num_samples") or []
         if len(lengths) != 1:
             # Each segment restarts the counter, so a multi-segment recording is more than one
-            # clock (R27 §3) and its length is not one interval on this one.
+            # clock (`01` §3.9) and its length is not one interval on this one.
             self.notes.append(f"{stream.key}: {len(lengths)} recording segments; no observation window written")
             return None
         return int(lengths[0])
@@ -565,7 +565,7 @@ class SorterSource:
         `NWBSource._electrode_ids` composes, and a name is what makes the two agree without
         this adapter having to run after that one.
 
-        R83 §2.2 forbids inferring the list, so a stream whose analyzer states none contributes
+        `02` §12.2 forbids inferring the list, so a stream whose analyzer states none contributes
         no rows and says so.
         """
         rows = []
@@ -588,7 +588,7 @@ class SorterSource:
     def observation_intervals(self) -> list[dict[str, Any]]:
         """`core.clock_observation_intervals`, one window per stream's sample clock.
 
-        R38 §2.3: a sample clock's window is the extent of the recording it counts, which for
+        `01` §2.2: a sample clock's window is the extent of the recording it counts, which for
         a clock whose origin is sample 0 is `[0, length - 1]`. It is deliberately not derived
         from the spikes -- a denominator taken from the numerator makes every rate identical --
         and it is the fact that makes the window independent of what the sorting found: a unit

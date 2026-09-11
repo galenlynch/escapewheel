@@ -3,12 +3,12 @@
 Five things about this data decide the shape of what follows, each measured against the twelve
 series of `ecephys_776259_2025-04-09`.
 
-**It is referenced, not copied.** 5.8 GB of compressed int16 across twelve probes. R14 §2.3
+**It is referenced, not copied.** 5.8 GB of compressed int16 across twelve probes. `04` §5.1
 makes referencing the expected form for a resource this size: copying duplicates the bulk of a
 dataset, and transcoding to the portable floor would discard the acquisition's own compression
 for nothing. The bytes stay where they are and the packet says where that is.
 
-**It is Zarr v2, which only an external resource may be** (R21 §3.2). A packet-owned array
+**It is Zarr v2, which only an external resource may be** (`03` §6.1). A packet-owned array
 must be v3. The version rides on `physical_profile`, not a new field, because a resource that
 already says which profile it is should not say it twice.
 
@@ -27,7 +27,7 @@ position and R20 §2's labelled form points the axis at it.
 **`inter_sample_shift` is the per-channel quantity R19 was for.** It takes eight distinct
 values within a series, because a Neuropixels ADC samples its channels in turn rather than at
 once. `conversion` is *not*: it is one value per series here, so it stays on
-`core.array_assets` rather than being repeated down 96 rows, which R3 §3.0 forbids.
+`core.array_assets` rather than being repeated down 96 rows, which `02` §6 forbids.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ from .store import SourceStore, source_root
 #: Where an NWB keeps its LFP series.
 GROUP = "processing/ecephys/LFP"
 
-#: The array within a series that holds the samples. R21 §3.2's URI names the array, not the
+#: The array within a series that holds the samples. `03` §6.1's URI names the array, not the
 #: group around it, because a dense array asset is one array.
 DATA = "data"
 
@@ -73,7 +73,7 @@ class LFPSource(Compensates):
 
         - `none` records no claim.
         - `size` lists the store and records the total.
-        - `members` also records R51 §2.1's per-member listing, carrying whatever content hash
+        - `members` also records `04` §5.4's per-member listing, carrying whatever content hash
           the store handed over with it. Same request, so it costs what `size` costs; what it
           buys is a per-member check where the total hides two members changing in opposite
           directions, and `validate --store-digests` to see whether anything changed in place.
@@ -91,7 +91,7 @@ class LFPSource(Compensates):
         and `--store-digests` each report what they had nothing to compare against.
     """
 
-    #: R63 §2.1: what this adapter can supply, whatever a given root happens to hold.
+    #: `05` §3.4: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
     #: therefore needs the data.
     PRODUCES = frozenset(
@@ -102,7 +102,7 @@ class LFPSource(Compensates):
         }
     )
 
-    #: R87 §2.2: recipe fields this adapter states, to the attribute holding each. Declared
+    #: `05` §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
@@ -178,7 +178,7 @@ class LFPSource(Compensates):
 
     @staticmethod
     def _codecs(meta: dict[str, Any]) -> tuple[str, ...]:
-        """Name the codecs an array uses, as R15 §2 requires the manifest to declare them."""
+        """Name the codecs an array uses, as `03` §6.4 requires the manifest to declare them."""
         names = [str(f["id"]) for f in meta.get("filters") or []]
         if compressor := meta.get("compressor"):
             names.append(str(compressor["id"]))
@@ -223,15 +223,15 @@ class LFPSource(Compensates):
         return out
 
     def _verified(self, array: Any) -> Any:
-        """Record what looking at the referenced bytes established, or nothing (R14 §2.3.1).
+        """Record what looking at the referenced bytes established, or nothing (`03` §8).
 
         Resolves the URI the manifest will carry, not the local copy beside it: bytes next to
         the writer are not the bytes the URI names, however likely they are to be identical.
         A store it cannot reach leaves the claim unmade, which is a packet saying less rather
-        than saying something untrue (R36 §2.4).
+        than saying something untrue (`04` §5.2).
 
         `size_bytes` is the whole prefix, metadata documents included, because a dense array
-        asset is a prefix of many objects and its `.zarray` is part of what it is (R36 §2.1).
+        asset is a prefix of many objects and its `.zarray` is part of what it is (`04` §5.4).
         """
         from escapewheel_validator.stores import StoreUnreachable, digest, listing
 
@@ -241,7 +241,7 @@ class LFPSource(Compensates):
             return array
         try:
             found = listing(array.uri)
-            # A prefix has no natural digest, so R36 §2.2 defines one. It reads every byte --
+            # A prefix has no natural digest, so `04` §5.4 defines one. It reads every byte --
             # 3.9 s an array here -- which is why it is asked for separately.
             checksum = digest(array.uri) if self.verify == "sha256" else None
         except StoreUnreachable as exc:
@@ -282,7 +282,7 @@ class LFPSource(Compensates):
                     "clock_id": self._clock(series),
                     # No sample_rate_hz: core.array_dimensions declares the step in ticks on a
                     # clock whose rate is declared, so a rate here would be a second, rounded
-                    # statement of the same fact (R3 §3.0) -- and the rounded one is the one
+                    # statement of the same fact (`02` §6) -- and the rounded one is the one
                     # this file gets wrong.
                     "unit": attrs.get("unit"),
                     "conversion": attrs.get("conversion"),
@@ -391,7 +391,7 @@ class LFPSource(Compensates):
 
 
 def _member_entry(member: Any) -> dict[str, Any]:
-    """One R51 §2.1 member entry, omitting what the store said nothing about."""
+    """One `04` §5.4 member entry, omitting what the store said nothing about."""
     entry: dict[str, Any] = {"key": member.key, "size_bytes": member.size_bytes}
     if member.store_digest is not None:
         entry["store_digest"] = {

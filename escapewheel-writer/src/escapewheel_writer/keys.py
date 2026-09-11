@@ -1,4 +1,4 @@
-"""Assign an integer to each thing a packet names (R53 §2.5).
+"""Assign an integer to each thing a packet names (`05` §8).
 
 An identifier is `int32` and, where R53 §2.3 calls it **assigned**, this is what chooses the
 number. Shared across adapters on purpose: the recipe exists because four sources can each
@@ -10,7 +10,7 @@ NWB's own `id`, so the writer passes it through rather than choosing. `core.unit
 one until R81 §2.1: a sorter numbers from zero within each run, so its label named several units
 and only the packet can say which is which.
 
-Numbers are assigned in first-seen order and start at 0. Nothing depends on the order -- R53 §2.5
+Numbers are assigned in first-seen order and start at 0. Nothing depends on the order -- `05` §8
 requires only that a key not move once committed -- but a deterministic one makes two builds of
 the same sources produce the same packet, which is what lets a rebuild be compared to what it
 replaced.

@@ -245,7 +245,7 @@ def _import(args: argparse.Namespace) -> int:
 
 
 def _say_verdict(out: Path, report: Any) -> None:
-    """Report core's verdict and the extensions' apart, as R17 §4 keeps them.
+    """Report core's verdict and the extensions' apart, as `05` §5.4 keeps them.
 
     A packet stays core-conformant carrying an extension whose rules a validator cannot run, so
     one total conflates two verdicts and reads as a packet that committed despite an error.
@@ -260,7 +260,7 @@ def _say_verdict(out: Path, report: Any) -> None:
 
 
 def _verify(args: argparse.Namespace) -> int:
-    """Record what is true about a committed packet's external resources (R36 §2.4)."""
+    """Record what is true about a committed packet's external resources (`04` §5.2)."""
     from ..verify import verify
 
     report, manifest = verify(args.packet, level=args.level)
@@ -274,7 +274,7 @@ def _verify(args: argparse.Namespace) -> int:
 
 
 def _prune(args: argparse.Namespace) -> int:
-    """Remove what a committed packet no longer names (R61 §2.1)."""
+    """Remove what a committed packet no longer names (`03` §9.5)."""
     from ..prune import prune
 
     plan = prune(
@@ -301,7 +301,7 @@ def _prune(args: argparse.Namespace) -> int:
 
 
 def _extension(args: argparse.Namespace) -> int:
-    """Draft an extension registry from tables that already exist (R17 §2)."""
+    """Draft an extension registry from tables that already exist (`09` §2)."""
     from ..scaffold import draft
 
     tables = {}
@@ -349,7 +349,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     init.set_defaults(func=_init)
 
     extension = subcommands.add_parser("extension", help="draft an extension registry from tables that already exist")
-    extension.add_argument("extension_id", help="namespace every table is prefixed by (R17 §2)")
+    extension.add_argument("extension_id", help="namespace every table is prefixed by (`09` §2)")
     extension.add_argument(
         "--table",
         action="append",
@@ -368,7 +368,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         "--level",
         choices=("size", "members", "sha256"),
         default="members",
-        help="how much to establish; sha256 reads every byte, which is the cost R36 §2.4 puts "
+        help="how much to establish; sha256 reads every byte, which is the cost `04` §5.2 puts "
         "at publication rather than in a build (default: members)",
     )
     verifier.set_defaults(func=_verify)

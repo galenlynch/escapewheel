@@ -118,7 +118,7 @@ def _json_string(value: Any, column: str) -> Any:
 
 
 def _bounded(low: int, high: int, kind: str) -> Any:
-    """Return a coercion that refuses a value the declared width cannot hold (R76 §2.1).
+    """Return a coercion that refuses a value the declared width cannot hold (`02` §5.3).
 
     NumPy wraps: `np.int32(2**31)` is `-2147483648`, and casting an `int64` array to `int32`
     truncates each element silently. A wrapped identifier is a *valid* `int32` -- it satisfies
@@ -136,8 +136,8 @@ def _bounded(low: int, high: int, kind: str) -> Any:
             return value
         if not low <= number <= high:
             raise ValueError(
-                f"{column}: {number} does not fit {kind}; R76 §2.1 refuses the write rather than "
-                f"wrapping. Declare the wider type (R53 §2.4) or assign an identifier and record "
+                f"{column}: {number} does not fit {kind}; `02` §5.3 refuses the write rather than "
+                f"wrapping. Declare the wider type (`02` §5.3) or assign an identifier and record "
                 f"the source's own value as its name (R53 §2.3.1)"
             )
         return value
@@ -154,7 +154,7 @@ COERCE = {
     "int64": _bounded(-(2**63), 2**63 - 1, "int64"),
 }
 
-#: Registry column type -> the Arrow type a conforming writer emits (R3 §2.1).
+#: Registry column type -> the Arrow type a conforming writer emits (`03` §5.5).
 #: Every one is a primitive: no struct, map, or list appears anywhere in the registry.
 ARROW: dict[str, pa.DataType] = {
     "string": pa.string(),
@@ -173,7 +173,7 @@ def schema(spec: Mapping[str, Any], present: set[str]) -> pa.Schema:
     """Build the Arrow schema for one table.
 
     Optional columns are omitted when no record carries them; required and nullable
-    columns are always emitted, nullable ones as nulls. That is R2 §5's three presence
+    columns are always emitted, nullable ones as nulls. That is `02` §6's three presence
     states expressed physically.
 
     Parameters
@@ -200,7 +200,7 @@ def schema(spec: Mapping[str, Any], present: set[str]) -> pa.Schema:
 def sort_key(resource: str, spec: Mapping[str, Any]) -> list[str] | None:
     """Return the columns this table is physically ordered by, or None.
 
-    R10 §2 sorts every table by its primary key unless the registry overrides it, which
+    `03` §5.3 sorts every table by its primary key unless the registry overrides it, which
     `03` does for `core.spike_events` and `core.events`.
 
     Parameters
@@ -239,7 +239,7 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> No
     declared = {c["name"]: c for c in spec["columns"]}
     # A foreign key is numbered in the map of the column it points at, not its own. Otherwise
     # `parent_clock_id` and `clock_id` -- both clocks -- get separate numbering and the parent
-    # chain names a clock that does not exist, which R27 §3 requires to be well-founded. Same for
+    # chain names a clock that does not exist, which `01` §3.9 requires to be well-founded. Same for
     # `default_electrode_id` into electrodes and `supersedes_run_id` into runs.
     target = {
         column: referenced
@@ -367,7 +367,7 @@ def build(resource: str, spec: Mapping[str, Any], records: Sequence[Mapping[str,
     """
     rows = [dict(r) for r in records]
     if keys is not None:
-        # Before the sort, not after: R10 §2 orders by the primary key, and the key is the
+        # Before the sort, not after: `03` §5.3 orders by the primary key, and the key is the
         # number. Sorting the names would order `unit_10` between `unit_1` and `unit_2`.
         number(spec, rows, keys)
     if order := sort_key(resource, spec):

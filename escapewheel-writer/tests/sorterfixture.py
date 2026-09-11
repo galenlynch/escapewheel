@@ -24,7 +24,7 @@ from tests.nwbfixture import BLOSC
 #: distinguish an adapter that resolves `unit_index` from one that stores it.
 UNIT_IDS = [0, 1, 2, 5, 12, 40]
 
-#: One label per unit per source. bombcell alone emits `non_soma`, which R22 §3 projects to
+#: One label per unit per source. bombcell alone emits `non_soma`, which `02` §9.3 projects to
 #: null rather than forcing into `noise`.
 LABELS = {
     "KSLabel": ["good", "mua", "good", "mua", "good", "mua"],

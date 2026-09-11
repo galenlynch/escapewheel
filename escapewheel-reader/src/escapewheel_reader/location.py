@@ -24,17 +24,17 @@ from .errors import ManifestError, ResourceUnreadableError, UnresolvedSource
 
 #: A substitution a caller supplies at open time: declared URI prefix to replacement.
 #:
-#: R14 §2.3 makes an external resource's reachability a property of the reader's situation, and
+#: `04` §5.1 makes an external resource's reachability a property of the reader's situation, and
 #: a packet already committed records one situation -- the writer's. Substituting a prefix is
-#: how a reader reaches the same bytes from somewhere else without touching bytes R14 §2.3
+#: how a reader reaches the same bytes from somewhere else without touching bytes `04` §5.1
 #: makes immutable. `git config url.<base>.insteadOf` is the same mechanism.
 Rewrite = Mapping[str, str]
 
-#: A source resolution document's `sources` block, flattened to name -> URI (R80 §2.2).
+#: A source resolution document's `sources` block, flattened to name -> URI (`04` §5.5).
 Sources = Mapping[str, str]
 
-#: Where a writer SHOULD leave a default resolution document (R80 §2.3). Not a packet resource,
-#: so nothing in the manifest names it and R14 §2.3's immutability does not reach it.
+#: Where a writer SHOULD leave a default resolution document (`04` §5.5). Not a packet resource,
+#: so nothing in the manifest names it and `04` §5.1's immutability does not reach it.
 SOURCES_FILENAME = "sources.json"
 
 #: The one version of that document this reader knows how to read.
@@ -84,7 +84,7 @@ def _filesystem(store: str) -> tuple[Any, str]:
     Resolving costs a request -- pyarrow asks S3 which region a bucket is in -- so a packet
     with 28 tables in one bucket must not pay it 28 times.
 
-    **Credentials are deliberately not set.** R14 §2.3 makes reachability the caller's
+    **Credentials are deliberately not set.** `04` §5.1 makes reachability the caller's
     situation, so this takes whatever the filesystem's own default chain finds.
     """
     from pyarrow.fs import FileSystem
@@ -208,7 +208,7 @@ class Location:
         Raises
         ------
         UnresolvedSource
-            If `source` is named and no resolution document locates it (R80 §2.4).
+            If `source` is named and no resolution document locates it (`04` §5.5).
         """
         if source is not None:
             located = dict(self.sources).get(source)

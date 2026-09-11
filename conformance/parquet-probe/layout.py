@@ -14,7 +14,7 @@ encodings each one actually got and its bits per row. Flags three shapes worth a
 - **dict on a wide column** — a dictionary that is most of the column's own bytes, which is R68's
   case: the values are too distinct for the dictionary to pay for itself.
 - **no delta on a sorted integer** — `DELTA_BINARY_PACKED` is defined for INT32/INT64 alone
-  (R68 §2.3), so an ascending tick column not using it is leaving the floor unclaimed.
+  (`01` §3.18), so an ascending tick column not using it is leaving the floor unclaimed.
 - **a row group under 8 K rows** — its footer statistics start to cost more than they prune.
 """
 
@@ -60,7 +60,7 @@ def _flags(name: str, entry: dict[str, object], rows: int, groups: list[int]) ->
         # data it indexes, which is what a column declaring nothing else gets by default.
         said.append(f"dict is {int(entry['dictionary']) / compressed:.0%} of {compressed / 1e6:.2f}M")
     encodings = {str(e) for e in entry["encodings"]}
-    # A tick ascends within its partition, which is what DELTA_BINARY_PACKED is for (R68 §2.3).
+    # A tick ascends within its partition, which is what DELTA_BINARY_PACKED is for (`01` §3.18).
     # An `_index` does not -- `axis_index` cycles 0,1,2 per coordinate and `channel_index` per run --
     # so delta would encode a sawtooth and RLE is the right answer there.
     if name.endswith("_tick") and rows >= ENOUGH_ROWS and not any("DELTA" in e for e in encodings):
