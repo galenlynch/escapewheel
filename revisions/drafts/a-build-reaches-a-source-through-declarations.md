@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 03 §2 (the source protocols the portable profile requires); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the connection as a carrier beside the file, and when a report is this run's) |
+| **Amends** | Part 03, a new section at its end (the source protocols, what a delivery states, and how an adapter is reached); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the conversion that keeps a column, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the connection as a carrier beside the file, and when a report is this run's) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole, and a contradiction is refused), R87 §2.2 (an adapter declares which recipe fields it states), R109 §2.3 (a shared process is a shared dependency closure), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -78,12 +78,13 @@ One reads neither an institute's files nor a tool's: `tables` reads whatever the
 is R109 §3.2's route.
 
 `nwb` is the interesting case and it does not divide at the module. It reads NWB, the format this
-specification exists to interoperate with and whose importer is Part 07 §5's Phase 3 — and **15 of the
-columns it reads are ones base NWB does not define**: eight for a CCF position (`ccf_ap`, `ccf_ml`,
-`ccf_dv`, `ccf_id`, `ccf_acronym`, `ccf_name`, `ccf_structure_id_path`, `brain_region_id`), five for
-a dynamic-foraging trial (`go_cue`, `reward_outcome`, `reward_outcome_time`, `delay_start`,
-`delay_start_time`), plus `ks_unit_id` and `channel_name`. A `DynamicTable` admits any column, so
-reading those is reading one producer's dialect, not the standard.
+specification exists to interoperate with and whose importer is Part 07 §5's Phase 3 — and **15 of
+the columns it reads are ones base NWB does not define**: eight for a CCF position (`ccf_ap`,
+`ccf_ml`, `ccf_dv`, `ccf_id`, `ccf_acronym`, `ccf_name`, `ccf_structure_id_path`,
+`brain_region_id`), five for a dynamic-foraging trial (`go_cue`, `reward_outcome`,
+`reward_outcome_time`, `delay_start`, `delay_start_time`), plus `ks_unit_id` and `channel_name`. A
+`DynamicTable` admits any column, so reading those is reading one producer's dialect, not the
+standard.
 
 So the boundary runs **inside** the 1,291-line module rather than around it: the machinery that opens
 an NWB and walks its tables is this format's, and the knowledge of which extra columns a particular
@@ -99,9 +100,9 @@ a generic word for a specific reader, and R85 §2.3 is the rule that makes that 
 untidiness: a name this specification does not constrain must not be doing load-bearing work, and
 this one names what a build constructs.
 
-The mismatch is why §2.2's grouping is hard to see from a recipe: `[[source]] kind = "session"` reads
-as a session's metadata generally, where it means AIND's. Nothing in this part turns on the fix, and
-recording it is what keeps a rename from being invented later as a new idea.
+The mismatch is why §2.2's grouping is hard to see from a recipe: `[[source]] kind = "session"`
+reads as a session's metadata generally, where it means AIND's. Nothing in this part turns on the
+fix, and recording it is what keeps a rename from being invented later as a new idea.
 
 ### 2.4 Four tables hold an adapter's own property, away from the adapter
 
@@ -380,9 +381,9 @@ allows an adapter. Nothing R109 permitted is withdrawn: a file the recipe names 
 every implementation must support, and the stream is added beside it.
 
 The default settles the case that would otherwise need an exception. `core.spike_events` is 674.2 MB
-and every other adapter produces under 0.25 MB (§2.1), so a file costs the small ones nothing and the
-large one a write and a read; defaulting to the stream means no adapter needs permission to avoid
-that, and a recipe that wants the file says so.
+and every other adapter produces under 0.25 MB (§2.1), so a file costs the small ones nothing and
+the large one a write and a read; defaulting to the stream means no adapter needs permission to
+avoid that, and a recipe that wants the file says so.
 
 ### 3.4 A build runs a command from an argument list
 
@@ -421,37 +422,58 @@ before any source is opened.
 
 ### 3.6 An adapter returns records, never a transport
 
-Part 07 §4 states that an adapter's return type is records and not a path, because that is what lets an
-adapter be tested without a filesystem and keeps normalization decisions out of I/O code. That
-sentence **stands and is not enough**, because it answers what an adapter returns and this part asks
-how rows reach a build.
+Part 07 §4 states that an adapter's return type is records and not a path, because that is what
+lets an adapter be tested without a filesystem and keeps normalization decisions out of I/O code.
+That sentence **stands and is not enough**, because it answers what an adapter returns and this
+part asks how rows reach a build.
 
 An adapter's interface **MUST** remain records whichever route delivers them. Out of process, the
 transport carries them and the receiving end returns records again — which is not a hope: a `tables`
 source reads files and yields batches today, so the interface is re-established on this side of the
 boundary by machinery that already exists.
 
-**Turning records into a table is where a column goes missing.** Every out-of-process protocol
-carries a table, so something must build one, and the obvious call is wrong: `pa.Table.from_pylist`
-takes its columns from the leading row and drops what later rows carry. Measured over the NWB
-adapter's `core.electrode_coordinates`, one electrode in three carries R59's `region_id` and
-`region_label` and the first does not, so both columns left the delivery and nothing raised. An
-adapter **MUST** take a delivery's columns from every row of a resource, and a build **MUST NOT**
-read an absent column as a source having produced none — Part 02 §5's three presence states are
-decided against the registry on arrival, not by whichever row happened to be first.
+**A delivery's column set is a statement.** Every out-of-process protocol carries a table, so an
+adapter builds one before a build's registry is in reach, and which columns it puts there is read as
+Part 02 §5's presence: a column that is absent says the source produced no value for it in any row.
+An adapter **MUST** deliver a column wherever any row of that resource carries a value, and a build
+**MUST NOT** read an absent column as saying anything else.
 
-The registry is also why an adapter needs no types. A column null in every row infers as Arrow's
-`null`, an integer as `int64` where the registry may say `int32`, and both are settled by the build,
-which holds the declaration and is where R53's numbering already happens (§3.7). `arrow.py` is the
-reference for that reconciliation in process today: it takes the union of the keys and the
-registry's declared types, which is exactly what an out-of-process adapter must not be left to
-reinvent (§3.9).
+**Which columns are present is the only part a build cannot recover.** Measured over the NWB
+adapter's thirteen populated resources, a build rebuilding each delivered table through the same
+call it makes on records in process gets a table identical to the direct one in **13 of 13** — types
+settled against the registry, values coerced, columns in declared order, identifiers numbered
+(§3.7), rows sorted. A column null in every row arrives typed as Arrow's `null` and an integer as
+`int64` where the registry may say `int32`, and both are the build's to settle. So an adapter needs
+no types, no order and no numbering, and the one thing it cannot get wrong is which columns it sent.
+
+The way to get it wrong is language-specific, which is why the rule binds the statement and not the
+route to it. Python's `pa.Table.from_pylist` takes its columns from the leading row: over
+`core.electrode_coordinates`, one electrode of three carries R59's `region_id` and `region_label`
+and the first does not, so both columns left every delivery and nothing raised — **1 of 13**
+resources silently wrong. An adapter in a language with no dictionary as a row type declares its
+schema and meets the requirement by construction, and will find its own ways to fail that nothing
+here has seen.
+
+**What a delivery is belongs to the profile.** Part 03 is what someone implementing against this
+reads, and it carries the cross-language floor for the same reason: R3 §2's ban on nested types is
+there because a native reader must stay viable in a language with no embedded SQL engine. An adapter
+in another language is that argument one step earlier — it is the first thing a foreign
+implementation writes — so the protocols, their versions, what a delivery states and how an adapter
+is reached are **Part 03's**, in one section an implementer can read end to end rather than
+assembled from four parts.
+
+The split is by artifact, not by topic. What a conforming **delivery** is goes to Part 03. What a
+**build** does with one — refuse an incomplete run, report a failure, settle presence and type
+against the registry — stays Part 05's, being the import pipeline. How the reference implementation
+performs the conversion without losing a column is **Part 07 §4's**, being a property of that code
+and no other; writing it as a requirement would put a Python inference rule into a profile whose
+point is that it is not Python.
 
 What the out-of-process route gives up is the property Part 07 §4 names. Testing an adapter that
 delivers over a transport means running it, so the filesystem or the pipe is back, and an in-process
 adapter is the only one testable without either. **That is the trade** — a solvable environment
-against a test that needs no I/O — and §3.5 puts it where the person who bears it can make it, rather
-than settling it here for every recipe.
+against a test that needs no I/O — and §3.5 puts it where the person who bears it can make it,
+rather than settling it here for every recipe.
 
 ### 3.7 An identifier crosses the boundary as a name
 
@@ -688,15 +710,18 @@ so both answers are needed to report a failure rather than to report that one ha
 
 ## 5. Consequence
 
-Part 03 §2 gains the source protocols the portable profile requires. Part 05 §3 gains a preference
-table, an in-process declaration and when a source's delivery is complete; Part 05 §3.4 gains what an
-adapter declares; and Part 05 §3.5 and §3.7 gain what a build captures from a failure and what an
-adapter may report about a run. Part 09 §5.8's report gains the connection as a carrier beside the
-file, and the rule that a build clears the path before the run that writes it. Part 07 §4 gains
-`NEEDS`, `CONSUMES`, the protocol an adapter declares and how an array crosses — its sentence
-reads "two static declarations" today and becomes four. Part 09 §5.7 gains that an extension may
-use any
-protocol of the group and that a command is carried as a list.
+Part 03 gains a section at its end carrying the whole of what a foreign implementation needs:
+the protocol groups, each protocol's name and version, what a delivery states by the columns and
+resources it carries, and how a build reaches an adapter that must be running. Appending it
+renumbers nothing. Part 05 §3 gains a preference
+table, an in-process declaration and when a source's delivery is complete; Part 05 §3.4 gains what
+an adapter declares; and Part 05 §3.5 and §3.7 gain what a build captures from a failure and what
+an adapter may report about a run. Part 09 §5.8's report gains the connection as a carrier beside
+the file, and the rule that a build clears the path before the run that writes it. Part 07 §4
+gains `NEEDS`, `CONSUMES`, the protocol an adapter declares, how an array crosses, and the
+conversion the shipped protocols perform — its sentence reads "two static declarations" today and
+becomes four. Part 09 §5.7 gains that an extension may use any protocol of the group and that a
+command is carried as a list.
 
 **What a build tells a source.** `session.py` constructs an adapter in **56 lines carrying ten
 `spec.kind` branches**, one per built-in, each passing a different set of extras. That becomes one
@@ -740,9 +765,11 @@ today it hands the values over and the writer writes them. `LFPSource` needs not
 `external_arrays` is already the shape — and `add_array` keeps its signature for an in-process
 adapter that has not been converted.
 
-§3.9's shipped implementation is what keeps §3.6's conversion from being rewritten per adapter, and
-the naive one is what an author reaches for: the three probe adapters each used it and each lost the
-same two columns until a run over all eighteen resources found them.
+§3.9's shipped implementation is what keeps §3.6's column set from being decided by whichever call
+came to hand, and in Python the wrong call is the obvious one: all three probe adapters reached for
+it and each lost the same two columns, which a run over four resources did not show and a run over
+eighteen did. What it cannot do is carry that protection into another language, where an
+implementation of the protocol is a second piece of work and its footguns are its own.
 
 The reference implementation owes a command it does not have: `escapewheel` runs `inspect`, `init`,
 `extension`, `verify`, `prune` and `import`, and none of them runs one adapter and hands over its
@@ -783,13 +810,16 @@ establishes and what nothing before it did.
   286,896,563 spikes without measuring it as an intermediate. If the stream costs little, §3.5's
   opt-in is a convenience rather than a necessity, and saying so is worth more than permitting it.
 
-- **Whether a structured failure crosses between two languages.** Every measurement behind §3.10
-  and §3.11 is Python answering Python: `extra_info`, `DoAction` and the Stage 1 row count are
-  read from the same Arrow build that wrote them. The protocols exist so an adapter need not share
-  the writer's closure, and a closure in another language is the case that most needs them. What it
-  would take: one adapter in Go or Java serving `flight-v0.1`, failing once, and a Python build
-  reading what came back — which also settles whether `extra_info` is carried by every Flight
-  implementation or by this one.
+- **What a second language finds that Python did not.** Every measurement in this part is Python
+  answering Python, and the portable profile exists to be read and written by implementations that
+  are not (Part 03 §1). One defect has already turned on that: §3.6's lost columns are a property of
+  building a table from dictionaries, which is how Python does it and not how Go or Julia does, so
+  the requirement had to be restated as what a delivery says rather than as how to build one. The
+  same is unverified for the rest — `extra_info`, `DoAction` and Stage 1's row count are read from
+  the Arrow build that wrote them, and whether a Flight implementation in another language carries
+  `extra_info` at all is an assumption. What it would take: one adapter in Go or Julia serving
+  `flight-v0.1` and `stream-v0.1`, delivering the eighteen resources and failing once, read by the
+  build here.
 
 - **Whether a build should report what an opt-in bought.** §3.5 makes running an adapter in process
   the recipe author's call, and gives them nothing to judge it by: a build knows what it staged and
