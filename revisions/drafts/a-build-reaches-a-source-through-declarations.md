@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 03 §1 (the protocol group the portable profile names); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the two protocols that carry a run report without a file) |
+| **Amends** | Part 03 §1 (the protocol group the portable profile names); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the connection as a carrier beside the file, and when a report is this run's) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole, and a contradiction is refused), R87 §2.2 (an adapter declares which recipe fields it states), R109 §2.3 (a shared process is a shared dependency closure), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -355,7 +355,7 @@ that language too, and the Arrow implementations carrying Flight are a subset of
 An adapter that emits everything it has and lets the build discard is paying a cost R63 §1.2
 measures at one resource in five, and an adapter whose discovery costs an extraction is paying what
 the NWB adapter's `offers` pays in process today, counting rows by computing them. Both are costs a
-working adapter can carry. What the stream costs on the failing path is larger and is §3.10's: a
+working adapter can carry. What the stream costs on the failing path is larger and is §3.11's: a
 build learns that a run failed and not which resource, where Flight names the one it asked for.
 
 A recipe declares files where persistence is the point — an extraction expensive enough to reuse
@@ -363,8 +363,8 @@ across builds, or one whose output should still be there to inspect after a fail
 lesser route: it is the one R109 §3.2 requires of an extension, and both packaged sessions use it
 today, re-reading a `tables/` directory across several rebuilds without running the extraction again.
 
-How a failure and a finding reach a build is §3.10's, and follows the same rule: what a protocol
-carries is what a build reports.
+Whether a run succeeded is §3.10's and is the same question under every protocol; how much a build
+learns about why it did not is §3.11's, and is not.
 
 The same holds for an extension's rows, and R109 §3.2 is narrower than its own reason: it has an
 extension deliver Parquet and names a subprocess for converting a raw source, where the argument it
@@ -527,82 +527,113 @@ version it was written against in its own environment, and that version exports 
 speaks it. A profile **MUST NOT** change what a named protocol means (§3.3), so the build at a
 later version still names `stream-v0.1` in its group and still reads it.
 
-### 3.10 A build reports what the protocol carries
+### 3.10 A build knows a run succeeded from what arrived
+
+R63 §2.2 settles which resources each source owns before any source is opened, which is what lets a
+contradictory recipe be refused. A build therefore already holds the set it is waiting for when an
+adapter starts: no adapter declares it, no protocol carries it, and it is the same set whether or
+not §3.1's wanted term was supplied. A run succeeded when every resource in that set arrived. A
+build **MUST** refuse where one did not, naming the source by the name the recipe gave it rather
+than by its adapter, since two sources may run the same one.
+
+**A source with no rows for a resource delivers it empty.** An adapter **MUST** deliver every
+resource it was asked for, empty where the source has nothing for it, rather than omitting it. The
+rule costs an adapter a schema it already holds and buys the only unambiguous reading of absence:
+without it a missing resource is a crash under every protocol and *also* a source with nothing to
+say under two of them, and no build can tell which. An empty table says the adapter looked. It does
+not say the source is empty — an extraction that silently produced nothing delivers the same rows —
+and a build wanting that difference reads §3.11's report.
+
+**The data does not say whether a delivery finished.** Measured in
+`conformance/adapter-boundary/stream_failures.py`, a command killed after writing four rows and
+before the end-of-stream marker delivers **4 of 4 rows that parse clean**, because a reader treats
+end of file as end of stream; a finished run, a run that died between two resources and that one all
+end with the same parse error. Over `flight-v0.1` a transfer failing partway delivers **0 rows**,
+the client discarding what it holds rather than returning a short table. The two protocols leave a
+build holding different things and neither says so in the data, which is why the test is the set and
+not the bytes.
+
+**A non-zero exit is a failure whatever arrived.** A build **MUST** report one as a failure even
+where every resource is present, because an adapter saying it failed is not overruled by its own
+output, and a command dying between two resources delivers the first one complete and valid. A build
+**MUST** also report a stream it cannot parse as a failure where the command exited zero, which is
+the one case the bytes do carry: a stream stopped inside a message fails naming how many bytes short
+it was, where every clean end reports a null schema message instead.
+
+**What nothing catches is a short table from a run that exits zero.** An adapter that swallows its
+own exception and reports success delivers a table with some rows where more were meant, and no
+protocol defends against an adapter that misreports — one that will swallow an exception will as
+readily declare a count it does not meet. Where an adapter declares one anyway a build **MUST**
+check it: `flight-v0.1` carries a row count per resource in Stage 1, and an adapter that cannot know
+its size before it sends declares none, which a build **MUST** read as unknown rather than as zero.
+`stream-v0.1` has nowhere to put a count and this section adds nowhere, since a metadata key an
+adapter can only fill after materialising its rows is a count bought by giving up the streaming that
+named the protocol.
+
+### 3.11 A build reports what the protocol carries
 
 A build that captures standard error and nothing else reports nothing at all for a failure over
 `flight-v0.1`. Measured in `conformance/adapter-boundary/failures.py`, an adapter failing inside
 that protocol writes **0 bytes** to standard error, because the diagnosis travels on the connection
 it was asked over; a build looking where a command would have printed one finds an empty string and
-reports a failure with no reason attached. So the obligation binds the protocol rather than a
-stream: a build **MUST** report everything the protocol it used carries about a failure, which is
-standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its
-`extra_info` for `flight-v0.1`.
+reports a failure with no reason attached. A build **MUST** report everything the protocol it used
+carries about a failure, which is standard error for `files-v0.1` and `stream-v0.1`, and the error's
+message together with its `extra_info` for `flight-v0.1`.
 
 **Part 05 §3.7 is amended to match.** A build **MUST** capture standard error and report it with a
 failure, and **MUST NOT** report standard output as a diagnosis where the recipe put rows on it.
 R109 §3.2's reason survives intact: the diagnosis a command prints was always the thing worth
 keeping, and standard error is where a command that also emits data must print it.
 
-**An adapter serving `flight-v0.1` SHOULD attach its finding to the failure.** A plain exception is
-what an adapter gets for doing nothing, and it does cross — as a **1,108-character** string in which
-the adapter's Python traceback and gRPC's own debug context are pasted inside the message, which a
-build can repeat and cannot read. Raised instead as a Flight error carrying one Part 09 §5.8
-`problems` entry, the same failure crosses as **125 bytes** of JSON a build parses: a `level`, the
-`resource` the finding is about, and a message. A build **MUST NOT** refuse a failure whose
-`extra_info` it cannot parse, and reports the message alone, since an adapter that raised an
-ordinary exception is the common case rather than a defect.
+**A failing adapter is still serving.** Measured, after one resource's call raised, Stage 1 answered
+unchanged, another resource delivered its rows, and the run's report came back carrying an `error`
+for the resource that failed beside a `warning` from one that had not. A build **SHOULD** therefore
+try every resource it was waiting for and report every failure together rather than stopping at the
+first, which is what §3.10's set makes worth doing: the answer a person wants is which resources did
+not arrive, not which one did not arrive first.
 
-**What a failed transfer leaves a build depends on the protocol, and only one of them discards.**
-Over `flight-v0.1`, two batches of a four-row table had crossed when the adapter raised and the
-build was left holding **0 rows**: the client discards what it has rather than returning a short
-table. Over `stream-v0.1` nothing discards. A command killed after writing four rows and before the
-end-of-stream marker delivers **4 of 4 rows that parse clean**, because a reader treats end of file
-as end of stream, and the read then ends with the same message a finished run ends with — so a
-build holds a table the adapter had not finished writing and the bytes do not say so.
+**The report is one shape on three carriers.** Part 09 §5.8 has an extension write a JSON report
+carrying a `problems` array whose entries each have a `level` of `error`, `warning` or `info`, a
+`message`, and optionally the `resource` the finding is about. An adapter **MAY** write the same
+report on the same terms, and a build **MUST** ask for it after a failure as it does after a
+success. What differs per protocol is only where it is handed over: a file at a path the recipe
+names under `files-v0.1` and `stream-v0.1`, where rows have taken standard output and a file is the
+channel left, and `DoAction("report")` under `flight-v0.1`, where the connection is that channel and
+no file outlives the run. An adapter with a report **MUST** name `report` among its actions and a
+build **MUST NOT** ask one that did not, since an adapter implementing no action lists none and
+raises on being asked anyway.
 
-**The exit code is what says a run succeeded.** A build **MUST NOT** stage any resource from a
-command that exited non-zero, whatever arrived on standard output, and that includes a resource
-that arrived whole: a command dying between two resources delivers the first one complete and valid.
-A build **MUST** also report a stream it cannot parse as a failure where the command exited zero,
-which is the one case the bytes do carry — a stream stopped inside a message fails naming how many
-bytes short it was, where every clean end reports a null schema message instead.
+A build owns the adapter's process and terminates it once it has the rows and the report, so an
+adapter **MUST NOT** rely on running code after its last response.
 
-The asymmetry is an argument for `flight-v0.1` and against owning any framing. With the stream a
-build learns that the run failed and not which resource; with Flight the failure is an error on the
-call, so the resource it was asked for is named. Getting that from the stream means a build reading
-the end-of-stream marker itself rather than handing the bytes to a reader, which is the ownership
-§3.3 declines.
-
-**A report is carried the way the protocol carries everything else.** Part 09 §5.8 has an extension
-write a JSON report at a path the recipe names, carrying a `problems` array whose entries each have
-a `level` of `error`, `warning` or `info`, a `message`, and optionally the `resource` the finding is
-about. An adapter **MAY** write the same report on the same terms under `files-v0.1` and
-`stream-v0.1`, where a file is the only channel left once rows have taken standard output. Under
-`flight-v0.1` the connection is that channel, so no path is named and no file outlives the run: an
-adapter with a report **MUST** name `report` among its actions, and answers `DoAction("report")`
-with that JSON as one result. A build **MUST** ask after it has read the rows and before the adapter
-exits, and **MUST NOT** ask one that did not name the action — measured, an adapter implementing no
-action lists none and raises on being asked anyway, so the declaration is what a build reads and the
-error is what it avoids.
+**An adapter MAY attach one finding to the failing call.** A plain exception is what an adapter gets
+for doing nothing and it does cross — as a **1,108-character** string with the adapter's Python
+traceback and gRPC's own debug context pasted inside the message, which a build can repeat and
+cannot read. The same failure raised as a Flight error carrying one `problems` entry in `extra_info`
+is **125 bytes** a build parses, and saves the round trip the report costs. It is a **MAY** because
+the report carries that finding and more: requiring it would tax every raise in every adapter for a
+convenience. A build **MUST NOT** refuse a failure whose `extra_info` it cannot parse, and reports
+the message alone.
 
 **A report file says nothing about which run wrote it.** Part 09 §5.8 has a build report what a
 report contains where one is present, and a file at a path the recipe names is present after any run
 that ever wrote one, so last week's findings are reported as this build's and nothing distinguishes
-them. The two protocols that carry a report on the wire cannot have the defect, since what comes
-back was asked for by this run. A build **MUST** therefore remove the path before it runs the
-command, and **MUST** treat a report it did not see appear as absent. Nothing reads one yet — R109
-§3.6 is specified and unimplemented — so the correction costs a clause and no rebuild.
-
-Reporting is the same in all three, which is the point: a build files an adapter's findings beside
-an extension's and beside its own, at Part 05 §9's levels, without knowing which protocol brought
-them. An adapter and an extension reach a build over the same protocols, and having them describe a
-problem two different ways is a difference with no argument behind it.
+them. The protocol that carries a report on the connection cannot have the defect, since what comes
+back was asked for by this run. A build **MUST** remove the path before it runs the command, and
+**MUST** treat a report it did not see appear as absent. Nothing reads one yet — R109 §3.6 is
+specified and unimplemented — so the correction costs a clause and no rebuild.
 
 **A finding does not ride Stage 1.** `FlightInfo` carries an `app_metadata` field and this protocol
 names no meaning for it. A build asks Stage 1 before an adapter has extracted anything, so a finding
 put there is one the adapter must know before doing the work, and what a build wants from Stage 1 —
 which resources are offered, their schemas and their row counts — is in the `FlightInfo` already. A
 build **MUST** ignore `app_metadata`, which leaves the field to a later version of the protocol.
+
+What a build learns about *why* is the one thing a protocol does decide. With `stream-v0.1` a build
+learns that the run failed and not which resource, where a Flight failure is an error on the call
+and names the resource it was asked for. Getting that from the stream means a build reading the
+end-of-stream marker itself rather than handing the bytes to a reader, which is the ownership §3.3
+declines — so it stands as what the stream costs, not as something to repair.
 
 ## 4. What this does not change
 
@@ -620,11 +651,12 @@ build **MUST** ignore `app_metadata`, which leaves the field to a later version 
 
 ## 5. Consequence
 
-Part 03 §1 gains the protocol group the portable profile names. Part 05 §3 gains a preference table
-and an in-process declaration, Part 05 §3.4 gains what an adapter declares, and Part 05 §3.5 and
-§3.7 gain what a build captures from a failure and what an adapter may report about a run.
-Part 09 §5.8's report gains the two protocols that carry it without a file. Part 07 §4 gains `NEEDS`,
-`CONSUMES`, the protocol an adapter declares and how an array crosses — its sentence reads "two
+Part 03 §1 gains the protocol group the portable profile names. Part 05 §3 gains a preference table,
+an in-process declaration and when a source's delivery is complete; Part 05 §3.4 gains what an
+adapter declares; and Part 05 §3.5 and §3.7 gain what a build captures from a failure and what an
+adapter may report about a run. Part 09 §5.8's report gains the connection as a carrier beside the
+file, and the rule that a build clears the path before the run that writes it. Part 07 §4 gains
+`NEEDS`, `CONSUMES`, the protocol an adapter declares and how an array crosses — its sentence reads "two
 static declarations" today and becomes four. Part 09 §5.7 gains that an extension may use any
 protocol of the group and that a command is carried as a list.
 
@@ -683,6 +715,12 @@ no backslash. One naming an interpreter by an absolute Windows path would not, a
 missing executable rather than as a malformed command. The fix is a TOML array and the deletion of
 the split.
 
+§3.10's completeness test costs the ten adapters one habit each. An adapter that has nothing for a
+resource returns nothing for it today, and must return it empty instead, which is a schema each
+already holds and no extraction it does not already do. It buys the check a build has never had:
+`records()` is trusted whole, so a source that quietly produced fewer resources than it owns has
+been reaching a packet since R63 §2.3 reduced that case to a warning.
+
 Nothing here forces the ten adapters apart, and §2.2's grouping is why the option is worth having.
 An adapter reading one institute's metadata schema or one tool's directory layout can move to that
 institute or that tool once it can reach a build without being imported, which is what §3.3
@@ -698,6 +736,14 @@ establishes and what nothing before it did.
   the `unit_id` a writer assigns, and that R86 §2.3 puts a widened join key at 2.93x over
   286,896,563 spikes without measuring it as an intermediate. If the stream costs little, §3.5's
   opt-in is a convenience rather than a necessity, and saying so is worth more than permitting it.
+
+- **Whether a structured failure crosses between two languages.** Every measurement behind §3.10
+  and §3.11 is Python answering Python: `extra_info`, `DoAction` and the Stage 1 row count are
+  read from the same Arrow build that wrote them. The protocols exist so an adapter need not share
+  the writer's closure, and a closure in another language is the case that most needs them. What it
+  would take: one adapter in Go or Java serving `flight-v0.1`, failing once, and a Python build
+  reading what came back — which also settles whether `extra_info` is carried by every Flight
+  implementation or by this one.
 
 - **Whether a build should report what an opt-in bought.** §3.5 makes running an adapter in process
   the recipe author's call, and gives them nothing to judge it by: a build knows what it staged and
