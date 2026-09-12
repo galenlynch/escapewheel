@@ -78,9 +78,9 @@ pipe carried. What crosses first is one argument: 387 bytes of JSON holding the 
 
 Three facts the layout makes visible. A **resource with no rows** is a schema and a terminator and
 no batch at all, 136 bytes, which is how an absent resource arrives as present-and-empty rather
-than as nothing. The **sentinel** is the same shape at 128 bytes, its `resource_id` the reserved `end`. And
-the build's reader lands exactly on each boundary — 1088, 2272, 2416 — so the next `open_stream` on
-the same handle finds the next resource.
+than as nothing. The **sentinel** is the same shape at 128 bytes, its `resource_id` the reserved
+`end`. And the build's reader lands exactly on each boundary — 1088, 2272, 2416 — so the next
+`open_stream` on the same handle finds the next resource.
 
 Cut the same delivery at 2272 bytes, which is a command dying between two resources, and every
 message still parses: two resources complete, and the only thing wrong is that the sentinel never
