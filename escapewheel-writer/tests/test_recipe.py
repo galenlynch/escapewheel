@@ -63,6 +63,30 @@ def test_a_recipe_parses_its_declarations(tmp_path):
     assert recipe.sources[0].owns == ("core.units",)
 
 
+def test_a_recipe_may_run_some_sources_in_process_and_not_others(tmp_path):
+    """Part 05 §3.9 is per source. `[packet]` declares the set that installs beside the writer,
+    which is the fact a recipe author actually holds, and an entry narrows or widens it."""
+    both = (
+        '\n[[source]]\nkind = "sorter"\nroot = "."\nowns = ["core.units"]{}\n'
+        '\n[[source]]\nkind = "nwb"\nroot = "."\nowns = ["core.probes"]\n'
+    )
+
+    recipe = Recipe.load(write(tmp_path, both.format(""), "all.toml"))
+    assert [s.in_process for s in recipe.sources] == [True, True]
+
+    out = write(tmp_path, both.format("\nin_process = false"), "one-out.toml")
+    assert [s.in_process for s in Recipe.load(out).sources] == [False, True]
+
+
+def test_an_in_process_source_does_not_carry_the_flag_into_the_adapter(tmp_path):
+    """`in_process` is the build's business, so it must not reach the adapter as an option: every
+    other key of a source entry is passed through as a keyword argument."""
+    recipe = Recipe.load(
+        write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "."\nowns = []\nin_process = true\n')
+    )
+    assert "in_process" not in recipe.sources[0].options
+
+
 def test_paths_resolve_against_the_recipe_not_the_caller(tmp_path):
     """A recipe travels with the tree it describes, so relative paths are relative to it."""
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "sorted"\nowns = []\n'))
