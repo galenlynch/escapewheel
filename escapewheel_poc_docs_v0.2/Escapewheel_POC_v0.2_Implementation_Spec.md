@@ -1604,7 +1604,9 @@ A profile names a **group** for each way rows cross a process boundary, and the 
 | `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
 | `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource |
 
-An adapter MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names (R115 §3.3). The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
+An adapter **released independently of a build** MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names (R115 §3.3). The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting such an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
+
+An adapter a build ships with need not declare one, and a build reaches it directly. The test is the release boundary rather than who wrote the code: an adapter inside a build's distribution is upgraded in the commit that changes a dependency, where one released apart is on the far side of a version boundary the build moves without asking, and the protocol is what keeps that move from being an outage. A build MAY serve an adapter it ships over any protocol of the group, which is how one becomes reachable out of process without declaring anything.
 
 A protocol carries its version in its name, semantically versioned from `v0.1`. A profile MUST NOT change what a named protocol means; a protocol that changes how rows cross is a new member of the group, and a build MUST NOT read support for one version as support for another (R115 §3.3). Retiring a protocol is a change to this profile and not a decision a build makes.
 
@@ -2021,7 +2023,7 @@ belongs to the build.
 
 ### 3.9 Whether a source runs in the writer's process
 
-A build MUST deliver a source out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run one in process where the recipe does not say so (R115 §3.5).
+A build MUST deliver a source whose adapter declares a protocol out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run such a source in process where the recipe does not say so (R115 §3.5). An adapter the build ships with declares none (Part 03 §11.1), so in process is its only route and a recipe naming one declares nothing: a build MUST NOT require a declaration where it offers no choice.
 
 The recipe declares it because the recipe author chose the environment. One process resolves one dependency closure, so whether a given set of adapters installs together is a fact about one machine on one day rather than a property of any adapter, and the person assembling the recipe is the only party who can find out and the one who carries it when the answer changes.
 

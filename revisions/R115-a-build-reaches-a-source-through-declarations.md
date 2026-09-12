@@ -36,13 +36,14 @@ unless a build has something to tell it with.
 
 **Who this binds.** A **build** assembles one packet from one recipe. A **writer** is the
 distribution shipping a build, and the adapters it ships with it. An **adapter** reads one source
-and returns records, whether the writer ships it or a third party does. An **extension** is a
+and returns records, whether the writer ships it or somebody else does. An **extension** is a
 registry document and rows (R109 §3.1) that reach a build as a source, so what binds an adapter
 binds the adapter carrying them. A **profile** names the protocol groups, and a **recipe author**
-declares the preferences, opt-ins and commands one packet is built with. **A clause binding an
-adapter binds one the writer does not ship identically**, which is what makes §3.3's protocol rule
-load-bearing: a third party's adapter conforms on the same terms as a shipped one, and §3.9 is what
-keeps meeting them cheap.
+declares the preferences, opt-ins and commands one packet is built with.
+
+Every clause below binds an adapter the writer ships and one it does not alike, with **one
+exception, and §3.3 states the test**: what a protocol must be spoken by turns on whether the
+adapter is released with the build or apart from it.
 
 ## 2. Background
 
@@ -279,17 +280,28 @@ refused naming both sources, where a built-in winner applied one silently.
 
 ### 3.3 An adapter delivers its rows out of process
 
-A writer **MUST NOT** require any adapter to be importable in its own environment, and **MUST**
-provide a route by which every adapter it ships delivers its rows without being imported.
+A writer **MUST NOT** require any adapter to be importable in its own environment, and a build
+**MUST** be able to reach one that is not.
 
-**The adapter carries the matching obligation, and it is a MUST.** The protocol rule below binds
-every adapter, one a third party ships as much as one the writer does, because an adapter that can
-only be imported is one a build can only reach by resolving its closure — which is the coupling this
-part exists to remove, and §2.1 measures how little authorship protects against it. R109's narrower
-allocation does not reach an adapter: R109 §3.1 binds a writer to build from a document and rows
-because an extension may be nothing but those, with no code to carry an obligation at all. An
-adapter is code by definition, so the requirement sits on the artifact — a declared protocol and an
-implementation of it — and whoever ships the adapter is who satisfies it.
+**An adapter released independently of a build MUST declare and support at least one protocol in a
+group.** An adapter the build ships with need not. The test is the release boundary, and not who
+wrote the code: an adapter inside a build's own distribution is upgraded in the commit that changes
+a dependency, so no day comes when the two disagree, where an adapter released apart is on the far
+side of a version boundary the build moves without asking. The protocol is what decouples the two
+release cycles, which is R109 §2.3's shared closure stated as a schedule rather than as an
+environment.
+
+**Importability is not the test**, though it looks like one. Whether an adapter installs beside a
+build is true of a moment: it holds until the build drops a dependency or moves a pin, and an
+adapter exempted while it held is one whose author learns it needs a protocol from somebody else's
+release notes, on a day neither party chose. A rule that binds from the moment an adapter is
+distributed separately is one its author can plan for.
+
+**Nor is authorship**, which §2.1 measures against directly — the writer's own closure is 57
+distributions and nothing about shipping with the writer keeps it small. What shipping together
+buys is not a smaller closure but a single maintainer of it: the writer already isolates an
+adapter's heavy dependencies as optional extras, so two of them conflicting is one party's problem
+with one lockfile, which is exactly what is unavailable across a release boundary.
 
 **What matters is the process boundary; a transport is a protocol, and protocols come in groups.** A
 profile names a group for each way rows cross that boundary, and the protocols in it. An adapter
@@ -483,8 +495,13 @@ buffer. How a build does it is Part 07 §7's, being a technique that changes wit
 
 ### 3.5 A recipe opts a source into the writer's process
 
-A build **MUST** deliver a source out of process unless the recipe declares that it runs in the
-writer's, and a writer **MUST NOT** run one in process where the recipe does not say so.
+A build **MUST** deliver a source whose adapter declares a protocol out of process, unless the
+recipe declares that it runs in the writer's, and a writer **MUST NOT** run such a source in process
+where the recipe does not say so.
+
+An adapter the build ships with declares none (§3.3), so in process is its only route and a recipe
+naming one declares nothing: a build **MUST NOT** require a declaration where it offers no choice,
+which would be a statement that cannot be false and that a reader learns nothing from.
 
 **The recipe declares it because the recipe author chose the environment.** Python resolves one
 environment per process, so whether a given set of adapters installs together is a fact about one
@@ -934,9 +951,13 @@ build has never had: `records()` is trusted whole, so a source that quietly prod
 resources than it owns has been reaching a packet since R63 §2.3 reduced that case to a warning.
 
 Nothing here forces the ten adapters apart, and §2.2's grouping is why the option is worth having.
-An adapter reading one institute's metadata schema or one tool's directory layout can move to that
-institute or that tool once it can reach a build without being imported, which is what §3.3
-establishes and what nothing before it did.
+An adapter reading **one institute's** metadata schema can move to that institute once it can reach
+a build without being imported, which is what §3.3 establishes and what nothing before it did. One
+reading a tool's or a device's layout is the case for keeping it: SpikeInterface, Open Ephys and
+Harp are read by many institutions, so support for them is worth carrying centrally, where
+`rig.json` serves one. The boundary that decides is §3.3's — an adapter released with the build
+speaks no protocol and one released apart must — and what a distribution chooses to ship is a
+judgement it makes against that, not a rule this part states.
 
 ## 6. Open
 

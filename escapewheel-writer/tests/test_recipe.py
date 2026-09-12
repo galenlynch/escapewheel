@@ -23,9 +23,6 @@ BASE = """
 [packet]
 id = "s001"
 registry = "reg.json"
-# Part 05 §3.9: these adapters install beside the writer, which is the recipe author's fact
-# and the only route until one declares a protocol.
-in_process = true
 
 [session]
 session_id = "s001"
@@ -64,18 +61,38 @@ def test_a_recipe_parses_its_declarations(tmp_path):
 
 
 def test_a_recipe_may_run_some_sources_in_process_and_not_others(tmp_path):
-    """Part 05 §3.9 is per source. `[packet]` declares the set that installs beside the writer,
-    which is the fact a recipe author actually holds, and an entry narrows or widens it."""
+    """Part 05 §3.9 is per source, and `[packet]` is the default because whether a set of adapters
+    installs together is a fact about the set. An entry narrows or widens it."""
     both = (
         '\n[[source]]\nkind = "sorter"\nroot = "."\nowns = ["core.units"]{}\n'
         '\n[[source]]\nkind = "nwb"\nroot = "."\nowns = ["core.probes"]\n'
     )
 
-    recipe = Recipe.load(write(tmp_path, both.format(""), "all.toml"))
-    assert [s.in_process for s in recipe.sources] == [True, True]
+    path = tmp_path / "packet-level.toml"
+    path.write_text(BASE.replace('registry = "reg.json"', 'registry = "reg.json"\nin_process = true') + both.format(""))
+    assert [s.in_process for s in Recipe.load(path).sources] == [True, True]
 
-    out = write(tmp_path, both.format("\nin_process = false"), "one-out.toml")
-    assert [s.in_process for s in Recipe.load(out).sources] == [False, True]
+    out = write(tmp_path, both.format("\nin_process = true"), "one-in.toml")
+    assert [s.in_process for s in Recipe.load(out).sources] == [True, False]
+
+
+def test_a_shipped_adapter_needs_no_declaration_and_a_registered_one_does(tmp_path):
+    """Part 03 §11.1's test is the release boundary. A built-in ships with this package and is
+    upgraded with it, so in process is its only route and there is nothing to declare; a kind
+    another distribution registers moves on its own schedule and must say how it can be reached."""
+    registry = {"tables": {"core.units": {"columns": [], "rules": []}}}
+
+    built_in = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "."\nowns = []\n'))
+    assert not [p for p in built_in.check(registry) if "reach" in p.message]
+
+    registered = write(tmp_path, '\n[[source]]\nkind = "vr_sites"\nroot = "."\nowns = []\n', "reg.toml")
+    problems = [p.message for p in Recipe.load(registered).check(registry) if "reach it only" in p.message]
+    assert problems and "vr_sites" in problems[0]
+
+    opted = write(
+        tmp_path, '\n[[source]]\nkind = "vr_sites"\nroot = "."\nowns = []\nin_process = true\n', "opt.toml"
+    )
+    assert not [p for p in Recipe.load(opted).check(registry) if "reach it only" in p.message]
 
 
 def test_an_in_process_source_does_not_carry_the_flag_into_the_adapter(tmp_path):

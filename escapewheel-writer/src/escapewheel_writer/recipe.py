@@ -696,26 +696,25 @@ class Recipe:
     def _delivery_problems(self) -> list[str]:
         """Report each source with no route to a build (Part 05 §3.9).
 
-        A build delivers a source out of process unless the recipe declares that it runs in the
-        writer's, and delivering one out of process needs the adapter to declare a protocol of a
-        group the profile names (Part 03 §11.1). A source with neither cannot be reached at all,
-        which is a refusal rather than a warning: narrowing is legitimate and this is not narrow.
+        An adapter released independently of a build must declare a protocol (Part 03 §11.1), and
+        the entry-point group is that boundary here: a built-in kind ships with this package and is
+        upgraded with it, where a registered one is another distribution's and moves on its own
+        schedule. So a registered kind that declares no protocol can be reached only by importing
+        it, which the recipe must ask for; a built-in needs nothing, since in process is its only
+        route and a declaration offering no choice states what cannot be false.
         """
         from . import sources
 
-        # Registered kinds too, and not only the built-in ten: an extension may ship an adapter
-        # (Part 09 §5.6), and one that declares a protocol has the same route a built-in does.
-        known = {**sources.discovered(), **sources.ADAPTERS}
         problems = []
         for spec in self.sources:
-            if spec.in_process:
+            if spec.in_process or spec.kind in sources.ADAPTERS:
                 continue
-            adapter = known.get(spec.kind)
+            adapter = sources.discovered().get(spec.kind)
             if adapter is not None and getattr(adapter, "PROTOCOL", None):
                 continue
             problems.append(
-                f"{spec.kind} declares no protocol and the recipe does not run it in the writer's "
-                f"process; set in_process on the source or on [packet]"
+                f"{spec.kind} is registered by another distribution and declares no protocol, so a "
+                f"build can reach it only in its own process; set in_process on the source"
             )
         return problems
 

@@ -144,7 +144,7 @@ belongs to the build.
 
 ### 3.9 Whether a source runs in the writer's process
 
-A build MUST deliver a source out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run one in process where the recipe does not say so (R115 §3.5).
+A build MUST deliver a source whose adapter declares a protocol out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run such a source in process where the recipe does not say so (R115 §3.5). An adapter the build ships with declares none (Part 03 §11.1), so in process is its only route and a recipe naming one declares nothing: a build MUST NOT require a declaration where it offers no choice.
 
 The recipe declares it because the recipe author chose the environment. One process resolves one dependency closure, so whether a given set of adapters installs together is a fact about one machine on one day rather than a property of any adapter, and the person assembling the recipe is the only party who can find out and the one who carries it when the answer changes.
 
