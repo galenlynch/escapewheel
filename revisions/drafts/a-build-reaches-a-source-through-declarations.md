@@ -831,11 +831,14 @@ part that fixes an attribute name, and R93 §4's test puts the name where the im
   what a build tells a source and how a source answers, so what changes is who may add one.
 - **`PRODUCES` and `STATES` declare what they declared.** R63 §2.1 and R87 §2.2 stand: §3.1 says the
   rest of what an adapter needs is declared the same way and §3.12 gives all of it a second form,
-and   neither changes what either fact is. What moves is where the names live.
-- **An extension's registry document is untouched.** An extension reaches a build as a source
-  (R109 §3.2), so what declares `NEEDS`, a protocol and a delivery is the adapter carrying its rows,
-  and for the `tables` kind that is a root and the resources the recipe names. Its obligations under
-  §3.10 are an adapter's, and what it owes as an extension does not change.
+  and neither changes what either fact is. What moves is where the names live.
+- **An extension's registry document is untouched, and is not the document §3.12 adds.** A registry
+  document declares tables in the format of Part 02 (R109 §3.2); a declaration document declares
+  what an adapter produces, states, needs and speaks. An extension delivering tables through an
+  adapter has both, for different readers, and neither substitutes for the other. What it owes as an
+  extension does not change: it reaches a build as a source, so what declares a protocol and a
+  delivery is the adapter carrying its rows, and for the `tables` kind that is a root and the
+  resources the recipe names, with §3.10's obligations falling on it as an adapter's.
 
 ## 5. Consequence
 
