@@ -703,11 +703,14 @@ class Recipe:
         """
         from . import sources
 
+        # Registered kinds too, and not only the built-in ten: an extension may ship an adapter
+        # (Part 09 §5.6), and one that declares a protocol has the same route a built-in does.
+        known = {**sources.discovered(), **sources.ADAPTERS}
         problems = []
         for spec in self.sources:
             if spec.in_process:
                 continue
-            adapter = sources.ADAPTERS.get(spec.kind)
+            adapter = known.get(spec.kind)
             if adapter is not None and getattr(adapter, "PROTOCOL", None):
                 continue
             problems.append(
