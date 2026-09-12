@@ -439,7 +439,10 @@ def test_a_command_runs_first_and_is_not_a_shell(tmp_path):
         " 'site_id': pa.array([0], type=pa.int32()), 'odor': pa.array(['a'])}), 'sites.parquet')\n"
     )
     source = TablesSource(
-        root, session_id="s001", tables={"vrf.sites": "sites.parquet"}, command=f"{sys.executable} export.py"
+        root,
+        session_id="s001",
+        tables={"vrf.sites": "sites.parquet"},
+        command=[sys.executable, "export.py"],
     )
     assert source.offers() == {"vrf.sites": 1}
     assert any("export.py" in note for note in source.notes)
@@ -457,7 +460,7 @@ def test_a_failing_command_is_a_source_defect(tmp_path):
         root,
         session_id="s001",
         tables={"vrf.sites": "sites.parquet"},
-        command=f"{sys.executable} -c 'raise SystemExit(3)'",
+        command=[sys.executable, "-c", "raise SystemExit(3)"],
     )
     with pytest.raises(SourceDefect, match="failed"):
         source.offers()
@@ -472,7 +475,26 @@ def test_a_command_that_does_not_produce_what_it_claimed_says_so(tmp_path):
     root = tmp_path / "raw"
     root.mkdir()
     source = TablesSource(
-        root, session_id="s001", tables={"vrf.sites": "sites.parquet"}, command=f"{sys.executable} -c 'pass'"
+        root,
+        session_id="s001",
+        tables={"vrf.sites": "sites.parquet"},
+        command=[sys.executable, "-c", "pass"],
     )
     with pytest.raises(SourceDefect, match="no file at the declared path after running"):
         source.offers()
+
+def test_a_command_given_as_a_string_is_refused(tmp_path):
+    r"""Part 05 §3.7: splitting one applies a quoting convention the recipe never declared, and
+    POSIX rules eat a backslash on every host, so `C:\Python\python.exe` loses its separators."""
+    from escapewheel_writer.sources import TablesSource
+    from escapewheel_writer.sources.nwb import SourceDefect
+
+    root = tmp_path / "raw"
+    root.mkdir()
+    with pytest.raises(SourceDefect, match="argument list"):
+        TablesSource(
+            root,
+            session_id="s001",
+            tables={"vrf.sites": "sites.parquet"},
+            command="python export.py",
+        )

@@ -7,7 +7,8 @@ which is the failure `ndx-` extensions demonstrate on the read path and which a 
 adapter would reproduce on the write path.
 
 Where the raw source needs converting, `command` runs first. It is a plain argument list run in
-`root` -- **not** a shell, and with no opinion about how the environment is arranged. That is
+`root` -- **not** a shell, and carried as a list rather than split from a string (Part 05 §3.7),
+with no opinion about how the environment is arranged. That is
 deliberate: `uv run export.py` and `python -m package.export` and `/opt/venv/bin/python -m …` are
 all just commands, so isolating an adapter's dependencies is the recipe author's choice rather
 than a tool this package requires anyone to adopt.
@@ -19,9 +20,8 @@ staged, so a process outside this one cannot know them and does not need to: it 
 
 from __future__ import annotations
 
-import shlex
 import subprocess
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -47,9 +47,9 @@ class TablesSource:
         Accepted for the shape every adapter has; the rows carry their own.
     tables : Mapping
         Resource ID to the Parquet file holding it, relative to `root`.
-    command : str, optional
-        Run once before reading, as an argument list rather than through a shell. A non-zero
-        exit is a `SourceDefect`, because a half-written export is worse than none.
+    command : sequence of str, optional
+        Run once before reading, as an argument list rather than through a shell (Part 05 §3.7).
+        A non-zero exit is a `SourceDefect`, because a half-written export is worse than none.
     batch_rows : int, optional
         Rows per batch. A file is streamed rather than read whole: an extension's table may be
         as large as a core one, and R2 §7's own reason for the streaming path applies here.
@@ -69,12 +69,18 @@ class TablesSource:
         *,
         session_id: str,
         tables: Mapping[str, str] | None = None,
-        command: str | None = None,
+        command: Sequence[str] | None = None,
         batch_rows: int = BATCH_ROWS,
     ) -> None:
         self.root = source_root(root)
         self.session_id = session_id
-        self.command = command
+        if isinstance(command, str):
+            # Part 05 §3.7 forbids deriving a list by splitting a string: a parse is a quoting
+            # convention the recipe never declared, and POSIX rules eat a backslash on every host.
+            raise SourceDefect(
+                f"command must be an argument list, not {command!r}; write it as a TOML array"
+            )
+        self.command = list(command) if command is not None else None
         self.batch_rows = batch_rows
         self.notes: list[str] = []
         if not tables:
@@ -89,7 +95,7 @@ class TablesSource:
         self._ran = True
         if self.command is not None:
             try:
-                subprocess.run(shlex.split(self.command), cwd=self.root, check=True)
+                subprocess.run(self.command, cwd=self.root, check=True)
             except (OSError, subprocess.CalledProcessError) as exc:
                 raise SourceDefect(f"{self.command!r} failed: {exc}") from None
             self.notes.append(f"ran {self.command!r} in {self.root}")
