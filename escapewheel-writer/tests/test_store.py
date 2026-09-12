@@ -114,6 +114,7 @@ def test_the_adapters_that_share_a_root_share_its_store(tmp_path, registry):
 [packet]
 id = "s1"
 registry = "r"
+in_process = true
 [session]
 session_id = "s1"
 reference_clock_id = "harp"

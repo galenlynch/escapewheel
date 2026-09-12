@@ -119,7 +119,7 @@ REQUIRED_OPTIONS = {
 }
 
 #: Keys a `[[source]]` entry uses for itself; everything else is passed to the adapter.
-_SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes", "storage_options"})
+_SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes", "storage_options", "in_process"})
 
 #: Keys a `[[materialize]]` entry uses for itself; the rest are the materializer's parameters.
 _MATERIALIZE_KEYS = frozenset({"resource"})
@@ -225,6 +225,11 @@ class SourceSpec:
     #: Part 05 §3.4: whether the recipe stated `owns`. Silence means the whole of `PRODUCES`, so it
     #: must be distinguishable from an explicit empty list, which narrows to nothing.
     narrowed: bool = True
+    #: Part 05 §3.9: whether the recipe declares that this source runs in the writer's process.
+    #: A build delivers every other source out of process, so this is the recipe author saying
+    #: that this machine installs the adapter alongside the writer -- a fact about one machine on
+    #: one day, which is why no adapter and no build may decide it.
+    in_process: bool = False
 
     @property
     def claims(self) -> tuple[str, ...]:
@@ -417,6 +422,10 @@ class Recipe:
                         contributes=tuple(s.get("contributes", ())),
                         options={k: v for k, v in s.items() if k not in _SOURCE_KEYS},
                         narrowed="owns" in s,
+                        # `[packet] in_process` declares it for every source, since whether a set
+                        # of adapters installs together is a fact about the set; an entry may
+                        # narrow that to itself.
+                        in_process=bool(s.get("in_process", packet.get("in_process", False))),
                     )
                     for s in document.get("source", [])
                 )
@@ -546,6 +555,7 @@ class Recipe:
         errors.extend(self._dangling_references(tables, claimants, warnings))
         errors.extend(self._clock_problems())
         errors.extend(self._option_problems())
+        errors.extend(self._delivery_problems())
         errors.extend(self._states_problems())
         errors.extend(self.encoding_problems(tables))
         fact_errors, fact_warnings, notes = self._declared_fact_problems()
@@ -682,6 +692,29 @@ class Recipe:
             for spec in self.sources
             for resource in sorted(produces(spec.kind) - claimed)
         ]
+
+    def _delivery_problems(self) -> list[str]:
+        """Report each source with no route to a build (Part 05 §3.9).
+
+        A build delivers a source out of process unless the recipe declares that it runs in the
+        writer's, and delivering one out of process needs the adapter to declare a protocol of a
+        group the profile names (Part 03 §11.1). A source with neither cannot be reached at all,
+        which is a refusal rather than a warning: narrowing is legitimate and this is not narrow.
+        """
+        from . import sources
+
+        problems = []
+        for spec in self.sources:
+            if spec.in_process:
+                continue
+            adapter = sources.ADAPTERS.get(spec.kind)
+            if adapter is not None and getattr(adapter, "PROTOCOL", None):
+                continue
+            problems.append(
+                f"{spec.kind} declares no protocol and the recipe does not run it in the writer's "
+                f"process; set in_process on the source or on [packet]"
+            )
+        return problems
 
     def _option_problems(self) -> list[str]:
         """Options a source kind requires and this recipe does not carry."""

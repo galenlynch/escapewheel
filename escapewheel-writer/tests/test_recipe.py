@@ -23,6 +23,9 @@ BASE = """
 [packet]
 id = "s001"
 registry = "reg.json"
+# Part 05 §3.9: these adapters install beside the writer, which is the recipe author's fact
+# and the only route until one declares a protocol.
+in_process = true
 
 [session]
 session_id = "s001"
