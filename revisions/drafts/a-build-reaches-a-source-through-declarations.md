@@ -305,12 +305,39 @@ identifier rides in the schema's key-value metadata, which is a field the format
 `conformance/adapter-boundary/` sends three resources with three schemas over a real pipe and reads
 all three back, which is the measurement this clause rests on.
 
+**"Arrow IPC" names a family, and the protocol pins one member of it.** The format offers choices a
+reader may not implement: a record-batch body may be compressed with LZ4 or Zstd, declared in the
+message it belongs to; a stream may be written at metadata version V4 or V5; and a dictionary may be
+sent as a delta against one already sent. Part 03 §5.5 settles the same question for stored bytes by
+naming the four compressions a Parquet reader **MUST** support, and a delivery needs that floor for
+the same reason — an adapter and a build are written by different people in different languages, so
+an option one reaches for is an option the other must already have.
+
+**An adapter MUST write uncompressed record-batch bodies at metadata version V5, and MUST send each
+dictionary whole rather than as a delta.** Compression buys nothing on a pipe: measured in
+`conformance/adapter-boundary/ipc_floor.py`, 5,000,000 spike-shaped rows cross one in **32 ms**
+uncompressed and **107 ms** under Zstd, 3.3x for bytes that never leave memory, and the codec is a
+dependency in a language whose Arrow binding may not carry one. V5 has been the default since
+Arrow 1.0 and V4 lays a union out differently. A delta dictionary is the least evenly implemented
+part of the format, and an adapter gains nothing by sending one, since the types it sends are the
+build's to settle (§3.6).
+
+**Concatenation needs a build to stop reading where the adapter stopped writing.** An adapter
+**MUST** terminate every resource's stream with the end-of-stream marker and a build **MUST**
+consume exactly to it, so the next resource's schema begins at the next byte: two 376-byte streams
+leave the handle at 376 and then at 752, which is what lets a second open on the same handle find
+the second resource. An adapter omitting a marker fails loudly — `Header-type of flatbuffer-encoded
+Message is not RecordBatch` — where a build reading past one loses every resource after it and
+reports §3.10's truncation against a delivery that finished.
+
 **What each protocol invents, and nothing more.** `files-v0.1` invents a mapping from resource to
 path, which a recipe already carries for a `tables` source. `stream-v0.1` invents **one metadata
 key**, `resource_id`, and one reserved value of it, `end`, which §3.10 uses to say a delivery
 finished. Everything else is Arrow: the container, the schema, the batching, the terminator that
-separates one resource from the next, and the metadata field the key lives in. A
-protocol that owned more would be a format to maintain; these are a spelling of two.
+separates one resource from the next, and the metadata field the key lives in. Pinning
+which of Arrow's choices may cross is selection rather than invention, which is what Part 03 §5.5
+already does for Parquet. A protocol that owned more would be a format to maintain; these are a
+spelling of two.
 
 Where rows travel on standard output they are **bytes**. An adapter **MUST** write the stream to a
 binary handle and a build **MUST** read one, because a platform translating a line ending in text

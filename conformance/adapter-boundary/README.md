@@ -55,6 +55,33 @@ A pipe is also memory, so this route touches no disk. Where an adapter is not a 
 build — another host, a scheduler — a port would be the shape, and Arrow Flight is its standard;
 that is a protocol to add rather than a change to these two.
 
+## Arrow IPC is a family, so a delivery pins which member
+
+The framing is fixed and three choices are not, and `ipc_floor.py` prices each.
+`IpcWriteOptions` exposes `compression`, `metadata_version`, `emit_dictionary_deltas`,
+`unify_dictionaries`, `allow_64bit` and `use_legacy_format`, so two adapters both writing "Arrow
+IPC" can hand a build bytes it cannot read.
+
+**Compression is a loss here.** 5,000,000 spike-shaped rows — an `int32` unit and an `int64` tick —
+cross a real pipe in **32 ms** uncompressed at 60.0 MB, **109 ms** under LZ4 at 34.8 MB and **107
+ms** under Zstd at 18.1 MB. Bytes that never leave memory pay 3.3x to be a third the size, and the
+codec is a dependency an adapter author in another language may not have.
+
+**The metadata version is already right.** `IpcWriteOptions().metadata_version` is `V5`, the default
+since Arrow 1.0, so pinning it costs a conforming adapter nothing and stops `use_legacy_format=True`
+emitting V4, which lays a union out differently.
+
+**A dictionary column crosses, and the stream after it still opens.** A dictionary-encoded string
+column puts a DictionaryBatch ahead of its record batch — 600 bytes for three values — and the next
+resource's schema parses on the same handle. A *delta* dictionary is the least evenly implemented
+part of the format, and an adapter gains nothing by sending one, since a delivery's types are the
+build's to settle against the registry.
+
+**Concatenation depends on both ends agreeing where a stream ended.** Two 376-byte streams leave the
+handle at 376 and then at 752, which is what lets a second open find the second resource. Remove one
+end-of-stream marker and the read fails loudly: `Header-type of flatbuffer-encoded Message is not
+RecordBatch`.
+
 ## Arrow Flight answers Stage 1 from its own vocabulary
 
 Part 05 §4.1 has a build report, per source, what it offers per resource and how many rows, without
