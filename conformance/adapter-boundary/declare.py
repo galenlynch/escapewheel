@@ -77,7 +77,7 @@ def refusals(doc: dict, options: dict) -> list[str]:
 
 
 def owners(docs: list[dict]) -> dict[str, str]:
-    """R63 §2.2's default ownership, settled from the documents and no adapter."""
+    """Part 05 §3.4's default ownership, settled from the documents and no adapter."""
     claims: dict[str, list[str]] = {}
     for doc in docs:
         for resource in doc["produces"]:
