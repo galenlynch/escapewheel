@@ -196,9 +196,17 @@ document and not a function of the rows. The document already carries its own ve
 ## 1d. The adapter boundary is specified and not built
 
 R115 was accepted on 2026-09-11 and Part 03 §11 now carries the whole contract between a build and
-a source. None of it is implemented. `conformance/adapter-boundary/` is the reference — seven
-scripts in which all three protocols deliver the NWB adapter's eighteen resources identically, five
-of them empty — and every piece below is the distance between that spike and the writer.
+a source. `conformance/adapter-boundary/` is the reference — seven scripts in which all three
+protocols deliver the NWB adapter's eighteen resources identically, five of them empty — and every
+piece below is the distance between that spike and the writer.
+
+**The nine adapters that read a source will declare `flight-v0.1`**, decided 2026-09-12. One
+protocol each is all R115 §3.3 asks, the build carries breadth for all three, and Flight owns the
+least of them: a descriptor is the format's, so the protocol invents no metadata key, and
+`ListFlights` answers Part 05 §4.1's discovery and `DoGet` the per-resource fetch from its own
+vocabulary rather than from surface we would have to specify. `tables` is the exception and keeps
+`files-v0.1`, which is what a source whose rows are already files *is*; an extension delivering
+through it is unaffected.
 
 **No command runs one adapter and hands over its rows.** The writer registers `inspect`, `init`,
 `extension`, `verify`, `prune` and `import` under the one `escapewheel` CLI, and none of them does
@@ -206,10 +214,11 @@ this. It is the same command a `tables` source names, so a built-in adapter reac
 the door an extension already uses (R109 §3.2) rather than through a second mechanism.
 
 **The ten adapters declare two of the four facts Part 05 §3.4 requires.** `PRODUCES` and `STATES`
-are on the classes; the values a build must supply and the protocol its rows cross by are not. Until
-they are, Part 05 §3.9 makes every build non-conforming unless every recipe opts every source into
-the writer's process, which is the narrow case rather than the ordinary one. Declaring a protocol
-per adapter is the smallest step that changes that.
+are on the classes; the values a build must supply and the protocol its rows cross by are not. Both
+packaged recipes and every test recipe now carry `[packet] in_process = true`, which Part 05 §3.9
+makes the honest thing to say while that is so — this machine installs these adapters beside the
+writer — and `Recipe.check` refuses a source that declares neither a protocol nor the opt-in. The
+opt-in comes back out as each adapter declares `flight-v0.1` and can be reached.
 
 **`_build_source` is 72 lines carrying ten `spec.kind` branches**, each passing a different set of
 extras, and becomes one construction that reads the declaration, resolves each name against Part 03
@@ -227,11 +236,6 @@ writer rather than the reader.
 **Nothing generates a declaration document.** R115 §3.12 requires generation rather than
 maintenance, and measured on the ten classes it is 180 to 914 bytes each with no judgement in it,
 from `PRODUCES`, `STATES`, `CONSUMES` and the protocol.
-
-**`TablesSource` takes `command` as a string and splits it with `shlex`**, which Part 05 §3.7 now
-forbids. Both packaged recipes survive the parse because `python extract.py` holds no backslash;
-one naming an interpreter by an absolute Windows path would fail as a missing executable rather than
-as a malformed command. The fix is a TOML array, the deletion of the split, and a line in each recipe.
 
 **A build reads no report at all.** R109 §3.6 was specified and unimplemented before this, and
 Part 09 §5.8 now adds the connection as a carrier, the rule that a build clears a report's path
