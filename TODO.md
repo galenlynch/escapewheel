@@ -204,9 +204,18 @@ piece below is the distance between that spike and the writer.
 protocol each is all R115 §3.3 asks, the build carries breadth for all three, and Flight owns the
 least of them: a descriptor is the format's, so the protocol invents no metadata key, and
 `ListFlights` answers Part 05 §4.1's discovery and `DoGet` the per-resource fetch from its own
-vocabulary rather than from surface we would have to specify. `tables` is the exception and keeps
-`files-v0.1`, which is what a source whose rows are already files *is*; an extension delivering
-through it is unaffected.
+vocabulary rather than from surface we would have to specify.
+
+**`tables` is the tenth and is not an adapter; it is `files-v0.1` wearing the interface.** It knows
+no format and normalizes nothing: it runs the recipe's command, reads row counts from Parquet
+footers, hands back `pq.ParquetFile(path).iter_batches(...)` per resource, and refuses where a
+declared file is missing — which is the protocol's definition, Part 05 §4.1's discovery, and
+Part 05 §4.4's completeness test respectively. It is the one adapter that needs an exception to
+every adapter rule: `PRODUCES` is empty with a comment saying what it supplies "is not a property of
+the adapter at all", `STATES` is empty, and `records()` returns nothing. So it does not declare a
+protocol — a build must support `files-v0.1` natively (Part 03 §11.1), and once it does, a source
+entry naming `{resource: path}` with an optional command **is** a delivery and the class goes away.
+`kind = "tables"` can stay as the recipe's spelling for one.
 
 **No command runs one adapter and hands over its rows.** The writer registers `inspect`, `init`,
 `extension`, `verify`, `prune` and `import` under the one `escapewheel` CLI, and none of them does
