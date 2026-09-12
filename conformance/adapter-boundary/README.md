@@ -87,6 +87,46 @@ message still parses: two resources complete, and the only thing wrong is that t
 came. That is what the build refuses on, and it names `core.coordinate_frame_axes` — the resource it
 last read — rather than the first one missing.
 
+## An adapter's declarations cross as a document
+
+`PRODUCES`, `STATES` and `NEEDS` are class attributes, so a build reads them by importing the
+adapter — which an adapter in Julia or Go cannot offer, and which the out-of-process rule forbids
+requiring. `declare.py` writes the same facts as JSON and shows what a build can then do with
+nothing imported.
+
+```
+   harp          200 bytes   1 produces, 0 states, 0 needs, 0 consumes
+   lfp           287 bytes   3 produces, 0 states, 0 needs, 2 consumes
+   nwb           914 bytes  18 produces, 6 states, 6 needs, 1 consumes
+   session       542 bytes   6 produces, 6 states, 0 needs, 3 consumes
+   sorter        451 bytes  10 produces, 0 states, 0 needs, 0 consumes
+   tables        180 bytes   0 produces, 0 states, 0 needs, 0 consumes
+```
+
+Ten documents, 180 to 914 bytes, every one generated from attributes the class already carries.
+**Ownership settled from the ten documents is the ownership settled from the ten classes** — 27
+resources with one producer, 8 with more — so the document is sufficient for R63 §2.2's rule, which
+runs before any source is opened.
+
+Four refusals then need only the document, the registry and the recipe:
+
+| broken declaration | what a build says |
+|---|---|
+| `"protocol": "carrier-pigeon-v1"` | is in no group of this profile |
+| `produces` holds `core.tirals` | which no loaded registry declares |
+| `states` holds `subject.sbuject_id` | which is no column of `core.subjects` |
+| `needs` holds `open_store` | neither a term nor an option this recipe sets |
+
+The second is the one worth having. Today a `produces` typo is not refused at all: it feeds default
+ownership and then surfaces through R63 §2.3 as a resource no source claims — a warning about a
+resource that does not exist.
+
+**What a document cannot carry is the values.** `states` names the fields a source can state and
+every value needs the source read, so they come back under `stated` in the run's report: six fields
+in **222 bytes** over `stream-v0.1`. The fixture's NWB states `subject.subject_id` as `m001`; a
+recipe declaring `786867` gets the mismatch R87 refuses on, out of process and from the same
+comparison.
+
 ## Arrow IPC is a family, so a delivery pins which member
 
 The framing is fixed and three choices are not, and `ipc_floor.py` prices each.

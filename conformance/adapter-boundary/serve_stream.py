@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 import pyarrow as pa
 from serve_nwb import as_table, build
@@ -26,9 +27,19 @@ def emit(out, resource: str, table: pa.Table) -> None:
 
 if __name__ == "__main__":
     supplied = json.loads(sys.argv[1])
-    rows = build(supplied).records()
+    source = build(supplied)
+    rows = source.records()
     out = sys.stdout.buffer
     for resource in supplied.get("wanted") or list(rows):
         emit(out, resource, as_table(rows.get(resource, [])))
     emit(out, SENTINEL, pa.table({}))
     out.flush()
+    if path := supplied.get("report_path"):
+        # The one fact a declaration cannot carry: `states` names the recipe fields this source can
+        # state, and every value needs the source read. Part 09 §5.8's report is the channel.
+        stated = {
+            field: getattr(source, attr) for field, attr in type(source).STATES.items()
+        }
+        Path(path).write_text(
+            json.dumps({"stated": stated}, indent=2, default=str) + "\n"
+        )

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 03, a new section at its end (the source protocols, what a delivery states, and how an adapter is reached); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the conversion that keeps a column, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the connection as a carrier beside the file, and when a report is this run's) |
+| **Amends** | Part 03, a new section at its end (the source protocols, what a delivery states, how an adapter is reached, and the document it declares itself in); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the conversion that keeps a column, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the connection as a carrier beside the file, when a report is this run's, and the facts a source states about itself) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole, and a contradiction is refused), R87 §2.2 (an adapter declares which recipe fields it states), R109 §2.3 (a shared process is a shared dependency closure), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -164,9 +164,10 @@ it is built for are declared like anything else: exempting the two every adapter
 second mechanism for the same act, and the reference declaration lists both today.
 
 The reference spelling is `NEEDS`, a set of names beside `PRODUCES` and `STATES` on the class, and
-it lives in Part 07 §4 with them rather than here: what a conforming build must do is read a
-declaration, and what this implementation calls it is the reference implementation's business
-(R87 §2.2 places `STATES` the same way).
+it lives in Part 07 §4 with them rather than here; §3.12 is how an adapter a build cannot import
+declares the same thing. What a conforming build must do is read a declaration: what a conforming
+build must do is read a declaration, and what this implementation calls it is the reference
+implementation's business (R87 §2.2 places `STATES` the same way).
 
 A build **MUST** refuse a recipe naming an adapter that declares something the build cannot supply,
 before any source is opened, which is where R63 §2.2 already refuses a recipe it cannot satisfy. Two
@@ -777,12 +778,60 @@ file that will not open is the resource it is. §3.10's set says which resources
 is a different question — the resource an adapter died *inside* can arrive short and parse clean —
 so both answers are needed to report a failure rather than to report that one happened.
 
+### 3.12 An adapter publishes its declarations as a document
+
+Every declaration this part relies on is read before a source is opened, and for a class a build
+reads one by importing it — the thing §3.3 forbids requiring. So an adapter a build cannot import
+**MUST** publish its declarations as a JSON document the recipe names, and a build **MUST** read
+that document before it launches anything.
+
+The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`,
+`protocol`, `produces`, `states`, `needs` and `consumes`. The command, the root and the options stay
+in the recipe, because which interpreter is installed where is the recipe author's fact (§3.5) where
+the resources an adapter can supply is not — which is §2.4's complaint answered, an adapter's own
+property recorded with the adapter. Its shape is published as `registry/adapter.schema.json`, beside
+R80 §2.2's resolution document and for that document's reason: a file a build reads is one whose
+shape something should be able to check.
+
+**The two forms are one declaration.** A build **MUST** treat a document and an importable class
+declaring the same facts as the same declaration and **MUST NOT** prefer one where both are present,
+which is §3.1's rule against a second way in applied one level up. A writer shipping both **MUST**
+generate the document from the class rather than maintain it: measured in
+`conformance/adapter-boundary/declare.py`, the ten shipped adapters' documents run **180 to 914
+bytes**, each produced from `PRODUCES`, `STATES`, `CONSUMES` and the protocol with no judgement, and
+ownership settled from the ten documents is the ownership settled from the ten classes.
+
+**A build checks a declaration against the registry and the recipe, never against the adapter.** A
+build **MUST** refuse a declaration whose `protocol` names no protocol of a group its profile names,
+whose `produces` names a resource no loaded registry declares, whose `states` names a field no
+recipe block carries, or whose `needs` names what §3.1 resolves to neither a term nor an option.
+Each fires on its own, naming what is wrong, and the second catches what nothing catches today: a
+`produces` entry reading `core.tirals` is reported by R63 §2.3 as a resource no source claims, which
+is a warning about a resource that does not exist.
+
+**The values behind `states` cross in the report.** `states` names the recipe fields a source can
+state, and Part 05 §3.6 compares each against what the recipe declares, so the values need the
+source read and no static document can carry them. They travel under `stated` in the run's report
+(§3.11), keyed by the same `block.field` name, and an adapter declaring a non-empty `states`
+**MUST** return them — which leaves Part 09 §5.8's rule that a build must not require a report
+standing for every adapter that declares none. A build **MUST** read a declared field absent from
+the report as unstated rather than as disagreeing, since Part 05 §3.6 makes a source stating nothing
+a fact and not a mismatch. Measured over the stream, six stated fields come back in **222 bytes**,
+and the comparison that refuses a wrong `subject.subject_id` runs on them as it runs in process.
+
+**Where each name lives.** The document's keys are the profile's and are lowercase. `PRODUCES`,
+`STATES` and `NEEDS` are the reference implementation's spelling of the same facts and stay Part 07
+§4's, which is where R87 §2.2 put `STATES` already. Part 05 §3.4 names `PRODUCES` in a requirement
+on a build and is amended to name the document's key instead: the part that binds a build is not the
+part that fixes an attribute name, and R93 §4's test puts the name where the implementation is.
+
 ## 4. What this does not change
 
 - **No table, column, reference, rule or vocabulary changes, and no packet is rebuilt.** This binds
   what a build tells a source and how a source answers, so what changes is who may add one.
-- **`PRODUCES` and `STATES` are untouched.** R63 §2.1 and R87 §2.2 stand; §3.1 says the rest of what
-  an adapter needs is declared the same way, not that those two change shape.
+- **`PRODUCES` and `STATES` declare what they declared.** R63 §2.1 and R87 §2.2 stand: §3.1 says the
+  rest of what an adapter needs is declared the same way and §3.12 gives all of it a second form,
+and   neither changes what either fact is. What moves is where the names live.
 - **An extension's registry document is untouched.** An extension reaches a build as a source
   (R109 §3.2), so what declares `NEEDS`, a protocol and a delivery is the adapter carrying its rows,
   and for the `tables` kind that is a root and the resources the recipe names. Its obligations under
@@ -856,7 +905,10 @@ The reference implementation owes a command it does not have: the writer registe
 `init`, `extension`, `verify`, `prune` and `import` under the one `escapewheel` CLI, and none of
 them runs one adapter and hands over its rows, which is what §3.3 requires of the ten it ships. That
 command is also the `command` a `tables` source names, so a built-in adapter reaches a build through
-the same door an extension does (R109 §3.2) rather than through a second mechanism built for it.
+the same door an extension does (R109 §3.2) rather than through a second mechanism built for it. It
+owes a second: §3.12 has a writer generate each shipped adapter's declaration document rather than
+maintain it, which is ten files of 180 to 914 bytes and no judgement, from attributes those classes
+already carry.
 
 It also carries the defect §3.4 forbids: `TablesSource` takes `command` as a string and splits it
 with `shlex`, which the module's own docstring calls "a plain argument list … **not** a shell". Both
