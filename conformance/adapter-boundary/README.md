@@ -9,10 +9,10 @@ Run it with `uv run --project ../../escapewheel-writer python probe.py`.
 
 ## The NWB adapter's inputs cross, and its rows are unchanged
 
-Everything a build passes it goes over in **271 bytes of JSON** — a root, the reference clock's
-`core.clocks` row, an IANA zone string, and one recipe option — and the adapter returns **33 rows
-across 13 resources, identical** to the ones it returns when constructed the way `session.py`
-constructs it today, with a `Clock` object and a `ZoneInfo`.
+Everything a build passes it goes over as **one JSON object** — a root, the reference clock's
+`core.clocks` row, the session's name, the resources wanted, and two recipe options — and the
+adapter returns **33 rows across 13 resources, identical** to the ones it returns when constructed
+the way `session.py` constructs it today, with a `Clock` object and a `ZoneInfo`.
 
 That is the draft's closed list tested on the adapter that receives the most, and it holds. It
 needs no store: `store=None` is already the default, and the adapter opens its own root.
@@ -195,17 +195,30 @@ none of them empty — so today a resource that never arrives is a crash and a s
 say, indistinguishably. Delivered empty it costs a name and no schema: zero columns, and 144 bytes
 as a stream.
 
-**Three things the draft does not say, found by needing them.**
+**Three things the draft did not say, found by needing them.** Two are now stated, and the third is
+what a build cannot check.
 
-**Rendezvous.** Nothing states how a build knows the adapter is listening. Here the server prints
-`ready` on standard output and the build waits for that line — invented for this probe. Retrying the
-connection until it succeeds would do as well, and the two are not interchangeable for a build that
-must distinguish *not yet* from *never*.
+**Rendezvous.** Nothing stated how a build knows the adapter is listening. It now **retries** the
+address it supplied until the socket answers or the process exits: a readiness line cannot tell *not
+yet* from *never* unless the build watches the process too, which is the whole of what retrying
+already does.
 
-**Which recipe options an adapter accepts.** The closed list has "a recipe option" as a row, and an
-adapter's `NEEDS` names terms rather than options, so `interval_kind` had to be passed beside the
-declaration rather than through it. Either an adapter names the options it accepts in the same
-declaration, or a build cannot refuse a recipe that sets one the adapter will ignore.
+Removing the line exposed a race it had been hiding. `FlightServerBase` begins accepting inside its
+own constructor, so a server that binds and *then* extracts answers `ListFlights` from a half-built
+object — an `AttributeError` on the build's first call, every run. `serve_nwb.py` now builds its
+tables before calling `super().__init__`, and an adapter must not bind before it can answer.
+
+**Which recipe options an adapter accepts.** `NEEDS` named terms, so `interval_kind` had to be
+passed beside the declaration. A declared name now resolves against the closed vocabulary first and
+the recipe's options second, so `NEEDS` carries both: four terms and two options — `zone` and
+`interval_kind` — and a name in neither is refused. A term the recipe cannot fill is the same
+refusal, because `supply` dropped one silently until it was not: an adapter cannot tell a term
+nobody filled from one legitimately empty.
+
+What crosses is one JSON object, keyed by the term, as the command's last argument and the only one
+the build adds. A protocol's own rendezvous value travels in it too — `socket` for `flight-v0.1`,
+`delivery_root` for `files-v0.1`, neither for `stream-v0.1` — which is why no protocol needs a
+positional convention of its own.
 
 **Whether the wanted set is honoured.** `serve_nwb.py` computes every resource and filters, so
 naming three of eighteen saved nothing. The saving is available to an adapter and not required of

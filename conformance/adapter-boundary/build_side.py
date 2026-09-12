@@ -56,36 +56,75 @@ SUPPLIABLE = {
     "clocks",
     "first_samples",
     "units",
-    "zone",
     "session_id",
     "wanted",
     "array_location",
 }
 
+#: Terms a protocol requires rather than an adapter declares, so a build supplies one because the
+#: adapter speaks that protocol and never because it asked. Declaring one is refused as a term
+#: outside `SUPPLIABLE` would be.
+PROTOCOL_TERMS = {
+    "flight-v0.1": "socket",
+    "files-v0.1": "delivery_root",
+    "stream-v0.1": None,
+}
 
-def supply(needs, context):
-    """The values a build passes for what an adapter declared, and nothing else."""
-    unknown = set(needs) - SUPPLIABLE
-    if unknown:
-        raise SystemExit(
-            f"the adapter needs {sorted(unknown)}, which a build cannot supply"
-        )
-    return {term: context[term] for term in needs if term in context}
+
+def supply(needs, context, options):
+    """The values a build passes for what an adapter declared, and nothing else.
+
+    A declared name resolves against the vocabulary first and the recipe's options second, so a
+    `zone` is an option and a `root` is a term. A name in neither, and a term this recipe cannot
+    fill, are the same refusal: an adapter cannot tell a term nobody filled from one that is
+    legitimately empty, so neither may be dropped.
+    """
+    refusals = []
+    if unknown := sorted(n for n in needs if n not in SUPPLIABLE and n not in options):
+        refusals.append(f"{unknown}, neither a term nor an option this recipe sets")
+    if unfilled := sorted(n for n in needs if n in SUPPLIABLE and n not in context):
+        refusals.append(f"{unfilled}, which this recipe cannot fill")
+    if refusals:
+        raise SystemExit(f"the adapter needs {'; and '.join(refusals)}")
+    named = {n: options[n] for n in needs if n not in SUPPLIABLE}
+    supplied = {term: context[term] for term in needs if term in SUPPLIABLE}
+    return {**supplied, "options": named} if named else supplied
 
 
-def over_flight(tmp: str, wire: str, wanted: list[str]) -> tuple[dict, dict, float]:
+def rendezvous(socket: str, child: subprocess.Popen) -> fl.FlightClient:
+    """`flight-v0.1`: retry the socket until it answers or the adapter exits.
+
+    A readiness line on standard output would work and would be a second thing to specify, and it
+    cannot cover the case that matters: an adapter that dies before binding says nothing either way.
+    """
+    while True:
+        try:
+            client = fl.connect(fl.Location.for_grpc_unix(socket))
+            client.wait_for_available(timeout=0.05)
+            return client
+        except (fl.FlightUnavailableError, fl.FlightTimedOutError):
+            if child.poll() is not None:
+                raise SystemExit(
+                    f"the adapter exited {child.returncode} before serving"
+                ) from None
+            time.sleep(0.01)
+
+
+def over_flight(
+    tmp: str, supplied: dict, wanted: list[str]
+) -> tuple[dict, dict, float]:
     """`flight-v0.1`: Stage 1 from ListFlights, then one DoGet per resource."""
     socket = str(Path(tmp) / "adapter.sock")
     started = time.perf_counter()
     child = subprocess.Popen(
-        [sys.executable, str(HERE / "serve_nwb.py"), socket, wire],
-        stdout=subprocess.PIPE,
-        text=True,
+        [
+            sys.executable,
+            str(HERE / "serve_nwb.py"),
+            json.dumps({**supplied, "socket": socket}),
+        ],
         env={**os.environ, "PYTHONPATH": str(HERE)},
     )
-    if child.stdout.readline().strip() != "ready":
-        raise SystemExit("the adapter did not come up")
-    client = fl.connect(fl.Location.for_grpc_unix(socket))
+    client = rendezvous(socket, child)
     stage1 = {
         fi.descriptor.path[0].decode(): fi.total_records for fi in client.list_flights()
     }
@@ -97,13 +136,17 @@ def over_flight(tmp: str, wire: str, wanted: list[str]) -> tuple[dict, dict, flo
     return stage1, got, elapsed
 
 
-def over_files(tmp: str, wire: str, wanted: list[str]) -> tuple[dict, dict, float]:
+def over_files(tmp: str, supplied: dict, wanted: list[str]) -> tuple[dict, dict, float]:
     """`files-v0.1`: the adapter writes Parquet, and Stage 1 is the footers."""
     root = Path(tmp) / "delivered"
     root.mkdir()
     started = time.perf_counter()
     code = subprocess.call(
-        [sys.executable, str(HERE / "serve_files.py"), str(root), wire],
+        [
+            sys.executable,
+            str(HERE / "serve_files.py"),
+            json.dumps({**supplied, "delivery_root": str(root)}),
+        ],
         env={**os.environ, "PYTHONPATH": str(HERE)},
     )
     if code:
@@ -116,11 +159,13 @@ def over_files(tmp: str, wire: str, wanted: list[str]) -> tuple[dict, dict, floa
     return stage1, got, 1000 * (time.perf_counter() - started)
 
 
-def over_stream(tmp: str, wire: str, wanted: list[str]) -> tuple[dict, dict, float]:
+def over_stream(
+    tmp: str, supplied: dict, wanted: list[str]
+) -> tuple[dict, dict, float]:
     """`stream-v0.1`: concatenated IPC on standard output, ended by the sentinel."""
     started = time.perf_counter()
     child = subprocess.Popen(
-        [sys.executable, str(HERE / "serve_stream.py"), wire],
+        [sys.executable, str(HERE / "serve_stream.py"), json.dumps(supplied)],
         stdout=subprocess.PIPE,
         env={**os.environ, "PYTHONPATH": str(HERE)},
     )
@@ -160,15 +205,15 @@ def main() -> int:
                 "tick_rate_den": 1,
                 "origin": "HARP epoch",
             },
-            "zone": "America/Los_Angeles",
             "session_id": SESSION,
             # Everything the adapter declares, so every resource crosses and the five this
             # session has nothing for arrive empty rather than not arriving.
             "wanted": list(NWBSource.PRODUCES),
         }
-        supplied = supply(serve_nwb.NEEDS, context)
-        supplied["options"] = {"interval_kind": "task.trials"}
-        wire = json.dumps(supplied)
+        # The recipe's options, which a declared name resolves against after the vocabulary.
+        options = {"zone": "America/Los_Angeles", "interval_kind": "task.trials"}
+        supplied = supply(serve_nwb.NEEDS, context, options)
+        wire = json.dumps(supplied)  # what crosses, before a protocol adds its own term
         wanted = context["wanted"]
         print(f"a build supplies {sorted(serve_nwb.NEEDS)}")
         print(
@@ -183,7 +228,7 @@ def main() -> int:
             ("files-v0.1", over_files),
             ("stream-v0.1", over_stream),
         ):
-            stage1, got, elapsed = run(tmp, wire, wanted)
+            stage1, got, elapsed = run(tmp, supplied, wanted)
             complete = set(got) == set(wanted)
             results[name] = (stage1, True)
             # The boundary's own property: what a source produced is what a build receives.

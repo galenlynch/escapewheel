@@ -1,6 +1,7 @@
 """The NWB adapter delivering `stream-v0.1`: concatenated Arrow IPC on standard output.
 
-`argv[1]` is the JSON a build sends for `NEEDS`. One stream per resource, each carrying its
+`argv[1]` is the JSON a build sends: the terms the adapter declared in `NEEDS`, and nothing
+else, since `stream-v0.1` needs no rendezvous of its own. One stream per resource, each carrying its
 `resource_id`, and a final empty stream named `end` so a truncated delivery is not mistaken for a
 finished one.
 """
@@ -11,7 +12,6 @@ import json
 import sys
 
 import pyarrow as pa
-
 from serve_nwb import as_table, build
 
 SENTINEL = "end"

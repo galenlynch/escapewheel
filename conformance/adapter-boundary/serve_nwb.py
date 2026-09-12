@@ -1,7 +1,8 @@
 """The NWB adapter behind a Flight server, built from what a build supplies and nothing else.
 
-`argv[1]` is the socket to serve on; `argv[2]` is the JSON a build sends for the adapter's declared
-`NEEDS`. Nothing else crosses: no store, no `Clock`, no `ZoneInfo`, no object of the writer's.
+`argv[1]` is the whole of it: one JSON object carrying the terms the adapter declared in `NEEDS`
+and the one `flight-v0.1` requires, `socket`. Nothing else crosses — no store, no `Clock`, no
+`ZoneInfo`, no object of the writer's — and nothing else is positional.
 """
 
 from __future__ import annotations
@@ -15,8 +16,10 @@ import pyarrow.flight as fl
 from escapewheel_writer.clock import Clock
 from escapewheel_writer.sources.nwb import NWBSource
 
-#: What this adapter declares it needs, from the closed vocabulary a build can supply.
-NEEDS = ("root", "reference_clock", "zone", "session_id", "wanted")
+#: What this adapter declares it needs. Four resolve against the vocabulary a build can supply and
+#: two against the recipe's options -- `zone` and `interval_kind` -- because an option an adapter
+#: does not declare is one a build refuses the recipe for setting.
+NEEDS = ("root", "reference_clock", "session_id", "wanted", "zone", "interval_kind")
 
 
 def as_table(rows: list[dict]) -> pa.Table:
@@ -31,14 +34,18 @@ def as_table(rows: list[dict]) -> pa.Table:
 
 
 def build(supplied: dict) -> NWBSource:
-    """Construct the adapter from values, rebuilding the writer's classes on this side."""
-    clock = Clock(**supplied["reference_clock"])
+    """Construct the adapter from values, rebuilding the writer's classes on this side.
+
+    Every value crossed as a string or a record of them, so the types are rebuilt here: the zone is
+    an option the recipe set and a `ZoneInfo` is what this adapter wants of it.
+    """
+    options = dict(supplied.get("options", {}))
     return NWBSource(
         supplied["root"],
-        clock=clock,
-        zone=ZoneInfo(supplied["zone"]),
+        clock=Clock(**supplied["reference_clock"]),
+        zone=ZoneInfo(options.pop("zone")),
         session_id=supplied.get("session_id"),
-        **supplied.get("options", {}),
+        **options,
     )
 
 
@@ -48,12 +55,15 @@ class Served(fl.FlightServerBase):
     def __init__(
         self, location: str, source: NWBSource, wanted: list[str] | None
     ) -> None:
-        super().__init__(fl.Location.for_grpc_unix(location))
         rows = source.records()
         asked = list(wanted) if wanted else list(rows)
         # A resource this source has nothing for arrives empty rather than not arriving, so a build
         # reads absence as the run having failed and never as the source having nothing to say.
         self.tables = {r: as_table(rows.get(r, [])) for r in asked}
+        # Bound last, and that is load-bearing: the base class starts accepting inside its own
+        # `__init__`, so a build that reaches the socket as soon as it answers can call a handler
+        # before anything assigned after this line exists.
+        super().__init__(fl.Location.for_grpc_unix(location))
 
     def list_flights(self, context, criteria):
         """Stage 1: what this source offers per resource, and how many rows (Part 05 §4.1)."""
@@ -69,7 +79,7 @@ class Served(fl.FlightServerBase):
 
 
 if __name__ == "__main__":
-    supplied = json.loads(sys.argv[2])
-    server = Served(sys.argv[1], build(supplied), supplied.get("wanted"))
-    print("ready", flush=True)
-    server.serve()
+    supplied = json.loads(sys.argv[1])
+    # No readiness line: a build retries the socket until it answers or this process exits, so an
+    # adapter that never binds is detected without it having to say anything.
+    Served(supplied["socket"], build(supplied), supplied.get("wanted")).serve()

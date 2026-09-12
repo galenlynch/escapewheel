@@ -25,6 +25,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer"))
 sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer/tests"))
 
+import build_side
 import nwbfixture
 import serve_nwb
 import serve_stream
@@ -48,9 +49,12 @@ def context(root: Path) -> dict:
             "tick_rate_den": 1,
             "origin": "HARP epoch",
         },
-        "zone": "America/Los_Angeles",
         "session_id": SESSION,
     }
+
+
+#: The recipe's options, which a declared name resolves against after the vocabulary.
+OPTIONS = {"zone": "America/Los_Angeles", "interval_kind": "task.trials"}
 
 
 def walk(raw: bytes) -> None:
@@ -87,32 +91,29 @@ def walk(raw: bytes) -> None:
 def main() -> int:
     with tempfile.TemporaryDirectory(dir="/mnt/Data") as tmp:
         root = nwbfixture.build(Path(tmp))
-        held = context(root)
-        supplied = (
-            serve_nwb.supply_from(held)
-            if hasattr(serve_nwb, "supply_from")
-            else {term: held[term] for term in serve_nwb.NEEDS if term in held}
-        )
-        supplied["options"] = {"interval_kind": "task.trials"}
-
-        # Which resources this session has rows for, so the trace can carry one that has none.
-        produced = serve_nwb.build({**supplied, "wanted": None}).records()
         # Sorted: `PRODUCES` is a set, so its iteration order changes between processes and an
         # unsorted trace would not be the same trace twice.
         declares = sorted(NWBSource.PRODUCES)
+        held = {**context(root), "wanted": declares}
+
+        # Which resources this session has rows for, so the trace can carry one that has none.
+        produced = serve_nwb.build(
+            build_side.supply(serve_nwb.NEEDS, held, OPTIONS)
+        ).records()
         populated = [r for r in declares if produced.get(r)]
         empty = [r for r in declares if not produced.get(r)]
-        supplied["wanted"] = [*populated[:2], empty[0]]
+        held["wanted"] = [*populated[:2], empty[0]]
+        supplied = build_side.supply(serve_nwb.NEEDS, held, OPTIONS)
         wire = json.dumps(supplied)
 
         print("1. what the build hands over\n")
         print(f"   argv[0] {sys.executable}")
         print(f"   argv[1] {HERE / 'serve_stream.py'}")
-        print(f"   argv[2] {len(wire)} bytes of JSON:")
-        for term in serve_nwb.NEEDS:
-            print(f"           {term} = {json.dumps(supplied.get(term))[:88]}")
+        print(f"   argv[2] {len(wire)} bytes of JSON, and nothing else is positional:")
+        for term, value in supplied.items():
+            print(f"           {term} = {json.dumps(value)[:84]}")
         print(
-            f"\n   {len(supplied['wanted'])} resources asked for: {', '.join(supplied['wanted'])}"
+            f"\n   {len(held['wanted'])} resources asked for: {', '.join(held['wanted'])}"
         )
         print(f"   {empty[0]} is one this session has no rows for\n")
 

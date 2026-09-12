@@ -157,10 +157,11 @@ belongs in the recipe rather than the schema. A preference is a fact about one p
 
 ### 3.1 An adapter declares what a build must supply it
 
-An adapter **MUST** declare what a build supplies it beyond its root and the session identifier, as
-a static declaration read with nothing open, in the shape `PRODUCES` and `STATES` already take. A
-build **MUST** supply exactly what an adapter declares and **MUST NOT** decide it from the kind's
-name.
+An adapter **MUST** declare every value a build supplies it, as a static declaration read with
+nothing open, in the shape `PRODUCES` and `STATES` already take. A build **MUST** supply exactly
+what an adapter declares and **MUST NOT** decide it from the kind's name. Its root and the session
+it is built for are declared like anything else: exempting the two every adapter needs would be a
+second mechanism for the same act, and the reference declaration lists both today.
 
 The reference spelling is `NEEDS`, a set of names beside `PRODUCES` and `STATES` on the class, and
 it lives in Part 07 §4 with them rather than here: what a conforming build must do is read a
@@ -168,7 +169,8 @@ declaration, and what this implementation calls it is the reference implementati
 (R87 §2.2 places `STATES` the same way).
 
 A build **MUST** refuse a recipe naming an adapter that declares something the build cannot supply,
-before any source is opened, which is where R63 §2.2 already refuses a recipe it cannot satisfy.
+before any source is opened, which is where R63 §2.2 already refuses a recipe it cannot satisfy. Two
+things are that: a name nothing can resolve, and a term this recipe cannot fill.
 
 **Everything a build supplies is data.** An adapter need not run in the writer's process. Across a
 process boundary a build passes an argument list, and an argument list holds strings. So a build
@@ -176,21 +178,52 @@ process boundary a build passes an argument list, and an argument list holds str
 the writer's own — and what may be declared is closed for the same reason: a build can pass only
 what survives the crossing.
 
-| an adapter declares it needs | a build passes |
-|---|---|
-| the root as a location | the URI, which the adapter opens for itself |
-| the session's reference clock | its identifier and its rational tick rate |
-| the first sample of each stream | one integer per stream name |
-| the clocks declared before it runs | each identifier with its rate |
-| the units a prior source produced | a row each: the source's names for it, and the identifiers assigned |
-| which resources are wanted | the resource IDs the recipe leaves it owning, so it produces no more |
-| somewhere to write an array | a location under the staging area, where the adapter produces one |
-| a recipe option, named | the value the recipe carries under that name |
+**The vocabulary is closed, and these are its terms.** Each names one value and the form it takes,
+so an adapter and a build written by different people pass the same thing:
 
-A profile adding to that list amends this section. An adapter names the options it accepts among
-what it declares, rather than accepting whatever a recipe sets: a build that does not know which
-options reach an adapter cannot refuse a recipe setting one the adapter will ignore, which is
-R63 §2.2's refusal applied to an option instead of a resource.
+| term | what a build passes |
+|---|---|
+| `root` | the source's location as a URI, which the adapter opens for itself |
+| `session_id` | the session's own name, never the integer a build assigns (§3.7) |
+| `reference_clock` | the reference clock's row: identifier, rational tick rate, origin |
+| `clocks` | one such row per clock declared before this source runs |
+| `first_samples` | one record per stream: its name, and the integer its samples start at |
+| `units` | one record per unit: the source's label for it, and the identifier assigned |
+| `wanted` | the resource IDs the recipe leaves this source owning, so it produces no more |
+| `array_location` | a location under the staging area to write an array to (§3.8) |
+| an option, by its name | the value the recipe carries under it — a `zone`, an `interval_kind` |
+
+A build **MUST** resolve each declared name against that list first and the recipe's options second,
+and **MUST** refuse a recipe where a name resolves to neither, before any source is opened. A
+profile adding a term amends this section. Options are declared for the same reason everything else
+is: a build that does not know which options reach an adapter cannot refuse a recipe setting one the
+adapter will ignore, which is R63 §2.2's refusal applied to an option instead of a resource.
+Measured on the NWB adapter, four of its six declared names are terms and two are options, and the
+`interval_kind` a recipe sets reached it only because it declares it.
+
+**A term a build cannot fill is a refusal, not an omission.** `first_samples` needs a source that
+states them and `units` needs one that produced them, so a recipe naming neither cannot satisfy an
+adapter that asks for either. A build **MUST** refuse such a recipe, naming the term and the source,
+and **MUST NOT** pass the term absent or empty instead: an adapter cannot tell a term nobody filled
+from one whose value is legitimately empty. The spike measuring this boundary dropped such a term
+silently until this clause was written, which is what an omission buys — a source constructed
+without the value, failing wherever it first reaches for one.
+
+**Two terms belong to a protocol rather than to an adapter.** `flight-v0.1` requires `socket`, the
+address to serve on, and `files-v0.1` requires `delivery_root`, the directory to write the delivery
+into; `stream-v0.1` requires neither, its rows going to standard output. A build **MUST** supply
+whichever term its adapter's protocol requires, and an adapter **MUST NOT** declare one — declaring
+the protocol is what asks for it, and a build refuses a declaration of it as it refuses any term
+outside the list above.
+
+**What crosses is one JSON object.** A build **MUST** pass the terms it supplies as a single JSON
+object keyed by the term, appended to the command's argument list as its last element, and **MUST
+NOT** add an argument of its own beside it; an option appears under `options`, keyed by its name, so
+no option can collide with a term. JSON because the values are strings, integers and records of
+those, because Part 09 §5.8's report is already JSON in the other direction, and because one
+encoding is what keeps two implementations agreeing about what arrived rather than about what was
+meant. Measured in `conformance/adapter-boundary/`, the NWB adapter's six declared names are **721
+bytes** naming all eighteen of its resources.
 
 **The wanted set is a term a build supplies and an adapter MAY act on.** A build settles ownership
 before any source is opened (R63 §2.2), so it knows which of a source's resources it will keep, and
@@ -603,6 +636,13 @@ socket forever. A readiness line on standard output is the obvious alternative a
 because a build waiting for a line that never comes cannot tell *not yet* from *never* unless it
 watches the process as well, which is the whole of what retrying the socket already does.
 
+The retry puts one obligation back on the adapter: it **MUST NOT** bind before it can answer
+`ListFlights`. A build's first call arrives as soon as the socket answers, so an adapter that binds
+and then extracts serves Stage 1 from a half-built server. Measured, `FlightServerBase` begins
+accepting inside its own constructor, and the readiness line had been hiding that — removing the
+line turned the race into an `AttributeError` on the first `ListFlights` until the adapter built its
+tables before binding.
+
 **A protocol's name is importable with it.** An adapter declares a protocol by naming it, and the
 name is a constant the implementation exports rather than a string the adapter spells. Pinning is
 then what keeps an old adapter working, and it needs no shim to maintain: the adapter resolves the
@@ -765,9 +805,10 @@ command is carried as a list.
 
 **What a build tells a source.** `session.py` constructs an adapter in **72 lines carrying ten
 `spec.kind` branches**, one per built-in, each passing a different set of extras. That becomes one
-construction that reads `NEEDS` and passes the values it names. The five tables that name a kind go
-with it — `_SHARED_SOURCES`, `SAMPLED`, `REQUIRED_OPTIONS`, `CONSUMES` and `PREFERRED` — against one
-`NEEDS` and one `CONSUMES` per adapter, ten of each.
+construction that reads the declaration, resolves each name against the vocabulary and then the
+recipe's options, refuses what it cannot fill, and passes the rest as one JSON object. The five
+tables that name a kind go with it — `_SHARED_SOURCES`, `SAMPLED`, `REQUIRED_OPTIONS`, `CONSUMES`
+and `PREFERRED` — against one `NEEDS` and one `CONSUMES` per adapter, ten of each.
 
 What that costs is three adapters, a cache and a conversion. `nwb`, `waveforms` and `lfp` are handed
 an open store today and must open the root themselves; `store_for` already takes a root and keys on
