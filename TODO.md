@@ -211,9 +211,31 @@ would have to specify and version.
 
 **Core ships adapters for standards and not for institutions.** SpikeInterface, Open Ephys, Harp and
 NWB are read by many institutions, so support for them is worth carrying centrally; `rig.json`
-serves one. By that line `session` (707 lines of AIND's metadata schema) and `video` (311 lines
-built around `dynamic-foraging-task`'s `rx:Zip` pairing defect and `foraging.bonsai`'s CsvWriter
-columns) leave this distribution, and leaving is what makes them need a protocol.
+serves one. Measured against what each module actually names, the ten sort four ways:
+
+| | adapters |
+|---|---|
+| generic | `sorter`, `sync`, `openephys`, `harp`; `waveforms` once `ks_unit_id` goes; `nwb` once its dialect columns go |
+| one option short | `lfp` |
+| one institution's, whole | `session`, `video` |
+| not an adapter | `tables` |
+
+`session` is 707 lines of AIND's metadata schema and carries both `aind.*` compensations. `video` is
+311 lines requiring a **headerless three-column CSV read positionally** — `COLUMNS = ("rig_seconds",
+"frame_counter", "camera_nanoseconds")` — beside every `.mp4` with the same stem, with `frame_index`
+derived from `frame_counter` and the `rx:Zip` pairing repair on top. One `ffprobe` call for
+container metadata is the only generic part, so it leaves whole rather than as a carving.
+
+`lfp` is nearly generic and worth keeping: `processing/ecephys/LFP` is where pynwb's own `LFP`
+container lives, and the Zarr v2 referencing, the axis description and the band declaration are
+all format-level. Its one line of dialect recovers a probe from a series name NWB does not
+constrain — `series.name.removeprefix("ElectricalSeries").removesuffix("-LFP")` — and a declared
+pattern option
+settles it. `waveforms` reads `waveform_mean`, `waveform_sd` and the ragged
+`electrodes`/`electrodes_index`, all base NWB; its only dialect touch is `ks_unit_id`, which R81
+measured equal to `original_cluster_id` in 6,781 of 6,781 units, so it is deleted rather than moved.
+
+Leaving is what makes an adapter need a protocol (R115 §3.3).
 
 **`tables` is the tenth and is not an adapter; it is `files-v0.1` wearing the interface.** It knows
 no format and normalizes nothing: it runs the recipe's command, reads row counts from Parquet
