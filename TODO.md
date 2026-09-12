@@ -178,19 +178,69 @@ sound until a build refuses it, or worse does not. The four extensions here drif
 reason and are caught only because they sit beside `check.py`, which its own comment says: nothing
 regenerates them.
 
-This is the extension's version of what `an-adapters-rows-cross-a-process-boundary` §3.7 does for
+This is the extension's version of what R115 §3.9 does for
 an adapter — ship the thing an author would otherwise write badly — and the shape is the same:
 `escapewheel extension check <document>`, the invariants already written, run against a document
 and the core registry a packet embeds.
 
 **The rest of the parallel is already there**, which is worth saying so nobody builds it twice. An
-extension's *rows* cross by the same protocols an adapter's do, and §3.7 ships both ends for either.
+extension's *rows* cross by the same protocols an adapter's do, and R115 §3.9 ships both ends for
+either.
 Its *document* is already drafted for it by `escapewheel extension`, which reads what a Parquet file
 can tell it and names what it cannot, so a human finishes a draft rather than starting one — and
 that is not R109 §3.2's forbidden derivation, because what the extension delivers is the human's
 document and not a function of the rows. The document already carries its own versions too:
 `extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
 (R57 §2.1). Checking is the only half that never shipped.
+
+## 1d. The adapter boundary is specified and not built
+
+R115 was accepted on 2026-09-11 and Part 03 §11 now carries the whole contract between a build and
+a source. None of it is implemented. `conformance/adapter-boundary/` is the reference — seven
+scripts in which all three protocols deliver the NWB adapter's eighteen resources identically, five
+of them empty — and every piece below is the distance between that spike and the writer.
+
+**No command runs one adapter and hands over its rows.** The writer registers `inspect`, `init`,
+`extension`, `verify`, `prune` and `import` under the one `escapewheel` CLI, and none of them does
+this. It is the same command a `tables` source names, so a built-in adapter reaches a build through
+the door an extension already uses (R109 §3.2) rather than through a second mechanism.
+
+**The ten adapters declare two of the four facts Part 05 §3.4 requires.** `PRODUCES` and `STATES`
+are on the classes; the values a build must supply and the protocol its rows cross by are not. Until
+they are, Part 05 §3.9 makes every build non-conforming unless every recipe opts every source into
+the writer's process, which is the narrow case rather than the ordinary one. Declaring a protocol
+per adapter is the smallest step that changes that.
+
+**`_build_source` is 72 lines carrying ten `spec.kind` branches**, each passing a different set of
+extras, and becomes one construction that reads the declaration, resolves each name against Part 03
+§11.2's terms and then the recipe's options, refuses what it cannot fill, and passes the rest as one
+JSON object. The five tables keyed by kind go with it: `_SHARED_SOURCES`, `SAMPLED`,
+`REQUIRED_OPTIONS` and `CONSUMES` become declarations on the ten adapters, and `PREFERRED` moves
+into the recipe, where Part 05 §3.3 now puts it.
+
+**`registry/adapter.schema.json` does not exist**, and Part 03 §11.5 publishes it. R80's
+`registry/sources.schema.json` is the template and has three hookups: hand-written beside
+`manifest.schema.json`, copied by `build.py`'s `VENDORED` map into the package that reads it, and
+loaded by `check.py`. One thing differs — a **build** reads this document, so it vendors into the
+writer rather than the reader.
+
+**Nothing generates a declaration document.** R115 §3.12 requires generation rather than
+maintenance, and measured on the ten classes it is 180 to 914 bytes each with no judgement in it,
+from `PRODUCES`, `STATES`, `CONSUMES` and the protocol.
+
+**`TablesSource` takes `command` as a string and splits it with `shlex`**, which Part 05 §3.7 now
+forbids. Both packaged recipes survive the parse because `python extract.py` holds no backslash;
+one naming an interpreter by an absolute Windows path would fail as a missing executable rather than
+as a malformed command. The fix is a TOML array, the deletion of the split, and a line in each recipe.
+
+**A build reads no report at all.** R109 §3.6 was specified and unimplemented before this, and
+Part 09 §5.8 now adds the connection as a carrier, the rule that a build clears a report's path
+before the run that writes it, and `stated`, which is where the values behind an adapter's declared
+fields cross. All of it is unread today, so a source stating a fact out of process is compared
+against nothing.
+
+Nothing here invalidates a packet: R115 changes no table, column, reference, rule or vocabulary, and
+the two built packets are conforming under it.
 
 ## 1a. The packets' physical layout and encoding
 
