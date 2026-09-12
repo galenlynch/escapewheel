@@ -200,11 +200,20 @@ a source. `conformance/adapter-boundary/` is the reference — seven scripts in 
 protocols deliver the NWB adapter's eighteen resources identically, five of them empty — and every
 piece below is the distance between that spike and the writer.
 
-**The nine adapters that read a source will declare `flight-v0.1`**, decided 2026-09-12. One
-protocol each is all R115 §3.3 asks, the build carries breadth for all three, and Flight owns the
-least of them: a descriptor is the format's, so the protocol invents no metadata key, and
-`ListFlights` answers Part 05 §4.1's discovery and `DoGet` the per-resource fetch from its own
-vocabulary rather than from surface we would have to specify.
+**Where a protocol is needed it is `flight-v0.1`**, decided 2026-09-12. R115 §3.3 asks one of an
+adapter released independently of the build and none of an adapter the build ships, so the ten need
+nothing today; what the decision settles is which protocol the writer's own server speaks, and which
+one an adapter leaving this distribution implements. Flight owns the least of the three: a
+descriptor is the format's, so the protocol invents no metadata key, and `ListFlights` answers
+Part 05 §4.1's
+discovery and `DoGet` the per-resource fetch from Arrow's own vocabulary rather than from surface we
+would have to specify and version.
+
+**Core ships adapters for standards and not for institutions.** SpikeInterface, Open Ephys, Harp and
+NWB are read by many institutions, so support for them is worth carrying centrally; `rig.json`
+serves one. By that line `session` (707 lines of AIND's metadata schema) and `video` (311 lines
+built around `dynamic-foraging-task`'s `rx:Zip` pairing defect and `foraging.bonsai`'s CsvWriter
+columns) leave this distribution, and leaving is what makes them need a protocol.
 
 **`tables` is the tenth and is not an adapter; it is `files-v0.1` wearing the interface.** It knows
 no format and normalizes nothing: it runs the recipe's command, reads row counts from Parquet
@@ -223,11 +232,10 @@ this. It is the same command a `tables` source names, so a built-in adapter reac
 the door an extension already uses (R109 §3.2) rather than through a second mechanism.
 
 **The ten adapters declare two of the four facts Part 05 §3.4 requires.** `PRODUCES` and `STATES`
-are on the classes; the values a build must supply and the protocol its rows cross by are not. Both
-packaged recipes and every test recipe now carry `[packet] in_process = true`, which Part 05 §3.9
-makes the honest thing to say while that is so — this machine installs these adapters beside the
-writer — and `Recipe.check` refuses a source that declares neither a protocol nor the opt-in. The
-opt-in comes back out as each adapter declares `flight-v0.1` and can be reached.
+are on the classes; the values a build must supply are not, and `CONSUMES` is a table keyed by kind
+rather than a declaration. A protocol is not owed, since all ten ship with the build. `in_process`
+exists for the case that does owe one — a kind another distribution registers — and `Recipe.check`
+refuses such a source that declares neither.
 
 **`_build_source` is 72 lines carrying ten `spec.kind` branches**, each passing a different set of
 extras, and becomes one construction that reads the declaration, resolves each name against Part 03
@@ -235,6 +243,36 @@ extras, and becomes one construction that reads the declaration, resolves each n
 JSON object. The five tables keyed by kind go with it: `_SHARED_SOURCES`, `SAMPLED`,
 `REQUIRED_OPTIONS` and `CONSUMES` become declarations on the ten adapters, and `PREFERRED` moves
 into the recipe, where Part 05 §3.3 now puts it.
+
+**The NWB adapter is half a standard's and half one producer's, and the split is a lift rather
+than a rewrite.** The paths it walks are all base NWB — `general/subject`, `general/devices`,
+`general/extracellular_ephys/electrodes`, `intervals/trials`, `acquisition/` — and about fifteen of
+the columns it pulls out of them are ones base NWB does not define, which R59 measured varying
+between two exporters of one pipeline. Those columns share rows with the standard ones, and R108
+§3.2 forbids composing a row from more than one source, so the dialect cannot be split off as a
+second adapter contributing columns.
+
+What splits instead is the **code**: a base NWB reader as its own distribution, and an adapter that
+speaks one institution's dialect as another, importing the reader and emitting whole rows of whole
+resources. Ownership between the two is the arbitration that already exists — the recipe declares
+which owns `core.electrode_coordinates` (Part 05 §3.3), and R108 §3.1 refuses a preference that
+discards a value the passed-over source stated. Sharing the reader is safe across a release boundary
+because R115 §3.9 lets an out-of-process adapter import whatever version it was written against: the
+boundary unshares the environment, so a shared library is not a shared closure.
+
+It is cheap because the boundary work above is the extraction. `sources/nwb.py` needs exactly two
+things of the build — `Clock` and `StagedArray` — and R115 §3.1 has the reference clock cross as its
+identifier and rational rate, while §3.8 has an array cross as a reference. After those, what lifts
+is `nwb.py`, `zarr_compat.py` and `store.py`, **1,677 lines touching nothing of the build**.
+Sequence it after the one construction, not before.
+
+A **dialect mapping** — a recipe-named document of candidate column names per core column — was
+designed and rejected in the same conversation. It existed only because the row-level split looked
+blocked; splitting the code instead removes the need, and a rename map would not have covered what
+actually differs anyway: three columns becoming rows with an `axis_index`, a delimited
+`ccf_structure_id_path` that R3 §3.0 forbids, or a unit. Where a source needs converting rather than
+renaming, the general form already exists — a command producing Parquet, delivered as `files-v0.1`
+(R109 §3.2).
 
 **`registry/adapter.schema.json` does not exist**, and Part 03 §11.5 publishes it. R80's
 `registry/sources.schema.json` is the template and has three hookups: hand-written beside
@@ -244,7 +282,9 @@ writer rather than the reader.
 
 **Nothing generates a declaration document.** R115 §3.12 requires generation rather than
 maintenance, and measured on the ten classes it is 180 to 914 bytes each with no judgement in it,
-from `PRODUCES`, `STATES`, `CONSUMES` and the protocol.
+from `PRODUCES`, `STATES`, `CONSUMES` and the protocol. The ten need none while they ship with the
+build; what needs one is the first adapter to leave, and generating it here is how its author starts
+from something correct.
 
 **A build reads no report at all.** R109 §3.6 was specified and unimplemented before this, and
 Part 09 §5.8 now adds the connection as a carrier, the rule that a build clears a report's path
