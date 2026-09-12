@@ -55,6 +55,38 @@ A pipe is also memory, so this route touches no disk. Where an adapter is not a 
 build — another host, a scheduler — a port would be the shape, and Arrow Flight is its standard;
 that is a protocol to add rather than a change to these two.
 
+## One delivery, byte by byte
+
+`stream_trace.py` runs the NWB adapter over a pipe for three resources and names every message the
+pipe carried. What crosses first is one argument: 387 bytes of JSON holding the five terms
+`serve_nwb.NEEDS` declares, one of which is the `wanted` set a build settles from `owns` and
+`PRODUCES` before any source is opened.
+
+```
+  offset  message          meta    body  what it says
+       0  schema            496       0  core.clocks: clock_id, session_id, origin, tick_rate_num, ...
+     504  record batch      472      96  1 row(s)
+    1080  end-of-stream       -       -  that resource is complete
+    1088  schema            464       0  core.coordinate_frame_axes: session_id, coordinate_frame, ...
+    1560  record batch      408     288  5 row(s)
+    2264  end-of-stream       -       -  that resource is complete
+    2272  schema            128       0  core.array_assets: no fields
+    2408  end-of-stream       -       -  that resource is complete
+    2416  schema            112       0  end: no fields
+    2536  end-of-stream       -       -  that resource is complete
+```
+
+Three facts the layout makes visible. A **resource with no rows** is a schema and a terminator and
+no batch at all, 136 bytes, which is how an absent resource arrives as present-and-empty rather
+than as nothing. The **sentinel** is the same shape at 128 bytes, its `resource_id` the reserved `end`. And
+the build's reader lands exactly on each boundary — 1088, 2272, 2416 — so the next `open_stream` on
+the same handle finds the next resource.
+
+Cut the same delivery at 2272 bytes, which is a command dying between two resources, and every
+message still parses: two resources complete, and the only thing wrong is that the sentinel never
+came. That is what the build refuses on, and it names `core.coordinate_frame_axes` — the resource it
+last read — rather than the first one missing.
+
 ## Arrow IPC is a family, so a delivery pins which member
 
 The framing is fixed and three choices are not, and `ipc_floor.py` prices each.
