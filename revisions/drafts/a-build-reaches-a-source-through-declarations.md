@@ -17,10 +17,10 @@ Everything a build knows about a source is written down somewhere central. R63 �
 declare `PRODUCES` and R87 §2.2 has it declare `STATES`, both read before any I/O; the rest is a
 table keyed by the adapter's kind — which resource it wins when two sources offer one, whether it
 is handed an object store, whether it may be sampled, which recipe options it cannot be constructed
-without, and whose output it reads. Measured across the writer package, 102 string literals match
-one of the ten built-in kind names and **80 of them name a kind**: ten are `sources/__init__.py`
-mapping each kind to its class, which is the registry of adapters, and **70 are in the modules that
-decide behaviour**, 50 of them in the one that drives a build.
+without, and whose output it reads. Counted over the writer package's syntax trees, **97 string
+literals equal one of the ten built-in kind names**: ten are `sources/__init__.py` mapping each kind
+to its class, which is the registry of adapters, and **51 are in the one module that drives a
+build**.
 
 How an adapter's rows reach a build is written down nowhere. R109 §2.3 refuses an in-process
 extension because its dependency closure becomes the writer's, and two extensions pinning
@@ -33,6 +33,16 @@ is declared by the adapter and passed as values; how the adapter's rows come bac
 adapter declares from a group the profile names. Each half decides the other: a build cannot supply
 a live object to an adapter in another process, and an adapter cannot be told what to produce
 unless a build has something to tell it with.
+
+**Who this binds.** A **build** assembles one packet from one recipe. A **writer** is the
+distribution shipping a build, and the adapters it ships with it. An **adapter** reads one source
+and returns records, whether the writer ships it or a third party does. An **extension** is a
+registry document and rows (R109 §3.1) that reach a build as a source, so what binds an adapter
+binds the adapter carrying them. A **profile** names the protocol groups, and a **recipe author**
+declares the preferences, opt-ins and commands one packet is built with. **A clause binding an
+adapter binds one the writer does not ship identically**, which is what makes §3.3's protocol rule
+load-bearing: a third party's adapter conforms on the same terms as a shipped one, and §3.9 is what
+keeps meeting them cheap.
 
 ## 2. Background
 
@@ -62,10 +72,10 @@ the day one of them needed `pynwb` — which is the rot, handled by a rule rathe
 a permission.
 
 Volume is the one thing that argues for keeping an in-process route at all: of the ten kinds, **one
-produces bulk** — `sorter`, at 674.2 MB for `core.spike_events` — and every other produces under
-0.25 MB, `nwb` included at 0.2 MB across 18 resources. The adapter with the most resources moves the
-least data, so the exception is narrow and it is about a table's size rather than about who wrote
-the code that makes it.
+produces bulk** — `sorter`, at **675.1 MB** of `core.spike_events` in `ecephys_776259` — and every
+other totals under **0.5 MB** there, `nwb` included at **0.34 MB** across the 14 of its 18 resources
+that session holds. The adapter with the most resources moves the least data, so the exception is
+narrow and it is about a table's size rather than about who wrote the code that makes it.
 
 ### 2.2 An adapter's files say whose it is
 
@@ -96,7 +106,7 @@ is effort nobody spends on an adapter free to pull what it likes.
 
 The kind a recipe names is `session`, and the module behind it is `aind.py`, which reads
 `rig.json`, `session.json` and `subject.json` — one institute's metadata schema. A recipe author sees
-a generic word for a specific reader, and R85 §2.3 is the rule that makes that a defect rather than
+a generic word for a specific reader, and R67 §2.4 is the rule that makes that a defect rather than
 untidiness: a name this specification does not constrain must not be doing load-bearing work, and
 this one names what a build constructs.
 
@@ -185,7 +195,8 @@ R63 §2.2's refusal applied to an option instead of a resource.
 **The wanted set is a term a build supplies and an adapter MAY act on.** A build settles ownership
 before any source is opened (R63 §2.2), so it knows which of a source's resources it will keep, and
 an adapter told that may extract no more — where one that is not told produces everything and a
-build discards, which R63 §1.2 measures at one resource in five. Acting on it is permitted rather
+build discards, which both packaged recipes put at **4 resources of the 45** and **4 of the 48**
+their sources produce. Acting on it is permitted rather
 than required, because for some sources there is nothing to save: an NWB reaches its eighteen
 resources through one open file, so producing three of them costs what producing all eighteen does,
 and the adapter filters at the end. A build cannot tell the two apart either, since an adapter that
@@ -234,14 +245,16 @@ refused naming both sources, where a built-in winner applied one silently.
 ### 3.3 An adapter delivers its rows out of process
 
 A writer **MUST NOT** require any adapter to be importable in its own environment, and **MUST**
-provide a route by which every adapter it ships delivers its rows without being imported. An adapter
-author **SHOULD** provide that route for an adapter the writer does not ship, whatever else they
-provide.
+provide a route by which every adapter it ships delivers its rows without being imported.
 
-The obligation is the writer's and the author's rather than the adapter's, which is R109's
-allocation: R109 §3.1 binds a writer to build from a document and rows, and describes what an
-extension delivers without requiring it of the extension. An adapter is a class and cannot run
-itself out of process; whoever ships it can.
+**The adapter carries the matching obligation, and it is a MUST.** The protocol rule below binds
+every adapter, one a third party ships as much as one the writer does, because an adapter that can
+only be imported is one a build can only reach by resolving its closure — which is the coupling this
+part exists to remove, and §2.1 measures how little authorship protects against it. R109's narrower
+allocation does not reach an adapter: R109 §3.1 binds a writer to build from a document and rows
+because an extension may be nothing but those, with no code to carry an obligation at all. An
+adapter is code by definition, so the requirement sits on the artifact — a declared protocol and an
+implementation of it — and whoever ships the adapter is who satisfies it.
 
 **What matters is the process boundary; a transport is a protocol, and protocols come in groups.** A
 profile names a group for each way rows cross that boundary, and the protocols in it. An adapter
@@ -250,7 +263,9 @@ protocol in every group its profile names.
 
 Running in the writer's process is not one of them, and §3.5 says why: whether a set of adapters
 installs together is a fact about one machine on one day, so it is the recipe author's to declare
-and not the adapter's. A protocol is what an adapter can promise about itself.
+and not the adapter's. A protocol is what an adapter can promise about itself, so an adapter a
+recipe opts in is bound by the rule above as much as one it does not: the opt-in decides where a
+build runs an adapter and not what the adapter supports.
 
 **A protocol carries its version in its name**, semantically versioned and starting at `v0.1`, which
 is the form every other identifier this specification hands out takes —
@@ -386,8 +401,8 @@ descriptor in **119 ms including the process start**.
 Arrow binding at all, which is the floor R3 chose for stored columns applied here: Flight needs
 gRPC bindings for
 that language too, and the Arrow implementations carrying Flight are a subset of those carrying IPC.
-An adapter that emits everything it has and lets the build discard is paying a cost R63 §1.2
-measures at one resource in five, and an adapter whose discovery costs an extraction is paying what
+An adapter that emits everything it has and lets the build discard is paying a cost the packaged
+recipes put at 4 resources of 45, and an adapter whose discovery costs an extraction is paying what
 the NWB adapter's `offers` pays in process today, counting rows by computing them. Both are costs a
 working adapter can carry. On the failing path the stream costs one more empty stream of **128
 bytes** (§3.10), which buys what a Flight call has for nothing: a delivery that says it finished.
@@ -407,8 +422,8 @@ rather than by the file. An extension **MAY** therefore deliver over any transpo
 allows an adapter. Nothing R109 permitted is withdrawn: a file the recipe names remains the route
 every implementation must support, and the stream is added beside it.
 
-The default settles the case that would otherwise need an exception. `core.spike_events` is 674.2 MB
-and every other adapter produces under 0.25 MB (§2.1), so a file costs the small ones nothing and
+The default settles the case that would otherwise need an exception. `core.spike_events` is 675.1 MB
+and every other adapter produces under 0.5 MB (§2.1), so a file costs the small ones nothing and
 the large one a write and a read; defaulting to the stream means no adapter needs permission to
 avoid that, and a recipe that wants the file says so.
 
@@ -429,7 +444,7 @@ A list needs no convention, because `subprocess` already has one per host: `list
 A build **MUST** consume standard output and standard error concurrently. A pipe holds tens of
 kilobytes, so reading one to completion first deadlocks on any adapter whose diagnosis outruns that
 buffer. How a build does it is Part 07 §7's, being a technique that changes with the implementation
-(R93 §3.3).
+(R93 §4).
 
 ### 3.5 A recipe opts a source into the writer's process
 
@@ -505,7 +520,7 @@ rather than settling it here for every recipe.
 ### 3.7 An identifier crosses the boundary as a name
 
 An adapter reaching a build through files hands over identifiers as the **names** its source used,
-never as numbers, because a writer mints every assigned identifier packet-wide (R53 §2.2) and the
+never as numbers, because a writer mints every assigned identifier packet-wide (R53 §2.5) and the
 numbers do not exist until it has. That is R109 §3.2's rule for an extension and it binds an adapter
 identically.
 
@@ -540,7 +555,7 @@ memory, into a file the build then writes — the copy the staging path exists t
 `external_arrays` returns references today, which is R14 §2.3.1's external resource, and the shape
 this section gives every adapter.
 
-Where the array is external — bytes the packet references rather than owns (Part 03 §6.1) — a
+Where the array is external — bytes the packet references rather than owns (Part 03 §8.2) — a
 build supplies no location and the producer returns the URI its source already has.
 
 **This binds whoever produces an array, which includes an extension.** An extension declares tables
@@ -559,7 +574,8 @@ delivering its rows over the same protocols (§3.3). Nobody should hand-roll a f
 already specified and already implemented, and the side that does is where the two ends drift apart
 first.
 
-Using it **MUST NOT** be a condition of conformance. §3.3 specifies each protocol so either can
+A profile **MUST NOT** make using it a condition of conformance, and a build **MUST NOT** refuse an
+adapter that speaks a protocol without it. §3.3 specifies each protocol so either can
 speak one with nothing of the writer's installed, in any language, which is what R109 §3.1 asks and
 what a shipped implementation would otherwise quietly undo — the point is to spare an author the
 work, not to decide what they may build against. An extension is the case that makes this sharp:
@@ -725,9 +741,6 @@ so both answers are needed to report a failure rather than to report that one ha
 
 - **No table, column, reference, rule or vocabulary changes, and no packet is rebuilt.** This binds
   what a build tells a source and how a source answers, so what changes is who may add one.
-- **Nothing R109 permitted is withdrawn.** A file the recipe names remains a route every
-  implementation supports, and it is `files-v0.1`: §3.3 adds two protocols beside it and makes none
-  of them a default, and §3.5 leaves the in-process route available where a recipe asks for it.
 - **`PRODUCES` and `STATES` are untouched.** R63 §2.1 and R87 §2.2 stand; §3.1 says the rest of what
   an adapter needs is declared the same way, not that those two change shape.
 - **An extension's registry document is untouched.** An extension reaches a build as a source
@@ -750,7 +763,7 @@ conversion the shipped protocols perform — its sentence reads "two static decl
 becomes four. Part 09 §5.7 gains that an extension may use any protocol of the group and that a
 command is carried as a list.
 
-**What a build tells a source.** `session.py` constructs an adapter in **56 lines carrying ten
+**What a build tells a source.** `session.py` constructs an adapter in **72 lines carrying ten
 `spec.kind` branches**, one per built-in, each passing a different set of extras. That becomes one
 construction that reads `NEEDS` and passes the values it names. The five tables that name a kind go
 with it — `_SHARED_SOURCES`, `SAMPLED`, `REQUIRED_OPTIONS`, `CONSUMES` and `PREFERRED` — against one
@@ -798,11 +811,11 @@ it and each lost the same two columns, which a run over four resources did not s
 eighteen did. What it cannot do is carry that protection into another language, where an
 implementation of the protocol is a second piece of work and its footguns are its own.
 
-The reference implementation owes a command it does not have: `escapewheel` runs `inspect`, `init`,
-`extension`, `verify`, `prune` and `import`, and none of them runs one adapter and hands over its
-rows, which is what §3.3 requires of the ten it ships. That command is also the `command` a `tables`
-source names, so a built-in adapter reaches a build through the same door an extension does
-(R109 §3.2) rather than through a second mechanism built for it.
+The reference implementation owes a command it does not have: the writer registers `inspect`,
+`init`, `extension`, `verify`, `prune` and `import` under the one `escapewheel` CLI, and none of
+them runs one adapter and hands over its rows, which is what §3.3 requires of the ten it ships. That
+command is also the `command` a `tables` source names, so a built-in adapter reaches a build through
+the same door an extension does (R109 §3.2) rather than through a second mechanism built for it.
 
 It also carries the defect §3.4 forbids: `TablesSource` takes `command` as a string and splits it
 with `shlex`, which the module's own docstring calls "a plain argument list … **not** a shell". Both
