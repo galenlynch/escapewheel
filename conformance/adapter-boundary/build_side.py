@@ -1,6 +1,6 @@
 """The build's side: read an adapter's NEEDS, supply exactly those, and read its rows three ways.
 
-This is the interface `a-build-reaches-a-source-through-declarations` states, exercised end to end
+This is the interface R115 states, exercised end to end
 against the adapter that receives the most, over each of the three protocols the draft names. What
 crosses is one JSON argument; what comes back is a resource at a time, and the rows must agree.
 

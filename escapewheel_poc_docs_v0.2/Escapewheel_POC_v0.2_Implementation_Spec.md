@@ -13,7 +13,7 @@ part number here as it does there.
 This document set specifies the Escapewheel proof-of-principle data packet. It is v0.1 with every accepted revision applied:
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R114 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R115 accepted. R42 and R73 withdrawn. No draft is open.
 <!-- END facts: revisions -->
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
@@ -1588,6 +1588,100 @@ A packet-owned resource recording no digest is not checked, and a verification r
 
 Verification of external resources is optional and layered (Part 04 §5.3).
 
+## 11. Reaching a source
+
+An adapter reads one source and returns records, and a build assembles a packet from several (Part 05 §3.1). This section is what passes between them: the protocols rows may cross by, what a build supplies an adapter, what a delivery states, and how an adapter declares itself. It is the profile's rather than the pipeline's because every rule in it would change if the profile changed, and because an adapter is the first thing an implementation in another language writes (R115 §3.6).
+
+An **adapter** here is code that reads one source, whether the reference implementation ships it or a third party does. A clause binding an adapter binds one it does not ship identically (R115 §1).
+
+### 11.1 Protocol groups
+
+A profile names a **group** for each way rows cross a process boundary, and the protocols in it. `escapewheel-portable-v0.1` names one group, out of process, holding three:
+
+| protocol | rows cross as |
+|---|---|
+| `files-v0.1` | Parquet the recipe names, one file per resource |
+| `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
+| `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource |
+
+An adapter MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names (R115 §3.3). The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
+
+A protocol carries its version in its name, semantically versioned from `v0.1`. A profile MUST NOT change what a named protocol means; a protocol that changes how rows cross is a new member of the group, and a build MUST NOT read support for one version as support for another (R115 §3.3). Retiring a protocol is a change to this profile and not a decision a build makes.
+
+An adapter a recipe opts into the writer's process (Part 05 §3.9) is bound by this section too: the opt-in decides where a build runs an adapter, not what the adapter supports.
+
+### 11.2 What a build supplies
+
+An adapter MUST declare every value a build supplies it, and a build MUST supply exactly what the adapter declares and MUST NOT decide it from the source's kind (R115 §3.1). Everything supplied is data: a build MUST NOT require an adapter to accept a live handle — an open store, a connection, an object of the implementation's own — because across a process boundary an argument list holds strings, and an adapter with two ways in has one that depends on where it is running.
+
+The vocabulary is closed. Each term names one value and the form it takes, so an adapter and a build written by different people pass the same thing:
+
+| term | what a build passes |
+|---|---|
+| `root` | the source's location as a URI, which the adapter opens for itself |
+| `session_id` | the session's own name, never the integer a build assigns (§11.3) |
+| `reference_clock` | the reference clock's row: identifier, rational tick rate, origin |
+| `clocks` | one such row per clock declared before this source runs |
+| `first_samples` | one record per stream: its name, and the integer its samples start at |
+| `units` | one record per unit: the source's label for it, and the identifier assigned |
+| `wanted` | the resource IDs the recipe leaves this source owning, so it produces no more |
+| `array_location` | a location under the staging area to write an array to (§11.3) |
+| an option, by its name | the value the recipe carries under it — a `zone`, an `interval_kind` |
+
+A build MUST resolve each declared name against that list first and the recipe's options second, and MUST refuse a recipe where a name resolves to neither (R115 §3.1). A profile adding a term amends this section.
+
+A build MUST refuse a recipe where a term the list carries cannot be filled, naming the term and the source, and MUST NOT pass such a term absent or empty: `first_samples` needs a source that states them and `units` one that produced them, and an adapter cannot tell a term nobody filled from one whose value is legitimately empty (R115 §3.1).
+
+A build MUST pass a collection as records carrying its key as columns. A mapping's keys are a type the crossing does not keep: an integer key returns as a string, and a compound key does not cross at all.
+
+Some terms belong to a protocol rather than to an adapter. `flight-v0.1` requires `socket`, the address to serve on; `files-v0.1` requires `delivery_root`, the directory to write the delivery into; both `files-v0.1` and `stream-v0.1` require `report_path` where a report is expected (Part 09 §5.8). A build MUST supply whichever terms its adapter's protocol requires, and an adapter MUST NOT declare one — declaring the protocol is what asks for it.
+
+What crosses is one JSON object keyed by the term, appended to the command's argument list as its last element, and a build MUST add no other argument of its own (R115 §3.1). An option appears under `options`, keyed by its name, so no option collides with a term.
+
+The wanted set is a term a build supplies and an adapter MAY act on. A build settles ownership before any source is opened (Part 05 §3.4), so an adapter told what is wanted may extract no more; acting on it is permitted rather than required, because for some sources producing three resources costs what producing all of them costs, and a build cannot tell an adapter that extracted three from one that extracted everything and discarded the rest.
+
+### 11.3 What a delivery states
+
+A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is Part 02 §5's presence and nothing else (R115 §3.6). A build MUST NOT read an absent column as saying anything more.
+
+An adapter MUST hand over identifiers as the names its source used and never as numbers, because a writer mints every assigned identifier packet-wide and the numbers do not exist until it has (Part 05 §8). Types, column order, numbering and the declared sort are the build's: it holds the registry and settles all four on arrival.
+
+A resource an adapter owns and has no rows for MUST arrive empty rather than not arriving (R115 §3.10). An empty delivery states that the source had nothing to say; a resource that does not arrive states that the run failed, and a build that cannot tell them apart cannot report either.
+
+An adapter's arrays MUST NOT cross as rows. A dense array crosses as a reference: its `array_asset_id`, the layout the adapter chose — chunking, sharding, codecs, fill value — and a location. Where the packet will own the array, a build MUST supply a location under the staging area (Part 05 §1) and the adapter MUST write the array there and return the reference, so commit moves it by the rename Part 05 §6 already performs. Where the array is external (§8.2), a build supplies no location and the producer returns the URI its source already has.
+
+### 11.4 The Arrow IPC floor
+
+An Arrow IPC stream carries one schema and an adapter returns many resources, so under `stream-v0.1` the streams concatenate: each ends with the format's own end-of-stream marker, and the resource identifier rides in the schema's key-value metadata under the key `resource_id` (R115 §3.3). That key and one reserved value of it, `end`, are the whole of what this protocol adds to Arrow.
+
+"Arrow IPC" names a family, so this profile pins one member of it, as §5.5 pins Parquet's compressions. An adapter MUST write uncompressed record-batch bodies at metadata version V5, and MUST send each dictionary whole rather than as a delta against one already sent (R115 §3.3). Compressing buys nothing on a pipe and costs an adapter author a codec in a language whose Arrow binding may not carry one; V5 has been the default since Arrow 1.0, and a delta dictionary is the least evenly implemented part of the format.
+
+An adapter MUST terminate every resource's stream with the end-of-stream marker and a build MUST consume exactly to it, so the next resource's schema begins at the next byte. An adapter that omits one delivers bytes no reader can frame; a build that consumes past one loses every resource after it and reports a truncation on a delivery that finished.
+
+A reader treats end of file as end of stream, so a delivery cut at a message boundary parses clean and cannot be told from a short one. `stream-v0.1` therefore ends a delivery with an empty stream whose `resource_id` is `end`. A build MUST refuse a delivery that did not end with it, and MUST name the last resource it read as the one the adapter died inside rather than the first that never arrived (R115 §3.10). A resource identifier is dotted, so no undotted token can collide with the reserved value.
+
+Where rows travel on standard output they are bytes. An adapter MUST write the stream to a binary handle and a build MUST read one, because a platform translating a line ending corrupts the stream, which then fails as malformed data rather than as an encoding error.
+
+### 11.5 The declaration document
+
+A build reads what an adapter declares before it opens any source, and for a class it reads that by importing the adapter — which this section forbids requiring. An adapter a build cannot import MUST publish its declarations as a JSON document the recipe names, and a build MUST read that document before it launches anything (R115 §3.12).
+
+The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocol`, `produces`, `states`, `needs` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. Its shape is published as `registry/adapter.schema.json`.
+
+A build MUST treat a document and an importable declaration of the same facts as one declaration, and MUST NOT prefer either where both are present. An implementation shipping both MUST generate the document rather than maintain it.
+
+A build MUST refuse a declaration whose `protocol` names no protocol of a group this profile names, whose `produces` names a resource no loaded registry declares, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option (R115 §3.12). None of those need the adapter opened or imported.
+
+`states` names the recipe fields a source can state and the values need the source read, so no static document carries them: they travel under `stated` in the run's report (Part 09 §5.8), keyed by the same `block.field` name. An adapter declaring a non-empty `states` MUST return them. A build MUST read a declared field absent from the report as unstated rather than as disagreeing, since a source stating nothing is a fact and not a mismatch (Part 05 §3.6).
+
+### 11.6 Reaching an adapter that must be running
+
+Where a protocol needs the adapter running — `flight-v0.1` does, `files-v0.1` and `stream-v0.1` do not — the protocol MUST say how a build establishes that. `flight-v0.1` says it by connection: a build retries the address it supplied until the socket answers or the adapter's process exits, and reports the exit (R115 §3.9). A readiness line on standard output is weaker, because a build waiting for a line that never comes cannot tell *not yet* from *never* unless it watches the process as well, which is the whole of what retrying already does.
+
+The retry puts one obligation on the adapter: it MUST NOT bind before it can answer `ListFlights`. A build's first call arrives as soon as the socket answers, so an adapter that binds and then extracts serves discovery from a half-built server.
+
+A build that started a process owns it and terminates it once it holds the rows and the report, so an adapter MUST NOT rely on running code after its last response.
+
 <!-- END 03_portable_physical_profile.md -->
 
 <!-- BEGIN 04_packet_catalog.md -->
@@ -1840,13 +1934,17 @@ Each source declares its resources as `owns` or `contributes`.
 
 A recipe MUST NOT declare `owns` for a resource that more than one of its sources produces rows for, unless it declares a preference between them (R98 §3.2). Exclusivity is for a resource one source is responsible for; where two sources each hold part, `owns` discards the part the owner does not hold, and no check sees it because the resource is claimed.
 
+A preference is declared in the recipe, in a table keyed by resource, each entry naming the source that owns it and the reason that source knows more. A build MUST apply a declared preference and MUST NOT hold a preference of its own for any resource a recipe does not name (R115 §3.2): a built-in winner is one no recipe can see, and a recipe that has not heard of a new contest is better refused than silently arbitrated.
+
 A preference MUST NOT name a resource only one source produces (R108 §3.4). Such an entry arbitrates nothing and exempts a report that will never be due, so it is a claim no build tests, and it goes stale the moment the second producer stops producing.
 
 ### 3.4 What a source can produce
 
-Every source adapter MUST declare `PRODUCES`, the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
+Every source adapter MUST declare the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-A build MUST read a source entry that declares no `owns` as owning every resource in its adapter's `PRODUCES` that no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
+An adapter declares four such facts, all read before any source is opened: the resources it can supply, the recipe fields it can state (§3.6), the values a build must supply it (Part 03 §11.2), and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `states`, `needs` and `consumes`; what an implementation calls them in code is Part 07 §4's (R115 §3.12).
+
+A build MUST read a source entry that declares no `owns` as owning every resource its adapter declares it can supply and no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
 
 Where two sources default to the same resource and no preference is declared, a build MUST refuse the recipe naming both.
 
@@ -1856,7 +1954,7 @@ A build MUST refuse where a preference discards a value another source stated: w
 
 A build MUST NOT compose a row from more than one source (R108 §3.2). The merged row would be a fact no source stated. A recipe resolves the refusal by naming the fact in `[overrides]` with its reason (R87 §2.5), by preferring the other source, or by correcting the source that states less.
 
-A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for (R87 §2.2). What that declaration is called and where it lives is Part 07 §4's.
+A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for (R87 §2.2). What an implementation calls that declaration in code is Part 07 §4's, and the key it takes in a declaration document is Part 03 §11.5's.
 
 ### 3.5 Checking a recipe
 
@@ -1867,6 +1965,14 @@ A build MUST check a recipe against the registry before it opens any source. A b
 - an owned table whose **required** foreign key targets a table nothing supplies;
 - a clock declared twice, referenced but absent, or parented to nothing;
 - a required source option that is not set.
+
+A build MUST also refuse, on the same terms and before any source is opened (R115 §3.1, §3.12):
+
+- an adapter declaring a value Part 03 §11.2 resolves to neither a term nor a recipe option;
+- an adapter declaring a term that list carries and this recipe cannot fill, naming the term and the source;
+- an adapter declaring no protocol of a group the profile names, or one it does not name;
+- a declaration whose resources include one no loaded registry declares;
+- a declaration whose stated fields include one no recipe block carries.
 
 A build MUST report as a **warning**:
 
@@ -1892,7 +1998,9 @@ A fact the source **derives** is the source's. `core.sessions.session_start_time
 
 A command that exits non-zero MUST fail the build, and a build MUST name the source whose command failed together with the resources that source owns, rather than reporting the first resource it then finds missing (R109 §3.3). A command belongs to a source and a source is not an extension: one command may produce tables of several extensions, so a finding naming one of them would be wrong about the rest.
 
-A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
+A recipe MUST carry a command as an argument list, and a build MUST NOT derive one by splitting a string (R115 §3.4). A parse is a quoting convention the recipe never declared: POSIX rules applied on every host eat a backslash everywhere, so `C:\Python\python.exe` becomes `C:Pythonpython.exe` and fails as a missing executable rather than as a malformed command. A list needs no convention, because the host's own process interface takes one.
+
+A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Where the recipe puts rows on standard output (Part 03 §11.1), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one (R115 §3.11). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 
 ### 3.8 A recipe declares an encoding
 
@@ -1910,6 +2018,14 @@ about one packet's values: a column repeating often enough to want a dictionary 
 not in the next, where a schema-level declaration would claim it of every packet. §3.6's
 `[overrides]` puts a chosen value and its reason in a recipe for the same reason — the choice
 belongs to the build.
+
+### 3.9 Whether a source runs in the writer's process
+
+A build MUST deliver a source out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run one in process where the recipe does not say so (R115 §3.5).
+
+The recipe declares it because the recipe author chose the environment. One process resolves one dependency closure, so whether a given set of adapters installs together is a fact about one machine on one day rather than a property of any adapter, and the person assembling the recipe is the only party who can find out and the one who carries it when the answer changes.
+
+What the opt-in buys is a saved transfer and what it costs is a solvable environment. A build that cannot import an adapter the recipe opted in MUST refuse, naming the source and the import that failed, before any source is opened.
 
 ## 4. Stages 1 to 3
 
@@ -1930,6 +2046,18 @@ Normalization MUST be deterministic in the recipe. Two runs of the same recipe o
 An interval is closed (01 §2.3). A writer MUST convert a source whose intervals are half-open — `[start, stop)` — which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
 
 An adapter compensating for a known defect in its source MUST declare the compensation, and a writer MUST record every compensation applied in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
+
+### 4.4 When a source's delivery is complete
+
+What a build expects of a source is the set of resources it owns, settled from `owns` and what the adapter declares before any I/O (§3.4). A run succeeded when every resource in that set arrived and the process exited clean (R115 §3.10).
+
+A resource an adapter owns and has nothing for MUST arrive empty rather than not arriving (Part 03 §11.3). That is what makes the test usable: a build reads a resource that did not arrive as the run having failed, and never as the source having had nothing to say.
+
+A non-zero exit is a failure whatever arrived. A build MUST report one as a failure even where every resource is present, because an adapter saying it failed is not overruled by its own output, and a command dying between two resources delivers the first one complete and valid (R115 §3.10).
+
+A build MUST report a delivery it cannot parse as a failure where the command exited zero, naming what was short. What no protocol catches is a short table from a run that exits zero: where an adapter declares a row count a build MUST check it, and an adapter that cannot know its size before it sends declares none, which a build MUST read as unknown rather than as zero.
+
+A build MUST report everything the protocol it used carries about a failure — standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its detail for `flight-v0.1`, where a failing adapter writes nothing to standard error because the diagnosis travels on the connection it was asked over (R115 §3.11). A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
 
 ## 5. Stage 4: Validate
 
@@ -2201,9 +2329,15 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 | `Validator` | run the generated and declared checks; return a report |
 | `PacketWriter` | accumulate records; stage, validate, commit |
 
-An adapter's return type is records, not a path. That is what lets adapters be tested without a filesystem and stops normalization decisions leaking into I/O code.
+An adapter's return type is records, not a path, and stays records whichever route delivers them. That is what lets an adapter be tested without a filesystem and stops normalization decisions leaking into I/O code. Out of process the transport carries a table and the receiving end returns records again, so nothing downstream of the boundary knows which route was taken (R115 §3.6).
 
-An adapter carries two static declarations, both readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4), and `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2). For each name in `STATES` the adapter exposes the value it holds. Both are class attributes here; the requirements in Part 05 are on what a build can determine, not on how an implementation stores it.
+An adapter carries four static declarations, all readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4); `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2); `NEEDS`, the values a build must supply it, drawn from Part 03 §11.2's terms and the recipe's options (R115 §3.1); and `CONSUMES`, the kinds whose output it reads, which is what orders a build. For each name in `STATES` the adapter exposes the value it holds. All four are class attributes here, and Part 03 §11.5's document is the same facts for an adapter a build cannot import; the requirements in Part 05 and Part 03 are on what a build can determine, not on how an implementation stores it.
+
+An adapter declares its protocol by naming a constant the implementation exports rather than a string it spells, so an adapter resolves the version it was written against and that version speaks what it names (R115 §3.9).
+
+Converting records to a table takes the column set from every row and not from the first. `pyarrow.Table.from_pylist` infers its schema from the leading row and silently drops what later rows carry, which loses a column a source populates for some rows only — measured, one of thirteen resources of the NWB adapter. The rule it implements is Part 03 §11.3's, stated about what a delivery says rather than about how a table is built, because an adapter declaring its schema up front meets it by construction (R115 §3.6).
+
+An adapter that produces a dense array writes it to the location the build supplied and returns the reference, rather than handing the values over for the writer to write (Part 03 §11.3).
 
 A build reports a `metadata` key whose value equals a column of the same row, which is how 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the one R95 §3.3 already makes between two columns, over a key and a column instead, and three keys in the packaged sessions were restating a column a revision had promoted (R97 §2.3).
 
@@ -2450,7 +2584,9 @@ A writer MAY accept an extension that ships code — an adapter registered under
 
 ### 5.7 How an extension's document and rows reach a build
 
-An extension delivers a registry document in the format of Part 02 and, per table it declares, rows as Parquet. Where a raw source needs converting first, a recipe names a command: an argument list run in the source's own root, not a shell line, so an extension isolates its dependencies however it likes and a build states no opinion about how (R109 §3.2).
+An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet the recipe names is one way and remains the route every implementation supports; an extension MAY deliver over any protocol of the group its profile names (Part 03 §11.1), since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that (R115 §3.3). Where a raw source needs converting first, a recipe names a command: an argument list carried as a list and run in the source's own root, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how (R109 §3.2).
+
+An extension's registry document and Part 03 §11.5's declaration document are different things for different readers, and neither substitutes for the other: the first declares tables, the second declares what the adapter carrying them produces, states, needs and speaks.
 
 Rows arrive carrying identifiers as the names their source used, and a writer numbers them (R53 §2.5), so an extension neither knows nor needs the packet's numbering.
 
@@ -2464,9 +2600,15 @@ An extension MAY validate its own tables before returning them, against its own 
 
 An extension MAY write a report of its run at a path the recipe names, and a build MUST report what one contains where it is present. A build MUST NOT require one, and MUST NOT fail on a report's contents alone (R109 §3.6).
 
+Where the report is a file, a build MUST remove that path before it runs the command and MUST treat a report it did not see appear as absent (R115 §3.11). A file at a path the recipe names is present after any run that ever wrote one, so last week's findings are otherwise reported as this run's with nothing to distinguish them.
+
+Which channel carries a report is the protocol's. Under `files-v0.1` and `stream-v0.1` it is a file at the path the recipe names, supplied to the adapter as `report_path` (Part 03 §11.2), because rows have taken standard output and a file is the channel left. Under `flight-v0.1` it is `DoAction("report")`, because the connection is that channel and no file outlives the run; an adapter with a report MUST name `report` among its actions, and a build MUST NOT ask one that did not.
+
 A report carries what a build cannot derive, and a build SHOULD ignore what it can: rows per table, which tables exist, and whether their schemas conform are each established without asking. What no artifact holds is what the command read, what it skipped and why, and whether a table that is short is legitimately short.
 
-A report is JSON. An optional `problems` array carries an entry per finding, each with a `level` of `error`, `warning` or `info` (R2 §7.3), a `message`, and optionally the `resource` the finding concerns; an optional `read` array names what the command consumed. A build MUST report every problem it is given and MUST NOT refuse a report for carrying keys it does not recognise.
+A report is JSON. An optional `problems` array carries an entry per finding, each with a `level` of `error`, `warning` or `info` (R2 §7.3), a `message`, and optionally the `resource` the finding concerns; an optional `read` array names what the command consumed; an optional `stated` object carries, per `block.field` name the source declares it states, the value the source holds (Part 03 §11.5). A build MUST report every problem it is given and MUST NOT refuse a report for carrying keys it does not recognise.
+
+A build MUST look for a report after a failure as it does after a success, since the run that went wrong is the one with something to say (R115 §3.11).
 
 ## 6. Direction of reference
 

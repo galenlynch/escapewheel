@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
-| **Amends** | Part 03, a new section at its end (the source protocols, what a delivery states, how an adapter is reached, and the document it declares itself in); Part 05 §3 (a recipe declares a preference between two sources, and whether a source runs in the writer's process); Part 05 §3.4 (what an adapter declares); Part 05 §3.5 (what a build captures where a command's output carries rows); Part 05 §3.7 (the same, where a recipe names a command); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the conversion that keeps a column, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the connection as a carrier beside the file, when a report is this run's, and the facts a source states about itself) |
+| **Status** | **Accepted** 2026-09-11 |
+| **Amends** | Part 03 §11, new (the source protocols, what a build supplies, what a delivery states, the Arrow IPC floor, the declaration document, and how an adapter that must be running is reached); Part 05 §3.3 (a preference is the recipe's); Part 05 §3.4 (the four facts an adapter declares); Part 05 §3.5 (what a build refuses a declaration for); Part 05 §3.7 (a command is a list, and where a diagnosis goes when rows take standard output); Part 05 §3.9, new (whether a source runs in the writer's process); Part 05 §4.4, new (when a delivery is complete, and what a build reports of a failure); Part 07 §4 (what a build supplies an adapter, an adapter's return type, the conversion that keeps a column, the protocol it declares, and how an array crosses); Part 09 §5.7 (an extension's rows cross by the same protocols, and a command is carried as a list); Part 09 §5.8 (the connection as a carrier beside the file, when a report is this run's, and the facts a source states about itself) |
 | **Depends on** | R63 §2.1 (an adapter declares `PRODUCES` before any I/O), R63 §2.2 (silence means the whole, and a contradiction is refused), R87 §2.2 (an adapter declares which recipe fields it states), R109 §2.3 (a shared process is a shared dependency closure), R109 §3.1 (a writer requires no code of an extension), R109 §3.2 (an extension delivers a registry document and rows as files), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
 | **Profile** | all |
 
@@ -210,12 +210,13 @@ from one whose value is legitimately empty. The spike measuring this boundary dr
 silently until this clause was written, which is what an omission buys — a source constructed
 without the value, failing wherever it first reaches for one.
 
-**Two terms belong to a protocol rather than to an adapter.** `flight-v0.1` requires `socket`, the
+**Some terms belong to a protocol rather than to an adapter.** `flight-v0.1` requires `socket`, the
 address to serve on, and `files-v0.1` requires `delivery_root`, the directory to write the delivery
-into; `stream-v0.1` requires neither, its rows going to standard output. A build **MUST** supply
-whichever term its adapter's protocol requires, and an adapter **MUST NOT** declare one — declaring
-the protocol is what asks for it, and a build refuses a declaration of it as it refuses any term
-outside the list above.
+into; `stream-v0.1` requires neither, its rows going to standard output. Both of the latter require
+`report_path` where a report is expected, since §3.11 has the recipe name that path and the adapter
+is what writes the file. A build **MUST** supply whichever terms its adapter's protocol requires, and
+an adapter **MUST NOT** declare one — declaring the protocol is what asks for it, and a build refuses
+a declaration of it as it refuses any term outside the list above.
 
 **What crosses is one JSON object.** A build **MUST** pass the terms it supplies as a single JSON
 object keyed by the term, appended to the command's argument list as its last element, and **MUST
@@ -842,13 +843,15 @@ part that fixes an attribute name, and R93 §4's test puts the name where the im
 
 ## 5. Consequence
 
-Part 03 gains a section at its end carrying the whole of what a foreign implementation needs:
-the protocol groups, each protocol's name and version, what a delivery states by the columns and
-resources it carries, and how a build reaches an adapter that must be running. Appending it
-renumbers nothing. Part 05 §3 gains a preference
-table, an in-process declaration and when a source's delivery is complete; Part 05 §3.4 gains what
-an adapter declares; and Part 05 §3.5 and §3.7 gain what a build captures from a failure and what
-an adapter may report about a run. Part 09 §5.8's report gains the connection as a carrier beside
+Part 03 gains §11 at its end, carrying the whole of what a foreign implementation needs: the
+protocol groups, each protocol's name and version, what a build supplies and in what form, what a
+delivery states by the columns and resources it carries, the member of the Arrow IPC family a
+delivery may use, the document an adapter declares itself in, and how a build reaches an adapter
+that must be running. Appending it renumbers nothing. Part 05 §3.3 gains that a preference is the
+recipe's, §3.4 the four facts an adapter declares, §3.5 what a build refuses a declaration for, and
+§3.7 that a command is a list and that a diagnosis travels on standard error where rows have taken
+standard output; §3.9 and §4.4 are new, for the in-process opt-in and for when a delivery is
+complete. Part 09 §5.8's report gains the connection as a carrier beside
 the file, and the rule that a build clears the path before the run that writes it. Part 07 §4
 gains `NEEDS`, `CONSUMES`, the protocol an adapter declares, how an array crosses, and the
 conversion the shipped protocols perform — its sentence reads "two static declarations" today and

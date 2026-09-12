@@ -57,13 +57,17 @@ Each source declares its resources as `owns` or `contributes`.
 
 A recipe MUST NOT declare `owns` for a resource that more than one of its sources produces rows for, unless it declares a preference between them (R98 §3.2). Exclusivity is for a resource one source is responsible for; where two sources each hold part, `owns` discards the part the owner does not hold, and no check sees it because the resource is claimed.
 
+A preference is declared in the recipe, in a table keyed by resource, each entry naming the source that owns it and the reason that source knows more. A build MUST apply a declared preference and MUST NOT hold a preference of its own for any resource a recipe does not name (R115 §3.2): a built-in winner is one no recipe can see, and a recipe that has not heard of a new contest is better refused than silently arbitrated.
+
 A preference MUST NOT name a resource only one source produces (R108 §3.4). Such an entry arbitrates nothing and exempts a report that will never be due, so it is a claim no build tests, and it goes stale the moment the second producer stops producing.
 
 ### 3.4 What a source can produce
 
-Every source adapter MUST declare `PRODUCES`, the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
+Every source adapter MUST declare the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-A build MUST read a source entry that declares no `owns` as owning every resource in its adapter's `PRODUCES` that no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
+An adapter declares four such facts, all read before any source is opened: the resources it can supply, the recipe fields it can state (§3.6), the values a build must supply it (Part 03 §11.2), and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `states`, `needs` and `consumes`; what an implementation calls them in code is Part 07 §4's (R115 §3.12).
+
+A build MUST read a source entry that declares no `owns` as owning every resource its adapter declares it can supply and no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
 
 Where two sources default to the same resource and no preference is declared, a build MUST refuse the recipe naming both.
 
@@ -73,7 +77,7 @@ A build MUST refuse where a preference discards a value another source stated: w
 
 A build MUST NOT compose a row from more than one source (R108 §3.2). The merged row would be a fact no source stated. A recipe resolves the refusal by naming the fact in `[overrides]` with its reason (R87 §2.5), by preferring the other source, or by correcting the source that states less.
 
-A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for (R87 §2.2). What that declaration is called and where it lives is Part 07 §4's.
+A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for (R87 §2.2). What an implementation calls that declaration in code is Part 07 §4's, and the key it takes in a declaration document is Part 03 §11.5's.
 
 ### 3.5 Checking a recipe
 
@@ -84,6 +88,14 @@ A build MUST check a recipe against the registry before it opens any source. A b
 - an owned table whose **required** foreign key targets a table nothing supplies;
 - a clock declared twice, referenced but absent, or parented to nothing;
 - a required source option that is not set.
+
+A build MUST also refuse, on the same terms and before any source is opened (R115 §3.1, §3.12):
+
+- an adapter declaring a value Part 03 §11.2 resolves to neither a term nor a recipe option;
+- an adapter declaring a term that list carries and this recipe cannot fill, naming the term and the source;
+- an adapter declaring no protocol of a group the profile names, or one it does not name;
+- a declaration whose resources include one no loaded registry declares;
+- a declaration whose stated fields include one no recipe block carries.
 
 A build MUST report as a **warning**:
 
@@ -109,7 +121,9 @@ A fact the source **derives** is the source's. `core.sessions.session_start_time
 
 A command that exits non-zero MUST fail the build, and a build MUST name the source whose command failed together with the resources that source owns, rather than reporting the first resource it then finds missing (R109 §3.3). A command belongs to a source and a source is not an extension: one command may produce tables of several extensions, so a finding naming one of them would be wrong about the rest.
 
-A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
+A recipe MUST carry a command as an argument list, and a build MUST NOT derive one by splitting a string (R115 §3.4). A parse is a quoting convention the recipe never declared: POSIX rules applied on every host eat a backslash everywhere, so `C:\Python\python.exe` becomes `C:Pythonpython.exe` and fails as a missing executable rather than as a malformed command. A list needs no convention, because the host's own process interface takes one.
+
+A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Where the recipe puts rows on standard output (Part 03 §11.1), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one (R115 §3.11). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 
 ### 3.8 A recipe declares an encoding
 
@@ -127,6 +141,14 @@ about one packet's values: a column repeating often enough to want a dictionary 
 not in the next, where a schema-level declaration would claim it of every packet. §3.6's
 `[overrides]` puts a chosen value and its reason in a recipe for the same reason — the choice
 belongs to the build.
+
+### 3.9 Whether a source runs in the writer's process
+
+A build MUST deliver a source out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run one in process where the recipe does not say so (R115 §3.5).
+
+The recipe declares it because the recipe author chose the environment. One process resolves one dependency closure, so whether a given set of adapters installs together is a fact about one machine on one day rather than a property of any adapter, and the person assembling the recipe is the only party who can find out and the one who carries it when the answer changes.
+
+What the opt-in buys is a saved transfer and what it costs is a solvable environment. A build that cannot import an adapter the recipe opted in MUST refuse, naming the source and the import that failed, before any source is opened.
 
 ## 4. Stages 1 to 3
 
@@ -147,6 +169,18 @@ Normalization MUST be deterministic in the recipe. Two runs of the same recipe o
 An interval is closed (01 §2.3). A writer MUST convert a source whose intervals are half-open — `[start, stop)` — which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
 
 An adapter compensating for a known defect in its source MUST declare the compensation, and a writer MUST record every compensation applied in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
+
+### 4.4 When a source's delivery is complete
+
+What a build expects of a source is the set of resources it owns, settled from `owns` and what the adapter declares before any I/O (§3.4). A run succeeded when every resource in that set arrived and the process exited clean (R115 §3.10).
+
+A resource an adapter owns and has nothing for MUST arrive empty rather than not arriving (Part 03 §11.3). That is what makes the test usable: a build reads a resource that did not arrive as the run having failed, and never as the source having had nothing to say.
+
+A non-zero exit is a failure whatever arrived. A build MUST report one as a failure even where every resource is present, because an adapter saying it failed is not overruled by its own output, and a command dying between two resources delivers the first one complete and valid (R115 §3.10).
+
+A build MUST report a delivery it cannot parse as a failure where the command exited zero, naming what was short. What no protocol catches is a short table from a run that exits zero: where an adapter declares a row count a build MUST check it, and an adapter that cannot know its size before it sends declares none, which a build MUST read as unknown rather than as zero.
+
+A build MUST report everything the protocol it used carries about a failure — standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its detail for `flight-v0.1`, where a failing adapter writes nothing to standard error because the diagnosis travels on the connection it was asked over (R115 §3.11). A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
 
 ## 5. Stage 4: Validate
 

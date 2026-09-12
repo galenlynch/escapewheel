@@ -2544,3 +2544,101 @@ note = "that R53 §2.1 would have gone unseen, which is the measurement rather t
 disposition = "applied"
 where = [{ part = "02", section = "7" }]
 note = "the type joins the role and identity in the reference rule, and the paragraph beside it takes 5.3's int64 escape on both sides or neither"
+
+[clause."R115 §2.1"]
+disposition = "rationale"
+note = "the writer's own adapters resolve 57 distributions from five declared dependencies, so authorship is not what keeps a closure small"
+
+[clause."R115 §2.2"]
+disposition = "rationale"
+note = "which institute's or tool's files each adapter reads, and that the boundary runs inside the NWB module rather than around it"
+
+[clause."R115 §2.3"]
+disposition = "rationale"
+note = "the `session` kind reads one institute's schema; recorded so a rename is not invented later as a new idea, and nothing in the decision turns on it"
+
+[clause."R115 §2.4"]
+disposition = "rationale"
+note = "four tables keyed by kind hold an adapter's own property where the adapter is not"
+
+[clause."R115 §2.5"]
+disposition = "rationale"
+note = "a registered adapter is constructed with a root and options and reaches none of the extras a built-in gets by name"
+
+[clause."R115 §2.6"]
+disposition = "rationale"
+note = "35 resources produced, 8 contested, 2 needing arbitration, which no adapter can declare of itself"
+
+[clause."R115 §3.1"]
+disposition = "applied"
+where = [
+  { part = "03", section = "11.2", note = "the closed vocabulary, how a declared name resolves, what a build refuses, and the one JSON object" },
+  { part = "05", section = "3.4", note = "the four facts an adapter declares, one of them the values a build supplies" },
+]
+note = "the supply contract; Part 07 §4 keeps the reference spelling"
+
+[clause."R115 §3.2"]
+disposition = "applied"
+where = [{ part = "05", section = "3.3", note = "a preference is declared in the recipe and a build holds none of its own" }]
+
+[clause."R115 §3.3"]
+disposition = "applied"
+where = [
+  { part = "03", section = "11.1", note = "the group, its three protocols, the asymmetry, and versioning by name" },
+  { part = "09", section = "5.7", note = "an extension may deliver over any protocol of the group" },
+]
+
+[clause."R115 §3.4"]
+disposition = "applied"
+where = [{ part = "05", section = "3.7", note = "a command is carried as a list and never split from a string" }]
+
+[clause."R115 §3.5"]
+disposition = "applied"
+where = [{ part = "05", section = "3.9", note = "the in-process opt-in is the recipe author's, and a build that cannot import refuses" }]
+
+[clause."R115 §3.6"]
+disposition = "applied"
+where = [
+  { part = "03", section = "11.3", note = "a delivery's column set is a statement, and what a build settles on arrival" },
+  { part = "07", section = "4", note = "the return type stays records, and the conversion that keeps a column" },
+]
+
+[clause."R115 §3.7"]
+disposition = "applied"
+where = [{ part = "03", section = "11.3", note = "identifiers cross as the names the source used" }]
+
+[clause."R115 §3.8"]
+disposition = "applied"
+where = [{ part = "03", section = "11.3", note = "an array crosses as a reference to a location the build supplied" }]
+
+[clause."R115 §3.9"]
+disposition = "applied"
+where = [
+  { part = "03", section = "11.6", note = "the retry rendezvous, and that an adapter binds only when it can answer" },
+  { part = "07", section = "4", note = "a protocol is named by a constant the implementation exports" },
+]
+note = "that a writer ships each end and that using it is nobody's condition of conformance is Part 03 §11.1's group plus this"
+
+[clause."R115 §3.10"]
+disposition = "applied"
+where = [
+  { part = "05", section = "4.4", note = "the ownership set as the expectation, the empty delivery, and a non-zero exit" },
+  { part = "03", section = "11.4", note = "the reserved `end` stream, since a reader treats end of file as end of stream" },
+]
+
+[clause."R115 §3.11"]
+disposition = "applied"
+where = [
+  { part = "05", section = "4.4", note = "what a build reports of a failure, per protocol, and every failure together" },
+  { part = "05", section = "3.7", note = "standard error carries the diagnosis where rows have taken standard output" },
+  { part = "09", section = "5.8", note = "the connection as a carrier beside the file, and a report cleared before the run" },
+]
+
+[clause."R115 §3.12"]
+disposition = "applied"
+where = [
+  { part = "03", section = "11.5", note = "the declaration document, its keys, and what a build refuses one for" },
+  { part = "05", section = "3.4", note = "the four facts, and that an adapter a build cannot import publishes them" },
+  { part = "05", section = "3.5", note = "the refusals a recipe check makes against a declaration" },
+  { part = "09", section = "5.8", note = "`stated` carries the values behind the fields a source declares it states" },
+]
