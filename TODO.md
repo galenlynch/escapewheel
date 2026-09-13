@@ -231,9 +231,22 @@ container lives, and the Zarr v2 referencing, the axis description and the band 
 all format-level. Its one line of dialect recovers a probe from a series name NWB does not
 constrain — `series.name.removeprefix("ElectricalSeries").removesuffix("-LFP")` — and a declared
 pattern option
-settles it. `waveforms` reads `waveform_mean`, `waveform_sd` and the ragged
-`electrodes`/`electrodes_index`, all base NWB; its only dialect touch is `ks_unit_id`, which R81
-measured equal to `original_cluster_id` in 6,781 of 6,781 units, so it is deleted rather than moved.
+settles it.
+
+`waveforms` reads `waveform_mean`, `waveform_sd` and the ragged `electrodes`/`electrodes_index`, all
+base NWB, and matches an array row to a unit by a **pair**: `(device_name, ks_unit_id)`, the probe
+plus the sorter's label. A run is one probe (R83) and R81 measured 810 distinct labels across 6,781
+units over 12 runs, so the probe is what makes the pair unique and nothing keys on `ks_unit_id`
+alone. The build already keys `Context.units` by `(device_name, local_unit_label)`, which R81
+measured equal to `ks_unit_id` in 6,781 of 6,781 rows, so the mapping needs no change; what changes
+is the NWB-side read, `store.array(group / "ks_unit_id")` becoming a read of the `Units` table's own
+`id` — base NWB, and where SpikeInterface writes a sorter's unit ids.
+
+R115 §3.1 rewrites that crossing regardless: a units mapping keyed by a tuple was measured refused
+at the boundary, so `units` arrives as records carrying the key as columns and the adapter builds
+its own lookup. The dialect column goes with that work rather than as a change of its own. One
+repair the rekeying forces — `units: {n} NWB row(s) match no unit or are all zero; skipped` sums two
+causes, and a wrong key must be countable apart from a genuinely padded row.
 
 Leaving is what makes an adapter need a protocol (R115 §3.3).
 
@@ -258,6 +271,19 @@ are on the classes; the values a build must supply are not, and `CONSUMES` is a 
 rather than a declaration. A protocol is not owed, since all ten ship with the build. `in_process`
 exists for the case that does owe one — a kind another distribution registers — and `Recipe.check`
 refuses such a source that declares neither.
+
+Writing those declarations out against `_build_source`'s ten branches turns up two things, found
+2026-09-12. **Part 03 §11.2's closed vocabulary is one term short**: `lfp` and `waveforms` both take
+an `electrodes` argument — `dict[int, str]`, the NWB's global electrode row index to the
+`electrode_id` a build assigned, built in `session.py` from `NWBSource.electrodes` — and the eight
+terms do not carry it. It is the exact parallel of `units`, one record per electrode carrying the
+source's index and the identifier assigned, and it is not derivable from anything else that crosses,
+because the row index is a position in a table only the NWB adapter read. §11.2 says a profile adding
+a term amends the section, so this is a revision and not a code change. **And `store` cannot be
+declared at all**: §11.2 forbids a build requiring an adapter to accept a live handle and names an
+open store as the example, so `_SHARED_SOURCES` becomes an in-process optimization the construction
+applies behind the declaration — three adapters reading one `.nwb` may still share a parsed store,
+and none of them may ask for one.
 
 **`_build_source` is 72 lines carrying ten `spec.kind` branches**, each passing a different set of
 extras, and becomes one construction that reads the declaration, resolves each name against Part 03
