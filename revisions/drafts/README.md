@@ -19,7 +19,7 @@ dependencies run downward, so a draft may depend on the ones above it and on not
 
 | draft | words | appraised | why here |
 |---|---|---|---|
-| `a-build-supplies-the-electrode-identifiers-it-assigned` | 1,655 | not yet | Only one open, and it depends on R115 alone. |
+| `a-build-supplies-the-electrode-identifiers-it-assigned` | 1,815 | not yet | Only one open, and it depends on R115 alone. |
 
 The last to leave was `a-build-reaches-a-source-through-declarations`, accepted as **R115** on
 2026-09-11 at 12,038 words. It was two drafts merged — a writer requiring no knowledge of a
