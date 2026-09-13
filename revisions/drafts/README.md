@@ -14,9 +14,12 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-Nothing is open. A draft added here takes a row naming its word count, when it was appraised, and
-why it sits where it does: dependencies run downward, so a draft may depend on the ones above it
-and on nothing below.
+A draft takes a row naming its word count, when it was appraised, and why it sits where it does:
+dependencies run downward, so a draft may depend on the ones above it and on nothing below.
+
+| draft | words | appraised | why here |
+|---|---|---|---|
+| `a-build-supplies-the-electrode-identifiers-it-assigned` | 1,655 | not yet | Only one open, and it depends on R115 alone. |
 
 The last to leave was `a-build-reaches-a-source-through-declarations`, accepted as **R115** on
 2026-09-11 at 12,038 words. It was two drafts merged — a writer requiring no knowledge of a
