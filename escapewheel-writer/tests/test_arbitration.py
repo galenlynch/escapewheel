@@ -15,15 +15,16 @@ import ast
 from pathlib import Path
 
 import pytest
+
 from escapewheel_writer.recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, produces
 from escapewheel_writer.scripts.cli import KINDS
-from escapewheel_writer.session import _KINDS
+from escapewheel_writer.sources import ADAPTERS
 
 
 def _by_resource() -> dict[str, list[str]]:
     """Which adapters can produce each resource, over every kind a build accepts."""
     found: dict[str, list[str]] = {}
-    for kind in _KINDS:
+    for kind in ADAPTERS:
         for resource in produces(kind):
             found.setdefault(resource, []).append(kind)
     return found
@@ -55,7 +56,7 @@ def test_the_scaffolder_names_only_kinds_a_build_knows():
     `PREFERRED`'s docstring gives that as the reason it is held in `recipe` rather than in the
     scaffolder, and the two lists had drifted to 5 kinds against 10.
     """
-    assert set(KINDS) <= set(_KINDS), f"scaffolder names {sorted(set(KINDS) - set(_KINDS))}"
+    assert set(KINDS) <= set(ADAPTERS), f"scaffolder names {sorted(set(KINDS) - set(ADAPTERS))}"
 
 
 def test_every_kind_the_scaffolder_offers_can_be_opened_alone():
@@ -76,8 +77,13 @@ def test_every_kind_the_scaffolder_offers_can_be_opened_alone():
     assert set(KINDS) == opens, f"KINDS is {sorted(KINDS)}, _open takes {sorted(opens)}"
 
 
-def test_the_build_knows_every_kind_it_dispatches_on():
-    """`_KINDS` is what an unknown kind is reported against, and it had gone stale by three."""
+def test_the_build_dispatches_on_no_kind():
+    """Every source is constructed from what it declares (Part 05 §3.4), so no branch names a kind.
+
+    It used to carry one per kind, each passing a different set of extras, and the list of kinds an
+    unknown one was reported against had gone stale by three. A branch reappearing here is a value
+    that belongs in the adapter's `NEEDS`.
+    """
     from escapewheel_writer import session
 
     source = Path(session.__file__).read_text()
@@ -88,7 +94,7 @@ def test_the_build_knows_every_kind_it_dispatches_on():
                   and isinstance(n.comparators[0], ast.Constant)
                   and isinstance(n.comparators[0].value, str)
                   and isinstance(n.left, ast.Attribute) and n.left.attr == "kind"}
-    assert dispatched <= set(_KINDS), f"_build_source handles {sorted(dispatched - set(_KINDS))}"
+    assert dispatched == set(), f"_build_source branches on {sorted(dispatched)}"
 
 
 @pytest.mark.parametrize("resource", RECIPE_SUPPLIES)

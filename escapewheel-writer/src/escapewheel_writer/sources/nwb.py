@@ -53,7 +53,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from numpy.typing import NDArray
 
-from ..clock import Clock
+from ..clock import TickGrid
 from .compensations import Compensates
 from .store import SourceStore, source_root
 from .zarr_compat import UnsupportedEncoding
@@ -200,9 +200,11 @@ class NWBSource(Compensates):
     ----------
     root : str or Path
         The ``.nwb`` directory, or a directory containing exactly one.
-    clock : Clock
-        The clock the file's `timestamps` are on. Every conversion is checked against its
-        grid, so passing the wrong clock raises rather than producing plausible ticks.
+    reference_clock : Mapping
+        The `core.clocks` row of the clock the file's `timestamps` are on (Part 03 §11.2). Every
+        conversion is checked against its grid, so the wrong clock raises rather than producing
+        plausible ticks. A row rather than a clock object because everything a build supplies is
+        data, and the row is what an adapter out of process receives.
     zone : zoneinfo.ZoneInfo
         The rig's wall-clock zone. Used for values stored without an offset, and to
         cross-check the ones stored with one.
@@ -302,7 +304,7 @@ class NWBSource(Compensates):
         self,
         root: str | Path,
         *,
-        clock: Clock,
+        reference_clock: Mapping[str, Any],
         zone: ZoneInfo,
         session_id: str | None = None,
         prefix: str = "",
@@ -323,7 +325,11 @@ class NWBSource(Compensates):
         # precondition R54 §4 required before the revision could be implemented at all.
         self.interval_kind = interval_kind
         self.store = store if store is not None else SourceStore(self.root)
-        self.clock = clock
+        # The row is kept to emit as `core.clocks` where the recipe asks; the grid is what
+        # converts, and is all the row can rebuild: a row carries no label, `clock_name` being
+        # what `clock_id` stands for (Part 02 §8.2).
+        self.clock_row = dict(reference_clock)
+        self.clock = TickGrid.from_row(reference_clock)
         self.zone = zone
         self.prefix = prefix
         self.trial_metadata = trial_metadata
@@ -350,9 +356,10 @@ class NWBSource(Compensates):
         self.notes: list[str] = []
         self._cache: dict[str, Any] = {}
         self.session_id = session_id or _one(self._array("general/session_id")) or self.root.stem
-        if clock.session_id != self.session_id:
+        if self.clock_row.get("session_id") != self.session_id:
             raise ValueError(
-                f"clock {clock.clock_id!r} belongs to session {clock.session_id!r}, not {self.session_id!r}"
+                f"clock {self.clock.clock_id!r} belongs to session "
+                f"{self.clock_row.get('session_id')!r}, not {self.session_id!r}"
             )
 
     # -- source access ----------------------------------------------------------------
@@ -1239,7 +1246,7 @@ class NWBSource(Compensates):
         built = {
             "core.subjects": self.subjects(),
             "core.sessions": self.sessions(),
-            "core.clocks": ([self.clock.record()] if self.emit_clock else []) + self.signal_clocks(),
+            "core.clocks": ([self.clock_row] if self.emit_clock else []) + self.signal_clocks(),
             "core.devices": self.devices(),
             "core.probes": self.probes(),
             "core.electrodes": self.electrodes(),

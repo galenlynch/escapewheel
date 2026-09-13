@@ -1,7 +1,7 @@
 """The NWB adapter behind a Flight server, built from what a build supplies and nothing else.
 
 `argv[1]` is the whole of it: one JSON object carrying the terms the adapter declared in `NEEDS`
-and the one `flight-v0.1` requires, `socket`. Nothing else crosses — no store, no `Clock`, no
+and the one `flight-v0.1` requires, `socket`. Nothing else crosses — no store, no clock object, no
 `ZoneInfo`, no object of the writer's — and nothing else is positional.
 """
 
@@ -13,7 +13,6 @@ from zoneinfo import ZoneInfo
 
 import pyarrow as pa
 import pyarrow.flight as fl
-from escapewheel_writer.clock import Clock
 from escapewheel_writer.sources.nwb import NWBSource
 
 #: What this adapter declares it needs. Four resolve against the vocabulary a build can supply and
@@ -37,12 +36,13 @@ def build(supplied: dict) -> NWBSource:
     """Construct the adapter from values, rebuilding the writer's classes on this side.
 
     Every value crossed as a string or a record of them, so the types are rebuilt here: the zone is
-    an option the recipe set and a `ZoneInfo` is what this adapter wants of it.
+    an option the recipe set and a `ZoneInfo` is what this adapter wants of it. The reference clock
+    needs no rebuilding -- it crossed as its `core.clocks` row and that is what the adapter takes.
     """
     options = dict(supplied.get("options", {}))
     return NWBSource(
         supplied["root"],
-        clock=Clock(**supplied["reference_clock"]),
+        reference_clock=supplied["reference_clock"],
         zone=ZoneInfo(options.pop("zone")),
         session_id=supplied.get("session_id"),
         **options,

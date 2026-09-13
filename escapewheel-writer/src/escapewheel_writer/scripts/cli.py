@@ -58,16 +58,17 @@ def _open(kind: str, root: Path, session_id: str) -> Any:
     if kind == "lfp":
         from ..sources import LFPSource
 
-        # Inspecting reads what the series declare; the clock and electrode maps a build passes
-        # in change what the rows say, not how many there are.
+        # Inspecting reads what the series declare; the clocks a build passes in change what the
+        # rows say, not how many there are.
         return LFPSource(root, session_id=session_id)
     if kind == "nwb":
         from zoneinfo import ZoneInfo
 
-        from ..clock import Clock
-
-        clock = Clock("harp", session_id=session_id, name="HARP", tick_rate_num=31250, origin="HARP epoch")
-        return NWBSource(root, clock=clock, zone=ZoneInfo("UTC"), session_id=session_id)
+        # A stand-in row: counting what the file offers needs a grid to convert against, and any
+        # rate answers that. Which clock it really is decides tick values, which Stage 1 does not
+        # report.
+        row = {"clock_id": "harp", "session_id": session_id, "origin": "HARP epoch", "tick_rate_num": 31250}
+        return NWBSource(root, reference_clock=row, zone=ZoneInfo("UTC"), session_id=session_id)
     raise SystemExit(f"error: {kind} cannot be inspected on its own; it consumes another source")
 
 

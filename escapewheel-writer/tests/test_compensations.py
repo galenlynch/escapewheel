@@ -69,7 +69,7 @@ def test_the_nwb_source_declares_an_offset_it_kept(tmp_path):
     clock = Clock(
         "harp", session_id="mini_2025-04-09", name="HARP", tick_rate_num=HARP_TICK_RATE_HZ, origin="HARP epoch"
     )
-    source = NWBSource(root, clock=clock, zone=ZoneInfo("America/Los_Angeles"), units={})
+    source = NWBSource(root, reference_clock=clock.record(), zone=ZoneInfo("America/Los_Angeles"), units={})
     source.subjects()
     assert "nwb.stored_offset_kept" in source.compensations
 

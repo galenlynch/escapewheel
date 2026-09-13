@@ -26,7 +26,6 @@ sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer"))
 sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer/tests"))
 
 import nwbfixture
-from escapewheel_writer.clock import Clock
 from escapewheel_writer.sources.nwb import NWBSource
 from escapewheel_writer.sources.waveforms import WaveformSource
 
@@ -36,15 +35,15 @@ ZONE = "America/Los_Angeles"
 
 
 def today(root: Path) -> NWBSource:
-    """The adapter as `session.py` constructs it: a Clock object and a ZoneInfo."""
-    clock = Clock(
-        "harp",
-        session_id=SESSION,
-        name="HARP",
-        tick_rate_num=31_250,
-        origin="HARP epoch",
-    )
-    return NWBSource(root, clock=clock, zone=ZoneInfo(ZONE), interval_kind=KIND)
+    """The adapter as `session.py` constructs it: a `core.clocks` row and a ZoneInfo."""
+    row = {
+        "clock_id": "harp",
+        "session_id": SESSION,
+        "origin": "HARP epoch",
+        "tick_rate_num": 31_250,
+        "tick_rate_den": 1,
+    }
+    return NWBSource(root, reference_clock=row, zone=ZoneInfo(ZONE), interval_kind=KIND)
 
 
 def across(root: Path) -> tuple[NWBSource, str]:
@@ -59,19 +58,21 @@ def across(root: Path) -> tuple[NWBSource, str]:
         "reference_clock": {
             "clock_id": "harp",
             "session_id": SESSION,
-            "name": "HARP",
+            "origin": "HARP epoch",
             "tick_rate_num": 31_250,
             "tick_rate_den": 1,
-            "origin": "HARP epoch",
+            "metadata": {"label": "HARP"},
         },
         "zone": ZONE,
         "options": {"interval_kind": KIND},
     }
     wire = json.dumps(supplied)
     got = json.loads(wire)
-    clock = Clock(**got["reference_clock"])
     return NWBSource(
-        got["root"], clock=clock, zone=ZoneInfo(got["zone"]), **got["options"]
+        got["root"],
+        reference_clock=got["reference_clock"],
+        zone=ZoneInfo(got["zone"]),
+        **got["options"],
     ), wire
 
 
@@ -126,13 +127,12 @@ def waveforms(tmp: Path) -> None:
     )
     (root / ".zgroup").write_text(json.dumps({"zarr_format": 2}))
 
+    # One term now, not two: the electrode map a build used to pass was deleted once both adapters
+    # composed a contact's name from the electrode table they open themselves.
     supplied = {
         "units": {
             ("probeA", str(u)): {"unit_id": u, "sorting_run_id": 1, "curation_id": 1}
             for u in range(fixture.UNITS)
-        },
-        "electrodes": {
-            row: 100 + row for row in range(fixture.UNITS * fixture.CHANNELS)
         },
     }
     print("\nwaveform adapter, what a build supplies:")

@@ -26,7 +26,6 @@ sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer/tests"))
 import build_side
 import nwbfixture
 import serve_nwb
-from escapewheel_writer.session import CONSUMES
 from escapewheel_writer.sources import ADAPTERS
 
 REGISTRY = json.loads(
@@ -41,8 +40,13 @@ BLOCKS = {"session": "core.sessions", "subject": "core.subjects"}
 GROUP = ("files-v0.1", "stream-v0.1", "flight-v0.1")
 
 
-def declaration(kind: str, protocol: str, needs: tuple[str, ...] = ()) -> dict:
-    """One adapter's own properties, as the document a build reads instead of importing it."""
+def declaration(kind: str, protocol: str, needs: tuple[str, ...] | None = None) -> dict:
+    """One adapter's own properties, as the document a build reads instead of importing it.
+
+    Every field is read off the class, which is what makes generating the document rather than
+    maintaining it possible; `needs` is overridable so a refusal can be exercised against a name
+    no adapter declares.
+    """
     cls = ADAPTERS[kind]
     return {
         "$schema": "https://escapewheel.org/schemas/adapter/0.1.0",
@@ -50,8 +54,8 @@ def declaration(kind: str, protocol: str, needs: tuple[str, ...] = ()) -> dict:
         "protocol": protocol,
         "produces": sorted(getattr(cls, "PRODUCES", ())),
         "states": sorted(getattr(cls, "STATES", {})),
-        "needs": list(needs),
-        "consumes": list(CONSUMES.get(kind, ())),
+        "needs": list(getattr(cls, "NEEDS", ()) if needs is None else needs),
+        "consumes": list(getattr(cls, "CONSUMES", ())),
     }
 
 
@@ -143,10 +147,10 @@ def main() -> int:
             "reference_clock": {
                 "clock_id": "harp",
                 "session_id": build_side.SESSION,
-                "name": "HARP",
+                "origin": "HARP epoch",
                 "tick_rate_num": 31_250,
                 "tick_rate_den": 1,
-                "origin": "HARP epoch",
+                "metadata": {"label": "HARP"},
             },
             "wanted": ["core.sessions"],
         }

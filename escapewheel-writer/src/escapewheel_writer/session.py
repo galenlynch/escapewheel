@@ -22,30 +22,23 @@ the recipe says it owns, so the resolution is declared in one place a reader can
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from functools import partial
 from math import ceil
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import numpy as np
 from escapewheel_reader.clocks import BOUND, align
 from numpy.typing import NDArray
 
 from .extensions import load as load_extension
-from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe, SourceSpec, consumes, states
-from .sources import SourceDefect
+from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, TERMS, Recipe, SourceSpec, consumes, states
+from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
-
-#: Which sources a kind consumes the output of. Data-flow between adapters, which the
-#: registry cannot express; see the module docstring.
-#: Kinds that read a Zarr source through :class:`~escapewheel_writer.sources.store.SourceStore`,
-#: and so share one open store per root.
-_SHARED_SOURCES = frozenset({"nwb", "waveforms", "lfp"})
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
 #: staged packet. Part 05 stage 8 calls these optional, so a recipe that names none is complete.
@@ -196,84 +189,69 @@ def order(recipe: Recipe) -> list[SourceSpec]:
     return ordered
 
 
-#: Source kinds this package implements. A distribution may register others under
-#: `escapewheel_writer.sources.SOURCE_GROUP`; these are consulted first, so a plugin cannot shadow
-#: one and a recipe naming `sorter` always means this one.
-_KINDS = ("harp", "lfp", "nwb", "openephys", "session", "sorter", "sync", "tables",
-          "video", "waveforms")
+def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collection[str]) -> dict[str, Any]:
+    """Return what this build can fill of Part 03 §11.2's vocabulary, for this source.
+
+    A term absent from the result is one this recipe cannot fill, which is a refusal rather than an
+    omission: an adapter cannot tell a term nobody filled from one whose value is legitimately
+    empty. Only what `needed` names is resolved, since resolving the reference clock can itself
+    refuse and a source that asks for none should not be held to it.
+    """
+    terms: dict[str, Any] = {"root": spec.root, "session_id": context.session_id}
+    if "reference_clock" in needed:
+        clock = context.reference or _reference_clock(recipe, context)
+        # The row, not the object: everything a build supplies is data (Part 03 §11.2).
+        terms["reference_clock"] = clock.record()
+    if "clocks" in needed and context.clocks:
+        terms["clocks"] = sorted(context.clocks)
+    if "units" in needed and context.units:
+        terms["units"] = context.units
+    return terms
 
 
 def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
-    """Construct one adapter, supplying whatever earlier sources produced for it."""
-    from .sources import (
-        HarpSource,
-        LFPSource,
-        NWBSource,
-        OpenEphysSource,
-        SorterSource,
-        SyncSource,
-        TablesSource,
-        VideoSource,
-        WaveformSource,
-    )
+    """Construct one adapter from what it declares it needs (Part 05 §3.4).
+
+    One construction for every kind, built-in or registered by another distribution. Each name in
+    `NEEDS` resolves against Part 03 §11.2's terms first and the recipe's options second, and a name
+    resolving to neither is refused -- which `Recipe.check` reports before anything is opened, so
+    reaching the refusal here means the recipe was not checked.
+
+    The recipe's remaining options pass through untouched. They are the ones an adapter can run
+    without, which Part 03 §11.2 gives no way to declare: a declared name a recipe does not set
+    resolves to nothing, so declaring one would make it mandatory.
+    """
+    import inspect
+
+    from .sources import discovered
     from .sources.store import store_for
 
-    options = dict(spec.options)
-    if spec.kind in _SHARED_SOURCES:
-        options["store"] = store_for(spec.root, context.stores)
-    if spec.kind == "tables":
-        # The least coupled source: files that already exist, optionally produced by a command
-        # first. An extension supplied this way needs no Python of ours at all.
-        return TablesSource(spec.root, session_id=context.session_id, **options)
-    if spec.kind == "harp":
-        return HarpSource(spec.root, session_id=context.session_id, **options)
-    if spec.kind == "openephys":
-        return OpenEphysSource(spec.root, session_id=context.session_id, **options)
-    if spec.kind == "video":
-        clock = context.reference or _reference_clock(recipe, context)
-        return VideoSource(
-            spec.root,
-            session_id=context.session_id,
-            clock_id=clock.clock_id,
-            tick_rate=clock.tick_rate_num,
-            **options,
-        )
-    if spec.kind == "sorter":
-        return SorterSource(spec.root, session_id=context.session_id, **options)
-    if spec.kind == "sync":
-        first = options.pop("first_samples", None)
-        samples = json.loads(Path(first).read_text()) if first else None
-        return SyncSource(spec.root, session_id=context.session_id, first_samples=samples, **options)
-    if spec.kind == "nwb":
-        zone = ZoneInfo(str(options.pop("zone")))
-        clock = context.reference or _reference_clock(recipe, context)
-        return NWBSource(
-            spec.root, clock=clock, zone=zone, session_id=context.session_id, units=context.units, **options
-        )
-    if spec.kind == "lfp":
-        return LFPSource(
-            spec.root,
-            session_id=context.session_id,
-            clocks=sorted(context.clocks),
-            **options,
-        )
-    if spec.kind == "session":
-        from .sources import SessionSource
+    adapter = ADAPTERS.get(spec.kind) or discovered().get(spec.kind)
+    if adapter is None:
+        known = ", ".join(sorted({*ADAPTERS, *discovered()}))
+        raise RecipeError(f"unknown source kind {spec.kind!r}; known kinds are {known}")
 
-        return SessionSource(spec.root, zone=ZoneInfo(str(options.pop("zone"))), session_id=context.session_id)
-    if spec.kind == "waveforms":
-        return WaveformSource(
-            spec.root, session_id=context.session_id, units=context.units, **options
-        )
-    # A kind this package does not know may be registered by another distribution (R17's problem
-    # one layer down: an extension's table needs an adapter that knows a raw format core never
-    # will). Consulted after the built-ins, so a plugin cannot shadow one.
-    from .sources import discovered
+    needs = getattr(adapter, "NEEDS", ("root", "session_id"))
+    terms = _terms(spec, recipe, context, needs)
+    supplied: dict[str, Any] = {}
+    for name in needs:
+        if name in TERMS:
+            if name not in terms:
+                raise RecipeError(f"source {spec.kind} needs {name!r}, which this recipe cannot fill")
+            supplied[name] = terms[name]
+        elif name in spec.options:
+            supplied[name] = spec.options[name]
+        else:
+            raise RecipeError(f"source {spec.kind} needs {name!r}, which this entry does not set")
 
-    if (build := discovered().get(spec.kind)) is not None:
-        return build(spec.root, session_id=context.session_id, **options)
-    known = ", ".join(sorted({*_KINDS, *discovered()}))
-    raise RecipeError(f"unknown source kind {spec.kind!r}; known kinds are {known}")
+    passed = {k: v for k, v in spec.options.items() if k not in supplied}
+    # In process, adapters reading one Zarr root share an open store, so they cannot disagree about
+    # what is in it and the electrode table is parsed once. A handle is not something an adapter may
+    # declare (Part 03 §11.2), so it is supplied where the class accepts one rather than from a
+    # table of kinds -- and an adapter out of process is handed none and opens its own.
+    if "store" in inspect.signature(adapter).parameters:
+        passed.setdefault("store", store_for(spec.root, context.stores))
+    return adapter(supplied.pop("root"), **supplied, **passed)
 
 
 def _reference_clock(recipe: Recipe, context: Context) -> Any:

@@ -44,10 +44,10 @@ def context(root: Path) -> dict:
         "reference_clock": {
             "clock_id": "harp",
             "session_id": SESSION,
-            "name": "HARP",
+            "origin": "HARP epoch",
             "tick_rate_num": 31_250,
             "tick_rate_den": 1,
-            "origin": "HARP epoch",
+            "metadata": {"label": "HARP"},
         },
         "session_id": SESSION,
     }

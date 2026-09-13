@@ -134,7 +134,14 @@ owns = ["core.array_channels"]
     path = tmp_path / "session.toml"
     path.write_text(text)
     recipe = Recipe.load(path)
-    context = Context(session_id="s1")
+    # The three declare `units` and `clocks`, which a build fills from the sorter's output and
+    # refuses to pass empty (Part 03 §11.2), so the context carries both as it would by the time any
+    # of them is built.
+    context = Context(
+        session_id="s1",
+        units={("probeA", "0"): {"unit_id": 1}},
+        clocks={"probe.45883-1.samples": 30000.0},
+    )
     built = [_build_source(spec, recipe, context) for spec in recipe.sources]
     assert built[0].store is built[1].store
     assert len(context.stores) == 1

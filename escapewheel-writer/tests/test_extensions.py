@@ -150,10 +150,10 @@ def test_a_registered_source_kind_is_built(tmp_path, monkeypatch):
 
 def test_a_builtin_kind_cannot_be_shadowed(tmp_path, monkeypatch):
     """A recipe naming `sorter` always means this package's sorter."""
-    from escapewheel_writer.session import _KINDS
+    from escapewheel_writer.sources import ADAPTERS
 
     monkeypatch.setattr("escapewheel_writer.sources.discovered", lambda: {"sorter": _Registered})
-    assert "sorter" in _KINDS, "the built-ins are consulted first, so this never reaches discovered()"
+    assert "sorter" in ADAPTERS, "the built-ins are consulted first, so this never reaches discovered()"
 
 
 def test_an_unknown_kind_names_what_is_known(tmp_path, monkeypatch):

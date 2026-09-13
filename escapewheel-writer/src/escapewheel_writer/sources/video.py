@@ -45,7 +45,7 @@ positions from where it is shown.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -82,10 +82,10 @@ class VideoSource(Compensates):
         timing. A video with no CSV is referenced and contributes no frames.
     session_id : str
         The session these were recorded in.
-    clock_id : str
-        The clock the CSV's first column is in seconds of.
-    tick_rate : int
-        That clock's ticks per second, used to convert those seconds to ticks.
+    reference_clock : Mapping
+        The `core.clocks` row of the clock the CSV's first column is in seconds of
+        (Part 03 §11.2). Only its `clock_id` is read: the CSV states a frame's tick, so nothing
+        here converts.
     uri_base : str, optional
         Absolute base the videos are addressed under. Without one the packet records a `file://`
         URI, which resolves only on the machine that built it.
@@ -113,15 +113,13 @@ class VideoSource(Compensates):
         root: str | Path,
         *,
         session_id: str,
-        clock_id: str,
-        tick_rate: int,
+        reference_clock: Mapping[str, Any],
         uri_base: str | None = None,
         batch_rows: int = BATCH_ROWS,
     ) -> None:
         self.root = source_root(root)
         self.session_id = session_id
-        self.clock_id = clock_id
-        self.tick_rate = int(tick_rate)
+        self.clock_id = str(reference_clock["clock_id"])
         self.uri_base = uri_base.rstrip("/") if uri_base else None
         self.batch_rows = batch_rows
         super().__init__()

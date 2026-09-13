@@ -20,7 +20,7 @@ numbers.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -60,6 +60,99 @@ class NonFinite(ValueError):
     `inventory/nwb-zarr-776259-2025-04-09.md` carry a single NaN -- so a caller that expects
     them filters first and says so, rather than letting a NaN become an arbitrary integer.
     """
+
+
+@dataclass(frozen=True)
+class TickGrid:
+    """The identifier ticks are counted on, the rate they advance at, and the conversion.
+
+    Separate from :class:`Clock` because this is the whole of what turning seconds into ticks
+    needs, and it is all an adapter handed a `core.clocks` row can build (Part 03 §11.2): the row
+    carries no human label, `clock_name` being what `clock_id` stands for (Part 02 §8.2), so a grid
+    is derivable from one where a clock is not.
+
+    Parameters
+    ----------
+    clock_id : str
+        The clock these ticks are on.
+    tick_rate_num, tick_rate_den : int
+        The tick rate as an exact rational, in hertz.
+
+    Examples
+    --------
+    >>> TickGrid("harp", 31250).ticks([1.0, 0.000032])
+    array([31250,     1])
+    """
+
+    clock_id: str
+    tick_rate_num: int
+    tick_rate_den: int = 1
+
+    def __post_init__(self) -> None:
+        """Reject a rate that is not a positive rational."""
+        if self.tick_rate_num <= 0 or self.tick_rate_den <= 0:
+            raise ValueError(f"{self.clock_id}: tick rate {self.tick_rate_num}/{self.tick_rate_den} is not positive")
+
+    @classmethod
+    def from_row(cls, row: Mapping[str, Any]) -> TickGrid:
+        """Build a grid from a `core.clocks` row, which is how an adapter is handed one.
+
+        The rational is always there in a row a build passes: :meth:`Clock.record` writes
+        `tick_rate_hz` only where there is no rational, and no clock can be built without one.
+        """
+        return cls(
+            clock_id=str(row["clock_id"]),
+            tick_rate_num=int(row["tick_rate_num"]),
+            tick_rate_den=int(row.get("tick_rate_den") or 1),
+        )
+
+    @property
+    def hz(self) -> float:
+        """The tick rate in hertz, as a float. The rational is authoritative."""
+        return self.tick_rate_num / self.tick_rate_den
+
+    def ticks(self, seconds: Sequence[float] | NDArray[np.floating[Any]]) -> NDArray[np.int64]:
+        """Convert seconds on this clock to exact integer ticks.
+
+        Parameters
+        ----------
+        seconds : sequence of float
+            Times in seconds since this clock's tick 0.
+
+        Returns
+        -------
+        numpy.ndarray of int64
+            The ticks.
+
+        Raises
+        ------
+        NonFinite
+            If any value is NaN or infinite.
+        OffGrid
+            If any value does not land on an integer tick.
+        OverflowError
+            If any tick falls outside int64.
+        """
+        values = np.asarray(seconds, dtype=np.float64)
+        if values.size == 0:
+            return np.empty(0, dtype=np.int64)
+        if not np.isfinite(values).all():
+            raise NonFinite(f"{self.clock_id}: {int((~np.isfinite(values)).sum())} of {values.size} values not finite")
+
+        exact = values * self.tick_rate_num / self.tick_rate_den
+        rounded = np.rint(exact)
+        residual = np.abs(exact - rounded)
+        if off := int((residual > 0).sum()):
+            worst = float(residual.max())
+            raise OffGrid(
+                f"{self.clock_id}: {off} of {values.size} values miss the {self.hz:g} Hz grid "
+                f"by up to {worst:.4g} tick; converting them would mean fitting a rate, not quantizing",
+                n_off=off,
+                worst=worst,
+            )
+        if rounded.min() < TICK_MIN or rounded.max() > TICK_MAX:
+            raise OverflowError(f"{self.clock_id}: ticks {rounded.min():.0f}..{rounded.max():.0f} exceed int64")
+        return rounded.astype(np.int64)
 
 
 @dataclass(frozen=True)
@@ -118,52 +211,18 @@ class Clock:
             raise ValueError(f"{self.clock_id}: tick rate {self.tick_rate_num}/{self.tick_rate_den} is not positive")
 
     @property
+    def grid(self) -> TickGrid:
+        """The tick grid this clock defines, which an adapter handed its row rebuilds."""
+        return TickGrid(self.clock_id, self.tick_rate_num, self.tick_rate_den)
+
+    @property
     def hz(self) -> float:
         """The tick rate in hertz, as a float. The rational is authoritative."""
-        return self.tick_rate_num / self.tick_rate_den
+        return self.grid.hz
 
     def ticks(self, seconds: Sequence[float] | NDArray[np.floating[Any]]) -> NDArray[np.int64]:
-        """Convert seconds on this clock to exact integer ticks.
-
-        Parameters
-        ----------
-        seconds : sequence of float
-            Times in seconds since this clock's tick 0.
-
-        Returns
-        -------
-        numpy.ndarray of int64
-            The ticks.
-
-        Raises
-        ------
-        NonFinite
-            If any value is NaN or infinite.
-        OffGrid
-            If any value does not land on an integer tick.
-        OverflowError
-            If any tick falls outside int64.
-        """
-        values = np.asarray(seconds, dtype=np.float64)
-        if values.size == 0:
-            return np.empty(0, dtype=np.int64)
-        if not np.isfinite(values).all():
-            raise NonFinite(f"{self.clock_id}: {int((~np.isfinite(values)).sum())} of {values.size} values not finite")
-
-        exact = values * self.tick_rate_num / self.tick_rate_den
-        rounded = np.rint(exact)
-        residual = np.abs(exact - rounded)
-        if off := int((residual > 0).sum()):
-            worst = float(residual.max())
-            raise OffGrid(
-                f"{self.clock_id}: {off} of {values.size} values miss the {self.hz:g} Hz grid "
-                f"by up to {worst:.4g} tick; converting them would mean fitting a rate, not quantizing",
-                n_off=off,
-                worst=worst,
-            )
-        if rounded.min() < TICK_MIN or rounded.max() > TICK_MAX:
-            raise OverflowError(f"{self.clock_id}: ticks {rounded.min():.0f}..{rounded.max():.0f} exceed int64")
-        return rounded.astype(np.int64)
+        """Convert seconds on this clock to exact integer ticks (:meth:`TickGrid.ticks`)."""
+        return self.grid.ticks(seconds)
 
     def tick_at(self, instant: datetime) -> int:
         """Convert a wall-clock instant to the nearest tick on this clock.

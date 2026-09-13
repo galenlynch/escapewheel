@@ -32,13 +32,13 @@ def nwb(tmp_path):
 
 @pytest.fixture
 def source(nwb, harp):
-    return NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND)
+    return NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND)
 
 
 @pytest.fixture
 def carrying(nwb, harp):
     """A source asked to carry unmapped trial columns, which Part 02 §6 makes an opt-in."""
-    return NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND, trial_metadata=True)
+    return NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND, trial_metadata=True)
 
 
 def only(rows, **match):
@@ -74,7 +74,7 @@ def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
     """`units/spike_times` is 287 M values against 6,781 rows, and no builder can use it as
     one: it is written here in an encoding that refuses, so reading it would leave a note."""
     units = _units(nwb)
-    source = NWBSource(nwb, clock=harp, zone=PACIFIC, units=units, interval_kind=KIND)
+    source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, units=units, interval_kind=KIND)
     assert source.unit_coordinates() == [
         {
             "session_id": SESSION,
@@ -98,7 +98,7 @@ def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
 def test_the_index_beside_a_ragged_column_is_still_read(nwb, harp):
     """It is one value per row, which is what makes the column beside it ragged."""
     units = _units(nwb, refuses=False)
-    source = NWBSource(nwb, clock=harp, zone=PACIFIC, units=units, interval_kind=KIND)
+    source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, units=units, interval_kind=KIND)
     columns = source._table("units")
     assert "spike_times" not in columns
     assert columns["spike_times_index"].tolist() == [3]
@@ -143,7 +143,7 @@ def test_it_does_not_offer_the_primary_electrode(source):
 
 def test_the_asset_directory_is_accepted_as_well_as_the_nwb(tmp_path, harp):
     nwbfixture.build(tmp_path)
-    assert NWBSource(tmp_path, clock=harp, zone=PACIFIC, interval_kind=KIND).session_id == SESSION
+    assert NWBSource(tmp_path, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND).session_id == SESSION
 
 
 # -- time ----------------------------------------------------------------------------
@@ -172,17 +172,18 @@ def test_a_clock_the_times_are_not_on_is_refused(tmp_path, harp):
     ticks -- and there a rate one hertz out is refused.
     """
     nwb = nwbfixture.build(tmp_path, seconds=(0.000032, 0.000064))
-    ticks = [e["t_tick"] for e in NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND).records()["core.events"]]
+    source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND)
+    ticks = [e["t_tick"] for e in source.records()["core.events"]]
     assert ticks[:2] == [1, 2]
     wrong = Clock("c", session_id=SESSION, name="c", tick_rate_num=31251, origin="e")
     with pytest.raises(OffGrid):
-        NWBSource(nwb, clock=wrong, zone=PACIFIC, interval_kind=KIND).records()
+        NWBSource(nwb, reference_clock=wrong.record(), zone=PACIFIC, interval_kind=KIND).records()
 
 
 def test_a_clock_from_another_session_is_refused(nwb):
     stray = Clock("c", session_id="other", name="c", tick_rate_num=HARP_TICK_RATE_HZ, origin="e")
     with pytest.raises(ValueError, match="belongs to session"):
-        NWBSource(nwb, clock=stray, zone=PACIFIC, interval_kind=KIND)
+        NWBSource(nwb, reference_clock=stray.record(), zone=PACIFIC, interval_kind=KIND)
 
 
 def test_the_session_start_is_converted_to_utc(source):
@@ -192,7 +193,7 @@ def test_the_session_start_is_converted_to_utc(source):
 
 def test_a_fixed_offset_is_not_a_zone(nwb, harp):
     with pytest.raises(TypeError, match="IANA zone"):
-        NWBSource(nwb, clock=harp, zone=timezone.utc, interval_kind=KIND)
+        NWBSource(nwb, reference_clock=harp.record(), zone=timezone.utc, interval_kind=KIND)
 
 
 def test_a_stored_offset_that_disagrees_with_the_zone_is_reported(source):
@@ -203,7 +204,7 @@ def test_a_stored_offset_that_disagrees_with_the_zone_is_reported(source):
 
 def test_a_naive_wall_clock_is_read_in_the_declared_zone(tmp_path, harp):
     nwb = nwbfixture.build(tmp_path, session_offset="")
-    source = NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND)
+    source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND)
     assert source.records()["core.sessions"][0]["session_start_time"].utcoffset().total_seconds() == -7 * 3600
     assert any("no offset stored" in note for note in source.notes)
 
@@ -264,7 +265,7 @@ def test_electrode_ids_are_composed_because_no_single_column_is_unique(source):
 
 
 def test_a_prefix_disambiguates_ids_for_a_multi_session_packet(nwb, harp):
-    records = NWBSource(nwb, clock=harp, zone=PACIFIC, prefix="A_", interval_kind=KIND).records()
+    records = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, prefix="A_", interval_kind=KIND).records()
     assert records["core.electrodes"][0]["electrode_id"].startswith("A_probeA.")
     assert records["core.probes"][0]["probe_id"] == "A_probeA"
 
@@ -359,7 +360,7 @@ def test_trial_metadata_is_off_unless_asked(source, carrying):
 def test_a_trial_without_an_interval_is_a_defect_not_a_dropped_row(tmp_path, harp):
     nwb = nwbfixture.build(tmp_path, trial_stop=np.nan)
     with pytest.raises(SourceDefect, match="stop_time"):
-        NWBSource(nwb, clock=harp, zone=PACIFIC, interval_kind=KIND).records()
+        NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND).records()
 
 
 # -- end to end ----------------------------------------------------------------------
@@ -475,7 +476,7 @@ def test_a_trial_that_never_reached_the_moment_emits_no_event(tmp_path, harp):
     rather than columns on `core.trials`."""
     root = nwbfixture.build(tmp_path)
     nwbfixture.array(root / "intervals/trials/goCue_start_time", np.array([np.nan]))
-    source = NWBSource(root, clock=harp, zone=PACIFIC, session_id=SESSION, units={})
+    source = NWBSource(root, reference_clock=harp.record(), zone=PACIFIC, session_id=SESSION, units={})
     assert not [e for e in source.events() if e["stream_id"] == _stream_of(source, "go_cue")]
     assert "go_cue" in {s["event_stream_name"] for s in source.event_streams()}
 
