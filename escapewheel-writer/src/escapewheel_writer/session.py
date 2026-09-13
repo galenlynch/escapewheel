@@ -53,10 +53,11 @@ CONSUMES: dict[str, tuple[str, ...]] = {
     # sorter must have run first. Without this the namer is None and `anchors` falls back to
     # naming every aligned stream, including ones no source declared a clock for.
     "sync": ("sorter",),
-    "waveforms": ("sorter", "nwb"),
-    # The probe clock an LFP axis advances on comes from the sorter; the electrode behind each
-    # channel comes from the NWB.
-    "lfp": ("sorter", "nwb"),
+    "waveforms": ("sorter",),
+    # The probe clock an LFP axis advances on comes from the sorter. Neither kind reads the NWB's
+    # output any more: each composes a contact's name from the electrode table it opens itself, and
+    # the writer numbers the name (Part 05 §8), so the reference resolves without an ordering.
+    "lfp": ("sorter",),
     # Locating tick 0 takes a tick observed at the ephys stream's declared start: the first
     # spike, from the sorter, mapped onto the reference clock through the sync anchors. The
     # observation windows it writes cover the event streams the NWB declares.
@@ -118,9 +119,6 @@ class Context:
     units : dict
         `(device_name, local_unit_label)` to the identifying triple. The join key the NWB and
         the sorter meet on: the sorter mints unit identity, the NWB places it in space.
-    electrodes : dict
-        Global electrode row index to `electrode_id`, for a source that reads an array indexed
-        by row rather than by ID.
     clocks : dict
         Clock ID to declared tick rate, for a source placing an array axis on one. An axis
         advances in ticks (R20 §2), so a step cannot be derived without the rate.
@@ -138,7 +136,6 @@ class Context:
     session_id: str
     sources: dict[str, Any] = field(default_factory=dict)
     units: dict[tuple[str, str], dict[str, str]] = field(default_factory=dict)
-    electrodes: dict[int, str] = field(default_factory=dict)
     clocks: dict[str, float] = field(default_factory=dict)
     stores: dict[Path, Any] = field(default_factory=dict)
     stated: dict[str, dict[str, list[dict[str, Any]]]] = field(default_factory=dict)
@@ -275,7 +272,6 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
             spec.root,
             session_id=context.session_id,
             clocks=sorted(context.clocks),
-            electrodes=context.electrodes,
             **options,
         )
     if spec.kind == "session":
@@ -284,7 +280,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         return SessionSource(spec.root, zone=ZoneInfo(str(options.pop("zone"))), session_id=context.session_id)
     if spec.kind == "waveforms":
         return WaveformSource(
-            spec.root, session_id=context.session_id, units=context.units, electrodes=context.electrodes, **options
+            spec.root, session_id=context.session_id, units=context.units, **options
         )
     # A kind this package does not know may be registered by another distribution (R17's problem
     # one layer down: an extension's table needs an adapter that knows a raw format core never
@@ -408,7 +404,6 @@ def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) ->
                 f"declared stream window {began.isoformat()}; the window is used"
             )
     if spec.kind == "nwb":
-        context.electrodes = dict(enumerate(row["electrode_id"] for row in source.electrodes()))
         context.event_streams = [row["event_stream_id"] for row in source.event_streams()]
 
 

@@ -171,6 +171,19 @@ def _alike(a: Any, b: Any) -> bool:
     return bool(a == b)
 
 
+def electrode_name(group: Any, channel: Any, prefix: str = "") -> str:
+    """Compose a contact's packet-wide name, which no NWB column carries on its own.
+
+    `electrode_name` repeats across the shanks of a quad-base probe -- 1,920 distinct values over
+    4,608 rows -- and `channel_name` is per-probe, so the pair is what identifies a contact.
+
+    Module-level because every adapter reading one NWB composes it: a writer numbers a name
+    (Part 05 §8), so a second spelling of one contact mints a second electrode, and the packet then
+    references a row that is not there.
+    """
+    return f"{prefix}{group}.{channel}"
+
+
 def _subject_fact(key: str) -> property:
     """Return a `subject.*` fact this file states, from the row `subjects()` already builds.
 
@@ -588,7 +601,7 @@ class NWBSource(Compensates):
         (group, channel) is unique, so that is the ID.
         """
         return [
-            f"{self.prefix}{group}.{channel}"
+            electrode_name(group, channel, self.prefix)
             for group, channel in zip(columns["group_name"], columns["channel_name"], strict=True)
         ]
 

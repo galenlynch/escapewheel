@@ -45,10 +45,11 @@ def test_a_knowing_pass_through_is_registered_too():
 
 def test_the_lfp_source_declares_what_it_ignores(tmp_path):
     """It never reads the stored timestamps, and the packet should say so."""
-    from tests.test_lfp import RATES, _series, _source
+    from tests.test_lfp import RATES, _contacts, _series, _source
 
     root = tmp_path / "s.nwb"
     _series(root)
+    _contacts(root)
     source = _source(root)
     source.records(rates=RATES)
     assert source.compensations == ["lfp.timestamps_distrusted"]

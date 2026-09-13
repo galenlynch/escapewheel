@@ -9,7 +9,7 @@ Last checked 2026-09-09, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R115 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R115 accepted. R42 and R73 withdrawn. No draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -272,18 +272,37 @@ rather than a declaration. A protocol is not owed, since all ten ship with the b
 exists for the case that does owe one — a kind another distribution registers — and `Recipe.check`
 refuses such a source that declares neither.
 
-Writing those declarations out against `_build_source`'s ten branches turns up two things, found
-2026-09-12. **Part 03 §11.2's closed vocabulary is one term short**: `lfp` and `waveforms` both take
-an `electrodes` argument — `dict[int, str]`, the NWB's global electrode row index to the
-`electrode_id` a build assigned, built in `session.py` from `NWBSource.electrodes` — and the eight
-terms do not carry it. It is the exact parallel of `units`, one record per electrode carrying the
-source's index and the identifier assigned, and it is not derivable from anything else that crosses,
-because the row index is a position in a table only the NWB adapter read. §11.2 says a profile adding
-a term amends the section, so this is a revision and not a code change. **And `store` cannot be
-declared at all**: §11.2 forbids a build requiring an adapter to accept a live handle and names an
-open store as the example, so `_SHARED_SOURCES` becomes an in-process optimization the construction
-applies behind the declaration — three adapters reading one `.nwb` may still share a parsed store,
-and none of them may ask for one.
+Writing those declarations out against `_build_source`'s ten branches turned up two things, found
+2026-09-12. **`store` cannot be declared at all**: §11.2 forbids a build requiring an adapter to
+accept a live handle and names an open store as the example, so `_SHARED_SOURCES` becomes an
+in-process optimization the construction applies behind the declaration — three adapters reading one
+`.nwb` may still share a parsed store, and none of them may ask for one.
+
+**And the electrode mapping is deleted rather than declared, done 2026-09-12.** `lfp` and `waveforms`
+each took an `electrodes` argument — the NWB's electrode row index to the `electrode_id` of that row
+— which Part 03 §11.2's eight terms carry nothing for, so a draft proposed a ninth. Appraising it
+found the boundary already carries the value: the mapping's values are the **composed name**
+`f"{prefix}{group_name}.{channel_name}"`, not an assigned number, and `PacketWriter._preassign`
+resolves every assigned identifier column's names to numbers packet-wide before any table is built
+(Part 05 §8). So both adapters compose that name from the electrode table they open themselves,
+`electrode_name` in `sources/nwb.py` is the one spelling all three share, and `Context.electrodes`
+is gone. A name no `core.electrodes` row carries now orphans the declared reference and Tier 1's
+anti-join reports it, where the old lookup wrote a null in `core.array_channels` and dropped the row
+in `core.unit_electrodes`. `CONSUMES` loses `nwb` for both kinds, since neither reads its output any
+more. The draft was withdrawn; `revisions/drafts/README.md` says where it went.
+
+The coupling that replaces it is `prefix`: three adapters must compose one contact's name
+identically, and a recipe setting `prefix` on one and not the others makes two electrodes of one.
+It fails loudly rather than silently, and the fix is the extraction below — one reader, one
+function, three callers.
+
+**Parked: what a nullable identifier's null means.** Nothing obliges an adapter to report a value it
+could not fill — Part 09 §5.8's report is a MAY — so a consumer cannot tell
+`core.array_channels.electrode_id` null meaning *this channel maps to no contact* from null meaning
+*I gave up*, and that is true of every nullable reference in the registry. `lfp` now refuses rather
+than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** rows of the two
+packets, so there is no instance to write a rule against. Worth a revision when something produces
+one.
 
 **`_build_source` is 72 lines carrying ten `spec.kind` branches**, each passing a different set of
 extras, and becomes one construction that reads the declaration, resolves each name against Part 03

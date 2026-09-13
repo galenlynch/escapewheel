@@ -72,16 +72,30 @@ def _series(root, probe="45883-1", *, rows=1000, channels=2, compressor=None, st
     return series
 
 
+def _contacts(root, probe="45883-1", names=("CH0", "CH4")):
+    """The electrode table the adapter names its contacts from, as the owning adapter reads it.
+
+    `channel_name` alone repeats across probes, so a contact's name is the pair -- which is why
+    both columns have to be here for a channel row to name an electrode at all.
+    """
+    from tests.nwbfixture import array, group
+
+    contacts = group(root / "general/extracellular_ephys/electrodes")
+    array(contacts / "group_name", [probe] * len(names), filter_id="vlen-utf8")
+    array(contacts / "channel_name", list(names), filter_id="vlen-utf8")
+    return contacts
+
+
 @pytest.fixture
 def nwb(tmp_path):
     root = tmp_path / "s.nwb"
     _series(root)
+    _contacts(root)
     return root
 
 
 def _source(root, **kwargs):
     kwargs.setdefault("clocks", [CLOCK])
-    kwargs.setdefault("electrodes", {0: "45883-1.CH0", 1: "45883-1.CH4"})
     return LFPSource(root, session_id="s1", **kwargs)
 
 
@@ -96,10 +110,12 @@ def test_the_step_comes_from_the_interval_not_the_values(nwb):
     """The sign fault ruins the timestamps' values; it leaves their spacing alone."""
     root = nwb.parent / "flipped.nwb"
     _series(root)
+    _contacts(root)
     source = _source(root)
     # A different decimation must be read off the data rather than assumed.
     other = nwb.parent / "other.nwb"
     _series(other, step_hz=2500.0)
+    _contacts(other)
     assert source.records(rates=RATES)["core.array_dimensions"][0]["step_tick_num"] == 24
     assert _source(other).records(rates=RATES)["core.array_dimensions"][0]["step_tick_num"] == 12
 
@@ -202,10 +218,20 @@ def test_offers_counts_the_channels_it_can_supply(nwb):
     assert source.offers()["core.array_channels"] == len(source.array_channels())
 
 
-def test_channels_are_offered_without_an_electrode_map(nwb):
-    """The rows exist either way; a map only decides whether they name an electrode."""
-    bare = LFPSource(nwb, session_id="s1", clocks=[CLOCK])
-    assert bare.offers() == _source(nwb).offers()
+def test_a_contact_the_source_cannot_name_is_refused(tmp_path):
+    """A channel row naming no electrode ties an array axis to nothing, so the adapter refuses.
+
+    Both columns are needed because a contact's name is the pair; the adapter owning
+    `core.electrodes` reads them unguarded, so a file missing one fails the build either way.
+    """
+    root = tmp_path / "unnamed.nwb"
+    _series(root)
+    from tests.nwbfixture import array, group
+
+    contacts = group(root / "general/extracellular_ephys/electrodes")
+    array(contacts / "channel_name", ["CH0", "CH4"], filter_id="vlen-utf8")
+    with pytest.raises(SourceDefect, match="group_name"):
+        _source(root).records(rates=RATES)
 
 
 def test_init_can_draft_an_lfp_source(nwb):

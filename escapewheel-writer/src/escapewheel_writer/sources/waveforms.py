@@ -38,7 +38,7 @@ from typing import Any, ClassVar
 import numpy as np
 from numpy.typing import NDArray
 
-from .nwb import SourceDefect
+from .nwb import SourceDefect, electrode_name
 from .store import SourceStore, source_root
 
 #: Samples either side of the window used to estimate what the average left behind. Only for
@@ -70,10 +70,6 @@ class WaveformSource:
         `(device_name, ks_unit_id)` to the identifying triple, as `NWBSource` takes. The array
         rows follow the NWB's own unit order, and a unit the packet's sorting does not contain
         is skipped rather than stored as padding.
-    electrodes : Mapping, optional
-        Global electrode row index to `electrode_id`, so the support can name real electrodes.
-        Without it `core.unit_electrodes` is not emitted and the channel axis carries no
-        coordinate.
     array_asset_id : str
         Identifier for the mean array.
     sd : bool
@@ -86,7 +82,9 @@ class WaveformSource:
         Expected compressed bytes per chunk, which is what `arrays.shard_for` sizes a shard
         against.
     prefix : str
-        Prepended to identifiers this adapter mints.
+        Prepended to identifiers this adapter mints, including the contact names it composes. It
+        MUST match what the adapter owning `core.electrodes` uses, since a name is what the writer
+        numbers.
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
@@ -110,7 +108,6 @@ class WaveformSource:
         *,
         session_id: str,
         units: dict[tuple[str, str], dict[str, str]],
-        electrodes: dict[int, str] | None = None,
         array_asset_id: str = "waveform_mean",
         sd: bool = False,
         sd_asset_id: str = "waveform_sd",
@@ -122,7 +119,6 @@ class WaveformSource:
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.units = dict(units)
-        self.electrodes = dict(electrodes or {})
         self.array_asset_id = f"{prefix}{array_asset_id}"
         self.sd = sd
         self.sd_asset_id = f"{prefix}{sd_asset_id}"
@@ -412,17 +408,19 @@ class WaveformSource:
         column would mean inventing a number the source disagrees with.
         """
         built = self._read()
-        if not self.electrodes:
-            self.notes.append("no electrode map given, so the channel support is not emitted")
-            return []
+        table = self.root / "general/extracellular_ephys/electrodes"
+        for column in ("group_name", "channel_name"):
+            if not (table / column).is_dir():
+                raise SourceDefect(f"electrodes/{column}: absent, so no contact can be named")
+        group = self.store.array(table / "group_name")
+        channel_names = self.store.array(table / "channel_name")
         rows = []
         for position, (row, channels) in enumerate(zip(built["rows"], built["support"], strict=True)):
             start = 0 if row == 0 else int(built["bounds"][row - 1])
             identity = built["identity"][position]
             for ordinal, channel in enumerate(channels):
-                electrode = self.electrodes.get(int(built["electrode_rows"][start + int(channel)]))
-                if electrode is None:
-                    continue
+                source_row = int(built["electrode_rows"][start + int(channel)])
+                electrode = electrode_name(group[source_row], channel_names[source_row], self.prefix)
                 rows.append(
                     {
                         "session_id": self.session_id,

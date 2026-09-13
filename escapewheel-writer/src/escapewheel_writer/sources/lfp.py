@@ -39,7 +39,7 @@ from typing import Any, ClassVar
 import numpy as np
 
 from .compensations import Compensates
-from .nwb import SourceDefect
+from .nwb import SourceDefect, electrode_name
 from .store import SourceStore, source_root
 
 #: Where an NWB keeps its LFP series.
@@ -62,12 +62,13 @@ class LFPSource(Compensates):
     clocks : sequence of str, optional
         Clock IDs the packet declares. A series is placed on the one whose ID ends in
         `.<probe>.samples`, which is the probe's own sample clock.
-    electrodes : Mapping, optional
-        Global electrode row index to `electrode_id`, so a channel can name a real electrode.
     uri_base : str, optional
         Absolute base the referenced arrays live under, without a trailing slash, to which the
         series path is appended. Absent, the local path is used as a `file://` URI, which makes
         a packet that resolves only on this machine.
+    prefix : str
+        Prepended to the contact names this adapter composes. It MUST match what the adapter
+        owning `core.electrodes` uses, since a name is what the writer numbers.
     verify : str, default "size"
         What to establish about the referenced bytes, each level including the one before it:
 
@@ -112,8 +113,8 @@ class LFPSource(Compensates):
         *,
         session_id: str,
         clocks: Any = (),
-        electrodes: Any = None,
         uri_base: str | None = None,
+        prefix: str = "",
         verify: str = "size",
         store: Any = None,
     ) -> None:
@@ -121,7 +122,7 @@ class LFPSource(Compensates):
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.clocks = list(clocks)
-        self.electrodes = dict(electrodes or {})
+        self.prefix = prefix
         self.uri_base = uri_base.rstrip("/") if uri_base else None
         if verify not in {"none", "size", "members", "sha256"}:
             raise ValueError(f"verify must be none, size, members or sha256, not {verify!r}")
@@ -336,8 +337,17 @@ class LFPSource(Compensates):
 
     def array_channels(self) -> list[dict[str, Any]]:
         """`core.array_channels`, one row per channel of every series (R19 §2)."""
+        if not self._series:
+            return []
         table = self.root / "general/extracellular_ephys/electrodes"
-        channel = self.store.array(table / "channel_name") if (table / "channel_name").is_dir() else None
+        for column in ("group_name", "channel_name"):
+            if not (table / column).is_dir():
+                # Refusing rather than writing a null electrode: the pair is what names a contact,
+                # and a channel row naming none ties an array axis to nothing. `NWBSource` reads
+                # both columns unguarded, so a file missing one fails the build either way.
+                raise SourceDefect(f"electrodes/{column}: absent, so no contact can be named")
+        group = self.store.array(table / "group_name")
+        channel = self.store.array(table / "channel_name")
         shift = self.store.array(table / "inter_sample_shift") if (table / "inter_sample_shift").is_dir() else None
         if shift is None:
             self.notes.append("electrodes/inter_sample_shift: absent, so array channels carry no acquisition offset")
@@ -350,13 +360,11 @@ class LFPSource(Compensates):
                         "array_asset_id": self.array_asset_id(series),
                         "axis_index": 1,
                         "channel_index": index,
-                        "electrode_id": self.electrodes.get(source_row),
-                        "channel_label": str(channel[source_row]) if channel is not None else None,
+                        "electrode_id": electrode_name(group[source_row], channel[source_row], self.prefix),
+                        "channel_label": str(channel[source_row]),
                         "inter_sample_shift": float(shift[source_row]) if shift is not None else None,
                     }
                 )
-            if not self.electrodes:
-                self.notes.append("no electrode map given, so array channels name no electrode")
         return rows
 
     def records(self, *, rates: Any = None) -> dict[str, list[dict[str, Any]]]:

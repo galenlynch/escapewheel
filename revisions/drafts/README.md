@@ -14,12 +14,18 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-A draft takes a row naming its word count, when it was appraised, and why it sits where it does:
-dependencies run downward, so a draft may depend on the ones above it and on nothing below.
+Nothing is open. A draft added here takes a row naming its word count, when it was appraised, and
+why it sits where it does: dependencies run downward, so a draft may depend on the ones above it
+and on nothing below.
 
-| draft | words | appraised | why here |
-|---|---|---|---|
-| `a-build-supplies-the-electrode-identifiers-it-assigned` | 1,815 | not yet | Only one open, and it depends on R115 alone. |
+A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
+records what bound something and a draft never did. Git holds the document, and whatever the
+appraisal found goes wherever the work went. `a-build-supplies-the-electrode-identifiers-it-assigned`
+went that way on 2026-09-12 at commit `aa230d7`: it proposed a ninth term for Part 03 §11.2's supply
+vocabulary, and the appraisal found the boundary already carried the value, `PacketWriter._preassign`
+resolving a name to an assigned number packet-wide before any table is built (Part 05 §8). What the
+adapters needed was to compose the name the owning adapter composes, which deleted the mapping
+instead of declaring it — recorded in `TODO.md` §1d.
 
 The last to leave was `a-build-reaches-a-source-through-declarations`, accepted as **R115** on
 2026-09-11 at 12,038 words. It was two drafts merged — a writer requiring no knowledge of a

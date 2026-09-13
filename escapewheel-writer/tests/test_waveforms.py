@@ -67,6 +67,12 @@ def nwb(tmp_path: Path) -> Path:
     array(units / "electrodes", np.arange(UNITS * CHANNELS, dtype="<i8"))
     array(units / "electrodes_index", np.arange(1, UNITS + 1, dtype="<i8") * CHANNELS)
     array(units / "extremum_channel_index", np.array(EXTREMUM, dtype="<i8"))
+    # The electrode table the adapter names its contacts from, one row per (unit, channel) cell
+    # the ragged `electrodes` region indexes. `channel_name` alone repeats across probes, so the
+    # name is the pair, composed as the adapter owning `core.electrodes` composes it.
+    contacts = group(root / "general/extracellular_ephys/electrodes")
+    array(contacts / "group_name", ["probeA"] * (UNITS * CHANNELS), filter_id="vlen-utf8")
+    array(contacts / "channel_name", [str(row) for row in range(UNITS * CHANNELS)], filter_id="vlen-utf8")
     (root / ".zgroup").write_text(json.dumps({"zarr_format": 2}))
     return root
 
@@ -76,7 +82,6 @@ def _source(root: Path, **options) -> WaveformSource:
         root,
         session_id="s1",
         units={("probeA", str(u)): {"unit_id": u, "sorting_run_id": 1, "curation_id": 1} for u in range(UNITS)},
-        electrodes={row: 100 + row for row in range(UNITS * CHANNELS)},
         **options,
     )
 

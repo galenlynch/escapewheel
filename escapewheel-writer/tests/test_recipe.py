@@ -188,7 +188,11 @@ def test_sources_order_after_what_they_consume(tmp_path, registry):
         '\n[[source]]\nkind = "sorter"\nroot = "."\nowns = []\n'
     )
     ordered = [s.kind for s in order(Recipe.load(write(tmp_path, body)))]
-    assert ordered.index("sorter") < ordered.index("nwb") < ordered.index("waveforms")
+    # Both consume the sorter's units and neither consumes the other: the waveform source names a
+    # contact from the electrode table it opens itself, and the writer resolves the name (Part 05
+    # §8), so nothing makes it wait for the NWB.
+    assert ordered.index("sorter") < ordered.index("nwb")
+    assert ordered.index("sorter") < ordered.index("waveforms")
 
 
 def test_a_source_consuming_an_undeclared_kind_is_refused(tmp_path):
