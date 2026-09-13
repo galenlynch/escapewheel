@@ -22,7 +22,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
+from zoneinfo import ZoneInfo
 from typing import Any
 
 import numpy as np
@@ -299,6 +300,19 @@ class Clock:
         if extra:
             row["metadata"] = extra
         return row
+
+
+def zone_of(value: str | tzinfo) -> ZoneInfo:
+    """Resolve a recipe's declared time zone, which crosses to an adapter as a string.
+
+    An option is data (Part 03 §11.2), so a zone arrives as the name the recipe wrote and the
+    adapter is what turns it into a zone. A fixed offset is refused however it arrives: the sources
+    here record naive local wall clocks, and resolving one needs a zone that knows when DST moved.
+    """
+    resolved = ZoneInfo(value) if isinstance(value, str) else value
+    if not isinstance(resolved, ZoneInfo):
+        raise TypeError(f"{value!r} is a fixed offset; pass an IANA zone so DST resolves per date")
+    return resolved
 
 
 def epoch_from(instant: datetime, t_tick: int, tick_rate_num: int, tick_rate_den: int = 1) -> datetime:

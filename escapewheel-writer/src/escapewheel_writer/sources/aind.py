@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
-from ..clock import Clock, epoch_from
+from ..clock import Clock, epoch_from, zone_of
 from .compensations import Compensates
 from .nwb import SourceDefect, _offset, _sex
 from .store import source_root
@@ -88,9 +88,10 @@ class SessionSource(Compensates):
     ----------
     root : str or Path
         `session.json` itself, or a directory holding one.
-    zone : zoneinfo.ZoneInfo
-        The rig's wall-clock zone. An IANA zone, not a fixed offset: this session is PDT and
-        the HARP epoch its ticks count from is PST, so a rig constant is wrong half the year.
+    zone : str or zoneinfo.ZoneInfo
+        The rig's wall-clock zone, named or resolved. An IANA zone, not a fixed offset: this
+        session is PDT and the HARP epoch its ticks count from is PST, so a rig constant is wrong
+        half the year.
     session_id : str, optional
         Overrides the ID derived from the asset directory name.
 
@@ -143,9 +144,8 @@ class SessionSource(Compensates):
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter", "sync", "nwb")
 
-    def __init__(self, root: str | Path, *, zone: ZoneInfo, session_id: str | None = None) -> None:
-        if not isinstance(zone, ZoneInfo):
-            raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
+    def __init__(self, root: str | Path, *, zone: str | ZoneInfo, session_id: str | None = None) -> None:
+        zone = zone_of(zone)
         path = source_root(root)
         self.path = path if path.is_file() else path / SESSION_JSON
         if not self.path.is_file():

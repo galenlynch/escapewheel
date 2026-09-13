@@ -67,7 +67,7 @@ class WaveformSource:
     session_id : str
         The session these units belong to.
     units : Mapping
-        `(device_name, ks_unit_id)` to the identifying triple, as `NWBSource` takes. The array
+        `(device_name, ks_unit_id)` to the identifier assigned, as `NWBSource` takes. The array
         rows follow the NWB's own unit order, and a unit the packet's sorting does not contain
         is skipped rather than stored as padding.
     array_asset_id : str

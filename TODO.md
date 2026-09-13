@@ -485,6 +485,17 @@ Worth deciding whether a default that is RAM on any machine with a tmpfs `/tmp` 
 whether the cache should sit beside the packet as the materializer's scratch already does
 (`dir=packet.root.parent`). The two temp locations in one build already disagree.
 
+Threading the packet root down to `source_root` is the one shape to avoid: every adapter calls it
+itself, so that is a parameter through ten constructors, which is what `_build_source`'s unification
+just removed. `source_root` already takes a `cache` override, so a build setting the location once
+before it constructs anything costs one call and no plumbing; `escapewheel inspect` constructs an
+adapter with no packet in hand and is what still needs a default.
+
+Two builds killed on 2026-09-13 were **not** this: both cache directories were empty, and `/tmp` held
+**27 GB in four ~6.8 GB Python environments** that no build wrote. Attributing a kill to this item
+needs the cache measured rather than assumed, since anything on a tmpfs `/tmp` presses on the same
+pages.
+
 ## 1b. A code quality audit of the whole project
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and

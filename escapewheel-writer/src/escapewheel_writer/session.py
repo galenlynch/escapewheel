@@ -93,8 +93,10 @@ class Context:
     sources : dict
         Kind to the adapter instance, once built.
     units : dict
-        `(device_name, local_unit_label)` to the identifying triple. The join key the NWB and
-        the sorter meet on: the sorter mints unit identity, the NWB places it in space.
+        `(device_name, local_unit_label)` to the identifier assigned. The join key the NWB and
+        the sorter meet on: the sorter mints unit identity, the NWB places it in space. One column,
+        not three -- `core.units` is keyed on `unit_id` alone (Part 02 §12.1), and the tables an
+        adapter puts this on declare no other identity column.
     clocks : dict
         Clock ID to declared tick rate, for a source placing an array axis on one. An axis
         advances in ticks (R20 §2), so a step cannot be derived without the rate.
@@ -339,9 +341,7 @@ def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) ->
         # The NWB names a quad-base probe's shanks separately and the sorting run ID ends in
         # exactly that name, while probe_id collapses to the physical probe.
         context.units = {
-            (row["sorting_run_id"].rsplit(".", 1)[-1], row["local_unit_label"]): {
-                key: row[key] for key in ("unit_id", "sorting_run_id", "curation_id")
-            }
+            (row["sorting_run_id"].rsplit(".", 1)[-1], row["local_unit_label"]): {"unit_id": row["unit_id"]}
             for row in source.units()
         }
         # Part 02 §12.4 makes the two rate forms exclusive, so a clock states one or the other and

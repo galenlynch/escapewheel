@@ -53,7 +53,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from numpy.typing import NDArray
 
-from ..clock import TickGrid
+from ..clock import TickGrid, zone_of
 from .compensations import Compensates
 from .store import SourceStore, source_root
 from .zarr_compat import UnsupportedEncoding
@@ -205,7 +205,7 @@ class NWBSource(Compensates):
         conversion is checked against its grid, so the wrong clock raises rather than producing
         plausible ticks. A row rather than a clock object because everything a build supplies is
         data, and the row is what an adapter out of process receives.
-    zone : zoneinfo.ZoneInfo
+    zone : str or zoneinfo.ZoneInfo
         The rig's wall-clock zone. Used for values stored without an offset, and to
         cross-check the ones stored with one.
     session_id : str, optional
@@ -305,7 +305,7 @@ class NWBSource(Compensates):
         root: str | Path,
         *,
         reference_clock: Mapping[str, Any],
-        zone: ZoneInfo,
+        zone: str | ZoneInfo,
         session_id: str | None = None,
         prefix: str = "",
         trial_metadata: bool = False,
@@ -316,8 +316,7 @@ class NWBSource(Compensates):
         attachments: str | Path | None = None,
         store: Any = None,
     ) -> None:
-        if not isinstance(zone, ZoneInfo):
-            raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
+        zone = zone_of(zone)
         self.root = _resolve(source_root(root))
         # Part 01 §3.10: an interval declares the resource that says what it was, and this adapter
         # cannot know it -- an exported trials table is the task's, and which task it is is a
@@ -816,9 +815,9 @@ class NWBSource(Compensates):
         The NWB is derived from the sorting, so it carries the sorter's own unit id as
         `ks_unit_id` (identical to `original_cluster_id`, measured) and the probe as
         `device_name`. Those two are the join back to `core.units`, which is why the caller
-        supplies the mapping rather than this adapter inventing identifiers: unit identity is
-        contextual -- `(session_id, unit_id, sorting_run_id, curation_id)` -- and only the
-        sorter knows the run and curation.
+        supplies the mapping rather than this adapter inventing identifiers: a packet numbers its
+        own units at commit (Part 05 §8), so the number does not exist until the build has minted
+        it.
 
         The key is the file's own `device_name`, unprefixed, because it names a probe as *this
         source* calls it. A quad-base probe is four device names here (`45883-1` through `-4`)

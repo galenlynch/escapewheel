@@ -131,7 +131,7 @@ def waveforms(tmp: Path) -> None:
     # composed a contact's name from the electrode table they open themselves.
     supplied = {
         "units": {
-            ("probeA", str(u)): {"unit_id": u, "sorting_run_id": 1, "curation_id": 1}
+            ("probeA", str(u)): {"unit_id": u}
             for u in range(fixture.UNITS)
         },
     }

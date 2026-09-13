@@ -62,13 +62,11 @@ def _open(kind: str, root: Path, session_id: str) -> Any:
         # rows say, not how many there are.
         return LFPSource(root, session_id=session_id)
     if kind == "nwb":
-        from zoneinfo import ZoneInfo
-
         # A stand-in row: counting what the file offers needs a grid to convert against, and any
         # rate answers that. Which clock it really is decides tick values, which Stage 1 does not
         # report.
         row = {"clock_id": "harp", "session_id": session_id, "origin": "HARP epoch", "tick_rate_num": 31250}
-        return NWBSource(root, reference_clock=row, zone=ZoneInfo("UTC"), session_id=session_id)
+        return NWBSource(root, reference_clock=row, zone="UTC", session_id=session_id)
     raise SystemExit(f"error: {kind} cannot be inspected on its own; it consumes another source")
 
 

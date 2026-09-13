@@ -67,7 +67,7 @@ def _units(nwb, *, refuses=True):
     else:
         nwbfixture.array(units / "spike_times", np.array([0.1, 0.2, 0.3]))
     nwbfixture.array(units / "spike_times_index", np.array([3], dtype=np.int64))
-    return {("probeA", "7"): {"unit_id": 1, "sorting_run_id": "run", "curation_id": "cur"}}
+    return {("probeA", "7"): {"unit_id": 1}}
 
 
 def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
@@ -78,9 +78,9 @@ def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
     assert source.unit_coordinates() == [
         {
             "session_id": SESSION,
+            # `unit_id` alone: `core.unit_coordinates` declares no other identity column, and the
+            # run and curation this expectation used to carry were dropped on the way to Parquet.
             "unit_id": 1,
-            "sorting_run_id": "run",
-            "curation_id": "cur",
             "coordinate_frame": "ccf",
             # Part 01 §3.8: an exported file records where the probe was found, never where it was
             # aimed, so an import can only assert `measured`.
@@ -194,6 +194,17 @@ def test_the_session_start_is_converted_to_utc(source):
 def test_a_fixed_offset_is_not_a_zone(nwb, harp):
     with pytest.raises(TypeError, match="IANA zone"):
         NWBSource(nwb, reference_clock=harp.record(), zone=timezone.utc, interval_kind=KIND)
+
+
+def test_a_zone_is_accepted_as_the_name_a_recipe_wrote(nwb, harp):
+    """An option crosses to an adapter as data (Part 03 §11.2), so a zone arrives as a string.
+
+    The adapter used to require a `ZoneInfo` and the build's per-kind branch converted on the way
+    in; once every source was constructed from its declaration the conversion had nowhere to live,
+    and a real recipe failed on its own `zone` where every fixture passed an object.
+    """
+    named = NWBSource(nwb, reference_clock=harp.record(), zone=str(PACIFIC), interval_kind=KIND)
+    assert named.zone == PACIFIC
 
 
 def test_a_stored_offset_that_disagrees_with_the_zone_is_reported(source):
