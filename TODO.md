@@ -316,12 +316,21 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-**`_build_source` is 72 lines carrying ten `spec.kind` branches**, each passing a different set of
-extras, and becomes one construction that reads the declaration, resolves each name against Part 03
-§11.2's terms and then the recipe's options, refuses what it cannot fill, and passes the rest as one
-JSON object. The five tables keyed by kind go with it: `_SHARED_SOURCES`, `SAMPLED`,
-`REQUIRED_OPTIONS` and `CONSUMES` become declarations on the ten adapters, and `PREFERRED` moves
-into the recipe, where Part 05 §3.3 now puts it.
+**`_build_source` is one construction, done 2026-09-12.** It was 72 lines carrying ten `spec.kind`
+branches, each passing a different set of extras; it now reads the adapter's `NEEDS`, resolves each
+name against Part 03 §11.2's terms and then the recipe's options, refuses a term this recipe cannot
+fill, and passes the recipe's remaining options through. `_SHARED_SOURCES` and `_KINDS` went with the
+branches — the shared store is supplied to whichever class accepts one, since a handle is not
+something an adapter may declare — and a test asserts the function branches on no kind at all.
+`SAMPLED` is the one kind-keyed table left; `PREFERRED` was already in the recipe layer where
+Part 05 §3.3 puts it.
+
+The reference clock crosses as its `core.clocks` row, since everything a build supplies is data.
+`TickGrid` carries the identifier, the rational rate and the seconds-to-ticks conversion, which is
+all a row can rebuild — a row has no label, `clock_name` being what `clock_id` stands for
+(Part 02 §8.2) — and `Clock` delegates to it, so the conversion that refuses off-grid values has one
+implementation and the future base NWB reader carries the grid rather than the writer's clock model.
+`VideoSource.tick_rate` is struck: a required argument assigned and read by nothing.
 
 **The NWB adapter is half a standard's and half one producer's, and the split is a lift rather
 than a rewrite.** The paths it walks are all base NWB — `general/subject`, `general/devices`,
