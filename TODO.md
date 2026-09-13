@@ -266,11 +266,23 @@ entry naming `{resource: path}` with an optional command **is** a delivery and t
 this. It is the same command a `tables` source names, so a built-in adapter reaches a build through
 the door an extension already uses (R109 §3.2) rather than through a second mechanism.
 
-**The ten adapters declare two of the four facts Part 05 §3.4 requires.** `PRODUCES` and `STATES`
-are on the classes; the values a build must supply are not, and `CONSUMES` is a table keyed by kind
-rather than a declaration. A protocol is not owed, since all ten ship with the build. `in_process`
+**The ten adapters declare all four facts Part 05 §3.4 requires, done 2026-09-12.** `NEEDS` and
+`CONSUMES` joined `PRODUCES` and `STATES` on the classes, `recipe.needs` and `recipe.consumes` read
+them with nothing open, `Recipe.check` reports a declared name resolving to neither a term nor an
+option the entry sets, and the build's ordering reads each adapter. `REQUIRED_OPTIONS` and the
+`CONSUMES` table keyed by kind are deleted; `_SHARED_SOURCES` and `SAMPLED` remain, and go with the
+one construction below. A protocol is not owed, since all ten ship with the build. `in_process`
 exists for the case that does owe one — a kind another distribution registers — and `Recipe.check`
 refuses such a source that declares neither.
+
+**An optional option cannot be declared, which is a gap in R115 §3.1.** A declared name resolves
+against the terms first and the recipe's options second, and one resolving to neither is refused, so
+declaring an option makes a recipe carry it. R115 §3.1 argues an adapter declares its options so a
+build can refuse a recipe setting one the adapter ignores — and that reasoning wants every settable
+option declared, which the refusal rule forbids for any option with a default. So `NEEDS` carries
+terms plus the options an adapter cannot be constructed without, and the other ten options across
+the ten adapters keep flowing through the recipe's own dict unvalidated. Worth a clause giving
+`needs` an optional half; measure how many options it would cover before writing one.
 
 Writing those declarations out against `_build_source`'s ten branches turned up two things, found
 2026-09-12. **`store` cannot be declared at all**: §11.2 forbids a build requiring an adapter to
