@@ -9,7 +9,6 @@ import pytest
 from escapewheel_writer.recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe, produces
 from escapewheel_writer.session import (
     _ARBITRATED,
-    CONSUMES,
     Context,
     RecipeError,
     _encoding_exceptions,
@@ -203,7 +202,7 @@ def test_a_source_consuming_an_undeclared_kind_is_refused(tmp_path):
 
 
 def test_a_dependency_cycle_is_refused(tmp_path, monkeypatch):
-    monkeypatch.setitem(CONSUMES, "sorter", ("nwb",))
+    monkeypatch.setattr(ADAPTERS["sorter"], "CONSUMES", ("nwb",))
     body = '\n[[source]]\nkind = "nwb"\nroot = "."\nowns = []\n\n[[source]]\nkind = "sorter"\nroot = "."\nowns = []\n'
     with pytest.raises(RecipeError, match="depend on each other"):
         order(Recipe.load(write(tmp_path, body)))
@@ -211,8 +210,12 @@ def test_a_dependency_cycle_is_refused(tmp_path, monkeypatch):
 
 def test_a_required_option_is_reported_not_crashed_on(tmp_path):
     """`_build_source` pops `zone` for the nwb kind, so a recipe without one used to die there
-    with a KeyError after --check had called the recipe sound."""
-    from escapewheel_writer.recipe import REQUIRED_OPTIONS, Recipe
+    with a KeyError after --check had called the recipe sound.
+
+    What makes it reportable is the adapter's own `NEEDS` (Part 05 §3.4): `zone` resolves to no
+    term, so it falls through to the recipe's options and the entry has to carry it.
+    """
+    from escapewheel_writer.recipe import Recipe, needs
 
     path = tmp_path / "recipe.toml"
     path.write_text(
@@ -220,7 +223,7 @@ def test_a_required_option_is_reported_not_crashed_on(tmp_path):
         '[[source]]\nkind = "nwb"\nroot = "."\nowns = ["core.trials"]\n'
     )
     problems = Recipe.load(path).check({"tables": {"core.trials": {"columns": [], "references": []}}})
-    assert "zone" in REQUIRED_OPTIONS["nwb"]
+    assert "zone" in needs("nwb")
     assert any("requires 'zone'" in str(p) for p in problems)
 
 

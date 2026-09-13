@@ -40,6 +40,22 @@ SAMPLED = frozenset({"sorter"})
 
 RECIPE_SUPPLIES = ("core.sessions", "core.processing_runs")
 
+#: Part 03 §11.2's closed vocabulary: the names a build fills itself. A declared name outside this
+#: set is an option, which the recipe has to carry. Held here because `check` has to tell the two
+#: apart with nothing open, and a profile adding a term amends that section.
+TERMS = frozenset(
+    {
+        "root",
+        "session_id",
+        "reference_clock",
+        "clocks",
+        "first_samples",
+        "units",
+        "wanted",
+        "array_location",
+    }
+)
+
 #: Resources the recipe supplies only where no source owns them (Part 05 §3.1). `core.subjects` left
 #: RECIPE_SUPPLIES because the NWB states every column of it and the row was built and discarded;
 #: a `[subject]` block is now the fallback for a packet whose sources name no subject.
@@ -97,6 +113,27 @@ def state_accessors(kind: str) -> Mapping[str, str]:
     return {f: a for f, a in states(kind).items() if adapter is not None and not hasattr(adapter, a)}
 
 
+def needs(kind: str) -> tuple[str, ...]:
+    """Return the names a build must supply an adapter of this kind (Part 05 §3.4).
+
+    Each resolves against Part 03 §11.2's terms first and the recipe's options second, so what a
+    recipe has to carry is whatever is left: the declaration is where the options a source cannot
+    be constructed without are recorded, rather than a table here keyed by kind.
+    """
+    from . import sources
+
+    adapter = sources.ADAPTERS.get(kind)
+    return tuple(getattr(adapter, "NEEDS", ()) if adapter is not None else ())
+
+
+def consumes(kind: str) -> tuple[str, ...]:
+    """Return the kinds whose output an adapter of this kind reads (Part 05 §3.4)."""
+    from . import sources
+
+    adapter = sources.ADAPTERS.get(kind)
+    return tuple(getattr(adapter, "CONSUMES", ()) if adapter is not None else ())
+
+
 def produces(kind: str) -> frozenset[str]:
     """Return what an adapter of this kind can supply (Part 05 §3.4).
 
@@ -109,14 +146,6 @@ def produces(kind: str) -> frozenset[str]:
     adapter = sources.ADAPTERS.get(kind)
     return frozenset(getattr(adapter, "PRODUCES", ()) if adapter is not None else ())
 
-
-#: Options an adapter requires that a recipe must carry, because no inspection supplies them.
-#: `session.py`'s `_build_source` pops these; a recipe missing one dies there on a KeyError
-#: rather than being reported here, which is what `--check` exists to prevent.
-REQUIRED_OPTIONS = {
-    "nwb": ("zone",),
-    "session": ("zone",),
-}
 
 #: Keys a `[[source]]` entry uses for itself; everything else is passed to the adapter.
 _SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes", "storage_options", "in_process"})
@@ -720,11 +749,14 @@ class Recipe:
 
     def _option_problems(self) -> list[str]:
         """Options a source kind requires and this recipe does not carry."""
+        # A declared name a build cannot resolve is refused before any source is opened
+        # (Part 03 §11.2). A term the build fills is not a recipe's business, so only the names
+        # that fall through to the recipe's options are reported here.
         return [
-            f"source {spec.kind} requires {option!r}, which this entry does not set"
+            f"source {spec.kind} requires {name!r}, which this entry does not set"
             for spec in self.sources
-            for option in REQUIRED_OPTIONS.get(spec.kind, ())
-            if option not in spec.options
+            for name in needs(spec.kind)
+            if name not in TERMS and name not in spec.options
         ]
 
     def _clock_problems(self) -> list[str]:
@@ -743,4 +775,4 @@ class Recipe:
         return problems
 
 
-__all__ = ["RECIPE_SUPPLIES", "REQUIRED_OPTIONS", "ClockSpec", "MaterializeSpec", "Problem", "Recipe", "SourceSpec"]
+__all__ = ["RECIPE_SUPPLIES", "TERMS", "ClockSpec", "MaterializeSpec", "Problem", "Recipe", "SourceSpec"]

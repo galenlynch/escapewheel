@@ -604,7 +604,7 @@ class PacketWriter:
         is a different operation on a different thing.
 
         R99 §3.2 is why this exists. The sync source learns which of a clock's terminal anchors
-        it withheld only by reading that clock's pulses, and `session.CONSUMES` runs the sorter
+        it withheld only by reading that clock's pulses, and the sync adapter's `CONSUMES` runs the sorter
         first because the sync source needs the sorter's clocks to know which streams to anchor
         at all -- so the row the fact belongs on is already here when the fact becomes known.
 

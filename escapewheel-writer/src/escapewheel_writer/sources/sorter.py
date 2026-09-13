@@ -207,6 +207,16 @@ class SorterSource:
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
+    #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
+    #: recipe's options second. A name resolving to neither is refused before any source is opened.
+    #:
+    #: An option the adapter can run without is left out: a declared name a recipe does not set
+    #: resolves to nothing, so declaring one makes it mandatory.
+    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id")
+
+    #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
+    CONSUMES: ClassVar[tuple[str, ...]] = ()
+
     def __init__(
         self,
         root: str | Path,

@@ -9,8 +9,8 @@ validity, not write order -- Parquet files are independent and `core.spike_event
 written before `core.units` with nothing the worse. What actually sequences a build is
 data-flow between adapters: `NWBSource` needs the sorter's units to attach a unit to an
 electrode, and no reference in the registry says so, because the dependency is between
-adapters rather than between tables. So :data:`CONSUMES` states it, and it is short because
-there is little of it.
+adapters rather than between tables. So each adapter declares `CONSUMES` (Part 05 §3.4), and the
+declarations are short because there is little of it.
 
 **Ownership is what stops two sources fighting.** Four adapters can each produce
 `core.probes`, and without a rule the last one to run wins silently -- which is how a
@@ -36,7 +36,7 @@ from escapewheel_reader.clocks import BOUND, align
 from numpy.typing import NDArray
 
 from .extensions import load as load_extension
-from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe, SourceSpec, states
+from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe, SourceSpec, consumes, states
 from .sources import SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
@@ -46,23 +46,6 @@ from .writer import PacketWriter
 #: Kinds that read a Zarr source through :class:`~escapewheel_writer.sources.store.SourceStore`,
 #: and so share one open store per root.
 _SHARED_SOURCES = frozenset({"nwb", "waveforms", "lfp"})
-
-CONSUMES: dict[str, tuple[str, ...]] = {
-    "nwb": ("sorter",),
-    # `_clock_namer` reads the sorter's clocks to know which streams already have one, so the
-    # sorter must have run first. Without this the namer is None and `anchors` falls back to
-    # naming every aligned stream, including ones no source declared a clock for.
-    "sync": ("sorter",),
-    "waveforms": ("sorter",),
-    # The probe clock an LFP axis advances on comes from the sorter. Neither kind reads the NWB's
-    # output any more: each composes a contact's name from the electrode table it opens itself, and
-    # the writer numbers the name (Part 05 §8), so the reference resolves without an ordering.
-    "lfp": ("sorter",),
-    # Locating tick 0 takes a tick observed at the ephys stream's declared start: the first
-    # spike, from the sorter, mapped onto the reference clock through the sync anchors. The
-    # observation windows it writes cover the event streams the NWB declares.
-    "session": ("sorter", "sync", "nwb"),
-}
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
 #: staged packet. Part 05 stage 8 calls these optional, so a recipe that names none is complete.
@@ -186,7 +169,7 @@ def order(recipe: Recipe) -> list[SourceSpec]:
     Returns
     -------
     list of SourceSpec
-        The sources, in an order that satisfies :data:`CONSUMES`.
+        The sources, in an order that satisfies every adapter's `CONSUMES`.
 
     Raises
     ------
@@ -196,14 +179,14 @@ def order(recipe: Recipe) -> list[SourceSpec]:
     remaining = list(recipe.sources)
     declared = {s.kind for s in remaining}
     for spec in remaining:
-        missing = [k for k in CONSUMES.get(spec.kind, ()) if k not in declared]
+        missing = [k for k in consumes(spec.kind) if k not in declared]
         if missing:
             raise RecipeError(f"source {spec.kind} consumes {', '.join(missing)}, which the recipe does not declare")
 
     ordered: list[SourceSpec] = []
     done: set[str] = set()
     while remaining:
-        ready = [s for s in remaining if set(CONSUMES.get(s.kind, ())) <= done]
+        ready = [s for s in remaining if set(consumes(s.kind)) <= done]
         if not ready:
             stuck = ", ".join(sorted(s.kind for s in remaining))
             raise RecipeError(f"sources {stuck} depend on each other and cannot be ordered")
@@ -1041,7 +1024,7 @@ def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None])
     """Put Part 02 §12.6's terminal-anchor test on each clock it examined (R99 §3.2).
 
     The sync source computes this and emits only the reference clock's row; the probe clock rows
-    are the sorter's, and `CONSUMES` runs the sorter first, so they are already staged. Three
+    are the sorter's, and the sorter's `CONSUMES` runs it first, so they are already staged. Three
     states are the point: a clock the test never reached keeps both columns null, where one it
     reached and kept records `false` (Part 06 §4).
     """
@@ -1098,7 +1081,6 @@ def _alignment_parameters(context: Context | None) -> dict[str, Any]:
 
 __all__ = [
     "BATCH_ROWS",
-    "CONSUMES",
     "MATERIALIZERS",
     "TOLERANCE",
     "Context",

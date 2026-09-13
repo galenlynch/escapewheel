@@ -273,6 +273,16 @@ class NWBSource(Compensates):
         "subject.strain": "stated_strain",
     }
 
+    #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
+    #: recipe's options second. A name resolving to neither is refused before any source is opened.
+    #:
+    #: An option the adapter can run without is left out: a declared name a recipe does not set
+    #: resolves to nothing, so declaring one makes it mandatory.
+    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "reference_clock", "units", "zone")
+
+    #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
+    CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
+
     stated_subject_id = _subject_fact("subject_id")
     stated_species = _subject_fact("species")
     stated_sex = _subject_fact("sex")
