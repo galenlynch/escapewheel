@@ -85,13 +85,21 @@ def test_a_shipped_adapter_needs_no_declaration_and_a_registered_one_does(tmp_pa
     assert not [p for p in built_in.check(registry) if "reach" in p.message]
 
     registered = write(tmp_path, '\n[[source]]\nkind = "vr_sites"\nroot = "."\nowns = []\n', "reg.toml")
-    problems = [p.message for p in Recipe.load(registered).check(registry) if "reach it only" in p.message]
+    problems = [p.message for p in Recipe.load(registered).check(registry) if "neither delivers" in p.message]
     assert problems and "vr_sites" in problems[0]
 
     opted = write(
         tmp_path, '\n[[source]]\nkind = "vr_sites"\nroot = "."\nowns = []\nin_process = true\n', "opt.toml"
     )
-    assert not [p for p in Recipe.load(opted).check(registry) if "reach it only" in p.message]
+    assert not [p for p in Recipe.load(opted).check(registry) if "neither delivers" in p.message]
+
+    delivered = write(
+        tmp_path,
+        '\n[[source]]\nkind = "vr_sites"\nroot = "."\nowns = []\n'
+        '\n[source.delivery]\nprotocol = "stream-v0.1"\ncommand = ["vr-sites-adapter"]\n',
+        "delivered.toml",
+    )
+    assert not [p for p in Recipe.load(delivered).check(registry) if "neither delivers" in p.message]
 
 
 def test_an_in_process_source_does_not_carry_the_flag_into_the_adapter(tmp_path):
@@ -562,3 +570,120 @@ def test_an_encoding_declaration_reaches_the_writer(tmp_path):
 "aind_unit_qc.metrics.num_spikes_used" = { encoding = "delta", reason = "1.7x" }
 """))
     assert _encoding_exceptions(recipe)["delta"] == {"aind_unit_qc.metrics": ("num_spikes_used",)}
+
+
+# -- a source the build does not import (Part 03 §11) ---------------------------------------
+
+
+def declaration_for(tmp_path, **fields):
+    """Write an adapter's declaration document and return its path, relative to the recipe."""
+    import json
+
+    document = {
+        "kind": "thermistor",
+        "protocol": "stream-v0.1",
+        "produces": ["core.devices"],
+        "needs": ["root", "session_id", "sample_rate_hz"],
+        "states": [],
+        "consumes": [],
+        **fields,
+    }
+    (tmp_path / "thermistor.json").write_text(json.dumps(document))
+    return "thermistor.json"
+
+
+DELIVERED = """
+[[source]]
+kind = "thermistor"
+root = "."
+sample_rate_hz = 1000
+
+[source.delivery]
+declaration = "{declaration}"
+command = ["thermistor-adapter", "--verbose"]
+report_path = "reports/thermistor.json"
+"""
+
+
+def test_a_delivered_source_carries_how_a_build_reaches_it(tmp_path):
+    """The recipe carries every fact about the machine; the document carries the adapter's."""
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=declaration_for(tmp_path))))
+    (spec,) = recipe.sources
+    assert spec.delivery.command == ("thermistor-adapter", "--verbose")
+    assert spec.delivery.protocol == "stream-v0.1"
+    assert spec.delivery.report_path == tmp_path / "reports/thermistor.json"
+
+
+def test_ownership_defaults_from_a_document_for_a_kind_that_cannot_be_imported(tmp_path, registry):
+    """Which is the point of the document: a build settles ownership before it launches anything."""
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=declaration_for(tmp_path))))
+    # `core.devices` is shared, so silence makes it a contribution rather than an exclusive claim.
+    assert recipe.sources[0].claims == ("core.devices",)
+    assert not [p for p in recipe.check(registry) if p.level == "error"]
+
+
+def test_a_declaration_that_cannot_be_read_is_reported_rather_than_raised(tmp_path, registry):
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration="absent.json")))
+    assert any("no adapter declaration to read" in p.message for p in recipe.check(registry))
+
+
+def test_a_declaration_naming_a_resource_no_registry_declares_is_refused(tmp_path, registry):
+    named = declaration_for(tmp_path, produces=["core.tirals"])
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
+    assert any("no loaded registry declares" in p.message for p in recipe.check(registry))
+
+
+def test_a_declaration_naming_a_protocol_outside_the_group_is_refused(tmp_path, registry):
+    named = declaration_for(tmp_path, protocol="carrier-pigeon-v1.0")
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
+    assert any("in no group" in p.message for p in recipe.check(registry))
+
+
+def test_a_declaration_whose_shape_is_wrong_is_reported_where_it_is_wrong(tmp_path, registry):
+    """The schema checks the shape; what the declaration says is checked against the registry."""
+    named = declaration_for(tmp_path, protocol="carrier pigeon")
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
+    assert any("protocol" in p.message and "thermistor.json" in p.message for p in recipe.check(registry))
+
+
+def test_a_declaration_needing_what_the_recipe_does_not_set_is_refused(tmp_path, registry):
+    named = declaration_for(tmp_path, needs=["root", "session_id", "calibration_uri"])
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
+    assert any("neither a term nor an option" in p.message for p in recipe.check(registry))
+
+
+def test_a_delivery_with_no_command_is_refused(tmp_path, registry):
+    body = DELIVERED.format(declaration=declaration_for(tmp_path)).replace(
+        'command = ["thermistor-adapter", "--verbose"]\n', ""
+    )
+    recipe = Recipe.load(write(tmp_path, body))
+    assert any("no command to run it with" in p.message for p in recipe.check(registry))
+
+
+def test_a_source_is_reached_one_way_or_the_other(tmp_path, registry):
+    """Part 05 §3.9: in process is the recipe's choice, and a delivery is the other choice."""
+    body = DELIVERED.format(declaration=declaration_for(tmp_path)).replace(
+        "sample_rate_hz = 1000", "sample_rate_hz = 1000\nin_process = true"
+    )
+    recipe = Recipe.load(write(tmp_path, body))
+    assert any("one way or the other" in p.message for p in recipe.check(registry))
+
+
+def test_a_built_in_adapter_may_be_delivered_without_a_document(tmp_path, registry):
+    """A build may serve an adapter it ships over any protocol of the group (Part 03 §11.1)."""
+    body = """
+[[source]]
+kind = "sorter"
+root = "."
+owns = ["core.units"]
+
+[source.delivery]
+protocol = "files-v0.1"
+command = ["escapewheel", "deliver", "sorter"]
+"""
+    recipe = Recipe.load(write(tmp_path, body))
+    assert recipe.sources[0].delivery.declaration is None
+    # The recipe is one source short of validating, which is not what this is about: nothing the
+    # build says about reaching the adapter is a problem.
+    about = ("delivery", "declaration", "protocol", "declares")
+    assert not [p for p in recipe.check(registry) if any(word in p.message for word in about)]

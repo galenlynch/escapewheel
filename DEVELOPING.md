@@ -158,7 +158,7 @@ fall and must not rise.
 How many there are is counted from the source that holds them, by `facts.py` parsing `check.py`:
 
 <!-- BEGIN facts: checks -->
-31 structural invariants, each applied to core and to each of the 4 extension registries, and 38 further checks over the whole set
+31 structural invariants, each applied to core and to each of the 4 extension registries, and 40 further checks over the whole set
 <!-- END facts: checks -->
 
 | check | catches |

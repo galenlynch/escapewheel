@@ -1,0 +1,21 @@
+{
+  "$schema": "https://escapewheel.org/schemas/adapter/0.1.0",
+  "kind": "thermistor",
+  "protocol": "stream-v0.1",
+  "produces": [
+    "core.array_assets",
+    "core.array_dimensions",
+    "core.devices"
+  ],
+  "needs": [
+    "root",
+    "session_id",
+    "reference_clock",
+    "array_location",
+    "sample_rate_hz"
+  ],
+  "states": [],
+  "consumes": [
+    "sync"
+  ]
+}

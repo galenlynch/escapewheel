@@ -1,0 +1,594 @@
+"""How rows cross a process boundary: the serving half and the reading half of one protocol.
+
+Part 03 §11.1 names three protocols for `escapewheel-portable-v0.1`, and a build supports all of
+them because there is one build and there will be many adapters. Both halves live here so the
+encoder and the decoder of one wire format cannot drift apart.
+
+Which to use is the recipe's choice, and they are not equivalent under load. `files-v0.1` is the one
+to reach for where a source is large: the delivery is Parquet on disk, so a build streams it a batch
+at a time the way it streams any other file. `stream-v0.1` and `flight-v0.1` hold each resource as
+it arrives, because a build consumes resources in its own order and a pipe cannot be rewound.
+
+An adapter's arrays do not cross here. Part 03 §11.3 has a dense array cross as a reference to a
+location a build supplies, which is a different act from delivering rows; a source that stages one
+is refused with what it would take, rather than delivering half of itself.
+"""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+import threading
+import time
+from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
+from io import IOBase
+from pathlib import Path
+from typing import Any, cast
+
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE
+from .sources import SourceDefect
+
+#: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 03 §11.4). A resource
+#: identifier is dotted, so no undotted token can collide with it.
+SENTINEL = "end"
+
+#: Rows per record batch when a delivery is written from records rather than from batches.
+BATCH_ROWS = 1_000_000
+
+#: How long to wait between attempts on a `flight-v0.1` socket, in seconds. A build retries until
+#: the address answers or the adapter's process exits (Part 03 §11.6), so this only decides how
+#: soon an adapter that died before binding is noticed.
+RETRY = 0.01
+
+#: One protocol's reading half: what arrived per resource, and what was wrong with the run.
+Reader = Callable[[str, Sequence[str], Mapping[str, Any], Sequence[str]], tuple[dict[str, Any], list[str]]]
+
+
+def as_table(rows: Sequence[Mapping[str, Any]]) -> pa.Table:
+    """Return records as a table, taking the columns from every row rather than from the first.
+
+    `pa.Table.from_pylist` infers the schema from the leading row and drops what later rows carry,
+    which loses a column a source populates for some rows only -- and an absent column is a
+    statement under Part 03 §11.3, so losing one says something untrue. Types are the build's to
+    settle against the registry, so nothing here declares one.
+    """
+    columns = list(dict.fromkeys(name for row in rows for name in row))
+    return pa.Table.from_pylist([{c: row.get(c) for c in columns} for row in rows])
+
+
+def offered(source: Any) -> dict[str, Iterator[pa.RecordBatch] | pa.Table]:
+    """Everything one adapter has to deliver, per resource, without materializing a large one.
+
+    A table that streams stays a stream: `core.spike_events` is 10^8 rows, and a delivery that
+    holds it as host objects costs two orders of magnitude more than the bytes it becomes.
+    """
+    delivering: dict[str, Iterator[pa.RecordBatch] | pa.Table] = {}
+    for resource, rows in source.records().items():
+        delivering[resource] = as_table(rows)
+    if hasattr(source, "spike_batches"):
+        delivering["core.spike_events"] = source.spike_batches(batch_rows=BATCH_ROWS)
+    for resource, batches in (getattr(source, "batches", dict)() or {}).items():
+        delivering[resource] = batches
+    return delivering
+
+
+def _undeliverable(source: Any) -> str | None:
+    """Why this source cannot be delivered out of process yet, or None."""
+    for attribute, what in (
+        ("staged_arrays", "stages a dense array"),
+        ("external_arrays", "references a dense array"),
+        ("external_media", "references a media asset"),
+    ):
+        if getattr(source, attribute, None) is not None and getattr(source, attribute)():
+            return (
+                f"this source {what}, which crosses as a reference rather than as rows "
+                "(Part 03 §11.3) and is not yet implemented over a protocol; run it in process"
+            )
+    return None
+
+
+# -- the serving half -------------------------------------------------------------------
+
+
+def construct(kind: str, supplied: Mapping[str, Any]) -> Any:
+    """Build one adapter from the JSON object a build passed, and from nothing else.
+
+    The terms the adapter declared arrive at the top level and the recipe's options under
+    `options`, so no option can collide with a term. A term the protocol required is not passed
+    on: an adapter never declared it, and a build supplied it because of the protocol.
+    """
+    from .sources import ADAPTERS, discovered
+
+    adapter = ADAPTERS.get(kind) or discovered().get(kind)
+    if adapter is None:
+        known = ", ".join(sorted({*ADAPTERS, *discovered()}))
+        raise SourceDefect(f"unknown source kind {kind!r}; this build ships {known}")
+    declared = getattr(adapter, "NEEDS", ("root", "session_id"))
+    terms = {name: supplied[name] for name in declared if name in supplied and name != "root"}
+    if "root" not in supplied:
+        raise SourceDefect(f"{kind}: nothing supplied a root, which every adapter needs")
+    return adapter(supplied["root"], **terms, **dict(supplied.get("options", {})))
+
+
+def infers(supplied: Mapping[str, Any]) -> str:
+    """Which protocol a build reached this adapter by, from the term it supplied for it.
+
+    A build supplies whichever terms its adapter's protocol requires (Part 03 §11.2), so the term
+    that is there says which protocol this is without a second statement that could disagree with
+    the first.
+    """
+    if "socket" in supplied:
+        return "flight-v0.1"
+    if "delivery_root" in supplied:
+        return "files-v0.1"
+    return "stream-v0.1"
+
+
+def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any = None) -> None:
+    """Deliver one adapter's rows over the protocol a build reached it by.
+
+    Parameters
+    ----------
+    source : object
+        The constructed adapter.
+    supplied : Mapping
+        The JSON object a build passed: the terms the adapter declared, plus whichever its
+        protocol requires.
+    protocol : str
+        Which of Part 03 §11.1's protocols to deliver over.
+    out : file-like, optional
+        Where `stream-v0.1` writes. Standard output's binary handle by default, because a
+        platform translating a line ending corrupts the stream (Part 03 §11.4).
+    """
+    if (why := _undeliverable(source)) is not None:
+        raise SourceDefect(why)
+    delivering = offered(source)
+    # A resource this source has nothing for arrives empty rather than not arriving, so a build
+    # reads absence as the run having failed and never as the source having had nothing to say
+    # (Part 03 §11.3). What it owns is what the recipe left it, where a build said so, and its
+    # whole `produces` otherwise -- an adapter that is not told cannot narrow, and must not
+    # deliver less than it declared either way.
+    declares = sorted(getattr(type(source), "PRODUCES", ()) or ())
+    wanted = list(supplied.get("wanted") or declares or delivering)
+    tables = {name: delivering.get(name, as_table([])) for name in wanted}
+    if protocol == "stream-v0.1":
+        _serve_stream(tables, out if out is not None else sys.stdout.buffer)
+    elif protocol == "files-v0.1":
+        _serve_files(tables, Path(supplied["delivery_root"]))
+    elif protocol == "flight-v0.1":
+        _serve_flight(tables, str(supplied["socket"]))
+    else:
+        raise SourceDefect(f"{protocol} is in no group this profile names")
+    if (path := supplied.get("report_path")) and protocol in REPORT_AS_FILE:
+        Path(path).write_text(json.dumps(report_of(source), indent=2, default=str) + "\n")
+
+
+def report_of(source: Any) -> dict[str, Any]:
+    """Return the run's report (Part 09 §5.8): what a build cannot derive from the delivery.
+
+    `stated` is the half no static document can carry -- a declared field's value needs the source
+    read -- and the notes an adapter accumulated are the other: what it worked around, and why a
+    table that is short is legitimately short.
+    """
+    stated = {field: getattr(source, attribute, None) for field, attribute in getattr(source, "STATES", {}).items()}
+    problems = [{"level": "info", "message": note} for note in getattr(source, "notes", ())]
+    return {"stated": {f: v for f, v in stated.items() if v is not None}, "problems": problems}
+
+
+def _write(out: Any, resource: str, table: pa.Table | Iterator[pa.RecordBatch]) -> None:
+    """One resource as a complete stream, ending with the format's own end-of-stream marker."""
+    if isinstance(table, pa.Table):
+        batches = table.to_batches() or [pa.RecordBatch.from_pylist([], schema=table.schema)]
+    else:
+        batches = list(table)
+        if not batches:
+            batches = [pa.RecordBatch.from_pylist([])]
+    schema = batches[0].schema.with_metadata({"resource_id": resource})
+    # Uncompressed bodies at metadata version V5, each dictionary whole (Part 03 §11.4).
+    options = pa.ipc.IpcWriteOptions(compression=None, metadata_version=pa.ipc.MetadataVersion.V5)
+    with pa.ipc.new_stream(out, schema, options=options) as writer:
+        for batch in batches:
+            writer.write_batch(batch.replace_schema_metadata({"resource_id": resource}))
+
+
+def _serve_stream(tables: Mapping[str, Any], out: Any) -> None:
+    """`stream-v0.1`: concatenated Arrow IPC streams, ended by the sentinel."""
+    for resource, table in tables.items():
+        _write(out, resource, table)
+    _write(out, SENTINEL, pa.table({}))
+    out.flush()
+
+
+def _serve_files(tables: Mapping[str, Any], root: Path) -> None:
+    """`files-v0.1`: one Parquet file per resource, under the root a build named."""
+    root.mkdir(parents=True, exist_ok=True)
+    for resource, table in tables.items():
+        if isinstance(table, pa.Table):
+            pq.write_table(table, root / f"{resource}.parquet")
+            continue
+        writer = None
+        try:
+            for batch in table:
+                if writer is None:
+                    writer = pq.ParquetWriter(root / f"{resource}.parquet", batch.schema)
+                writer.write_batch(batch)
+        finally:
+            if writer is not None:
+                writer.close()
+        if writer is None:
+            pq.write_table(as_table([]), root / f"{resource}.parquet")
+
+
+def _serve_flight(tables: Mapping[str, Any], socket: str) -> None:
+    """`flight-v0.1`: one descriptor per resource, served until the build terminates this process."""
+    import pyarrow.flight as fl
+
+    held = {name: t if isinstance(t, pa.Table) else pa.Table.from_batches(list(t)) for name, t in tables.items()}
+
+    class Served(fl.FlightServerBase):
+        """One adapter's resources, each a Flight descriptor."""
+
+        def list_flights(self, context: Any, criteria: Any) -> Iterator[Any]:
+            """Part 05 §4.1's discovery, from Arrow's own vocabulary."""
+            for name, table in held.items():
+                descriptor = fl.FlightDescriptor.for_path(name)
+                yield fl.FlightInfo(table.schema, descriptor, [], table.num_rows, table.nbytes)
+
+        def do_get(self, context: Any, ticket: Any) -> Any:
+            """One resource, by the descriptor a build asked for."""
+            return fl.RecordBatchStream(held[ticket.ticket.decode()])
+
+    # Bound last, and that is load-bearing: a build's first call arrives as soon as the socket
+    # answers, so an adapter that binds before it can answer serves discovery half-built
+    # (Part 03 §11.6).
+    Served(fl.Location.for_grpc_unix(socket)).serve()
+
+
+# -- the reading half -------------------------------------------------------------------
+
+
+class Delivered:
+    """What a build received from a source it ran out of process, shaped like an adapter.
+
+    Everything after the boundary is the same for a delivered source as for an imported one, so
+    this offers what a build asks of any adapter: what it has per resource, and its rows as
+    batches. Types, column order, numbering and the declared sort are settled afterwards against
+    the registry, exactly as they are for rows handed over in process.
+    """
+
+    #: Nothing here stages an array; a source that does is refused before it is run.
+    PRODUCES: frozenset[str] = frozenset()
+
+    def __init__(
+        self,
+        kind: str,
+        tables: Mapping[str, pa.Table | Path],
+        *,
+        notes: Sequence[str] = (),
+        stated: Mapping[str, Any] = {},
+        states: Sequence[str] = (),
+        merged: Collection[str] = (),
+    ) -> None:
+        self.kind = kind
+        self.tables = dict(tables)
+        #: Resources this source shares with another, which come back as rows rather than as a
+        #: stream: a writer takes one table from one path, since two streams cannot be put in the
+        #: declared sort order across the seam between them.
+        self.merged = frozenset(merged)
+        self.notes = list(notes)
+        #: Part 05 §3.6's comparison reads a declared field off the source, so a delivered one
+        #: carries what its report stated under the same names an imported adapter would.
+        self.STATES = {field: _attribute(field) for field in states}
+        for field, attribute in self.STATES.items():
+            setattr(self, attribute, stated.get(field))
+
+    def offers(self) -> dict[str, int]:
+        """Part 05 Stage 1: how many rows of each resource arrived."""
+        return {
+            resource: (table.num_rows if isinstance(table, pa.Table) else pq.ParquetFile(table).metadata.num_rows)
+            for resource, table in self.tables.items()
+        }
+
+    def records(self) -> dict[str, list[dict[str, Any]]]:
+        """Return the resources this source shares, as rows the writer merges and sorts."""
+        return {
+            resource: [row for batch in _batches(table) for row in batch.to_pylist()]
+            for resource, table in self.tables.items()
+            if resource in self.merged
+        }
+
+    def batches(self) -> dict[str, Iterator[pa.RecordBatch]]:
+        """Every resource this source owns outright, as a stream, in the order it arrived."""
+        return {
+            resource: _batches(table) for resource, table in self.tables.items() if resource not in self.merged
+        }
+
+
+def _attribute(field: str) -> str:
+    """Return the attribute a stated field is read from, which Part 05 §3.6's comparison names."""
+    return "stated_" + field.replace(".", "_")
+
+
+def _batches(table: pa.Table | Path) -> Iterator[pa.RecordBatch]:
+    """One delivered resource as batches, read from disk where it is still there."""
+    if isinstance(table, pa.Table):
+        return iter(table.to_batches())
+    return pq.ParquetFile(table).iter_batches(batch_size=BATCH_ROWS)
+
+
+def fetch(
+    kind: str,
+    command: Sequence[str],
+    supplied: Mapping[str, Any],
+    *,
+    protocol: str,
+    wanted: Sequence[str],
+    states: Sequence[str] = (),
+    merged: Collection[str] = (),
+    report_path: Path | None = None,
+    workspace: Path,
+    say: Callable[[str], None] = lambda _: None,
+) -> Delivered:
+    """Run one adapter as a command and read what it delivered (Part 05 §4.4).
+
+    Parameters
+    ----------
+    kind : str
+        The source kind, for what is reported.
+    command : sequence of str
+        The argument list the recipe carries, run as it is written. A list rather than a string
+        because a parse is a quoting convention no recipe declared (Part 05 §3.7).
+    supplied : Mapping
+        The terms the adapter declared, which cross as one JSON object appended to the command as
+        its last argument; the protocol's own terms are added here, since declaring the protocol
+        is what asks for them.
+    protocol : str
+        Which of Part 03 §11.1's protocols to read.
+    wanted : sequence of str
+        The resources this source owns, which a delivery is complete when it carries.
+    states : sequence of str
+        The `block.field` names this adapter declares it states, read back from its report.
+    merged : collection of str
+        Resources this source contributes to alongside others, which come back as rows so the
+        writer can merge and sort them; everything it owns outright streams.
+    report_path : Path, optional
+        Where a report is expected. Removed before the run, so last week's findings are not
+        reported as this run's (Part 09 §5.8).
+    workspace : Path
+        A directory to put a delivery and a socket in, under the packet's staging area.
+
+    Returns
+    -------
+    Delivered
+        The rows, and whatever the report carried.
+    """
+    if isinstance(command, str):
+        raise SourceDefect(f"{kind}: command must be an argument list, not {command!r}; write it as a TOML array")
+    if not command:
+        raise SourceDefect(f"{kind}: a delivered source declares no command to run")
+    workspace.mkdir(parents=True, exist_ok=True)
+    if report_path is not None:
+        # A file at a path the recipe names is present after any run that ever wrote one.
+        report_path.unlink(missing_ok=True)
+    supplied = {**supplied, **_protocol_supplies(protocol, workspace, report_path)}
+    argv = [*command, json.dumps(supplied, default=str)]
+    started = time.perf_counter()
+    readers: dict[str, Reader] = {
+        "stream-v0.1": _read_stream,
+        "files-v0.1": _read_files,
+        "flight-v0.1": _read_flight,
+    }
+    if protocol not in readers:
+        raise SourceDefect(f"{kind}: {protocol} is in no group this profile names")
+    tables, failures = readers[protocol](kind, argv, supplied, wanted)
+    say(f"  delivered {len(tables)} resource(s) over {protocol} in {time.perf_counter() - started:.1f} s")
+
+    notes, stated = _from_report(kind, protocol, report_path, tables)
+    missing = [resource for resource in wanted if resource not in tables]
+    if missing:
+        # Reported together rather than one at a time: what a person wants is which resources did
+        # not arrive, not which one did not arrive first (Part 05 §4.4).
+        failures.append(f"{len(missing)} resource(s) never arrived: {', '.join(missing)}")
+    if failures:
+        raise SourceDefect(f"{kind}: " + "; ".join(failures) + _tail(notes))
+    return Delivered(kind, tables, notes=notes, stated=stated, states=states, merged=merged)
+
+
+def _tail(notes: Sequence[str]) -> str:
+    """Return what the report said, for a failure: the run that went wrong is the one with something to say."""
+    return "\n  " + "\n  ".join(notes) if notes else ""
+
+
+def _protocol_supplies(protocol: str, workspace: Path, report_path: Path | None) -> dict[str, str]:
+    """Return the terms this protocol requires, which an adapter may not declare and a build supplies."""
+    supplies = {}
+    for term in PROTOCOL_TERMS[protocol]:
+        supplies[term] = str(workspace / ("delivery" if term == "delivery_root" else "adapter.sock"))
+    if report_path is not None and protocol in REPORT_AS_FILE:
+        supplies["report_path"] = str(report_path)
+    return supplies
+
+
+def _from_report(
+    kind: str, protocol: str, report_path: Path | None, tables: Mapping[str, Any]
+) -> tuple[list[str], dict[str, Any]]:
+    """Read a report where one is expected, as notes and the values a source stated.
+
+    A build must not require one and must not fail on its contents (Part 09 §5.8), so an absent
+    report and an unparseable one are both notes. What it carries that nothing else can is
+    `stated`; rows per table and which tables exist are established without asking.
+    """
+    del tables  # what a report says about them is what a build already knows
+    if report_path is None or protocol not in REPORT_AS_FILE:
+        return [], {}
+    if not report_path.is_file():
+        return [], {}
+    try:
+        document = json.loads(report_path.read_text())
+    except json.JSONDecodeError as exc:
+        return [f"{kind}: the report at {report_path} is not JSON ({exc})"], {}
+    notes = []
+    for problem in document.get("problems", ()):
+        where = f" [{problem['resource']}]" if problem.get("resource") else ""
+        notes.append(f"{kind} reports {problem.get('level', 'info')}{where}: {problem.get('message', '')}")
+    if read := document.get("read"):
+        notes.append(f"{kind} read {len(read)} input(s): {', '.join(str(r) for r in read[:4])}")
+    return notes, dict(document.get("stated", {}))
+
+
+def _drain(handle: Any, into: list[str]) -> threading.Thread:
+    """Read a pipe to its end on a thread of its own.
+
+    A pipe holds tens of kilobytes, so reading one to completion after the other deadlocks on any
+    adapter whose diagnosis outruns that buffer (Part 05 §3.7).
+    """
+    def run() -> None:
+        into.append(handle.read().decode(errors="replace"))
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    return thread
+
+
+def _said(collected: Sequence[str]) -> str:
+    """Return an adapter's standard error, trimmed to what a build reports (Part 05 §4.4)."""
+    text = "".join(collected).strip()
+    return f" said: {text[-2000:]}" if text else ""
+
+
+def _read_files(
+    kind: str, argv: Sequence[str], supplied: Mapping[str, Any], wanted: Sequence[str]
+) -> tuple[dict[str, Any], list[str]]:
+    """`files-v0.1`: the adapter writes Parquet, and Stage 1 is the footers."""
+    root = Path(supplied["delivery_root"])
+    root.mkdir(parents=True, exist_ok=True)
+    done = subprocess.run(argv, capture_output=True, check=False)
+    failures = []
+    if done.returncode:
+        # A non-zero exit is a failure whatever arrived: an adapter saying it failed is not
+        # overruled by its own output (Part 05 §4.4).
+        failures.append(f"the command exited {done.returncode}{_said([done.stderr.decode(errors='replace')])}")
+    tables = {}
+    for path in sorted(root.glob("*.parquet")):
+        try:
+            # The footer, which is what says the file is a delivery rather than a partial write.
+            _ = pq.ParquetFile(path).metadata.num_rows
+        except pa.ArrowInvalid as exc:
+            failures.append(f"{path.stem}: the delivered file cannot be read ({exc})")
+            continue
+        tables[path.stem] = path
+    del kind, wanted
+    return tables, failures
+
+
+def _read_stream(
+    kind: str, argv: Sequence[str], supplied: Mapping[str, Any], wanted: Sequence[str]
+) -> tuple[dict[str, Any], list[str]]:
+    """`stream-v0.1`: concatenated IPC on standard output, ended by the sentinel."""
+    del supplied, wanted
+    child = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    said: list[str] = []
+    draining = _drain(child.stderr, said)
+    rows = cast("IOBase", child.stdout)  # a pipe, opened by `Popen` and never None with stdout=PIPE
+    tables: dict[str, Any] = {}
+    ended, last = False, None
+    try:
+        while True:
+            try:
+                reader = pa.ipc.open_stream(rows)
+            except (pa.ArrowInvalid, OSError):
+                break
+            name = reader.schema.metadata[b"resource_id"].decode()
+            if name == SENTINEL:
+                ended = True
+                break
+            tables[name] = reader.read_all()
+            last = name
+    finally:
+        rows.close()
+        child.wait()
+        draining.join(timeout=5)
+    failures = []
+    if child.returncode:
+        failures.append(f"the command exited {child.returncode}{_said(said)}")
+    if not ended:
+        # Naming the last resource read rather than the first that never arrived: a reader treats
+        # end of file as end of stream, so a cut delivery parses clean (Part 03 §11.4).
+        where = f" after {last}" if last else " before anything arrived"
+        failures.append(f"the delivery did not end with the sentinel; the adapter died{where}{_said(said)}")
+    del kind
+    return tables, failures
+
+
+def _read_flight(
+    kind: str, argv: Sequence[str], supplied: Mapping[str, Any], wanted: Sequence[str]
+) -> tuple[dict[str, Any], list[str]]:
+    """`flight-v0.1`: retry the socket until it answers, then one DoGet per descriptor."""
+    import pyarrow.flight as fl
+
+    del wanted
+    socket = str(supplied["socket"])
+    child = subprocess.Popen(argv, stderr=subprocess.PIPE)
+    said: list[str] = []
+    draining = _drain(child.stderr, said)
+    tables: dict[str, Any] = {}
+    failures: list[str] = []
+    client = None
+    try:
+        client = _rendezvous(socket, child)
+    except SourceDefect as exc:
+        failures.append(str(exc) + _said(said))
+    if client is not None:
+        try:
+            for info in client.list_flights():
+                name = info.descriptor.path[0].decode()
+                tables[name] = client.do_get(fl.Ticket(name.encode())).read_all()
+        except fl.FlightError as exc:
+            # A failing adapter writes nothing to standard error here, because the diagnosis
+            # travels on the connection it was asked over (Part 05 §4.4).
+            failures.append(f"{exc}; detail: {getattr(exc, 'extra_info', b'') !r}")
+        client.close()
+    # A build that started a process owns it, and an adapter may not rely on running code after
+    # its last response (Part 03 §11.6).
+    child.terminate()
+    child.wait()
+    draining.join(timeout=5)
+    del kind
+    return tables, failures
+
+
+def _rendezvous(socket: str, child: subprocess.Popen[bytes]) -> Any:
+    """Wait for a `flight-v0.1` adapter by connecting, not by reading a readiness line.
+
+    A line would work and would be a second thing to specify, and it cannot cover the case that
+    matters: an adapter that dies before binding says nothing either way (Part 03 §11.6).
+    """
+    import pyarrow.flight as fl
+
+    while True:
+        try:
+            client = fl.connect(fl.Location.for_grpc_unix(socket))
+            client.wait_for_available(timeout=1)
+            return client
+        except (fl.FlightUnavailableError, fl.FlightTimedOutError):
+            if child.poll() is not None:
+                raise SourceDefect(f"the adapter exited {child.returncode} before serving") from None
+            time.sleep(RETRY)
+
+
+__all__ = [
+    "BATCH_ROWS",
+    "SENTINEL",
+    "Delivered",
+    "as_table",
+    "construct",
+    "fetch",
+    "infers",
+    "offered",
+    "report_of",
+    "serve",
+]

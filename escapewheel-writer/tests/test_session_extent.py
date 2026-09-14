@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import ClassVar
 
 import pytest
 
@@ -18,6 +19,10 @@ class Spec:
 
 class Stub:
     """A session source with one declared extent."""
+
+    #: Part 05 §3.4: the recipe fields this source states, read off the source the way a build
+    #: reads them from any adapter -- or, for one delivered out of process, from its report.
+    STATES: ClassVar[dict[str, str]] = {"subject.subject_id": "subject_id"}
 
     def __init__(self, began=BEGAN, ended=ENDED, subject_id=None):
         self.extent_value = (began, ended)

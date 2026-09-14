@@ -83,6 +83,20 @@ SHARED = frozenset({"core.clocks", "core.clock_anchors", "core.clock_observation
                     "core.array_assets", "core.array_dimensions", "core.devices"})
 
 
+def adapter_for(kind: str) -> Any:
+    """Return the class this kind names, built-in or registered by another distribution.
+
+    Imported here rather than at module load: `Recipe` is meant to be parseable without the
+    adapters, and this is the one thing it needs from them. The adapters cost 0.16 s to import and
+    open nothing, so a check that consults them still reports before any I/O. A registered kind is
+    consulted too, because a build that read less of one than of a built-in would give an adapter
+    from another distribution the worse deal (Part 05 §3.4).
+    """
+    from . import sources
+
+    return sources.ADAPTERS.get(kind) or sources.discovered().get(kind)
+
+
 def states(kind: str) -> Mapping[str, str]:
     """Return the recipe fields an adapter of this kind can state, to the attribute holding each.
 
@@ -90,26 +104,20 @@ def states(kind: str) -> Mapping[str, str]:
     declares nothing is reported by `check` rather than silently treated as stating nothing --
     which is the failure `produces` has, and which R63 §4 left open.
     """
-    from . import sources
-
-    adapter = sources.ADAPTERS.get(kind)
-    declared = getattr(adapter, "STATES", None) if adapter is not None else None
-    return dict(declared) if declared is not None else {}
+    adapter = adapter_for(kind)
+    stated = getattr(adapter, "STATES", None) if adapter is not None else None
+    return dict(stated) if stated is not None else {}
 
 
 def declares_states(kind: str) -> bool:
     """Whether this kind's adapter declares `STATES` at all, empty or not (Part 05 §3.4)."""
-    from . import sources
-
-    adapter = sources.ADAPTERS.get(kind)
+    adapter = adapter_for(kind)
     return adapter is not None and getattr(adapter, "STATES", None) is not None
 
 
 def state_accessors(kind: str) -> Mapping[str, str]:
     """`STATES` entries whose named attribute the adapter class does not expose (Part 05 §3.4)."""
-    from . import sources
-
-    adapter = sources.ADAPTERS.get(kind)
+    adapter = adapter_for(kind)
     return {f: a for f, a in states(kind).items() if adapter is not None and not hasattr(adapter, a)}
 
 
@@ -120,35 +128,31 @@ def needs(kind: str) -> tuple[str, ...]:
     recipe has to carry is whatever is left: the declaration is where the options a source cannot
     be constructed without are recorded, rather than a table here keyed by kind.
     """
-    from . import sources
-
-    adapter = sources.ADAPTERS.get(kind)
-    return tuple(getattr(adapter, "NEEDS", ()) if adapter is not None else ())
+    # The floor is what every adapter needs and no declaration can omit: a root to open and the
+    # session it is built for (Part 03 §11.2).
+    adapter = adapter_for(kind)
+    return tuple(getattr(adapter, "NEEDS", ("root", "session_id")) if adapter is not None else ())
 
 
 def consumes(kind: str) -> tuple[str, ...]:
     """Return the kinds whose output an adapter of this kind reads (Part 05 §3.4)."""
-    from . import sources
-
-    adapter = sources.ADAPTERS.get(kind)
+    adapter = adapter_for(kind)
     return tuple(getattr(adapter, "CONSUMES", ()) if adapter is not None else ())
 
 
 def produces(kind: str) -> frozenset[str]:
     """Return what an adapter of this kind can supply (Part 05 §3.4).
 
-    Imported here rather than at module load: `Recipe` is meant to be parseable without the
-    adapters, and this is the one thing it needs from them. The adapters cost 0.16 s to import
-    and open nothing, so a check that consults them still reports before any I/O.
+    Empty where no adapter of this kind can be imported, which `check` reports through the
+    declaration a recipe must then name (Part 03 §11.5) rather than treating as a source that
+    produces nothing.
     """
-    from . import sources
-
-    adapter = sources.ADAPTERS.get(kind)
+    adapter = adapter_for(kind)
     return frozenset(getattr(adapter, "PRODUCES", ()) if adapter is not None else ())
 
 
 #: Keys a `[[source]]` entry uses for itself; everything else is passed to the adapter.
-_SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes", "storage_options", "in_process"})
+_SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes", "storage_options", "in_process", "delivery"})
 
 #: Keys a `[[materialize]]` entry uses for itself; the rest are the materializer's parameters.
 _MATERIALIZE_KEYS = frozenset({"resource"})
@@ -219,6 +223,36 @@ class ClockSpec:
 
 
 @dataclass(frozen=True)
+class DeliverySpec:
+    """How a build reaches a source it does not import (Part 03 §11).
+
+    The recipe carries all of it, because every field is a fact about one machine: which command
+    runs the adapter, where its declarations are, and where it should write its report. What the
+    adapter itself declares is in the document, and a build reads that before it launches anything.
+
+    Attributes
+    ----------
+    command : tuple of str
+        The argument list to run, in the source's own root. A list rather than a string because a
+        parse is a quoting convention no recipe declared (Part 05 §3.7).
+    protocol : str
+        Which of Part 03 §11.1's protocols the rows cross by. The declaration's where there is
+        one, since the adapter is what knows; the recipe's where a build serves an adapter it
+        ships, which declares none.
+    declaration : Mapping, optional
+        The parsed declaration document, where the recipe names one. Absent for a kind this build
+        can import, whose class declares the same four facts.
+    report_path : Path, optional
+        Where the adapter writes its report (Part 09 §5.8). A build removes it before the run.
+    """
+
+    command: tuple[str, ...]
+    protocol: str
+    declaration: Mapping[str, Any] | None = None
+    report_path: Path | None = None
+
+
+@dataclass(frozen=True)
 class SourceSpec:
     """One source, what it is built from, and which resources it is responsible for.
 
@@ -254,6 +288,10 @@ class SourceSpec:
     #: Part 05 §3.4: whether the recipe stated `owns`. Silence means the whole of `PRODUCES`, so it
     #: must be distinguishable from an explicit empty list, which narrows to nothing.
     narrowed: bool = True
+    #: Part 03 §11: how a build reaches this source where it does not import it. A source with
+    #: no delivery block is constructed in this process, which every adapter this build ships
+    #: can be (Part 05 §3.9).
+    delivery: DeliverySpec | None = None
     #: Part 05 §3.9: whether the recipe declares that this source runs in the writer's process.
     #: A build delivers every other source out of process, so this is the recipe author saying
     #: that this machine installs the adapter alongside the writer -- a fact about one machine on
@@ -264,6 +302,71 @@ class SourceSpec:
     def claims(self) -> tuple[str, ...]:
         """Every resource this source supplies, however it claims it."""
         return (*self.owns, *self.contributes)
+
+
+def _delivery(block: Mapping[str, Any] | None, resolve: Any) -> DeliverySpec | None:
+    """Parse a `[source.delivery]` block, leaving what is wrong with it to `check`.
+
+    A declaration that cannot be read is carried as the problem it is rather than raised here,
+    because a caller that reports every problem at once is more useful than one that stops at the
+    first -- which is what `Recipe.load` promises of everything else in the document.
+    """
+    if not block:
+        return None
+    from . import declaration as declared_document
+
+    document: Mapping[str, Any] | None = None
+    if (named := block.get("declaration")) is not None:
+        try:
+            document = declared_document.load(resolve(str(named)))
+        except ValueError as exc:
+            document = {"unreadable": str(exc)}
+    protocol = str(block.get("protocol") or (document or {}).get("protocol") or "")
+    command = block.get("command", ())
+    report = block.get("report_path")
+    return DeliverySpec(
+        command=(command,) if isinstance(command, str) else tuple(str(c) for c in command),
+        protocol=protocol,
+        declaration=document,
+        report_path=resolve(str(report)) if report else None,
+    )
+
+
+def _builtin(kind: str) -> bool:
+    """Whether this build ships the adapter for a kind, which is what makes in process its route."""
+    from . import sources
+
+    return kind in sources.ADAPTERS
+
+
+def _importable(kind: str) -> bool:
+    """Whether this build can read a kind's declarations by importing its adapter."""
+    return adapter_for(kind) is not None
+
+
+def declared(spec: SourceSpec) -> dict[str, Any]:
+    """Return one source's four declarations, from the document the recipe names or the class.
+
+    A document and an importable class declaring the same facts are one declaration, and a build
+    prefers neither (Part 03 §11.5) -- so everything reading a declaration reads it through here,
+    and nothing downstream has to know which form this source took.
+    """
+    document = spec.delivery.declaration if spec.delivery is not None else None
+    if document is not None and "unreadable" not in document:
+        return {
+            "produces": frozenset(document.get("produces", ())),
+            "states": tuple(document.get("states", ())),
+            "needs": tuple(document.get("needs", ())),
+            "consumes": tuple(document.get("consumes", ())),
+            "declares_states": "states" in document,
+        }
+    return {
+        "produces": produces(spec.kind),
+        "states": tuple(sorted(states(spec.kind))),
+        "needs": needs(spec.kind),
+        "consumes": consumes(spec.kind),
+        "declares_states": declares_states(spec.kind),
+    }
 
 
 def _resolve_ownership(sources: tuple[SourceSpec, ...]) -> tuple[SourceSpec, ...]:
@@ -285,7 +388,7 @@ def _resolve_ownership(sources: tuple[SourceSpec, ...]) -> tuple[SourceSpec, ...
             resolved.append(spec)
             continue
         owns, contributes = [], list(spec.contributes)
-        for resource in sorted(produces(spec.kind) - narrowed - supplies):
+        for resource in sorted(declared(spec)["produces"] - narrowed - supplies):
             if resource in SHARED:
                 if resource not in contributes:
                     contributes.append(resource)
@@ -447,6 +550,7 @@ class Recipe:
                     SourceSpec(
                         kind=str(s["kind"]),
                         root=resolve_root(str(s.get("root", ".")), s.get("storage_options", {})),
+                        delivery=_delivery(s.get("delivery"), resolve),
                         owns=tuple(s.get("owns", ())),
                         contributes=tuple(s.get("contributes", ())),
                         options={k: v for k, v in s.items() if k not in _SOURCE_KEYS},
@@ -585,6 +689,7 @@ class Recipe:
         errors.extend(self._clock_problems())
         errors.extend(self._option_problems())
         errors.extend(self._delivery_problems())
+        errors.extend(self._declaration_problems(tables))
         errors.extend(self._states_problems())
         errors.extend(self.encoding_problems(tables))
         fact_errors, fact_warnings, notes = self._declared_fact_problems()
@@ -604,12 +709,18 @@ class Recipe:
         one that states nothing, which is the failure R63 §4 records for `PRODUCES`.
         """
         problems = []
-        for kind in sorted({spec.kind for spec in self.sources}):
-            if not declares_states(kind):
-                problems.append(f"source {kind} declares no STATES, so a build cannot tell what facts it states")
-            for fact, attribute in sorted(state_accessors(kind).items()):
+        for spec in sorted(self.sources, key=lambda s: s.kind):
+            if not declared(spec)["declares_states"]:
                 problems.append(
-                    f"source {kind} states {fact} through {attribute!r}, which its adapter does not expose"
+                    f"source {spec.kind} declares no STATES, so a build cannot tell what facts it states"
+                )
+            if spec.delivery is not None:
+                # An adapter a build cannot import exposes its stated values in its report rather
+                # than through an attribute, so there is nothing here to look for (Part 09 §5.8).
+                continue
+            for fact, attribute in sorted(state_accessors(spec.kind).items()):
+                problems.append(
+                    f"source {spec.kind} states {fact} through {attribute!r}, which its adapter does not expose"
                 )
         return problems
 
@@ -622,9 +733,9 @@ class Recipe:
     def stated_by(self) -> dict[str, list[str]]:
         """`block.field` to the source kinds in this recipe that state it (Part 05 §3.4)."""
         by_field: dict[str, list[str]] = {}
-        for kind in sorted({spec.kind for spec in self.sources}):
-            for fact in states(kind):
-                by_field.setdefault(fact, []).append(kind)
+        for spec in sorted(self.sources, key=lambda s: s.kind):
+            for fact in declared(spec)["states"]:
+                by_field.setdefault(fact, []).append(spec.kind)
         return by_field
 
     def encoding_problems(self, tables: Mapping[str, Any]) -> list[str]:
@@ -719,32 +830,72 @@ class Recipe:
         return [
             f"{spec.kind} can produce {resource}, which no source in this recipe claims"
             for spec in self.sources
-            for resource in sorted(produces(spec.kind) - claimed)
+            for resource in sorted(declared(spec)["produces"] - claimed)
         ]
 
     def _delivery_problems(self) -> list[str]:
         """Report each source with no route to a build (Part 05 §3.9).
 
-        An adapter released independently of a build must declare a protocol (Part 03 §11.1), and
-        the entry-point group is that boundary here: a built-in kind ships with this package and is
-        upgraded with it, where a registered one is another distribution's and moves on its own
-        schedule. So a registered kind that declares no protocol can be reached only by importing
-        it, which the recipe must ask for; a built-in needs nothing, since in process is its only
-        route and a declaration offering no choice states what cannot be false.
+        There are three: a `[source.delivery]` block, which carries the command that runs the
+        adapter out of process; `in_process`, which is the recipe author saying this machine
+        installs the adapter beside the writer; and being an adapter this build ships, for which
+        in process is the only route and a recipe naming one declares nothing.
+
+        What is left over is a kind another distribution registered and the recipe says nothing
+        about. An adapter released independently of a build must declare a protocol (Part 03
+        §11.1), and declaring one is not enough on its own: something still has to say what
+        command runs it, and only the recipe knows.
         """
-        from . import sources
+        problems = []
+        for spec in self.sources:
+            if spec.in_process or spec.delivery is not None or _builtin(spec.kind):
+                continue
+            problems.append(
+                f"{spec.kind} is registered by another distribution and this recipe neither delivers it nor "
+                f"runs it in process; give it a [source.delivery] command or set in_process"
+            )
+        return problems
+
+    def _declaration_problems(self, tables: Mapping[str, Any]) -> list[str]:
+        """Everything wrong with a source's declaration, knowable with nothing opened.
+
+        Part 03 §11.5's four checks, plus what the recipe itself has to get right for a build to
+        reach the adapter at all. Each fires on its own and names what is wrong, and none of them
+        needs the adapter imported -- which is the point of a declaration a build can read.
+        """
+        from . import declaration as document
 
         problems = []
         for spec in self.sources:
-            if spec.in_process or spec.kind in sources.ADAPTERS:
+            delivery = spec.delivery
+            if delivery is None:
                 continue
-            adapter = sources.discovered().get(spec.kind)
-            if adapter is not None and getattr(adapter, "PROTOCOL", None):
+            if spec.in_process:
+                problems.append(
+                    f"{spec.kind} declares both a delivery and in_process; a source is reached one way or "
+                    "the other (Part 05 §3.9)"
+                )
+            if not delivery.command:
+                problems.append(f"{spec.kind} declares a delivery and no command to run it with")
+            if delivery.declaration is not None and "unreadable" in delivery.declaration:
+                problems.append(f"{spec.kind}: {delivery.declaration['unreadable']}")
                 continue
-            problems.append(
-                f"{spec.kind} is registered by another distribution and declares no protocol, so a "
-                f"build can reach it only in its own process; set in_process on the source"
-            )
+            if delivery.declaration is None and not _importable(spec.kind):
+                problems.append(
+                    f"{spec.kind} names no declaration and this build cannot import it, so nothing says "
+                    "what it produces"
+                )
+            asked = declared(spec)
+            stated = {
+                "protocol": delivery.protocol,
+                "produces": sorted(asked["produces"]),
+                "states": list(asked["states"]),
+                "needs": list(asked["needs"]),
+            }
+            problems += [
+                f"{spec.kind} {refusal}"
+                for refusal in document.refusals(stated, tables=tables, options=spec.options, terms=TERMS)
+            ]
         return problems
 
     def _option_problems(self) -> list[str]:
@@ -755,7 +906,7 @@ class Recipe:
         return [
             f"source {spec.kind} requires {name!r}, which this entry does not set"
             for spec in self.sources
-            for name in needs(spec.kind)
+            for name in declared(spec)["needs"]
             if name not in TERMS and name not in spec.options
         ]
 

@@ -193,12 +193,16 @@ document and not a function of the rows. The document already carries its own ve
 `extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
 (R57 §2.1). Checking is the only half that never shipped.
 
-## 1d. The adapter boundary is specified and not built
+## 1d. The adapter boundary reaches three of the ten adapters
 
-R115 was accepted on 2026-09-11 and Part 03 §11 now carries the whole contract between a build and
-a source. `conformance/adapter-boundary/` is the reference — seven scripts in which all three
-protocols deliver the NWB adapter's eighteen resources identically, five of them empty — and every
-piece below is the distance between that spike and the writer.
+R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
+source. Every piece of it is built as of 2026-09-14 — a declaration, a document, a command, three
+protocols and a report — and what it does not yet reach is seven adapters, for the two reasons at
+the end of this section.
+
+`conformance/adapter-boundary/` is where it was measured first: seven scripts in which all three
+protocols deliver the NWB adapter's eighteen resources identically, five of them empty. What is in
+the writer now is that spike, specified and built.
 
 **Where a protocol is needed it is `flight-v0.1`**, decided 2026-09-12. R115 §3.3 asks one of an
 adapter released independently of the build and none of an adapter the build ships, so the ten need
@@ -261,10 +265,19 @@ protocol — a build must support `files-v0.1` natively (Part 03 §11.1), and on
 entry naming `{resource: path}` with an optional command **is** a delivery and the class goes away.
 `kind = "tables"` can stay as the recipe's spelling for one.
 
-**No command runs one adapter and hands over its rows.** The writer registers `inspect`, `init`,
-`extension`, `verify`, `prune` and `import` under the one `escapewheel` CLI, and none of them does
-this. It is the same command a `tables` source names, so a built-in adapter reaches a build through
-the door an extension already uses (R109 §3.2) rather than through a second mechanism.
+**A command runs one adapter and hands over its rows, done 2026-09-14.** `escapewheel deliver
+<kind> <json>` constructs one adapter from the JSON object a build appends to its command and
+delivers over whichever protocol the build reached it by — inferred from the term that asked for
+it, since `socket` means `flight-v0.1` and `delivery_root` means `files-v0.1` and neither means
+`stream-v0.1`, so no second statement can disagree with the first. `escapewheel declare <kind>`
+writes the other half. Both halves of each protocol live in `delivery.py`, so the encoder and the
+decoder of one wire format cannot drift apart.
+
+A recipe reaches a source that way through a `[source.delivery]` block carrying the command, the
+protocol, the declaration document where there is one, and where the report goes. The block is
+what makes the three routes Part 05 §3.9 allows explicit: a delivery, `in_process`, or being an
+adapter this build ships, for which in process is the only route. A recipe naming both a delivery
+and `in_process` is refused.
 
 **The ten adapters declare all four facts Part 05 §3.4 requires, done 2026-09-12.** `NEEDS` and
 `CONSUMES` joined `PRODUCES` and `STATES` on the classes, `recipe.needs` and `recipe.consumes` read
@@ -371,12 +384,9 @@ tables byte-identical** to the packet built before, `core.clocks` and
 doing — both spike tables, `core.units`'s three spike-derived columns, the run's parameters, and one
 extension table whose content is equal and whose bytes are not.
 
-**What still reaches into an adapter is the harvest, and a delivery is what replaces it.** `_harvest`
-calls `units()`, `clocks()`, `extent()`, `behavior()` and `event_streams()` per kind, and
-`_recorded_epoch` calls `aligned()`, `started()` and `clock_id_for()` on the sync source. None of
-that is a build *supplying* a value, which is what §11.2 governs; all of it is a build reading what a
-source produced, and out of process it arrives as rows. Sequence it with the command below rather
-than before it.
+**What still reaches into an adapter is the harvest, and a delivery is what replaces it.** It is
+what keeps four of the ten from being delivered, and it is recorded at the end of this section with
+the other reason.
 
 **The NWB adapter is half a standard's and half one producer's, and the split is a lift rather
 than a rewrite.** The paths it walks are all base NWB — `general/subject`, `general/devices`,
@@ -408,23 +418,50 @@ actually differs anyway: three columns becoming rows with an `axis_index`, a del
 renaming, the general form already exists — a command producing Parquet, delivered as `files-v0.1`
 (R109 §3.2).
 
-**`registry/adapter.schema.json` does not exist**, and Part 03 §11.5 publishes it. R80's
-`registry/sources.schema.json` is the template and has three hookups: hand-written beside
-`manifest.schema.json`, copied by `build.py`'s `VENDORED` map into the package that reads it, and
-loaded by `check.py`. One thing differs — a **build** reads this document, so it vendors into the
-writer rather than the reader.
+**`registry/adapter.schema.json` exists, done 2026-09-14**, hand-written beside
+`manifest.schema.json`, copied by `build.py`'s `VENDORED` map into the **writer** rather than the
+reader — a build is what reads this document — and checked by `check.py` against an example, the
+way R80's `sources.schema.json` is. The schema fixes the shape and not the vocabulary: which
+protocols are in a group is the profile's to say and a build's to refuse, so it is checked where
+it can be named rather than as a schema error.
 
-**Nothing generates a declaration document.** R115 §3.12 requires generation rather than
-maintenance, and measured on the ten classes it is 180 to 914 bytes each with no judgement in it,
-from `PRODUCES`, `STATES`, `CONSUMES` and the protocol. The ten need none while they ship with the
-build; what needs one is the first adapter to leave, and generating it here is how its author starts
-from something correct.
+**The declaration document is generated, done 2026-09-14.** `escapewheel declare <kind>` writes it
+from `PRODUCES`, `STATES`, `CONSUMES` and the protocol, with no judgement in it; `states` carries
+the field names alone, since which attribute holds each is this implementation's business and no
+other implementation can use it. A test settles ownership from the ten documents and from the ten
+classes and demands the same answer, which is what "the two forms are one declaration" has to mean
+in practice.
 
-**A build reads no report at all.** R109 §3.6 was specified and unimplemented before this, and
-Part 09 §5.8 now adds the connection as a carrier, the rule that a build clears a report's path
-before the run that writes it, and `stated`, which is where the values behind an adapter's declared
-fields cross. All of it is unread today, so a source stating a fact out of process is compared
-against nothing.
+**A build reads a report, done 2026-09-14.** It removes the path before the run, so last week's
+findings cannot be reported as this run's; reports every problem the report carries and fails on
+none of them; and reads `stated` back into the source's own attribute names, so Part 05 §3.6's
+comparison runs on a delivered source exactly as it runs on an imported one — a delivered NWB
+stating `subject_id` `m001` against a recipe declaring `786867` refuses the build, which is the
+test that proves the channel end to end.
+
+**Proved on a real recipe.** `ecephys_786867` at `--sample 2000` with `openephys` delivered over
+`files-v0.1` and `harp` over `stream-v0.1`: committed with **0 errors and 0 warnings**, and
+`core.devices` — the table both delivered sources contribute to — **byte-identical** to the packet
+built with both in process, at 21 rows. The five tables that differ are the sample's doing and are
+the same five an all-in-process build at that sample produces.
+
+**Three of the ten adapters can be delivered today, and what stops the other seven is two things.**
+`waveforms`, `lfp` and `video` stage or reference an array or a media asset, which Part 03 §11.3
+has crossing as a *reference* to a location a build supplies — a different act from delivering
+rows, and unimplemented, so each is refused with what it would take rather than delivering half of
+itself. `array_location` stays reserved and unfilled with it. `sorter`, `nwb`, `sync` and `session`
+are reached by the harvest: `_harvest` calls `units()`, `clocks()`, `extent()`, `behavior()` and
+`event_streams()` per kind, and `_recorded_epoch` calls `aligned()`, `started()` and
+`clock_id_for()` on the sync source. None of that is a build supplying a value, which is what
+Part 03 §11.2 governs; all of it is a build reading what a source produced, and out of process it
+arrives as rows. That is the next piece, and it is what makes the boundary reach every adapter
+rather than the three that need nothing of it.
+
+**A shared resource comes back as rows, not as a stream.** A writer takes one table from one path,
+because two streams cannot be put in the declared sort order across the seam between them — so a
+resource a source `contributes` is materialized and a resource it `owns` streams. Both shared
+tables are metadata-scale (`core.clocks`, `core.devices`), so nothing large is held; a large
+contributed table would be, and the writer would refuse it in process too.
 
 Nothing here invalidates a packet: R115 changes no table, column, reference, rule or vocabulary, and
 the two built packets are conforming under it.

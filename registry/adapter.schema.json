@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://escapewheel.org/schemas/adapter/0.1.0",
+  "title": "Escapewheel adapter declaration document",
+  "description": "Shape of the document an adapter a build cannot import publishes, per Part 03 §11.5. It carries what belongs to the adapter and nothing that belongs to the machine: the command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. An implementation shipping both a document and an importable class generates the document rather than maintaining it.",
+  "type": "object",
+  "required": [
+    "kind",
+    "protocol",
+    "produces",
+    "needs"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This document's meta-schema, by $id. Identity rather than a fetch instruction: a build MUST NOT dereference it and MUST NOT require it (Part 04 §5.4)."
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "maxLength": 64,
+      "description": "The name a recipe's source entry uses for this adapter."
+    },
+    "protocol": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*-v[0-9]+\\.[0-9]+$",
+      "description": "The protocol this adapter's rows cross by. Membership of a group is the profile's to settle and a build's to refuse (Part 03 §11.1), so the pattern here fixes the shape and not the vocabulary."
+    },
+    "produces": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$",
+        "description": "A dotted resource ID some loaded registry declares."
+      },
+      "description": "What this adapter can supply, whatever a given root happens to hold. A build settles ownership from it before any source is opened (Part 05 §3.4)."
+    },
+    "needs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_]*$",
+        "maxLength": 64
+      },
+      "description": "Every value a build supplies this adapter, each resolving against Part 03 §11.2's terms first and the recipe's options second. A term a protocol requires is not declared here: declaring the protocol is what asks for it."
+    },
+    "states": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$",
+        "description": "A `block.field` name of the recipe."
+      },
+      "description": "The recipe fields this source can state, which a build compares against what the recipe declares (Part 05 §3.6). The values need the source read, so they travel under `stated` in the run's report (Part 09 §5.8) rather than here."
+    },
+    "consumes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_-]*$",
+        "maxLength": 64
+      },
+      "description": "The kinds whose output this adapter reads, which orders a build rather than being passed to it."
+    }
+  },
+  "additionalProperties": false
+}

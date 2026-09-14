@@ -27,6 +27,9 @@ VENDORED = {
     "registry.schema.json": HERE.parent / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
     "manifest.schema.json": HERE.parent / "escapewheel-reader/src/escapewheel_reader/schemas/manifest.schema.json",
     "sources.schema.json": HERE.parent / "escapewheel-reader/src/escapewheel_reader/schemas/sources.schema.json",
+    # A *build* reads an adapter's declaration (Part 03 §11.5), so this one vendors into the
+    # writer where the other three go to whichever package reads them.
+    "adapter.schema.json": HERE.parent / "escapewheel-writer/src/escapewheel_writer/schemas/adapter.schema.json",
 }
 RULES = HERE / "rules.json"
 

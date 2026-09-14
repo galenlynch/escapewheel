@@ -35,7 +35,7 @@ from escapewheel_reader.clocks import BOUND, align
 from numpy.typing import NDArray
 
 from .extensions import load as load_extension
-from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, TERMS, Recipe, SourceSpec, consumes, states
+from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, TERMS, Recipe, SourceSpec, declared
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
@@ -140,6 +140,13 @@ class Context:
     measured_bound: dict[str, Any] = field(default_factory=dict)
     #: The anchors and the bound, once `alignment` has settled them.
     _alignment: tuple[dict[str, Any], float] | None = None
+    #: Where a source delivered out of process writes: one directory per kind, beside the packet
+    #: rather than inside it, so a delivery lands on the filesystem the packet is going to and a
+    #: failed build leaves it where it can be looked at.
+    workspace: Path = Path()
+    #: The build's progress reporter, for the stages that happen inside one source rather than
+    #: between them -- a delivery being the one that can take minutes on its own.
+    say: Callable[[str], None] = lambda _: None
     #: What the build itself observed, reported beside the adapters' own notes.
     notes: list[str] = field(default_factory=list)
     #: Part 05 §3.6: `block.field` to the registry type the packet stores it as, so a declared
@@ -180,16 +187,16 @@ def order(recipe: Recipe) -> list[SourceSpec]:
         If a source consumes a kind the recipe does not declare, or the dependencies cycle.
     """
     remaining = list(recipe.sources)
-    declared = {s.kind for s in remaining}
+    kinds = {s.kind for s in remaining}
     for spec in remaining:
-        missing = [k for k in consumes(spec.kind) if k not in declared]
+        missing = [k for k in declared(spec)["consumes"] if k not in kinds]
         if missing:
             raise RecipeError(f"source {spec.kind} consumes {', '.join(missing)}, which the recipe does not declare")
 
     ordered: list[SourceSpec] = []
     done: set[str] = set()
     while remaining:
-        ready = [s for s in remaining if set(consumes(s.kind)) <= done]
+        ready = [s for s in remaining if set(declared(s)["consumes"]) <= done]
         if not ready:
             stuck = ", ".join(sorted(s.kind for s in remaining))
             raise RecipeError(f"sources {stuck} depend on each other and cannot be ordered")
@@ -215,6 +222,10 @@ def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collectio
         terms["clocks"] = [context.clocks[clock_id] for clock_id in sorted(context.clocks)]
     if "units" in needed and context.units:
         terms["units"] = context.units
+    if "wanted" in needed:
+        # Settled before any source is opened (Part 05 §3.4), so a source told what is wanted may
+        # extract no more -- and one that is not told produces everything and a build discards.
+        terms["wanted"] = sorted(spec.claims)
     return terms
 
 
@@ -235,49 +246,72 @@ def _reference(recipe: Recipe, context: Context) -> Any:
     return clock
 
 
+def _supplied(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str, Any]:
+    """Return what a build supplies this source, resolved against what it declares (Part 05 §3.4).
+
+    Each name in the declaration resolves against Part 03 §11.2's terms first and the recipe's
+    options second, and a name resolving to neither is refused -- which `Recipe.check` reports
+    before anything is opened, so reaching the refusal here means the recipe was not checked.
+
+    The recipe's remaining options travel too, under `options`, so no option can collide with a
+    term. They are the ones an adapter can run without, which Part 03 §11.2 gives no way to
+    declare: a declared name a recipe does not set resolves to nothing, so declaring one would
+    make it mandatory.
+    """
+    names = declared(spec)["needs"]
+    terms = _terms(spec, recipe, context, names)
+    supplied: dict[str, Any] = {}
+    for name in names:
+        if name in TERMS:
+            if name not in terms:
+                raise RecipeError(f"source {spec.kind} needs {name!r}, which this recipe cannot fill")
+            supplied[name] = terms[name]
+        elif name not in spec.options:
+            raise RecipeError(f"source {spec.kind} needs {name!r}, which this entry does not set")
+    return {**supplied, "options": dict(spec.options)}
+
+
 def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
-    """Construct one adapter from what it declares it needs (Part 05 §3.4).
+    """Construct one adapter, or run it and read what it delivered (Part 05 §3.9).
 
-    One construction for every kind, built-in or registered by another distribution. Each name in
-    `NEEDS` resolves against Part 03 §11.2's terms first and the recipe's options second, and a name
-    resolving to neither is refused -- which `Recipe.check` reports before anything is opened, so
-    reaching the refusal here means the recipe was not checked.
-
-    The recipe's remaining options pass through untouched. They are the ones an adapter can run
-    without, which Part 03 §11.2 gives no way to declare: a declared name a recipe does not set
-    resolves to nothing, so declaring one would make it mandatory.
+    One construction for every kind, built-in or registered by another distribution, and one
+    delivery for every source the recipe does not run in this process. What a source is handed is
+    the same either way -- it is the same JSON object, written down for a command and passed as
+    keywords for a class -- so which route a source took reaches nothing downstream.
     """
     import inspect
 
+    from . import delivery
     from .sources import discovered
     from .sources.store import store_for
+
+    supplied = _supplied(spec, recipe, context)
+    options = supplied.pop("options")
+    if spec.delivery is not None and not spec.in_process:
+        return delivery.fetch(
+            spec.kind,
+            spec.delivery.command,
+            {**supplied, "options": options},
+            protocol=spec.delivery.protocol,
+            wanted=spec.claims,
+            states=declared(spec)["states"],
+            merged=spec.contributes,
+            report_path=spec.delivery.report_path,
+            workspace=context.workspace / spec.kind,
+            say=context.say,
+        )
 
     adapter = ADAPTERS.get(spec.kind) or discovered().get(spec.kind)
     if adapter is None:
         known = ", ".join(sorted({*ADAPTERS, *discovered()}))
         raise RecipeError(f"unknown source kind {spec.kind!r}; known kinds are {known}")
-
-    needs = getattr(adapter, "NEEDS", ("root", "session_id"))
-    terms = _terms(spec, recipe, context, needs)
-    supplied: dict[str, Any] = {}
-    for name in needs:
-        if name in TERMS:
-            if name not in terms:
-                raise RecipeError(f"source {spec.kind} needs {name!r}, which this recipe cannot fill")
-            supplied[name] = terms[name]
-        elif name in spec.options:
-            supplied[name] = spec.options[name]
-        else:
-            raise RecipeError(f"source {spec.kind} needs {name!r}, which this entry does not set")
-
-    passed = {k: v for k, v in spec.options.items() if k not in supplied}
     # In process, adapters reading one Zarr root share an open store, so they cannot disagree about
     # what is in it and the electrode table is parsed once. A handle is not something an adapter may
     # declare (Part 03 §11.2), so it is supplied where the class accepts one rather than from a
     # table of kinds -- and an adapter out of process is handed none and opens its own.
     if "store" in inspect.signature(adapter).parameters:
-        passed.setdefault("store", store_for(spec.root, context.stores))
-    return adapter(supplied.pop("root"), **supplied, **passed)
+        options.setdefault("store", store_for(spec.root, context.stores))
+    return adapter(supplied.pop("root"), **supplied, **options)
 
 
 def _reference_clock(recipe: Recipe, context: Context) -> Any:
@@ -333,7 +367,7 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
     every difference would tax every recipe to catch a rarer defect than the note surfaces.
     """
     declared, notes = recipe.declared_facts, getattr(source, "notes", context.notes)
-    for fact, attribute in sorted(states(spec.kind).items()):
+    for fact, attribute in sorted(getattr(source, "STATES", {}).items()):
         if fact not in declared:
             continue
         want, stated = declared[fact], getattr(source, attribute, None)
@@ -698,7 +732,12 @@ def build(
         Loaded with every record, ready to commit.
     """
     session_id = str(recipe.session["session_id"])
-    context = Context(session_id=session_id, fact_types=_fact_types(registry))
+    context = Context(
+        session_id=session_id,
+        fact_types=_fact_types(registry),
+        workspace=Path(f"{recipe.out}.deliveries"),
+        say=say,
+    )
     if recipe.session.get("reference_clock_id"):
         context.reference = _reference_clock(recipe, context)
     writer = PacketWriter(
@@ -890,8 +929,8 @@ def _encoding_exceptions(recipe: Recipe) -> dict[str, dict[str, tuple[str, ...]]
     `resource.column` splits at the last dot, since a resource ID is itself dotted.
     """
     grouped: dict[str, dict[str, list[str]]] = {"delta": {}, "plain": {}, "dictionary": {}}
-    for name, declared in recipe.encoding.items():
-        chosen = str(declared.get("encoding", "")).strip()
+    for name, chosen_for in recipe.encoding.items():
+        chosen = str(chosen_for.get("encoding", "")).strip()
         if chosen not in grouped or name.count(".") < 2:
             continue
         resource, _, column = name.rpartition(".")

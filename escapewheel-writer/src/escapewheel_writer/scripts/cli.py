@@ -1,4 +1,4 @@
-"""The ``escapewheel import``, ``inspect`` and ``init`` subcommands.
+"""The ``escapewheel import``, ``inspect``, ``init``, ``declare`` and ``deliver`` subcommands.
 
 `escapewheel_reader` owns the ``escapewheel`` entry point and discovers this through the
 ``escapewheel.commands`` group, so installing this package makes the subcommands appear rather
@@ -8,6 +8,12 @@ The three follow Part 05's stages. ``inspect`` is Stage 1 -- what a source offer
 is staged. ``init`` turns several inspections into a recipe draft, so the ownership decisions a
 build depends on are made from what the sources actually hold rather than from memory.
 ``import`` is Stages 2-6.
+
+``declare`` and ``deliver`` are the two halves of Part 03 §11's boundary. ``declare`` writes an
+adapter's declarations as the document a build reads where it cannot import one, generated from the
+class rather than maintained. ``deliver`` runs one adapter and hands its rows over a protocol, which
+is how an adapter this package ships becomes reachable out of process without declaring anything --
+and is the command a recipe names to have a source delivered rather than imported.
 """
 
 from __future__ import annotations
@@ -16,6 +22,7 @@ import argparse
 import json
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +31,14 @@ from ..extensions import load as load_extension
 from ..recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe
 from ..session import build, materializers
 from ..writer import CommitRefused
+
+
+def declaration_protocols() -> tuple[str, ...]:
+    """Part 03 §11.1's group, read where the CLI is built rather than imported at module load."""
+    from ..declaration import PROTOCOLS
+
+    return PROTOCOLS
+
 
 #: What the recipe declares rather than reading from a source, spelled for a draft's comment.
 SUPPLIES_NOTE = "the recipe supplies core.sessions, core.subjects and core.processing_runs"
@@ -218,12 +233,15 @@ def _import(args: argparse.Namespace) -> int:
     # One budget for the build. The CLI wins over the recipe, because the recipe travels with
     # the data and the machine packaging it does not.
     budget = args.memory_budget or recipe.memory_budget
+    # The override is applied to the recipe rather than only to the commit: a build derives
+    # where a delivery lands from where the packet is going, and the two must name one place.
+    recipe = replace(recipe, out=args.out or recipe.out)
     writer = build(recipe, registry, say=say, strict=args.strict)
     derive = materializers(recipe, memory_budget=budget)
     limits = {k: v for k, v in recipe.limits.items() if k != "memory_budget"}
     if budget and "memory_limit" not in limits:
         limits["memory_limit"] = budget
-    out = args.out or recipe.out
+    out = recipe.out
     # Read before the commit writes over it: a rebuild's reference is the packet it replaces,
     # and after `commit` there is nothing left to compare against.
     reference = compare.resources(args.compare or out)
@@ -327,8 +345,50 @@ def _extension(args: argparse.Namespace) -> int:
     return 0
 
 
+def _declare(args: argparse.Namespace) -> int:
+    """Write one adapter's declarations as the document Part 03 §11.5 publishes the shape of."""
+    from .. import declaration
+    from ..sources import ADAPTERS, discovered
+
+    adapter = ADAPTERS.get(args.kind) or discovered().get(args.kind)
+    if adapter is None:
+        known = ", ".join(sorted({*ADAPTERS, *discovered()}))
+        print(f"unknown source kind {args.kind!r}; this build ships {known}", file=sys.stderr)
+        return 2
+    document = declaration.of(adapter, args.kind, args.protocol)
+    text = json.dumps(document, indent=2) + "\n"
+    if args.out is None:
+        print(text, end="")
+    else:
+        args.out.write_text(text)
+        print(f"wrote {args.out} ({len(text)} bytes)")
+    return 0
+
+
+def _deliver(args: argparse.Namespace) -> int:
+    """Run one adapter and deliver its rows over the protocol the build reached it by."""
+    from .. import delivery
+    from ..sources import SourceDefect
+
+    try:
+        supplied = json.loads(args.supplied)
+    except json.JSONDecodeError as exc:
+        print(f"the last argument must be one JSON object of supplied terms: {exc}", file=sys.stderr)
+        return 2
+    protocol = args.protocol or delivery.infers(supplied)
+    try:
+        source = delivery.construct(args.kind, supplied)
+        delivery.serve(source, supplied, protocol)
+    except SourceDefect as exc:
+        # Standard error is what `files-v0.1` and `stream-v0.1` carry a failure on, and rows have
+        # taken standard output (Part 05 §4.4).
+        print(f"{args.kind}: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    """Add ``import``, ``inspect`` and ``init`` to the ``escapewheel`` command.
+    """Add ``import``, ``inspect``, ``init``, ``declare`` and ``deliver`` to ``escapewheel``.
 
     Parameters
     ----------
@@ -426,6 +486,31 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         "recorded in the run's parameters so the packet says it is a sample",
     )
     importer.set_defaults(func=_import)
+
+    declare = subcommands.add_parser("declare", help="write an adapter's declarations as a document")
+    declare.add_argument("kind", help="the source kind, as a recipe entry names it")
+    declare.add_argument(
+        "--protocol",
+        default="stream-v0.1",
+        choices=declaration_protocols(),
+        help="the protocol this adapter's rows cross by (Part 03 §11.1)",
+    )
+    declare.add_argument("--out", type=Path, help="write here rather than to stdout")
+    declare.set_defaults(func=_declare)
+
+    deliver = subcommands.add_parser("deliver", help="run one adapter and hand over its rows")
+    deliver.add_argument("kind", help="the source kind to run")
+    deliver.add_argument(
+        "--protocol",
+        default=None,
+        choices=declaration_protocols(),
+        help="override the protocol, which is otherwise read from the terms supplied",
+    )
+    deliver.add_argument(
+        "supplied",
+        help="one JSON object of the terms the adapter declared, as a build appends it",
+    )
+    deliver.set_defaults(func=_deliver)
 
 
 __all__ = ["KINDS", "PREFERRED", "register"]

@@ -704,6 +704,16 @@ try:
           [f"{list(e.path)[:4]} {e.message[:60]}"
            for e in jsonschema.Draft202012Validator(_sources).iter_errors(
                json.loads(_example.read_text()))] if _example.exists() else [])
+    # Part 03 §11.5's declaration document, checked the way the two above are: valid JSON Schema
+    # here, vendored by build.py, and an example that must still satisfy it.
+    _adapter = json.loads((HERE / "adapter.schema.json").read_text())
+    jsonschema.Draft202012Validator.check_schema(_adapter)
+    check("adapter declaration schema is valid JSON Schema", [])
+    _declared = HERE / "adapter.example.json"
+    check("the example adapter declaration validates against it",
+          [f"{list(e.path)[:4]} {e.message[:60]}"
+           for e in jsonschema.Draft202012Validator(_adapter).iter_errors(
+               json.loads(_declared.read_text()))] if _declared.exists() else [])
     # The prototype argues that the format drives the tooling, which is worth nothing if its
     # own input is a document the format rejects. It drifted 16 errors out of conformance
     # unnoticed -- 13 columns with no `role` after R48, two tables with no `rules`.
