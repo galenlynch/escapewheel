@@ -19,7 +19,8 @@ dependencies run downward, so a draft may depend on the ones above it and on not
 
 | draft | words | appraised | why here |
 |---|---|---|---|
-| `a-build-supplies-a-source-on-standard-input` | 1,283 | — | Depends on R115 alone, and on nothing else open. It moves the channel a build supplies a source by, which the adapter delivering an array will use as it stands; drafting that one first would describe a channel this one replaces. |
+| `a-build-supplies-a-source-on-standard-input` | 1,283 | — | Depends on R115 alone. It moves the channel a build supplies a source by, which the draft below uses as it stands; drafting that one first would have described a channel this one replaces. |
+| `an-adapter-delivers-an-array-by-writing-it` | 1,546 | — | Depends on R115 and on nothing above it: the two amend different clauses — one what a build supplies, the other what an adapter returns — and either order applies. Written second because the supply channel is what a build uses to say where an array goes. |
 
 A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
 records what bound something and a draft never did. Git holds the document, and whatever the
