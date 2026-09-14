@@ -13,9 +13,12 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense, as in the base sp
 
 ## 1. Scope
 
-This settles how a dense array or a media asset reaches a build from an adapter running out of
-process, which Part 03 §11.3 leaves open. It changes nothing about what a packet holds: no manifest
-field, no column, no table and no rule.
+This settles how a dense array reaches a build from an adapter running out of process, and how a
+resource that adapter references is described, both of which Part 03 §11.3 leaves open. A
+packet-owned media asset is not settled here and is not settled elsewhere, no source producing one.
+
+What a packet holds is unchanged: no manifest field, no column, no table, and no rule a validator
+runs over a packet.
 
 ## 2. Motivation
 
@@ -30,8 +33,8 @@ Three of the ten adapters the reference implementation ships are stopped there, 
 three that hold the bulk of a session. Measured on `ecephys_786867`, an AIND ecephys session of ten
 probes: the waveform adapter writes **one packet-owned array** of shape `[4505, 26, 150]` —
 17,569,500 values, 12.8 MB written — and the LFP and video adapters reference **10 arrays and 4
-media assets** between them, which is why a packet whose tables are 1.2 GB points at 6.8 GB it does
-not copy.
+media assets** between them, **14.44 GB** against the **0.59 GB** of tables the packet owns. What
+the three of them account for is most of what a session is.
 
 ### 2.2 A written array declares its own layout
 
@@ -76,15 +79,29 @@ must not go.
 
 ### 3.1 A packet-owned array crosses as bytes under the supplied location
 
-Where the packet will own a dense array, a build **MUST** supply `array_location`, a directory under
-the staging area (Part 05 §1), and the adapter **MUST** write each array it delivers into that
-directory as Zarr v3 (Part 03 §6.1), in a directory named by the array's `array_asset_id` with the
-suffix `.zarr`. A build **MUST** take that name as the asset's identifier.
+Where the packet will own a dense array, a build **MUST** supply `array_location`, a directory
+under the staging area (Part 05 §1) and **one per source**, since two sources may each deliver an
+asset of the same name and a shared directory would make them one array. The adapter **MUST** write
+each array it delivers into that directory as Zarr v3 (Part 03 §6.1), in a directory named by the
+array's `array_asset_id` with the suffix `.zarr`.
+
+**The name is the identifier, and the rows must agree with it.** A build **MUST** take the directory
+name as the asset's, and **MUST** refuse a delivery where an array arrives that the source's
+`core.array_assets` rows do not declare, or where a row declares a packet-owned array that did not:
+an asset whose bytes and whose row disagree about which asset they are is one a build cannot
+describe.
 
 Nothing else crosses for such an array. A build **MUST** settle the manifest entry by reading what
 was written — `physical_profile` from the array's `zarr_format`, `codecs` from its codec chain
 outermost first and descending through a shard, and `size_bytes` and `sha256` from the bytes — and
 **MUST NOT** require an adapter to state any of them.
+
+**An adapter that delivers an array writes bytes, and no other adapter writes anything.** R115
+§3.6 keeps an adapter's interface records whichever route delivers them, so that one can be tested
+without a filesystem; an array is the case that interface does not reach, which Part 03 §11.3
+settles by having it cross as a reference rather than as rows. What that costs an author is a Zarr
+v3 writer with sharding, where an adapter delivering rows needs no I/O at all — and it is the cost
+of the alternative that justifies it, a 12.8 MB array being 17,569,500 rows of four columns.
 
 An array written this way is validated as one written in process is: a build's own checks run over
 every staged resource whatever produced it (R109 §3.5), so a rank, a codec outside the floor or a
@@ -102,7 +119,8 @@ producer established of `physical_profile`, `codecs`, `source`, `sha256`, `size_
 `verified_at` and `members`. A build **MUST** merge each entry into the manifest it writes, and
 **MUST NOT** require any field but `resource_id` and `uri`: a writer that cannot reach a URI records
 nothing rather than copying a value from a local stand-in (Part 04 §5.2), which is a fact about the
-store rather than a failure of the run.
+store rather than a failure of the run. `external` is one a build fills rather than reads, every
+entry of this document being a resource the packet does not own.
 
 **It travels the way every other resource travels.** Under `files-v0.1` it is a file named
 `resources.json` under the delivery root; under `stream-v0.1` a stream whose `resource_id` metadata
@@ -143,10 +161,6 @@ the same thing.
 
 ## 4. What this does not change
 
-- **The manifest gains no field.** §3.2 has manifest entries arriving from an adapter, which
-  invites the reading that the manifest is what grew. It is not: every field named there is one
-  Part 04 §5 already declares, and this says which channel fills it for a source that ran
-  elsewhere.
 - **The layout stays the adapter's choice.** §3.1 has a build read chunking, sharding and codecs
   back off the array rather than stating them, which invites the reading that the build now decides
   them. The adapter decides, as Part 03 §11.3 says; reading them back is how a build learns what
