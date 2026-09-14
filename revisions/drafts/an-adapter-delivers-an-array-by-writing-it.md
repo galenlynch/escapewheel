@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 03 §11.3 (how a dense array's reference reaches a build), Part 09 §5.8 (what a run's report carries) |
+| **Amends** | Part 03 §11.3 (how a dense array's reference reaches a build), Part 09 §5.8 (what a run's report carries, and the shape it is published in) |
 | **Depends on** | R115 §3.8 (a dense array crosses as a reference rather than as rows), R115 §3.11 (a report is the channel for what a build cannot derive), R52 §2 (a build digests the bytes a packet owns), R51 §2 (a referenced prefix may record its members), R80 §2.2 (a referenced resource may name a source rather than a location) |
 | **Profile** | all |
 
@@ -51,24 +51,22 @@ So a reference for a packet-owned array would restate what the array declares, w
 refuses, and it would introduce the one thing worse than restating: two statements that can
 disagree, one of them checkable and one of them not.
 
-### 2.3 A referenced resource states what no build can look up
+### 2.3 A referenced resource states what no row carries
 
-A referenced resource is the other case, and it inverts. Its location looks as though it crosses
-already: `uri` is declared on `core.array_assets` and on `core.media_assets` and is populated in
-**11 of 11** array rows and **4 of 4** media rows of the packet measured, so an adapter delivering
-rows is delivering the location with them.
+A referenced resource is the other case, and it inverts. Much of what a manifest says about one
+crosses already, because an array and a media asset each have rows: `core.array_assets` carries
+`uri` alongside the asset's identity, `core.media_assets` carries `uri` and `format`, and both are
+populated — **11 of 11** array rows and **4 of 4** media rows in the packet measured. An adapter
+delivering rows delivers the location with them.
 
-That copy is the consumer's, and it does not reach the manifest. A row identifies its asset by
-`array_asset_name`, which is the name the source used — `ElectricalSeries46101-LFP` — where the
-manifest entry for the same array names `46101.lfp`, and **0 of 11 rows join to a manifest entry by
-name**. A build filling a manifest entry from the rows would have to guess which row is which
-resource.
-
-What no row carries at all is what the producer learned by looking at the store. Per referenced
-array the manifest holds five such facts — `codecs`, `physical_profile`, `size_bytes`,
-`verified_at` and `external` — and a build cannot recover them: structural validation MUST NOT
-reach the network (Part 04 §5.3), the referenced arrays here are `zarr_v2` where the packet's own
-are v3, and R36 §2.4 and R51 §2 exist precisely because a store may not answer twice.
+What no row carries is what the producer learned by opening the store. Per referenced array the
+manifest holds five such facts — `codecs`, `physical_profile`, `size_bytes`, `verified_at` and
+`external` — and they are not a table's to hold: a resource's location, its codecs and what was
+true of its bytes when someone looked are the catalog's (Part 04 §5), and a column restating them
+is the duplication R3 §3.0 refuses. Nor can a build recover them. Structural validation MUST NOT
+reach the network (Part 04 §5.3); the referenced arrays here are `zarr_v2` where the packet's own
+are v3, so the profile is not a constant; and R36 §2.4 and R51 §2 exist because a store may not
+answer twice.
 
 A build could open the store itself rather than being told. That is the work the adapter was run to
 do, done a second time and over the network, and it fails exactly where Part 04 §5.3 says a build
@@ -92,24 +90,41 @@ An array written this way is validated as one written in process is: a build's o
 every staged resource whatever produced it (R109 §3.5), so a rank, a codec outside the floor or a
 profile below Part 03 §6.1 is a finding rather than something an adapter is trusted about.
 
-### 3.2 A referenced resource's manifest facts cross in the report
+### 3.2 A referenced resource's manifest entry crosses in the report
 
 Where a resource is external (Part 04 §5.1), a build supplies no location and the adapter writes no
-bytes, so what the manifest needs has nowhere to come from but the adapter.
+bytes, so what the catalog needs has nowhere to come from but the adapter.
 
-It crosses in the run's report (Part 09 §5.8), in an optional `referenced` array: one entry per
-resource, keyed by the `resource_id` the entry is for, carrying `uri` and whatever else the producer
-established — `physical_profile`, `codecs`, `source`, `sha256`, `size_bytes`, `verified_at`,
-`members`. The location is among them rather than being taken from the row that also carries it,
-because the two are addressed differently and §2.3 measures that they do not join. A build **MUST** read that entry into the
-resource's manifest entry, and **MUST NOT** require any field of it: a writer that cannot reach a
-URI records nothing rather than copying a value from a local stand-in (Part 04 §5.2), which is a
-fact about the store rather than a failure of the run.
+It crosses in the run's report (Part 09 §5.8), in an optional `referenced` array whose entries are
+**manifest resource entries**, as Part 04 §5 declares them and the manifest's own published schema
+describes them: `resource_id`, `external`, `uri`, and whatever else the producer established —
+`physical_profile`, `codecs`, `source`, `sha256`, `size_bytes`, `verified_at`, `members`. A build
+**MUST** merge each entry into the manifest it writes, and **MUST NOT** require any field but
+`resource_id`: a writer that cannot reach a URI records nothing rather than copying a value from a
+local stand-in (Part 04 §5.2), which is a fact about the store rather than a failure of the run.
+
+Entries rather than a vocabulary of this revision's own, because a build already writes exactly
+this shape and a schema already describes it. What an adapter sends is what a manifest holds, so
+nothing translates between them and nothing can drift apart.
 
 A build **MUST NOT** treat an entry naming a resource the delivery did not carry as a failure of
-the run, and **MUST** report it: an adapter that names a resource it did not deliver has said
-something about a resource this build has no row for, and the mismatch is worth a line rather than
-a refusal.
+the run, and **MUST** report it: an adapter that names a resource it delivered no rows for has said
+something about a resource this build has no asset for, which is worth a line rather than a
+refusal.
+
+### 3.3 A report has a published shape
+
+The shape of a run's report **MUST** be published as `registry/report.schema.json`, as Part 04 §5.5
+publishes the source resolution document's shape and Part 03 §11.5 the adapter declaration's, and a
+build **MUST NOT** require a report to be valid against it — a report is a courtesy from a source
+that may be written by anything, and refusing one for its shape would lose what it says.
+
+A schema is owed here because §3.2 makes the report carry what a packet's catalog is written from,
+and because it already carries what a build refuses a packet over: Part 05 §3.6's comparison runs
+on `stated`, and a subject the recipe declares against one the source states refuses the build. Of
+the documents this format defines, the registry, the manifest, the source resolution document and
+the adapter declaration each have a published schema — `registry/` holds four — and the report is
+the one that does not.
 
 ## 4. What this does not change
 
@@ -131,11 +146,21 @@ they read. Their references stop being the reason a source must run in the write
 moves, and the manifest a build writes is the one it writes today: this is a channel for facts that
 already have a home.
 
+**The location is stated twice, and this does not settle which is right.** `core.array_assets.uri`
+and the manifest entry's `uri` hold the same location, and §2.3 leans on the row's copy for what a
+consumer does while §3.2 fills the manifest from the report. Striking one of the two is a question
+about Part 04 and the tables rather than about this channel, and it is left where it was found.
+
 **The reference implementation changes on both sides of the boundary.** Its `StagedArray` carries
 values and a layout, and an adapter delivering out of process writes the array rather than handing
 the values over; its `ExternalArray` and `ExternalMedia` become what a report entry parses into.
 The in-process path keeps both objects and is untouched, which is what keeps a recipe free to run a
 source either way.
+
+**The schema is a new artifact with three hookups**, which `registry/sources.schema.json` is the
+template for: hand-written beside `manifest.schema.json`, copied by `build.py`'s `VENDORED` map into
+the package that reads it — the writer, since a build reads a report — and checked by `check.py`
+against an example.
 
 **One measurement should be taken again at acceptance.** The packet measured here holds one
 packet-owned array; the second packet holds none, and a session with per-unit waveforms from more
