@@ -493,6 +493,20 @@ another source's rows, which no resource carries and no report key holds. A deli
 `withheld_first_anchor` and `withheld_last_anchor` null where an imported one fills them, and the
 build says so rather than leaving the packet quietly poorer.
 
+**A credential in a recipe reaches the packet, closed 2026-09-14.**
+`core.processing_runs.parameters` carries the recipe document verbatim, so a `storage_options`
+holding a key travelled inside every copy of the packet it built, and nothing redacted it. Neither
+packaged recipe sets one — both rely on the anonymous default — so nothing had leaked. A recipe
+setting a credential is now refused before any source is opened, naming the option and saying to
+name a profile or leave it to the environment; and what a run records is redacted wherever it is
+written, since a recipe written before the refusal existed is already inside a packet. A reference
+is not a credential: `profile`, `anon`, `region` and `endpoint_url` pass, and so does gcsfs's
+`token = "anon"`, which names a way to authenticate rather than a secret.
+
+This is also what decides the channel question below. With no secret in the object, what crosses is
+a root URI, a session name and rows — and the argument list's remaining fault is size, not
+exposure.
+
 **Two things the delivery found in what was already there.** A mapping crossed as an Arrow struct
 and could not be cast to the `json_string` the packet stores, so a delivery now encodes one as the
 canonical JSON the writer would have written — which is also what Part 03 §5.5's ban on nested

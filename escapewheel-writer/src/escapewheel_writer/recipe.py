@@ -151,6 +151,68 @@ def produces(kind: str) -> frozenset[str]:
     return frozenset(getattr(adapter, "PRODUCES", ()) if adapter is not None else ())
 
 
+#: Storage options that carry a credential itself rather than a reference to one. Refused,
+#: because a recipe is recorded inside the packet it builds -- `core.processing_runs.parameters`
+#: carries the document verbatim -- so a key written here travels wherever the packet does, and
+#: an environment that can be asked for one instead is available on every machine that has one.
+#: The names are fsspec's and its backends': s3fs, gcsfs and adlfs each spell the pair their own
+#: way, and `connection_string` carries both halves at once.
+SECRETS = frozenset(
+    {
+        "account_key",
+        "api_key",
+        "aws_access_key_id",
+        "aws_secret_access_key",
+        "aws_session_token",
+        "client_secret",
+        "connection_string",
+        "credential",
+        "credentials",
+        "key",
+        "passwd",
+        "password",
+        "private_key",
+        "sas_token",
+        "secret",
+        "secret_key",
+        "session_token",
+        "token",
+    }
+)
+
+#: What a `token` may say without being one. gcsfs takes a mode here as well as a credential, and
+#: `token = "anon"` is how its own documentation reads a public bucket -- so the name alone does
+#: not decide, and these are the values that name a way to authenticate rather than a secret.
+TOKEN_MODES = frozenset({"anon", "browser", "cache", "cloud", "google_default"})
+
+#: What a refused option is replaced by wherever a recipe is recorded.
+REDACTED = "[redacted]"
+
+
+def carries_a_secret(name: str, value: Any) -> bool:
+    """Whether one storage option is a credential rather than a reference to one."""
+    if name not in SECRETS:
+        return False
+    return not (name == "token" and isinstance(value, str) and value in TOKEN_MODES)
+
+
+def redacted(document: Any) -> Any:
+    """Return a recipe document with every credential replaced, for recording it.
+
+    Applied wherever the recipe is written down rather than at parse time, so a build still opens
+    what the author declared -- and applied to the whole document rather than to `storage_options`
+    alone, because the next place a key gets written will not be the one this was built for.
+    """
+    if isinstance(document, Mapping):
+        return {
+            name: REDACTED if carries_a_secret(str(name), value) else redacted(value)
+            for name, value in document.items()
+        }
+    if isinstance(document, list):
+        return [redacted(item) for item in document]
+    return document
+
+
 #: Keys a `[[source]]` entry uses for itself; everything else is passed to the adapter.
 _SOURCE_KEYS = frozenset({"kind", "root", "owns", "contributes", "storage_options", "in_process", "delivery"})
 
@@ -709,6 +771,7 @@ class Recipe:
         errors.extend(self._dangling_references(tables, claimants, warnings))
         errors.extend(self._clock_problems())
         errors.extend(self._option_problems())
+        errors.extend(self._storage_problems())
         errors.extend(self._delivery_problems())
         errors.extend(self._declaration_problems(tables))
         errors.extend(self._states_problems())
@@ -854,6 +917,23 @@ class Recipe:
             for resource in sorted(declared(spec)["produces"] - claimed)
         ]
 
+    def _storage_problems(self) -> list[str]:
+        """Storage options that carry a credential, which a recipe must not (Part 05 §3.1).
+
+        Refused rather than redacted on the way in, because the recipe file is the author's and
+        the value is in it: replacing it here would leave the packet clean and the file leaking,
+        and the author would not learn. What a build records is redacted as well, since a recipe
+        written before this check ran is already inside a packet.
+        """
+        return [
+            f"[[source]] {spec.kind} sets storage_options.{name}, which is a credential; name a "
+            f"profile or leave it to the environment, because the recipe is recorded in the packet "
+            f"it builds"
+            for spec in self.sources
+            for name, value in sorted(spec.storage_options.items())
+            if carries_a_secret(str(name), value)
+        ]
+
     def _delivery_problems(self) -> list[str]:
         """Report each source with no route to a build (Part 05 §3.9).
 
@@ -947,4 +1027,15 @@ class Recipe:
         return problems
 
 
-__all__ = ["RECIPE_SUPPLIES", "TERMS", "ClockSpec", "MaterializeSpec", "Problem", "Recipe", "SourceSpec"]
+__all__ = [
+    "RECIPE_SUPPLIES",
+    "REDACTED",
+    "SECRETS",
+    "TERMS",
+    "ClockSpec",
+    "MaterializeSpec",
+    "Problem",
+    "Recipe",
+    "SourceSpec",
+    "redacted",
+]

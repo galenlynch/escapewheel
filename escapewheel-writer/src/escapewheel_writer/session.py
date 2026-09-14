@@ -35,7 +35,7 @@ from escapewheel_reader.clocks import BOUND, align
 from numpy.typing import NDArray
 
 from .extensions import load as load_extension
-from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, TERMS, Recipe, SourceSpec, declared
+from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, TERMS, Recipe, SourceSpec, declared, redacted
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
@@ -914,7 +914,9 @@ def _import_run(
         "code_uri": f"sha256:{recipe.digest}",
         "parameters": json.dumps(
             {
-                "recipe": recipe.document,
+                # Redacted, because this lands in the packet: a recipe written before the
+                # refusal existed carries a credential into every copy of it otherwise.
+                "recipe": redacted(recipe.document),
                 "compensations": describe(compensations or []),
                 # Part 02 §12.6 and §4: what the terminal-anchor test withheld, and the measurement
                 # that justifies mapping further than Part 01 §3.9's default.
