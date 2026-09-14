@@ -19,7 +19,7 @@ dependencies run downward, so a draft may depend on the ones above it and on not
 
 | draft | words | appraised | why here |
 |---|---|---|---|
-| `an-adapter-delivers-an-array-by-writing-it` | 1,804 | — | Depends on R115 and on R116, which it uses as it stands: the two amend different clauses — one what a build supplies, the other what an adapter returns — so accepting R116 first changed nothing here. |
+| `an-adapter-delivers-an-array-by-writing-it` | 2,053 | — | Depends on R115 and on R116, which it uses as it stands: the two amend different clauses — one what a build supplies, the other what an adapter returns — so accepting R116 first changed nothing here. |
 
 A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
 records what bound something and a draft never did. Git holds the document, and whatever the

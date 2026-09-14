@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 03 §11.3 (how a dense array's reference reaches a build), Part 03 §11.2 (`resources_path`, a term a protocol requires) |
-| **Depends on** | R115 §3.8 (a dense array crosses as a reference rather than as rows), R115 §3.11 (a report is the channel for what a build cannot derive), R52 §2 (a build digests the bytes a packet owns), R51 §2 (a referenced prefix may record its members), R80 §2.2 (a referenced resource may name a source rather than a location) |
+| **Amends** | Part 03 §11.3 (how a dense array's reference reaches a build, and what a delivery says about a referenced one), Part 03 §11.4 (a second reserved resource identifier) |
+| **Depends on** | R115 §3.8 (a dense array crosses as a reference rather than as rows), R115 §3.3 (rows cross by a protocol of a group, each carrying a resource by name), R52 §2 (a build digests the bytes a packet owns), R51 §2 (a referenced prefix may record its members), R80 §2.2 (a referenced resource may name a source rather than a location) |
 | **Profile** | all |
 
 Normative, except §2, which is informative.
@@ -90,35 +90,43 @@ An array written this way is validated as one written in process is: a build's o
 every staged resource whatever produced it (R109 §3.5), so a rank, a codec outside the floor or a
 profile below Part 03 §6.1 is a finding rather than something an adapter is trusted about.
 
-### 3.2 A referenced resource crosses as a resource document
+### 3.2 A referenced resource crosses with the delivery
 
 Where a resource is external (Part 04 §5.1), a build supplies no location and the adapter writes no
 bytes, so what the catalog needs has nowhere to come from but the adapter.
 
-An adapter that delivers a referenced resource **MUST** deliver a **resource document** with it: a
-JSON document carrying one entry per such resource, each a manifest resource entry as Part 04 §5
-declares one — `resource_id`, `external`, `uri`, and whatever the producer established of
-`physical_profile`, `codecs`, `source`, `sha256`, `size_bytes`, `verified_at` and `members`. A
-build **MUST** merge each entry into the manifest it writes, and **MUST NOT** require any field but
-`resource_id` and `uri`: a writer that cannot reach a URI records nothing rather than copying a
-value from a local stand-in (Part 04 §5.2), which is a fact about the store rather than a failure
-of the run.
+An adapter that delivers a referenced resource **MUST** deliver a **resource document** with it,
+under the reserved resource identifier `resources`: one entry per such resource, each a manifest
+resource entry as Part 04 §5 declares one — `resource_id`, `external`, `uri`, and whatever the
+producer established of `physical_profile`, `codecs`, `source`, `sha256`, `size_bytes`,
+`verified_at` and `members`. A build **MUST** merge each entry into the manifest it writes, and
+**MUST NOT** require any field but `resource_id` and `uri`: a writer that cannot reach a URI records
+nothing rather than copying a value from a local stand-in (Part 04 §5.2), which is a fact about the
+store rather than a failure of the run.
 
-**Which channel carries it is the protocol's**, as it is for a report (Part 09 §5.8). Under
-`files-v0.1` and `stream-v0.1` it is a file at a path the build supplies as `resources_path`, a
-term a protocol requires rather than an adapter declaring it (Part 03 §11.2); under `flight-v0.1`
-it is `DoAction("resources")`, because the connection is the channel and no file outlives the run.
+**It travels the way every other resource travels.** Under `files-v0.1` it is a file named
+`resources.json` under the delivery root; under `stream-v0.1` a stream whose `resource_id` metadata
+is `resources`; under `flight-v0.1` a descriptor of that name, which `ListFlights` reports and
+`DoGet` fetches as it does any other. A resource identifier is dotted, so no undotted token can
+collide with it — the argument §11.4 already makes for `end`.
 
-**It is a delivery and not a report, and the difference is the whole of why it is a second
-document.** A report is a courtesy: a build MUST NOT require one and MUST NOT fail on its contents
-(Part 09 §5.8), so a fact a packet cannot be written without has no business in it. This document
-is part of what the run delivers: a build **MUST** treat its absence as a failed run where the
-source delivered a resource whose rows say it is external, on the same terms as a resource that
-did not arrive (Part 05 §4.4).
+**Nothing about it is a second mechanism**, and that is the point. It needs no term of its own,
+because a build already supplies where a delivery goes; no action of its own, because a descriptor
+is the format's and inventing a key is what §11.1's choice of Flight avoided; and no rule of its
+own about arriving, because a resource that does not arrive is already a failed run (Part 05 §4.4).
+A build **MUST NOT** count it among the resources the recipe left the source owning, since it is
+what the delivery says *about* them.
 
-Entries rather than a vocabulary of this revision's own, because a build already writes exactly
-this shape. What an adapter sends is what a manifest holds, so nothing translates between them and
-nothing can drift apart.
+**It is not a report, and the difference is why it is not in one.** A report is a courtesy: a build
+MUST NOT require one and MUST NOT fail on its contents (Part 09 §5.8), so a fact a packet's catalog
+cannot be written without has no business in it — and for these arrays the absent fact is not a
+missing one but a false one, `physical_profile` being `zarr_v2` where a default would say v3.
+
+Manifest entries rather than a vocabulary of this revision's own, because a build already writes
+exactly this shape. Under a protocol that carries Arrow, the document travels as text in a
+single-row table rather than as a column per field: the manifest's schema then stays the one
+description of an entry, where a column per field would be a second one to keep in step with it,
+and `members` is a list no column holds.
 
 ### 3.3 A resource document has a published shape
 
@@ -127,17 +135,18 @@ Part 04 §5.5 publishes the source resolution document's shape and Part 03 §11.
 declaration's, and a build **MUST** refuse a document that does not satisfy it, naming what is
 wrong, before it writes a manifest.
 
-Refused rather than reported, which is the opposite of what §3.2 says about a report and for the
+Refused rather than reported, which is the opposite of what a build does with a report and for the
 same reason: this is the catalog's own content arriving from elsewhere, and a malformed entry
 merged into a manifest is a packet that misdescribes its own resources. The manifest's schema
-already describes an entry, so the document's schema is a wrapper around it rather than a second
-description of the same thing.
+already describes an entry, so this one is a wrapper around it rather than a second description of
+the same thing.
 
 ## 4. What this does not change
 
-- **The manifest gains no field.** §3.2 adds a report key carrying manifest facts, which invites
-  the reading that the manifest is what grew. It is not: every field named there is one Part 04 §5
-  already declares, and this says which channel fills it for a source that ran elsewhere.
+- **The manifest gains no field.** §3.2 has manifest entries arriving from an adapter, which
+  invites the reading that the manifest is what grew. It is not: every field named there is one
+  Part 04 §5 already declares, and this says which channel fills it for a source that ran
+  elsewhere.
 - **The layout stays the adapter's choice.** §3.1 has a build read chunking, sharding and codecs
   back off the array rather than stating them, which invites the reading that the build now decides
   them. The adapter decides, as Part 03 §11.3 says; reading them back is how a build learns what
@@ -146,27 +155,25 @@ description of the same thing.
 ## 5. Consequence
 
 **The three adapters holding a session's bulk become deliverable.** The waveform adapter writes its
-array into the location it is given; the LFP and video adapters report what they found at a store
-they read. Their references stop being the reason a source must run in the writer's process.
+array into the location it is given; the LFP and video adapters deliver what they found at the
+store they read. Their references stop being the reason a source must run in the writer's process.
 
 **A packet is unchanged, and nothing is rebuilt.** No table, column, reference, rule or vocabulary
 moves, and the manifest a build writes is the one it writes today: this is a channel for facts that
 already have a home.
 
-**The report is unchanged, and nothing here leans on it.** An earlier form of this revision put
-these entries in the run's report, which is where the shape went wrong: a report is optional by
-Part 09 §5.8's own words and a catalog cannot be written from an optional document. The report
-stays what it is — what a person reads about a run — and keeps carrying `problems`, `read` and
-`stated`.
+**The report is unchanged.** It keeps carrying `problems`, `read` and `stated`, and nothing here
+leans on it.
 
 **The location is stated twice, and this does not settle which is right.** `core.array_assets.uri`
 and the manifest entry's `uri` hold the same location, and §2.3 leans on the row's copy for what a
-consumer does while §3.2 fills the manifest from the report. Striking one of the two is a question
+consumer does while §3.2 fills the manifest from the delivery. Striking one of the two is a question
 about Part 04 and the tables rather than about this channel, and it is left where it was found.
 
 **The reference implementation changes on both sides of the boundary.** Its `StagedArray` carries
 values and a layout, and an adapter delivering out of process writes the array rather than handing
-the values over; its `ExternalArray` and `ExternalMedia` become what a report entry parses into.
+the values over; its `ExternalArray` and `ExternalMedia` become what an entry of the resource document parses
+into.
 The in-process path keeps both objects and is untouched, which is what keeps a recipe free to run a
 source either way.
 
