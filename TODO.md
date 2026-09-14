@@ -9,7 +9,7 @@ Last checked 2026-09-09, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R115 accepted. R42 and R73 withdrawn. 2 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R116 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -471,21 +471,38 @@ harvest from the kinds it was written against. Three facts had to become rows fi
   explicitly — the source wins and the recipe is reported — where the build used to apply it in
   the harvest and say something else in the comparison.
 
-**Five of the ten are delivered on real data, and three things stop the rest.** `waveforms`, `lfp`
+**Six of the ten are delivered on real data, and two things stop the rest.** `waveforms`, `lfp`
 and `video` stage or reference an array or a media asset, which Part 03 §11.3 has crossing as a
 *reference* to a location a build supplies — a different act from delivering rows, and
 unimplemented, so each is refused with what it would take rather than delivering half of itself.
 `array_location` stays reserved and unfilled with it, and **which channel carries a reference is
 not specified**: §11.3 says what crosses and not where, so this needs a revision before it needs
-code.
+code. `tables` is the tenth, and it delivers: what stops it on this recipe is not the boundary but
+`extract_qc.py` writing `session_id` as the integer `0`, below.
 
-**A term does not fit in an argument, measured 2026-09-14.** Part 03 §11.2 has what a build
-supplies cross as one JSON object appended to the command's argument list. For `ecephys_786867` the
-`units` term is **322,281 bytes**, against Linux's per-argument limit of **131,072** — 2.5x, and the
-limit is reached at about **1,832 units**. So the NWB adapter cannot be delivered for a real
-session, and R115 §3.1's measurement of **721 bytes** was taken on the fixture, where `units` is
-empty. Every other adapter's object fits. This is a spec defect and wants a revision: the channel
-is the argument list, and a term carrying records outgrows it.
+**A term did not fit in an argument, settled by R116 on 2026-09-14.** Part 03 §11.2 had what a
+build supplies cross as one JSON object appended to the command's argument list. For
+`ecephys_786867` the NWB adapter's object is **322,799 bytes** against Linux's per-argument limit of
+**131,072** and Windows' **32,767** for a whole command line, so two of the ten adapters could not
+be delivered for a real session and the limit was reached at about **1,832 units**. R115 §3.1's
+**721 bytes** was measured on the fixture, where `units` is empty.
+
+R116 moves the object to standard input, which carries nothing under any of the three protocols and
+has no such limit, and binds both sides against the deadlock the size makes possible. Implemented
+the same day: **the NWB adapter delivered 18 resources over `stream-v0.1` in 1.0 s** on the session
+that refused it, in a build with **six of the ten sources out of process** — `sorter` and `sync`
+over `files-v0.1`, `session`, `harp` and `nwb` over `stream-v0.1`, `openephys` over `flight-v0.1` —
+committed with 0 core errors and **34 of 42 tables byte-identical** to the in-process packet.
+
+**`core.array_assets.array_asset_name` records the wrong name, found 2026-09-14.** R53 §2.5 makes
+a `*_name` what its identifier stands for, and the numbering fills it from exactly that where a row
+leaves it unset. `sources/lfp.py` sets it to the NWB's series name — `ElectricalSeries46101-LFP` —
+while minting the identifier from `46101.lfp`, which is also what the manifest entry carries. So
+**0 of 11 rows join to their manifest entry by name**, a consumer holding a row cannot find the
+resource it describes, and the packet records nothing about what `array_asset_id` 3 was minted
+from. The fix is to drop the override and let the numbering fill it; the series name goes to
+`metadata` or nowhere, the resource id already carrying the probe. Found while drafting the array
+reference, whose first draft rested on the join failure being a property of the format.
 
 **One fact of the harvest has no channel at all.** R99 §3.2's terminal-anchor result is per probe
 clock, the sync source computes it, and the *sorter* owns those rows — so it is a fact about

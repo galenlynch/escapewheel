@@ -45,7 +45,9 @@ BATCH_ROWS = 1_000_000
 RETRY = 0.01
 
 #: One protocol's reading half: what arrived per resource, and what was wrong with the run.
-Reader = Callable[[str, Sequence[str], Mapping[str, Any], Sequence[str]], tuple[dict[str, Any], list[str]]]
+Reader = Callable[
+    [str, Sequence[str], bytes, Mapping[str, Any], Sequence[str]], tuple[dict[str, Any], list[str]]
+]
 
 
 def as_table(rows: Sequence[Mapping[str, Any]]) -> pa.Table:
@@ -384,9 +386,9 @@ def fetch(
         The argument list the recipe carries, run as it is written. A list rather than a string
         because a parse is a quoting convention no recipe declared (Part 05 §3.7).
     supplied : Mapping
-        The terms the adapter declared, which cross as one JSON object appended to the command as
-        its last argument; the protocol's own terms are added here, since declaring the protocol
-        is what asks for them.
+        The terms the adapter declared, which cross as one JSON object on the command's standard
+        input; the protocol's own terms are added here, since declaring the protocol is what asks
+        for them.
     protocol : str
         Which of Part 03 §11.1's protocols to read.
     wanted : sequence of str
@@ -416,7 +418,10 @@ def fetch(
         # A file at a path the recipe names is present after any run that ever wrote one.
         report_path.unlink(missing_ok=True)
     supplied = {**supplied, **_protocol_supplies(protocol, workspace, report_path)}
-    argv = [*command, json.dumps(supplied, default=str)]
+    # On standard input, not in the argument list: an argument has a size no profile can raise,
+    # and one term carrying a record per unit passed it on a real session (Part 03 §11.2).
+    crossing = json.dumps(supplied, default=str).encode()
+    argv = list(command)
     started = time.perf_counter()
     readers: dict[str, Reader] = {
         "stream-v0.1": _read_stream,
@@ -425,7 +430,7 @@ def fetch(
     }
     if protocol not in readers:
         raise SourceDefect(f"{kind}: {protocol} is in no group this profile names")
-    tables, failures = readers[protocol](kind, argv, supplied, wanted)
+    tables, failures = readers[protocol](kind, argv, crossing, supplied, wanted)
     say(f"  delivered {len(tables)} resource(s) over {protocol} in {time.perf_counter() - started:.1f} s")
 
     notes, stated = _from_report(kind, protocol, report_path, tables)
@@ -481,6 +486,30 @@ def _from_report(
     return notes, dict(document.get("stated", {}))
 
 
+def _supply(child: subprocess.Popen[bytes], crossing: bytes) -> threading.Thread:
+    """Write what a build supplies to the child and close the stream, on a thread of its own.
+
+    Without waiting for the child to exit (Part 05 §3.7): a pipe holds tens of kilobytes and a
+    supplied object may be far larger, so writing it whole before reading rows would leave each
+    process waiting on the other.
+    """
+
+    def run() -> None:
+        assert child.stdin is not None
+        try:
+            child.stdin.write(crossing)
+        except BrokenPipeError:
+            # An adapter that died before reading is a failure the exit code reports; writing into
+            # its closed pipe must not raise here and hide it.
+            pass
+        finally:
+            child.stdin.close()
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    return thread
+
+
 def _drain(handle: Any, into: list[str]) -> threading.Thread:
     """Read a pipe to its end on a thread of its own.
 
@@ -502,12 +531,14 @@ def _said(collected: Sequence[str]) -> str:
 
 
 def _read_files(
-    kind: str, argv: Sequence[str], supplied: Mapping[str, Any], wanted: Sequence[str]
+    kind: str, argv: Sequence[str], crossing: bytes, supplied: Mapping[str, Any], wanted: Sequence[str]
 ) -> tuple[dict[str, Any], list[str]]:
     """`files-v0.1`: the adapter writes Parquet, and Stage 1 is the footers."""
     root = Path(supplied["delivery_root"])
     root.mkdir(parents=True, exist_ok=True)
-    done = subprocess.run(argv, capture_output=True, check=False)
+    # `communicate` writes the input and drains both output streams together, which is what keeps
+    # a build from waiting on an adapter that is waiting on it (Part 05 §3.7).
+    done = subprocess.run(argv, input=crossing, capture_output=True, check=False)
     failures = []
     if done.returncode:
         # A non-zero exit is a failure whatever arrived: an adapter saying it failed is not
@@ -527,12 +558,13 @@ def _read_files(
 
 
 def _read_stream(
-    kind: str, argv: Sequence[str], supplied: Mapping[str, Any], wanted: Sequence[str]
+    kind: str, argv: Sequence[str], crossing: bytes, supplied: Mapping[str, Any], wanted: Sequence[str]
 ) -> tuple[dict[str, Any], list[str]]:
     """`stream-v0.1`: concatenated IPC on standard output, ended by the sentinel."""
     del supplied, wanted
-    child = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    child = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     said: list[str] = []
+    _supply(child, crossing)
     draining = _drain(child.stderr, said)
     rows = cast("IOBase", child.stdout)  # a pipe, opened by `Popen` and never None with stdout=PIPE
     tables: dict[str, Any] = {}
@@ -566,15 +598,16 @@ def _read_stream(
 
 
 def _read_flight(
-    kind: str, argv: Sequence[str], supplied: Mapping[str, Any], wanted: Sequence[str]
+    kind: str, argv: Sequence[str], crossing: bytes, supplied: Mapping[str, Any], wanted: Sequence[str]
 ) -> tuple[dict[str, Any], list[str]]:
     """`flight-v0.1`: retry the socket until it answers, then one DoGet per descriptor."""
     import pyarrow.flight as fl
 
     del wanted
     socket = str(supplied["socket"])
-    child = subprocess.Popen(argv, stderr=subprocess.PIPE)
+    child = subprocess.Popen(argv, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     said: list[str] = []
+    _supply(child, crossing)
     draining = _drain(child.stderr, said)
     tables: dict[str, Any] = {}
     failures: list[str] = []

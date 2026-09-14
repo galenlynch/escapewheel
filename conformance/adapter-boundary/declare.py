@@ -156,11 +156,8 @@ def main() -> int:
         }
         supplied = build_side.supply(serve_nwb.NEEDS, held, options)
         child = subprocess.run(
-            [
-                sys.executable,
-                str(HERE / "serve_stream.py"),
-                json.dumps({**supplied, "report_path": str(report)}),
-            ],
+            [sys.executable, str(HERE / "serve_stream.py")],
+            input=json.dumps({**supplied, "report_path": str(report)}).encode(),
             stdout=subprocess.DEVNULL,
             env={**os.environ, "PYTHONPATH": str(HERE)},
             check=True,

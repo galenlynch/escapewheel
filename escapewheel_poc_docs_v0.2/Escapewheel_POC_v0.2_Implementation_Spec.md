@@ -13,7 +13,7 @@ part number here as it does there.
 This document set specifies the Escapewheel proof-of-principle data packet. It is v0.1 with every accepted revision applied:
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R115 accepted. R42 and R73 withdrawn. 2 drafts are open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R116 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
@@ -1638,7 +1638,9 @@ A build MUST pass a collection as records carrying its key as columns. A mapping
 
 Some terms belong to a protocol rather than to an adapter. `flight-v0.1` requires `socket`, the address to serve on; `files-v0.1` requires `delivery_root`, the directory to write the delivery into; both `files-v0.1` and `stream-v0.1` require `report_path` where a report is expected (Part 09 §5.8). A build MUST supply whichever terms its adapter's protocol requires, and an adapter MUST NOT declare one — declaring the protocol is what asks for it.
 
-What crosses is one JSON object keyed by the term, appended to the command's argument list as its last element, and a build MUST add no other argument of its own (R115 §3.1). An option appears under `options`, keyed by its name, so no option collides with a term.
+What crosses is one JSON object keyed by the term. A build MUST write it to the command's standard input and MUST close that stream when it has, MUST NOT pass it as an argument, and MUST NOT add any argument to the command the recipe carries (R116 §3.1). An adapter MUST read its standard input to end of file and parse it as that object before it writes any rows, and a build supplies nothing else on that stream. An option appears under `options`, keyed by its name, so no option collides with a term.
+
+An argument list is not the channel because it has a size no profile can raise — 131,072 bytes for one argument on Linux, 32,767 characters for a whole command line on Windows — and a term carrying one record per unit reached 322,799 bytes on a real session, where an adapter's whole object measured 721 against a fixture that had none (R116 §2.1). Standard input carries nothing under any protocol of the group and has no such limit.
 
 The wanted set is a term a build supplies and an adapter MAY act on. A build settles ownership before any source is opened (Part 05 §3.4), so an adapter told what is wanted may extract no more; acting on it is permitted rather than required, because for some sources producing three resources costs what producing all of them costs, and a build cannot tell an adapter that extracted three from one that extracted everything and discarded the rest.
 
@@ -2001,6 +2003,8 @@ A fact the source **derives** is the source's. `core.sessions.session_start_time
 A command that exits non-zero MUST fail the build, and a build MUST name the source whose command failed together with the resources that source owns, rather than reporting the first resource it then finds missing (R109 §3.3). A command belongs to a source and a source is not an extension: one command may produce tables of several extensions, so a finding naming one of them would be wrong about the rest.
 
 A recipe MUST carry a command as an argument list, and a build MUST NOT derive one by splitting a string (R115 §3.4). A parse is a quoting convention the recipe never declared: POSIX rules applied on every host eat a backslash everywhere, so `C:\Python\python.exe` becomes `C:Pythonpython.exe` and fails as a missing executable rather than as a malformed command. A list needs no convention, because the host's own process interface takes one.
+
+A build MUST write what it supplies a source to that command's standard input and MUST close the stream when it has, without waiting for the command to exit, and MUST read what the command produces while it writes (R116 §3.2). A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
 
 A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Where the recipe puts rows on standard output (Part 03 §11.1), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one (R115 §3.11). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 

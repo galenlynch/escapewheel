@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-14 |
 | **Amends** | Part 03 §11.2 (the channel the supplied object crosses by), Part 05 §3.7 (what a build does with a command's standard input) |
 | **Depends on** | R115 §3.1 (a build supplies exactly what an adapter declares, as one JSON object keyed by term), R115 §3.3 (rows cross by a protocol of a group), R115 §3.4 (a recipe carries a command as an argument list) |
 | **Profile** | all |

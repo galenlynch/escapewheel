@@ -438,3 +438,55 @@ def test_the_harvest_reads_a_delivered_source_s_rows(tmp_path, nwb, harp):
     _harvest(spec, built, context, _recipe_declaring(tmp_path, spec, subject_id="m001"), _rows(built, built.records()))
     assert context.event_streams, "the NWB declares the streams a later source's windows cover"
     assert [row["clock_id"] for row in context.clocks.values()] == ["harp"]
+
+
+# -- the channel what a build supplies crosses by --------------------------------------------
+
+
+def test_what_a_build_supplies_crosses_on_standard_input(tmp_path, supplied):
+    """Part 03 §11.2: on standard input, with no argument added to the command the recipe wrote."""
+    script = tmp_path / "echo.py"
+    script.write_text(
+        "import json, sys\n"
+        "seen = {'argv': sys.argv[1:], 'stdin': json.loads(sys.stdin.buffer.read())}\n"
+        "open(sys.argv[1], 'w').write(json.dumps(seen))\n"
+        "raise SystemExit(7)\n"
+    )
+    seen = tmp_path / "seen.json"
+    with pytest.raises(SourceDefect, match="exited 7"):
+        delivery.fetch(
+            "echo",
+            [sys.executable, str(script), str(seen)],
+            supplied,
+            protocol="stream-v0.1",
+            wanted=[],
+            workspace=tmp_path / "work",
+        )
+    crossed = json.loads(seen.read_text())
+    assert crossed["argv"] == [str(seen)], "the command is what the recipe wrote, and nothing more"
+    assert crossed["stdin"]["root"] == supplied["root"]
+    assert crossed["stdin"]["options"] == supplied["options"]
+
+
+def test_a_term_larger_than_an_argument_crosses(tmp_path, supplied):
+    """The failure this channel replaces: Linux caps one argument at 32 pages, 131,072 bytes."""
+    units = [{"device_name": "probeA", "local_unit_label": str(n), "unit_id": n} for n in range(4_505)]
+    crossing = json.dumps({**supplied, "units": units})
+    assert len(crossing) > 131_072, "the object has to be past the limit for this to test anything"
+
+    script = tmp_path / "count.py"
+    script.write_text(
+        "import json, sys\n"
+        "open(sys.argv[1], 'w').write(str(len(json.loads(sys.stdin.buffer.read())['units'])))\n"
+    )
+    counted = tmp_path / "counted"
+    got = delivery.fetch(
+        "count",
+        [sys.executable, str(script), str(counted)],
+        {**supplied, "units": units},
+        protocol="files-v0.1",
+        wanted=[],
+        workspace=tmp_path / "work",
+    )
+    assert counted.read_text() == "4505"
+    assert got.tables == {}

@@ -123,6 +123,8 @@ A command that exits non-zero MUST fail the build, and a build MUST name the sou
 
 A recipe MUST carry a command as an argument list, and a build MUST NOT derive one by splitting a string (R115 §3.4). A parse is a quoting convention the recipe never declared: POSIX rules applied on every host eat a backslash everywhere, so `C:\Python\python.exe` becomes `C:Pythonpython.exe` and fails as a missing executable rather than as a malformed command. A list needs no convention, because the host's own process interface takes one.
 
+A build MUST write what it supplies a source to that command's standard input and MUST close the stream when it has, without waiting for the command to exit, and MUST read what the command produces while it writes (R116 §3.2). A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
+
 A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Where the recipe puts rows on standard output (Part 03 §11.1), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one (R115 §3.11). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 
 ### 3.8 A recipe declares an encoding

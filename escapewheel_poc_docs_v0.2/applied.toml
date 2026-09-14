@@ -2642,3 +2642,27 @@ where = [
   { part = "05", section = "3.5", note = "the refusals a recipe check makes against a declaration" },
   { part = "09", section = "5.8", note = "`stated` carries the values behind the fields a source declares it states" },
 ]
+
+[clause."R116 §2.1"]
+disposition = "rationale"
+note = "the NWB adapter's object is 322,799 bytes against a 131,072-byte argument on Linux and a 32,767-character command line on Windows; two of ten adapters exceed it and both for `units`"
+
+[clause."R116 §2.2"]
+disposition = "rationale"
+note = "`units` grows with what a session produced where `clocks` grows with the rig, so a cap on the term is a cap on the science"
+
+[clause."R116 §2.3"]
+disposition = "rationale"
+note = "standard input is free under all three protocols, is unbounded, and is the one channel that does not publish what it carries through /proc"
+
+[clause."R116 §3.1"]
+disposition = "applied"
+where = [
+  { part = "03", section = "11.2", note = "the object crosses on standard input, an adapter reads it to end of file, and no argument is added" },
+]
+
+[clause."R116 §3.2"]
+disposition = "applied"
+where = [
+  { part = "05", section = "3.7", note = "a build writes and closes without waiting, and reads what the command produces while it writes" },
+]

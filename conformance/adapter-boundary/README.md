@@ -174,7 +174,7 @@ protocol.
 `flight.py` serves three resources over a **Unix socket** — `Location.for_grpc_unix`, so no port
 and no network exposure — and a client lists them by descriptor and fetches each: **119 ms
 including the server's process start**. Flight ships in the standard pyarrow wheel. What a build
-supplies is the socket path, which it already passes in an argument list, so this protocol invents
+supplies is the socket path, which it already passes in the object it supplies, so this protocol invents
 nothing at all where `stream-v0.1` invents a metadata key.
 
 The reason to keep the stream is the one R3 §2.1 has argued from the beginning: a raw IPC stream is

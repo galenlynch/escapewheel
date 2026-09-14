@@ -117,13 +117,13 @@ def over_flight(
     socket = str(Path(tmp) / "adapter.sock")
     started = time.perf_counter()
     child = subprocess.Popen(
-        [
-            sys.executable,
-            str(HERE / "serve_nwb.py"),
-            json.dumps({**supplied, "socket": socket}),
-        ],
+        [sys.executable, str(HERE / "serve_nwb.py")],
+        stdin=subprocess.PIPE,
         env={**os.environ, "PYTHONPATH": str(HERE)},
     )
+    # Part 03 §11.2: on standard input, and closed, so the adapter reads to end of file.
+    child.stdin.write(json.dumps({**supplied, "socket": socket}).encode())
+    child.stdin.close()
     client = rendezvous(socket, child)
     stage1 = {
         fi.descriptor.path[0].decode(): fi.total_records for fi in client.list_flights()
@@ -141,14 +141,12 @@ def over_files(tmp: str, supplied: dict, wanted: list[str]) -> tuple[dict, dict,
     root = Path(tmp) / "delivered"
     root.mkdir()
     started = time.perf_counter()
-    code = subprocess.call(
-        [
-            sys.executable,
-            str(HERE / "serve_files.py"),
-            json.dumps({**supplied, "delivery_root": str(root)}),
-        ],
+    code = subprocess.run(
+        [sys.executable, str(HERE / "serve_files.py")],
+        input=json.dumps({**supplied, "delivery_root": str(root)}).encode(),
         env={**os.environ, "PYTHONPATH": str(HERE)},
-    )
+        check=False,
+    ).returncode
     if code:
         raise SystemExit(f"the adapter exited {code}")
     stage1 = {
@@ -165,10 +163,13 @@ def over_stream(
     """`stream-v0.1`: concatenated IPC on standard output, ended by the sentinel."""
     started = time.perf_counter()
     child = subprocess.Popen(
-        [sys.executable, str(HERE / "serve_stream.py"), json.dumps(supplied)],
+        [sys.executable, str(HERE / "serve_stream.py")],
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         env={**os.environ, "PYTHONPATH": str(HERE)},
     )
+    child.stdin.write(json.dumps(supplied).encode())
+    child.stdin.close()
     got, ended = {}, False
     while True:
         try:
@@ -213,7 +214,7 @@ def main() -> int:
         # The recipe's options, which a declared name resolves against after the vocabulary.
         options = {"zone": "America/Los_Angeles", "interval_kind": "task.trials"}
         supplied = supply(serve_nwb.NEEDS, context, options)
-        wire = json.dumps(supplied)  # what crosses, before a protocol adds its own term
+        wire = json.dumps(supplied)  # what crosses on standard input, before a protocol adds its own term
         wanted = context["wanted"]
         print(f"a build supplies {sorted(serve_nwb.NEEDS)}")
         print(

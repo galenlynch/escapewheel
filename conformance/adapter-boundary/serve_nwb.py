@@ -1,8 +1,8 @@
 """The NWB adapter behind a Flight server, built from what a build supplies and nothing else.
 
-`argv[1]` is the whole of it: one JSON object carrying the terms the adapter declared in `NEEDS`
-and the one `flight-v0.1` requires, `socket`. Nothing else crosses — no store, no clock object, no
-`ZoneInfo`, no object of the writer's — and nothing else is positional.
+Standard input is the whole of it: one JSON object carrying the terms the adapter declared in
+`NEEDS` and the one `flight-v0.1` requires, `socket`. Nothing else crosses — no store, no clock
+object, no `ZoneInfo`, no object of the writer's — and the command takes no argument at all.
 """
 
 from __future__ import annotations
@@ -79,7 +79,9 @@ class Served(fl.FlightServerBase):
 
 
 if __name__ == "__main__":
-    supplied = json.loads(sys.argv[1])
+    # Part 03 §11.2: what a build supplies crosses on standard input, read to end of file
+    # before anything is written.
+    supplied = json.loads(sys.stdin.buffer.read())
     # No readiness line: a build retries the socket until it answers or this process exits, so an
     # adapter that never binds is detected without it having to say anything.
     Served(supplied["socket"], build(supplied), supplied.get("wanted")).serve()

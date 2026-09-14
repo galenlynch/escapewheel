@@ -1,7 +1,7 @@
 """The NWB adapter delivering `stream-v0.1`: concatenated Arrow IPC on standard output.
 
-`argv[1]` is the JSON a build sends: the terms the adapter declared in `NEEDS`, and nothing
-else, since `stream-v0.1` needs no rendezvous of its own. One stream per resource, each carrying its
+Standard input is the JSON a build sends: the terms the adapter declared in `NEEDS`, and
+nothing else, since `stream-v0.1` needs no rendezvous of its own. One stream per resource, each carrying its
 `resource_id`, and a final empty stream named `end` so a truncated delivery is not mistaken for a
 finished one.
 """
@@ -26,7 +26,9 @@ def emit(out, resource: str, table: pa.Table) -> None:
 
 
 if __name__ == "__main__":
-    supplied = json.loads(sys.argv[1])
+    # Part 03 §11.2: what a build supplies crosses on standard input, read to end of file
+    # before anything is written.
+    supplied = json.loads(sys.stdin.buffer.read())
     source = build(supplied)
     rows = source.records()
     out = sys.stdout.buffer

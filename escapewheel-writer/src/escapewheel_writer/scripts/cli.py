@@ -13,7 +13,9 @@ build depends on are made from what the sources actually hold rather than from m
 adapter's declarations as the document a build reads where it cannot import one, generated from the
 class rather than maintained. ``deliver`` runs one adapter and hands its rows over a protocol, which
 is how an adapter this package ships becomes reachable out of process without declaring anything --
-and is the command a recipe names to have a source delivered rather than imported.
+and is the command a recipe names to have a source delivered rather than imported. It takes what a
+build supplies on standard input and no arguments of its own beyond the kind, so running one by
+hand is `escapewheel deliver nwb < supplied.json`.
 """
 
 from __future__ import annotations
@@ -370,10 +372,12 @@ def _deliver(args: argparse.Namespace) -> int:
     from .. import delivery
     from ..sources import SourceDefect
 
+    # Read to end of file before anything is written, which is what a build supplies and all it
+    # supplies on this stream (Part 03 §11.2).
     try:
-        supplied = json.loads(args.supplied)
+        supplied = json.loads(sys.stdin.buffer.read() or b"{}")
     except json.JSONDecodeError as exc:
-        print(f"the last argument must be one JSON object of supplied terms: {exc}", file=sys.stderr)
+        print(f"standard input must carry one JSON object of supplied terms: {exc}", file=sys.stderr)
         return 2
     protocol = args.protocol or delivery.infers(supplied)
     try:
@@ -505,10 +509,6 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         default=None,
         choices=declaration_protocols(),
         help="override the protocol, which is otherwise read from the terms supplied",
-    )
-    deliver.add_argument(
-        "supplied",
-        help="one JSON object of the terms the adapter declared, as a build appends it",
     )
     deliver.set_defaults(func=_deliver)
 

@@ -108,8 +108,8 @@ def main() -> int:
 
         print("1. what the build hands over\n")
         print(f"   argv[0] {sys.executable}")
-        print(f"   argv[1] {HERE / 'serve_stream.py'}")
-        print(f"   argv[2] {len(wire)} bytes of JSON, and nothing else is positional:")
+        print(f"   argv[1] {HERE / 'serve_stream.py'}, and no argument beyond it")
+        print(f"   stdin   {len(wire)} bytes of JSON, which is the whole of what crosses:")
         for term, value in supplied.items():
             print(f"           {term} = {json.dumps(value)[:84]}")
         print(
@@ -119,7 +119,8 @@ def main() -> int:
 
         print("2. what comes back on standard output\n")
         child = subprocess.run(
-            [sys.executable, str(HERE / "serve_stream.py"), wire],
+            [sys.executable, str(HERE / "serve_stream.py")],
+            input=wire.encode(),
             stdout=subprocess.PIPE,
             env={**os.environ, "PYTHONPATH": str(HERE)},
             check=True,
