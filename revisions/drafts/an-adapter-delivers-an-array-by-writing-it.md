@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 03 §11.3 (how a dense array's reference reaches a build), Part 09 §5.8 (what a run's report carries, and the shape it is published in) |
+| **Amends** | Part 03 §11.3 (how a dense array's reference reaches a build), Part 03 §11.2 (`resources_path`, a term a protocol requires) |
 | **Depends on** | R115 §3.8 (a dense array crosses as a reference rather than as rows), R115 §3.11 (a report is the channel for what a build cannot derive), R52 §2 (a build digests the bytes a packet owns), R51 §2 (a referenced prefix may record its members), R80 §2.2 (a referenced resource may name a source rather than a location) |
 | **Profile** | all |
 
@@ -90,41 +90,48 @@ An array written this way is validated as one written in process is: a build's o
 every staged resource whatever produced it (R109 §3.5), so a rank, a codec outside the floor or a
 profile below Part 03 §6.1 is a finding rather than something an adapter is trusted about.
 
-### 3.2 A referenced resource's manifest entry crosses in the report
+### 3.2 A referenced resource crosses as a resource document
 
 Where a resource is external (Part 04 §5.1), a build supplies no location and the adapter writes no
 bytes, so what the catalog needs has nowhere to come from but the adapter.
 
-It crosses in the run's report (Part 09 §5.8), in an optional `referenced` array whose entries are
-**manifest resource entries**, as Part 04 §5 declares them and the manifest's own published schema
-describes them: `resource_id`, `external`, `uri`, and whatever else the producer established —
-`physical_profile`, `codecs`, `source`, `sha256`, `size_bytes`, `verified_at`, `members`. A build
-**MUST** merge each entry into the manifest it writes, and **MUST NOT** require any field but
-`resource_id`: a writer that cannot reach a URI records nothing rather than copying a value from a
-local stand-in (Part 04 §5.2), which is a fact about the store rather than a failure of the run.
+An adapter that delivers a referenced resource **MUST** deliver a **resource document** with it: a
+JSON document carrying one entry per such resource, each a manifest resource entry as Part 04 §5
+declares one — `resource_id`, `external`, `uri`, and whatever the producer established of
+`physical_profile`, `codecs`, `source`, `sha256`, `size_bytes`, `verified_at` and `members`. A
+build **MUST** merge each entry into the manifest it writes, and **MUST NOT** require any field but
+`resource_id` and `uri`: a writer that cannot reach a URI records nothing rather than copying a
+value from a local stand-in (Part 04 §5.2), which is a fact about the store rather than a failure
+of the run.
+
+**Which channel carries it is the protocol's**, as it is for a report (Part 09 §5.8). Under
+`files-v0.1` and `stream-v0.1` it is a file at a path the build supplies as `resources_path`, a
+term a protocol requires rather than an adapter declaring it (Part 03 §11.2); under `flight-v0.1`
+it is `DoAction("resources")`, because the connection is the channel and no file outlives the run.
+
+**It is a delivery and not a report, and the difference is the whole of why it is a second
+document.** A report is a courtesy: a build MUST NOT require one and MUST NOT fail on its contents
+(Part 09 §5.8), so a fact a packet cannot be written without has no business in it. This document
+is part of what the run delivers: a build **MUST** treat its absence as a failed run where the
+source delivered a resource whose rows say it is external, on the same terms as a resource that
+did not arrive (Part 05 §4.4).
 
 Entries rather than a vocabulary of this revision's own, because a build already writes exactly
-this shape and a schema already describes it. What an adapter sends is what a manifest holds, so
-nothing translates between them and nothing can drift apart.
+this shape. What an adapter sends is what a manifest holds, so nothing translates between them and
+nothing can drift apart.
 
-A build **MUST NOT** treat an entry naming a resource the delivery did not carry as a failure of
-the run, and **MUST** report it: an adapter that names a resource it delivered no rows for has said
-something about a resource this build has no asset for, which is worth a line rather than a
-refusal.
+### 3.3 A resource document has a published shape
 
-### 3.3 A report has a published shape
+The shape of a resource document **MUST** be published as `registry/resources.schema.json`, as
+Part 04 §5.5 publishes the source resolution document's shape and Part 03 §11.5 the adapter
+declaration's, and a build **MUST** refuse a document that does not satisfy it, naming what is
+wrong, before it writes a manifest.
 
-The shape of a run's report **MUST** be published as `registry/report.schema.json`, as Part 04 §5.5
-publishes the source resolution document's shape and Part 03 §11.5 the adapter declaration's, and a
-build **MUST NOT** require a report to be valid against it — a report is a courtesy from a source
-that may be written by anything, and refusing one for its shape would lose what it says.
-
-A schema is owed here because §3.2 makes the report carry what a packet's catalog is written from,
-and because it already carries what a build refuses a packet over: Part 05 §3.6's comparison runs
-on `stated`, and a subject the recipe declares against one the source states refuses the build. Of
-the documents this format defines, the registry, the manifest, the source resolution document and
-the adapter declaration each have a published schema — `registry/` holds four — and the report is
-the one that does not.
+Refused rather than reported, which is the opposite of what §3.2 says about a report and for the
+same reason: this is the catalog's own content arriving from elsewhere, and a malformed entry
+merged into a manifest is a packet that misdescribes its own resources. The manifest's schema
+already describes an entry, so the document's schema is a wrapper around it rather than a second
+description of the same thing.
 
 ## 4. What this does not change
 
@@ -146,6 +153,12 @@ they read. Their references stop being the reason a source must run in the write
 moves, and the manifest a build writes is the one it writes today: this is a channel for facts that
 already have a home.
 
+**The report is unchanged, and nothing here leans on it.** An earlier form of this revision put
+these entries in the run's report, which is where the shape went wrong: a report is optional by
+Part 09 §5.8's own words and a catalog cannot be written from an optional document. The report
+stays what it is — what a person reads about a run — and keeps carrying `problems`, `read` and
+`stated`.
+
 **The location is stated twice, and this does not settle which is right.** `core.array_assets.uri`
 and the manifest entry's `uri` hold the same location, and §2.3 leans on the row's copy for what a
 consumer does while §3.2 fills the manifest from the report. Striking one of the two is a question
@@ -159,8 +172,8 @@ source either way.
 
 **The schema is a new artifact with three hookups**, which `registry/sources.schema.json` is the
 template for: hand-written beside `manifest.schema.json`, copied by `build.py`'s `VENDORED` map into
-the package that reads it — the writer, since a build reads a report — and checked by `check.py`
-against an example.
+the package that reads it — the writer, since a build is what merges a resource document — and
+checked by `check.py` against an example.
 
 **One measurement should be taken again at acceptance.** The packet measured here holds one
 packet-owned array; the second packet holds none, and a session with per-unit waveforms from more
