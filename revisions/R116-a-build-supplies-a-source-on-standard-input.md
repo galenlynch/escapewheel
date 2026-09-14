@@ -3,7 +3,8 @@
 | | |
 |---|---|
 | **Status** | **Accepted** 2026-09-14 |
-| **Amends** | Part 03 §11.2 (the channel the supplied object crosses by), Part 05 §3.7 (what a build does with a command's standard input) |
+| **Amends** | Part 03 §11.2 (the channel the supplied object crosses by), Part 05 §3.7 (what a build does with the standard input of a command it reaches a source through) |
+| **Supersedes** | R115 §3.1's channel — the object appended to the command's argument list as its last element — the rest of that clause standing |
 | **Depends on** | R115 §3.1 (a build supplies exactly what an adapter declares, as one JSON object keyed by term), R115 §3.3 (rows cross by a protocol of a group), R115 §3.4 (a recipe carries a command as an argument list) |
 | **Profile** | all |
 
@@ -89,7 +90,9 @@ The terms a protocol requires rather than an adapter declaring them — `socket`
 ### 3.2 A build writes without waiting for the command
 
 A build **MUST** write and close standard input without waiting for the command to exit, and
-**MUST** read what the command produces while it writes.
+**MUST** read what the command produces while it writes. This binds the command a build reaches a
+source through and no other: a command that converts a raw source before it is read (Part 09 §5.7)
+is supplied nothing, and is owed nothing on that stream.
 
 A pipe holds tens of kilobytes, and the object measured in §2.1 is two orders of magnitude past
 that. A build that wrote it whole before reading rows would deadlock against an adapter whose first

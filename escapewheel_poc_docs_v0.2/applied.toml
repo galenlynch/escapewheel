@@ -2575,7 +2575,7 @@ where = [
   { part = "03", section = "11.2", note = "the closed vocabulary, how a declared name resolves, what a build refuses, and the one JSON object" },
   { part = "05", section = "3.4", note = "the four facts an adapter declares, one of them the values a build supplies" },
 ]
-note = "the supply contract; Part 07 §4 keeps the reference spelling"
+note = "the supply contract; Part 07 §4 keeps the reference spelling. One sentence of it is gone: R116 §3.1 replaced the channel the object crosses by, and the rest of the clause stands"
 
 [clause."R115 §3.2"]
 disposition = "applied"
