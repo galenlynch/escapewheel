@@ -326,7 +326,7 @@ An adapter a recipe opts into the writer's process (Part 05 §3.9) is bound by t
 
 ### 11.2 What a build supplies
 
-An adapter MUST declare every value a build supplies it, and a build MUST supply exactly what the adapter declares and MUST NOT decide it from the source's kind (R115 §3.1). Everything supplied is data: a build MUST NOT require an adapter to accept a live handle — an open store, a connection, an object of the implementation's own — because across a process boundary an argument list holds strings, and an adapter with two ways in has one that depends on where it is running.
+An adapter MUST declare every value a build supplies it, and a build MUST supply exactly what the adapter declares and MUST NOT decide it from the source's kind (R115 §3.1). Everything supplied is data: a build MUST NOT require an adapter to accept a live handle — an open store, a connection, an object of the implementation's own — because what crosses a process boundary is text, and an adapter with two ways in has one that depends on where it is running.
 
 The vocabulary is closed. Each term names one value and the form it takes, so an adapter and a build written by different people pass the same thing:
 
