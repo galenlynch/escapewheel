@@ -7,6 +7,9 @@ from escapewheel_writer.sources.store import SourceStore, store_for
 from escapewheel_writer.sources.zarr_compat import UnsupportedEncoding
 from tests import nwbfixture
 
+#: One clock's `core.clocks` row, which is the shape the `clocks` term takes.
+PROBE_CLOCK = {"clock_id": "probe.45883-1.samples", "tick_rate_num": 30000, "tick_rate_den": 1}
+
 
 @pytest.fixture
 def store(tmp_path):
@@ -139,8 +142,8 @@ owns = ["core.array_channels"]
     # of them is built.
     context = Context(
         session_id="s1",
-        units={("probeA", "0"): {"unit_id": 1}},
-        clocks={"probe.45883-1.samples": 30000.0},
+        units=[{"device_name": "probeA", "local_unit_label": "0", "unit_id": 1}],
+        clocks={PROBE_CLOCK["clock_id"]: PROBE_CLOCK},
     )
     built = [_build_source(spec, recipe, context) for spec in recipe.sources]
     assert built[0].store is built[1].store

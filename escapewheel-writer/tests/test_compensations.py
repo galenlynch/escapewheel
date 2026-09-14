@@ -45,13 +45,13 @@ def test_a_knowing_pass_through_is_registered_too():
 
 def test_the_lfp_source_declares_what_it_ignores(tmp_path):
     """It never reads the stored timestamps, and the packet should say so."""
-    from tests.test_lfp import RATES, _contacts, _series, _source
+    from tests.test_lfp import _contacts, _series, _source
 
     root = tmp_path / "s.nwb"
     _series(root)
     _contacts(root)
     source = _source(root)
-    source.records(rates=RATES)
+    source.records()
     assert source.compensations == ["lfp.timestamps_distrusted"]
 
 
@@ -69,7 +69,7 @@ def test_the_nwb_source_declares_an_offset_it_kept(tmp_path):
     clock = Clock(
         "harp", session_id="mini_2025-04-09", name="HARP", tick_rate_num=HARP_TICK_RATE_HZ, origin="HARP epoch"
     )
-    source = NWBSource(root, reference_clock=clock.record(), zone=ZoneInfo("America/Los_Angeles"), units={})
+    source = NWBSource(root, reference_clock=clock.record(), zone=ZoneInfo("America/Los_Angeles"), units=())
     source.subjects()
     assert "nwb.stored_offset_kept" in source.compensations
 

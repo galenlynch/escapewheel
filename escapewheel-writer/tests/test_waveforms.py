@@ -81,7 +81,7 @@ def _source(root: Path, **options) -> WaveformSource:
     return WaveformSource(
         root,
         session_id="s1",
-        units={("probeA", str(u)): {"unit_id": u} for u in range(UNITS)},
+        units=[{"device_name": "probeA", "local_unit_label": str(u), "unit_id": u} for u in range(UNITS)],
         **options,
     )
 

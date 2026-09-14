@@ -28,6 +28,10 @@ class Stub:
     def extent(self):
         return self.extent_value
 
+    def behavior(self):
+        """The acquisition window, which the build pairs with the streams the NWB declared."""
+        return SimpleNamespace(start=self.extent_value[0], stop=self.extent_value[1])
+
 
 def _recipe(session=None, subject=None, overrides=None):
     """The parts of a Recipe `_harvest` reads, which a whole one would only pad out."""

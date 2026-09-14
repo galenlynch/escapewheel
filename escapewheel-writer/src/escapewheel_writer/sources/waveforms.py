@@ -32,6 +32,7 @@ in the two.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -66,10 +67,11 @@ class WaveformSource:
         The `.nwb` directory.
     session_id : str
         The session these units belong to.
-    units : Mapping
-        `(device_name, ks_unit_id)` to the identifier assigned, as `NWBSource` takes. The array
-        rows follow the NWB's own unit order, and a unit the packet's sorting does not contain
-        is skipped rather than stored as padding.
+    units : sequence of Mapping
+        One record per unit, as `NWBSource` takes: `device_name` and `local_unit_label`, the
+        pair this file's rows join on, and the `unit_id` assigned. The array rows follow the
+        NWB's own unit order, and a unit the packet's sorting does not contain is skipped
+        rather than stored as padding.
     array_asset_id : str
         Identifier for the mean array.
     sd : bool
@@ -117,7 +119,7 @@ class WaveformSource:
         root: str | Path,
         *,
         session_id: str,
-        units: dict[tuple[str, str], dict[str, str]],
+        units: Sequence[Mapping[str, Any]],
         array_asset_id: str = "waveform_mean",
         sd: bool = False,
         sd_asset_id: str = "waveform_sd",
@@ -128,7 +130,9 @@ class WaveformSource:
         self.root = source_root(root)
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
-        self.units = dict(units)
+        # Records in, lookup here: a mapping keyed by a pair does not cross a boundary
+        # (Part 03 §11.2), so the build hands over rows and each adapter keys them itself.
+        self.units = {(str(row["device_name"]), str(row["local_unit_label"])): row["unit_id"] for row in units}
         self.array_asset_id = f"{prefix}{array_asset_id}"
         self.sd = sd
         self.sd_asset_id = f"{prefix}{sd_asset_id}"
@@ -184,13 +188,14 @@ class WaveformSource:
                 found = self.units.get((str(device[start + offset]), str(int(ks[start + offset]))))
                 if found is None:
                     continue
+                identified = {"unit_id": found}
                 live = np.flatnonzero((dense[offset] != 0).any(axis=0))
                 if not live.size:
                     continue
                 slab = dense[offset][:, live].T.copy()
                 peak = max(peak, float(np.abs(slab).max()))
                 keep.append(start + offset)
-                identity.append(found)
+                identity.append(identified)
                 support.append(live)
                 primary.append(int(slab.min(axis=1).argmin()))
                 slabs.append(slab)

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Collection, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 from functools import partial
 from math import ceil
@@ -92,14 +92,17 @@ class Context:
         The session every adapter is scoped to.
     sources : dict
         Kind to the adapter instance, once built.
-    units : dict
-        `(device_name, local_unit_label)` to the identifier assigned. The join key the NWB and
-        the sorter meet on: the sorter mints unit identity, the NWB places it in space. One column,
-        not three -- `core.units` is keyed on `unit_id` alone (Part 02 §12.1), and the tables an
-        adapter puts this on declare no other identity column.
+    units : list of dict
+        One record per unit: the probe and the sorter's label for it, and the identifier
+        assigned. The join key the NWB and the sorter meet on -- the sorter mints unit identity,
+        the NWB places it in space -- carried as rows rather than as a mapping, because a
+        compound key does not survive the crossing (Part 03 §11.2). One identity column, not
+        three: `core.units` is keyed on `unit_id` alone (Part 02 §12.1), and the tables an
+        adapter puts this on declare no other.
     clocks : dict
-        Clock ID to declared tick rate, for a source placing an array axis on one. An axis
-        advances in ticks (R20 §2), so a step cannot be derived without the rate.
+        Clock ID to that clock's `core.clocks` row, for a source placing an array axis on one.
+        An axis advances in ticks (R20 §2), so a step cannot be derived without the rate, and
+        the row is what carries it.
     stores : dict
         Resolved source root to its open store. Three adapters in a real recipe read the same
         `.nwb`; sharing the store means they cannot disagree about what is in it, and stops the
@@ -113,15 +116,20 @@ class Context:
 
     session_id: str
     sources: dict[str, Any] = field(default_factory=dict)
-    units: dict[tuple[str, str], dict[str, str]] = field(default_factory=dict)
-    clocks: dict[str, float] = field(default_factory=dict)
+    units: list[dict[str, Any]] = field(default_factory=list)
+    clocks: dict[str, dict[str, Any]] = field(default_factory=dict)
     stores: dict[Path, Any] = field(default_factory=dict)
     stated: dict[str, dict[str, list[dict[str, Any]]]] = field(default_factory=dict)
-    #: The reference clock, as the recipe declares it. A `session` source rewrites its row
-    #: with a `tick_zero_utc`; every other adapter uses it as given.
+    #: The reference clock, as the recipe declares it and the build locates it. `_reference`
+    #: fills `tick_zero_utc` once a source carrying the stamps has run; an adapter uses the
+    #: row it is handed and never rewrites it.
     reference: Any = None
     #: `core.event_streams` IDs the NWB declared, which the observation windows cover.
     event_streams: list[str] = field(default_factory=list)
+    #: The acquisition window the streams above were watched in, as the wall clocks a source
+    #: declared it with. One source states the window and another states the streams, so the
+    #: rows pairing them are composed here rather than by either (Part 05 §3.4).
+    acquisition_window: tuple[datetime, datetime] | None = None
     #: Session facts a source derived that the recipe does not state, merged into
     #: `core.sessions` after every source has run.
     session_extra: dict[str, Any] = field(default_factory=dict)
@@ -201,14 +209,30 @@ def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collectio
     """
     terms: dict[str, Any] = {"root": spec.root, "session_id": context.session_id}
     if "reference_clock" in needed:
-        clock = context.reference or _reference_clock(recipe, context)
         # The row, not the object: everything a build supplies is data (Part 03 §11.2).
-        terms["reference_clock"] = clock.record()
+        terms["reference_clock"] = _reference(recipe, context).record()
     if "clocks" in needed and context.clocks:
-        terms["clocks"] = sorted(context.clocks)
+        terms["clocks"] = [context.clocks[clock_id] for clock_id in sorted(context.clocks)]
     if "units" in needed and context.units:
         terms["units"] = context.units
     return terms
+
+
+def _reference(recipe: Recipe, context: Context) -> Any:
+    """Return the reference clock as it stands, located in wall clock where a build can.
+
+    `tick_zero_utc` is derived from the record nodes' own stamps rather than declared by any
+    source, so it can only be filled once the source holding those stamps has run: an adapter
+    built before that is handed a clock without one, which is what it would have had anyway.
+    Kept on the context, so every later adapter and the packet's own row agree.
+    """
+    clock = context.reference or _reference_clock(recipe, context)
+    if clock.tick_zero_utc is None and "sync" in context.sources:
+        located = _recorded_epoch(context, *context.alignment())
+        if located is not None:
+            clock = replace(clock, tick_zero_utc=located)
+    context.reference = clock
+    return clock
 
 
 def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
@@ -340,17 +364,15 @@ def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) ->
     if spec.kind == "sorter":
         # The NWB names a quad-base probe's shanks separately and the sorting run ID ends in
         # exactly that name, while probe_id collapses to the physical probe.
-        context.units = {
-            (row["sorting_run_id"].rsplit(".", 1)[-1], row["local_unit_label"]): {"unit_id": row["unit_id"]}
+        context.units = [
+            {
+                "device_name": row["sorting_run_id"].rsplit(".", 1)[-1],
+                "local_unit_label": row["local_unit_label"],
+                "unit_id": row["unit_id"],
+            }
             for row in source.units()
-        }
-        # Part 02 §12.4 makes the two rate forms exclusive, so a clock states one or the other and
-        # this reads whichever it states. The rational is the common case; the float is what a
-        # source that measured its rate rather than declaring it records.
-        context.clocks.update(
-            {c["clock_id"]: (float(c["tick_rate_hz"]) if c.get("tick_rate_hz") is not None
-                             else c["tick_rate_num"] / c["tick_rate_den"])
-             for c in source.clocks()})
+        ]
+        context.clocks.update({row["clock_id"]: dict(row) for row in source.clocks()})
     _compare_declared_facts(spec, source, context, recipe)
     if spec.kind == "session":
         # Part 05 §3.6: both ends come from the declared stream windows rather than from the
@@ -359,6 +381,8 @@ def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) ->
         began, ended = source.extent()
         context.session_extra["session_start_time"] = began
         context.session_extra["session_end_time"] = ended
+        window = source.behavior()
+        context.acquisition_window = (window.start, window.stop)
         if (declared := _declared_start(recipe)) is not None and abs((declared - began).total_seconds()) > 1:
             source.notes.append(
                 f"[session].session_start_time {declared.isoformat()} disagrees with the earliest "
@@ -381,7 +405,7 @@ def _declared_start(recipe: Recipe) -> datetime | None:
 def _anchors(context: Context) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]]:
     """Return the sync source's anchors as arrays per clock, in the shape `align` wants."""
     collected: dict[str, tuple[list[int], list[int]]] = {}
-    for row in context.sources["sync"].anchors(clock_id_for=_clock_namer(context)):
+    for row in context.sources["sync"].anchors():
         at, parent = collected.setdefault(row["clock_id"], ([], []))
         at.append(row["t_tick"])
         parent.append(row["parent_tick"])
@@ -504,11 +528,10 @@ def _recorded_epoch(context: Context, by_clock: Mapping[str, Any], bound: float)
     if sync is None or reference is None:
         return None
     rate = reference.tick_rate_num / (reference.tick_rate_den or 1)
-    namer = _clock_namer(context)
     per_node: dict[str, list[int]] = {}
     stamps: dict[str, datetime] = {}
     for stream in sync.aligned():
-        clock = namer(stream) if namer else None
+        clock = sync.clock_id_for(stream)
         started = sync.started(stream)
         if clock is None or started is None or clock not in by_clock:
             continue
@@ -533,30 +556,6 @@ def _recorded_epoch(context: Context, by_clock: Mapping[str, Any], bound: float)
             )
     # The mean of the nodes' estimates; each is independently derived and neither is better.
     return earliest + (latest - earliest) / 2
-
-
-def _first_spike_tick(context: Context, by_clock: Mapping[str, Any], bound: float) -> int:
-    """Return the earliest spike in the session, on the reference clock.
-
-    `core.units` carries `first_spike_tick` per unit on its own probe's clock, so the earliest
-    is a minimum per clock mapped through that clock's anchors, not a minimum of raw ticks:
-    ticks from two probes are not comparable, which is the whole reason the anchors exist.
-    """
-    from escapewheel_reader.clocks import align
-
-    earliest: list[int] = []
-    for row in context.sources["sorter"].units():
-        # A unit names no clock; its sorting run does, by the convention the two adapters
-        # already meet on -- the same one `SyncSource.anchors` defaults to.
-        tick, clock_id = row.get("first_spike_tick"), f"{row.get('sorting_run_id')}.samples"
-        if tick is None or clock_id not in by_clock:
-            continue
-        converted, defined = align(np.array([tick], dtype=np.int64), *by_clock[clock_id], bound=bound)
-        if defined[0]:
-            earliest.append(int(converted[0]))
-    if not earliest:
-        raise RecipeError("no unit carries a first_spike_tick on an anchored clock, so tick 0 cannot be located")
-    return min(earliest)
 
 
 def _add_batches(writer: PacketWriter, spec: SourceSpec, source: Any, counts: dict[str, int]) -> dict[str, int]:
@@ -592,46 +591,36 @@ def _add_batches(writer: PacketWriter, spec: SourceSpec, source: Any, counts: di
     return produced
 
 
-def _records(spec: SourceSpec, source: Any, context: Context) -> dict[str, list[dict[str, Any]]]:
-    """Return a source's records, with the arguments its kind needs to produce them."""
-    got: dict[str, list[dict[str, Any]]]
-    if spec.kind == "lfp":
-        lfp: dict[str, list[dict[str, Any]]] = source.records(rates=context.clocks)
-        return lfp
-    if spec.kind == "session":
-        clock = context.reference
-        session: dict[str, list[dict[str, Any]]] = source.records(
-            at_tick=_first_spike_tick(context, *context.alignment()),
-            epoch=_recorded_epoch(context, *context.alignment()),
-            clock_id=clock.clock_id,
-            tick_rate_num=clock.tick_rate_num,
-            tick_rate_den=clock.tick_rate_den,
-            name=clock.name,
-            origin=clock.origin,
-            event_stream_ids=context.event_streams,
-        )
-        return session
-    if spec.kind == "sync":
-        return dict(source.records(clock_id_for=_clock_namer(context)))
-    got = source.records()
-    return got
+def _composed(spec: SourceSpec, context: Context) -> dict[str, list[dict[str, Any]]]:
+    """Return the rows this build composes rather than any one source producing them.
 
-
-def _clock_namer(context: Context) -> Any:
-    """Return the map from a sync stream to the clock its ticks are on, or None for neither.
-
-    Anchor only the streams some source declared a clock for, because an anchor naming a clock
-    the packet does not carry is a dangling reference. The rig aligns more than it sorts: the
-    NI-DAQ has its own clock, running at its own rate, which `structure.oebin` records and no
-    adapter yet emits -- so its anchors are dropped here rather than dangling, and the alignment
-    for the stream carrying the sync pulse is lost with them. Every caller that asks the sync
-    source for anchors uses this, so the packet and the alignment behind it see the same set.
+    `core.event_stream_observation_intervals` is the case: one source declares the acquisition
+    window and another declares the streams watched in it, and Part 05 §3.3 leaves a row to a
+    single source, so pairing them is the build's act. Keyed on what the spec claims rather than
+    on its kind, since which source declared the window is not what decides the composition.
     """
-    sorter = context.sources.get("sorter")
-    if sorter is None:
-        return None
-    known = {c["clock_id"] for c in sorter.clocks()}
-    return lambda stream: name if (name := f"{stream.key}.samples") in known else None
+    resource = "core.event_stream_observation_intervals"
+    window, clock = context.acquisition_window, context.reference
+    if resource not in spec.claims or window is None or not context.event_streams:
+        return {}
+    if clock is None or clock.tick_zero_utc is None:
+        context.notes.append(
+            f"{resource}: the reference clock carries no tick_zero_utc, so an acquisition window "
+            "in wall clock locates no ticks and no stream gets a window"
+        )
+        return {}
+    start, stop = clock.tick_at(window[0]), clock.tick_at(window[1])
+    if stop < start:
+        raise SourceDefect(f"{resource}: the acquisition window ends at {stop} and starts at {start}")
+    # One window for every stream, because they come from a single acquisition: a stream with
+    # 46 rewards was watched exactly as long as one with 2,641 licks, and giving each the extent
+    # of its own events would make a rare event look frequent.
+    return {
+        resource: [
+            {"event_stream_id": event_stream_id, "start_tick": start, "stop_tick": stop}
+            for event_stream_id in context.event_streams
+        ]
+    }
 
 
 def _derive(options: Mapping[str, Any], packet: Any, writer: Any) -> None:
@@ -754,10 +743,11 @@ def build(
                 f"{staged.values.nbytes / 1e6:.1f} MB raw"
             )
             writer.add_array(f"core.{staged.array_asset_id}", staged)
-        if spec.kind == "lfp":
-            for resource_id, array in source.external_arrays().items():
-                writer.reference_array(resource_id, array)
-                say(f"  referenced {resource_id} ({array.physical_profile}, {', '.join(array.codecs) or 'no codec'})")
+        # Any adapter may reference an array, not only the LFP one: a source says so by defining
+        # `external_arrays`, and what kind it happens to be is not the question (Part 04 §5.1).
+        for resource_id, array in getattr(source, "external_arrays", dict)().items():
+            writer.reference_array(resource_id, array)
+            say(f"  referenced {resource_id} ({array.physical_profile}, {', '.join(array.codecs) or 'no codec'})")
         # Any adapter may reference media, not only this kind: a source says so by defining
         # `external_media`, and what kind it happens to be is not the question (Part 04 §5.1).
         for resource_id, media in getattr(source, "external_media", dict)().items():
@@ -870,7 +860,7 @@ def _add_records(
         Rows the source produced per resource, claimed or not, for `_unclaimed` to report.
     """
     produced: dict[str, int] = {}
-    for resource, rows in _records(spec, source, context).items():
+    for resource, rows in {**source.records(), **_composed(spec, context)}.items():
         produced[resource] = len(rows)
         if resource in _ARBITRATED:
             # Kept rather than counted, so Part 05 §3.4 can compare what the winner staged against

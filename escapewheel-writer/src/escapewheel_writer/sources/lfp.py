@@ -59,9 +59,10 @@ class LFPSource(Compensates):
         The `.nwb` directory.
     session_id : str
         The session these series belong to.
-    clocks : sequence of str, optional
-        Clock IDs the packet declares. A series is placed on the one whose ID ends in
-        `.<probe>.samples`, which is the probe's own sample clock.
+    clocks : sequence of Mapping, optional
+        The `core.clocks` row of every clock declared before this source runs. A series is
+        placed on the one whose ID ends in `.<probe>.samples`, which is the probe's own sample
+        clock, and that row is what states the rate an axis step in ticks is derived against.
     uri_base : str, optional
         Absolute base the referenced arrays live under, without a trailing slash, to which the
         series path is appended. Absent, the local path is used as a `file://` URI, which makes
@@ -131,7 +132,7 @@ class LFPSource(Compensates):
         self.root = source_root(root)
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
-        self.clocks = list(clocks)
+        self.clocks = [dict(row) for row in clocks]
         self.prefix = prefix
         self.uri_base = uri_base.rstrip("/") if uri_base else None
         if verify not in {"none", "size", "members", "sha256"}:
@@ -139,7 +140,17 @@ class LFPSource(Compensates):
         self.verify = verify
         Compensates.__init__(self)
         self.notes: list[str] = []
-        self._rates: dict[str, float] = {}
+        # Part 02 §12.4 makes the two rate forms exclusive, so a clock states one or the other
+        # and this reads whichever it states. The rational is the common case; the float is what
+        # a source that measured its rate rather than declaring it records.
+        self._rates: dict[str, float] = {
+            row["clock_id"]: (
+                float(row["tick_rate_hz"])
+                if row.get("tick_rate_hz") is not None
+                else row["tick_rate_num"] / row["tick_rate_den"]
+            )
+            for row in self.clocks
+        }
         self._series = (
             sorted(p for p in (self.root / GROUP).iterdir() if p.is_dir()) if (self.root / GROUP).is_dir() else []
         )
@@ -164,7 +175,7 @@ class LFPSource(Compensates):
     def _clock(self, series: Path) -> str:
         """Return the probe's own sample clock, which is what the axis advances on."""
         probe = self.probe_of(series)
-        matches = [c for c in self.clocks if c.endswith(f".{probe}.samples")]
+        matches = [row["clock_id"] for row in self.clocks if str(row["clock_id"]).endswith(f".{probe}.samples")]
         if len(matches) != 1:
             raise SourceDefect(
                 f"{series.name}: {len(matches)} clocks end in '.{probe}.samples', so the time axis has no clock"
@@ -339,7 +350,7 @@ class LFPSource(Compensates):
         return rows
 
     def _clock_rate(self, clock_id: str) -> float:
-        """Return the declared tick rate of a clock, from whatever the recipe supplied."""
+        """Return the declared tick rate of a clock, from the row the build supplied for it."""
         rate = self._rates.get(clock_id)
         if rate is None:
             raise SourceDefect(f"{clock_id}: no declared tick rate, so an axis step in ticks cannot be derived")
@@ -377,15 +388,8 @@ class LFPSource(Compensates):
                 )
         return rows
 
-    def records(self, *, rates: Any = None) -> dict[str, list[dict[str, Any]]]:
-        """Return every table this source supplies.
-
-        Parameters
-        ----------
-        rates : Mapping, optional
-            Clock ID to declared tick rate, which the axis step in ticks is derived against.
-        """
-        self._rates = dict(rates or {})
+    def records(self) -> dict[str, list[dict[str, Any]]]:
+        """Return every table this source supplies."""
         return {
             "core.array_assets": self.array_assets(),
             "core.array_dimensions": self.array_dimensions(),

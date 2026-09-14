@@ -8,7 +8,8 @@ from escapewheel_writer.sources.lfp import LFPSource
 from escapewheel_writer.sources.nwb import SourceDefect
 
 CLOCK = "experiment1.Neuropix-PXI-100.45883-1.samples"
-RATES = {CLOCK: 30000.0}
+#: The clock's own `core.clocks` row, which is what a build supplies (Part 03 §11.2).
+CLOCK_ROW = {"clock_id": CLOCK, "session_id": "s1", "origin": "sample 0", "tick_rate_num": 30000, "tick_rate_den": 1}
 
 
 def _array(path, meta):
@@ -95,13 +96,13 @@ def nwb(tmp_path):
 
 
 def _source(root, **kwargs):
-    kwargs.setdefault("clocks", [CLOCK])
+    kwargs.setdefault("clocks", [CLOCK_ROW])
     return LFPSource(root, session_id="s1", **kwargs)
 
 
 def test_the_time_axis_is_ticks_on_the_probes_own_clock(nwb):
     """R20: three integers replace 7,983,750 float64 timestamps, and 24 is derived not assumed."""
-    axis = _source(nwb).records(rates=RATES)["core.array_dimensions"][0]
+    axis = _source(nwb).records()["core.array_dimensions"][0]
     assert axis["clock_id"] == CLOCK
     assert (axis["origin_tick"], axis["step_tick_num"], axis["step_tick_den"]) == (0, 24, 1)
 
@@ -116,8 +117,8 @@ def test_the_step_comes_from_the_interval_not_the_values(nwb):
     other = nwb.parent / "other.nwb"
     _series(other, step_hz=2500.0)
     _contacts(other)
-    assert source.records(rates=RATES)["core.array_dimensions"][0]["step_tick_num"] == 24
-    assert _source(other).records(rates=RATES)["core.array_dimensions"][0]["step_tick_num"] == 12
+    assert source.records()["core.array_dimensions"][0]["step_tick_num"] == 24
+    assert _source(other).records()["core.array_dimensions"][0]["step_tick_num"] == 12
 
 
 def test_a_non_integer_decimation_is_refused(nwb):
@@ -125,25 +126,25 @@ def test_a_non_integer_decimation_is_refused(nwb):
     root = nwb.parent / "odd.nwb"
     _series(root, step_hz=1111.0)
     with pytest.raises(SourceDefect, match="not an integer"):
-        _source(root).records(rates=RATES)
+        _source(root).records()
 
 
 def test_the_channel_axis_points_at_the_channel_table(nwb):
     """LFP keeps every fourth contact, so the axis cannot be a range (R20 §2)."""
-    axis = _source(nwb).records(rates=RATES)["core.array_dimensions"][1]
+    axis = _source(nwb).records()["core.array_dimensions"][1]
     assert axis["coordinate_resource"] == "core.array_channels"
     assert axis["coordinate_position_column"] == "channel_index"
 
 
 def test_channels_name_electrodes_and_carry_the_acquisition_offset(nwb):
-    rows = _source(nwb).records(rates=RATES)["core.array_channels"]
+    rows = _source(nwb).records()["core.array_channels"]
     assert [r["electrode_id"] for r in rows] == ["45883-1.CH0", "45883-1.CH4"]
     assert all(r["axis_index"] == 1 for r in rows)
 
 
 def test_conversion_stays_on_the_asset(nwb):
     """One value per series here, so repeating it down the channels would buy nothing (Part 02 §6)."""
-    got = _source(nwb).records(rates=RATES)
+    got = _source(nwb).records()
     assert got["core.array_assets"][0]["conversion"] == pytest.approx(2.34e-06)
     assert all(r.get("conversion") is None for r in got["core.array_channels"])
 
@@ -202,12 +203,12 @@ def test_an_unknown_verify_mode_is_refused(nwb):
 
 def test_a_series_with_no_matching_clock_is_refused(nwb):
     with pytest.raises(SourceDefect, match="clocks end in"):
-        _source(nwb, clocks=[]).records(rates=RATES)
+        _source(nwb, clocks=[]).records()
 
 
 def test_an_nwb_with_no_lfp_group_yields_nothing(tmp_path):
     source = _source(tmp_path / "empty.nwb")
-    assert source.records(rates=RATES)["core.array_assets"] == []
+    assert source.records()["core.array_assets"] == []
     assert any("no series found" in n for n in source.notes)
 
 
@@ -231,7 +232,7 @@ def test_a_contact_the_source_cannot_name_is_refused(tmp_path):
     contacts = group(root / "general/extracellular_ephys/electrodes")
     array(contacts / "channel_name", ["CH0", "CH4"], filter_id="vlen-utf8")
     with pytest.raises(SourceDefect, match="group_name"):
-        _source(root).records(rates=RATES)
+        _source(root).records()
 
 
 def test_init_can_draft_an_lfp_source(nwb):

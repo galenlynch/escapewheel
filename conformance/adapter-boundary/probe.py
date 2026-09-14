@@ -42,6 +42,7 @@ def today(root: Path) -> NWBSource:
         "origin": "HARP epoch",
         "tick_rate_num": 31_250,
         "tick_rate_den": 1,
+        "metadata": {"label": "HARP"},
     }
     return NWBSource(root, reference_clock=row, zone=ZoneInfo(ZONE), interval_kind=KIND)
 
@@ -129,25 +130,31 @@ def waveforms(tmp: Path) -> None:
 
     # One term now, not two: the electrode map a build used to pass was deleted once both adapters
     # composed a contact's name from the electrode table they open themselves.
-    supplied = {
-        "units": {
-            ("probeA", str(u)): {"unit_id": u}
-            for u in range(fixture.UNITS)
-        },
-    }
-    print("\nwaveform adapter, what a build supplies:")
-    for name, value in supplied.items():
-        key = next(iter(value))
+    #
+    # What a mapping costs is measured first, because that is why the term is records. Keyed by
+    # the pair a waveform row joins on, it does not write down at all; keyed by an integer it
+    # writes down and comes back with string keys, so the lookup misses silently.
+    keyed = {("probeA", str(u)): {"unit_id": u} for u in range(fixture.UNITS)}
+    numbered = {u: {"unit_id": u} for u in range(fixture.UNITS)}
+    print("\nwaveform adapter, what a mapping does at the boundary:")
+    for name, value in (("units keyed by a pair", keyed), ("units keyed by an integer", numbered)):
         wrote = _dumps(value)
-        # A mapping that writes down is not a mapping that comes back: JSON has string keys, so
-        # an integer one returns as a string and the adapter looks a row up with the wrong type.
-        survives = (
-            wrote == "yes"
-            and list(json.loads(json.dumps(value))) == [str(k) for k in value]
-            and list(json.loads(json.dumps(value))) != list(value)
-        )
-        note = "; keys return as strings" if survives else ""
-        print(f"    {name}: keyed by {type(key).__name__}, json.dumps: {wrote}{note}")
+        back = list(json.loads(json.dumps(value))) if wrote == "yes" else []
+        note = "; keys return as strings" if back and back != list(value) else ""
+        print(f"    {name}: json.dumps: {wrote}{note}")
+
+    # So a build passes records carrying the key as columns, and the adapter keys them itself.
+    supplied = {
+        "units": [
+            {"device_name": "probeA", "local_unit_label": str(u), "unit_id": u}
+            for u in range(fixture.UNITS)
+        ],
+    }
+    wire = json.dumps(supplied)
+    print(
+        f"    as records: {len(wire)} bytes of JSON, and what comes back is what went in: "
+        f"{json.loads(wire) == supplied}"
+    )
 
     source = WaveformSource(root, session_id="s1", **supplied)
     staged = source.staged_arrays()

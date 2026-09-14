@@ -44,7 +44,7 @@ What remains is the recording's first raw sample, which lives in
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -298,9 +298,16 @@ class SyncSource:
     sync_line : int, default 1
         The TTL line carrying the shared pulse. Line 5 on this rig is the HARP heartbeat
         UART, which only the NI-DAQ decodes and which is not a bare edge.
-    first_samples : Mapping, optional
-        Stream key -> the recording's first raw sample. Read from
-        ``continuous/<stream>/sample_numbers.npy`` when absent here and present on disk.
+    clocks : sequence of Mapping, optional
+        The `core.clocks` row of every clock declared before this source runs. A stream is
+        anchored to the clock named `<key>.samples` and only where the packet declares one,
+        since an anchor naming a clock the packet does not carry is a dangling reference: the
+        NI-DAQ records the sync pulse and carries no ticks of its own. Supply none and every
+        aligned stream is anchored, which is the convention `SorterSource` writes.
+    first_samples : sequence of Mapping, optional
+        One record per stream: `stream`, its key, and `first_sample`, the recording's first raw
+        sample. Read from ``continuous/<stream>/sample_numbers.npy`` when absent here and
+        present on disk.
     prefix : str, optional
         Prepended to every generated ID.
 
@@ -331,7 +338,7 @@ class SyncSource:
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
     #: resolves to nothing, so declaring one makes it mandatory.
-    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id")
+    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "clocks")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
@@ -344,7 +351,8 @@ class SyncSource:
         experiment: str = "experiment1",
         recording: str = "recording1",
         sync_line: int = 1,
-        first_samples: Mapping[str, int] | None = None,
+        clocks: Sequence[Mapping[str, Any]] = (),
+        first_samples: Sequence[Mapping[str, Any]] = (),
         prefix: str = "",
     ) -> None:
         self.root = _resolve(source_root(root))
@@ -352,7 +360,8 @@ class SyncSource:
         self.experiment = experiment
         self.recording = recording
         self.sync_line = sync_line
-        self.first_samples = dict(first_samples or {})
+        self.declared = {str(row["clock_id"]) for row in clocks}
+        self.first_samples = {str(row["stream"]): int(row["first_sample"]) for row in first_samples}
         self.prefix = prefix
         self.notes: list[str] = []
         #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters. Every
@@ -536,17 +545,24 @@ class SyncSource:
             origin="HARP device power-on; tick 0 is not the session start",
         )
 
-    def anchors(self, *, clock_id_for: Any = None, parent_clock_id: str = "harp") -> list[dict[str, Any]]:
+    def clock_id_for(self, stream: SyncStream) -> str | None:
+        """Return the clock a stream's ticks are on, or None where the packet declares none.
+
+        The name follows the convention `SorterSource` writes, so the two adapters meet without
+        either knowing about the other. A stream is anchored only where the supplied clocks
+        carry that name, because an anchor naming a clock the packet does not hold is a
+        dangling reference: the rig aligns more than it sorts, and the NI-DAQ records the sync
+        pulse while carrying no ticks of its own. Supplied none, every aligned stream is
+        anchored, which is what a caller reading one tree on its own wants.
+        """
+        name = f"{self.prefix}{stream.key}.samples"
+        return name if not self.declared or name in self.declared else None
+
+    def anchors(self, *, parent_clock_id: str = "harp") -> list[dict[str, Any]]:
         """`core.clock_anchors`, one row per sync pulse per aligned stream.
 
         Parameters
         ----------
-        clock_id_for : callable, optional
-            Maps a :class:`SyncStream` to the clock id its ticks are on, or to None for a
-            stream the packet declares no clock for -- the NI-DAQ records the sync pulse and
-            carries no ticks of its own, so it is anchored to nothing. Defaults to the
-            convention `SorterSource` writes, so the two adapters meet without either
-            knowing about the other.
         parent_clock_id : str, default "harp"
             The clock `parent_tick` is on.
 
@@ -555,10 +571,9 @@ class SyncSource:
         list of dict
             Sorted by `(clock_id, anchor_index)`, as R13 §3 requires.
         """
-        name_of = clock_id_for or (lambda s: f"{self.prefix}{s.key}.samples")
         rows = []
         for stream in self.aligned():
-            clock = name_of(stream)
+            clock = self.clock_id_for(stream)
             if clock is None:
                 if stream.key not in self._unanchored:
                     self._unanchored.add(stream.key)
@@ -650,14 +665,14 @@ class SyncSource:
             }
         ]
 
-    def phase_steps(self, *, clock_id_for: Any = None) -> list[dict[str, Any]]:
+    def phase_steps(self) -> list[dict[str, Any]]:
         """`core.clock_phase_steps`, one row per step in a clock's alignment (R99 §3.3).
 
         A step is reported and never corrected. `anchors` is what detects them, and is memoized
         on the pulses, so asking for it here costs nothing and removes the order dependence
         between this and the anchor rows.
         """
-        self.anchors(clock_id_for=clock_id_for)
+        self.anchors()
         return [
             {"clock_id": clock, "t_tick": event["t_tick"], "parent_tick": event["parent_tick"],
              "shift_seconds": event["seconds"], "anchor_interval_span": event["anchor_intervals"]}
@@ -665,13 +680,13 @@ class SyncSource:
             for event in events
         ]
 
-    def records(self, *, clock_id_for: Any = None) -> dict[str, list[dict[str, Any]]]:
+    def records(self) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records, keyed by resource ID."""
         built = {
             "core.clocks": [self.clock().record()],
-            "core.clock_anchors": self.anchors(clock_id_for=clock_id_for),
+            "core.clock_anchors": self.anchors(),
             "core.clock_observation_intervals": self.observation_intervals(),
-            "core.clock_phase_steps": self.phase_steps(clock_id_for=clock_id_for),
+            "core.clock_phase_steps": self.phase_steps(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 
@@ -679,10 +694,10 @@ class SyncSource:
         """Which resources this source supplies from its root, and how many rows (Part 05 §1)."""
         return {resource: len(rows) for resource, rows in self.records().items()}
 
-    def into(self, writer: Any, *, clock_id_for: Any = None) -> dict[str, int]:
+    def into(self, writer: Any) -> dict[str, int]:
         """Add the reference clock and every anchor to a `PacketWriter`."""
         counted = {}
-        for resource, rows in self.records(clock_id_for=clock_id_for).items():
+        for resource, rows in self.records().items():
             writer.add(resource, rows)
             counted[resource] = len(rows)
         return counted

@@ -67,7 +67,7 @@ def _units(nwb, *, refuses=True):
     else:
         nwbfixture.array(units / "spike_times", np.array([0.1, 0.2, 0.3]))
     nwbfixture.array(units / "spike_times_index", np.array([3], dtype=np.int64))
-    return {("probeA", "7"): {"unit_id": 1}}
+    return [{"device_name": "probeA", "local_unit_label": "7", "unit_id": 1}]
 
 
 def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
@@ -487,7 +487,7 @@ def test_a_trial_that_never_reached_the_moment_emits_no_event(tmp_path, harp):
     rather than columns on `core.trials`."""
     root = nwbfixture.build(tmp_path)
     nwbfixture.array(root / "intervals/trials/goCue_start_time", np.array([np.nan]))
-    source = NWBSource(root, reference_clock=harp.record(), zone=PACIFIC, session_id=SESSION, units={})
+    source = NWBSource(root, reference_clock=harp.record(), zone=PACIFIC, session_id=SESSION, units=())
     assert not [e for e in source.events() if e["stream_id"] == _stream_of(source, "go_cue")]
     assert "go_cue" in {s["event_stream_name"] for s in source.event_streams()}
 

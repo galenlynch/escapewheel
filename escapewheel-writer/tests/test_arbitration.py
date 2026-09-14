@@ -78,23 +78,31 @@ def test_every_kind_the_scaffolder_offers_can_be_opened_alone():
 
 
 def test_the_build_dispatches_on_no_kind():
-    """Every source is constructed from what it declares (Part 05 §3.4), so no branch names a kind.
+    """Every source is constructed from, and asked for its rows with, what it declares.
 
-    It used to carry one per kind, each passing a different set of extras, and the list of kinds an
-    unknown one was reported against had gone stale by three. A branch reappearing here is a value
-    that belongs in the adapter's `NEEDS`.
+    Both used to branch per kind: `_build_source` passed a different set of extras for each, and
+    the call side passed three adapters values they never declared -- a mapping of rates, a
+    closure, and eight keyword arguments -- which Part 03 §11.2 forbids a build to require and
+    which no protocol could carry. A branch reappearing in either is a value that belongs in the
+    adapter's `NEEDS`.
+
+    `_harvest` is not in the list: it reads what a source produced rather than supplying it, and
+    what replaces its per-kind reach is a delivery rather than a declaration.
     """
     from escapewheel_writer import session
 
     source = Path(session.__file__).read_text()
-    builder = next(n for n in ast.walk(ast.parse(source))
-                   if isinstance(n, ast.FunctionDef) and n.name == "_build_source")
-    dispatched = {n.comparators[0].value for n in ast.walk(builder)
-                  if isinstance(n, ast.Compare)
-                  and isinstance(n.comparators[0], ast.Constant)
-                  and isinstance(n.comparators[0].value, str)
-                  and isinstance(n.left, ast.Attribute) and n.left.attr == "kind"}
-    assert dispatched == set(), f"_build_source branches on {sorted(dispatched)}"
+    checked = {"_build_source", "_composed", "_add_records"}
+    functions = [n for n in ast.walk(ast.parse(source))
+                 if isinstance(n, ast.FunctionDef) and n.name in checked]
+    assert {n.name for n in functions} == checked
+    for function in functions:
+        dispatched = {n.comparators[0].value for n in ast.walk(function)
+                      if isinstance(n, ast.Compare)
+                      and isinstance(n.comparators[0], ast.Constant)
+                      and isinstance(n.comparators[0].value, str)
+                      and isinstance(n.left, ast.Attribute) and n.left.attr == "kind"}
+        assert dispatched == set(), f"{function.name} branches on {sorted(dispatched)}"
 
 
 @pytest.mark.parametrize("resource", RECIPE_SUPPLIES)

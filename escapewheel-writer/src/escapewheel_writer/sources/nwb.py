@@ -309,7 +309,7 @@ class NWBSource(Compensates):
         session_id: str | None = None,
         prefix: str = "",
         trial_metadata: bool = False,
-        units: Mapping[tuple[str, str], Mapping[str, str]] | None = None,
+        units: Sequence[Mapping[str, Any]] = (),
         signals: Sequence[str] = (),
         interval_kind: str | None = None,
         emit_clock: bool = True,
@@ -350,7 +350,10 @@ class NWBSource(Compensates):
         self.emit_clock = emit_clock
         #: Unmapped trial columns found constant across the session, filled in by `trials`.
         self._constants: dict[str, Any] = {}
-        self.units = dict(units or {})
+        #: The build's unit identity, keyed by the pair this file joins on. A collection crosses
+        #: as records (Part 03 §11.2), so the lookup is built here rather than handed over: a
+        #: mapping keyed by a pair does not survive the crossing at all.
+        self.units = {(str(row["device_name"]), str(row["local_unit_label"])): row["unit_id"] for row in units}
         Compensates.__init__(self)
         self.notes: list[str] = []
         self._cache: dict[str, Any] = {}
@@ -809,7 +812,7 @@ class NWBSource(Compensates):
 
     # -- units, which this file describes but does not date -----------------------------
 
-    def _unit_identity(self) -> list[tuple[int, Mapping[str, str]]]:
+    def _unit_identity(self) -> list[tuple[int, dict[str, Any]]]:
         """NWB unit rows paired with the identity a sorter gave them, in row order.
 
         The NWB is derived from the sorting, so it carries the sorter's own unit id as
@@ -832,16 +835,16 @@ class NWBSource(Compensates):
         if not columns or "ks_unit_id" not in columns or "device_name" not in columns:
             self.notes.append("units: no ks_unit_id/device_name, so no unit-electrode link is emitted")
             return []
-        paired = []
+        paired: list[tuple[int, dict[str, Any]]] = []
         missed = 0
         for index in range(len(columns["ks_unit_id"])):
             device = str(_clean(columns["device_name"][index]))
             label = str(int(columns["ks_unit_id"][index]))
-            identity = self.units.get((device, label))
-            if identity is None:
+            unit_id = self.units.get((device, label))
+            if unit_id is None:
                 missed += 1
                 continue
-            paired.append((index, identity))
+            paired.append((index, {"unit_id": unit_id}))
         if missed:
             self.notes.append(f"units: {missed} NWB row(s) match no unit in the packet's sorting; skipped")
         return paired

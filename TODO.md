@@ -332,6 +332,52 @@ all a row can rebuild — a row has no label, `clock_name` being what `clock_id`
 implementation and the future base NWB reader carries the grid rather than the writer's clock model.
 `VideoSource.tick_rate` is struck: a required argument assigned and read by nothing.
 
+**Nothing a build supplies is undeclared, done 2026-09-14.** Construction was unified first and the
+*call* side was not, so three adapters were handed ten values none of them declared: `lfp` a mapping
+of tick rates, `session` eight keyword arguments, and `sync` a **closure** — which no protocol can
+carry, so the one adapter a delivery could not have reached was the one the boundary work existed
+for. Eight of the ten were already expressible in Part 03 §11.2's vocabulary and two were not:
+
+- **`clocks` crosses as rows**, which is what §11.2 says it is. It carried bare identifiers, and the
+  rates they had been stripped of then travelled separately. `lfp` derives its axis step from the row
+  it is given, and `sync` names a stream's clock only where the supplied rows carry that name, which
+  is what the build's closure did.
+- **`units` crosses as records**, the case §11.2 cites: keyed by `(device_name, local_unit_label)` it
+  does not write down at all, and `conformance/adapter-boundary/probe.py` measures both that refusal
+  and the integer key that crosses and comes back as a string. Each adapter builds its own lookup.
+- **`first_samples` crosses as records** too. A recipe named a JSON file the build read and passed
+  as a mapping; the read went with the ten branches, so the path string reached `dict()` and raised.
+  Nothing caught it because `first_samples.json` is retired — the record nodes' own stamps supply
+  those numbers — and every test constructs `SyncSource` with a mapping directly.
+- **The reference clock reaches `session` as the term it already is.** Six of its eight arguments
+  were that row, and `tick_zero_utc` is now the build's: it is derived from `sync_messages.txt`, so
+  it can be filled once the source carrying those stamps has run and before the one that emits the
+  row is built. An adapter emits the row it was handed and never rewrites it.
+- **The build composes `core.event_stream_observation_intervals`.** One source declares the
+  acquisition window and another declares the streams watched in it, and Part 05 §3.3 leaves a row to
+  a single source, so the pairing is the build's act — keyed on what a spec claims rather than on its
+  kind. `SessionSource` keeps the window and `PRODUCES` keeps the resource, since the recipe settles
+  ownership from what makes a resource available.
+
+What a build cannot reach any more is the JSON-derived epoch: pairing `session.json`'s whole-second
+stream start with the first spike needs a tick, and no term carries one. `SessionSource.epoch` keeps
+it for a caller reading one asset on its own, with its compensation, and R39's own argument is
+against it — it pairs a wall clock with the datum being placed, and it is ~±1 s where the stamps are
+~±50 ms. `_first_spike_tick` went with it.
+
+Proved against `ecephys_786867` at `--sample 2000`, the recipe that names all ten kinds: **35 of 40
+tables byte-identical** to the packet built before, `core.clocks` and
+`core.event_stream_observation_intervals` among them, and the five that differ are the sample's
+doing — both spike tables, `core.units`'s three spike-derived columns, the run's parameters, and one
+extension table whose content is equal and whose bytes are not.
+
+**What still reaches into an adapter is the harvest, and a delivery is what replaces it.** `_harvest`
+calls `units()`, `clocks()`, `extent()`, `behavior()` and `event_streams()` per kind, and
+`_recorded_epoch` calls `aligned()`, `started()` and `clock_id_for()` on the sync source. None of
+that is a build *supplying* a value, which is what §11.2 governs; all of it is a build reading what a
+source produced, and out of process it arrives as rows. Sequence it with the command below rather
+than before it.
+
 **The NWB adapter is half a standard's and half one producer's, and the split is a lift rather
 than a rewrite.** The paths it walks are all base NWB — `general/subject`, `general/devices`,
 `general/extracellular_ephys/electrodes`, `intervals/trials`, `acquisition/` — and about fifteen of

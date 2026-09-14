@@ -4,8 +4,9 @@ The JSONs carry two facts no data file in the asset records, and both are about 
 
 **When each acquisition ran.** `session.json` declares a window per data stream, in wall
 clock. The NWB records when events happened, never when a sensor was watching, so this is
-the only source for `core.event_stream_observation_intervals`. It matters because the
-windows differ: on `inventory/nwb-zarr-776259-2025-04-09.md`'s session the ephys stream runs
+the only source for the window `core.event_stream_observation_intervals` rows carry -- the
+build pairs it with the streams the NWB declared, since no one source states both. It
+matters because the windows differ: on `inventory/nwb-zarr-776259-2025-04-09.md`'s session the ephys stream runs
 6387 s and the behaviour stream 7849 s, and a reward rate computed against the wrong one is
 wrong by 23%.
 
@@ -34,6 +35,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -103,9 +105,9 @@ class SessionSource(Compensates):
 
     Examples
     --------
-    >>> source = SessionSource(asset, zone=ZoneInfo("America/Los_Angeles"))  # doctest: +SKIP
-    >>> harp = source.clock(clock_id="harp", at_tick=first_spike_tick)  # doctest: +SKIP
-    >>> source.observation_intervals(harp, ["left_lick_time"])  # doctest: +SKIP
+    >>> source = SessionSource(asset, zone=zone, reference_clock=harp_row)  # doctest: +SKIP
+    >>> source.records()["core.calibrations"]  # doctest: +SKIP
+    >>> source.behavior().start  # doctest: +SKIP
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
@@ -117,6 +119,10 @@ class SessionSource(Compensates):
             "core.calibration_points",
             "core.calibrations",
             "core.clocks",
+            # The window these rows carry, and nothing else about them: the streams watched in
+            # it are the NWB's, so the build pairs the two (Part 05 §3.3 leaves a row to one
+            # source). Declared here because this is the source whose presence makes the
+            # resource available, which is what ownership is settled from.
             "core.event_stream_observation_intervals",
             "core.subjects",
         }
@@ -139,13 +145,24 @@ class SessionSource(Compensates):
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
     #: resolves to nothing, so declaring one makes it mandatory.
-    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "zone")
+    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "zone", "reference_clock")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter", "sync", "nwb")
 
-    def __init__(self, root: str | Path, *, zone: str | ZoneInfo, session_id: str | None = None) -> None:
+    def __init__(
+        self,
+        root: str | Path,
+        *,
+        zone: str | ZoneInfo,
+        reference_clock: Mapping[str, Any],
+        session_id: str | None = None,
+    ) -> None:
         zone = zone_of(zone)
+        #: The reference clock's own row, emitted as given. A build locates `tick_zero_utc`
+        #: from the record nodes' stamps, which are better than anything here (Part 03 §11.2);
+        #: :meth:`epoch` is what derives one where a caller has nothing better.
+        self.clock_row = dict(reference_clock)
         path = source_root(root)
         self.path = path if path.is_file() else path / SESSION_JSON
         if not self.path.is_file():
@@ -279,6 +296,7 @@ class SessionSource(Compensates):
         """
         anchor = self.ephys() if stream is None else stream
         instant = epoch_from(anchor.start, at_tick, tick_rate_num, tick_rate_den)
+        self.compensate("aind.tick_zero_from_stream_start")
         self.notes.append(
             f"tick_zero_utc {instant.isoformat()} derived from data_streams[{anchor.index}] "
             f"start and tick {at_tick}; not declared by any source, ~1 s uncertain"
@@ -321,50 +339,6 @@ class SessionSource(Compensates):
         )
 
     # -- tables -----------------------------------------------------------------------
-
-    def observation_intervals(
-        self,
-        clock: Clock,
-        event_stream_ids: list[str],
-        *,
-        stream: AcquisitionStream | None = None,
-    ) -> list[dict[str, Any]]:
-        """`core.event_stream_observation_intervals` for streams sharing one acquisition window.
-
-        One interval per ID, all with the same window, because these streams come from a
-        single acquisition: a stream with 46 rewards was watched exactly as long as one with
-        2641 licks, and giving each its own range would make a rare event look frequent.
-
-        The window is the declared one, never the extent of the events. Deriving it from the
-        events makes `core.events.within_observation` vacuous by construction and biases every
-        rate upward by excluding the silent head and tail.
-
-        Parameters
-        ----------
-        clock : Clock
-            The clock to place the window on. Needs `tick_zero_utc`.
-        event_stream_ids : list of str
-            The `core.event_streams` observed in this window, already prefixed by whatever
-            adapter emitted them.
-        stream : AcquisitionStream, optional
-            Which acquisition window. Defaults to the behaviour stream.
-
-        Returns
-        -------
-        list of dict
-            One record per ID, or empty if none were given.
-        """
-        if not event_stream_ids:
-            return []
-        window = self.behavior() if stream is None else stream
-        start = clock.tick_at(window.start)
-        stop = clock.tick_at(window.stop)
-        if stop < start:
-            raise SourceDefect(f"{self.path}: data_streams[{window.index}] ends before it starts")
-        return [
-            {"event_stream_id": event_stream_id, "start_tick": start, "stop_tick": stop}
-            for event_stream_id in event_stream_ids
-        ]
 
     def extent(self) -> tuple[datetime, datetime]:
         """When the session began and ended, across every declared stream.
@@ -608,61 +582,27 @@ class SessionSource(Compensates):
                 "core.calibration_points": len(self.calibration_points()),
                 "core.calibration_devices": len(self.calibration_devices())}
 
-    def records(
-        self,
-        *,
-        at_tick: int,
-        clock_id: str,
-        tick_rate_num: int,
-        tick_rate_den: int = 1,
-        name: str | None = None,
-        origin: str | None = None,
-        event_stream_ids: list[str] | None = None,
-        epoch: datetime | None = None,
-    ) -> dict[str, list[dict[str, Any]]]:
-        """Return the tables this source owns: the reference clock, and when each stream was watched.
-
-        Both need a tick the JSON does not contain, so `at_tick` is the caller's to supply --
-        a tick observed at the ephys stream's declared start, which is what locates tick 0.
-
-        Parameters
-        ----------
-        at_tick : int
-            The tick observed at the ephys stream's declared start.
-        clock_id, tick_rate_num, tick_rate_den, name, origin
-            The clock to build, as for :meth:`clock`.
-        event_stream_ids : list of str, optional
-            The `core.event_streams` observed in the behaviour window.
-        epoch : datetime, optional
-            `tick_zero_utc`, where the caller located it from something better than this
-            source's JSON. Supplying it makes `at_tick` unused for the clock.
+    def records(self) -> dict[str, list[dict[str, Any]]]:
+        """Return the tables this source owns.
 
         Returns
         -------
         dict
-            `core.clocks` and `core.event_stream_observation_intervals`.
+            `core.clocks`, plus `core.subjects` and the calibration tables where the documents
+            behind them are present. The reference clock is the row a build supplied, emitted
+            rather than rebuilt: everything a build supplies is data (Part 03 §11.2), and where
+            a build located tick 0 from an instrument's own record it knows better than the
+            whole-second stream start this JSON carries.
         """
-        built = self.clock(
-            clock_id=clock_id,
-            at_tick=at_tick,
-            tick_rate_num=tick_rate_num,
-            tick_rate_den=tick_rate_den,
-            name=name,
-            origin=origin,
-            epoch=epoch,
-        )
-        if epoch is None:
-            self.compensate("aind.tick_zero_from_stream_start")
         calibrations = {
             "core.calibrations": self.calibrations(),
             "core.calibration_devices": self.calibration_devices(),
             "core.calibration_points": self.calibration_points(),
         }
         return {
-            "core.clocks": [built.record()],
+            "core.clocks": [self.clock_row],
             # Omitted rather than staged empty where the document is absent, as a calibration is.
             **({"core.subjects": subjects} if (subjects := self.subjects()) else {}),
-            "core.event_stream_observation_intervals": self.observation_intervals(built, list(event_stream_ids or [])),
             # An asset carrying no calibration is conforming (R89 §3), so the resources are
             # omitted rather than staged empty -- a manifest entry a packet cannot answer for.
             **{resource: rows for resource, rows in calibrations.items() if rows},
