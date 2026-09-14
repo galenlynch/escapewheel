@@ -14,9 +14,12 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-Nothing is open. A draft added here takes a row naming its word count, when it was appraised, and
-why it sits where it does: dependencies run downward, so a draft may depend on the ones above it
-and on nothing below.
+A draft takes a row naming its word count, when it was appraised, and why it sits where it does:
+dependencies run downward, so a draft may depend on the ones above it and on nothing below.
+
+| draft | words | appraised | why here |
+|---|---|---|---|
+| `a-build-supplies-a-source-on-standard-input` | 1,283 | — | Depends on R115 alone, and on nothing else open. It moves the channel a build supplies a source by, which the adapter delivering an array will use as it stands; drafting that one first would describe a channel this one replaces. |
 
 A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
 records what bound something and a draft never did. Git holds the document, and whatever the
