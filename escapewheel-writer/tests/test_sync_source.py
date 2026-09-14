@@ -406,3 +406,33 @@ def test_the_limit_is_a_duration(source):
     parents[100:] -= 20  # 640 µs
     assert phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ, limit=1e-3) == []
     assert phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ, limit=1e-4)
+
+
+# -- where tick zero falls (Part 02 §8.4) -----------------------------------------------
+
+
+def test_the_clock_carries_the_instant_the_nodes_stamped(tmp_path):
+    """The stamps are this tree's, so locating tick 0 from them is this adapter's derivation."""
+    tree = syncfixture.build(tmp_path, with_sync_messages=True)
+    source = SyncSource(tree, session_id=SESSION, clocks=PROBE_CLOCKS, first_samples=FIRST_SAMPLES)
+    located = source.epoch()
+    assert located is not None
+    assert source.clock().record()["tick_zero_utc"] == located
+    # Every stream of the one node reaches its first sample after the node's own stamp, so tick 0
+    # is at or before it and never after.
+    assert located <= source.started(next(iter(source.aligned()))).started
+
+
+def test_a_tree_with_no_stamps_locates_nothing(source):
+    """HARP free-runs from power-on, and an events tree alone does not record when that was."""
+    assert source.epoch() is None
+    assert source.clock().record().get("tick_zero_utc") is None
+
+
+def test_the_instant_is_derived_once_however_often_it_is_asked_for(tmp_path):
+    tree = syncfixture.build(tmp_path, with_sync_messages=True)
+    source = SyncSource(tree, session_id=SESSION, clocks=PROBE_CLOCKS, first_samples=FIRST_SAMPLES)
+    first = source.epoch()
+    before = len(source.notes)
+    assert source.epoch() == first
+    assert len(source.notes) == before

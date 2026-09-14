@@ -55,9 +55,23 @@ def as_table(rows: Sequence[Mapping[str, Any]]) -> pa.Table:
     which loses a column a source populates for some rows only -- and an absent column is a
     statement under Part 03 §11.3, so losing one says something untrue. Types are the build's to
     settle against the registry, so nothing here declares one.
+
+    A mapping is the exception, and it is not a type decision: the profile stores one as JSON text
+    in an optional column and forbids a nested type outright (Part 03 §5.5), so a value that
+    arrived as a struct could not be cast to what the packet stores. Encoded here in the form the
+    writer would have written, which is what makes the two routes produce one byte string.
     """
     columns = list(dict.fromkeys(name for row in rows for name in row))
-    return pa.Table.from_pylist([{c: row.get(c) for c in columns} for row in rows])
+    return pa.Table.from_pylist(
+        [{c: _flat(row.get(c)) for c in columns} for row in rows]
+    )
+
+
+def _flat(value: Any) -> Any:
+    """Return a value in a form Arrow can carry across a boundary without inventing a type."""
+    from .arrow import canonical_json
+
+    return canonical_json(value) if isinstance(value, (Mapping, list, tuple)) else value
 
 
 def offered(source: Any) -> dict[str, Iterator[pa.RecordBatch] | pa.Table]:
@@ -102,6 +116,7 @@ def construct(kind: str, supplied: Mapping[str, Any]) -> Any:
     on: an adapter never declared it, and a build supplied it because of the protocol.
     """
     from .sources import ADAPTERS, discovered
+    from .sources.store import source_root
 
     adapter = ADAPTERS.get(kind) or discovered().get(kind)
     if adapter is None:
@@ -111,7 +126,12 @@ def construct(kind: str, supplied: Mapping[str, Any]) -> Any:
     terms = {name: supplied[name] for name in declared if name in supplied and name != "root"}
     if "root" not in supplied:
         raise SourceDefect(f"{kind}: nothing supplied a root, which every adapter needs")
-    return adapter(supplied["root"], **terms, **dict(supplied.get("options", {})))
+    options = dict(supplied.get("options", {}))
+    # Opened here rather than by the adapter, because how a store is reached is the recipe's fact
+    # and an adapter takes a root it can read. Absent, the default applies: a public bucket is
+    # read anonymously, which is what a build handed a bare URI would otherwise sign for.
+    root = source_root(supplied["root"], **dict(options.pop("storage_options", {})))
+    return adapter(root, **terms, **options)
 
 
 def infers(supplied: Mapping[str, Any]) -> str:
@@ -293,18 +313,39 @@ class Delivered:
             for resource, table in self.tables.items()
         }
 
+    def held(self, resource: str) -> bool:
+        """Whether this resource comes back as rows rather than as a stream.
+
+        Two reasons to hold one. A resource this source **shares** must be merged with another's,
+        and a writer takes one table from one path because two streams cannot be put in the
+        declared sort order across the seam between them. And a resource small enough to hold is
+        held so the writer *applies* that sort: the streaming path writes through untouched and
+        requires its caller to have sorted already, where an adapter's rows arrive in whatever
+        order it read them and the sort is the build's (Part 03 §11.3).
+
+        What is left is a table too large to hold, which is what the streaming path exists for,
+        and which reaches a build in the order the adapter streamed it.
+        """
+        return resource in self.merged or self.offers().get(resource, 0) <= BATCH_ROWS
+
     def records(self) -> dict[str, list[dict[str, Any]]]:
-        """Return the resources this source shares, as rows the writer merges and sorts."""
-        return {
-            resource: [row for batch in _batches(table) for row in batch.to_pylist()]
-            for resource, table in self.tables.items()
-            if resource in self.merged
-        }
+        """Return every resource this build holds, as rows for the writer to sort and merge."""
+        return {resource: self.rows(resource) for resource in self.tables if self.held(resource)}
+
+    def rows(self, resource: str) -> list[dict[str, Any]]:
+        """Return one delivered resource as rows, without spending the stream a build will stage.
+
+        What a build harvests it reads twice -- once for the sources that come after, once to
+        stage -- so this reads the delivery again rather than consuming it: a held table yields
+        fresh batches, and a delivered file is opened again.
+        """
+        table = self.tables.get(resource)
+        return [] if table is None else [row for batch in _batches(table) for row in batch.to_pylist()]
 
     def batches(self) -> dict[str, Iterator[pa.RecordBatch]]:
-        """Every resource this source owns outright, as a stream, in the order it arrived."""
+        """Return every resource too large to hold, as the stream it arrived as."""
         return {
-            resource: _batches(table) for resource, table in self.tables.items() if resource not in self.merged
+            resource: _batches(table) for resource, table in self.tables.items() if not self.held(resource)
         }
 
 

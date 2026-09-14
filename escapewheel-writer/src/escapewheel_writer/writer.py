@@ -36,6 +36,7 @@ import pyarrow.parquet as pq
 from escapewheel_reader import Manifest, Packet, open_packet
 from escapewheel_validator import Report, validate, verify_order
 from escapewheel_validator.generate import adjacency_settles_uniqueness
+from escapewheel_validator.validator import OrderViolation
 
 from .arrow import build, number_batch, schema, sort_key
 from .encoding import encodings, inefficient
@@ -929,10 +930,16 @@ class PacketWriter:
             path = staging / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             if resource_id in self._batches:
-                self.rows_written[resource_id] = _write_stream(
-                    spec, self._batches[resource_id], path, resource_id,
-                    self._encoding_exceptions, self._encoding_notes,
-                )
+                try:
+                    self.rows_written[resource_id] = _write_stream(
+                        spec, self._batches[resource_id], path, resource_id,
+                        self._encoding_exceptions, self._encoding_notes,
+                    )
+                except OrderViolation as exc:
+                    # Naming the table, because the streaming path writes through untouched and
+                    # the caller is what has to be fixed: a message about two rows says nothing
+                    # about which of a packet's forty tables they came from.
+                    raise OrderViolation(f"{resource_id}: {exc}") from None
                 if sort_key(resource_id, spec):
                     self._ordered.add(resource_id)
             else:

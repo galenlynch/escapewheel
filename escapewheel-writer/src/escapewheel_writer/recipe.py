@@ -285,6 +285,14 @@ class SourceSpec:
     owns: tuple[str, ...]
     contributes: tuple[str, ...] = ()
     options: Mapping[str, Any] = field(default_factory=dict)
+    #: Where the source is, as the URI an adapter opens for itself (Part 03 §11.2). Not `str(root)`:
+    #: a root this build resolved is a chained path carrying both the cache it reads through and
+    #: the anonymity it was opened with, and `str()` drops the second while keeping the first --
+    #: which is how a public bucket comes back signed in a process that was handed the text.
+    uri: str = ""
+    #: How to open that URI, where the recipe says. A fact about one machine's credentials, so it
+    #: travels with the source rather than being a property of any adapter.
+    storage_options: Mapping[str, Any] = field(default_factory=dict)
     #: Part 05 §3.4: whether the recipe stated `owns`. Silence means the whole of `PRODUCES`, so it
     #: must be distinguishable from an explicit empty list, which narrows to nothing.
     narrowed: bool = True
@@ -531,6 +539,17 @@ class Recipe:
                 return resolve(value)
             return source_root(value, **storage)
 
+        def locate(value: str, storage: Mapping[str, Any]) -> str:
+            """Where the source is, for an adapter that opens it in another process.
+
+            A local path is resolved, since the other process has its own working directory; a
+            store URI is left exactly as the recipe wrote it, because what `resolve_root` returns
+            is a chained path whose text no longer says how to open it.
+            """
+            del storage
+            resolved = resolve_root(value, {})
+            return str(resolved) if isinstance(resolved, Path) else value
+
         return cls(
             path=path,
             digest=hashlib.sha256(raw).hexdigest(),
@@ -550,6 +569,8 @@ class Recipe:
                     SourceSpec(
                         kind=str(s["kind"]),
                         root=resolve_root(str(s.get("root", ".")), s.get("storage_options", {})),
+                        uri=locate(str(s.get("root", ".")), s.get("storage_options", {})),
+                        storage_options=dict(s.get("storage_options", {})),
                         delivery=_delivery(s.get("delivery"), resolve),
                         owns=tuple(s.get("owns", ())),
                         contributes=tuple(s.get("contributes", ())),

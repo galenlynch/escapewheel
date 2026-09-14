@@ -193,11 +193,11 @@ document and not a function of the rows. The document already carries its own ve
 `extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
 (R57 §2.1). Checking is the only half that never shipped.
 
-## 1d. The adapter boundary reaches three of the ten adapters
+## 1d. The adapter boundary reaches five of the ten adapters
 
 R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
 source. Every piece of it is built as of 2026-09-14 — a declaration, a document, a command, three
-protocols and a report — and what it does not yet reach is seven adapters, for the two reasons at
+protocols and a report — and what it does not yet reach is five adapters, for the three reasons at
 the end of this section.
 
 `conformance/adapter-boundary/` is where it was measured first: seven scripts in which all three
@@ -384,9 +384,6 @@ tables byte-identical** to the packet built before, `core.clocks` and
 doing — both spike tables, `core.units`'s three spike-derived columns, the run's parameters, and one
 extension table whose content is equal and whose bytes are not.
 
-**What still reaches into an adapter is the harvest, and a delivery is what replaces it.** It is
-what keeps four of the ten from being delivered, and it is recorded at the end of this section with
-the other reason.
 
 **The NWB adapter is half a standard's and half one producer's, and the split is a lift rather
 than a rewrite.** The paths it walks are all base NWB — `general/subject`, `general/devices`,
@@ -439,23 +436,71 @@ comparison runs on a delivered source exactly as it runs on an imported one — 
 stating `subject_id` `m001` against a recipe declaring `786867` refuses the build, which is the
 test that proves the channel end to end.
 
-**Proved on a real recipe.** `ecephys_786867` at `--sample 2000` with `openephys` delivered over
-`files-v0.1` and `harp` over `stream-v0.1`: committed with **0 errors and 0 warnings**, and
-`core.devices` — the table both delivered sources contribute to — **byte-identical** to the packet
-built with both in process, at 21 rows. The five tables that differ are the sample's doing and are
-the same five an all-in-process build at that sample produces.
+**Proved on a real recipe.** `ecephys_786867` at `--sample 2000`, first with `openephys` over
+`files-v0.1` and `harp` over `stream-v0.1` — 0 errors, 0 warnings, and `core.devices`, the table
+both contribute to, **byte-identical** at 21 rows. Then with **five of the ten delivered**:
+`sorter` and `sync` over `files-v0.1`, `session` and `harp` over `stream-v0.1`, `openephys` over
+`flight-v0.1`. Committed clean, **34 of 42 tables byte-identical**, and every difference accounted
+for: both spike tables and `core.units`'s three spike-derived columns are the sample's, the run's
+parameters name a different recipe, `core.clocks` gains the `tick_zero_utc` nothing used to state,
+and two tables the earlier packet did not carry at all.
 
-**Three of the ten adapters can be delivered today, and what stops the other seven is two things.**
-`waveforms`, `lfp` and `video` stage or reference an array or a media asset, which Part 03 §11.3
-has crossing as a *reference* to a location a build supplies — a different act from delivering
-rows, and unimplemented, so each is refused with what it would take rather than delivering half of
-itself. `array_location` stays reserved and unfilled with it. `sorter`, `nwb`, `sync` and `session`
-are reached by the harvest: `_harvest` calls `units()`, `clocks()`, `extent()`, `behavior()` and
-`event_streams()` per kind, and `_recorded_epoch` calls `aligned()`, `started()` and
-`clock_id_for()` on the sync source. None of that is a build supplying a value, which is what
-Part 03 §11.2 governs; all of it is a build reading what a source produced, and out of process it
-arrives as rows. That is the next piece, and it is what makes the boundary reach every adapter
-rather than the three that need nothing of it.
+**The harvest reads rows, done 2026-09-14.** It used to call `units()`, `clocks()`, `extent()`,
+`behavior()` and `event_streams()` per kind, and `_recorded_epoch` reached into the sync source for
+`aligned()`, `started()` and `clock_id_for()` — none of which a source that has exited can answer.
+It now keys on the resource rather than on the kind, for the reason `_composed` does: which adapter
+declared a clock is not what makes it a clock, and a build that dispatched on the kind could only
+harvest from the kinds it was written against. Three facts had to become rows first:
+
+- **Where tick 0 falls is derived by the source holding the stamps.** `sync_messages.txt` is the
+  sync tree's, so `SyncSource.epoch` pairs each stream's tick 0 with its node's stamp and states
+  the instant on its own `core.clocks` row; the build reads it from there. At the default bound,
+  because tick 0 sits **inside** one median anchor interval of the terminal anchor — 0.6 s against
+  1.5 s on this session — so no wider allowance changes the answer. It is also a fact the packet
+  gained: `core.clocks.tick_zero_utc` was null in both rebuilt packets, since the recipe gives
+  `core.clocks` to the sorter and sync and neither stated one.
+- **The acquisition window is a `core.clock_observation_intervals` row.** The session source
+  declares when it watched the reference clock and the build pairs that with the streams the NWB
+  declared, per source rather than per clock: two sources may each declare a window on one clock —
+  a sync train and an acquisition are both true — and only the one that comes with the resource
+  being composed says when *those* streams were watched. Measured before writing it: the window
+  starts **14.6 s after** `t_zero_tick`, so R39's origin is unmoved.
+- **Both ends of the session are stated facts.** `session.session_start_time` and
+  `session.session_end_time` join `STATES`, so they arrive through the report for a delivered
+  source and off the attribute for an imported one. Part 05 §3.6 gains its third disposition
+  explicitly — the source wins and the recipe is reported — where the build used to apply it in
+  the harvest and say something else in the comparison.
+
+**Five of the ten are delivered on real data, and three things stop the rest.** `waveforms`, `lfp`
+and `video` stage or reference an array or a media asset, which Part 03 §11.3 has crossing as a
+*reference* to a location a build supplies — a different act from delivering rows, and
+unimplemented, so each is refused with what it would take rather than delivering half of itself.
+`array_location` stays reserved and unfilled with it, and **which channel carries a reference is
+not specified**: §11.3 says what crosses and not where, so this needs a revision before it needs
+code.
+
+**A term does not fit in an argument, measured 2026-09-14.** Part 03 §11.2 has what a build
+supplies cross as one JSON object appended to the command's argument list. For `ecephys_786867` the
+`units` term is **322,281 bytes**, against Linux's per-argument limit of **131,072** — 2.5x, and the
+limit is reached at about **1,832 units**. So the NWB adapter cannot be delivered for a real
+session, and R115 §3.1's measurement of **721 bytes** was taken on the fixture, where `units` is
+empty. Every other adapter's object fits. This is a spec defect and wants a revision: the channel
+is the argument list, and a term carrying records outgrows it.
+
+**One fact of the harvest has no channel at all.** R99 §3.2's terminal-anchor result is per probe
+clock, the sync source computes it, and the *sorter* owns those rows — so it is a fact about
+another source's rows, which no resource carries and no report key holds. A delivered sync leaves
+`withheld_first_anchor` and `withheld_last_anchor` null where an imported one fills them, and the
+build says so rather than leaving the packet quietly poorer.
+
+**Two things the delivery found in what was already there.** A mapping crossed as an Arrow struct
+and could not be cast to the `json_string` the packet stores, so a delivery now encodes one as the
+canonical JSON the writer would have written — which is also what Part 03 §5.5's ban on nested
+types requires of any adapter. And the two staging paths disagreed about identifiers: a table
+delivered as rows has its names minted by `_preassign`, where the same table streamed as batches
+does not, so `extract_qc.py` writing `session_id` as the **integer 0** rather than the session's
+name worked in process and minted a second session when delivered. Part 03 §11.3 requires names;
+the file is the user's to correct.
 
 **A shared resource comes back as rows, not as a stream.** A writer takes one table from one path,
 because two streams cannot be put in the declared sort order across the seam between them — so a

@@ -105,16 +105,26 @@ def _plain(value: Any) -> Any:
     return value
 
 
-def _json_string(value: Any, column: str) -> Any:
-    """Serialize a mapping or sequence to canonical JSON; pass a string through.
+def canonical_json(value: Any) -> Any:
+    """Serialize a mapping or sequence to canonical JSON; pass a string or None through.
 
-    Adapters build metadata as dictionaries, and JSON encoding is a property of the physical
-    profile rather than of any one source, so it happens here. Keys are sorted so two writers
-    given equal metadata emit equal bytes.
+    Keys are sorted and separators fixed, so two writers given equal metadata emit equal bytes --
+    and so a value encoded where it crosses a process boundary is the value this would have
+    written anyway.
     """
     if value is None or isinstance(value, str):
         return value
     return json.dumps(_plain(value), sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _json_string(value: Any, column: str) -> Any:
+    """Serialize a mapping or sequence to canonical JSON; pass a string through.
+
+    Adapters build metadata as dictionaries, and JSON encoding is a property of the physical
+    profile rather than of any one source, so it happens here.
+    """
+    del column
+    return canonical_json(value)
 
 
 def _bounded(low: int, high: int, kind: str) -> Any:

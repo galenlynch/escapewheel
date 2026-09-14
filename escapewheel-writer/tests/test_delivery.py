@@ -134,10 +134,8 @@ def test_the_rows_are_the_rows_the_adapter_produced(protocol, supplied, nwb, har
         workspace=tmp_path / "work",
     )
     assert sorted(got.tables) == wanted, "a resource with no rows arrives empty rather than not arriving"
-    delivered = got.batches()
     for resource in wanted:
-        arrived = [row for batch in delivered[resource] for row in batch.to_pylist()]
-        assert arrived == delivery.as_table(here.get(resource, [])).to_pylist(), resource
+        assert got.rows(resource) == delivery.as_table(here.get(resource, [])).to_pylist(), resource
 
 
 def test_stage_one_agrees_with_what_arrived(supplied, tmp_path):
@@ -149,7 +147,7 @@ def test_stage_one_agrees_with_what_arrived(supplied, tmp_path):
         wanted=sorted(NWBSource.PRODUCES),
         workspace=tmp_path / "work",
     )
-    counted = {r: sum(b.num_rows for b in batches) for r, batches in got.batches().items()}
+    counted = {resource: len(got.rows(resource)) for resource in got.tables}
     assert got.offers() == counted
 
 
@@ -332,6 +330,28 @@ def test_an_unknown_kind_names_what_this_build_ships():
         delivery.construct("tasklog", {"root": "."})
 
 
+def test_a_table_too_large_to_hold_arrives_as_the_stream_it_was_sent_as():
+    """The one case the streaming path exists for, and the one where the order is the adapter's."""
+    import pyarrow as pa
+
+    small = pa.table({"unit_id": ["1", "2"]})
+    big = pa.table({"t_tick": list(range(delivery.BATCH_ROWS + 1))})
+    got = delivery.Delivered("sorter", {"core.units": small, "core.spike_events": big})
+    assert got.held("core.units") and not got.held("core.spike_events")
+    assert sorted(got.records()) == ["core.units"]
+    assert sorted(got.batches()) == ["core.spike_events"]
+
+
+def test_a_shared_resource_is_held_however_large_it_is():
+    """A writer takes one table from one path, since two streams cannot be sorted across a seam."""
+    import pyarrow as pa
+
+    big = pa.table({"clock_id": ["harp"] * (delivery.BATCH_ROWS + 1)})
+    got = delivery.Delivered("sync", {"core.clocks": big}, merged=("core.clocks",))
+    assert got.held("core.clocks")
+    assert got.batches() == {}
+
+
 def test_the_protocol_is_read_from_the_term_that_asked_for_it():
     """A build supplies whichever terms its adapter's protocol requires (Part 03 §11.2)."""
     assert delivery.infers({"socket": "/tmp/a.sock"}) == "flight-v0.1"
@@ -373,7 +393,11 @@ def test_a_build_reaches_a_delivered_source_through_the_same_construction(tmp_pa
     assert isinstance(built, delivery.Delivered)
     assert sorted(built.offers()) == sorted(NWBSource.PRODUCES)
     assert built.offers()["core.electrodes"] == 2
-    assert built.records() == {}, "a delivered resource travels as batches, as a file's rows do"
+    # Held rather than streamed: a table this size is one the writer sorts, and the streaming
+    # path writes through untouched.
+    assert all(built.held(resource) for resource in built.tables)
+    assert built.batches() == {}
+    assert sorted(built.records()) == sorted(NWBSource.PRODUCES)
 
 
 def _recipe_declaring(tmp_path, spec, *, subject_id):
@@ -398,3 +422,19 @@ def test_a_delivered_source_still_has_its_facts_compared(tmp_path, nwb, harp):
     recipe = _recipe_declaring(tmp_path, spec, subject_id="786867")
     with pytest.raises(SourceDefect, match="786867"):
         _compare_declared_facts(spec, built, context, recipe)
+
+
+def test_the_harvest_reads_a_delivered_source_s_rows(tmp_path, nwb, harp):
+    """What the sources after it consume comes from the rows, not from the object that made them.
+
+    Which is what lets a source be delivered at all: by the time a build harvests, the process
+    that produced the rows has exited.
+    """
+    from escapewheel_writer.session import _build_source, _harvest, _rows
+
+    spec = _spec(tmp_path, nwb)
+    context = _context(reference=harp, workspace=tmp_path / "work")
+    built = _build_source(spec, None, context)
+    _harvest(spec, built, context, _recipe_declaring(tmp_path, spec, subject_id="m001"), _rows(built, built.records()))
+    assert context.event_streams, "the NWB declares the streams a later source's windows cover"
+    assert [row["clock_id"] for row in context.clocks.values()] == ["harp"]

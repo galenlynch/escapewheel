@@ -84,15 +84,27 @@ def harp(source):
     return source.clock(clock_id="harp", at_tick=FIRST_SPIKE_TICK, tick_rate_num=HARP_TICK_RATE_HZ)
 
 
+@pytest.fixture
+def located(asset, harp):
+    """The source as a build hands it over: a reference clock whose tick 0 is already located."""
+    return _session(asset, reference_clock={**HARP_ROW, "tick_zero_utc": harp.tick_zero_utc})
+
+
 def windows(source, clock, event_stream_ids):
-    """The rows the build composes from this source's window and another's streams."""
-    acquisition = source.behavior()
-    context = Context(
-        session_id=SESSION,
-        reference=clock,
-        event_streams=list(event_stream_ids),
-        acquisition_window=(acquisition.start, acquisition.stop),
+    """The rows the build composes from the window this source declared and another's streams.
+
+    The window reaches the build as `core.clock_observation_intervals` on the reference clock,
+    which is a row like any other -- so a source delivered from another process is harvested the
+    same way as one running here.
+    """
+    watched = source.records().get("core.clock_observation_intervals", [])
+    context = Context(session_id=SESSION, reference=clock, event_streams=list(event_stream_ids))
+    context.windows["session"] = next(
+        ((int(row["start_tick"]), int(row["stop_tick"])) for row in watched if row["clock_id"] == clock.clock_id),
+        None,
     )
+    if context.windows["session"] is None:
+        del context.windows["session"]
     spec = SourceSpec(kind="session", root=source.path, owns=("core.event_stream_observation_intervals",))
     return _composed(spec, context).get("core.event_stream_observation_intervals", [])
 
@@ -200,30 +212,30 @@ def test_a_naive_instant_locates_nothing(harp):
 # -- observation intervals -----------------------------------------------------------
 
 
-def test_every_stream_shares_the_declared_window(source, harp):
-    rows = windows(source, harp, ["left_lick_time", "right_reward_delivery_time"])
+def test_every_stream_shares_the_declared_window(located, harp):
+    rows = windows(located, harp, ["left_lick_time", "right_reward_delivery_time"])
     assert {(r["start_tick"], r["stop_tick"]) for r in rows} == {(361_751_236_188, 361_996_511_468)}
     assert [(r["start_tick"], r["stop_tick"]) for r in rows] == [(rows[0]["start_tick"], rows[0]["stop_tick"])] * 2
 
 
-def test_the_window_contains_the_events_it_declares(source, harp):
+def test_the_window_contains_the_events_it_declares(located, harp):
     """The independent check on the epoch: the events must fall inside the declared window."""
-    row = windows(source, harp, ["left_lick_time"])[0]
+    row = windows(located, harp, ["left_lick_time"])[0]
     assert row["start_tick"] <= FIRST_EVENT_TICK
     assert row["stop_tick"] >= LAST_EVENT_TICK
 
 
-def test_the_window_is_wider_than_the_events(source, harp):
+def test_the_window_is_wider_than_the_events(located, harp):
     """Deriving it from the events instead would lose this slack and bias every rate upward."""
-    row = windows(source, harp, ["left_lick_time"])[0]
+    row = windows(located, harp, ["left_lick_time"])[0]
     leading = (FIRST_EVENT_TICK - row["start_tick"]) / HARP_TICK_RATE_HZ
     trailing = (row["stop_tick"] - LAST_EVENT_TICK) / HARP_TICK_RATE_HZ
     assert 0 < leading < 1
     assert 39 < trailing < 40
 
 
-def test_it_uses_the_behaviour_window_not_the_ephys_one(source, harp):
-    row = windows(source, harp, ["left_lick_time"])[0]
+def test_it_uses_the_behaviour_window_not_the_ephys_one(located, harp):
+    row = windows(located, harp, ["left_lick_time"])[0]
     assert (row["stop_tick"] - row["start_tick"]) / HARP_TICK_RATE_HZ == pytest.approx(7848.8, abs=0.1)
 
 
@@ -233,8 +245,8 @@ def test_the_ephys_window_is_the_other_one_this_source_declares(source):
     assert (ephys.stop - ephys.start).total_seconds() == pytest.approx(6387.0, abs=0.1)
 
 
-def test_no_streams_means_no_intervals(source, harp):
-    assert windows(source, harp, []) == []
+def test_no_streams_means_no_intervals(located, harp):
+    assert windows(located, harp, []) == []
 
 
 def test_an_inverted_window_is_a_defect(tmp_path, harp):
@@ -242,8 +254,15 @@ def test_an_inverted_window_is_a_defect(tmp_path, harp):
         tmp_path,
         streams=[{"stream_start_time": EPHYS_STOP, "stream_end_time": EPHYS_START, "ephys_modules": []}],
     )
-    with pytest.raises(SourceDefect, match="ends at"):
-        windows(_session(asset), harp, ["left_lick_time"])
+    source = _session(asset, reference_clock={**HARP_ROW, "tick_zero_utc": harp.tick_zero_utc})
+    with pytest.raises(SourceDefect, match="ends before it starts"):
+        source.records()
+
+
+def test_a_window_cannot_be_placed_on_a_clock_whose_tick_zero_is_unknown(source):
+    """A wall clock locates no tick without one, so the window is omitted and said to be."""
+    assert "core.clock_observation_intervals" not in source.records()
+    assert any("no tick_zero_utc" in note for note in source.notes)
 
 
 def test_notes_do_not_grow_when_the_file_is_read_twice(source):

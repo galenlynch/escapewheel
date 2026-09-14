@@ -46,7 +46,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -364,6 +364,10 @@ class SyncSource:
         self.first_samples = {str(row["stream"]): int(row["first_sample"]) for row in first_samples}
         self.prefix = prefix
         self.notes: list[str] = []
+        #: Where tick 0 of the reference clock falls in wall clock, memoized: every caller that
+        #: asks must get the same instant, and the note about how far the nodes disagreed is
+        #: said once.
+        self._epoch: datetime | None = None
         #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters. Every
         #: clock aligned appears here, dropping nothing included (Part 06 §4).
         self.withheld: dict[str, dict[str, Any]] = {}
@@ -534,8 +538,9 @@ class SyncSource:
     def clock(self, *, clock_id: str = "harp", name: str = "HARP rig clock") -> Clock:
         """Build the reference clock every stream's anchors point at.
 
-        No `tick_zero_utc`: HARP free-runs from device power-on and nothing in an events tree
-        records when that was. `SessionSource.epoch` derives it where a packet needs one.
+        `tick_zero_utc` where :meth:`epoch` could locate it, and absent otherwise: HARP
+        free-runs from device power-on, so tick 0 is a power-on instant rather than a protocol
+        constant, and only a record node's own stamp says when that was.
         """
         return Clock(
             clock_id=f"{self.prefix}{clock_id}",
@@ -543,7 +548,69 @@ class SyncSource:
             name=name,
             tick_rate_num=HARP_TICK_RATE_HZ,
             origin="HARP device power-on; tick 0 is not the session start",
+            tick_zero_utc=self.epoch(),
         )
+
+    def epoch(self) -> datetime | None:
+        """Locate the reference clock's tick 0 in wall clock, from the record nodes' own stamps.
+
+        Each node writes `sync_messages.txt` when it starts: a UTC instant to the millisecond,
+        and the counter value of every stream at that moment. A stream's tick 0 *is* that counter
+        value, so mapping tick 0 onto the reference gives a (reference tick, UTC) pair -- which
+        is what `tick_zero_utc` is, and the only route to it that pairs a wall clock with an
+        instrument event rather than with a datum. Every other route pairs it with the first
+        spike, and the first spike is the thing being placed.
+
+        A node's streams do not all reach their first sample at the same moment: the node opens
+        the file and writes each stream's first available sample, so a stream is at or after the
+        stamp, never before. The earliest is therefore the closest, and the spread over the rest
+        bounds the error. Two nodes give two independent estimates; their disagreement is
+        reported.
+
+        Derived here rather than by a build because the stamps are this tree's, and at the
+        default bound because tick 0 sits **inside** a median anchor interval of the terminal
+        anchor: this session's anchors are 1.5 s apart and its first is 0.6 s after tick 0, so
+        no wider allowance changes the answer.
+
+        Returns
+        -------
+        datetime or None
+            The instant, or None where no stream carries both a stamp and anchors.
+        """
+        from escapewheel_reader.clocks import align
+
+        if self._epoch is None:
+            by_clock: dict[str, list[dict[str, Any]]] = {}
+            for row in self.anchors():
+                by_clock.setdefault(str(row["clock_id"]), []).append(row)
+            per_node: dict[str, list[int]] = {}
+            stamps: dict[str, datetime] = {}
+            for stream in self.aligned():
+                clock, started = self.clock_id_for(stream), self.started(stream)
+                if clock is None or started is None or clock not in by_clock:
+                    continue
+                rows = by_clock[clock]
+                at = np.array([r["t_tick"] for r in rows], dtype=np.int64)
+                parent = np.array([r["parent_tick"] for r in rows], dtype=np.int64)
+                converted, defined = align(np.array([0], dtype=np.int64), at, parent)
+                if defined[0]:
+                    per_node.setdefault(stream.node, []).append(int(converted[0]))
+                    stamps[stream.node] = started.started
+            estimates = [
+                stamps[node] - timedelta(seconds=min(ticks) / HARP_TICK_RATE_HZ)
+                for node, ticks in per_node.items()
+            ]
+            if not estimates:
+                return None
+            earliest, latest = min(estimates), max(estimates)
+            if len(estimates) > 1:
+                self.notes.append(
+                    f"tick_zero_utc: {len(estimates)} record nodes agree to "
+                    f"{(latest - earliest).total_seconds() * 1e3:.0f} ms"
+                )
+            # The mean of the nodes' estimates; each is independently derived and neither is better.
+            self._epoch = earliest + (latest - earliest) / 2
+        return self._epoch
 
     def clock_id_for(self, stream: SyncStream) -> str | None:
         """Return the clock a stream's ticks are on, or None where the packet declares none.

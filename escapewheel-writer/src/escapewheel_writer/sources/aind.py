@@ -119,10 +119,12 @@ class SessionSource(Compensates):
             "core.calibration_points",
             "core.calibrations",
             "core.clocks",
-            # The window these rows carry, and nothing else about them: the streams watched in
-            # it are the NWB's, so the build pairs the two (Part 05 §3.3 leaves a row to one
-            # source). Declared here because this is the source whose presence makes the
-            # resource available, which is what ownership is settled from.
+            # The window this source watched the reference clock over, which is the fact the
+            # rows below are composed from: the streams watched in it are the NWB's, so the
+            # build pairs the two (Part 05 §3.3 leaves a row to one source).
+            "core.clock_observation_intervals",
+            # Declared here because this is the source whose presence makes the resource
+            # available, which is what ownership is settled from.
             "core.event_stream_observation_intervals",
             "core.subjects",
         }
@@ -132,6 +134,11 @@ class SessionSource(Compensates):
     #: may declare either by hand. A build compares each against what the recipe says and refuses
     #: only on `subject.subject_id`, which is the one fact a reader resolves across packets.
     STATES: ClassVar[dict[str, str]] = {
+        # Both ends of the session, which this JSON declares per data stream and the recipe may
+        # also carry. A build compares them and keeps this source's (Part 05 §3.6): a hand-typed
+        # start transcribes the source's own derivation rather than competing with it.
+        "session.session_start_time": "stated_session_start_time",
+        "session.session_end_time": "stated_session_end_time",
         "subject.subject_id": "subject_id",
         "subject.species": "stated_species",
         "subject.sex": "stated_sex",
@@ -175,6 +182,16 @@ class SessionSource(Compensates):
         self._rig_document: dict[str, Any] | None = None
         self._subject_document: dict[str, Any] | None = None
         self.session_id = session_id or self.path.parent.name
+
+    @property
+    def stated_session_start_time(self) -> datetime:
+        """When the earliest declared acquisition began, which is when the session did."""
+        return self.extent()[0]
+
+    @property
+    def stated_session_end_time(self) -> datetime:
+        """When the last declared acquisition ended, since acquisition is staggered."""
+        return self.extent()[1]
 
     @property
     def subject_id(self) -> str | None:
@@ -339,6 +356,48 @@ class SessionSource(Compensates):
         )
 
     # -- tables -----------------------------------------------------------------------
+
+    def watched(self) -> list[dict[str, Any]]:
+        """`core.clock_observation_intervals`: when the behaviour acquisition watched the clock.
+
+        One row, on the reference clock the build supplied, because that is what this JSON can
+        say about it: the window is the declared one, never the extent of the events. Deriving
+        it from the events makes `core.events.within_observation` vacuous by construction and
+        biases every rate upward by excluding the silent head and tail.
+
+        Returns
+        -------
+        list of dict
+            The one window, or none where nothing locates tick 0 on the supplied clock and a
+            wall-clock window therefore names no tick.
+        """
+        clock = Clock(
+            clock_id=str(self.clock_row["clock_id"]),
+            session_id=self.session_id,
+            name=str(self.clock_row["clock_id"]),
+            tick_rate_num=int(self.clock_row["tick_rate_num"]),
+            tick_rate_den=int(self.clock_row.get("tick_rate_den", 1)),
+            origin=str(self.clock_row.get("origin", "")),
+            tick_zero_utc=_instant(self.clock_row.get("tick_zero_utc")),
+        )
+        if clock.tick_zero_utc is None:
+            self.notes.append(
+                f"{self.clock_row['clock_id']}: no tick_zero_utc, so the declared acquisition window "
+                "locates no ticks and no observation interval is emitted"
+            )
+            return []
+        window = self.behavior()
+        start, stop = clock.tick_at(window.start), clock.tick_at(window.stop)
+        if stop < start:
+            raise SourceDefect(f"{self.path}: data_streams[{window.index}] ends before it starts")
+        return [
+            {
+                "session_id": self.session_id,
+                "clock_id": clock.clock_id,
+                "start_tick": start,
+                "stop_tick": stop,
+            }
+        ]
 
     def extent(self) -> tuple[datetime, datetime]:
         """When the session began and ended, across every declared stream.
@@ -601,12 +660,20 @@ class SessionSource(Compensates):
         }
         return {
             "core.clocks": [self.clock_row],
+            **({"core.clock_observation_intervals": watched} if (watched := self.watched()) else {}),
             # Omitted rather than staged empty where the document is absent, as a calibration is.
             **({"core.subjects": subjects} if (subjects := self.subjects()) else {}),
             # An asset carrying no calibration is conforming (R89 §3), so the resources are
             # omitted rather than staged empty -- a manifest entry a packet cannot answer for.
             **{resource: rows for resource, rows in calibrations.items() if rows},
         }
+
+
+def _instant(value: Any) -> datetime | None:
+    """Read a wall clock the build supplied, which crosses a boundary as a string."""
+    if value is None or isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
 
 
 def _clean(value: Any) -> str | None:

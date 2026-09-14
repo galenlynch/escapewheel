@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field, replace
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from functools import partial
 from math import ceil
 from pathlib import Path
@@ -126,10 +126,13 @@ class Context:
     reference: Any = None
     #: `core.event_streams` IDs the NWB declared, which the observation windows cover.
     event_streams: list[str] = field(default_factory=list)
-    #: The acquisition window the streams above were watched in, as the wall clocks a source
-    #: declared it with. One source states the window and another states the streams, so the
-    #: rows pairing them are composed here rather than by either (Part 05 §3.4).
-    acquisition_window: tuple[datetime, datetime] | None = None
+    #: Per source, the window it declared on the reference clock, in that clock's ticks. One
+    #: source states a window and another states the streams watched in it, so the rows pairing
+    #: them are composed here rather than by either (Part 05 §3.4).
+    windows: dict[str, tuple[int, int]] = field(default_factory=dict)
+    #: `core.clock_anchors` rows, whatever source produced them, since the alignment every later
+    #: conversion uses is fitted across all of them.
+    anchors: list[dict[str, Any]] = field(default_factory=list)
     #: Session facts a source derived that the recipe does not state, merged into
     #: `core.sessions` after every source has run.
     session_extra: dict[str, Any] = field(default_factory=dict)
@@ -225,23 +228,27 @@ def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collectio
     if "wanted" in needed:
         # Settled before any source is opened (Part 05 §3.4), so a source told what is wanted may
         # extract no more -- and one that is not told produces everything and a build discards.
-        terms["wanted"] = sorted(spec.claims)
+        # What the recipe claims plus what this build harvests: a resource the recipe leaves
+        # unclaimed may still be the one a later source needs, and narrowing it away would lose
+        # a fact rather than a table.
+        terms["wanted"] = sorted(set(spec.claims) | (set(HARVESTED) & set(declared(spec)["produces"])))
     return terms
 
 
 def _reference(recipe: Recipe, context: Context) -> Any:
     """Return the reference clock as it stands, located in wall clock where a build can.
 
-    `tick_zero_utc` is derived from the record nodes' own stamps rather than declared by any
-    source, so it can only be filled once the source holding those stamps has run: an adapter
-    built before that is handed a clock without one, which is what it would have had anyway.
-    Kept on the context, so every later adapter and the packet's own row agree.
+    `tick_zero_utc` is not declared by any source; it is derived by the one holding the record
+    nodes' stamps, which states it on its own `core.clocks` row. So it can only be filled once
+    that source has run, and an adapter built before it is handed a clock without one -- which is
+    what it would have had anyway. Kept on the context, so every later adapter and the packet's
+    own row agree.
     """
     clock = context.reference or _reference_clock(recipe, context)
-    if clock.tick_zero_utc is None and "sync" in context.sources:
-        located = _recorded_epoch(context, *context.alignment())
+    if clock.tick_zero_utc is None:
+        located = context.clocks.get(clock.clock_id, {}).get("tick_zero_utc")
         if located is not None:
-            clock = replace(clock, tick_zero_utc=located)
+            clock = replace(clock, tick_zero_utc=_stored(located, "timestamp"))
     context.reference = clock
     return clock
 
@@ -288,10 +295,16 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
     supplied = _supplied(spec, recipe, context)
     options = supplied.pop("options")
     if spec.delivery is not None and not spec.in_process:
+        # The URI rather than the root this build resolved, and the options that open it beside
+        # it: the other process opens the source for itself (Part 03 §11.2), and what it is
+        # handed has to be enough to.
+        crossing = {**supplied, "root": spec.uri or str(spec.root)}
+        if spec.storage_options:
+            options = {**options, "storage_options": dict(spec.storage_options)}
         return delivery.fetch(
             spec.kind,
             spec.delivery.command,
-            {**supplied, "options": options},
+            {**crossing, "options": options},
             protocol=spec.delivery.protocol,
             wanted=spec.claims,
             states=declared(spec)["states"],
@@ -328,6 +341,12 @@ def _reference_clock(recipe: Recipe, context: Context) -> Any:
 #: colliding with the true value, and nothing downstream can detect it.
 REFUSES_ON_DIFFERENCE = frozenset({"subject.subject_id"})
 
+#: Part 05 §3.6's third disposition: facts where the source's value is written and the recipe's is
+#: reported. Both ends of a session are derived from the acquisition windows a source declares, so
+#: a hand-typed one transcribes that derivation rather than competing with it -- where a subject is
+#: a fact about the world that the recipe may legitimately correct.
+SOURCE_WINS = frozenset({"session.session_start_time", "session.session_end_time"})
+
 #: The recipe block each resource's fields are declared in, for Part 05 §3.6's comparison type.
 FACT_BLOCKS = {"session": "core.sessions", "subject": "core.subjects"}
 
@@ -341,15 +360,35 @@ def _fact_types(registry: Mapping[str, Any]) -> dict[str, str]:
     }
 
 
+def _stored(value: Any, declared_type: str | None) -> Any:
+    """Return a stated value as the type the packet stores it as, not as the text it crossed as.
+
+    `_normalized` reduces two spellings to one for comparison; this is the other direction, and
+    it is needed because a value that crossed a process boundary is a string whatever it means.
+    """
+    if value is None or declared_type not in {"timestamp", "date"}:
+        return value
+    if isinstance(value, datetime):
+        return value.date() if declared_type == "date" else value
+    if isinstance(value, date):
+        return value
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return parsed.date() if declared_type == "date" else parsed
+
+
 def _normalized(value: Any, declared_type: str | None) -> Any:
     """Reduce a value to the type the packet stores it as, so two spellings compare equal.
 
     `session.json` states a subject as the number 776259 where a recipe declares the string
     `"776259"`, and an NWB states a date of birth as a timestamp where R4 §3.3 makes the column a
-    calendar date. Comparing what was written would refuse both.
+    calendar date. Comparing what was written would refuse both. A wall clock is the same problem
+    with more spellings -- `Z` against `+00:00`, and a `T` against the space `str` puts there -- so
+    it is compared as the instant it names rather than as the text either side wrote.
     """
     if value is None:
         return None
+    if declared_type == "timestamp":
+        return _stored(value, "timestamp")
     if declared_type == "date":
         if isinstance(value, datetime):
             return value.date()
@@ -362,15 +401,25 @@ def _normalized(value: Any, declared_type: str | None) -> Any:
 def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) -> None:
     """Compare what the recipe declares against what this source states (Part 05 §3.6).
 
-    Reported rather than refused, except where the fact identifies something a reader resolves
-    across packets: a recipe correcting a source is the ordinary case (R87 §1.3), and refusing on
-    every difference would tax every recipe to catch a rarer defect than the note surfaces.
+    Three dispositions, and which one applies is the fact's rather than the source's. A fact that
+    identifies something a reader resolves across packets refuses the build, since nothing
+    downstream can detect a wrong one. A fact the source derives and the recipe transcribes is
+    written from the source. Everything else is the ordinary case, where a recipe correcting a
+    source is legitimate and the difference is reported.
+
+    A source that states a fact the recipe does not declare is not comparing anything, and its
+    value is taken: which is how `core.sessions` gets both its ends from the windows a session
+    source declares, whether that source ran here or delivered them from elsewhere.
     """
     declared, notes = recipe.declared_facts, getattr(source, "notes", context.notes)
     for fact, attribute in sorted(getattr(source, "STATES", {}).items()):
+        stated = getattr(source, attribute, None)
+        block, _, field = fact.partition(".")
+        if stated is not None and fact in SOURCE_WINS and block == "session":
+            context.session_extra[field] = _stored(stated, context.fact_types.get(fact))
         if fact not in declared:
             continue
-        want, stated = declared[fact], getattr(source, attribute, None)
+        want = declared[fact]
         reason = recipe.overrides.get(fact)
         if stated is None:
             # Part 05 §3.6: silence is a fact about the source, not a disagreement -- but it is
@@ -389,41 +438,82 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
                 f"{fact} is {want!r} and {getattr(source, 'path', spec.kind)} states {stated!r}; "
                 "a declared fact differs from the source that states it, with no override (Part 05 §3.6)"
             )
+        elif fact in SOURCE_WINS:
+            notes.append(f"{fact} is {want!r} and {spec.kind} derives {stated!r}; the source's value is used")
         else:
             notes.append(f"{fact} is {want!r} and {spec.kind} states {stated!r}; the recipe's value is used")
 
 
-def _harvest(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) -> None:
-    """Take from a built source whatever the sources after it consume."""
-    if spec.kind == "sorter":
+#: What a build takes from a source for the sources after it, beyond what the recipe claims. Each
+#: is read from the rows a source produced rather than by asking the source, so a source delivered
+#: out of process -- a process that has exited by the time this runs -- is harvested the same way.
+HARVESTED = (
+    "core.units",
+    "core.clocks",
+    "core.event_streams",
+    "core.clock_anchors",
+    "core.clock_observation_intervals",
+)
+
+
+def _rows(source: Any, records: Mapping[str, list[dict[str, Any]]]) -> Callable[[str], list[dict[str, Any]]]:
+    """Return a reader for one source's rows, whichever way they reached this process.
+
+    An adapter in this process hands over records; one delivered out of process hands over a
+    table or a file, which `Delivered.rows` reads again for each caller. Either way the harvest
+    asks the same question of the same rows.
+    """
+
+    def rows(resource: str) -> list[dict[str, Any]]:
+        if resource in records:
+            return records[resource]
+        reader = getattr(source, "rows", None)
+        return list(reader(resource)) if reader is not None else []
+
+    return rows
+
+
+def _harvest(
+    spec: SourceSpec,
+    source: Any,
+    context: Context,
+    recipe: Recipe,
+    rows: Callable[[str], list[dict[str, Any]]],
+) -> None:
+    """Take from what a source produced whatever the sources after it consume.
+
+    Keyed on the resource rather than on the kind, for the reason `_composed` is: which adapter
+    declared a clock is not what makes it a clock, and a build that dispatched on the kind could
+    only harvest from the kinds it was written against.
+    """
+    if units := rows("core.units"):
         # The NWB names a quad-base probe's shanks separately and the sorting run ID ends in
         # exactly that name, while probe_id collapses to the physical probe.
-        context.units = [
+        context.units += [
             {
                 "device_name": row["sorting_run_id"].rsplit(".", 1)[-1],
                 "local_unit_label": row["local_unit_label"],
                 "unit_id": row["unit_id"],
             }
-            for row in source.units()
+            for row in units
         ]
-        context.clocks.update({row["clock_id"]: dict(row) for row in source.clocks()})
+    for row in rows("core.clocks"):
+        # Merged rather than replaced: `core.clocks` is shared, so two sources may each state
+        # part of one clock -- a rate here, a located tick 0 there -- and the last to run must
+        # not erase what the first knew.
+        known = context.clocks.setdefault(str(row["clock_id"]), {})
+        known.update({column: value for column, value in row.items() if value is not None})
+    context.anchors += rows("core.clock_anchors")
+    context.event_streams += [row["event_stream_id"] for row in rows("core.event_streams")]
+    if (reference := context.reference) is not None:
+        # The window this source watched the reference clock over, which the build pairs with the
+        # streams another source declared. Kept per source: two sources may each declare a window
+        # on one clock -- a sync train and an acquisition are both true -- and only the one that
+        # comes with the resource being composed says when those streams were watched.
+        for row in rows("core.clock_observation_intervals"):
+            if row["clock_id"] == reference.clock_id:
+                context.windows[spec.kind] = (int(row["start_tick"]), int(row["stop_tick"]))
     _compare_declared_facts(spec, source, context, recipe)
-    if spec.kind == "session":
-        # Part 05 §3.6: both ends come from the declared stream windows rather than from the
-        # recipe, because a hand-entered start transcribes the source's own derivation rather
-        # than competing with it. Reported, never discarded silently.
-        began, ended = source.extent()
-        context.session_extra["session_start_time"] = began
-        context.session_extra["session_end_time"] = ended
-        window = source.behavior()
-        context.acquisition_window = (window.start, window.stop)
-        if (declared := _declared_start(recipe)) is not None and abs((declared - began).total_seconds()) > 1:
-            source.notes.append(
-                f"[session].session_start_time {declared.isoformat()} disagrees with the earliest "
-                f"declared stream window {began.isoformat()}; the window is used"
-            )
-    if spec.kind == "nwb":
-        context.event_streams = [row["event_stream_id"] for row in source.event_streams()]
 
 
 def _declared_start(recipe: Recipe) -> datetime | None:
@@ -437,9 +527,9 @@ def _declared_start(recipe: Recipe) -> datetime | None:
 
 
 def _anchors(context: Context) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]]:
-    """Return the sync source's anchors as arrays per clock, in the shape `align` wants."""
+    """Return every anchor a source produced as arrays per clock, in the shape `align` wants."""
     collected: dict[str, tuple[list[int], list[int]]] = {}
-    for row in context.sources["sync"].anchors():
+    for row in context.anchors:
         at, parent = collected.setdefault(row["clock_id"], ([], []))
         at.append(row["t_tick"])
         parent.append(row["parent_tick"])
@@ -524,8 +614,6 @@ def _time_origin(
     some of the clocks is not the minimum Part 05 §7 requires a writer to declare -- and R39
     §2.4 says an origin the writer cannot compute is one it must not state.
     """
-    from escapewheel_reader.clocks import align
-
     reference = context.reference.clock_id if context.reference else None
     starts: list[int] = []
     for row in intervals:
@@ -542,57 +630,9 @@ def _time_origin(
     return min(starts) if starts else None
 
 
-def _recorded_epoch(context: Context, by_clock: Mapping[str, Any], bound: float) -> datetime | None:
-    """Locate the reference clock's tick 0 in wall clock, from the record nodes' own stamps.
-
-    Each node writes `sync_messages.txt` when it starts: a UTC instant to the millisecond, and
-    the counter value of every stream at that moment. A stream's tick 0 *is* that counter
-    value, so mapping tick 0 onto the reference gives a (reference tick, UTC) pair -- which is
-    what `tick_zero_utc` is, and the only route to it that pairs a wall clock with an
-    instrument event rather than with a datum. Every other route pairs it with the first spike,
-    and the first spike is the thing being placed.
-
-    A node's streams do not all reach their first sample at the same moment: the node opens the
-    file and writes each stream's first available sample, so a stream is at or after the stamp,
-    never before. The earliest is therefore the closest, and the spread over the rest bounds
-    the error. Two nodes give two independent estimates; their disagreement is reported.
-    """
-    sync = context.sources.get("sync")
-    reference = context.reference
-    if sync is None or reference is None:
-        return None
-    rate = reference.tick_rate_num / (reference.tick_rate_den or 1)
-    per_node: dict[str, list[int]] = {}
-    stamps: dict[str, datetime] = {}
-    for stream in sync.aligned():
-        clock = sync.clock_id_for(stream)
-        started = sync.started(stream)
-        if clock is None or started is None or clock not in by_clock:
-            continue
-        converted, defined = align(np.array([0], dtype=np.int64), *by_clock[clock], bound=bound)
-        if defined[0]:
-            per_node.setdefault(stream.node, []).append(int(converted[0]))
-            stamps[stream.node] = started.started
-
-    estimates = [stamps[node] - timedelta(seconds=min(ticks) / rate) for node, ticks in per_node.items()]
-    if not estimates:
-        return None
-    earliest, latest = min(estimates), max(estimates)
-    if len(estimates) > 1:
-        context.notes.append(
-            f"tick_zero_utc: {len(estimates)} record nodes agree to {(latest - earliest).total_seconds() * 1e3:.0f} ms"
-        )
-    for node, ticks in sorted(per_node.items()):
-        if len(ticks) > 1:
-            context.notes.append(
-                f"{node}: its streams reach sample 0 over "
-                f"{(max(ticks) - min(ticks)) / rate * 1e3:.0f} ms, which bounds the estimate"
-            )
-    # The mean of the nodes' estimates; each is independently derived and neither is better.
-    return earliest + (latest - earliest) / 2
-
-
-def _add_batches(writer: PacketWriter, spec: SourceSpec, source: Any, counts: dict[str, int]) -> dict[str, int]:
+def _add_batches(
+    writer: PacketWriter, spec: SourceSpec, source: Any, counts: dict[str, int], staged: Collection[str] = ()
+) -> dict[str, int]:
     """Stream whatever a source streams, rather than holding it as Python mappings.
 
     `core.spike_events` is the case that forced the streaming path -- 10^8 rows, and a dict per
@@ -618,6 +658,11 @@ def _add_batches(writer: PacketWriter, spec: SourceSpec, source: Any, counts: di
         return produced
     offered = source.offers()
     for resource_id, batches in streamed().items():
+        if resource_id in staged:
+            # One table comes from one path, which is what keeps the declared sort enforceable:
+            # a resource this build composed is already written, and what the source delivered
+            # for it is the empty table it delivers for anything it has nothing to say about.
+            continue
         produced[resource_id] = offered.get(resource_id, 0)
         if resource_id in spec.claims:
             writer.add_batches(resource_id, batches)
@@ -628,22 +673,18 @@ def _add_batches(writer: PacketWriter, spec: SourceSpec, source: Any, counts: di
 def _composed(spec: SourceSpec, context: Context) -> dict[str, list[dict[str, Any]]]:
     """Return the rows this build composes rather than any one source producing them.
 
-    `core.event_stream_observation_intervals` is the case: one source declares the acquisition
-    window and another declares the streams watched in it, and Part 05 §3.3 leaves a row to a
-    single source, so pairing them is the build's act. Keyed on what the spec claims rather than
-    on its kind, since which source declared the window is not what decides the composition.
+    `core.event_stream_observation_intervals` is the case: one source declares the window it
+    watched the reference clock over and another declares the streams watched in it, and
+    Part 05 §3.3 leaves a row to a single source, so pairing them is the build's act. Keyed on
+    what the spec claims rather than on its kind, since which source declared the window is not
+    what decides the composition -- and paired with that source's own window, since two sources
+    may each declare one on the reference clock and only one of them is these streams'.
     """
     resource = "core.event_stream_observation_intervals"
-    window, clock = context.acquisition_window, context.reference
+    window = context.windows.get(spec.kind)
     if resource not in spec.claims or window is None or not context.event_streams:
         return {}
-    if clock is None or clock.tick_zero_utc is None:
-        context.notes.append(
-            f"{resource}: the reference clock carries no tick_zero_utc, so an acquisition window "
-            "in wall clock locates no ticks and no stream gets a window"
-        )
-        return {}
-    start, stop = clock.tick_at(window[0]), clock.tick_at(window[1])
+    start, stop = window
     if stop < start:
         raise SourceDefect(f"{resource}: the acquisition window ends at {stop} and starts at {start}")
     # One window for every stream, because they come from a single acquisition: a stream with
@@ -769,10 +810,13 @@ def build(
         say(f"{spec.kind} -> {', '.join(spec.owns) or 'nothing it owns'}")
         source = _build_source(spec, recipe, context)
         context.sources[spec.kind] = source
-        _harvest(spec, source, context, recipe)
+        # Once, and used twice: an adapter's records are expensive to build, and the harvest and
+        # the staging are two readings of one set of rows.
+        records = source.records()
+        _harvest(spec, source, context, recipe, _rows(source, records))
 
-        produced = _add_records(writer, spec, source, context, counts)
-        produced.update(_add_batches(writer, spec, source, counts))
+        produced = _add_records(writer, spec, records, context, counts)
+        produced.update(_add_batches(writer, spec, source, counts, staged=set(produced)))
         _note_unclaimed(spec, source, produced)
         # Any adapter may stage arrays, not only the waveform one. A source that has them says
         # so by defining `staged_arrays`; the kind it happens to be is not the question.
@@ -887,7 +931,7 @@ def _import_run(
 def _add_records(
     writer: PacketWriter,
     spec: SourceSpec,
-    source: Any,
+    records: Mapping[str, list[dict[str, Any]]],
     context: Context,
     counts: dict[str, int],
 ) -> dict[str, int]:
@@ -899,7 +943,7 @@ def _add_records(
         Rows the source produced per resource, claimed or not, for `_unclaimed` to report.
     """
     produced: dict[str, int] = {}
-    for resource, rows in {**source.records(), **_composed(spec, context)}.items():
+    for resource, rows in {**records, **_composed(spec, context)}.items():
         produced[resource] = len(rows)
         if resource in _ARBITRATED:
             # Kept rather than counted, so Part 05 §3.4 can compare what the winner staged against
@@ -1037,6 +1081,14 @@ def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None])
     """
     withheld = getattr(context.sources.get("sync"), "withheld", None)
     if not withheld:
+        if any(getattr(source, "kind", None) for source in context.sources.values()):
+            # A delivered source states what it produced and nothing about another source's rows,
+            # and this is a fact about the sorter's clock rows. No resource carries it, so it does
+            # not cross -- and a packet missing it says nothing, which is why this says it here.
+            context.notes.append(
+                "the terminal-anchor test's result is not recorded: the source that runs it was "
+                "delivered, and no resource carries a fact about another source's rows (R99 §3.2)"
+            )
         return
     stamped = writer.stamp(
         "core.clocks",
