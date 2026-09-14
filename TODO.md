@@ -494,15 +494,36 @@ that refused it, in a build with **six of the ten sources out of process** — `
 over `files-v0.1`, `session`, `harp` and `nwb` over `stream-v0.1`, `openephys` over `flight-v0.1` —
 committed with 0 core errors and **34 of 42 tables byte-identical** to the in-process packet.
 
-**`core.array_assets.array_asset_name` records the wrong name, found 2026-09-14.** R53 §2.5 makes
-a `*_name` what its identifier stands for, and the numbering fills it from exactly that where a row
-leaves it unset. `sources/lfp.py` sets it to the NWB's series name — `ElectricalSeries46101-LFP` —
-while minting the identifier from `46101.lfp`, which is also what the manifest entry carries. So
-**0 of 11 rows join to their manifest entry by name**, a consumer holding a row cannot find the
-resource it describes, and the packet records nothing about what `array_asset_id` 3 was minted
-from. The fix is to drop the override and let the numbering fill it; the series name goes to
-`metadata` or nowhere, the resource id already carrying the probe. Found while drafting the array
-reference, whose first draft rested on the join failure being a property of the format.
+**`core.array_assets.array_asset_name` recorded the wrong name, fixed 2026-09-14.** R53 §2.5 makes
+a `*_name` what its identifier stands for, and `arrow.py` fills it from exactly that where a row
+leaves it unset. Three adapters overrode it with a label of their own: `lfp` with the NWB's series
+name `ElectricalSeries46101-LFP` against an identifier minted from `46101.lfp`, `nwb` with the
+array's `description`, and `waveforms` with the phrase `mean waveform per unit`. So **0 of 11 rows
+joined to their manifest entry by name**, a consumer holding a row could not find the resource it
+described, and the packet recorded nothing about what `array_asset_id` 3 was minted from — the same
+defect `clock.py` had struck for `clock_name`, where a human label left nothing able to resolve a
+recipe's spelling back to a clock.
+
+All three overrides are gone and the numbering fills the column. Measured on a rebuild of
+`ecephys_786867`: **11 of 11 rows join**, and `array_asset_name` is the only column the fix moves.
+Nothing is lost — the series name is in the `uri`, the description is where it is read from and is
+what the device row is built from, and the phrase was the adapter's own invention where
+`semantic_type` already says what the array holds.
+
+**Five more sites drop a prefix rather than a label**, all in `sources/nwb.py`: `device_name`,
+`probe_name` and `event_stream_name` are set to the name without the recipe's prefix that the
+identifier carries. Inert while every packet is built at prefix `""` and an R85 collision the day
+two sessions are merged under different ones. Recorded as exceptions in
+`test_a_name_records_what_its_identifier_stands_for`, which reads the adapters statically and
+refuses a sixth, and which checks each exception still names a row that sets one.
+
+**The reference clock's epoch moved 20.5 ms, measured 2026-09-14.** Locating tick 0 moved from the
+build to the sync adapter, which applies R40's default bound where the build applied the one it
+measured, so a slightly different set of node estimates goes into the mean. The two derivations
+agree to **641 ticks**, inside the ~±50 ms this route claims for itself and well inside the ±1 s of
+the derivation it replaced; every event-stream window translates by that amount and none changes
+length. The epoch also now reaches the packet, where `core.clocks.tick_zero_utc` was null in both
+rebuilt packets.
 
 **One fact of the harvest has no channel at all.** R99 §3.2's terminal-anchor result is per probe
 clock, the sync source computes it, and the *sorter* owns those rows — so it is a fact about

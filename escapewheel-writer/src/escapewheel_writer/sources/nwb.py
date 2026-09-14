@@ -974,7 +974,6 @@ class NWBSource(Compensates):
         rows = []
         for name in self.signals:
             ticks, _ = self._signal(name)
-            attrs = self._attrs(f"acquisition/{name}")
             span = int(ticks[-1] - ticks[0]) if len(ticks) > 1 else 0
             rate = (len(ticks) - 1) * self.clock.tick_rate_num / span if span else None
             rows.append(
@@ -984,7 +983,14 @@ class NWBSource(Compensates):
                     # Part 01 §3.17: which instrument made this array. Read from the same description
                     # `_signal_devices` declares the device from, so the two cannot disagree.
                     "device_id": self._signal_device_id(name),
-                    "array_asset_name": str(attrs.get("description") or name),
+                    # No `array_asset_name`: Part 02 §8.2's rule for a clock holds for an asset
+                    # too -- the name is what the identifier stands for, and the numbering fills
+                    # it from exactly that where a row leaves it unset (R53 §2.5). Writing a
+                    # source's own label here left the packet with no record of what the
+                    # identifier was minted from, and nothing to join a row to its manifest
+                    # entry by.
+                    # The description stays where it is read from, and is what the
+                    # device row is built from.
                     "uri": f"arrays/core/{name}.zarr",
                     "format": "zarr_v3",
                     "clock_id": self._dispatch_clock_id(name),

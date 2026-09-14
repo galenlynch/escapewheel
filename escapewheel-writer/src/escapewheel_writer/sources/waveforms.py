@@ -307,7 +307,9 @@ class WaveformSource:
             "array_asset_id": asset_id,
             "session_id": self.session_id,
             "semantic_type": semantic_type,
-            "array_asset_name": name,
+            # No `array_asset_name`: the numbering fills it from what `array_asset_id` stands
+            # for (R53 §2.5), and a phrase this adapter invented is not that. `semantic_type`
+            # is where what the array holds is already declared.
             "uri": uri,
             "format": "zarr_v3",
             "clock_id": clock_id,

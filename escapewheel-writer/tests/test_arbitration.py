@@ -115,3 +115,59 @@ def test_a_recipe_supplied_resource_is_declared(resource):
     if registry is None:
         pytest.skip("registry not reachable from this working directory")
     assert resource in registry["tables"]
+
+
+#: Rows where an adapter sets a `*_name` to something other than the string its `*_id` is minted
+#: from, each with why it is still here. R85 wants a name unique within its packet and the
+#: numbering fills one from the identifier where a row leaves it unset, so an override that drops
+#: the prefix is a name that collides once two sessions are merged under different ones — inert
+#: while every packet is built at prefix "", which is why these are recorded rather than fixed.
+NAME_EXCEPTIONS = {
+    ("nwb.py", "device_name"): "drops the recipe's prefix, which the identifier carries",
+    ("nwb.py", "probe_name"): "drops the recipe's prefix, which the identifier carries",
+    ("nwb.py", "event_stream_name"): "drops the recipe's prefix, which the identifier carries",
+}
+
+
+def test_a_name_records_what_its_identifier_stands_for():
+    """R53 §2.5: a `*_name` is the string the number was minted from, and nothing else.
+
+    Read statically rather than by running the adapters, because what is wrong is visible in the
+    row an adapter writes: `core.clocks` had a human label in `clock_name` and nothing could
+    resolve a recipe's spelling back to a clock, and `core.array_assets` had a source's own label
+    in `array_asset_name` and nothing could join a row to its manifest entry.
+    """
+    import json
+
+    registry = json.loads((Path(__file__).resolve().parents[2] / "registry/logical_schemas.json").read_text())
+    pairs = {
+        column["name"]: column["name"].removesuffix("_name") + "_id"
+        for table in registry["tables"].values()
+        for column in table["columns"]
+        if column["name"].endswith("_name")
+    }
+    sources = Path(__file__).resolve().parents[1] / "src/escapewheel_writer/sources"
+    found = []
+    for path in sorted(sources.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.Dict):
+                continue
+            keys = {k.value: v for k, v in zip(node.keys, node.values) if isinstance(k, ast.Constant)}
+            for name, identity in pairs.items():
+                if name not in keys or identity not in keys:
+                    continue
+                if ast.dump(keys[name]) == ast.dump(keys[identity]):
+                    continue
+                if (path.name, name) in NAME_EXCEPTIONS:
+                    continue
+                found.append(f"{path.name}:{keys[name].lineno} {name} = {ast.unparse(keys[name])} "
+                             f"where {identity} = {ast.unparse(keys[identity])}")
+    assert found == [], "a name column holds something other than what its identifier stands for:\n" + "\n".join(found)
+
+
+def test_every_name_exception_still_names_a_row_that_sets_one():
+    """An exception that stops matching is one the code has outgrown, and it must not go stale."""
+    sources = Path(__file__).resolve().parents[1] / "src/escapewheel_writer/sources"
+    for (filename, column), reason in sorted(NAME_EXCEPTIONS.items()):
+        text = (sources / filename).read_text()
+        assert f'"{column}"' in text, f"{filename} no longer sets {column}; strike the exception ({reason})"

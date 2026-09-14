@@ -297,7 +297,13 @@ class LFPSource(Compensates):
                 {
                     "array_asset_id": self.array_asset_id(series),
                     "session_id": self.session_id,
-                    "array_asset_name": series.name,
+                    # No `array_asset_name`: Part 02 §8.2's rule for a clock holds for an asset
+                    # too -- the name is what the identifier stands for, and the numbering fills
+                    # it from exactly that where a row leaves it unset (R53 §2.5). Writing a
+                    # source's own label here left the packet with no record of what the
+                    # identifier was minted from, and nothing to join a row to its manifest
+                    # entry by.
+                    # The series name is in the `uri` either way.
                     "band": "lfp",
                     "uri": self._uri(series),
                     "format": "zarr_v2",
