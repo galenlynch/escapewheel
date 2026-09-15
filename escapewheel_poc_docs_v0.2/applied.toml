@@ -2393,14 +2393,14 @@ where = "R110 §2.5"
 note = "measuring every column three ways over a 65,536-row sample costs about 0.4 s a packet against a 467 s build, so cost is not what refuses it: the choice records no reason and differs between a --sample build and a full one. A property of one implementation's libraries, so carried to 07 §7 rather than 10 (R93 §3.5)"
 
 [clause."R110 §3.1"]
-disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
-note = "a writer SHOULD delta-encode, and SHOULD NOT dictionary-encode, the first column of a table's sort order whose role is identifier; session_id is skipped, being one value in a single-session packet and 0.03 bits a row under RLE"
+disposition = "superseded"
+by = "R118"
+note = "the leading identifier survives as one of R118 §3.4's declarations of order, delta-encoded unless its runs are long"
 
 [clause."R110 §3.2"]
-disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
-note = "a writer SHOULD NOT dictionary-encode a floating-point column, and SHOULD write one whose values repeat as a declared exception"
+disposition = "superseded"
+by = "R118"
+note = "a float is judged by repetition under R118 §3.5, taking a dictionary where each value covers 50 rows"
 
 [clause."R110 §3.3"]
 disposition = "applied"
@@ -2697,3 +2697,68 @@ disposition = "applied"
 where = [
   { part = "03", section = "11.3", note = "the published shape, and a build refusing a document that does not satisfy it" },
 ]
+
+[clause."R118 §2.1"]
+disposition = "rationale"
+where = "R118 §2.1"
+note = "as written under R110's rules, 173 of 365 and 182 of 372 columns sit 1.15x or more off their best encoding, most of them single-valued or empty columns no rule reaches; the 1.5x report found none because it compared one-column files rather than column chunks"
+
+[clause."R118 §2.2"]
+disposition = "rationale"
+where = "R118 §2.2"
+note = "a dictionary page costs 27 bytes in every row group, so a single-valued column repays one only past some tens of thousands of rows, the packets crossing between 41,275 and 76,646; below 50,000 rows delta suits a single-valued integer. Carried to 10 §2.8"
+
+[clause."R118 §2.3"]
+disposition = "rationale"
+where = "R118 §2.3"
+note = "a count over a whole column cannot see a climb within groups, so counts alone write the spike tables' t_tick plain at 1.24x to 1.30x, 384 MB over best; the _tick suffix, the structural_index and sequence_position roles and assigned identity mark such columns without stating a distribution. Carried to 10 §2.9"
+
+[clause."R118 §2.4"]
+disposition = "rationale"
+where = "R118 §2.4"
+note = "rules keyed on declarations alone leave 70 columns 1.15x off their best, since no declaration says how many rows share a value. Carried to 10 §2.10"
+
+[clause."R118 §2.5"]
+disposition = "rationale"
+where = "R118 §2.5"
+note = "declared order then counts leave 15 columns needing an exception against 193 as written, on a plateau and across packets, and every column then lands within 1.15x of its best. Writing each column three ways and keeping the smallest is not adopted: the rules record a reason, sharing only the sampled build's divergence. Carried to 10 §2.11, and the counting cost to 07 §7"
+
+[clause."R118 §2.6"]
+disposition = "rationale"
+where = "R118 §2.6"
+note = "BYTE_STREAM_SPLIT is 1.15x smaller on 4 float column-and-packet pairs and 1.15x larger on 34, and DELTA_BYTE_ARRAY is refused by hyparquet and fastparquet; neither is among the encodings Part 03 §5.5 permits, so no rule chooses either"
+
+[clause."R118 §2.7"]
+disposition = "rationale"
+where = "R118 §2.7"
+note = "a --sample 2000 build encodes 8 columns differently from its full build, seven within 1.04x of their sampled best and core.spike_events.amplitude plain at 1.56x to 1.60x, every other column staying within 1.15x. Carried to 10 §2.12"
+
+[clause."R118 §3.1"]
+disposition = "applied"
+where = [{ part = "03", section = "5.5" }]
+note = "a writer SHOULD choose from declarations and four counts over the rows it holds when it chooses, a streamed table's being the row group about to be written or the first where one encoding is kept for the file; the first of four rules that applies decides"
+
+[clause."R118 §3.2"]
+disposition = "applied"
+where = [{ part = "03", section = "5.5" }]
+note = "a column in which every row is null SHOULD be written plain"
+
+[clause."R118 §3.3"]
+disposition = "applied"
+where = [{ part = "03", section = "5.5" }]
+note = "a single-valued column SHOULD take a dictionary from 50,000 rows, and below that delta for an integer and plain otherwise"
+
+[clause."R118 §3.4"]
+disposition = "applied"
+where = [{ part = "03", section = "5.5" }]
+note = "an integer declared ordered by the _tick suffix, the leading identifier, the structural_index or sequence_position role or assigned identity, or observed never to decrease, SHOULD take delta, and plain where it holds 50 rows a run"
+
+[clause."R118 §3.5"]
+disposition = "applied"
+where = [{ part = "03", section = "5.5" }]
+note = "any other column, a float included, SHOULD take a dictionary where it holds 50 rows a distinct value and plain otherwise"
+
+[clause."R118 §3.6"]
+disposition = "applied"
+where = [{ part = "03", section = "5.5" }]
+note = "the report SHOULD measure a column's own chunks and judge a string, timestamp or date column between a dictionary and plain; R110 §3.3's override and R110 §3.4's recipe declaration stand"

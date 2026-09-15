@@ -98,5 +98,7 @@ These are properties of the reference implementation, not requirements. A number
 - **Do not measure every column's encoding at write time.** Writing each column three ways over a
   65,536-row sample and keeping the smallest costs about **0.4 s** for a whole packet against a
   467 s build, so cost is not what refuses it: a measured choice records no reason for itself, and
-  it differs between a `--sample` build and a full one (R110 §2.5).
+  it differs between a `--sample` build and a full one (R110 §2.5). Counting each column instead, as
+  Part 03 §5.5's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count
+  (R118 §2.5).
 - **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id` (R86 §2.4). A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.

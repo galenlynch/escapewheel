@@ -14,16 +14,9 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-Dependencies run downward: a draft may depend on the ones above it and on nothing below. Each row
-names the draft's word count, when it was appraised, and why it sits where it does.
-
-| # | draft | words | appraised | why here |
-|---|---|---:|---|---|
-| 1 | `a-columns-encoding-follows-declared-order-and-counted-repetition` | 2,744 | 2026-09-15 | the only open draft; supersedes R110 §3.1 and §3.2, and rests on R110 §3.3 to §3.5 for exceptions and the report |
-
-**It moves no count in the generated block.** No table, column, reference, rule or vocabulary
-changes; every number in it is measured against both committed packets as they stood on 2026-09-15
-and is re-measured at acceptance.
+Nothing is open. A draft added here takes a row naming its word count, when it was appraised, and
+why it sits where it does: dependencies run downward, so a draft may depend on the ones above it
+and on nothing below.
 
 A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
 records what bound something and a draft never did. Git holds the document, and whatever the
@@ -34,7 +27,16 @@ resolving a name to an assigned number packet-wide before any table is built (Pa
 adapters needed was to compose the name the owning adapter composes, which deleted the mapping
 instead of declaring it — recorded in `TODO.md` §2.
 
-The last to leave was `an-adapter-delivers-an-array-by-writing-it`, accepted as **R117** on
+The last to leave was `a-columns-encoding-follows-declared-order-and-counted-repetition`, accepted
+as **R118** on 2026-09-15 at 2,744 words: Part 03 §5.5's tick, leading-identifier and float rules
+became four rules over declared order and counted repetition, which leave 15 columns needing an
+exception across the two packaged sessions where R110's leave 193. Its appraisal found the obvious
+alternative unargued, writing each column three ways and keeping the smallest, and two clauses
+carrying the reference writer into the profile. Building both sessions with `--sample 2000` to close
+its last open measurement found the writer choosing a streamed table's encodings from the batch as
+delivered rather than as written.
+
+Before it, `an-adapter-delivers-an-array-by-writing-it`, accepted as **R117** on
 2026-09-14 at 2,246 words: a packet-owned array crosses by being written to the location a build
 supplies and read back, since every field of its manifest entry is recoverable from the array and
 its name; a referenced one crosses as a resource document under the delivery's own reserved

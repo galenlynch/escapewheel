@@ -9,7 +9,7 @@ Last checked 2026-09-09, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R117 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R118 accepted. R42 and R73 withdrawn. No draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -224,23 +224,7 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 3. The encoding ladder awaits acceptance
-
-`revisions/drafts/a-columns-encoding-follows-declared-order-and-counted-repetition.md` replaces
-Part 03 §5.5's three encoding rules with four, over declared order and counted repetition, and
-carries every measurement behind them. The writer applies them already (`encoding.choose`), since
-Part 03 §5.5 leaves the choice to a writer, with 12 exceptions for core tables. Both recipes under
-`/mnt/Data` carry the 5 extension entries, and keep their R110-era `[encoding]` blocks beside them as
-`recipe.toml.before-declaration-rules`. Neither committed packet has been rebuilt, so both still carry
-R110's encodings.
-
-On acceptance the draft's §5 names what moves: Part 03 §5.5, Part 10 §2 and `applied.toml`, and the
-writer's docstrings then cite Part 03 §5.5 for the rules instead of describing them as extending it.
-Its §2.7 measures what a `--sample` build does to the rules, which is what the two sampled builds of
-2026-09-15 were for; they also found the streaming path counting a batch as delivered rather than as
-written, fixed in `ab3e322`.
-
-## 4. No code quality audit has run
+## 3. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
@@ -256,7 +240,7 @@ a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncon
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
 
-## 5. `registry_version` is held at `0.1.0`
+## 4. `registry_version` is held at `0.1.0`
 
 Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
 packets claiming one version with incompatible schemas is what the field exists to prevent, and it
@@ -264,19 +248,19 @@ is preventing nothing. Free to settle while nobody outside holds a packet, and f
 the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
 three at 0.2.0.
 
-## 6. The repository directory is still `nwb-lake/`
+## 5. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
 working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
 doing in one order or the other, not at once.
 
-## 7. Staging both packets to scratch needs a token
+## 6. Staging both packets to scratch needs a token
 
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 8. Parked: R42's write case survives its withdrawal
+## 7. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -294,7 +278,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 9. Smaller open items
+## 8. Smaller open items
 
 - **Trial-in-block containment has no consumer.** The measurement below concluded that a trial
   needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries `start_tick`
@@ -402,6 +386,11 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 
 # Settled 2026-09-15
 
+- **R118 is accepted and applied.** Part 03 §5.5's encoding rules are four, over declared order and
+  counted repetition, with 12 exceptions for core tables in the writer and 5 entries in the two
+  recipes under `/mnt/Data`, whose R110-era `[encoding]` blocks sit beside them as
+  `recipe.toml.before-declaration-rules`. Neither committed packet has been rebuilt, so both carry
+  R110's encodings until the next rebuild.
 - **Julia reads a packet through DuckDB.jl, and the delta encodings stay.** Parquet2.jl, the
   pure-Julia reader, decodes none of `DELTA_BINARY_PACKED`, `DELTA_LENGTH_BYTE_ARRAY`,
   `DELTA_BYTE_ARRAY` or `BYTE_STREAM_SPLIT`, in 0.2.34, the latest registered version, or on its
@@ -412,7 +401,7 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
   add delta decoding to a package this project does not own — the first was chosen, since no packet
   changes. The root `CLAUDE.md` now names DuckDB.jl; Part 02 §5.2 and Part 07 §2.2 name no reader and
   stay true. `conformance/parquet-probe/readers.py` and `readers.jl` reproduce the reads, and what the
-  choice leaves open about `list` is a smaller item under §9.
+  choice leaves open about `list` is a smaller item under §8.
 
 ---
 

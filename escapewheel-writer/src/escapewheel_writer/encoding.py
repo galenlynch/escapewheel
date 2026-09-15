@@ -1,6 +1,6 @@
 """How a column is encoded in Parquet, and what an extension may say about its own.
 
-The rules extend Part 03 §5.5's, and they reach any table the writer stages -- an extension's as much
+The rules are Part 03 §5.5's, and they reach any table the writer stages -- an extension's as much
 as core's, because Part 09 §5.6 lets a writer require no code of an extension. What core does **not**
 do is name an extension's tables: the exception tables below carry `core.*` and `analysis.*` alone,
 and an extension supplying its own passes them to :class:`~escapewheel_writer.writer.PacketWriter`.
@@ -129,7 +129,8 @@ def choose(field: pa.Field[Any], column: Mapping[str, Any], leading: str | None,
            counts: Counts | None) -> str | None:
     """Return the encoding one column takes: `"delta"`, `"plain"`, or None for a dictionary.
 
-    Four rules over what the writer holds when it chooses, the first that applies deciding. Measured
+    Part 03 §5.5's four rules, over what the writer holds when it chooses, the first that applies
+    deciding. Measured
     over both packaged sessions' columns they leave 15 of 381 more than 1.15x off their best
     encoding, and each of those is an exception above or in a recipe.
 

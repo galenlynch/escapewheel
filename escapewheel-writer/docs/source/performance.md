@@ -86,11 +86,17 @@ them, which costs — so merge once, not per batch.
 
 ## Layout
 
-**Tick columns take `DELTA_BINARY_PACKED`**, derived from the schema's `_tick` convention, plus
-`anchor_index` and `n_spikes`. A tick has too many distinct values for a dictionary, so the
-default overflows the dictionary page and falls back to `PLAIN` mid-column, paying for both.
-`core.spike_events` 885 → 682 MB; `core.clock_anchors` 465 → 26 KB. `channel_ordinal` is the
-exception: it cycles 0..25 per unit, where RLE over a 26-entry dictionary beats delta by 1.38×.
+**A column's encoding follows Part 03 §5.5's four rules**, which `encoding.choose` implements over
+counts of the table being written or a stream's first batch: no value is plain, one value takes a
+dictionary from 50,000 rows, an integer declared or observed to climb takes delta unless its runs
+average 50 rows, and anything else takes a dictionary where each value covers 50 rows. The counts
+are taken on the batch as it will be written, after nulls fill an omitted column and after the
+cast to the registry's type, since either changes what a column costs. A tick has too many
+distinct values for a dictionary, which overflows its page and falls back to `PLAIN` mid-column:
+`core.spike_events` went 885 → 682 MB and `core.clock_anchors` 465 → 26 KB when ticks took delta.
+The 12 columns the rules misjudge carry exceptions in `encoding.py` with their measurements, among
+them `core.unit_electrodes.channel_index`, which cycles through 26 positions in every unit and keeps
+its dictionary against delta by 1.39x to 1.41x.
 
 **Row groups are one million rows, not the 8–16 MB object-storage band.** No available reader
 prunes below a row group, so a larger one multiplies what a predicate reads. A one-second

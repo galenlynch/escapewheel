@@ -81,7 +81,7 @@ A partitioned table's row order across files is not defined by this profile. A s
 
 ### 5.3 Ordering
 
-A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where the registry declares no sort for a table, the order required is its primary key's. A validator MUST report a departure as an **error** (R92 §2.2).
+A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where the registry declares no sort for a table, the order required is its primary key's (R10 §2). A validator MUST report a departure as an **error** (R92 §2.2).
 
 Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means Part 02 §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3).
 
@@ -109,32 +109,42 @@ A reader MUST support the compressions **uncompressed, Snappy, Gzip and Zstd**. 
 one of those four and SHOULD use Zstd (R3 §2). Dictionary, RLE and delta encodings MAY be used and
 MUST be supported by readers.
 
-A writer SHOULD encode tick columns with `DELTA_BINARY_PACKED` and SHOULD NOT dictionary-encode
-them. On a high-cardinality tick column a writer builds a dictionary nearly as large as the column,
-abandons it at its size threshold, and emits a mix of partial-dictionary and plain pages larger
-than either encoding alone.
+A writer SHOULD choose the encoding of each integer, float, string, timestamp and date column from
+the column's declarations and from four counts over the rows it holds when it chooses: the rows,
+nulls included; the distinct non-null values; the runs, a run being a maximal sequence of equal
+values once nulls are set aside; and, for an integer, whether its non-null values never decrease
+(R118 §3.1). Where a writer writes a table whole the rows are the table's; where it streams a table,
+they are the row group it is about to write, or the first row group where the writer keeps one
+encoding for the whole file. The first of the four rules below that applies decides.
 
-A writer SHOULD encode with `DELTA_BINARY_PACKED`, and SHOULD NOT dictionary-encode, the first
-column of a table's sort order whose role is `identifier` (R110 §3.1). Sorting a table by its key
-(R10 §2) makes that column ascend across the whole table, which is what delta encoding exists for
-and which no later key column has. `session_id` is not that column, being one value in a
-single-session packet and already 0.03 bits a row under run-length encoding; a writer skips it and
-takes the next.
+1. A writer SHOULD write plain a column in which every row is null (R118 §3.2).
+2. A writer SHOULD dictionary-encode a column holding one distinct non-null value where it holds
+   50,000 rows or more, and below that SHOULD encode it with `DELTA_BINARY_PACKED` where it is an
+   integer and plain otherwise (R118 §3.3). A dictionary page costs its bytes in every row group,
+   and only a long row group repays them (Part 10 §2.8).
+3. An integer column is **ordered** where its name ends `_tick`; where it is the first column of its
+   table's sort order other than `session_id` and its role is `identifier`; where its role is
+   `structural_index` or `sequence_position` (Part 02 §8.1); where it is an `assigned` identifier
+   (Part 02 §8.2); or where its non-null values never decrease. A writer SHOULD encode an ordered
+   integer with `DELTA_BINARY_PACKED`, and SHOULD write it plain where it holds at least 50 rows for
+   each run (R118 §3.4). A declaration states no distribution, but it marks a column likely to climb
+   within groups, which no count over the whole column sees (Part 10 §2.9).
+4. A writer SHOULD dictionary-encode any other column, a float included, where it holds at least 50
+   rows for each distinct non-null value, and SHOULD write it plain otherwise (R118 §3.5). Repetition
+   is what a dictionary indexes, and no declaration says how often a value repeats (Part 10 §2.10).
 
-A writer SHOULD NOT dictionary-encode a floating-point column, and SHOULD write one whose values
-repeat as a declared exception (R110 §3.2). Repetition is what a dictionary indexes, and four
-floats in five do not repeat enough to pay for one.
-
-Neither rule is the property it stands in for, so a writer MUST be able to override each per
+None of the four is the property it stands in for, so a writer MUST be able to override each per
 column, and every override MUST record what it measured and on what (R110 §3.3). An exception
 recording nothing cannot be re-judged when the data changes. A writer SHOULD refuse an exception
 naming a column no table declares, which is decidable with no packet in hand.
 
 A writer SHOULD report, at `info`, a column whose encoding costs more than **1.5x** the smallest
-available to it, measured over a sample of the rows it wrote (R110 §3.5). These rules are good
-guesses, and the report is how the author of a table learns that theirs is one a guess misses. A
-report and not a refusal: every encoding above is permitted, so a packet is conforming whichever
-it uses.
+available to it, measured over a sample of the rows it wrote (R110 §3.5). It SHOULD measure a column
+by its own compressed chunks rather than by a file carrying it, and SHOULD judge a string, timestamp
+or date column between a dictionary and plain, the two encodings the rules choose among for it
+(R118 §3.6). These rules are good guesses, and the report is how the author of a table learns that
+theirs is one a guess misses. A report and not a refusal: every encoding above is permitted, so a
+packet is conforming whichever it uses.
 
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
 precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.

@@ -13,7 +13,7 @@ part number here as it does there.
 This document set specifies the Escapewheel proof-of-principle data packet. It is v0.1 with every accepted revision applied:
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R117 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R118 accepted. R42 and R73 withdrawn. No draft is open.
 <!-- END facts: revisions -->
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
@@ -1369,7 +1369,7 @@ A partitioned table's row order across files is not defined by this profile. A s
 
 ### 5.3 Ordering
 
-A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where the registry declares no sort for a table, the order required is its primary key's. A validator MUST report a departure as an **error** (R92 §2.2).
+A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where the registry declares no sort for a table, the order required is its primary key's (R10 §2). A validator MUST report a departure as an **error** (R92 §2.2).
 
 Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means Part 02 §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3).
 
@@ -1397,32 +1397,42 @@ A reader MUST support the compressions **uncompressed, Snappy, Gzip and Zstd**. 
 one of those four and SHOULD use Zstd (R3 §2). Dictionary, RLE and delta encodings MAY be used and
 MUST be supported by readers.
 
-A writer SHOULD encode tick columns with `DELTA_BINARY_PACKED` and SHOULD NOT dictionary-encode
-them. On a high-cardinality tick column a writer builds a dictionary nearly as large as the column,
-abandons it at its size threshold, and emits a mix of partial-dictionary and plain pages larger
-than either encoding alone.
+A writer SHOULD choose the encoding of each integer, float, string, timestamp and date column from
+the column's declarations and from four counts over the rows it holds when it chooses: the rows,
+nulls included; the distinct non-null values; the runs, a run being a maximal sequence of equal
+values once nulls are set aside; and, for an integer, whether its non-null values never decrease
+(R118 §3.1). Where a writer writes a table whole the rows are the table's; where it streams a table,
+they are the row group it is about to write, or the first row group where the writer keeps one
+encoding for the whole file. The first of the four rules below that applies decides.
 
-A writer SHOULD encode with `DELTA_BINARY_PACKED`, and SHOULD NOT dictionary-encode, the first
-column of a table's sort order whose role is `identifier` (R110 §3.1). Sorting a table by its key
-(R10 §2) makes that column ascend across the whole table, which is what delta encoding exists for
-and which no later key column has. `session_id` is not that column, being one value in a
-single-session packet and already 0.03 bits a row under run-length encoding; a writer skips it and
-takes the next.
+1. A writer SHOULD write plain a column in which every row is null (R118 §3.2).
+2. A writer SHOULD dictionary-encode a column holding one distinct non-null value where it holds
+   50,000 rows or more, and below that SHOULD encode it with `DELTA_BINARY_PACKED` where it is an
+   integer and plain otherwise (R118 §3.3). A dictionary page costs its bytes in every row group,
+   and only a long row group repays them (Part 10 §2.8).
+3. An integer column is **ordered** where its name ends `_tick`; where it is the first column of its
+   table's sort order other than `session_id` and its role is `identifier`; where its role is
+   `structural_index` or `sequence_position` (Part 02 §8.1); where it is an `assigned` identifier
+   (Part 02 §8.2); or where its non-null values never decrease. A writer SHOULD encode an ordered
+   integer with `DELTA_BINARY_PACKED`, and SHOULD write it plain where it holds at least 50 rows for
+   each run (R118 §3.4). A declaration states no distribution, but it marks a column likely to climb
+   within groups, which no count over the whole column sees (Part 10 §2.9).
+4. A writer SHOULD dictionary-encode any other column, a float included, where it holds at least 50
+   rows for each distinct non-null value, and SHOULD write it plain otherwise (R118 §3.5). Repetition
+   is what a dictionary indexes, and no declaration says how often a value repeats (Part 10 §2.10).
 
-A writer SHOULD NOT dictionary-encode a floating-point column, and SHOULD write one whose values
-repeat as a declared exception (R110 §3.2). Repetition is what a dictionary indexes, and four
-floats in five do not repeat enough to pay for one.
-
-Neither rule is the property it stands in for, so a writer MUST be able to override each per
+None of the four is the property it stands in for, so a writer MUST be able to override each per
 column, and every override MUST record what it measured and on what (R110 §3.3). An exception
 recording nothing cannot be re-judged when the data changes. A writer SHOULD refuse an exception
 naming a column no table declares, which is decidable with no packet in hand.
 
 A writer SHOULD report, at `info`, a column whose encoding costs more than **1.5x** the smallest
-available to it, measured over a sample of the rows it wrote (R110 §3.5). These rules are good
-guesses, and the report is how the author of a table learns that theirs is one a guess misses. A
-report and not a refusal: every encoding above is permitted, so a packet is conforming whichever
-it uses.
+available to it, measured over a sample of the rows it wrote (R110 §3.5). It SHOULD measure a column
+by its own compressed chunks rather than by a file carrying it, and SHOULD judge a string, timestamp
+or date column between a dictionary and plain, the two encodings the rules choose among for it
+(R118 §3.6). These rules are good guesses, and the report is how the author of a table learns that
+theirs is one a guess misses. A report and not a refusal: every encoding above is permitted, so a
+packet is conforming whichever it uses.
 
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
 precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
@@ -2384,7 +2394,9 @@ These are properties of the reference implementation, not requirements. A number
 - **Do not measure every column's encoding at write time.** Writing each column three ways over a
   65,536-row sample and keeping the smallest costs about **0.4 s** for a whole packet against a
   467 s build, so cost is not what refuses it: a measured choice records no reason for itself, and
-  it differs between a `--sample` build and a full one (R110 §2.5).
+  it differs between a `--sample` build and a full one (R110 §2.5). Counting each column instead, as
+  Part 03 §5.5's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count
+  (R118 §2.5).
 - **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id` (R86 §2.4). A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.
 
 <!-- END 07_reference_implementation.md -->
@@ -2704,7 +2716,8 @@ number silently missing the field says nothing at all.
 
 Dictionary encoding is what a column declaring nothing else receives, and a monotonic ramp of 7.5 M
 distinct values is its worst case: `pts` is **96.9%** of the table as written. `DELTA_BINARY_PACKED`
-is defined for `INT32` and `INT64` alone, which is what Part 03 §5.5's SHOULD turns on.
+is defined for `INT32` and `INT64` alone, which is what Part 03 §5.5's rule for an ordered integer
+turns on.
 
 ### 2.2 An integer identifier costs nothing to store and much to read
 
@@ -2771,6 +2784,77 @@ and resets (R110 §2.4, 2026-09-10; toolchain as above).
 
 A declaration says what a value means. It does not say how the values are spread, and a storage
 choice turns on the second.
+
+### 2.8 A dictionary page costs 27 bytes in every row group
+
+A column holding one value gives a dictionary nothing to index that plain's compression does not
+already remove. A constant `int32` under Zstandard (R118 §2.2, 2026-09-15; pyarrow 25.0.1, Python
+3.13.15):
+
+| rows | dictionary | plain |
+|---:|---:|---:|
+| 12 | 92 B | 69 B |
+| 6,781 | 95 B | 75 B |
+| 171,280 | 666 B | 718 B |
+| 1,000,000 | 3,577 B | 4,000 B |
+
+The page is 27 bytes in each row group and outweighs the column below some tens of thousands of
+rows; above them the dictionary is smaller by a steady 1.12x. The committed packets put the crossing
+between `core.clock_anchors.session_id` at 41,275 rows, where the two are within 3 bytes, and at
+76,646 rows, where the dictionary is smaller. Below 50,000 rows delta suits a single-valued integer
+better than plain: it is never more than 6 bytes larger in either packet, and plain is up to 5.9x
+larger, `core.array_channels.axis_index` being 546 bytes plain and 93 under delta.
+
+### 2.9 Declarations mark the integers that climb within groups
+
+A count over a whole column sees a climb only where the table is sorted by that column.
+`core.spike_events.t_tick` climbs within each unit and `core.clock_anchors.anchor_index` within each
+clock, so choosing by counts alone writes both plain: `anchor_index` 28x to 67x off its best,
+`core.clock_anchors.t_tick` 30x to 32x, and the spike tables' `t_tick` 1.24x to 1.30x, 384 MB over
+the best across both packets before any exception (R118 §2.3, 2026-09-15; toolchain as above). The
+`_tick` suffix, the `structural_index` and `sequence_position` roles and `assigned` identity mark
+such columns. None states a distribution, so §2.7 stands, and a mark is wrong in places:
+`core.unit_electrodes.channel_index` is a structural index cycling through 26 positions in every
+unit.
+
+### 2.10 A count sees repetition that a declaration cannot
+
+Rules that each follow from a declaration leave 70 columns 1.15x or more off their best across the
+two packets: a `free` string plain, an `open` or `closed` one a dictionary, a `data` integer plain,
+and `session_id` plain. No declaration says how many rows share a value, and `session_id` wants
+plain in a 12-row table and a dictionary in a million-row group. `core.spike_events.amplitude` and
+`core.unit_quality_labels.confidence` are both floats: the first repeats and is 1.75x smaller under a
+dictionary, and the second does not and is 1.47x larger (R118 §2.4, 2026-09-15; toolchain as above).
+
+### 2.11 The four rules leave 15 columns needing an exception
+
+Columns 1.15x or more off their best in either packet (R118 §2.5, 2026-09-15; toolchain as above):
+
+| rules | columns | at 1.5x | at 2x |
+|---|---:|---:|---:|
+| R110's, with their exceptions | 193 | 61 | 4 |
+| declarations of type, role, identity and vocabulary | 70 | 20 | 4 |
+| those, plus plain under 32 rows, or for one value under 50,000 rows | 34 | 12 | 4 |
+| counts alone | 26 | 11 | 9 |
+| Part 03 §5.5's, declared order then counts | 15 | 3 | 1 |
+
+The count holds from 50 to 200 rows a run, from 32 to 50 rows a value, and at every one-value
+threshold from 20,000 rows up, where bytes choose 50,000: at 500,000 the rules sit 913 kB over the
+best against 304 kB. Thresholds fitted to either packet alone leave 13 on the other. Under the rules
+and their exceptions every column of both packets lands within 1.15x of its best, 317 of 365 and 322
+of 372 exactly at it, and 157 kB and 71 kB over the best in all. That 0.014% and 0.012% of each
+packet is what the rules give up against writing each column three ways and keeping the smallest.
+
+### 2.12 A sampled build encodes its spike tables for the rows it holds
+
+`--sample 2000` keeps the first 2,000 spikes of each probe's stream, shrinking the two spike tables
+and changing the values of `core.units`, and each packet then encodes 8 columns differently from its
+full build (R118 §2.7, 2026-09-15; toolchain as above). Seven take the encoding their sampled values
+call for, within 1.04x of the best. `core.spike_events.amplitude` does not: each stream is one
+2,000-row row group holding 97 and 128 distinct amplitudes, under 50 rows a value, so it is written
+plain at 1.56x and 1.60x off its best. Every other column of both sampled packets lies within 1.15x
+of its best, so a sampled packet is encoded for the rows it holds and does not preview the full
+build's layout in the tables a sample shrinks.
 
 ## 3. Row groups
 

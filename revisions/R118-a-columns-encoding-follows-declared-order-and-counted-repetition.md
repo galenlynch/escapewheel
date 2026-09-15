@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
-| **Amends** | Part 03 §5.5 (the tick, leading-identifier and float rules become four rules over declared order and counted repetition; the report measures a column's own chunks), Part 10 §2 (five readings appended) |
+| **Status** | **Accepted** 2026-09-15 |
+| **Amends** | Part 03 §5.5 (the tick, leading-identifier and float rules become four rules over declared order and counted repetition; the report measures a column's own chunks), Part 10 §2.8 to §2.12 (five readings appended) |
 | **Supersedes** | R110 §3.1, R110 §3.2 |
 | **Depends on** | R110 §2.5 (why choosing by writing each column three ways was refused), R110 §3.3 (an exception records its measurement), R110 §3.4 (an extension declares one in the recipe), R110 §3.5 (a writer reports a column 1.5x off its best), R68 §1.3 (delta is defined for integers alone), R48 §2.1 (every column declares a role), R53 §2.3 (an identifier is carried or assigned), R1 (single-session packets are primary, so `session_id` rarely orders a table) |
 | **Profile** | `escapewheel-portable-v0.1` |
@@ -233,8 +233,8 @@ recipe declaration stand, and override §3.2 to §3.5 as they overrode the rules
 ## 5. Consequence
 
 Part 03 §5.5's tick rule and the rules of R110 §3.1 and §3.2 give way to §3.1 to §3.5, and its
-override and report paragraphs gain §3.6. Part 10 §2 gains the readings of §2.2 to §2.5 and §2.7,
-appended after its own §2.7.
+override and report paragraphs gain §3.6. Part 10 §2.8 to §2.12 carry the readings of §2.2 to §2.5
+and §2.7.
 
 The reference writer carries 12 exceptions for core tables, and the two recipes carry 5 entries over
 3 columns of `aind_unit_qc`, all of which §2.5's 15 counts. Eleven of the 15 core exceptions R110's

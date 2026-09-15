@@ -36,7 +36,8 @@ number silently missing the field says nothing at all.
 
 Dictionary encoding is what a column declaring nothing else receives, and a monotonic ramp of 7.5 M
 distinct values is its worst case: `pts` is **96.9%** of the table as written. `DELTA_BINARY_PACKED`
-is defined for `INT32` and `INT64` alone, which is what Part 03 §5.5's SHOULD turns on.
+is defined for `INT32` and `INT64` alone, which is what Part 03 §5.5's rule for an ordered integer
+turns on.
 
 ### 2.2 An integer identifier costs nothing to store and much to read
 
@@ -103,6 +104,77 @@ and resets (R110 §2.4, 2026-09-10; toolchain as above).
 
 A declaration says what a value means. It does not say how the values are spread, and a storage
 choice turns on the second.
+
+### 2.8 A dictionary page costs 27 bytes in every row group
+
+A column holding one value gives a dictionary nothing to index that plain's compression does not
+already remove. A constant `int32` under Zstandard (R118 §2.2, 2026-09-15; pyarrow 25.0.1, Python
+3.13.15):
+
+| rows | dictionary | plain |
+|---:|---:|---:|
+| 12 | 92 B | 69 B |
+| 6,781 | 95 B | 75 B |
+| 171,280 | 666 B | 718 B |
+| 1,000,000 | 3,577 B | 4,000 B |
+
+The page is 27 bytes in each row group and outweighs the column below some tens of thousands of
+rows; above them the dictionary is smaller by a steady 1.12x. The committed packets put the crossing
+between `core.clock_anchors.session_id` at 41,275 rows, where the two are within 3 bytes, and at
+76,646 rows, where the dictionary is smaller. Below 50,000 rows delta suits a single-valued integer
+better than plain: it is never more than 6 bytes larger in either packet, and plain is up to 5.9x
+larger, `core.array_channels.axis_index` being 546 bytes plain and 93 under delta.
+
+### 2.9 Declarations mark the integers that climb within groups
+
+A count over a whole column sees a climb only where the table is sorted by that column.
+`core.spike_events.t_tick` climbs within each unit and `core.clock_anchors.anchor_index` within each
+clock, so choosing by counts alone writes both plain: `anchor_index` 28x to 67x off its best,
+`core.clock_anchors.t_tick` 30x to 32x, and the spike tables' `t_tick` 1.24x to 1.30x, 384 MB over
+the best across both packets before any exception (R118 §2.3, 2026-09-15; toolchain as above). The
+`_tick` suffix, the `structural_index` and `sequence_position` roles and `assigned` identity mark
+such columns. None states a distribution, so §2.7 stands, and a mark is wrong in places:
+`core.unit_electrodes.channel_index` is a structural index cycling through 26 positions in every
+unit.
+
+### 2.10 A count sees repetition that a declaration cannot
+
+Rules that each follow from a declaration leave 70 columns 1.15x or more off their best across the
+two packets: a `free` string plain, an `open` or `closed` one a dictionary, a `data` integer plain,
+and `session_id` plain. No declaration says how many rows share a value, and `session_id` wants
+plain in a 12-row table and a dictionary in a million-row group. `core.spike_events.amplitude` and
+`core.unit_quality_labels.confidence` are both floats: the first repeats and is 1.75x smaller under a
+dictionary, and the second does not and is 1.47x larger (R118 §2.4, 2026-09-15; toolchain as above).
+
+### 2.11 The four rules leave 15 columns needing an exception
+
+Columns 1.15x or more off their best in either packet (R118 §2.5, 2026-09-15; toolchain as above):
+
+| rules | columns | at 1.5x | at 2x |
+|---|---:|---:|---:|
+| R110's, with their exceptions | 193 | 61 | 4 |
+| declarations of type, role, identity and vocabulary | 70 | 20 | 4 |
+| those, plus plain under 32 rows, or for one value under 50,000 rows | 34 | 12 | 4 |
+| counts alone | 26 | 11 | 9 |
+| Part 03 §5.5's, declared order then counts | 15 | 3 | 1 |
+
+The count holds from 50 to 200 rows a run, from 32 to 50 rows a value, and at every one-value
+threshold from 20,000 rows up, where bytes choose 50,000: at 500,000 the rules sit 913 kB over the
+best against 304 kB. Thresholds fitted to either packet alone leave 13 on the other. Under the rules
+and their exceptions every column of both packets lands within 1.15x of its best, 317 of 365 and 322
+of 372 exactly at it, and 157 kB and 71 kB over the best in all. That 0.014% and 0.012% of each
+packet is what the rules give up against writing each column three ways and keeping the smallest.
+
+### 2.12 A sampled build encodes its spike tables for the rows it holds
+
+`--sample 2000` keeps the first 2,000 spikes of each probe's stream, shrinking the two spike tables
+and changing the values of `core.units`, and each packet then encodes 8 columns differently from its
+full build (R118 §2.7, 2026-09-15; toolchain as above). Seven take the encoding their sampled values
+call for, within 1.04x of the best. `core.spike_events.amplitude` does not: each stream is one
+2,000-row row group holding 97 and 128 distinct amplitudes, under 50 rows a value, so it is written
+plain at 1.56x and 1.60x off its best. Every other column of both sampled packets lies within 1.15x
+of its best, so a sampled packet is encoded for the rows it holds and does not preview the full
+build's layout in the tables a sample shrinks.
 
 ## 3. Row groups
 
