@@ -45,54 +45,7 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. Two rebuilds sit beside each original packet
-
-Two packets are built from real sessions and live outside this repository: `ecephys_776259` at
-`/mnt/Data/776259-packet/` and `ecephys_786867` at `/mnt/Data/786867-packet/`. Each of those
-directories holds three versions — `packet/`, the committed original, beside `packet-rebuilt/` and
-`packet-rebuilt-2/` from the rebuilds of 2026-09-12 and 2026-09-14. Both rebuilds committed clean,
-and neither has replaced the original. Swapping one in is this item's open decision; R32's
-amendment discipline and `escapewheel prune` govern it.
-
-The second rebuild committed with **0 errors and 1 warning** each — `ecephys_776259` in 550 s with
-286,896,563 spikes, `ecephys_786867` in 306 s with 7,570,450 media frames — and changed **no row
-count in any of 40 tables**. Two columns moved:
-
-| | `packet-rebuilt` | `packet-rebuilt-2` |
-|---|---|---|
-| `core.clocks.tick_zero_utc` on harp | null | `2025-04-11T20:34:55.351676Z`; `776259`'s is 2024-11-27 |
-| `core.array_assets.array_asset_name` | `ElectricalSeries46101-LFP`, `mean waveform per unit` | `46101.lfp`, `waveform_mean` |
-| names joining a manifest entry | 0 of 11 and 0 of 14 | **11 of 11 and 14 of 14** |
-
-`core.clock_observation_intervals` and `core.sessions.t_zero_tick` did not move, which places the
-20.5 ms epoch shift the sync adapter's derivation produced: it sits inside `tick_zero_utc`, a column
-the earlier pair did not carry, so there was no value for it to shift.
-
-**The one warning is the new column being honest.** `core.clocks.tick_zero_plausible` reports that
-tick 0 is more than a day from `session_start_time`, which it is by **167 days** on `786867` and 498
-on `776259` — the harp counter runs from device power-on, as that clock's `origin` says. The
-derivation is `stamp - counter / 31250`, so the **absolute** instant carries the nominal rate's error
-over that span, 1 ppm being 14 s at 167 days, while a tick converted through it cancels that error
-and stays accurate over the session's own duration. Two record nodes agree to 18 ms. The packet is
-conforming and the warning is the right level.
-
-The first rebuild corrected more, measured on the committed bytes rather than predicted:
-
-| | before | after |
-|---|---|---|
-| `core.subjects.subject_name` | `786867` in **both** packets (R87 §1) | `776259` and `786867` |
-| `species` | null | `Mus musculus`, from `subject.json` |
-| `sex` | `Male`, outside R101 §3.9's closed set | `male` |
-| clock windows | 1 of 13, and 1 of 11 (R98 §2.1) | 13 of 13, 11 of 11 |
-| `animal_response` | `0`, `1`, `2` with the key elsewhere | left/right/no_response, R106 §5's counts exactly |
-| coordinate frames | — | `ccf` and `probe`, five axes named as R105 §5 said |
-| calibrations | — | 3 from `rig.json`, R89's first real rows |
-
-**R68's prediction is confirmed against real data.** `core.media_frames` is **0.43 MB** against the
-**0.40 MB** R68 §5 predicted, down from 11.73 MB, with `pts` at **0.04 bits/row** on
-`DELTA_BINARY_PACKED`. The 0.03 MB over is R88's `session_id`, which R68 predates.
-
-## 2. No test drives a build
+## 1. No test drives a build
 
 **Queued, and the largest correctness gap on this list.** The corpus proves that an implementation
 agrees about the **format** and proves nothing about the **writer**: `fixtures/build.py` calls
@@ -114,7 +67,7 @@ any of them:
 | R88 §2.3 | `add_batches` never applied the fill at all, so a streamed table had nulls |
 
 **Two of the five are `add()` against `add_batches()`.** The records path and the streaming path
-have drifted apart and nothing compares them, which is the sharpest statement of §7 that can be
+have drifted apart and nothing compares them, which is the sharpest statement of §6 that can be
 written: the pair is where a rule gets implemented once and forgotten once.
 
 Two more instances landed on 2026-09-10, both the same shape. Three test fixtures carried columns the
@@ -144,7 +97,7 @@ Part 03 §5.5 asks for, which is the assertion no corpus packet can make, and th
 and the streaming path produce identical output for one table. Sized at an afternoon, not a
 restructuring. No draft is open, so nothing blocks it.
 
-## 3. No template scaffolds an extension project
+## 2. No template scaffolds an extension project
 
 **Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
 it: the four here were written by hand, and `registry/extensions/README.md` covers *what to model* —
@@ -189,7 +142,7 @@ commands, and that freedom is what R109 §3.1 exists to protect. Print for a per
 put anything a build should parse in the report file. Do not restate what the build already
 derives: rows per table come from the Parquet footer at Part 05 Stage 1.
 
-## 4. An extension can be drafted and cannot be checked
+## 3. An extension can be drafted and cannot be checked
 
 `escapewheel extension` drafts a registry document from tables that already exist, which is the
 half of extension authoring that is shipped. The other half is not: `registry/check.py` runs **30
@@ -218,7 +171,7 @@ document and not a function of the rows. The document already carries its own ve
 `extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
 (R57 §2.1). Checking is the only half that never shipped.
 
-## 5. The adapter boundary reaches nine of the ten adapters
+## 4. The adapter boundary reaches nine of the ten adapters
 
 R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
 source; every piece of it was built by 2026-09-14 — a declaration, a document, a command, three
@@ -352,12 +305,14 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 6. The rebuilt packets' encodings are unmeasured
+## 5. The committed packets' encodings are unmeasured
 
-**Not started.** Several tables have changed shape substantially — R105's four coordinate tables at
-74,223 value rows, R81's collapse of unit identity, R88's `session_id` on every session-scoped
-table, R83's `core.sorting_run_channels`, R99's phase steps — and a rebuild is the moment to check
-what Parquet actually does with them rather than what it was assumed to do.
+**Not started, and the packets to measure are now in place.** Several tables changed shape
+substantially — R105's four coordinate tables at 74,223 value rows, R81's collapse of unit identity,
+R88's `session_id` on every session-scoped table, R83's `core.sorting_run_channels`, R99's phase
+steps — and nothing has checked what Parquet did with them rather than what it was assumed to do.
+`conformance/parquet-probe/layout.py` reports what a committed packet actually got, per column, and
+is the thing to run.
 
 R68 §1.3 is the precedent and the method: `core.media_frames.pts` was **96.9%** of its table because
 a column declaring nothing else gets dictionary encoding, and a monotonic ramp of 7.5 M values is
@@ -366,7 +321,7 @@ per table: which encoding each column got, whether a sort makes a column compres
 measured for `session_id` at 1.0005x, and whether any row group is small enough that its footer
 costs more than its rows.
 
-## 7. No code quality audit has run
+## 6. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
@@ -382,7 +337,7 @@ a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncon
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
 
-## 8. `registry_version` is held at `0.1.0`
+## 7. `registry_version` is held at `0.1.0`
 
 Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
 packets claiming one version with incompatible schemas is what the field exists to prevent, and it
@@ -390,19 +345,19 @@ is preventing nothing. Free to settle while nobody outside holds a packet, and f
 the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
 three at 0.2.0.
 
-## 9. The repository directory is still `nwb-lake/`
+## 8. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
 working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
 doing in one order or the other, not at once.
 
-## 10. Staging both packets to scratch needs a token
+## 9. Staging both packets to scratch needs a token
 
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 11. Containment costs 0.02 ms in NumPy and 1.46 ms in SQL
+## 10. Containment costs 0.02 ms in NumPy and 1.46 ms in SQL
 
 **Measured 2026-09-02**, five repeats, on blocks derived from a real session (708 trials, 18
 blocks, disjoint, minimum gap 5,750 ticks) and synthetic data at the same ratio:
@@ -433,7 +388,7 @@ springs at a scale no packet has reached yet.
 binary search sound: a trial inside two blocks has no containing block. Scripts in
 `/mnt/Data/escapewheel/bench/nesting/` with the raw output in `results.txt`.
 
-## 12. Parked: R42's write case survives its withdrawal
+## 11. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -451,7 +406,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 13. Smaller open items
+## 12. Smaller open items
 
 - **A second ergonomic surface** for people who avoid both SQL and raw PyArrow: DuckDB relations,
   a polars `LazyFrame` behind an extra, or both. Does not block anything.
@@ -520,6 +475,18 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 
 # Settled 2026-09-14
 
+- **Both packets are rebuilt and promoted.** `packet-rebuilt-2` of 2026-09-14 replaced the
+  committed original in `/mnt/Data/776259-packet/` and `/mnt/Data/786867-packet/`, and the original
+  and the 2026-09-12 intermediate were deleted; each session now holds one packet, at the path its
+  recipe's `out` names. Both validate at that path with **0 errors and 1 warning**, the warning
+  being `core.clocks.tick_zero_plausible` on a harp counter running from device power-on 167 and 498
+  days before its session. What the originals lacked, measured against them before they went:
+  **32 and 34 tables against 40**, with calibrations, coordinate frames and their axes, electrode
+  and unit coordinate values and clock phase steps absent entirely, and
+  `core.clock_observation_intervals` holding **1 row where the rebuild holds 13 and 11** (R98 §2.1).
+  That last defect made a derived table wrong rather than thin: `core.spike_events` is identical in
+  both, so the originals' `analysis.spike_events` had silently dropped **19,704 and 9,398 spikes**
+  falling outside a window that had one row.
 - **A channel index resolves through the run's kept list.** `escapewheel_reader.channels` offers
   what Part 02 §12.2 requires of a consumer: `kept_channels` reads `core.sorting_run_channels`,
   `electrode_at` performs the lookup over one index or an array of them, and
@@ -577,7 +544,7 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 - **An interval's task columns are gone from core.** R54 struck the four Part 02 defined and nothing
   wrote, so `choice`, `rewarded`, `stimulus_id` and `condition_id` appear nowhere in the registry.
 - **`registry/tables.html` is tracked.** The note saying it was deliberately untracked is stale.
-- **The recipes no longer say `owns` where two sources each hold part.** See §1.
+- **The recipes no longer say `owns` where two sources each hold part.**
 
 ---
 

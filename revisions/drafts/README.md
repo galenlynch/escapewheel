@@ -25,7 +25,7 @@ went that way on 2026-09-12 at commit `aa230d7`: it proposed a ninth term for Pa
 vocabulary, and the appraisal found the boundary already carried the value, `PacketWriter._preassign`
 resolving a name to an assigned number packet-wide before any table is built (Part 05 §8). What the
 adapters needed was to compose the name the owning adapter composes, which deleted the mapping
-instead of declaring it — recorded in `TODO.md` §5.
+instead of declaring it — recorded in `TODO.md` §4.
 
 The last to leave was `an-adapter-delivers-an-array-by-writing-it`, accepted as **R117** on
 2026-09-14 at 2,246 words: a packet-owned array crosses by being written to the location a build
