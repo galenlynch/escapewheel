@@ -225,6 +225,10 @@ def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collectio
         terms["clocks"] = [context.clocks[clock_id] for clock_id in sorted(context.clocks)]
     if "units" in needed and context.units:
         terms["units"] = context.units
+    if "array_location" in needed:
+        # One directory per source (Part 03 §11.3): two sources may each deliver an asset of one
+        # name, and a shared directory would make them one array.
+        terms["array_location"] = str(context.workspace / spec.kind / "arrays")
     if "wanted" in needed:
         # Settled before any source is opened (Part 05 §3.4), so a source told what is wanted may
         # extract no more -- and one that is not told produces everything and a build discards.
@@ -821,10 +825,17 @@ def build(
         # Any adapter may stage arrays, not only the waveform one. A source that has them says
         # so by defining `staged_arrays`; the kind it happens to be is not the question.
         for staged in getattr(source, "staged_arrays", lambda: ())():
-            say(
-                f"  array {staged.array_asset_id} {staged.values.shape} {staged.values.dtype}, "
-                f"{staged.values.nbytes / 1e6:.1f} MB raw"
-            )
+            # A delivered array is bytes an adapter already wrote (Part 03 §11.3), so what there
+            # is to say about it is what is on disk; one staged in process is values, and its
+            # shape is what a reader of the log wants before it costs anything to write.
+            if staged.values is None:
+                written = sum(f.stat().st_size for f in staged.written.rglob("*") if f.is_file())
+                say(f"  array {staged.array_asset_id} delivered, {written / 1e6:.1f} MB written")
+            else:
+                say(
+                    f"  array {staged.array_asset_id} {staged.values.shape} {staged.values.dtype}, "
+                    f"{staged.values.nbytes / 1e6:.1f} MB raw"
+                )
             writer.add_array(f"core.{staged.array_asset_id}", staged)
         # Any adapter may reference an array, not only the LFP one: a source says so by defining
         # `external_arrays`, and what kind it happens to be is not the question (Part 04 §5.1).

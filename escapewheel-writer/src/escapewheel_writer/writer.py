@@ -302,10 +302,14 @@ class StagedArray:
 
     values: Any
     array_asset_id: str
-    chunks: tuple[int, ...]
+    chunks: tuple[int, ...] = ()
     shard: tuple[int, ...] | None = None
     codecs: tuple[str, ...] = ("blosc",)
     fill_value: Any = 0
+    #: Where an adapter already wrote this array, for one delivered out of process (Part 03
+    #: §11.3). Set, the layout above is the array's own and is read back off it rather than
+    #: applied: staging moves the directory where it would have written one.
+    written: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -839,7 +843,7 @@ class PacketWriter:
         """Write every staged array under `staging` and return its manifest entries."""
         if not self._staged_arrays:
             return []
-        from .arrays import declared_codecs, write_zarr
+        from .arrays import declared_codecs, write_zarr, written_codecs, written_profile
 
         entries = []
         for resource_id, spec in self._staged_arrays.items():
@@ -847,19 +851,28 @@ class PacketWriter:
             relative = f"arrays/{namespace}/{name}.zarr"
             path = staging / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            written = write_zarr(path, spec)
+            if spec.written is not None:
+                # Delivered: the adapter wrote it, so staging moves it rather than writing it
+                # again, and what the manifest says about it is read off the array (Part 03 §11.3).
+                path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(spec.written), str(path))
+                size = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+                codecs = list(written_codecs(path))
+            else:
+                size = write_zarr(path, spec)
+                codecs = list(declared_codecs(spec))
             entries.append(
                 {
                     "resource_id": resource_id,
                     "layer": namespace,
                     "kind": "dense_array_asset",
-                    "physical_profile": "zarr_v3",
+                    "physical_profile": written_profile(path) if spec.written is not None else "zarr_v3",
                     "uri": relative,
                     "array_asset_id": spec.array_asset_id,
                     "canonical": True,
                     "validation_state": "not_run",
-                    "codecs": list(declared_codecs(spec)),
-                    "size_bytes": written,
+                    "codecs": codecs,
+                    "size_bytes": size,
                     "sha256": _digest(path),
                 }
             )

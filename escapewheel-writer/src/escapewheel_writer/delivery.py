@@ -36,6 +36,11 @@ from .sources import SourceDefect
 #: identifier is dotted, so no undotted token can collide with it.
 SENTINEL = "end"
 
+#: The other reserved one: what a delivery says about the resources it references rather than
+#: writes (Part 03 §11.3). Carried as text in a single-row table where a protocol carries Arrow,
+#: so the manifest's schema stays the one description of an entry.
+RESOURCES = "resources"
+
 #: Rows per record batch when a delivery is written from records rather than from batches.
 BATCH_ROWS = 1_000_000
 
@@ -92,19 +97,53 @@ def offered(source: Any) -> dict[str, Iterator[pa.RecordBatch] | pa.Table]:
     return delivering
 
 
-def _undeliverable(source: Any) -> str | None:
-    """Why this source cannot be delivered out of process yet, or None."""
-    for attribute, what in (
-        ("staged_arrays", "stages a dense array"),
-        ("external_arrays", "references a dense array"),
-        ("external_media", "references a media asset"),
-    ):
-        if getattr(source, attribute, None) is not None and getattr(source, attribute)():
-            return (
-                f"this source {what}, which crosses as a reference rather than as rows "
-                "(Part 03 §11.3) and is not yet implemented over a protocol; run it in process"
-            )
-    return None
+def written_arrays(source: Any, location: str | None) -> int:
+    """Write every array this source stages into the location a build supplied (Part 03 §11.3).
+
+    The adapter writes, because an array does not cross as rows and a reference to one a build
+    cannot open is no use to it. Each goes in a directory named by its `array_asset_id`, which is
+    what a build takes the asset's identity from.
+    """
+    staged = list(getattr(source, "staged_arrays", lambda: ())())
+    if not staged:
+        return 0
+    if not location:
+        raise SourceDefect(
+            "this source stages a dense array and no array_location was supplied; an array crosses "
+            "as bytes under a location a build names (Part 03 §11.3)"
+        )
+    from .arrays import write_zarr
+
+    root = Path(location)
+    root.mkdir(parents=True, exist_ok=True)
+    for array in staged:
+        write_zarr(root / f"{array.array_asset_id}.zarr", array)
+    return len(staged)
+
+
+def referenced(source: Any) -> dict[str, Any] | None:
+    """Return the resource document for what this source references rather than writes.
+
+    One entry per resource, each a manifest resource entry (Part 04 §5), carrying what the
+    producer established by opening the store — which is the half of a manifest no row holds and
+    no build may go looking for.
+    """
+    from dataclasses import fields
+
+    entries = []
+    for attribute, kind in (("external_arrays", "array"), ("external_media", "media")):
+        for resource_id, resource in (getattr(source, attribute, dict)() or {}).items():
+            entry = {"resource_id": resource_id, "external": True}
+            for field in fields(resource):
+                value = getattr(resource, field.name)
+                if value is not None and not field.name.endswith("_asset_id"):
+                    entry[field.name] = value
+            if kind == "media" and "format" in entry:
+                # Part 04 §5.1's entry names it `physical_profile`; `ExternalMedia` calls the same
+                # thing `format`, which is what a media row carries.
+                entry["physical_profile"] = entry.pop("format")
+            entries.append(entry)
+    return {"resources": entries} if entries else None
 
 
 # -- the serving half -------------------------------------------------------------------
@@ -166,8 +205,7 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
         Where `stream-v0.1` writes. Standard output's binary handle by default, because a
         platform translating a line ending corrupts the stream (Part 03 §11.4).
     """
-    if (why := _undeliverable(source)) is not None:
-        raise SourceDefect(why)
+    written_arrays(source, supplied.get("array_location"))
     delivering = offered(source)
     # A resource this source has nothing for arrives empty rather than not arriving, so a build
     # reads absence as the run having failed and never as the source having had nothing to say
@@ -177,6 +215,8 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
     declares = sorted(getattr(type(source), "PRODUCES", ()) or ())
     wanted = list(supplied.get("wanted") or declares or delivering)
     tables = {name: delivering.get(name, as_table([])) for name in wanted}
+    if (document := referenced(source)) is not None:
+        tables[RESOURCES] = as_table([{"document": json.dumps(document, default=str)}])
     if protocol == "stream-v0.1":
         _serve_stream(tables, out if out is not None else sys.stdout.buffer)
     elif protocol == "files-v0.1":
@@ -229,6 +269,11 @@ def _serve_files(tables: Mapping[str, Any], root: Path) -> None:
     """`files-v0.1`: one Parquet file per resource, under the root a build named."""
     root.mkdir(parents=True, exist_ok=True)
     for resource, table in tables.items():
+        if resource == RESOURCES:
+            # A file is a file: the document goes down as JSON rather than as text in a table,
+            # which is the envelope only a protocol carrying Arrow needs.
+            (root / f"{RESOURCES}.json").write_text(table.column("document")[0].as_py())
+            continue
         if isinstance(table, pa.Table):
             pq.write_table(table, root / f"{resource}.parquet")
             continue
@@ -294,9 +339,16 @@ class Delivered:
         stated: Mapping[str, Any] = {},
         states: Sequence[str] = (),
         merged: Collection[str] = (),
+        referenced: Sequence[Mapping[str, Any]] = (),
+        arrays: Path | None = None,
     ) -> None:
         self.kind = kind
         self.tables = dict(tables)
+        #: What the delivery said about the resources it references rather than writes, as
+        #: manifest entries (Part 03 §11.3).
+        self.referenced = list(referenced)
+        #: Where this source wrote the arrays the packet will own, which a build reads back.
+        self.arrays = arrays
         #: Resources this source shares with another, which come back as rows rather than as a
         #: stream: a writer takes one table from one path, since two streams cannot be put in the
         #: declared sort order across the seam between them.
@@ -333,6 +385,64 @@ class Delivered:
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Return every resource this build holds, as rows for the writer to sort and merge."""
         return {resource: self.rows(resource) for resource in self.tables if self.held(resource)}
+
+    def staged_arrays(self) -> list[Any]:
+        """Every array this source wrote, as a reference to what is on disk (Part 03 §11.3).
+
+        The bytes are written and their layout is the array's own, so nothing here carries values
+        or a layout to apply: staging moves the directory and reads the manifest entry off it.
+        """
+        from .writer import StagedArray
+
+        if self.arrays is None or not self.arrays.is_dir():
+            return []
+        return [
+            StagedArray(values=None, array_asset_id=path.name.removesuffix(".zarr"), written=path)
+            for path in sorted(self.arrays.glob("*.zarr"))
+        ]
+
+    def external_arrays(self) -> dict[str, Any]:
+        """Every referenced array the delivery described, as the build's own reference object."""
+        from .writer import ExternalArray
+
+        return self._referenced(ExternalArray, "array_asset_id", "core.array_assets")
+
+    def external_media(self) -> dict[str, Any]:
+        """Every referenced media asset the delivery described."""
+        from .writer import ExternalMedia
+
+        return self._referenced(ExternalMedia, "media_asset_id", "core.media_assets")
+
+    def _referenced(self, kind: Any, identity: str, resource: str) -> dict[str, Any]:
+        """Build one kind of reference from the entries whose asset the delivery's rows declare.
+
+        Which kind an entry is comes from the rows rather than from the entry: an asset the source
+        delivered a `core.array_assets` row for is an array and one it delivered a
+        `core.media_assets` row for is a media asset, where guessing from the fields an entry
+        happens to carry would read a container format as a codec the first time one looked alike.
+        """
+        from dataclasses import fields
+
+        declared = {str(row[identity]) for row in self.rows(resource) if row.get(identity)}
+        taken = {f.name for f in fields(kind)}
+        built = {}
+        for entry in self.referenced:
+            asset = str(entry["resource_id"]).split(".", 1)[-1]
+            if asset not in declared:
+                continue
+            # JSON has no tuple, and these dataclasses declare one for a codec list and for a
+            # prefix's members, so what crossed as an array comes back as the type they name.
+            values = {
+                name: tuple(value) if isinstance(value, list) else value
+                for name, value in entry.items()
+                if name in taken
+            }
+            if "format" in taken and "physical_profile" in entry:
+                # `ExternalMedia` calls a container's format what a manifest entry calls its
+                # physical profile, and a media row carries the first name.
+                values["format"] = entry["physical_profile"]
+            built[str(entry["resource_id"])] = kind(**{**values, identity: asset})
+        return built
 
     def rows(self, resource: str) -> list[dict[str, Any]]:
         """Return one delivered resource as rows, without spending the stream a build will stage.
@@ -433,6 +543,8 @@ def fetch(
     tables, failures = readers[protocol](kind, argv, crossing, supplied, wanted)
     say(f"  delivered {len(tables)} resource(s) over {protocol} in {time.perf_counter() - started:.1f} s")
 
+    document, malformed = _document(kind, tables.pop(RESOURCES, None))
+    failures += malformed
     notes, stated = _from_report(kind, protocol, report_path, tables)
     missing = [resource for resource in wanted if resource not in tables]
     if missing:
@@ -441,7 +553,54 @@ def fetch(
         failures.append(f"{len(missing)} resource(s) never arrived: {', '.join(missing)}")
     if failures:
         raise SourceDefect(f"{kind}: " + "; ".join(failures) + _tail(notes))
-    return Delivered(kind, tables, notes=notes, stated=stated, states=states, merged=merged)
+    return Delivered(
+        kind,
+        tables,
+        notes=notes,
+        stated=stated,
+        states=states,
+        merged=merged,
+        referenced=document,
+        arrays=Path(supplied["array_location"]) if supplied.get("array_location") else None,
+    )
+
+
+def _document(kind: str, delivered: Any) -> tuple[list[dict[str, Any]], list[str]]:
+    """Read the resource document a delivery carried, refusing one that does not satisfy its shape.
+
+    Refused rather than reported, unlike a report: this is the catalog's own content arriving from
+    elsewhere, and a malformed entry merged into a manifest is a packet that misdescribes its own
+    resources (Part 03 §11.3).
+    """
+    if delivered is None:
+        return [], []
+    text = delivered.column("document")[0].as_py() if isinstance(delivered, pa.Table) else None
+    if text is None:
+        table = pq.read_table(delivered) if isinstance(delivered, Path) else None
+        text = table.column("document")[0].as_py() if table is not None else None
+    try:
+        document = json.loads(text or "{}")
+    except json.JSONDecodeError as exc:
+        return [], [f"the resource document is not JSON ({exc})"]
+    if problem := _refuses(document):
+        return [], [f"the resource document {problem}"]
+    return list(document.get("resources", ())), []
+
+
+def _refuses(document: Mapping[str, Any]) -> str | None:
+    """Return why a resource document does not satisfy its published shape, or None."""
+    from importlib import resources as bundled
+
+    try:
+        import jsonschema
+    except ImportError:  # pragma: no cover - jsonschema is a dependency of the validator
+        return None
+    schema = json.loads(bundled.files(__package__).joinpath("schemas/resources.schema.json").read_text())
+    found = sorted(jsonschema.Draft202012Validator(schema).iter_errors(document), key=lambda e: list(e.path))
+    if not found:
+        return None
+    where = "/".join(str(p) for p in found[0].path) or "document"
+    return f"does not satisfy registry/resources.schema.json at {where}: {found[0].message}"
 
 
 def _tail(notes: Sequence[str]) -> str:
@@ -544,7 +703,11 @@ def _read_files(
         # A non-zero exit is a failure whatever arrived: an adapter saying it failed is not
         # overruled by its own output (Part 05 §4.4).
         failures.append(f"the command exited {done.returncode}{_said([done.stderr.decode(errors='replace')])}")
-    tables = {}
+    tables: dict[str, Any] = {}
+    if (document := root / f"{RESOURCES}.json").is_file():
+        # A file is a file: under this protocol the document went down as JSON, and it reaches the
+        # same reader the other protocols' single-row table does.
+        tables[RESOURCES] = pa.table({"document": [document.read_text()]})
     for path in sorted(root.glob("*.parquet")):
         try:
             # The footer, which is what says the file is a delivery rather than a partial write.

@@ -193,12 +193,12 @@ document and not a function of the rows. The document already carries its own ve
 `extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
 (R57 §2.1). Checking is the only half that never shipped.
 
-## 1d. The adapter boundary reaches six of the ten adapters
+## 1d. The adapter boundary reaches nine of the ten adapters
 
 R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
 source. Every piece of it is built as of 2026-09-14 — a declaration, a document, a command, three
-protocols and a report — and what it does not yet reach is four adapters, for the two reasons at
-the end of this section, one of which R117 settles on paper and not yet in code.
+protocols and a report — and every adapter but `tables` is delivered on real data, `tables` being
+stopped by a defect of its own rather than by the boundary.
 
 `conformance/adapter-boundary/` is where it was measured first: seven scripts in which all three
 protocols deliver the NWB adapter's eighteen resources identically, five of them empty. What is in
@@ -471,19 +471,31 @@ harvest from the kinds it was written against. Three facts had to become rows fi
   explicitly — the source wins and the recipe is reported — where the build used to apply it in
   the harvest and say something else in the comparison.
 
-**Six of the ten are delivered on real data, and R117 says how the other three will be.** Accepted
-2026-09-14 and **not implemented**: `waveforms`, `lfp` and `video` stage or reference an array or a
-media asset, which Part 03 §11.3 now has crossing two ways. A packet-owned array crosses as the
-bytes themselves, written into an `array_location` a build supplies per source and read back —
-every field of its manifest entry being in the array or in the build. A referenced one crosses as a
-**resource document** under the delivery's own reserved identifier `resources`, whose shape is
-published as `registry/resources.schema.json` and vendored into the writer.
+**Nine of the ten are delivered on real data, done 2026-09-14.** R117 was accepted and implemented
+the same day, and what it unblocked is the three adapters holding a session's bulk. A packet-owned
+array crosses as the bytes themselves: the waveform adapter writes into the `array_location` a build
+supplies per source, staging **moves** the directory where it would have written one, and the
+manifest entry is read off the array — `physical_profile` from `zarr_format`, `codecs` from the
+chain descending through the shard. A referenced one crosses as a **resource document** under the
+delivery's reserved identifier `resources`, refused where it does not satisfy
+`registry/resources.schema.json`.
 
-What that needs of the writer: `array_location` filled and passed, `StagedArray` growing a path an
-adapter writes to, `ExternalArray` and `ExternalMedia` built from a document's entries, the document
-written and read per protocol, and `delivery._undeliverable`'s refusal struck. `tables` is the
-tenth, and it delivers: what stops it on this recipe is not the boundary but `extract_qc.py`
-writing `session_id` as the integer `0`, below.
+Measured with **nine of ten sources out of process** on `ecephys_786867` at `--sample 2000`, only
+`tables` in process: committed with 0 core errors, `waveform_mean` **12.8 MB delivered and moved**,
+four media and ten LFP arrays referenced from what the document carried, and every array and media
+**manifest entry identical** to the in-process packet's but for `verified_at`, which records when a
+store was looked at. Which kind an entry is comes from the rows rather than from the entry: an asset
+the source delivered a `core.array_assets` row for is an array, where guessing from the fields would
+read a container format as a codec the first time one looked alike.
+
+**A delivered source that states facts needs a `report_path`.** Without one it states nothing, its
+`STATES` values never cross, and the recipe's declared values stand — which moved
+`core.sessions.session_end_time` by 17 minutes in the run above. Conforming and not silent: a build
+notes each one as `went unchecked; session states none`, twice per fact. Name a report path in any
+recipe that delivers `session` or `nwb`.
+
+`tables` is the tenth, and it delivers: what stops it on this recipe is not the boundary but
+`extract_qc.py` writing `session_id` as the integer `0`, below.
 
 **A term did not fit in an argument, settled by R116 on 2026-09-14.** Part 03 §11.2 had what a
 build supplies cross as one JSON object appended to the command's argument list. For

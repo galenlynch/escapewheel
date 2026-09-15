@@ -109,7 +109,7 @@ class WaveformSource:
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
     #: resolves to nothing, so declaring one makes it mandatory.
-    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "units")
+    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "units", "array_location")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
@@ -125,6 +125,7 @@ class WaveformSource:
         sd_asset_id: str = "waveform_sd",
         compressed_per_chunk: float = 3850.0,
         prefix: str = "",
+        array_location: str | None = None,
         store: Any = None,
     ) -> None:
         self.root = source_root(root)
@@ -138,6 +139,10 @@ class WaveformSource:
         self.sd_asset_id = f"{prefix}{sd_asset_id}"
         self.compressed_per_chunk = compressed_per_chunk
         self.prefix = prefix
+        #: Where an array goes when this source is delivered out of process (Part 03 §11.3). Held
+        #: rather than used: the values are what `staged_arrays` hands over, and what writes them
+        #: is whichever side of the boundary is staging -- the writer here, the delivery there.
+        self.array_location = array_location
         self.notes: list[str] = []
         self._built: dict[str, Any] | None = None
 

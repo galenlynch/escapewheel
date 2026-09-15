@@ -5,8 +5,11 @@ what crosses is one JSON object and what comes back is rows, and neither may dep
 halves sharing an interpreter.
 """
 
+import inspect
+import io
 import json
 import sys
+from pathlib import Path
 from dataclasses import replace
 
 import pytest
@@ -311,8 +314,8 @@ def test_a_command_that_is_a_string_is_refused(tmp_path):
         )
 
 
-def test_a_source_that_stages_an_array_is_refused_rather_than_half_delivered(tmp_path):
-    """A dense array crosses as a reference to a location a build supplies (Part 03 §11.3)."""
+def test_an_array_with_nowhere_to_go_is_refused_rather_than_half_delivered(tmp_path):
+    """A dense array crosses as bytes under a location a build supplies (Part 03 §11.3)."""
 
     class Stages:
         def records(self):
@@ -321,8 +324,80 @@ def test_a_source_that_stages_an_array_is_refused_rather_than_half_delivered(tmp
         def staged_arrays(self):
             return [object()]
 
-    with pytest.raises(SourceDefect, match="crosses as a reference"):
+    with pytest.raises(SourceDefect, match="no array_location was supplied"):
         delivery.serve(Stages(), {}, "stream-v0.1")
+
+
+def test_an_array_crosses_as_the_bytes_the_adapter_wrote(tmp_path):
+    """The adapter writes it where it was told, and a build takes the name as the identity."""
+    import numpy as np
+
+    from escapewheel_writer.writer import StagedArray
+
+    class Stages:
+        def records(self):
+            return {}
+
+        def staged_arrays(self):
+            return [
+                StagedArray(
+                    values=np.arange(24, dtype="int16").reshape(2, 3, 4),
+                    array_asset_id="waveform_mean",
+                    chunks=(1, 3, 4),
+                )
+            ]
+
+    location = tmp_path / "arrays"
+    written = io.BytesIO()
+    delivery.serve(Stages(), {"array_location": str(location)}, "stream-v0.1", out=written)
+    assert (location / "waveform_mean.zarr/zarr.json").is_file()
+
+    got = delivery.Delivered("waveforms", {}, arrays=location)
+    (staged,) = got.staged_arrays()
+    assert staged.array_asset_id == "waveform_mean"
+    assert staged.values is None and staged.written == location / "waveform_mean.zarr"
+
+
+def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp_path, registry):
+    """Every field of its manifest entry is in the array or in the build (Part 03 §11.3)."""
+    import numpy as np
+
+    from escapewheel_writer.writer import PacketWriter, StagedArray
+
+    delivered = tmp_path / "delivered"
+    delivered.mkdir()
+    from escapewheel_writer.arrays import write_zarr
+
+    write_zarr(
+        delivered / "waveform_mean.zarr",
+        StagedArray(values=np.arange(24, dtype="int16").reshape(2, 3, 4), array_asset_id="waveform_mean",
+                    chunks=(1, 3, 4), shard=(2, 3, 4)),
+    )
+    writer = PacketWriter(registry, packet_id="s001", session="s001")
+    writer.add("core.subjects", [{"subject_id": "m001", "species": "Mus musculus", "sex": "male"}])
+    writer.add(
+        "core.sessions",
+        [{"session_id": "s001", "subject_id": "m001", "session_start_time": "2026-01-01T00:00:00Z"}],
+    )
+    writer.add("core.array_assets", [{
+        "session_id": "s001", "array_asset_id": "waveform_mean", "array_asset_name": "waveform_mean",
+        "uri": "arrays/core/waveform_mean.zarr", "format": "zarr_v3",
+    }])
+    writer.add("core.array_dimensions", [
+        {"session_id": "s001", "array_asset_id": "waveform_mean", "axis_index": axis, "dimension_name": name}
+        for axis, name in enumerate(("unit", "channel", "sample"))
+    ])
+    writer.add_array("core.waveform_mean", StagedArray(
+        values=None, array_asset_id="waveform_mean", written=delivered / "waveform_mean.zarr"))
+    report = writer.commit(tmp_path / "packet")
+    assert report.errors == 0
+
+    entry = next(r for r in json.loads((tmp_path / "packet/packet.json").read_text())["resources"]
+                 if r["resource_id"] == "core.waveform_mean")
+    assert entry["physical_profile"] == "zarr_v3"
+    assert entry["codecs"] == ["sharding_indexed", "blosc"], "read off the array, descending the shard"
+    assert entry["size_bytes"] > 0 and entry["sha256"]
+    assert not (delivered / "waveform_mean.zarr").exists(), "staging moved it rather than copying"
 
 
 def test_an_unknown_kind_names_what_this_build_ships():
@@ -490,3 +565,84 @@ def test_a_term_larger_than_an_argument_crosses(tmp_path, supplied):
     )
     assert counted.read_text() == "4505"
     assert got.tables == {}
+
+
+# -- what a delivery says about what it references ------------------------------------------
+
+
+class Referencing:
+    """A source whose resources are a store's, as the LFP and video adapters' are."""
+
+    PRODUCES = frozenset({"core.array_assets", "core.media_assets"})
+
+    def records(self):
+        return {
+            "core.array_assets": [{"array_asset_id": "46101.lfp", "array_asset_name": "46101.lfp"}],
+            "core.media_assets": [{"media_asset_id": "bottom_camera", "media_asset_name": "bottom_camera"}],
+        }
+
+    def external_arrays(self):
+        from escapewheel_writer.writer import ExternalArray
+
+        return {"core.46101.lfp": ExternalArray(
+            array_asset_id="46101.lfp", uri="s3://bucket/ElectricalSeries46101-LFP/data",
+            physical_profile="zarr_v2", codecs=("blosc",), size_bytes=582991872)}
+
+    def external_media(self):
+        from escapewheel_writer.writer import ExternalMedia
+
+        return {"core.bottom_camera": ExternalMedia(
+            media_asset_id="bottom_camera", uri="s3://bucket/bottom_camera.mp4", format="mp4",
+            size_bytes=2884901888)}
+
+
+@pytest.mark.parametrize("protocol", ["stream-v0.1", "files-v0.1"])
+def test_what_a_source_references_crosses_with_its_rows(protocol, tmp_path):
+    """The half of a manifest no row holds and no build may go looking for (Part 03 §11.3)."""
+    script = tmp_path / "serve.py"
+    script.write_text(
+        "import json, sys\n"
+        "from escapewheel_writer import delivery\n"
+        f"{inspect.getsource(Referencing)}\n"
+        "delivery.serve(Referencing(), json.loads(sys.stdin.buffer.read()), "
+        f"{protocol!r})\n"
+    )
+    got = delivery.fetch(
+        "lfp",
+        [sys.executable, str(script)],
+        {"root": str(tmp_path), "session_id": "s1"},
+        protocol=protocol,
+        wanted=["core.array_assets", "core.media_assets"],
+        workspace=tmp_path / "work",
+    )
+    assert delivery.RESOURCES not in got.tables, "the document is not one of the resources asked for"
+    (array,) = got.external_arrays().values()
+    assert (array.uri, array.physical_profile, array.codecs) == (
+        "s3://bucket/ElectricalSeries46101-LFP/data", "zarr_v2", ("blosc",)), "a codec list is a tuple again"
+    (media,) = got.external_media().values()
+    assert (media.uri, media.format, media.size_bytes) == ("s3://bucket/bottom_camera.mp4", "mp4", 2884901888)
+
+
+def test_a_malformed_resource_document_is_refused(tmp_path, supplied):
+    """Refused rather than reported: a bad entry merged into a manifest misdescribes the packet."""
+    script = tmp_path / "bad.py"
+    script.write_text(
+        "import json, sys\n"
+        "import pyarrow as pa\n"
+        "from escapewheel_writer import delivery\n"
+        "json.loads(sys.stdin.buffer.read())\n"
+        "out = sys.stdout.buffer\n"
+        "doc = json.dumps({'resources': [{'uri': 'file:///x'}]})\n"
+        "delivery._write(out, delivery.RESOURCES, delivery.as_table([{'document': doc}]))\n"
+        "delivery._write(out, delivery.SENTINEL, pa.table({}))\n"
+        "out.flush()\n"
+    )
+    with pytest.raises(SourceDefect, match="resources.schema.json"):
+        delivery.fetch(
+            "bad",
+            [sys.executable, str(script)],
+            supplied,
+            protocol="stream-v0.1",
+            wanted=[],
+            workspace=tmp_path / "work",
+        )
