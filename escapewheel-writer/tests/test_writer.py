@@ -986,7 +986,7 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
     stale = [
         f"{listed}: {resource}.{column}"
         for listed, entries, types in (("DELTA_COLUMNS", DELTA_COLUMNS, numeric),
-                                       ("NO_DICTIONARY", NO_DICTIONARY, numeric | {"string"}),
+                                       ("NO_DICTIONARY", NO_DICTIONARY, numeric | {"string", "json_string"}),
                                        ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS, numeric))
         for resource, columns in entries.items()
         for column in columns
@@ -994,6 +994,52 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
         or not any(c["name"] == column and c["type"] in types for c in tables[resource]["columns"])
     ]
     assert stale == []
+
+
+def test_no_encoding_exception_names_what_the_rules_already_choose(registry):
+    """An exception the rules agree with is needed by nothing, and would outlive a rule changing under it."""
+    from escapewheel_writer.arrow import schema, sort_key
+    from escapewheel_writer.encoding import by_rule, leading_identifier
+
+    tables = dict(registry["tables"])
+    redundant = []
+    for listed, entries, encoding in (("DELTA_COLUMNS", DELTA_COLUMNS, "delta"),
+                                      ("NO_DICTIONARY", NO_DICTIONARY, "plain"),
+                                      ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS, None)):
+        for resource, columns in entries.items():
+            spec = tables[resource]
+            out = schema(spec, {c["name"] for c in spec["columns"]})
+            leading = leading_identifier(spec, sort_key(resource, spec) or list(spec["primary_key"] or []))
+            declared = {c["name"]: c for c in spec["columns"]}
+            key = spec["primary_key"] or []
+            redundant += [f"{listed}: {resource}.{column}" for column in columns
+                          if by_rule(out.field(column), declared[column], key, leading) == encoding]
+    assert redundant == []
+
+
+@pytest.mark.parametrize(("kind", "column", "primary_key", "leading", "expected"), [
+    (pa.int64(), {"name": "t_tick", "role": "coordinate"}, ["unit_id"], None, "delta"),
+    (pa.int32(), {"name": "unit_id", "role": "identifier", "identity": "assigned"}, ["unit_id"], "unit_id", "delta"),
+    (pa.float64(), {"name": "axis_value", "role": "data"}, ["axis_id"], None, "plain"),
+    (pa.string(), {"name": "unit_name", "role": "data", "vocabulary": "free"}, ["unit_id"], None, "plain"),
+    (pa.dictionary(pa.int32(), pa.string()), {"name": "unit_name", "role": "data", "vocabulary": "free"},
+     ["unit_id"], None, "plain"),
+    (pa.string(), {"name": "label", "role": "data", "vocabulary": "open"}, ["label_id"], None, None),
+    (pa.int32(), {"name": "session_id", "role": "identifier", "identity": "assigned"}, ["unit_id"], None, "plain"),
+    (pa.string(), {"name": "species", "role": "data", "vocabulary": "open"}, ["subject_id"], None, "plain"),
+    (pa.timestamp("us", tz="UTC"), {"name": "started_at", "role": "data"}, ["run_id"], None, "plain"),
+    (pa.int64(), {"name": "axis_index", "role": "structural_index"}, ["axis_id"], None, "delta"),
+    (pa.int64(), {"name": "anchor_index", "role": "sequence_position"}, ["clock_id"], None, "delta"),
+    (pa.int32(), {"name": "probe_id", "role": "identifier", "identity": "assigned"}, ["run_id"], None, "delta"),
+    (pa.int32(), {"name": "region_id", "role": "identifier", "identity": "carried"}, ["electrode_id"], None, "plain"),
+    (pa.int64(), {"name": "n_spikes", "role": "data"}, ["unit_id"], None, "plain"),
+    (pa.string(), {"name": "device_kind", "role": "discriminator"}, ["device_id"], None, None),
+])
+def test_each_encoding_rule_reads_a_declaration(kind, column, primary_key, leading, expected):
+    """A rule reads a column's type and declarations and nothing of its values, so each is checkable alone."""
+    from escapewheel_writer.encoding import by_rule
+
+    assert by_rule(pa.field(column["name"], kind), column, primary_key, leading) == expected
 
 
 @pytest.mark.parametrize("held", ["strings", "codes"])

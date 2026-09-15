@@ -1,15 +1,15 @@
 """How a column is encoded in Parquet, and what an extension may say about its own.
 
-The rules are Part 03 §5.5's, and they reach any table the writer stages -- an extension's as much as
-core's, because Part 09 §5.6 lets a writer require no code of an extension. What core does **not** do is name an
-extension's tables: the exception tables below carry `core.*` and `analysis.*` alone, and an
-extension supplying its own passes them to :class:`~escapewheel_writer.writer.PacketWriter`.
+The rules extend Part 03 §5.5's, and they reach any table the writer stages -- an extension's as much
+as core's, because Part 09 §5.6 lets a writer require no code of an extension. What core does **not**
+do is name an extension's tables: the exception tables below carry `core.*` and `analysis.*` alone,
+and an extension supplying its own passes them to :class:`~escapewheel_writer.writer.PacketWriter`.
 
 That division follows from where the decision has weight. An extension hands the writer Arrow with
 its identifiers as **names**, and Part 05 §8 has the writer mint the integers packet-wide, so the
 columns where an encoding is worth 37x to 79x do not exist in their final form until the writer
-makes them. What an extension owns is its own measurements, which the float rule covers without
-naming anything.
+makes them. What an extension owns is its own measurements, which the rules cover without naming
+anything.
 
 `inefficient` closes the loop for what neither reaches: a rule is a good guess, and a column it
 guesses wrong about is reported rather than silently paid for.
@@ -17,7 +17,7 @@ guesses wrong about is reported rather than silently paid for.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import pyarrow as pa
@@ -25,56 +25,75 @@ import pyarrow.parquet as pq
 
 from .arrow import sort_key
 
-#: Columns the rules below miss, each with the measurement that justifies it. `test_writer.py`
-#: refuses an entry naming no such column, which is `check.py`'s discipline for a naming exception.
+#: Columns the rules leave off delta that delta serves, each with the measurement that justifies it.
+#: `test_writer.py` refuses an entry naming no such column, or naming what the rules already choose,
+#: which is `check.py`'s discipline for a naming exception.
 DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
-    "core.clock_anchors": ("anchor_index",),
+    # A per-unit spike count in unit order, which climbs more often than it repeats: delta 1.09x
+    # over plain and 1.7x over a dictionary.
     "core.units": ("n_spikes",),
-    # Contiguous 0..n-1 within one asset, and 2.5 M distinct values per camera: the worst case
-    # for a dictionary, whose entries then outnumber nothing and cost 1.54 B/row where delta
-    # costs 0.01. `pts` is the same shape once Part 01 §3.18 makes it an integer -- a frame timeline
-    # advancing by a constant step -- and takes the column from 1.50 B/row to 0.006.
-    "core.media_frames": ("frame_index", "pts"),
-    # Ascending without being a key column: a run lists its channels in the order it kept them
-    # (R83 §2.1) and a channel map lists its contacts, so both climb through the contact numbers
-    # with gaps. Measured 11.1x and 7.4x over the dictionary they would otherwise get.
-    "core.sorting_run_channels": ("electrode_id", "channel_index"),
-    "core.array_channels": ("electrode_id",),
-    # An interval's identifier is not in its key -- R47 §2 keys on where it starts and Part 01 §3.10
-    # on its kind -- so the leading-identifier rule cannot see it, and it still ascends. 5.6x.
+    # A frame timeline advancing by a constant step (Part 01 §3.18), declared `data`: delta is 144x
+    # smaller than plain.
+    "core.media_frames": ("pts",),
+    # A carried identifier that still ascends, the table being keyed on where an interval starts:
+    # delta 11.7x to 16.9x over plain.
     "core.intervals": ("interval_id",),
+    # One rational step or rate repeated down a table of a few dozen rows: delta 1.32x to 1.42x
+    # over plain.
+    "core.array_dimensions": ("step_tick_num", "step_tick_den"),
+    "core.clocks": ("tick_rate_den",),
 }
 
-#: Columns written PLAIN: no dictionary, no delta. An integer or a string -- a float takes this by rule.
+#: Columns the rules give a dictionary or delta that plain serves better, each measured.
 NO_DICTIONARY: dict[str, tuple[str, ...]] = {
-    # Summaries, not coordinates on a timeline: one row per unit in `unit_id` order, so the ticks
-    # arrive unordered and delta encodes noise while a dictionary of 6,781 distinct ticks pays for
-    # itself twice. Plain is 1.44x both, which is the `_tick` rule being a good guess and no more.
-    # The two strings are `core.electrodes`' case below.
-    "core.units": ("first_spike_tick", "last_spike_tick", "unit_name", "local_unit_label"),
-    # Strings a dictionary does not pay for: near-unique names, and labels a few characters long.
-    # Plain is 1.85x to 2.99x smaller than a dictionary on these three and `core.units.unit_name`,
-    # and 1.16x to 1.80x on `core.units.local_unit_label`. `DELTA_BYTE_ARRAY` is smaller again, but
-    # hyparquet and fastparquet refuse it while reading every other encoding a packet carries.
-    "core.electrodes": ("electrode_name", "local_electrode_label", "local_channel_label"),
-    # A trailing key component (R28 §2), so it climbs within each unit and resets: a sawtooth,
-    # which neither delta nor a dictionary reads well. 1.7x.
+    # Two ticks summarising each unit, in unit order rather than time order: plain 1.10x to 1.28x
+    # over delta. Four references copied from the unit's run, one value a run: plain 1.15x to 1.18x
+    # over delta. Two strings holding one value in every row: plain 1.20x to 1.25x.
+    "core.units": ("first_spike_tick", "last_spike_tick", "probe_id", "sorting_run_id", "curation_id",
+                   "clock_id", "amplitude_unit", "quality_label_source"),
+    # A trailing key component, so it climbs within each unit and resets: plain 1.59x to 1.85x over
+    # delta.
     "core.unit_electrodes": ("electrode_id",),
-    # 56 distinct structure ids over 8,832 rows, already run-length friendly; the dictionary is
-    # a second index over what RLE alone encodes. 1.3x.
-    "core.electrode_coordinates": ("region_id",),
-    # One unit per spike and a few hundred distinct per batch, but the derived table is bucketed
-    # by time (Part 03 §5.4) rather than clustered by unit, so the runs are short. 1.2x.
+    # Bucketed by time rather than clustered by unit (Part 03 §5.4), so a unit's runs are short:
+    # plain 1.11x to 1.16x over delta.
     "analysis.spike_events": ("unit_id",),
+    # Two values alternating electrode by electrode: plain 1.49x to 2.03x over a dictionary.
+    "core.electrode_coordinates": ("coordinate_frame", "coordinate_basis"),
+    # One frame and one basis in every row: plain 1.19x to 1.24x.
+    "core.unit_coordinates": ("coordinate_frame", "coordinate_basis"),
+    "core.unit_coordinate_values": ("coordinate_frame",),
+    # A thousand rows declaring no unit: plain 1.62x.
+    "core.array_channels": ("unit",),
+    # Strings in tables of 2 to 30 rows describing a session's instruments, assets and runs, holding
+    # one value, a handful or none, which a dictionary page outweighs: plain 1.17x to 1.67x.
+    "core.array_assets": ("band", "format", "semantic_type", "unit"),
+    "core.array_dimensions": ("coordinate_resource", "coordinate_unit"),
+    "core.calibrations": ("calibration_type", "detail_kind", "input_unit", "metadata", "output_unit"),
+    "core.coordinate_frame_axes": ("axis_direction", "axis_name", "unit"),
+    "core.coordinate_frames": ("atlas", "atlas_version", "coordinate_frame"),
+    "core.devices": ("device_kind", "manufacturer", "parent_port"),
+    "core.event_streams": ("detail_kind", "event_type"),
+    "core.media_assets": ("format", "semantic_type"),
+    "core.probes": ("manufacturer", "probe_type", "target_region"),
+    "core.processing_runs": ("activity_type", "scope_kind", "status"),
+    # Ticks in tables of 11 to 24 rows: plain 1.15x to 1.30x over delta.
+    "core.clock_observation_intervals": ("stop_tick",),
+    "core.clock_phase_steps": ("parent_tick", "t_tick"),
+    # References holding a dozen values or fewer in runs hundreds long: plain 1.18x to 1.19x over
+    # delta.
+    "core.events": ("stream_id",),
+    "core.sorting_run_channels": ("sorting_run_id",),
 }
 
-#: Columns keeping the dictionary the rules would take away, each measured. The float rule below
-#: is the one this mostly answers: a float is plain unless its values repeat.
+#: Columns keeping the dictionary the rules would take away, each measured.
 DICTIONARY_COLUMNS: dict[str, tuple[str, ...]] = {
-    # Quantised to the sorter's amplitude step, so 287 M rows hold few distinct values and the
-    # dictionary is exactly right. **1.85x on ~200 MB**, the largest single encoding decision in
-    # a packet, and the one a blanket float rule would have got wrong.
+    # Quantised to the sorter's amplitude step, so hundreds of millions of rows hold few distinct
+    # values: a dictionary 1.75x over plain on ~200 MB, the largest single encoding decision in a
+    # packet. A unit's spikes run for thousands of rows: a dictionary 1.18x over delta.
     "core.spike_events": ("amplitude", "unit_id"),
+    # Twenty-six channel positions repeating through every unit's support: a dictionary 1.39x to
+    # 1.41x over delta.
+    "core.unit_electrodes": ("channel_index",),
 }
 
 
@@ -94,37 +113,82 @@ def leading_identifier(spec: Mapping[str, Any], keys: list[str]) -> str | None:
     return None
 
 
+def _encodable(kind: pa.DataType) -> bool:
+    """Whether the rules choose an encoding for this type at all; anything else keeps pyarrow's."""
+    return (pa.types.is_integer(kind) or pa.types.is_floating(kind) or pa.types.is_string(kind)
+            or pa.types.is_large_string(kind) or pa.types.is_timestamp(kind) or pa.types.is_date(kind))
+
+
+def by_rule(field: pa.Field[Any], column: Mapping[str, Any], primary_key: Sequence[str],
+            leading: str | None) -> str | None:
+    """Return the encoding the rules choose for one column: `"delta"`, `"plain"`, or None for a dictionary.
+
+    Each rule reads a declaration and none reads the values, so each is a guess the exceptions above
+    correct. The first that applies decides, and every figure is a column's chunks with their
+    Zstandard, measured over both packaged sessions.
+
+    **A `*_tick` column, and the leading identifier of the key, take delta.** A tick climbs on a
+    monotonic clock and the first key column across the table (Part 03 §5.3): delta takes
+    `core.clock_anchors.t_tick` from 268.8 KB to 5.2 KB and `core.units.unit_id` down 57x.
+
+    **A float takes no dictionary**: 27 of 32 float columns above 2 kB are smaller plain.
+
+    **A `free` string takes no dictionary**, its values being drawn from no vocabulary: plain is
+    1.16x to 2.99x smaller on the electrode and unit names and labels. `DELTA_BYTE_ARRAY` is smaller
+    again, and hyparquet and fastparquet refuse it while reading every other encoding a packet uses.
+
+    **`session_id`, and every column of a table keyed by `session_id` or `subject_id` alone, take no
+    dictionary.** A single-session packet holds one such value and one such row, which a dictionary
+    page outweighs: plain 1.23x to 1.39x on `session_id` in the small tables, and within 1.12x of the
+    dictionary in the spike tables, where both cost 0.03 bits a row.
+
+    **A timestamp or a date takes no dictionary**, a moment rarely recurring in a table: plain 1.19x
+    to 1.67x.
+
+    **An integer declared `structural_index` or `sequence_position`, or an `assigned` identifier,
+    takes delta**, each climbing more than it repeats: `core.clock_anchors.anchor_index` 188x over a
+    dictionary, `core.media_frames.frame_index` 192x over plain, and a reference such as
+    `core.curation_versions.sorting_run_id` 1.88x to 1.99x over a dictionary.
+
+    **A `carried` identifier and an integer declared `data` take no dictionary**, a source's label
+    and a count repeating too rarely to pay for one: a dictionary is 1.67x to 1.77x plain on
+    `core.units.n_spikes`.
+
+    Everything else keeps pyarrow's dictionary, which is what an `open` or `closed` vocabulary is
+    declared to draw from: `core.electrode_coordinate_values.coordinate_frame` is 29x to 79x smaller
+    under one than plain. Choosing by measuring the values would do better and is refused, since it
+    records no reason and differs between a `--sample` build and a full one.
+    """
+    kind = field.type.value_type if pa.types.is_dictionary(field.type) else field.type
+    name, role = field.name, column.get("role")
+    integer = pa.types.is_integer(kind)
+    if integer and (name.endswith("_tick") or name == leading):
+        return "delta"
+    if pa.types.is_floating(kind):
+        return "plain"
+    if (pa.types.is_string(kind) or pa.types.is_large_string(kind)) and column.get("vocabulary") == "free":
+        return "plain"
+    if name == "session_id" or list(primary_key) in (["session_id"], ["subject_id"]):
+        return "plain"
+    if pa.types.is_timestamp(kind) or pa.types.is_date(kind):
+        return "plain"
+    if not integer:
+        return None
+    assigned = role == "identifier" and column.get("identity") == "assigned"
+    if role in ("structural_index", "sequence_position") or assigned:
+        return "delta"
+    if role in ("identifier", "data"):
+        return "plain"
+    return None
+
+
 def encodings(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
               extra: Mapping[str, Mapping[str, tuple[str, ...]]] | None = None,
               ) -> tuple[list[str], list[str]]:
     """Which columns take `DELTA_BINARY_PACKED` and which take no dictionary. Returns `(delta, plain)`.
 
-    Three rules and three lists of exceptions, in the shape `check.py` uses for naming: an
-    exception is declared with the measurement that justifies it, and a test refuses one naming a
-    column that does not exist. pyarrow never picks delta itself and defaults to a dictionary on
-    everything, which is wrong in both directions here.
-
-    **A `*_tick` column takes delta.** A tick is a large integer on a monotonic clock, so its
-    residuals bit-pack far smaller than the eight bytes PLAIN spends. Measured, delta takes
-    `core.clock_anchors.t_tick` from 268.8 KB to 5.2 KB and `core.spike_events.t_tick` from
-    660.9 MB to 462.1 MB.
-
-    **The leading identifier of the key takes delta.** Part 03 §5.3 sorts a table by its key, so that
-    column ascends across the whole table where every later key column only ascends within the
-    group above it. Measured: `core.units.unit_id` **57x**, `core.unit_coordinates.unit_id` 53x,
-    `core.electrode_coordinates.electrode_id` 48x, `core.unit_coordinate_values.unit_id` **75x**.
-
-    **A float takes no dictionary.** Of 32 float columns above 2 kB across both packaged sessions,
-    **27 are smaller plain**, by 1.15x to 1.76x: a dictionary over values that barely repeat is an
-    index nobody reads. The five that do repeat are listed, and one of them decides ~200 MB --
-    `core.spike_events.amplitude` is quantised to the sorter's step and is **1.85x** better with
-    the dictionary, which a blanket rule would have thrown away.
-
-    None of the three is monotonicity or cardinality itself, which is what the encodings actually
-    exploit and what nothing declares. Deriving the choice from the sort key alone was measured and
-    refused: it regresses `core.media_frames.pts` **195x** and `core.clock_anchors.t_tick` 57x,
-    both monotone without being key columns. Every column is zstd-compressed on top of its
-    encoding, so each number here is the pair measured end to end.
+    A declared exception decides first, then `by_rule`. pyarrow never picks delta itself and defaults
+    to a dictionary on everything, which is wrong in both directions here.
     """
     # An extension's own exceptions, merged over core's rather than into them: core names no
     # extension table, and an extension names no core one, so neither can quietly override the
@@ -135,23 +199,23 @@ def encodings(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
     forced_dict = set(DICTIONARY_COLUMNS.get(resource_id, ())) | set(listed.get("dictionary", {}).get(resource_id, ()))
     keys = sort_key(resource_id, spec) or list(spec.get("primary_key") or [])
     leading = leading_identifier(spec, keys)
+    declared = {c["name"]: c for c in spec.get("columns", ())}
+    primary_key = list(spec.get("primary_key") or [])
     delta, plain = [], []
     for field in out:
         name = field.name
-        integer, floating = pa.types.is_integer(field.type), pa.types.is_floating(field.type)
-        # A string held as dictionary codes is a string column in Parquet all the same, so it is
-        # judged by its value type; a string takes no encoding but by exception.
-        held = field.type.value_type if pa.types.is_dictionary(field.type) else field.type
-        string = pa.types.is_string(held) or pa.types.is_large_string(held)
-        if name in forced_dict or not (integer or floating or string):
+        # A string held as dictionary codes is a string column in Parquet all the same, so every
+        # choice is made on the value type.
+        kind = field.type.value_type if pa.types.is_dictionary(field.type) else field.type
+        if name in forced_dict or not _encodable(kind):
             continue
-        if name in forced_delta and integer:
+        if name in forced_delta and pa.types.is_integer(kind):
             delta.append(name)
         elif name in forced_plain:
             plain.append(name)
-        elif integer and (name.endswith("_tick") or name == leading):
+        elif (choice := by_rule(field, declared.get(name, {}), primary_key, leading)) == "delta":
             delta.append(name)
-        elif floating:
+        elif choice == "plain":
             plain.append(name)
     return delta, plain
 
