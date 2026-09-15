@@ -47,22 +47,29 @@ def documents() -> list[Path]:
     return found
 
 
+#: Where the invariants that hold of any registry document live. They left `registry/check.py` so
+#: that `escapewheel extension check` could run them, and that script now imports them.
+DOCUMENT_INVARIANTS = "escapewheel-validator/src/escapewheel_validator/registry_document.py"
+
+
 def _check_counts() -> tuple[int, int]:
-    """How many invariants `registry/check.py` holds, counted from the source that holds them.
+    """How many invariants hold of a registry document, and how many of this repository's build.
 
-    Split the way the file is: `structural` runs once per registry document, so each of its checks
-    binds core and every extension, while the rest run once over the whole set. Counted by parsing
-    rather than by running, since `check.py` needs DuckDB to finish and this must not.
+    The first run once per document, so each binds core and every extension; the second run once
+    over the whole set and are facts about the build rather than about any document. Counted by
+    parsing rather than by running, since `check.py` needs DuckDB to finish and this must not.
     """
-    tree = ast.parse((ROOT / "registry/check.py").read_text())
-    structural = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "structural")
-    nested = {id(n) for n in ast.walk(structural)}
-
     def calls(scope, name, exclude=frozenset()):
         return sum(1 for n in ast.walk(scope) if isinstance(n, ast.Call)
                    and getattr(n.func, "id", None) == name and id(n) not in exclude)
 
-    return calls(structural, "c_"), calls(tree, "check", nested)
+    shared = ast.parse((ROOT / DOCUMENT_INVARIANTS).read_text())
+    structural = next(n for n in shared.body if isinstance(n, ast.FunctionDef) and n.name == "structural")
+    declarations = next(n for n in shared.body if isinstance(n, ast.FunctionDef) and n.name == "declarations")
+    per_document = calls(structural, "c_") + sum(
+        1 for n in ast.walk(declarations) if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "Finding"
+    )
+    return per_document, calls(ast.parse((ROOT / "registry/check.py").read_text()), "check")
 
 
 def _clause_count() -> int:
