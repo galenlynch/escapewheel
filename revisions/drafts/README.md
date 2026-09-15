@@ -14,9 +14,13 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-Nothing is open. A draft added here takes a row naming its word count, when it was appraised, and
+One draft is open. A draft added here takes a row naming its word count, when it was appraised, and
 why it sits where it does: dependencies run downward, so a draft may depend on the ones above it
 and on nothing below.
+
+| draft | words | appraised | why here |
+|---|---|---|---|
+| `an-adapter-declares-the-options-it-accepts` | 2,060 | not yet | The only one open. It depends on R115 §3.1 and §3.12 and on nothing unaccepted, and it is what the declared options `waveforms` and `lfp` each need are waiting on. |
 
 A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
 records what bound something and a draft never did. Git holds the document, and whatever the
