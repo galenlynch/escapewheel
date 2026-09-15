@@ -150,7 +150,7 @@ sees them: `applied.toml` records where each clause went, and the count of undis
 fall and must not rise.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 584 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 590 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for
@@ -158,7 +158,7 @@ fall and must not rise.
 How many there are is counted from the source that holds them, by `facts.py` parsing `check.py`:
 
 <!-- BEGIN facts: checks -->
-31 structural invariants, each applied to core and to each of the 4 extension registries, and 40 further checks over the whole set
+31 structural invariants, each applied to core and to each of the 4 extension registries, and 42 further checks over the whole set
 <!-- END facts: checks -->
 
 | check | catches |
