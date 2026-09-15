@@ -173,3 +173,28 @@ def test_the_files_extremum_column_is_not_read(nwb: Path) -> None:
     before = _source(nwb).unit_electrodes()
     array(nwb / "units" / "extremum_channel_index", np.array([0, 0, 0], dtype="<i8"))
     assert _source(nwb).unit_electrodes() == before
+
+
+def test_a_wrong_key_and_a_padded_row_are_counted_apart(nwb: Path) -> None:
+    """One count for both would report a broken pairing as the padding every file carries.
+
+    Unit 1 is left out of the mapping, so its row matches nothing; unit 2 keeps its mapping and
+    loses its signal, which is what the NWB writes for a contact the sorter never computed.
+    """
+    import shutil
+
+    shutil.rmtree(nwb / "units" / "waveform_mean")
+    _wide(nwb / "units" / "waveform_mean", _dense({0: SUPPORT[0], 1: SUPPORT[1]}))
+    source = WaveformSource(
+        nwb,
+        session_id="s1",
+        units=[
+            {"device_name": "probeA", "local_unit_label": "0", "unit_id": 0},
+            {"device_name": "probeA", "local_unit_label": "2", "unit_id": 2},
+        ],
+    )
+    source.array_assets()
+    assert source.notes == [
+        "units: 1 NWB row(s) match no unit in the packet's sorting; skipped",
+        "units: 1 NWB row(s) are zero on every contact; skipped",
+    ]

@@ -34,7 +34,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, NamedTuple
 
 import numpy as np
 from numpy.typing import NDArray
@@ -56,6 +56,26 @@ def _support(dense: NDArray[Any], width: int) -> list[NDArray[np.int64]]:
     """Which channel each unit actually has signal on, in the source's channel order."""
     live = (dense != 0).any(axis=1)
     return [np.flatnonzero(row)[:width] for row in live]
+
+
+class Scan(NamedTuple):
+    """What one pass over `waveform_mean` kept, and the two separate reasons it kept less.
+
+    A row matching no unit means the pair this adapter joins on is wrong, which is a build
+    defect; a row zero on every contact is the padding the file writes for contacts a unit was
+    not computed on. One count covering both hides the first behind the second.
+    """
+
+    keep: list[int]
+    identity: list[dict[str, str]]
+    support: list[NDArray[np.int64]]
+    primary: list[int]
+    slabs: list[NDArray[np.float64]]
+    peak: float
+    sd_slabs: list[NDArray[np.float64]]
+    sd_peak: float
+    missed: int
+    blank: int
 
 
 class WaveformSource:
@@ -148,18 +168,7 @@ class WaveformSource:
 
     # -- reading ------------------------------------------------------------------------
 
-    def _scan(
-        self, array: Any, device: Any, ks: Any, spread: Any = None
-    ) -> tuple[
-        list[int],
-        list[dict[str, str]],
-        list[NDArray[np.int64]],
-        list[int],
-        list[NDArray[np.float64]],
-        float,
-        list[NDArray[np.float64]],
-        float,
-    ]:
+    def _scan(self, array: Any, device: Any, ks: Any, spread: Any = None) -> Scan:
         """Walk the source a chunk row at a time, keeping only each unit's own contacts.
 
         The block is the source's own chunk along the unit axis, so every chunk is read exactly
@@ -186,16 +195,19 @@ class WaveformSource:
         slabs: list[NDArray[np.float64]] = []
         sd_slabs: list[NDArray[np.float64]] = []
         peak = sd_peak = 0.0
+        missed = blank = 0
         for start in range(0, total, block):
             dense = np.asarray(array[start : start + block])
             deviation = np.asarray(spread[start : start + block]) if spread is not None else None
             for offset in range(dense.shape[0]):
                 found = self.units.get((str(device[start + offset]), str(int(ks[start + offset]))))
                 if found is None:
+                    missed += 1
                     continue
                 identified = {"unit_id": found}
                 live = np.flatnonzero((dense[offset] != 0).any(axis=0))
                 if not live.size:
+                    blank += 1
                     continue
                 slab = dense[offset][:, live].T.copy()
                 peak = max(peak, float(np.abs(slab).max()))
@@ -209,7 +221,7 @@ class WaveformSource:
                     sd_peak = max(sd_peak, float(np.abs(sd_slab).max()))
                     sd_slabs.append(sd_slab)
             del dense, deviation
-        return keep, identity, support, primary, slabs, peak, sd_slabs, sd_peak
+        return Scan(keep, identity, support, primary, slabs, peak, sd_slabs, sd_peak, missed, blank)
 
     @staticmethod
     def _quantise(
@@ -260,14 +272,18 @@ class WaveformSource:
         electrode_rows = self.store.array(group / "electrodes")
         bounds = self.store.array(group / "electrodes_index")
 
-        total, samples = array.shape[0], array.shape[1]
-        keep, identity, support, primary, slabs, peak, sd_slabs, sd_peak = self._scan(array, device, ks, spread)
+        samples = array.shape[1]
+        keep, identity, support, primary, slabs, peak, sd_slabs, sd_peak, missed, blank = self._scan(
+            array, device, ks, spread
+        )
 
         if not keep:
             self.notes.append("units: no NWB row matches a unit in the packet's sorting")
             raise SourceDefect("no unit in waveform_mean matches the packet's sorting")
-        if len(keep) < total:
-            self.notes.append(f"units: {total - len(keep)} NWB row(s) match no unit or are all zero; skipped")
+        if missed:
+            self.notes.append(f"units: {missed} NWB row(s) match no unit in the packet's sorting; skipped")
+        if blank:
+            self.notes.append(f"units: {blank} NWB row(s) are zero on every contact; skipped")
         width = max(s.size for s in support)
         if not peak:
             raise SourceDefect("waveform_mean is entirely zero, so no unit has a channel support")
