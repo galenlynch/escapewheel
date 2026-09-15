@@ -45,14 +45,18 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. Both packets are rebuilt twice, and neither pair is swapped in
+## 1. Two rebuilds sit beside each original packet
 
-`packet-rebuilt-2/` is the current pair, built 2026-09-14 beside `packet-rebuilt/` and the
-original, both untouched. Committed with **0 errors and 1 warning** each: `ecephys_776259` in 550 s
-with 286,896,563 spikes, `ecephys_786867` in 306 s with 7,570,450 media frames. Replacing the
-originals is a separate decision, governed by R32's amendment discipline and `escapewheel prune`.
+Two packets are built from real sessions and live outside this repository: `ecephys_776259` at
+`/mnt/Data/776259-packet/` and `ecephys_786867` at `/mnt/Data/786867-packet/`. Each of those
+directories holds three versions — `packet/`, the committed original, beside `packet-rebuilt/` and
+`packet-rebuilt-2/` from the rebuilds of 2026-09-12 and 2026-09-14. Both rebuilds committed clean,
+and neither has replaced the original. Swapping one in is this item's open decision; R32's
+amendment discipline and `escapewheel prune` govern it.
 
-The second rebuild changed **no row count in any of 40 tables** and two columns:
+The second rebuild committed with **0 errors and 1 warning** each — `ecephys_776259` in 550 s with
+286,896,563 spikes, `ecephys_786867` in 306 s with 7,570,450 media frames — and changed **no row
+count in any of 40 tables**. Two columns moved:
 
 | | `packet-rebuilt` | `packet-rebuilt-2` |
 |---|---|---|
@@ -61,18 +65,18 @@ The second rebuild changed **no row count in any of 40 tables** and two columns:
 | names joining a manifest entry | 0 of 11 and 0 of 14 | **11 of 11 and 14 of 14** |
 
 `core.clock_observation_intervals` and `core.sessions.t_zero_tick` did not move, which places the
-20.5 ms epoch shift the sync adapter's derivation produced: it is inside `tick_zero_utc`, a column
+20.5 ms epoch shift the sync adapter's derivation produced: it sits inside `tick_zero_utc`, a column
 the earlier pair did not carry, so there was no value for it to shift.
 
 **The one warning is the new column being honest.** `core.clocks.tick_zero_plausible` reports that
 tick 0 is more than a day from `session_start_time`, which it is by **167 days** on `786867` and 498
 on `776259` — the harp counter runs from device power-on, as that clock's `origin` says. The
 derivation is `stamp - counter / 31250`, so the **absolute** instant carries the nominal rate's error
-over that span (1 ppm is 14 s at 167 days) while a tick converted through it cancels that and is
-accurate over the session's own duration. Two record nodes agree to 18 ms. Conforming, and the
-warning is the right level.
+over that span, 1 ppm being 14 s at 167 days, while a tick converted through it cancels that error
+and stays accurate over the session's own duration. Two record nodes agree to 18 ms. The packet is
+conforming and the warning is the right level.
 
-What the **first** rebuild corrected, measured on the committed bytes rather than predicted:
+The first rebuild corrected more, measured on the committed bytes rather than predicted:
 
 | | before | after |
 |---|---|---|
@@ -88,7 +92,7 @@ What the **first** rebuild corrected, measured on the committed bytes rather tha
 **0.40 MB** R68 §5 predicted, down from 11.73 MB, with `pts` at **0.04 bits/row** on
 `DELTA_BINARY_PACKED`. The 0.03 MB over is R88's `session_id`, which R68 predates.
 
-## 2. No test drives a build, so the writer drifts unseen
+## 2. No test drives a build
 
 **Queued, and the largest correctness gap on this list.** The corpus proves that an implementation
 agrees about the **format** and proves nothing about the **writer**: `fixtures/build.py` calls
@@ -140,7 +144,7 @@ Part 03 §5.5 asks for, which is the assertion no corpus packet can make, and th
 and the streaming path produce identical output for one table. Sized at an afternoon, not a
 restructuring. No draft is open, so nothing blocks it.
 
-## 3. An extension copier template, and the instructions to go with it
+## 3. No template scaffolds an extension project
 
 **Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
 it: the four here were written by hand, and `registry/extensions/README.md` covers *what to model* —
@@ -214,14 +218,14 @@ document and not a function of the rows. The document already carries its own ve
 `extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
 (R57 §2.1). Checking is the only half that never shipped.
 
-## 5. The adapter boundary, and the three adapters that still owe work
+## 5. The adapter boundary reaches nine of the ten adapters
 
-R115 was accepted on 2026-09-11, Part 03 §11 carries the whole contract between a build and a
-source, and every piece of it was built by 2026-09-14: a declaration, a document, a command, three
-protocols and a report. Nine of the ten adapters are delivered out of process on real data
-(`ecephys_786867` at `--sample 2000`); `conformance/adapter-boundary/` holds the seven scripts that
-measured all three protocols delivering one adapter's eighteen resources identically. What follows
-is what the boundary does **not** yet reach.
+R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
+source; every piece of it was built by 2026-09-14 — a declaration, a document, a command, three
+protocols and a report. The nine are delivered out of process on real data (`ecephys_786867` at
+`--sample 2000`), and `conformance/adapter-boundary/` holds the seven scripts that measured all
+three protocols delivering one adapter's eighteen resources identically. What follows is what the
+boundary does not yet reach.
 
 **Where a protocol is needed it is `flight-v0.1`**, decided 2026-09-12. R115 §3.3 asks one of an
 adapter released independently of the build and none of an adapter the build ships, so the ten need
@@ -348,7 +352,7 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 6. The packets' physical layout and encoding
+## 6. The rebuilt packets' encodings are unmeasured
 
 **Not started.** Several tables have changed shape substantially — R105's four coordinate tables at
 74,223 value rows, R81's collapse of unit identity, R88's `session_id` on every session-scoped
@@ -362,7 +366,7 @@ per table: which encoding each column got, whether a sort makes a column compres
 measured for `session_id` at 1.0005x, and whether any row group is small enough that its footer
 costs more than its rows.
 
-## 7. A code quality audit of the whole project
+## 7. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
@@ -378,7 +382,7 @@ a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncon
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
 
-## 8. `registry_version` — still `0.1.0`
+## 8. `registry_version` is held at `0.1.0`
 
 Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
 packets claiming one version with incompatible schemas is what the field exists to prevent, and it
@@ -398,7 +402,7 @@ doing in one order or the other, not at once.
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 11. Nesting: containment is cheap, but not in SQL
+## 11. Containment costs 0.02 ms in NumPy and 1.46 ms in SQL
 
 **Measured 2026-09-02**, five repeats, on blocks derived from a real session (708 trials, 18
 blocks, disjoint, minimum gap 5,750 ticks) and synthetic data at the same ratio:
@@ -429,7 +433,7 @@ springs at a scale no packet has reached yet.
 binary search sound: a trial inside two blocks has no containing block. Scripts in
 `/mnt/Data/escapewheel/bench/nesting/` with the raw output in `results.txt`.
 
-## 12. Parked: R42's write case
+## 12. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -447,7 +451,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 13. Smaller, still open
+## 13. Smaller open items
 
 - **A second ergonomic surface** for people who avoid both SQL and raw PyArrow: DuckDB relations,
   a polars `LazyFrame` behind an extra, or both. Does not block anything.
