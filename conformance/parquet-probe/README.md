@@ -14,6 +14,8 @@ Produces the Parquet evidence cited in
 | `lists-duckdb.jl` | same file via DuckDB.jl |
 | `layout.py` | which encoding each column of a committed packet got, and three shapes worth a look |
 | `alternatives.py` | what every encoding Part 03 §5.5 permits would have cost each column of a committed packet |
+| `readers.py` | which Python readers decode each encoding on a packet's own columns, and a string's read cost |
+| `readers.jl` | the same files through Parquet2.jl and DuckDB.jl |
 
 ```bash
 uv run --with pyarrow --with numpy --with duckdb python access.py

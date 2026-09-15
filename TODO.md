@@ -224,7 +224,92 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 3. No code quality audit has run
+## 3. Parquet2.jl reads no delta encoding
+
+Part 03 §5.5 has a writer delta-encode tick columns and a table's leading identifier, and requires a
+reader to support delta encodings. Parquet2.jl, the native Julia reader R3 §7.3 measured the
+physical floor against, supports none of them: `unsupported_encodings()` lists
+`DELTA_BINARY_PACKED`, `DELTA_LENGTH_BYTE_ARRAY`, `DELTA_BYTE_ARRAY` and `BYTE_STREAM_SPLIT` in
+0.2.34, the latest registered version, and on its `master` branch as of the commit of 2026-09-01.
+Julia therefore cannot read a committed packet natively. All six tables tried in `ecephys_786867` —
+`core.sessions`, `core.units`, `core.electrodes`, `core.intervals`, `core.clock_anchors` and
+`core.sorting_run_channels` — fail on their first delta column with `Parquet2.jl does not yet
+support DELTA_BINARY_PACKED binary encoding`. DuckDB.jl 1.5.2 reads every one, so the Julia path
+left goes through an embedded SQL engine, which Part 07 §2.2 says a native reader should not need;
+the root `CLAUDE.md` still names Parquet2.jl as that reader. R3 §7.3 tested list columns and never
+an encoding. `conformance/parquet-probe/readers.py` and `readers.jl` reproduce all of it.
+
+There are three ways out, each with a price. Dropping delta from the rules costs
+`core.spike_events.t_tick` 1.24x in `ecephys_776259` (462 MB against 574 MB plain) and
+`analysis.spike_events.t_tick` 1.30x. Keeping it means amending Part 07 §2.2's claim and pointing
+Julia at DuckDB.jl. Adding delta decoding to Parquet2.jl keeps both, as work in a package this
+project does not own.
+
+## 4. Nearly half of each packet's columns are 1.15x their best encoding
+
+Measured per column, against that column's own best encoding rather than the packet: a small
+column is metadata a consumer reads across many packets, so its size matters whatever the spike
+table weighs. `conformance/parquet-probe/alternatives.py` rewrites every column under each encoding
+Part 03 §5.5 permits, and reproduces the file's own bytes at 1.000 on every column over 1 MB.
+`ecephys_776259` first, then `ecephys_786867`:
+
+| | numeric | string |
+|---|---|---|
+| columns | 250, 253 | 115, 119 |
+| at 1.15x their best or more | 93, 97 | 80, 85 |
+| at 1.5x | 28, 28 | 29, 30 |
+| at 2x | 0, 0 | 5, 6 |
+
+No column of `core.spike_events`, `analysis.spike_events` or `core.media_frames` is among them.
+Grouped by the shape of the values, which no rule sees:
+
+| shape | encoding given → best | columns | ratio |
+|---|---|---|---|
+| one value, nulls aside, such as `session_id` in every small table | dictionary → plain or delta | 73, 85 | 1.16–1.50x |
+| all null | dictionary → plain | 36, 37 | 1.57–1.67x |
+| any other column of a small table, or one with long runs | dictionary → plain | 33, 31 | 1.15–2.03x |
+| an ascending reference, such as `core.curation_versions.sorting_run_id` | dictionary → delta | 10, 9 | 1.27–1.99x |
+| a name, label or serial number, such as `core.electrodes.electrode_name` | dictionary → a delta string encoding | 9, 9 | 1.20–24.1x |
+| a repeating integer out of order, such as `core.array_channels.channel_index` | dictionary → delta | 5, 6 | 1.24–1.97x |
+| a repeating float, such as `dynamic_foraging.trials.lickspout_position_z` | plain → dictionary | 3, 3 | 1.17–1.57x |
+| a delta column too short to repay it, such as ticks in 11 to 24 rows | delta → plain | 4, 2 | 1.15–1.30x |
+
+The rules name ticks, a table's leading identifier and floats, so every other column takes pyarrow's
+default dictionary, whose page costs about 24 bytes before it holds a value: an all-null column is
+60 bytes where plain is 36. The report Part 03 §5.5 asks for, `encoding.inefficient` at 1.5x, reports
+**0 columns** on either packet, for two reasons. `_cost` returns the size of a one-column *file*, so
+about 400 bytes of footer dilute a small column: `core.curation_versions.sorting_run_id` is 143
+against 72 bytes as a column chunk (1.99x) and 560 against 476 as a file (1.18x). It also skips
+every string column. `TOLERANCE` was calibrated to report nothing on both sessions against that
+diluted measure. The same denominator applies to a file: 21 of the 40 in each packet are more than
+half footer, `core.sessions` 2,690 of 3,823 bytes, and every footer carries 344 to 2,488 bytes of
+`ARROW:schema`, which the writer omits only where a column arrives dictionary-typed.
+
+**Delta string encodings are uncommon, and two readers refuse them.** No default writer tried emits
+one for these columns: pyarrow writes a dictionary, fastparquet 2026.5.0 plain, and polars 1.44.2
+and DuckDB 1.5.5 plain for `unit_name` and a dictionary for `local_unit_label`. DuckDB writes
+`DELTA_LENGTH_BYTE_ARRAY` only under `parquet_version v2`, and its authors state it will not by
+default because mainstream engines do not read it (duckdb.org, 2025-01-22). parquet-java falls back
+to `DELTA_BYTE_ARRAY` only under its V2 writer, and its default is `PARQUET_1_0`. pyarrow 25.0.1,
+DuckDB 1.5.5, polars and DuckDB.jl decode both; fastparquet and Parquet2.jl decode neither. Spark's
+vectorized reader rejected a standalone `DELTA_LENGTH_BYTE_ARRAY` until 3.4.0 (SPARK-40128), and
+Iceberg 1.1.0's refused `DELTA_BYTE_ARRAY`, an issue closed as stale without a fix
+(apache/iceberg#7162) — which Phase 7 inherits.
+
+**pyarrow cannot read a delta string column as codes.** `read_dictionary` raises `Not yet
+implemented: DecodeArrow of DictAccumulator` on both encodings, and `validator._ordering_scan` reads
+every string key column that way, as `materialize.py` does its coded columns. A rule choosing delta
+for a string must therefore never reach a key column.
+
+**Delta buys size on these columns and costs some speed.** On a million unique ascending names built
+from `core.units.unit_name`, `DELTA_BYTE_ARRAY` is 164 kB against 1,014 kB under a dictionary (6.2x)
+and 993 kB plain, while `DELTA_LENGTH_BYTE_ARRAY` is 1,012 kB and buys nothing. Reading it was
+never faster, and two runs disagreed about by how much, each the best of five: pyarrow 1.01x then
+1.36x, polars 1.18x then 1.82x, and a DuckDB equality filter 1.68x then 1.21x. §3 decides whether a
+string rule is worth writing at all: fastparquet reads the delta integers the rules already write
+and no delta string, and Parquet2.jl reads neither.
+
+## 5. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
@@ -240,7 +325,7 @@ a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncon
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
 
-## 4. `registry_version` is held at `0.1.0`
+## 6. `registry_version` is held at `0.1.0`
 
 Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
 packets claiming one version with incompatible schemas is what the field exists to prevent, and it
@@ -248,19 +333,19 @@ is preventing nothing. Free to settle while nobody outside holds a packet, and f
 the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
 three at 0.2.0.
 
-## 5. The repository directory is still `nwb-lake/`
+## 7. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
 working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
 doing in one order or the other, not at once.
 
-## 6. Staging both packets to scratch needs a token
+## 8. Staging both packets to scratch needs a token
 
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 7. Parked: R42's write case survives its withdrawal
+## 9. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -278,7 +363,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 8. Smaller open items
+## 10. Smaller open items
 
 - **Trial-in-block containment has no consumer.** The measurement below concluded that a trial
   needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries `start_tick`
@@ -302,17 +387,6 @@ natural.
 - **A second trials table from another paradigm** would settle whether an interval's task columns
   belong in core. R54 struck the four Part 02 defined and nothing wrote, so the question is now about
   what an extension carries rather than what core does.
-- **String columns reach neither the encoding rules nor their report.** `encoding.encodings` and
-  `encoding.inefficient` skip every column that is not an integer or a float, where Part 03 §5.5
-  asks a writer to report any column costing more than 1.5x the smallest encoding available to it.
-  Five string columns in each rebuilt packet cost 2.6x to 24x what `DELTA_BYTE_ARRAY` or
-  `DELTA_LENGTH_BYTE_ARRAY` would: `core.electrodes.electrode_name`, `local_electrode_label` and
-  `local_channel_label`, and `core.units.unit_name` and `local_unit_label`. Each table stores them
-  in ascending order, so neighbours share a prefix — `unit_name` averages 84 characters, all but
-  the last three being the run and curation it is composed from. The five total 40 kB and 29 kB, so
-  what is missing is the report rather than the bytes. Confirm that Parquet2.jl reads both delta
-  string encodings before writing a rule for them: Part 03 §5.5 requires a reader to support delta
-  encodings, and a Julia reader that does not would make the rule cost portability for 40 kB.
 
 ---
 
@@ -387,27 +461,6 @@ Whole packet, 2,496 objects and 6.83 GB across twelve arrays:
 | local disk | 0.33 s | 75 s (91 MB/s, cold) |
 
 Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
-
----
-
-# Settled 2026-09-15
-
-- **The rebuilt packets' encodings are measured, and no integer or float column needs an
-  exception.** `conformance/parquet-probe/alternatives.py` rewrites each column of a packet under
-  every encoding Part 03 §5.5 permits, zstd on top, one row group at a time. Rewriting a column
-  under the encoding it already has reproduces the file's bytes at 1.000 for every column over 1 MB,
-  so the method matches the writer. Across 250 and 253 integer, float and timestamp columns holding
-  1.17 GB and 591 MB, the chosen encodings are **315 kB and 151 kB** from the best available, under
-  0.03% of either packet; in `ecephys_776259`, 310 kB of it is `analysis.spike_events.clock_id` and
-  `time_bucket_tick` taking delta where a dictionary is 1.11x and 1.13x smaller. One column in the
-  two packets is more than 1.15x off and wastes over 500 bytes: `aind_unit_qc.metrics.presence_ratio`
-  in `ecephys_786867`, plain where a dictionary is 1.39x smaller, at 522 bytes. No table the
-  originals lacked holds such a column, including the coordinate value tables,
-  `core.sorting_run_channels`, `core.clock_phase_steps` and the calibrations. `session_id` costs
-  0.03 bits a row in `core.spike_events`, and footers are **0.12%** of each packet:
-  `analysis.spike_events` carries 1.2 MB of footer over 2,197 row groups, and the other 38 files
-  85 kB and 99 kB between them. What the measurement did find is in string columns, recorded under
-  §8.
 
 ---
 
