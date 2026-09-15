@@ -983,11 +983,12 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
         "core names an extension's table; an extension supplies its own to PacketWriter"
     )
     numeric = {"int32", "int64", "float32", "float64"}
+    strings = {"string", "json_string"}
     stale = [
         f"{listed}: {resource}.{column}"
-        for listed, entries, types in (("DELTA_COLUMNS", DELTA_COLUMNS, numeric),
-                                       ("NO_DICTIONARY", NO_DICTIONARY, numeric | {"string", "json_string"}),
-                                       ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS, numeric))
+        for listed, entries, types in (("DELTA_COLUMNS", DELTA_COLUMNS, {"int32", "int64"}),
+                                       ("NO_DICTIONARY", NO_DICTIONARY, numeric | strings),
+                                       ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS, numeric | strings))
         for resource, columns in entries.items()
         for column in columns
         if resource not in tables
@@ -996,64 +997,67 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
     assert stale == []
 
 
-def test_no_encoding_exception_names_what_the_rules_already_choose(registry):
-    """An exception the rules agree with is needed by nothing, and would outlive a rule changing under it."""
-    from escapewheel_writer.arrow import schema, sort_key
-    from escapewheel_writer.encoding import by_rule, leading_identifier
+def _chosen(values, column=None):
+    from escapewheel_writer.encoding import choose, count
 
-    tables = dict(registry["tables"])
-    redundant = []
-    for listed, entries, encoding in (("DELTA_COLUMNS", DELTA_COLUMNS, "delta"),
-                                      ("NO_DICTIONARY", NO_DICTIONARY, "plain"),
-                                      ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS, None)):
-        for resource, columns in entries.items():
-            spec = tables[resource]
-            out = schema(spec, {c["name"] for c in spec["columns"]})
-            leading = leading_identifier(spec, sort_key(resource, spec) or list(spec["primary_key"] or []))
-            declared = {c["name"]: c for c in spec["columns"]}
-            key = spec["primary_key"] or []
-            redundant += [f"{listed}: {resource}.{column}" for column in columns
-                          if by_rule(out.field(column), declared[column], key, leading) == encoding]
-    assert redundant == []
+    column = column or {"name": "x", "role": "data"}
+    return choose(pa.field(column["name"], values.type), column, None, count(values))
 
 
-@pytest.mark.parametrize(("kind", "column", "primary_key", "leading", "expected"), [
-    (pa.int64(), {"name": "t_tick", "role": "coordinate"}, ["unit_id"], None, "delta"),
-    (pa.int32(), {"name": "unit_id", "role": "identifier", "identity": "assigned"}, ["unit_id"], "unit_id", "delta"),
-    (pa.float64(), {"name": "axis_value", "role": "data"}, ["axis_id"], None, "plain"),
-    (pa.string(), {"name": "unit_name", "role": "data", "vocabulary": "free"}, ["unit_id"], None, "plain"),
-    (pa.dictionary(pa.int32(), pa.string()), {"name": "unit_name", "role": "data", "vocabulary": "free"},
-     ["unit_id"], None, "plain"),
-    (pa.string(), {"name": "label", "role": "data", "vocabulary": "open"}, ["label_id"], None, None),
-    (pa.int32(), {"name": "session_id", "role": "identifier", "identity": "assigned"}, ["unit_id"], None, "plain"),
-    (pa.string(), {"name": "species", "role": "data", "vocabulary": "open"}, ["subject_id"], None, "plain"),
-    (pa.timestamp("us", tz="UTC"), {"name": "started_at", "role": "data"}, ["run_id"], None, "plain"),
-    (pa.int64(), {"name": "axis_index", "role": "structural_index"}, ["axis_id"], None, "delta"),
-    (pa.int64(), {"name": "anchor_index", "role": "sequence_position"}, ["clock_id"], None, "delta"),
-    (pa.int32(), {"name": "probe_id", "role": "identifier", "identity": "assigned"}, ["run_id"], None, "delta"),
-    (pa.int32(), {"name": "region_id", "role": "identifier", "identity": "carried"}, ["electrode_id"], None, "plain"),
-    (pa.int64(), {"name": "n_spikes", "role": "data"}, ["unit_id"], None, "plain"),
-    (pa.string(), {"name": "device_kind", "role": "discriminator"}, ["device_id"], None, None),
-])
-def test_each_encoding_rule_reads_a_declaration(kind, column, primary_key, leading, expected):
-    """A rule reads a column's type and declarations and nothing of its values, so each is checkable alone."""
-    from escapewheel_writer.encoding import by_rule
+def test_a_column_holding_no_value_is_plain():
+    """A dictionary page costs its bytes before it indexes anything, and here it would index nothing."""
+    assert _chosen(pa.array([None] * 12, type=pa.string())) == "plain"
 
-    assert by_rule(pa.field(column["name"], kind), column, primary_key, leading) == expected
+
+def test_one_value_takes_a_dictionary_only_over_a_long_row_group():
+    """A dictionary page repays itself over tens of thousands of rows of one value, not over a dozen."""
+    from escapewheel_writer.encoding import ONE_VALUE_ROWS
+
+    assert _chosen(pa.array([7] * 12, type=pa.int32())) == "delta"
+    assert _chosen(pa.array(["ccf"] * 12)) == "plain"
+    assert _chosen(pa.array([7] * ONE_VALUE_ROWS, type=pa.int32())) is None
+
+
+def test_a_declared_order_is_seen_where_values_climb_only_within_groups():
+    """A tick climbs within each unit and resets, which no count over the whole column can see."""
+    sawtooth = pa.array([t for _ in range(10) for t in range(100)], type=pa.int64())
+    assert _chosen(sawtooth, {"name": "t_tick", "role": "coordinate"}) == "delta"
+    assert _chosen(sawtooth, {"name": "count", "role": "data"}) == "plain", "undeclared, each value covers 10 rows"
+
+
+def test_an_observed_climb_takes_delta_unless_it_climbs_in_long_runs():
+    """Delta encodes a step; a run of equal values is a step of zero repeated, which plain compresses too."""
+    assert _chosen(pa.array(range(1_000), type=pa.int64())) == "delta"
+    assert _chosen(pa.array([i // 100 for i in range(1_000)], type=pa.int64())) == "plain"
+
+
+def test_repetition_decides_between_a_dictionary_and_plain():
+    """Where each value covers fifty rows a dictionary indexes something; where it covers a few it does not."""
+    assert _chosen(pa.array(["sua", "mua", "noise"] * 400)) is None
+    assert _chosen(pa.array([i / 7 for i in range(1_200)])) == "plain"
+    assert _chosen(pa.array([float(i % 5) for i in range(1_200)])) is None
+
+
+def test_with_no_values_only_the_declaration_decides():
+    """A spill opened before its first batch has counts of nothing, and still knows a tick climbs."""
+    from escapewheel_writer.encoding import choose
+
+    assert choose(pa.field("t_tick", pa.int64()), {"role": "coordinate"}, None, None) == "delta"
+    assert choose(pa.field("label", pa.string()), {"role": "data"}, None, None) is None
 
 
 @pytest.mark.parametrize("held", ["strings", "codes"])
-def test_a_string_listed_plain_is_written_without_a_dictionary(tmp_path, registry, held):
+def test_a_string_chosen_plain_is_written_without_a_dictionary(tmp_path, registry, held):
     """A string may reach the writer as dictionary codes, and is still a string column in Parquet.
 
-    Judging it by its Arrow type alone skipped it, so the exception would have held for a column
-    built from records and silently not for one streamed as codes.
+    Judged by its Arrow type alone it would be skipped, so the same column built from records and
+    streamed as codes would be written two ways.
     """
     names = pa.array(["probe.CH0", "probe.CH1", "probe.CH10"])
-    column = names if held == "strings" else names.dictionary_encode()
-    table = pa.table({"electrode_name": column})
+    table = pa.table({"electrode_name": names if held == "strings" else names.dictionary_encode()})
     path = tmp_path / "electrodes.parquet"
-    pq.write_table(table, path, **_options("core.electrodes", registry["tables"]["core.electrodes"], table.schema))
+    spec = registry["tables"]["core.electrodes"]
+    pq.write_table(table, path, **_options("core.electrodes", spec, table.schema, sample=table))
     encodings = {str(e) for e in pq.ParquetFile(path).metadata.row_group(0).column(0).encodings}
     assert not any("DICTIONARY" in e for e in encodings), encodings
     assert pq.read_table(path).column(0).to_pylist() == names.to_pylist()

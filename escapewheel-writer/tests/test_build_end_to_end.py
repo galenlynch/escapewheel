@@ -193,7 +193,9 @@ def test_the_writer_applies_its_own_encoding_rules(committed):
         parquet = pq.ParquetFile(packet.path(resource.resource_id))
         if parquet.metadata.num_rows == 0:
             continue
-        delta, plain = encodings(resource.resource_id, spec, parquet.schema_arrow)
+        # The writer counted the table it wrote, or its first batch, which is this row group.
+        delta, plain = encodings(resource.resource_id, spec, parquet.schema_arrow,
+                                 sample=parquet.read_row_group(0))
         used = {}
         for group in range(parquet.metadata.num_row_groups):
             for i in range(parquet.metadata.num_columns):

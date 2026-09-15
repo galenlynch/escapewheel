@@ -92,7 +92,8 @@ PROFILE = "escapewheel-portable-v0.1"
 #: `_tick` rule below, because measurement says so and their names do not. `anchor_index`
 #: ascends over thousands of anchors per clock; `n_spikes` is a large count with no repeats.
 def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
-             extra: Mapping[str, Any] | None = None) -> dict[str, Any]:
+             extra: Mapping[str, Any] | None = None,
+             sample: pa.Table | pa.RecordBatch | None = None) -> dict[str, Any]:
     """Parquet settings for one resource.
 
     **No page index.** `ColumnIndex` and `OffsetIndex` would give per-page bounds and byte
@@ -119,7 +120,7 @@ def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
     # not declare. Withhold it, and the file reads back as the registry says.
     if any(pa.types.is_dictionary(field.type) for field in out):
         options["store_schema"] = False
-    delta, plain = encodings(resource_id, spec, out, extra)
+    delta, plain = encodings(resource_id, spec, out, extra, sample)
     if delta or plain:
         options["use_dictionary"] = [n for n in out.names if n not in {*delta, *plain}]
         if delta:
@@ -228,7 +229,7 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
         for batch in _prefetch(_prefetch(verify_order(batches, keys, unique)) if keys else batches):
             if out is None:
                 out = _as_held(schema(spec, set(batch.schema.names)), batch.schema)
-                options = _options(resource_id, spec, out, extra)
+                options = _options(resource_id, spec, out, extra, batch)
                 writer = pq.ParquetWriter(path, out, **options)
                 if report is not None:
                     report.extend(inefficient(resource_id, pa.Table.from_batches([batch]),
@@ -968,7 +969,7 @@ class PacketWriter:
                 # from `Table.nbytes` is 320x out on a string-heavy table, because Arrow
                 # materialises strings that Parquet stores as dictionary codes. It once split a
                 # 101 KB table three ways.
-                options = _options(resource_id, spec, table.schema, self._encoding_exceptions)
+                options = _options(resource_id, spec, table.schema, self._encoding_exceptions, table)
                 pq.write_table(table, path, **options)
                 delta = list(options.get("column_encoding", {}))
                 kept = set(options.get("use_dictionary", table.schema.names))
