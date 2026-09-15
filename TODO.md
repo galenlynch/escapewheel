@@ -113,8 +113,8 @@ serves one. Measured against what each module actually names, the ten sort four 
 
 | | adapters |
 |---|---|
-| generic | `sorter`, `sync`, `openephys`, `harp`; `waveforms` once `ks_unit_id` goes; `nwb` once its dialect columns go |
-| one option short | `lfp` |
+| generic | `sorter`, `sync`, `openephys`, `harp`; `nwb` once its dialect columns go |
+| one option short | `lfp`, `waveforms` |
 | one institution's, whole | `session`, `video` |
 | not an adapter | `tables` |
 
@@ -133,11 +133,30 @@ settles it.
 `waveforms` reads `waveform_mean`, `waveform_sd` and the ragged `electrodes`/`electrodes_index`, all
 base NWB, and matches an array row to a unit by a **pair**: `(device_name, ks_unit_id)`, the probe
 plus the sorter's label. A run is one probe (R83) and R81 measured 810 distinct labels across 6,781
-units over 12 runs, so the probe is what makes the pair unique. What changes is the NWB-side read,
-`store.array(group / "ks_unit_id")` becoming a read of the `Units` table's own `id` — base NWB, and
-where SpikeInterface writes a sorter's unit ids. One repair goes with it: `units: {n} NWB row(s)
-match no unit or are all zero; skipped` sums two causes, and a wrong key must be countable apart
-from a genuinely padded row.
+units over 12 runs, so the probe is what makes the pair unique.
+
+**One half of that pair is base NWB and the other is in no base column**, measured 2026-09-15 on both
+sessions' files. The probe is derivable: each unit's ragged `electrodes` region spans exactly one
+`group_name`, equal to `device_name`, in **6,781 of 6,781** and **4,505 of 4,505** units, and the
+adapter already reads that column to name its contacts. The label is not. Reading the `Units` table's
+own `id` was recorded here as the fix and is wrong — `id` is `arange(n)`, the `DynamicTable` row
+number, and differs from `ks_unit_id` in **6,775 of 6,781** and **4,138 of 4,505** rows, because a
+sorter numbers from zero within each probe while the row id counts the table. `unit_name` is where
+NeuroConv writes a sorter's unit ids and holds a UUID in both files; `original_cluster_id` repeats
+`ks_unit_id`.
+
+**Row position is not the way out either.** `ks_unit_id` strictly ascends within each probe in file
+row order — 12 of 12 devices in one session, 10 of 10 in the other — so the nth row of a probe is its
+nth label and no dialect column is needed to pair them. What that spends is the detection: the NWB
+and the sorted asset it derives from hold different sortings, pairing 4,322 of 4,505 units with **0
+of 4,322** agreeing on spike count (`STATUS.md`, "Benchmark revisited"), and a positional match hands
+a template to the wrong unit there, where the pair match skips the row and says so. So what settles
+it is a **declared option naming the label column**, defaulting to `unit_name` — `lfp`'s declared
+pattern option one more time, and blocked by the same gap below.
+
+The repair recorded here is done: `units: {n} NWB row(s) match no unit or are all zero; skipped`
+summed two causes and now counts them apart, since a wrong key is a different finding from a row the
+file padded.
 
 **The NWB adapter is half a standard's and half one producer's, and the split is a lift rather
 than a rewrite.** The paths it walks are all base NWB — `general/subject`, `general/devices`,
@@ -188,9 +207,16 @@ against the terms first and the recipe's options second, and one resolving to ne
 declaring an option makes a recipe carry it. R115 §3.1 argues an adapter declares its options so a
 build can refuse a recipe setting one the adapter ignores — and that reasoning wants every settable
 option declared, which the refusal rule forbids for any option with a default. So `NEEDS` carries
-terms plus the options an adapter cannot be constructed without, and the other ten options across
-the ten adapters keep flowing through the recipe's own dict unvalidated. Worth a clause giving
-`needs` an optional half; measure how many options it would cover before writing one.
+terms plus the options an adapter cannot be constructed without, and every option carrying a default
+keeps flowing through the recipe's own dict unvalidated. Worth a clause giving `needs` an optional
+half.
+
+Measured 2026-09-15: the ten adapters take **32 constructor options beyond their `NEEDS`**, 28 of
+them the recipe's to set — the other four being `store` on three adapters, an injection point the
+tests use, and `first_samples`, a term a build fills. The two committed recipes set
+**10 distinct names** between them: `attachments`, `command`, `emit_clock`, `experiment`,
+`interval_kind`, `parent_clock_id`, `sd`, `signals`, `tables` and `zone`. Nothing checks any of the
+28 today, and the declared label column and series pattern above would each add one more.
 
 **`prefix` is the coupling left behind**, and the fix is one reader, one function, three callers.
 Three adapters must compose one contact's name identically, and a recipe setting `prefix` on one and
