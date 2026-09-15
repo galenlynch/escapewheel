@@ -357,26 +357,7 @@ doing in one order or the other, not at once.
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 10. The reader does not own containment
-
-Assigning a trial to the block containing it is a binary search, and every caller writes it
-themselves. `escapewheel_reader` should own it as `alignment.aligned_spikes` is owned, for the
-reason CONTRIBUTING's hazard table gives: a caller searching intervals that may overlap gets one
-containing block of several, plausible and with nothing to say it is arbitrary. What makes the
-search sound is a non-overlap declaration, which `dynamic_foraging.blocks` carries and
-`core.intervals` does not, so the operation has to check rather than assume.
-
-The measurement that settled the shape is below under **Measured, for reuse**: at real scale the
-search costs 0.02 ms against 0.60 ms to read a stored parent column, so no parent column is needed
-(R43), and neither SQL formulation survives scale.
-
-**One result there is unexplained.** DuckDB's ASOF join was expected to fix its range join, being
-the formulation the reader already uses to assign a spike to its preceding event, and it is ten
-times worse — 220 s against 21.7 s at a million trials. A follow-up probe timed out at ten minutes
-on 100,000 rows, so the cause is not established. Worth a separate look; nothing above depends on
-it.
-
-## 11. Parked: R42's write case survives its withdrawal
+## 10. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -394,8 +375,20 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 12. Smaller open items
+## 11. Smaller open items
 
+- **Trial-in-block containment has no consumer.** The measurement below concluded that a trial
+  needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries `start_tick`
+  and `stop_tick` over 19 rows, and `trials.block_id` is populated in **450 of 450 and 708 of 708**
+  rows with no nulls. That is not a contradiction — the measurement compared the *lookup* with the
+  blocks given, while what the extension's producer does is derive the blocks, a contiguous-run
+  grouping a consumer cannot get from a binary search. The general case, one `core.intervals` kind
+  contained by another, arises in no packet: both hold exactly one `interval_kind`. So a reader
+  operation waits for something to ask for it.
+- **DuckDB's ASOF join is ten times worse than its range join, and nobody knows why.** It was
+  expected to be the fix, being the formulation `alignment.aligned_spikes` already uses, and it
+  measured 220 s against 21.7 s at a million trials. A follow-up probe timed out at ten minutes on
+  100,000 rows, so the cause is unestablished. Nothing depends on it.
 - **A second ergonomic surface** for people who avoid both SQL and raw PyArrow: DuckDB relations,
   a polars `LazyFrame` behind an extra, or both. Does not block anything.
 - **No conformance variant for R51 or the shape check.** The fixture packet has no array resources
@@ -422,11 +415,16 @@ Scripts in `/mnt/Data/escapewheel/bench/nesting/`, raw output in `results.txt`:
 | 100,000 | 2,500 | 267.68 ms | 2,202.66 ms | 1.02 ms | 3.05 ms |
 | 1,000,000 | 25,000 | 21,708.92 ms | 219,594.04 ms | **15.95 ms** | 32.21 ms |
 
-At real scale containment is free — 0.02 ms, cheaper than reading a stored `block_id`, because the
-join returns indices where the column materialises a string per row. So R43's "an alignment is a
-query" holds and no parent column is needed. At a million trials the operation is 16 ms while
-DuckDB's range join is 21.7 s and its ASOF join 220 s, so the naive SQL is a trap that springs only
-at a scale no packet has reached. What the reader still owes is §10.
+At real scale the lookup is free — 0.02 ms, cheaper than reading a stored `block_id`, because the
+search returns indices where the column materialises a string per row. At a million trials it is
+16 ms while DuckDB's range join is 21.7 s and its ASOF join 220 s, so the naive SQL is a trap that
+springs only at a scale no packet has reached.
+
+**The blocks are taken as given, which bounds what this settles.** `blocks.py` derives them from
+the trials — a contiguous run sharing a reward-probability pair — because nothing recorded them
+when this was measured. `dynamic_foraging` now does, and its `trials.block_id` is populated in
+every row, so R43's "an alignment is a query" holds for the lookup and says nothing about the
+grouping that produces the blocks.
 
 Scripts in `/mnt/Data/escapewheel/bench/`: `s3_tires.py`, `s3_backends.py`, `clients.py`,
 `duckdb_s3.py`, `s3_full_verify.py`, and `partition/` (`make_parts.py`, `bench2.py`,
