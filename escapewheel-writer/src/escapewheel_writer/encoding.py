@@ -45,12 +45,18 @@ DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     "core.intervals": ("interval_id",),
 }
 
-#: Columns written PLAIN: no dictionary, no delta. Integers only -- a float takes this by rule.
+#: Columns written PLAIN: no dictionary, no delta. An integer or a string -- a float takes this by rule.
 NO_DICTIONARY: dict[str, tuple[str, ...]] = {
     # Summaries, not coordinates on a timeline: one row per unit in `unit_id` order, so the ticks
     # arrive unordered and delta encodes noise while a dictionary of 6,781 distinct ticks pays for
     # itself twice. Plain is 1.44x both, which is the `_tick` rule being a good guess and no more.
-    "core.units": ("first_spike_tick", "last_spike_tick"),
+    # The two strings are `core.electrodes`' case below.
+    "core.units": ("first_spike_tick", "last_spike_tick", "unit_name", "local_unit_label"),
+    # Strings a dictionary does not pay for: near-unique names, and labels a few characters long.
+    # Plain is 1.85x to 2.99x smaller than a dictionary on these three and `core.units.unit_name`,
+    # and 1.16x to 1.80x on `core.units.local_unit_label`. `DELTA_BYTE_ARRAY` is smaller again, but
+    # hyparquet and fastparquet refuse it while reading every other encoding a packet carries.
+    "core.electrodes": ("electrode_name", "local_electrode_label", "local_channel_label"),
     # A trailing key component (R28 §2), so it climbs within each unit and resets: a sawtooth,
     # which neither delta nor a dictionary reads well. 1.7x.
     "core.unit_electrodes": ("electrode_id",),
@@ -133,7 +139,11 @@ def encodings(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
     for field in out:
         name = field.name
         integer, floating = pa.types.is_integer(field.type), pa.types.is_floating(field.type)
-        if name in forced_dict or not (integer or floating):
+        # A string held as dictionary codes is a string column in Parquet all the same, so it is
+        # judged by its value type; a string takes no encoding but by exception.
+        held = field.type.value_type if pa.types.is_dictionary(field.type) else field.type
+        string = pa.types.is_string(held) or pa.types.is_large_string(held)
+        if name in forced_dict or not (integer or floating or string):
             continue
         if name in forced_delta and integer:
             delta.append(name)

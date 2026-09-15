@@ -15,6 +15,7 @@ from escapewheel_writer.encoding import (
     NO_DICTIONARY,
     inefficient,
 )
+from escapewheel_writer.writer import _options
 
 
 def _write(root, registry, tables, **kwargs):
@@ -971,8 +972,8 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
     nothing until R108 §3.4 struck it.
 
     Whether the encoding is the *better* one needs real values, which
-    `conformance/parquet-probe/layout.py` measures against a built packet. That the column exists
-    and is an integer is decidable here, with no packet in hand.
+    `conformance/parquet-probe/alternatives.py` measures against a built packet. That the column
+    exists and has a type its list can encode is decidable here, with no packet in hand.
     """
     tables = dict(registry["tables"])
     named = [resource
@@ -981,18 +982,35 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
     assert [r for r in named if not r.startswith(("core.", "analysis."))] == [], (
         "core names an extension's table; an extension supplies its own to PacketWriter"
     )
+    numeric = {"int32", "int64", "float32", "float64"}
     stale = [
         f"{listed}: {resource}.{column}"
-        for listed, entries in (("DELTA_COLUMNS", DELTA_COLUMNS),
-                                ("NO_DICTIONARY", NO_DICTIONARY),
-                                ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS))
+        for listed, entries, types in (("DELTA_COLUMNS", DELTA_COLUMNS, numeric),
+                                       ("NO_DICTIONARY", NO_DICTIONARY, numeric | {"string"}),
+                                       ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS, numeric))
         for resource, columns in entries.items()
         for column in columns
         if resource not in tables
-        or not any(c["name"] == column and c["type"] in {"int32", "int64", "float32", "float64"}
-                   for c in tables[resource]["columns"])
+        or not any(c["name"] == column and c["type"] in types for c in tables[resource]["columns"])
     ]
     assert stale == []
+
+
+@pytest.mark.parametrize("held", ["strings", "codes"])
+def test_a_string_listed_plain_is_written_without_a_dictionary(tmp_path, registry, held):
+    """A string may reach the writer as dictionary codes, and is still a string column in Parquet.
+
+    Judging it by its Arrow type alone skipped it, so the exception would have held for a column
+    built from records and silently not for one streamed as codes.
+    """
+    names = pa.array(["probe.CH0", "probe.CH1", "probe.CH10"])
+    column = names if held == "strings" else names.dictionary_encode()
+    table = pa.table({"electrode_name": column})
+    path = tmp_path / "electrodes.parquet"
+    pq.write_table(table, path, **_options("core.electrodes", registry["tables"]["core.electrodes"], table.schema))
+    encodings = {str(e) for e in pq.ParquetFile(path).metadata.row_group(0).column(0).encodings}
+    assert not any("DICTIONARY" in e for e in encodings), encodings
+    assert pq.read_table(path).column(0).to_pylist() == names.to_pylist()
 
 
 def test_an_inefficient_encoding_is_reported(tmp_path, registry, minimal):
