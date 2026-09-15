@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft |
-| **Amends** | Part 03 §5.5 (the tick, leading-identifier and float rules become four rules over declared order and counted repetition; the report measures a column's own chunks), Part 10 §2 (four readings appended) |
+| **Amends** | Part 03 §5.5 (the tick, leading-identifier and float rules become four rules over declared order and counted repetition; the report measures a column's own chunks), Part 10 §2 (five readings appended) |
 | **Supersedes** | R110 §3.1, R110 §3.2 |
 | **Depends on** | R110 §2.5 (why choosing by writing each column three ways was refused), R110 §3.3 (an exception records its measurement), R110 §3.4 (an extension declares one in the recipe), R110 §3.5 (a writer reports a column 1.5x off its best), R68 §1.3 (delta is defined for integers alone), R48 §2.1 (every column declares a role), R53 §2.3 (an identifier is carried or assigned), R1 (single-session packets are primary, so `session_id` rarely orders a table) |
 | **Profile** | `escapewheel-portable-v0.1` |
@@ -128,15 +128,17 @@ where the shared ones leave 13 and 12.
 
 Written under the four rules and their exceptions, every column of both packets lands within 1.15x of
 its best: 317 of 365 and 322 of 372 exactly at it, and 157 kB and 71 kB over the best in all, 0.014%
-and 0.012% of each packet. The report finds none at 1.5x. Counting costs 0.12 s to 0.20 s a packet,
-one pass over values the writer already holds.
+and 0.012% of each packet. The report finds none at 1.5x. That was measured by applying the rules to
+the committed files. Every table except the two spike tables is identical in the sampled builds of
+§2.7, and there the writer itself encodes each of their columns within 1.15x of its best. Counting
+costs 0.12 s to 0.20 s a packet, one pass over values the writer already holds.
 
 Writing each column three ways and keeping the smallest would reach the best on every column, at
 about 0.4 s a packet, and R110 §2.5 refused it for two reasons: a measured choice records no reason,
 and a `--sample` build measures different values from a full one. The four rules answer the first. A
 count and a threshold say why a column got its encoding, so an exception still marks a column the
-rules got wrong and the 1.5x report still has something to find. They share the second (§6), and
-give up about 0.013% of each packet to the measured choice.
+rules got wrong and the 1.5x report still has something to find. They share the second, which §2.7
+measures, and give up about 0.013% of each packet to the measured choice.
 
 ### 2.6 Byte-stream split and delta string encodings stay out
 
@@ -151,6 +153,24 @@ share prefixes. Two readers refuse it while reading every other encoding a packe
 dictionary codes by pyarrow 25.0.1, and Parquet2.jl 0.2.34 decodes neither encoding.
 `DELTA_BINARY_PACKED` itself is defined for integers alone (R68 §1.3), so no rule gives a float
 delta.
+
+### 2.7 A sampled build encodes its spike tables for the rows it holds
+
+`--sample N` keeps the first N spikes of each probe's stream. It shrinks `core.spike_events` and
+`analysis.spike_events`, changes the values of `core.units` without changing its rows, and leaves
+every other table as the full build writes it. Built with `--sample 2000`, each packet encodes 8
+columns differently from its full build: `session_id`, `unit_id`, `clock_id` and `time_bucket_tick`
+across the spike tables, `core.spike_events.amplitude`, and `core.units.n_spikes`. Seven take the
+encoding their sampled values call for, within 1.04x of the best. `core.spike_events.amplitude` does
+not. Each probe's stream is one 2,000-row row group holding 97 and 128 distinct amplitudes, under 50
+rows a value, so it is written plain, 1.56x and 1.60x off the dictionary its whole column favours,
+and the 1.5x report names it for `ecephys_786867`. Every other column of both sampled packets lies
+within 1.15x of its best.
+
+A sampled packet is therefore encoded for the rows it holds, and is no preview of the full build's
+layout in the tables a sample shrinks. R110 §2.5 counted that against measuring values, and the four
+rules confine it to those tables and to the one column whose repetition a 2,000-row group
+understates.
 
 ## 3. Decision
 
@@ -213,8 +233,8 @@ recipe declaration stand, and override §3.2 to §3.5 as they overrode the rules
 ## 5. Consequence
 
 Part 03 §5.5's tick rule and the rules of R110 §3.1 and §3.2 give way to §3.1 to §3.5, and its
-override and report paragraphs gain §3.6. Part 10 §2 gains the readings of §2.2 to §2.5, appended
-after its §2.7.
+override and report paragraphs gain §3.6. Part 10 §2 gains the readings of §2.2 to §2.5 and §2.7,
+appended after its own §2.7.
 
 The reference writer carries 12 exceptions for core tables, and the two recipes carry 5 entries over
 3 columns of `aind_unit_qc`, all of which §2.5's 15 counts. Eleven of the 15 core exceptions R110's
@@ -239,8 +259,6 @@ Both packets carry R110's encodings until they are rebuilt.
 
 ## 6. Open
 
-- A `--sample` build counts fewer rows in the tables it samples, so a column near 50 rows a value,
-  50 rows a run or 50,000 rows may encode differently from the full build. This is unmeasured.
 - Multi-session packets are unmeasured. Every packet here holds one session, so `session_id` always
   meets §3.3 before §3.4, and nothing has tested what §3.4 and §3.5 do with a column holding several.
 - Whether the thresholds hold beyond one pipeline is unmeasured. Both sessions come from one, and the

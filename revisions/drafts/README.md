@@ -19,7 +19,7 @@ names the draft's word count, when it was appraised, and why it sits where it do
 
 | # | draft | words | appraised | why here |
 |---|---|---:|---|---|
-| 1 | `a-columns-encoding-follows-declared-order-and-counted-repetition` | 2,534 | 2026-09-15 | the only open draft; supersedes R110 §3.1 and §3.2, and rests on R110 §3.3 to §3.5 for exceptions and the report |
+| 1 | `a-columns-encoding-follows-declared-order-and-counted-repetition` | 2,744 | 2026-09-15 | the only open draft; supersedes R110 §3.1 and §3.2, and rests on R110 §3.3 to §3.5 for exceptions and the report |
 
 **It moves no count in the generated block.** No table, column, reference, rule or vocabulary
 changes; every number in it is measured against both committed packets as they stood on 2026-09-15

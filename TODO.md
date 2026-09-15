@@ -236,8 +236,9 @@ R110's encodings.
 
 On acceptance the draft's §5 names what moves: Part 03 §5.5, Part 10 §2 and `applied.toml`, and the
 writer's docstrings then cite Part 03 §5.5 for the rules instead of describing them as extending it.
-The draft's §6 holds the one measurement left, whether a `--sample` build crosses a threshold the
-full build does not.
+Its §2.7 measures what a `--sample` build does to the rules, which is what the two sampled builds of
+2026-09-15 were for; they also found the streaming path counting a batch as delivered rather than as
+written, fixed in `ab3e322`.
 
 ## 4. No code quality audit has run
 
