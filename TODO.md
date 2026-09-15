@@ -224,46 +224,7 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 3. Julia reads the packets through DuckDB.jl alone
-
-Part 03 §5.5 has a writer delta-encode tick columns and a table's leading identifier, and requires a
-reader to support delta encodings. Parquet2.jl, the pure-Julia Parquet reader, supports none of
-them: `unsupported_encodings()` lists `DELTA_BINARY_PACKED`, `DELTA_LENGTH_BYTE_ARRAY`,
-`DELTA_BYTE_ARRAY` and `BYTE_STREAM_SPLIT` in 0.2.34, the latest registered version, and on its
-`master` branch as of the commit of 2026-09-01. All six tables tried in `ecephys_786867` —
-`core.sessions`, `core.units`, `core.electrodes`, `core.intervals`, `core.clock_anchors` and
-`core.sorting_run_channels` — fail on their first delta column with `Parquet2.jl does not yet
-support DELTA_BINARY_PACKED binary encoding`. DuckDB.jl 1.5.2 reads every one, and both delta string
-encodings, with values identical to the plain files. DuckDB runs in the reader's process, so the
-packets stay readable without a server; what Julia lacks is a reader without a SQL engine.
-`conformance/parquet-probe/readers.py` and `readers.jl` reproduce all of it.
-
-The specification chose Parquet2.jl over DuckDB.jl on purpose. R3 §2.3 weighed DuckDB.jl and set it
-aside — "DuckDB is a supported Julia path, but requiring it for any table read narrows 'readable
-without a server', and a reader cannot determine the constraint before failing" — and excluded
-`list`, which it calls core Parquet, on R3 §7.3's measurement that Parquet2.jl cannot read one.
-Part 07 §2.2 repeats the argument for Part 02 §5.2's ban on nested types, and the root `CLAUDE.md`
-names Parquet2.jl as the reader it preserves. R3 §7.3 tested list columns and never an encoding, so
-the delta encodings Part 03 §5.5 recommends route every table through DuckDB.jl anyway, and the Julia half of
-the case against `list` now holds for no packet this writer builds. `map` and `struct` are excluded
-for reasons of their own — uneven binding support, and schemas that break a multi-file read when a
-struct's fields vary between sessions — which this does not touch.
-
-Three options, each with a price:
-
-1. **Keep delta and name DuckDB.jl as Julia's path.** Amend Part 07 §2.2, which is informative, and
-   the root `CLAUDE.md`. Nothing in a packet changes. Julia gives up a pure-Julia dependency, and
-   R3 §2.3's Julia argument stops supporting the `list` exclusion, which then rests on the
-   implementation floor alone. Delta strings would then cost only the readers §4 names: fastparquet,
-   pyarrow's `read_dictionary`, and older Spark and Iceberg.
-2. **Drop delta from the rules.** Needs a revision amending Part 03 §5.5, and costs
-   `core.spike_events.t_tick` 1.24x in `ecephys_776259` (462 MB against 574 MB plain) and
-   `analysis.spike_events.t_tick` 1.30x, with every packet rebuilt. Parquet2.jl reads the plain and
-   dictionary files it was tested on; whole packets under it are untested.
-3. **Add delta decoding to Parquet2.jl.** Keeps both the encodings and the pure-Julia reader, as
-   work in a package this project does not own; upstream last committed on 2026-09-01.
-
-## 4. Nearly half of each packet's columns are 1.15x their best encoding
+## 3. Nearly half of each packet's columns are 1.15x their best encoding
 
 Measured per column, against that column's own best encoding rather than the packet: a small
 column is metadata a consumer reads across many packets, so its size matters whatever the spike
@@ -303,13 +264,16 @@ diluted measure. The same denominator applies to a file: 21 of the 40 in each pa
 half footer, `core.sessions` 2,690 of 3,823 bytes, and every footer carries 344 to 2,488 bytes of
 `ARROW:schema`, which the writer omits only where a column arrives dictionary-typed.
 
-**Delta string encodings are uncommon, and two readers refuse them.** No default writer tried emits
-one for these columns: pyarrow writes a dictionary, fastparquet 2026.5.0 plain, and polars 1.44.2
-and DuckDB 1.5.5 plain for `unit_name` and a dictionary for `local_unit_label`. DuckDB writes
+**Delta string encodings are uncommon, and three readers refuse them.** No default writer tried
+emits one for these columns: pyarrow writes a dictionary, fastparquet 2026.5.0 plain, and polars
+1.44.2 and DuckDB 1.5.5 plain for `unit_name` and a dictionary for `local_unit_label`. DuckDB writes
 `DELTA_LENGTH_BYTE_ARRAY` only under `parquet_version v2`, and its authors state it will not by
 default because mainstream engines do not read it (duckdb.org, 2025-01-22). parquet-java falls back
 to `DELTA_BYTE_ARRAY` only under its V2 writer, and its default is `PARQUET_1_0`. pyarrow 25.0.1,
-DuckDB 1.5.5, polars and DuckDB.jl decode both; fastparquet and Parquet2.jl decode neither. Spark's
+DuckDB 1.5.5, polars and DuckDB.jl decode both. fastparquet and hyparquet 1.30.1, the JavaScript
+reader, decode the delta integers the packets already carry and refuse `DELTA_BYTE_ARRAY`, so a
+delta string rule would drop both; Parquet2.jl reads no delta encoding at all. nanoparquet, for R,
+reads all of them by its changelog since 0.3.0, untested here because it did not build. Spark's
 vectorized reader rejected a standalone `DELTA_LENGTH_BYTE_ARRAY` until 3.4.0 (SPARK-40128), and
 Iceberg 1.1.0's refused `DELTA_BYTE_ARRAY`, an issue closed as stale without a fix
 (apache/iceberg#7162) — which Phase 7 inherits.
@@ -317,17 +281,31 @@ Iceberg 1.1.0's refused `DELTA_BYTE_ARRAY`, an issue closed as stale without a f
 **pyarrow cannot read a delta string column as codes.** `read_dictionary` raises `Not yet
 implemented: DecodeArrow of DictAccumulator` on both encodings, and `validator._ordering_scan` reads
 every string key column that way, as `materialize.py` does its coded columns. A rule choosing delta
-for a string must therefore never reach a key column.
+for a string must therefore never reach a key column. None of the five names and labels above is
+one: `core.electrodes` is keyed by `electrode_id` and `core.units` by `unit_id`.
 
-**Delta buys size on these columns and costs some speed.** On a million unique ascending names built
-from `core.units.unit_name`, `DELTA_BYTE_ARRAY` is 164 kB against 1,014 kB under a dictionary (6.2x)
-and 993 kB plain, while `DELTA_LENGTH_BYTE_ARRAY` is 1,012 kB and buys nothing. Reading it was
-never faster, and two runs disagreed about by how much, each the best of five: pyarrow 1.01x then
-1.36x, polars 1.18x then 1.82x, and a DuckDB equality filter 1.68x then 1.21x. §3 decides whether a
-string rule is worth writing at all: fastparquet reads the delta integers the rules already write
-and no delta string, and Parquet2.jl reads neither.
+**At their real sizes these columns decode faster under delta than under the dictionary they
+have.** Reading one column from memory, best of 200, in `ecephys_776259`: `core.units.unit_name` is
+23.0 kB and 495 µs as written, 12.2 kB and 373 µs plain, and 2.6 kB and 419 µs under
+`DELTA_BYTE_ARRAY`; `core.electrodes.electrode_name` is 12.5 kB and 287 µs, 5.2 kB and 240 µs, and
+0.5 kB and 256 µs. `ecephys_786867` agrees within 0.02 ms. So against the dictionary delta is 8.7x
+and 24x smaller and 1.18x and 1.12x faster, and against plain it is 4.6x and 10x smaller and 1.12x
+and 1.07x slower. On a synthetic column of a million unique names delta was never faster than a
+dictionary, and two runs disagreed about by how much, from 1.01x to 1.82x; no core string column
+is that long, since the spike and media tables carry none.
 
-## 5. No code quality audit has run
+**Over an object store the request count decides, and delta rarely moves it.** Served by a local
+server honouring byte ranges, a DuckDB 1.5.5 query over both packets' `core.units` made 6 requests
+under every encoding and pyarrow through fsspec 14, while bytes fell with delta: a count by name
+pattern fetched 71 kB as written, 53 kB plain and 38 kB delta. A request is saved only where a file
+shrinks under DuckDB's first read. `core.electrodes` took three requests a file at 20 to 23 kB as
+written and two at about 13 kB plain or 8 kB delta, so plain earns that saving as well. A remote read
+of 6,781 rows took 0.52 s (Settled below) and R86 measured an object store serving about 120
+requests a second, so a decode difference under 0.1 ms is under 0.02% of reading one packet's table.
+What a delta string rule costs is therefore fastparquet and hyparquet rather than time, and what it
+buys over plain is bytes.
+
+## 4. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
@@ -343,7 +321,7 @@ a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncon
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
 
-## 6. `registry_version` is held at `0.1.0`
+## 5. `registry_version` is held at `0.1.0`
 
 Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
 packets claiming one version with incompatible schemas is what the field exists to prevent, and it
@@ -351,19 +329,19 @@ is preventing nothing. Free to settle while nobody outside holds a packet, and f
 the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
 three at 0.2.0.
 
-## 7. The repository directory is still `nwb-lake/`
+## 6. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
 working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
 doing in one order or the other, not at once.
 
-## 8. Staging both packets to scratch needs a token
+## 7. Staging both packets to scratch needs a token
 
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 9. Parked: R42's write case survives its withdrawal
+## 8. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -381,7 +359,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 10. Smaller open items
+## 9. Smaller open items
 
 - **Trial-in-block containment has no consumer.** The measurement below concluded that a trial
   needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries `start_tick`
@@ -405,6 +383,11 @@ natural.
 - **A second trials table from another paradigm** would settle whether an interval's task columns
   belong in core. R54 struck the four Part 02 defined and nothing wrote, so the question is now about
   what an extension carries rather than what core does.
+- **Part 02 §5.2's exclusion of `list` has lost its Julia argument.** R3 §2.3 excluded `list`, which
+  it calls core Parquet, because Parquet2.jl cannot read one. Every Julia read of a packet now goes
+  through DuckDB.jl, which reads lists (R3 §7.3), so what still supports the exclusion is the lower
+  implementation floor R3 §2.3 also argues. Worth re-deciding before a table next wants a repeated
+  value inline.
 
 ---
 
@@ -479,6 +462,22 @@ Whole packet, 2,496 objects and 6.83 GB across twelve arrays:
 | local disk | 0.33 s | 75 s (91 MB/s, cold) |
 
 Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
+
+---
+
+# Settled 2026-09-15
+
+- **Julia reads a packet through DuckDB.jl, and the delta encodings stay.** Parquet2.jl, the
+  pure-Julia reader, decodes none of `DELTA_BINARY_PACKED`, `DELTA_LENGTH_BYTE_ARRAY`,
+  `DELTA_BYTE_ARRAY` or `BYTE_STREAM_SPLIT`, in 0.2.34, the latest registered version, or on its
+  `master` branch at the commit of 2026-09-01, so all six tables of `ecephys_786867` tried fail on
+  their first delta column. DuckDB.jl 1.5.2 reads every one, in process. R3 §2.3 had weighed DuckDB.jl
+  and chosen Parquet2.jl, but R3 §7.3 tested list columns and never an encoding. Of three ways out —
+  name DuckDB.jl, drop delta at 1.24x on `core.spike_events.t_tick` and a rebuild of every packet, or
+  add delta decoding to a package this project does not own — the first was chosen, since no packet
+  changes. The root `CLAUDE.md` now names DuckDB.jl; Part 02 §5.2 and Part 07 §2.2 name no reader and
+  stay true. `conformance/parquet-probe/readers.py` and `readers.jl` reproduce the reads, and what the
+  choice leaves open about `list` is a smaller item under §9.
 
 ---
 

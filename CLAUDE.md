@@ -472,10 +472,12 @@ Validation requires DuckDB, because the rules are SQL. Reading does not have to:
 read path goes through PyArrow, so `escapewheel-reader` makes DuckDB the optional `sql` extra
 and a packet can be read with it absent. That is also why validation is a separate
 distribution — the read path's dependency closure stays clean by construction, not by
-discipline. That is what R3 §2.1's ban on nested types exists to
-preserve — a native reader stays viable in a language without an embedded SQL engine, as
-Parquet2.jl is in Julia. `Packet.duckdb()` is a read path too and does need the extra; the
-point is that it is not the only one.
+discipline. That is what Part 02 §5.2's ban on nested types exists to
+preserve — a native reader stays viable in a language without an embedded SQL engine. Julia has
+one, and reads a packet through it: Parquet2.jl, the pure-Julia reader, decodes none of the delta
+encodings Part 03 §5.5 recommends, so a Julia consumer uses DuckDB.jl, which runs in process.
+`Packet.duckdb()` is a read path too and does need the extra; the point is that it is not the only
+one.
 
 Tier 2 rules are authored in `registry/rules.json` — as SQL, or as a template invocation
 that `build.py` expands (R24) — and merged into the generated
