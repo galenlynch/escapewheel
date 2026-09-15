@@ -224,26 +224,44 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 3. Parquet2.jl reads no delta encoding
+## 3. Julia reads the packets through DuckDB.jl alone
 
 Part 03 §5.5 has a writer delta-encode tick columns and a table's leading identifier, and requires a
-reader to support delta encodings. Parquet2.jl, the native Julia reader R3 §7.3 measured the
-physical floor against, supports none of them: `unsupported_encodings()` lists
-`DELTA_BINARY_PACKED`, `DELTA_LENGTH_BYTE_ARRAY`, `DELTA_BYTE_ARRAY` and `BYTE_STREAM_SPLIT` in
-0.2.34, the latest registered version, and on its `master` branch as of the commit of 2026-09-01.
-Julia therefore cannot read a committed packet natively. All six tables tried in `ecephys_786867` —
+reader to support delta encodings. Parquet2.jl, the pure-Julia Parquet reader, supports none of
+them: `unsupported_encodings()` lists `DELTA_BINARY_PACKED`, `DELTA_LENGTH_BYTE_ARRAY`,
+`DELTA_BYTE_ARRAY` and `BYTE_STREAM_SPLIT` in 0.2.34, the latest registered version, and on its
+`master` branch as of the commit of 2026-09-01. All six tables tried in `ecephys_786867` —
 `core.sessions`, `core.units`, `core.electrodes`, `core.intervals`, `core.clock_anchors` and
 `core.sorting_run_channels` — fail on their first delta column with `Parquet2.jl does not yet
-support DELTA_BINARY_PACKED binary encoding`. DuckDB.jl 1.5.2 reads every one, so the Julia path
-left goes through an embedded SQL engine, which Part 07 §2.2 says a native reader should not need;
-the root `CLAUDE.md` still names Parquet2.jl as that reader. R3 §7.3 tested list columns and never
-an encoding. `conformance/parquet-probe/readers.py` and `readers.jl` reproduce all of it.
+support DELTA_BINARY_PACKED binary encoding`. DuckDB.jl 1.5.2 reads every one, and both delta string
+encodings, with values identical to the plain files. DuckDB runs in the reader's process, so the
+packets stay readable without a server; what Julia lacks is a reader without a SQL engine.
+`conformance/parquet-probe/readers.py` and `readers.jl` reproduce all of it.
 
-There are three ways out, each with a price. Dropping delta from the rules costs
-`core.spike_events.t_tick` 1.24x in `ecephys_776259` (462 MB against 574 MB plain) and
-`analysis.spike_events.t_tick` 1.30x. Keeping it means amending Part 07 §2.2's claim and pointing
-Julia at DuckDB.jl. Adding delta decoding to Parquet2.jl keeps both, as work in a package this
-project does not own.
+The specification chose Parquet2.jl over DuckDB.jl on purpose. R3 §2.3 weighed DuckDB.jl and set it
+aside — "DuckDB is a supported Julia path, but requiring it for any table read narrows 'readable
+without a server', and a reader cannot determine the constraint before failing" — and excluded
+`list`, which it calls core Parquet, on R3 §7.3's measurement that Parquet2.jl cannot read one.
+Part 07 §2.2 repeats the argument for Part 02 §5.2's ban on nested types, and the root `CLAUDE.md`
+names Parquet2.jl as the reader it preserves. R3 §7.3 tested list columns and never an encoding, so
+the delta encodings Part 03 §5.5 recommends route every table through DuckDB.jl anyway, and the Julia half of
+the case against `list` now holds for no packet this writer builds. `map` and `struct` are excluded
+for reasons of their own — uneven binding support, and schemas that break a multi-file read when a
+struct's fields vary between sessions — which this does not touch.
+
+Three options, each with a price:
+
+1. **Keep delta and name DuckDB.jl as Julia's path.** Amend Part 07 §2.2, which is informative, and
+   the root `CLAUDE.md`. Nothing in a packet changes. Julia gives up a pure-Julia dependency, and
+   R3 §2.3's Julia argument stops supporting the `list` exclusion, which then rests on the
+   implementation floor alone. Delta strings would then cost only the readers §4 names: fastparquet,
+   pyarrow's `read_dictionary`, and older Spark and Iceberg.
+2. **Drop delta from the rules.** Needs a revision amending Part 03 §5.5, and costs
+   `core.spike_events.t_tick` 1.24x in `ecephys_776259` (462 MB against 574 MB plain) and
+   `analysis.spike_events.t_tick` 1.30x, with every packet rebuilt. Parquet2.jl reads the plain and
+   dictionary files it was tested on; whole packets under it are untested.
+3. **Add delta decoding to Parquet2.jl.** Keeps both the encodings and the pure-Julia reader, as
+   work in a package this project does not own; upstream last committed on 2026-09-01.
 
 ## 4. Nearly half of each packet's columns are 1.15x their best encoding
 
