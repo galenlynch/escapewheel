@@ -1038,3 +1038,19 @@ def test_inefficient_finds_a_column_encoded_worse_than_it_could_be(registry):
     ramp = pa.table({"t_tick": pa.array(range(1_000_000, 1_020_000), type=pa.int64())})
     assert inefficient("core.pretend", ramp, delta=[], plain=["t_tick"]), "delta is far smaller"
     assert inefficient("core.pretend", ramp, delta=["t_tick"], plain=[]) == [], "and delta is said to be right"
+
+
+def test_inefficient_judges_a_small_column_by_its_chunk(registry):
+    """A one-column file's footer outweighs a dozen rows, so a comparison of files reports nothing small."""
+    ids = pa.table({"sorting_run_id": pa.array(range(12), type=pa.int32())})
+    assert inefficient("core.pretend", ids, delta=[], plain=[]), "a dictionary over twelve ascending values"
+    assert inefficient("core.pretend", ids, delta=["sorting_run_id"], plain=[]) == []
+
+
+@pytest.mark.parametrize("held", ["strings", "codes"])
+def test_inefficient_reports_a_string_a_dictionary_does_not_pay_for(registry, held):
+    """Strings are judged too, between the dictionary and plain; a delta string encoding is no choice."""
+    names = pa.array([f"probe.CH{i}" for i in range(4_000)])
+    table = pa.table({"electrode_name": names if held == "strings" else names.dictionary_encode()})
+    assert inefficient("core.pretend", table, delta=[], plain=[]), "a dictionary of 4,000 distinct names"
+    assert inefficient("core.pretend", table, delta=[], plain=["electrode_name"]) == []

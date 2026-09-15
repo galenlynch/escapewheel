@@ -156,9 +156,8 @@ def encodings(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
     return delta, plain
 
 
-#: How much worse than the best available encoding a column may be before `inefficient` says so.
-#: Chosen so both packaged sessions report nothing: after the rules and their exceptions the worst
-#: column is `aind_unit_qc.metrics.isi_violations_count` at 1.15x.
+#: Part 03 §5.5's threshold: a column costing more than this times the smallest encoding the writer
+#: could have chosen for it is reported.
 TOLERANCE = 1.5
 
 #: Rows sampled when reporting. Enough that a page boundary and a run of repeats both appear.
@@ -166,7 +165,11 @@ SAMPLE = 65_536
 
 
 def _cost(sample: pa.Table, name: str, how: str) -> int | None:
-    """Bytes one column costs under one encoding, compressed as a packet compresses it."""
+    """Compressed bytes of one column's chunks under one encoding, as a packet compresses them.
+
+    The chunks and not the file: a one-column file's footer runs to a few hundred bytes, as much as
+    a small table's whole column, so comparing files hides every column of a few thousand rows.
+    """
     options: dict[str, Any] = {"compression": "zstd"}
     if how == "delta":
         options |= {"use_dictionary": False, "column_encoding": {name: "DELTA_BINARY_PACKED"}}
@@ -179,7 +182,8 @@ def _cost(sample: pa.Table, name: str, how: str) -> int | None:
         pq.write_table(sample.select([name]), buffer, **options)
     except (pa.ArrowInvalid, pa.ArrowNotImplementedError, OSError):
         return None
-    return buffer.getvalue().size
+    metadata = pq.ParquetFile(pa.BufferReader(buffer.getvalue())).metadata
+    return sum(metadata.row_group(g).column(0).total_compressed_size for g in range(metadata.num_row_groups))
 
 
 def inefficient(resource_id: str, sample: pa.Table, delta: list[str], plain: list[str]) -> list[str]:
@@ -196,15 +200,21 @@ def inefficient(resource_id: str, sample: pa.Table, delta: list[str], plain: lis
     said = []
     head = sample.slice(0, SAMPLE)
     for field in head.schema:
-        integer, floating = pa.types.is_integer(field.type), pa.types.is_floating(field.type)
-        if not (integer or floating):
+        held = field.type.value_type if pa.types.is_dictionary(field.type) else field.type
+        integer, floating = pa.types.is_integer(held), pa.types.is_floating(held)
+        # A string or a wall-clock value is judged between the two encodings the rules choose from.
+        # The delta string encodings are smaller on a sorted name and refused by hyparquet and
+        # fastparquet, so measuring against them would report a choice made on purpose.
+        other = (pa.types.is_string(held) or pa.types.is_large_string(held)
+                 or pa.types.is_timestamp(held) or pa.types.is_date(held))
+        if not (integer or floating or other):
             continue
         chosen = "delta" if field.name in delta else "plain" if field.name in plain else "dict"
         got = {how: n for how in (("dict", "delta", "plain") if integer else ("dict", "plain"))
                if (n := _cost(head, field.name, how)) is not None}
         if not got or chosen not in got:
             continue
-        best = min(got, key=got.get)
+        best = min(got, key=got.__getitem__)
         if got[chosen] > got[best] * TOLERANCE:
             said.append(
                 f"{resource_id}.{field.name} is {chosen} where {best} is "
