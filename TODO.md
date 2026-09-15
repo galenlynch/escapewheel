@@ -224,23 +224,7 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 3. The committed packets' encodings are unmeasured
-
-**Not started, and the packets to measure are now in place.** Several tables changed shape
-substantially — R105's four coordinate tables at 74,223 value rows, R81's collapse of unit identity,
-R88's `session_id` on every session-scoped table, R83's `core.sorting_run_channels`, R99's phase
-steps — and nothing has checked what Parquet did with them rather than what it was assumed to do.
-`conformance/parquet-probe/layout.py` reports what a committed packet actually got, per column, and
-is the thing to run.
-
-R68 §1.3 is the precedent and the method: `core.media_frames.pts` was **96.9%** of its table because
-a column declaring nothing else gets dictionary encoding, and a monotonic ramp of 7.5 M values is
-its worst case. That closed without a revision, the writer's choice being the defect. Worth checking
-per table: which encoding each column got, whether a sort makes a column compress away as R88 §4
-measured for `session_id` at 1.0005x, and whether any row group is small enough that its footer
-costs more than its rows.
-
-## 4. No code quality audit has run
+## 3. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
@@ -256,7 +240,7 @@ a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncon
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
 
-## 5. `registry_version` is held at `0.1.0`
+## 4. `registry_version` is held at `0.1.0`
 
 Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
 packets claiming one version with incompatible schemas is what the field exists to prevent, and it
@@ -264,19 +248,19 @@ is preventing nothing. Free to settle while nobody outside holds a packet, and f
 the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
 three at 0.2.0.
 
-## 6. The repository directory is still `nwb-lake/`
+## 5. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
 working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
 doing in one order or the other, not at once.
 
-## 7. Staging both packets to scratch needs a token
+## 6. Staging both packets to scratch needs a token
 
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 8. Parked: R42's write case survives its withdrawal
+## 7. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -294,7 +278,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 9. Smaller open items
+## 8. Smaller open items
 
 - **Trial-in-block containment has no consumer.** The measurement below concluded that a trial
   needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries `start_tick`
@@ -318,6 +302,17 @@ natural.
 - **A second trials table from another paradigm** would settle whether an interval's task columns
   belong in core. R54 struck the four Part 02 defined and nothing wrote, so the question is now about
   what an extension carries rather than what core does.
+- **String columns reach neither the encoding rules nor their report.** `encoding.encodings` and
+  `encoding.inefficient` skip every column that is not an integer or a float, where Part 03 §5.5
+  asks a writer to report any column costing more than 1.5x the smallest encoding available to it.
+  Five string columns in each rebuilt packet cost 2.6x to 24x what `DELTA_BYTE_ARRAY` or
+  `DELTA_LENGTH_BYTE_ARRAY` would: `core.electrodes.electrode_name`, `local_electrode_label` and
+  `local_channel_label`, and `core.units.unit_name` and `local_unit_label`. Each table stores them
+  in ascending order, so neighbours share a prefix — `unit_name` averages 84 characters, all but
+  the last three being the run and curation it is composed from. The five total 40 kB and 29 kB, so
+  what is missing is the report rather than the bytes. Confirm that Parquet2.jl reads both delta
+  string encodings before writing a rule for them: Part 03 §5.5 requires a reader to support delta
+  encodings, and a Julia reader that does not would make the rule cost portability for 40 kB.
 
 ---
 
@@ -392,6 +387,27 @@ Whole packet, 2,496 objects and 6.83 GB across twelve arrays:
 | local disk | 0.33 s | 75 s (91 MB/s, cold) |
 
 Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
+
+---
+
+# Settled 2026-09-15
+
+- **The rebuilt packets' encodings are measured, and no integer or float column needs an
+  exception.** `conformance/parquet-probe/alternatives.py` rewrites each column of a packet under
+  every encoding Part 03 §5.5 permits, zstd on top, one row group at a time. Rewriting a column
+  under the encoding it already has reproduces the file's bytes at 1.000 for every column over 1 MB,
+  so the method matches the writer. Across 250 and 253 integer, float and timestamp columns holding
+  1.17 GB and 591 MB, the chosen encodings are **315 kB and 151 kB** from the best available, under
+  0.03% of either packet; in `ecephys_776259`, 310 kB of it is `analysis.spike_events.clock_id` and
+  `time_bucket_tick` taking delta where a dictionary is 1.11x and 1.13x smaller. One column in the
+  two packets is more than 1.15x off and wastes over 500 bytes: `aind_unit_qc.metrics.presence_ratio`
+  in `ecephys_786867`, plain where a dictionary is 1.39x smaller, at 522 bytes. No table the
+  originals lacked holds such a column, including the coordinate value tables,
+  `core.sorting_run_channels`, `core.clock_phase_steps` and the calibrations. `session_id` costs
+  0.03 bits a row in `core.spike_events`, and footers are **0.12%** of each packet:
+  `analysis.spike_events` carries 1.2 MB of footer over 2,197 row groups, and the other 38 files
+  85 kB and 99 kB between them. What the measurement did find is in string columns, recorded under
+  §8.
 
 ---
 
