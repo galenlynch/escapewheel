@@ -33,7 +33,7 @@ here seems arbitrary, the reason is there.
 | `escapewheel-reader/` | The read path. This package's only runtime dependency of substance. |
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R117 accepted. R42 and R73 withdrawn. No draft is open.
+R1–R41, R43–R72 and R74–R117 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
