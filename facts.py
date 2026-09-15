@@ -150,8 +150,8 @@ def facts() -> dict[str, str]:
                       + (f"{_revision_span(withdrawn)} withdrawn. " if withdrawn else "")
                       + (f"{_revision_span(proposed)} proposed and not binding. " if proposed else "")
                       + (f"{len(drafts)} draft{'s' if len(drafts) != 1 else ''} "
-                         f"{'are' if len(drafts) != 1 else 'is'} open in revisions/drafts/, "
-                         "none of them binding and none numbered until accepted." if drafts
+                         f"{'are' if len(drafts) != 1 else 'is'} open in revisions/drafts/. "
+                         "A draft is not binding and takes no number until it is accepted." if drafts
                          else "No draft is open.")),
         "tier1": (f"{not_null} not-null, {references} foreign-key, {vocabulary} closed-vocabulary "
                   f"and {2 * discriminators} discriminator checks, plus one uniqueness check per "
