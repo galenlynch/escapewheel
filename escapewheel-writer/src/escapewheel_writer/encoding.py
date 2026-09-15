@@ -119,10 +119,10 @@ def _encodable(kind: pa.DataType) -> bool:
 
 
 def declared_order(name: str, column: Mapping[str, Any], leading: str | None) -> bool:
-    """Whether a column's declarations say an integer climbs, if only within the groups above it."""
+    """Whether a column's declarations mark an integer likely to climb, if only within the groups above it."""
     role = column.get("role")
     return (name.endswith("_tick") or name == leading or role in ("structural_index", "sequence_position")
-            or (role == "identifier" and column.get("identity") == "assigned" and name != "session_id"))
+            or (role == "identifier" and column.get("identity") == "assigned"))
 
 
 def choose(field: pa.Field[Any], column: Mapping[str, Any], leading: str | None,
@@ -141,9 +141,10 @@ def choose(field: pa.Field[Any], column: Mapping[str, Any], leading: str | None,
 
     **An ordered integer takes delta, or plain where its runs average `REPEATS` rows.** Order is
     declared -- a `*_tick`, the leading identifier, a `structural_index`, a `sequence_position`, an
-    `assigned` identifier -- or observed, the values never falling. Only the declaration sees order
-    within groups: `core.spike_events.t_tick` climbs within each unit and nowhere else, and plain
-    costs it 1.24x.
+    `assigned` identifier -- or observed, the values never falling. A declaration states no
+    distribution, but it marks a column likely to climb within groups, which no count over the whole
+    column sees: `core.spike_events.t_tick` climbs within each unit and nowhere else, and plain costs
+    it 1.24x.
 
     **Anything else takes a dictionary where each value covers `REPEATS` rows, and plain otherwise.**
     That is what a dictionary indexes: `core.spike_events.amplitude` repeats and is 1.75x smaller

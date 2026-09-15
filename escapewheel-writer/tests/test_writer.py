@@ -1025,6 +1025,18 @@ def test_a_declared_order_is_seen_where_values_climb_only_within_groups():
     assert _chosen(sawtooth, {"name": "count", "role": "data"}) == "plain", "undeclared, each value covers 10 rows"
 
 
+def test_a_single_valued_identifier_is_decided_by_its_one_value():
+    """`session_id` holds one value in a single-session packet, so the one-value rule decides it first.
+
+    That is why the ordered-integer rule needs no exception for it, declared `assigned` as it is.
+    """
+    from escapewheel_writer.encoding import ONE_VALUE_ROWS
+
+    session = {"name": "session_id", "role": "identifier", "identity": "assigned"}
+    assert _chosen(pa.array([0] * 12, type=pa.int32()), session) == "delta"
+    assert _chosen(pa.array([0] * ONE_VALUE_ROWS, type=pa.int32()), session) is None
+
+
 def test_an_observed_climb_takes_delta_unless_it_climbs_in_long_runs():
     """Delta encodes a step; a run of equal values is a step of zero repeated, which plain compresses too."""
     assert _chosen(pa.array(range(1_000), type=pa.int64())) == "delta"
