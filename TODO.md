@@ -305,6 +305,45 @@ requests a second, so a decode difference under 0.1 ms is under 0.02% of reading
 What a delta string rule costs is therefore fastparquet and hyparquet rather than time, and what it
 buys over plain is bytes.
 
+**The five names and labels are written plain.** `encoding.NO_DICTIONARY` lists
+`core.electrodes.electrode_name`, `local_electrode_label` and `local_channel_label`, and
+`core.units.unit_name` and `local_unit_label`, where plain is 1.16x to 2.99x smaller than a
+dictionary. The committed packets keep the dictionary until they are rebuilt.
+
+**No default fixes the other columns without regressing some.** Keeping the delta rules and the
+declared dictionary exceptions, and changing only what the rules leave to pyarrow's default,
+`ecephys_776259` then `ecephys_786867`:
+
+| what the rules leave takes | at 1.15x their best | at 1.5x | at 2x | bytes over best |
+|---|---|---|---|---|
+| a dictionary, as written | 173, 182 | 57, 58 | 5, 6 | 357 kB, 183 kB |
+| plain, every column | 43, 41 | 28, 19 | 14, 15 | 724 kB, 404 kB |
+| plain for a `free` string | 141, 149 | 47, 48 | 3, 5 | 333 kB, 165 kB |
+| plain for a `free` string and for an integer that is not a `structural_index` | 75, 78 | 30, 25 | 4, 6 | 527 kB, 261 kB |
+
+Plain everywhere regresses exactly the columns a dictionary exists for:
+`core.electrode_coordinate_values.coordinate_frame` by 29x and 79x, `core.unit_electrodes.channel_index`
+by 13x and 16x, and the quality labels by 3.1x to 3.5x — `open` and `closed` vocabularies and
+structural indices, all of them declared. So the last row keys on declarations and halves the
+columns at 1.15x. Its bytes rise because `session_id` in the two spike tables loses a dictionary
+1.06x and 1.12x smaller than plain, 192 kB of the 194 kB rise in `ecephys_776259`, both under
+1.15x. What it leaves at 1.5x, in each packet:
+
+- the `free` names only `DELTA_BYTE_ARRAY` beats, which plain was chosen over;
+- 13 columns holding no value or a single one, whose dictionary page costs 24 to 26 bytes more than
+  plain, such as `core.subjects.strain` and `core.array_channels.unit` — how many values a column
+  holds in one packet, which no declaration says;
+- repeating integer measurements in `aind_unit_qc.waveform_metrics` (`num_negative_peaks`,
+  `num_positive_peaks`, `spread`, 1.57x to 2.26x), which a recipe's `[encoding]` answers;
+- `core.array_channels.channel_index` and, in `ecephys_786867`,
+  `core.electrode_coordinate_values.axis_index`, structural indices delta beats by 1.71x to 1.97x;
+- `core.electrode_coordinates.coordinate_frame` and `coordinate_basis`, open vocabularies of a few
+  values in long runs, which plain beats by 1.58x to 2.03x;
+- in `ecephys_776259` only, six references in tables of 12 to 30 rows that delta beats by 1.52x,
+  and `dynamic_foraging.trials.lickspout_position_z`, a repeating float, at 1.57x.
+
+A rule keyed on `vocabulary` or `role` amends Part 03 §5.5 and needs a revision, as R110's did.
+
 ## 4. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
