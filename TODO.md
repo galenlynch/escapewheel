@@ -45,59 +45,7 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. No test drives a build
-
-**Queued, and the largest correctness gap on this list.** The corpus proves that an implementation
-agrees about the **format** and proves nothing about the **writer**: `fixtures/build.py` calls
-`pq.write_table` directly and never constructs a `PacketWriter`, so every rule this repository has
-added about how a packet is *written* — encodings, assigned identifiers, session fill, physical
-order — is enforced on a path the corpus does not take. The corpus can pass forever while the writer
-drifts, and twenty-one revisions of drift accumulated that way unseen.
-
-The 2026-09-12 rebuild is what surfaced it. Five blockers, every one an accepted revision
-implemented on one code path and not the other, and neither 448 tests nor 28 conformance packets saw
-any of them:
-
-| revision | what drifted |
-|---|---|
-| R95 §3.1 | `Clock.record` wrote a human label into `clock_name`, so no recipe spelling resolved |
-| R96 §3.4 | the materializer read `spike_events.clock_id` after it was struck |
-| R88 §2.3 | the central `session_id` fill read the session out of a table staged last |
-| R98 §3.1 | the sorter never claimed the twelve clock windows only it knows |
-| R88 §2.3 | `add_batches` never applied the fill at all, so a streamed table had nulls |
-
-**Two of the five are `add()` against `add_batches()`.** The records path and the streaming path
-have drifted apart and nothing compares them, which is the sharpest statement of §6 that can be
-written: the pair is where a rule gets implemented once and forgotten once.
-
-Two more instances landed on 2026-09-10, both the same shape. Three test fixtures carried columns the
-registry does not declare — `core.array_assets` rows with `name` and `kind`, where the table declares
-`array_asset_name` and no `kind` at all — and `PacketWriter.add` documented such keys as ignored and
-dropped them, so an array asset went nameless through three tests for as long as they had existed.
-And `core.spike_events.t_tick` is `RLE_DICTIONARY` in every corpus packet, which is the encoding
-Part 03 §5.5 now tells a writer not to use.
-
-**The corpus is not where this gets fixed, and that is settled rather than open.** 29 of its 30
-packets are `valid` deliberately corrupted — `null_required` sets a required column to `None`,
-`orphan_fk` points a row at a clock that does not exist, `unsorted_spikes` swaps two rows out of
-order — and refusing exactly those corruptions is what `PacketWriter` is for: `unsorted_spikes`
-raises `OrderViolation` while staging, and the other two fail Tier 1 at commit. `fixtures/build.py`
-writes Parquet directly because that is the only way to produce a packet the writer would never
-emit. Only `valid` could be built through the writer, and one packet is a test rather than a corpus.
-
-**Coverage says where to put the test.** `clock.py` is at **95%** and `materialize.py` at **85%**, so
-both modules that broke were covered and broke anyway; `session.py`, which drives a build — the
-source loop, the harvest, the two staging paths — is the least covered module in the package at
-**68%**, and its uncovered lines are that loop. Both bugs were interface mismatches between modules
-that each pass their own tests, which is what an end-to-end test catches and a unit test cannot.
-
-So the work is one test in `escapewheel-writer/tests/`: a small recipe with synthetic sources, run
-through `session.py`, asserting the packet it produces — including that its encodings are the ones
-Part 03 §5.5 asks for, which is the assertion no corpus packet can make, and that the records path
-and the streaming path produce identical output for one table. Sized at an afternoon, not a
-restructuring. No draft is open, so nothing blocks it.
-
-## 2. No template scaffolds an extension project
+## 1. No template scaffolds an extension project
 
 **Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
 it: the four here were written by hand, and `registry/extensions/README.md` covers *what to model* —
@@ -142,7 +90,7 @@ commands, and that freedom is what R109 §3.1 exists to protect. Print for a per
 put anything a build should parse in the report file. Do not restate what the build already
 derives: rows per table come from the Parquet footer at Part 05 Stage 1.
 
-## 3. An extension can be drafted and cannot be checked
+## 2. An extension can be drafted and cannot be checked
 
 `escapewheel extension` drafts a registry document from tables that already exist, which is the
 half of extension authoring that is shipped. The other half is not: `registry/check.py` runs **30
@@ -171,7 +119,7 @@ document and not a function of the rows. The document already carries its own ve
 `extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
 (R57 §2.1). Checking is the only half that never shipped.
 
-## 4. The adapter boundary reaches nine of the ten adapters
+## 3. The adapter boundary reaches nine of the ten adapters
 
 R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
 source; every piece of it was built by 2026-09-14 — a declaration, a document, a command, three
@@ -305,7 +253,7 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 5. The committed packets' encodings are unmeasured
+## 4. The committed packets' encodings are unmeasured
 
 **Not started, and the packets to measure are now in place.** Several tables changed shape
 substantially — R105's four coordinate tables at 74,223 value rows, R81's collapse of unit identity,
@@ -321,7 +269,7 @@ per table: which encoding each column got, whether a sort makes a column compres
 measured for `session_id` at 1.0005x, and whether any row group is small enough that its footer
 costs more than its rows.
 
-## 6. No code quality audit has run
+## 5. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
@@ -337,7 +285,7 @@ a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncon
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
 
-## 7. `registry_version` is held at `0.1.0`
+## 6. `registry_version` is held at `0.1.0`
 
 Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
 packets claiming one version with incompatible schemas is what the field exists to prevent, and it
@@ -345,19 +293,19 @@ is preventing nothing. Free to settle while nobody outside holds a packet, and f
 the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
 three at 0.2.0.
 
-## 8. The repository directory is still `nwb-lake/`
+## 7. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
 working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
 doing in one order or the other, not at once.
 
-## 9. Staging both packets to scratch needs a token
+## 8. Staging both packets to scratch needs a token
 
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 10. Parked: R42's write case survives its withdrawal
+## 9. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -375,7 +323,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 11. Smaller open items
+## 10. Smaller open items
 
 - **Trial-in-block containment has no consumer.** The measurement below concluded that a trial
   needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries `start_tick`
@@ -478,6 +426,17 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 
 # Settled 2026-09-14
 
+- **A build is driven end to end by a test.** `escapewheel-writer/tests/test_build_end_to_end.py`
+  writes synthetic sources to disk, names them in a recipe, and runs `session.build` and
+  `PacketWriter.commit`, which nothing did: `fixtures/build.py` calls `pq.write_table` directly, so
+  every rule about how a packet is *written* was enforced on a path the corpus does not take. Five
+  assertions, in **1.1 s** on ten spikes and two probes — the packet commits with 0 errors, a
+  clock's name is what its identifier stands for (R95 §3.1), every session-scoped table's
+  `session_id` is non-null including the streamed one (R88 §2.3), the encodings are the ones
+  `encoding.encodings` chose (Part 03 §5.5), and the records path and the streaming path produce
+  identical Parquet for one table. Each was checked by mutation rather than by assertion alone:
+  writing the human label into `clock_name`, skipping the streamed session fill, and dropping delta
+  encoding each fail exactly one test and the other four pass.
 - **Both packets are rebuilt and promoted.** `packet-rebuilt-2` of 2026-09-14 replaced the
   committed original in `/mnt/Data/776259-packet/` and `/mnt/Data/786867-packet/`, and the original
   and the 2026-09-12 intermediate were deleted; each session now holds one packet, at the path its
