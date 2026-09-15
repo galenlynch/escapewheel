@@ -14,9 +14,16 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-Nothing is open. A draft added here takes a row naming its word count, when it was appraised, and
-why it sits where it does: dependencies run downward, so a draft may depend on the ones above it
-and on nothing below.
+Dependencies run downward: a draft may depend on the ones above it and on nothing below. Each row
+names the draft's word count, when it was appraised, and why it sits where it does.
+
+| # | draft | words | appraised | why here |
+|---|---|---:|---|---|
+| 1 | `a-columns-encoding-follows-declared-order-and-counted-repetition` | 2,107 | not yet | the only open draft; supersedes R110 §3.1 and §3.2, and rests on R110 §3.3 to §3.5 for exceptions and the report |
+
+**It moves no count in the generated block.** No table, column, reference, rule or vocabulary
+changes; every number in it is measured against both committed packets as they stood on 2026-09-15
+and is re-measured at acceptance.
 
 A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
 records what bound something and a draft never did. Git holds the document, and whatever the

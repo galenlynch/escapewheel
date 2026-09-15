@@ -9,7 +9,7 @@ Last checked 2026-09-09, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R117 accepted. R42 and R73 withdrawn. No draft is open.
+R1–R41, R43–R72 and R74–R117 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -224,125 +224,20 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 3. Nearly half of each packet's columns are 1.15x their best encoding
+## 3. The encoding ladder awaits acceptance
 
-Measured per column, against that column's own best encoding rather than the packet: a small
-column is metadata a consumer reads across many packets, so its size matters whatever the spike
-table weighs. `conformance/parquet-probe/alternatives.py` rewrites every column under each encoding
-Part 03 §5.5 permits, and reproduces the file's own bytes at 1.000 on every column over 1 MB.
-`ecephys_776259` first, then `ecephys_786867`:
+`revisions/drafts/a-columns-encoding-follows-declared-order-and-counted-repetition.md` replaces
+Part 03 §5.5's three encoding rules with four, over declared order and counted repetition, and
+carries every measurement behind them. The writer applies them already (`encoding.choose`), since
+Part 03 §5.5 leaves the choice to a writer, with 12 exceptions for core tables. Both recipes under
+`/mnt/Data` carry the 5 extension entries, and keep their R110-era `[encoding]` blocks beside them as
+`recipe.toml.before-declaration-rules`. Neither committed packet has been rebuilt, so both still carry
+R110's encodings.
 
-| | numeric | string |
-|---|---|---|
-| columns | 250, 253 | 115, 119 |
-| at 1.15x their best or more | 93, 97 | 80, 85 |
-| at 1.5x | 28, 28 | 29, 30 |
-| at 2x | 0, 0 | 5, 6 |
-
-No column of `core.spike_events`, `analysis.spike_events` or `core.media_frames` is among them.
-Grouped by the shape of the values, which no rule sees:
-
-| shape | encoding given → best | columns | ratio |
-|---|---|---|---|
-| one value, nulls aside, such as `session_id` in every small table | dictionary → plain or delta | 73, 85 | 1.16–1.50x |
-| all null | dictionary → plain | 36, 37 | 1.57–1.67x |
-| any other column of a small table, or one with long runs | dictionary → plain | 33, 31 | 1.15–2.03x |
-| an ascending reference, such as `core.curation_versions.sorting_run_id` | dictionary → delta | 10, 9 | 1.27–1.99x |
-| a name, label or serial number, such as `core.electrodes.electrode_name` | dictionary → a delta string encoding | 9, 9 | 1.20–24.1x |
-| a repeating integer out of order, such as `core.array_channels.channel_index` | dictionary → delta | 5, 6 | 1.24–1.97x |
-| a repeating float, such as `dynamic_foraging.trials.lickspout_position_z` | plain → dictionary | 3, 3 | 1.17–1.57x |
-| a delta column too short to repay it, such as ticks in 11 to 24 rows | delta → plain | 4, 2 | 1.15–1.30x |
-
-The rules name ticks, a table's leading identifier and floats, so every other column takes pyarrow's
-default dictionary, whose page costs about 24 bytes before it holds a value: an all-null column is
-60 bytes where plain is 36. The report Part 03 §5.5 asks for, `encoding.inefficient` at 1.5x, reports
-**0 columns** on either packet, for two reasons. `_cost` returns the size of a one-column *file*, so
-about 400 bytes of footer dilute a small column: `core.curation_versions.sorting_run_id` is 143
-against 72 bytes as a column chunk (1.99x) and 560 against 476 as a file (1.18x). It also skips
-every string column. `TOLERANCE` was calibrated to report nothing on both sessions against that
-diluted measure. The same denominator applies to a file: 21 of the 40 in each packet are more than
-half footer, `core.sessions` 2,690 of 3,823 bytes, and every footer carries 344 to 2,488 bytes of
-`ARROW:schema`, which the writer omits only where a column arrives dictionary-typed.
-
-**Delta string encodings are uncommon, and three readers refuse them.** No default writer tried
-emits one for these columns: pyarrow writes a dictionary, fastparquet 2026.5.0 plain, and polars
-1.44.2 and DuckDB 1.5.5 plain for `unit_name` and a dictionary for `local_unit_label`. DuckDB writes
-`DELTA_LENGTH_BYTE_ARRAY` only under `parquet_version v2`, and its authors state it will not by
-default because mainstream engines do not read it (duckdb.org, 2025-01-22). parquet-java falls back
-to `DELTA_BYTE_ARRAY` only under its V2 writer, and its default is `PARQUET_1_0`. pyarrow 25.0.1,
-DuckDB 1.5.5, polars and DuckDB.jl decode both. fastparquet and hyparquet 1.30.1, the JavaScript
-reader, decode the delta integers the packets already carry and refuse `DELTA_BYTE_ARRAY`, so a
-delta string rule would drop both; Parquet2.jl reads no delta encoding at all. nanoparquet, for R,
-reads all of them by its changelog since 0.3.0, untested here because it did not build. Spark's
-vectorized reader rejected a standalone `DELTA_LENGTH_BYTE_ARRAY` until 3.4.0 (SPARK-40128), and
-Iceberg 1.1.0's refused `DELTA_BYTE_ARRAY`, an issue closed as stale without a fix
-(apache/iceberg#7162) — which Phase 7 inherits.
-
-**pyarrow cannot read a delta string column as codes.** `read_dictionary` raises `Not yet
-implemented: DecodeArrow of DictAccumulator` on both encodings, and `validator._ordering_scan` reads
-every string key column that way, as `materialize.py` does its coded columns. A rule choosing delta
-for a string must therefore never reach a key column. None of the five names and labels above is
-one: `core.electrodes` is keyed by `electrode_id` and `core.units` by `unit_id`.
-
-**At their real sizes these columns decode faster under delta than under the dictionary they
-have.** Reading one column from memory, best of 200, in `ecephys_776259`: `core.units.unit_name` is
-23.0 kB and 495 µs as written, 12.2 kB and 373 µs plain, and 2.6 kB and 419 µs under
-`DELTA_BYTE_ARRAY`; `core.electrodes.electrode_name` is 12.5 kB and 287 µs, 5.2 kB and 240 µs, and
-0.5 kB and 256 µs. `ecephys_786867` agrees within 0.02 ms. So against the dictionary delta is 8.7x
-and 24x smaller and 1.18x and 1.12x faster, and against plain it is 4.6x and 10x smaller and 1.12x
-and 1.07x slower. On a synthetic column of a million unique names delta was never faster than a
-dictionary, and two runs disagreed about by how much, from 1.01x to 1.82x; no core string column
-is that long, since the spike and media tables carry none.
-
-**Over an object store the request count decides, and delta rarely moves it.** Served by a local
-server honouring byte ranges, a DuckDB 1.5.5 query over both packets' `core.units` made 6 requests
-under every encoding and pyarrow through fsspec 14, while bytes fell with delta: a count by name
-pattern fetched 71 kB as written, 53 kB plain and 38 kB delta. A request is saved only where a file
-shrinks under DuckDB's first read. `core.electrodes` took three requests a file at 20 to 23 kB as
-written and two at about 13 kB plain or 8 kB delta, so plain earns that saving as well. A remote read
-of 6,781 rows took 0.52 s (Settled below) and R86 measured an object store serving about 120
-requests a second, so a decode difference under 0.1 ms is under 0.02% of reading one packet's table.
-What a delta string rule costs is therefore fastparquet and hyparquet rather than time, and what it
-buys over plain is bytes.
-
-**The five names and labels are written plain.** `encoding.NO_DICTIONARY` lists
-`core.electrodes.electrode_name`, `local_electrode_label` and `local_channel_label`, and
-`core.units.unit_name` and `local_unit_label`, where plain is 1.16x to 2.99x smaller than a
-dictionary. The committed packets keep the dictionary until they are rebuilt.
-
-**No default fixes the other columns without regressing some.** Keeping the delta rules and the
-declared dictionary exceptions, and changing only what the rules leave to pyarrow's default,
-`ecephys_776259` then `ecephys_786867`:
-
-| what the rules leave takes | at 1.15x their best | at 1.5x | at 2x | bytes over best |
-|---|---|---|---|---|
-| a dictionary, as written | 173, 182 | 57, 58 | 5, 6 | 357 kB, 183 kB |
-| plain, every column | 43, 41 | 28, 19 | 14, 15 | 724 kB, 404 kB |
-| plain for a `free` string | 141, 149 | 47, 48 | 3, 5 | 333 kB, 165 kB |
-| plain for a `free` string and for an integer that is not a `structural_index` | 75, 78 | 30, 25 | 4, 6 | 527 kB, 261 kB |
-
-Plain everywhere regresses exactly the columns a dictionary exists for:
-`core.electrode_coordinate_values.coordinate_frame` by 29x and 79x, `core.unit_electrodes.channel_index`
-by 13x and 16x, and the quality labels by 3.1x to 3.5x — `open` and `closed` vocabularies and
-structural indices, all of them declared. So the last row keys on declarations and halves the
-columns at 1.15x. Its bytes rise because `session_id` in the two spike tables loses a dictionary
-1.06x and 1.12x smaller than plain, 192 kB of the 194 kB rise in `ecephys_776259`, both under
-1.15x. What it leaves at 1.5x, in each packet:
-
-- the `free` names only `DELTA_BYTE_ARRAY` beats, which plain was chosen over;
-- 13 columns holding no value or a single one, whose dictionary page costs 24 to 26 bytes more than
-  plain, such as `core.subjects.strain` and `core.array_channels.unit` — how many values a column
-  holds in one packet, which no declaration says;
-- repeating integer measurements in `aind_unit_qc.waveform_metrics` (`num_negative_peaks`,
-  `num_positive_peaks`, `spread`, 1.57x to 2.26x), which a recipe's `[encoding]` answers;
-- `core.array_channels.channel_index` and, in `ecephys_786867`,
-  `core.electrode_coordinate_values.axis_index`, structural indices delta beats by 1.71x to 1.97x;
-- `core.electrode_coordinates.coordinate_frame` and `coordinate_basis`, open vocabularies of a few
-  values in long runs, which plain beats by 1.58x to 2.03x;
-- in `ecephys_776259` only, six references in tables of 12 to 30 rows that delta beats by 1.52x,
-  and `dynamic_foraging.trials.lickspout_position_z`, a repeating float, at 1.57x.
-
-A rule keyed on `vocabulary` or `role` amends Part 03 §5.5 and needs a revision, as R110's did.
+On acceptance the draft's §5 names what moves: Part 03 §5.5, Part 10 §2 and `applied.toml`, and the
+writer's docstrings then cite Part 03 §5.5 for the rules instead of describing them as extending it.
+The draft's §6 holds the one measurement left, whether a `--sample` build crosses a threshold the
+full build does not.
 
 ## 4. No code quality audit has run
 
