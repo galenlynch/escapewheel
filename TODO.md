@@ -357,36 +357,24 @@ doing in one order or the other, not at once.
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 10. Containment costs 0.02 ms in NumPy and 1.46 ms in SQL
+## 10. The reader does not own containment
 
-**Measured 2026-09-02**, five repeats, on blocks derived from a real session (708 trials, 18
-blocks, disjoint, minimum gap 5,750 ticks) and synthetic data at the same ratio:
+Assigning a trial to the block containing it is a binary search, and every caller writes it
+themselves. `escapewheel_reader` should own it as `alignment.aligned_spikes` is owned, for the
+reason CONTRIBUTING's hazard table gives: a caller searching intervals that may overlap gets one
+containing block of several, plausible and with nothing to say it is arbitrary. What makes the
+search sound is a non-overlap declaration, which `dynamic_foraging.blocks` carries and
+`core.intervals` does not, so the operation has to check rather than assume.
 
-| trials | blocks | range join | ASOF join | searchsorted | stored column |
-|---:|---:|---:|---:|---:|---:|
-| **708** | **18** | 1.46 ms | 1.54 ms | **0.02 ms** | 0.60 ms |
-| 10,000 | 250 | 5.58 ms | 32.70 ms | 0.07 ms | 1.00 ms |
-| 100,000 | 2,500 | 267.68 ms | 2,202.66 ms | 1.02 ms | 3.05 ms |
-| 1,000,000 | 25,000 | 21,708.92 ms | 219,594.04 ms | **15.95 ms** | 32.21 ms |
+The measurement that settled the shape is below under **Measured, for reuse**: at real scale the
+search costs 0.02 ms against 0.60 ms to read a stored parent column, so no parent column is needed
+(R43), and neither SQL formulation survives scale.
 
-**At real scale containment is free** — 0.02 ms, cheaper than reading a stored `block_id`
-column, because the join returns indices where the column materialises a string per row. R43's
-"an alignment is a query" holds, and no parent column is needed.
-
-**At scale, neither SQL formulation is usable.** The operation is 16 ms at a million trials;
-DuckDB's range join takes 21.7 s and its ASOF join 220 s. **The ASOF result contradicts the
-prediction** — it was expected to fix the range join, being the formulation the reader already
-uses to assign a spike to its preceding event, and it is ten times worse. A follow-up probe to
-find out why timed out at ten minutes on 100k rows, so **the cause is not established.** Worth a
-separate look; the conclusion does not depend on it.
-
-**What follows:** the reader should own containment as an operation, the way it already owns
-`aligned_spikes` rather than telling callers to write the join. The naive SQL is a trap that only
-springs at a scale no packet has reached yet.
-
-`dynamic_foraging.blocks` now declares that blocks may not overlap, which is what makes the
-binary search sound: a trial inside two blocks has no containing block. Scripts in
-`/mnt/Data/escapewheel/bench/nesting/` with the raw output in `results.txt`.
+**One result there is unexplained.** DuckDB's ASOF join was expected to fix its range join, being
+the formulation the reader already uses to assign a spike to its preceding event, and it is ten
+times worse — 220 s against 21.7 s at a million trials. A follow-up probe timed out at ten minutes
+on 100,000 rows, so the cause is not established. Worth a separate look; nothing above depends on
+it.
 
 ## 11. Parked: R42's write case survives its withdrawal
 
@@ -422,6 +410,23 @@ natural.
 ---
 
 # Measured, for reuse
+
+**Containment, four ways** (2026-09-02, five repeats), on blocks derived from a real session —
+708 trials, 18 blocks, disjoint, minimum gap 5,750 ticks — and synthetic data at the same ratio.
+Scripts in `/mnt/Data/escapewheel/bench/nesting/`, raw output in `results.txt`:
+
+| trials | blocks | range join | ASOF join | searchsorted | stored column |
+|---:|---:|---:|---:|---:|---:|
+| **708** | **18** | 1.46 ms | 1.54 ms | **0.02 ms** | 0.60 ms |
+| 10,000 | 250 | 5.58 ms | 32.70 ms | 0.07 ms | 1.00 ms |
+| 100,000 | 2,500 | 267.68 ms | 2,202.66 ms | 1.02 ms | 3.05 ms |
+| 1,000,000 | 25,000 | 21,708.92 ms | 219,594.04 ms | **15.95 ms** | 32.21 ms |
+
+At real scale containment is free — 0.02 ms, cheaper than reading a stored `block_id`, because the
+join returns indices where the column materialises a string per row. So R43's "an alignment is a
+query" holds and no parent column is needed. At a million trials the operation is 16 ms while
+DuckDB's range join is 21.7 s and its ASOF join 220 s, so the naive SQL is a trap that springs only
+at a scale no packet has reached. What the reader still owes is §10.
 
 Scripts in `/mnt/Data/escapewheel/bench/`: `s3_tires.py`, `s3_backends.py`, `clients.py`,
 `duckdb_s3.py`, `s3_full_verify.py`, and `partition/` (`make_parts.py`, `bench2.py`,
