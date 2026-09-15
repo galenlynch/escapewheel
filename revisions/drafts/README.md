@@ -14,12 +14,9 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-A draft takes a row naming its word count, when it was appraised, and why it sits where it does:
-dependencies run downward, so a draft may depend on the ones above it and on nothing below.
-
-| draft | words | appraised | why here |
-|---|---|---|---|
-| `an-adapter-delivers-an-array-by-writing-it` | 2,246 | 2026-09-14 | Depends on R115 and on R116, which it uses as it stands: the two amend different clauses — one what a build supplies, the other what an adapter returns — so accepting R116 first changed nothing here. |
+Nothing is open. A draft added here takes a row naming its word count, when it was appraised, and
+why it sits where it does: dependencies run downward, so a draft may depend on the ones above it
+and on nothing below.
 
 A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
 records what bound something and a draft never did. Git holds the document, and whatever the
@@ -30,7 +27,15 @@ resolving a name to an assigned number packet-wide before any table is built (Pa
 adapters needed was to compose the name the owning adapter composes, which deleted the mapping
 instead of declaring it — recorded in `TODO.md` §1d.
 
-The last to leave was `a-build-supplies-a-source-on-standard-input`, accepted as **R116** on
+The last to leave was `an-adapter-delivers-an-array-by-writing-it`, accepted as **R117** on
+2026-09-14 at 2,246 words: a packet-owned array crosses by being written to the location a build
+supplies and read back, since every field of its manifest entry is recoverable from the array and
+its name; a referenced one crosses as a resource document under the delivery's own reserved
+identifier. Two forms were rejected on the way, both recorded in its §3.2 — the run's report, which
+Part 09 §5.8 makes optional where a catalog cannot be, and a document beside the delivery, which
+needed a term, an action and a rule about arriving that the delivery already gives.
+
+Before it, `a-build-supplies-a-source-on-standard-input`, accepted as **R116** on
 2026-09-14 at 1,283 words: the object a build supplies crosses on standard input, because the
 argument list it crossed by caps one argument at 131,072 bytes on Linux and a whole command line at
 32,767 characters on Windows, where the NWB adapter's object for one real session is 322,799.

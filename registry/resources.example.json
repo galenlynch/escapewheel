@@ -1,0 +1,20 @@
+{
+  "$schema": "https://escapewheel.org/schemas/resources/0.1.0",
+  "resources": [
+    {
+      "resource_id": "core.46101.lfp",
+      "uri": "ElectricalSeries46101-LFP/data",
+      "source": "ecephys_786867_nwb",
+      "physical_profile": "zarr_v2",
+      "codecs": ["blosc"],
+      "size_bytes": 582991872,
+      "verified_at": "2026-09-14T00:00:00Z"
+    },
+    {
+      "resource_id": "core.bottom_camera",
+      "uri": "s3://aind-open-data/ecephys_786867/behavior-videos/bottom_camera.mp4",
+      "physical_profile": "mp4",
+      "size_bytes": 2884901888
+    }
+  ]
+}

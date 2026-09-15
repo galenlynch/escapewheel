@@ -30,6 +30,7 @@ VENDORED = {
     # A *build* reads an adapter's declaration (Part 03 §11.5), so this one vendors into the
     # writer where the other three go to whichever package reads them.
     "adapter.schema.json": HERE.parent / "escapewheel-writer/src/escapewheel_writer/schemas/adapter.schema.json",
+    "resources.schema.json": HERE.parent / "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json",
 }
 RULES = HERE / "rules.json"
 
@@ -86,7 +87,7 @@ SINCE = _Since([None])
 UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34, 35, 36, 37, 40,
              43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69, 71, 72, 74, 75, 76, 77, 78, 79,
              80, 82, 84, 86, 87, 90, 92, 93, 94, 98, 106, 108, 109, 110, 111, 112, 113, 114, 115,
-             116)
+             116, 117)
 
 
 #: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a

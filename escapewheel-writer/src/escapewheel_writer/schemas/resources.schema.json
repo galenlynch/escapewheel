@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://escapewheel.org/schemas/resources/0.1.0",
+  "title": "Escapewheel resource document",
+  "description": "Shape of the document an adapter delivers alongside its rows to describe the resources it references rather than writes, per Part 03 §11.3. Each entry is a manifest resource entry as Part 04 §5 declares one, so this is a wrapper around the manifest's own schema rather than a second description of an entry: it checks the envelope and the two fields a build cannot fill for itself, and the manifest's schema checks the entry when the build writes it.",
+  "type": "object",
+  "required": [
+    "resources"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This document's meta-schema, by $id. Identity rather than a fetch instruction: a build MUST NOT dereference it and MUST NOT require it (Part 04 §5.4)."
+    },
+    "resources": {
+      "type": "array",
+      "description": "One entry per resource this run references. A resource the adapter delivered rows for and wrote no bytes for belongs here; one the packet owns does not, its manifest entry being read off the array the adapter wrote.",
+      "items": {
+        "type": "object",
+        "required": [
+          "resource_id",
+          "uri"
+        ],
+        "properties": {
+          "resource_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+\\.[a-z0-9_.-]+$",
+            "description": "The resource this entry describes, dotted as every resource identifier is."
+          },
+          "uri": {
+            "type": "string",
+            "description": "Where the resource is: an absolute URI, or a path under the source a `source` field names (Part 04 §5.5)."
+          }
+        },
+        "description": "A manifest resource entry. Only `resource_id` and `uri` are required, because a writer that cannot reach a URI records nothing rather than copying a value from a local stand-in (Part 04 §5.2), and because `external`, `layer` and `kind` are fields a build fills rather than reads. Every other field the manifest declares is permitted here and carried through."
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | **Accepted** 2026-09-14 |
 | **Amends** | Part 03 §11.3 (how a dense array's reference reaches a build, and what a delivery says about a referenced one), Part 03 §11.4 (a second reserved resource identifier) |
 | **Depends on** | R115 §3.8 (a dense array crosses as a reference rather than as rows), R115 §3.3 (rows cross by a protocol of a group, each carrying a resource by name), R52 §2 (a build digests the bytes a packet owns), R51 §2 (a referenced prefix may record its members), R80 §2.2 (a referenced resource may name a source rather than a location) |
 | **Profile** | all |
@@ -113,8 +113,8 @@ Where a resource is external (Part 04 §5.1), a build supplies no location and t
 bytes, so what the catalog needs has nowhere to come from but the adapter.
 
 An adapter that delivers a referenced resource **MUST** deliver a **resource document** with it,
-under the reserved resource identifier `resources`: one entry per such resource, each a manifest
-resource entry as Part 04 §5 declares one — `resource_id`, `external`, `uri`, and whatever the
+under the reserved resource identifier `resources`: a JSON object carrying `resources`, an array
+with one entry per such resource, each a manifest resource entry as Part 04 §5 declares one — `resource_id`, `external`, `uri`, and whatever the
 producer established of `physical_profile`, `codecs`, `source`, `sha256`, `size_bytes`,
 `verified_at` and `members`. A build **MUST** merge each entry into the manifest it writes, and
 **MUST NOT** require any field but `resource_id` and `uri`: a writer that cannot reach a URI records

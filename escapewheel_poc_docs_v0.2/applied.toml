@@ -2666,3 +2666,34 @@ disposition = "applied"
 where = [
   { part = "05", section = "3.7", note = "a build writes and closes without waiting, and reads what the command produces while it writes" },
 ]
+
+[clause."R117 §2.1"]
+disposition = "rationale"
+note = "Part 03 §11.3 said what an array reference carries and not through what, which stopped the three adapters holding 14.44 GB of a 0.59 GB packet's data"
+
+[clause."R117 §2.2"]
+disposition = "rationale"
+note = "every field of a packet-owned array's manifest entry is in the array or in the build; the codec list read off the chain matches the entry's, descending through the shard"
+
+[clause."R117 §2.3"]
+disposition = "rationale"
+note = "a row carries a referenced resource's location and cannot carry what the producer learned by opening the store, which is the catalog's and not a table's"
+
+[clause."R117 §3.1"]
+disposition = "applied"
+where = [
+  { part = "03", section = "11.3", note = "array_location per source, the name that is the identifier, the rows that must agree with it, and the manifest entry read off the array" },
+]
+
+[clause."R117 §3.2"]
+disposition = "applied"
+where = [
+  { part = "03", section = "11.3", note = "the resource document, what a build requires of an entry, and why it is a delivery rather than a report" },
+  { part = "03", section = "11.4", note = "`resources` as the second reserved resource identifier, and the single-row table it travels as" },
+]
+
+[clause."R117 §3.3"]
+disposition = "applied"
+where = [
+  { part = "03", section = "11.3", note = "the published shape, and a build refusing a document that does not satisfy it" },
+]

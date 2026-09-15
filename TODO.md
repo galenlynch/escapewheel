@@ -9,7 +9,7 @@ Last checked 2026-09-09, by `python verify.py` — which is the way to check it,
 reading this block. Everything below is what that command reports.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R116 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/, none of them binding and none numbered until accepted.
+R1–R41, R43–R72 and R74–R117 accepted. R42 and R73 withdrawn. No draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -193,12 +193,12 @@ document and not a function of the rows. The document already carries its own ve
 `extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
 (R57 §2.1). Checking is the only half that never shipped.
 
-## 1d. The adapter boundary reaches five of the ten adapters
+## 1d. The adapter boundary reaches six of the ten adapters
 
 R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
 source. Every piece of it is built as of 2026-09-14 — a declaration, a document, a command, three
-protocols and a report — and what it does not yet reach is five adapters, for the three reasons at
-the end of this section.
+protocols and a report — and what it does not yet reach is four adapters, for the two reasons at
+the end of this section, one of which R117 settles on paper and not yet in code.
 
 `conformance/adapter-boundary/` is where it was measured first: seven scripts in which all three
 protocols deliver the NWB adapter's eighteen resources identically, five of them empty. What is in
@@ -471,14 +471,19 @@ harvest from the kinds it was written against. Three facts had to become rows fi
   explicitly — the source wins and the recipe is reported — where the build used to apply it in
   the harvest and say something else in the comparison.
 
-**Six of the ten are delivered on real data, and two things stop the rest.** `waveforms`, `lfp`
-and `video` stage or reference an array or a media asset, which Part 03 §11.3 has crossing as a
-*reference* to a location a build supplies — a different act from delivering rows, and
-unimplemented, so each is refused with what it would take rather than delivering half of itself.
-`array_location` stays reserved and unfilled with it, and **which channel carries a reference is
-not specified**: §11.3 says what crosses and not where, so this needs a revision before it needs
-code. `tables` is the tenth, and it delivers: what stops it on this recipe is not the boundary but
-`extract_qc.py` writing `session_id` as the integer `0`, below.
+**Six of the ten are delivered on real data, and R117 says how the other three will be.** Accepted
+2026-09-14 and **not implemented**: `waveforms`, `lfp` and `video` stage or reference an array or a
+media asset, which Part 03 §11.3 now has crossing two ways. A packet-owned array crosses as the
+bytes themselves, written into an `array_location` a build supplies per source and read back —
+every field of its manifest entry being in the array or in the build. A referenced one crosses as a
+**resource document** under the delivery's own reserved identifier `resources`, whose shape is
+published as `registry/resources.schema.json` and vendored into the writer.
+
+What that needs of the writer: `array_location` filled and passed, `StagedArray` growing a path an
+adapter writes to, `ExternalArray` and `ExternalMedia` built from a document's entries, the document
+written and read per protocol, and `delivery._undeliverable`'s refusal struck. `tables` is the
+tenth, and it delivers: what stops it on this recipe is not the boundary but `extract_qc.py`
+writing `session_id` as the integer `0`, below.
 
 **A term did not fit in an argument, settled by R116 on 2026-09-14.** Part 03 §11.2 had what a
 build supplies cross as one JSON object appended to the command's argument list. For

@@ -714,6 +714,15 @@ try:
           [f"{list(e.path)[:4]} {e.message[:60]}"
            for e in jsonschema.Draft202012Validator(_adapter).iter_errors(
                json.loads(_declared.read_text()))] if _declared.exists() else [])
+    # Part 03 §11.3's resource document, checked as the three above are.
+    _resources = json.loads((HERE / "resources.schema.json").read_text())
+    jsonschema.Draft202012Validator.check_schema(_resources)
+    check("resource document schema is valid JSON Schema", [])
+    _referenced = HERE / "resources.example.json"
+    check("the example resource document validates against it",
+          [f"{list(e.path)[:4]} {e.message[:60]}"
+           for e in jsonschema.Draft202012Validator(_resources).iter_errors(
+               json.loads(_referenced.read_text()))] if _referenced.exists() else [])
     # The prototype argues that the format drives the tooling, which is worth nothing if its
     # own input is a document the format rejects. It drifted 16 errors out of conformance
     # unnoticed -- 13 columns with no `role` after R48, two tables with no `rules`.
