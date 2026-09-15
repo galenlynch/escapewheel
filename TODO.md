@@ -388,13 +388,12 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 
 - **R118 is accepted and applied.** Part 03 §5.5's encoding rules are four, over declared order and
   counted repetition, with 12 exceptions for core tables in the writer and 5 entries in the two
-  recipes under `/mnt/Data`, whose R110-era `[encoding]` blocks sit beside them as
-  `recipe.toml.before-declaration-rules`. Both packets were rebuilt under it the same day and
+  recipes under `/mnt/Data`. Both packets were rebuilt under it the same day and
   promoted. Every table holds the same rows and values, except `core.processing_runs`, whose import
   run records the changed recipe; 213 and 222 columns changed encoding, none sits 1.15x or more off
   its best, and the tables shrank by 686 kB and 272 kB. Both validate at their paths with 0 errors
-  and the one `core.clocks.tick_zero_plausible` warning. The packets they replaced are kept beside
-  them as `packet-r110`, 1.2 GB and 578 MB, until deleted.
+  and the one `core.clocks.tick_zero_plausible` warning. The packets they replaced, and the
+  recipes' R110-era `[encoding]` blocks, were deleted the same day.
 - **Julia reads a packet through DuckDB.jl, and the delta encodings stay.** Parquet2.jl, the
   pure-Julia reader, decodes none of `DELTA_BINARY_PACKED`, `DELTA_LENGTH_BYTE_ARRAY`,
   `DELTA_BYTE_ARRAY` or `BYTE_STREAM_SPLIT`, in 0.2.34, the latest registered version, or on its
