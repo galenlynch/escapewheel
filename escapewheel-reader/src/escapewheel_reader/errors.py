@@ -42,6 +42,22 @@ class AmbiguousRun(PacketError):
     """
 
 
+class UnresolvableChannelIndex(PacketError):
+    """A channel index names no electrode of its sorting run (Part 02 §12.2).
+
+    `channels_declared` tells the two cases apart, because they call for different repairs.
+    `None` means the run records no channel list, which a conforming packet may do: the gap is a
+    fact about what the packet carries, so a consumer reports it and neither fails the packet nor
+    falls back to `core.electrodes`, where the index names a plausible wrong contact. An integer
+    means the run kept that many channels and the index falls outside them, so the index and the
+    packet disagree about one run.
+    """
+
+    def __init__(self, message: str, *, channels_declared: int | None = None) -> None:
+        super().__init__(message)
+        self.channels_declared = channels_declared
+
+
 class UnresolvedSource(PacketError):
     """An external resource names a source no available resolution document locates (Part 04 §5.5).
 

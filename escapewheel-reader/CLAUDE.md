@@ -275,6 +275,34 @@ Two details are easy to get wrong and are why this lives here. A shared-key join
 the named key is an `int32` a packet mints, so it matches that resource's `*_name` and not its key
 (Part 02 §8.2).
 
+### A channel index is resolved through the list its run kept (Part 02 §12.2)
+
+A sorting drops bad channels before it runs, so a channel index it emits afterwards counts what it
+kept and not the probe's contacts. `channels.py` is where that is settled: `kept_channels` reads
+`core.sorting_run_channels`, `electrode_at` performs the lookup, and `runs_without_channels` names
+the runs no index can be resolved for.
+
+A wrong reading still returns a contact, so nothing about the answer says it is wrong. Measured on
+the two packaged sessions, **3,375 of 4,510** channel indices in `ecephys_776259` and **1,651 of
+3,813** in `ecephys_786867` name a different contact than the full contact list would, because
+eleven of twelve runs and seven of ten dropped channels — one diverging as early as index 2. Where
+a run dropped only from the tail, nothing shifts at all, which is how the convention stayed
+invisible.
+
+A run that declares no channels is reported and never resolved against `core.electrodes`
+(R83 §2.3): such a packet is conforming, so the gap is a fact about what it carries and the answer
+a consumer owes its caller is which run it cannot resolve. `UnresolvableChannelIndex` carries
+`channels_declared` to separate that from an index outside a list the run *did* declare, since one
+wants the list recorded and the other wants the index corrected.
+
+Two checks are repeated here rather than assumed, because this package validates nothing: a table
+missing a required column is refused rather than read as a run declaring nothing, and indices that
+are not `0` to `n-1` are refused rather than indexed by position, which would return a wrong
+electrode in silence.
+
+A unit's own peak contact needs none of this — `core.unit_electrodes.is_primary` carries it, and
+resolving an index to reach the same electrode repeats the writer's work.
+
 ### Registration is not free over a store
 
 DuckDB binds a view when it is created, and binding a Parquet view reads that file's footer.

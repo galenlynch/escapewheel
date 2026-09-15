@@ -34,16 +34,7 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ### What stands between here and a production trial
 
-1. **Resolve a channel index for a caller.** The reader and consumer obligations were walked on
-   2026-09-11 against the parts, which R111 made the statement of record: **58 normative
-   sentences** name a reader or a consumer. One was unmet — the codec floor, fixed — and Part 02
-   §8.3's SHOULD is now offered by `escapewheel_reader.discriminators`. What remains is Part 02
-   §12.2: `extremum_channel_index` counts the channels a sorting run **kept**, and resolving it
-   against the contact list named the wrong electrode for **5,071 of 6,781 units** (R83 §1).
-   Nothing here resolves it through `core.sorting_run_channels`, and a consumer meeting an index
-   for a run that declares no channels MUST report it unresolvable rather than resolve it
-   anyway — which is a rule nobody can follow against an API that does not offer the resolution.
-2. **Bump `registry_version` when the schema settles.** It is held at `0.1.0` by decision, not by
+1. **Bump `registry_version` when the schema settles.** It is held at `0.1.0` by decision, not by
    oversight: the field is for compatibility and follows semantic versioning, and R48, R53, R56
    and R59 would each have forced a major increment. While the hold lasts, two packets declaring
    `0.1.0` can carry incompatible schemas, so the embedded registry is the authority and
@@ -872,6 +863,23 @@ Whole packet, 2,496 objects and 6.83 GB across twelve arrays:
 | local disk | 0.33 s | 75 s (91 MB/s, cold) |
 
 Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
+
+---
+
+# Settled 2026-09-14
+
+- **A channel index resolves through the run's kept list.** `escapewheel_reader.channels` offers
+  what Part 02 §12.2 requires of a consumer: `kept_channels` reads `core.sorting_run_channels`,
+  `electrode_at` performs the lookup over one index or an array of them, and
+  `runs_without_channels` names the runs no index can be resolved for. A run declaring no channels
+  raises `UnresolvableChannelIndex` rather than falling back to `core.electrodes`, and the
+  exception's `channels_declared` separates that from an index outside a list the run did declare.
+  Measured on the two rebuilt packets: **3,375 of 4,510** indices in `ecephys_776259` and **1,651
+  of 3,813** in `ecephys_786867` name a different contact than the contact list would, eleven of
+  twelve runs and seven of ten having dropped channels, one diverging at index 2. One run dropped
+  three contacts from the tail and shifts nothing, which is how the convention stayed invisible.
+- **The source cache lands where the build names it.** See §1a₂, which records the dropped fsspec
+  option behind it.
 
 ---
 

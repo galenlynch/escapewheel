@@ -11,6 +11,7 @@ from __future__ import annotations
 from importlib.metadata import version
 
 from .alignment import ClockMismatch, aligned_spikes, assigned_spikes, windows_disjoint
+from .channels import ChannelsUndeclared, electrode_at, kept_channels, runs_without_channels
 from .clocks import BOUND, NotAligned, Unanchored, align, on_clock, origin, seconds
 from .dataset import (
     PROJECTED,
@@ -36,6 +37,7 @@ from .errors import (
     PacketError,
     ResourceNotFoundError,
     ResourceUnreadableError,
+    UnresolvableChannelIndex,
     UnresolvedSource,
     UnsupportedCodecError,
 )
@@ -68,6 +70,7 @@ __all__ = [
     "Ambiguity",
     "AmbiguousRun",
     "ArrayResource",
+    "ChannelsUndeclared",
     "ClockMismatch",
     "Dataset",
     "Discriminator",
@@ -87,6 +90,7 @@ __all__ = [
     "StaleSupport",
     "TableResource",
     "Unanchored",
+    "UnresolvableChannelIndex",
     "Unresolved",
     "UnresolvedSource",
     "UnsupportedCodecError",
@@ -97,6 +101,8 @@ __all__ = [
     "assigned_spikes",
     "clock_windows",
     "declared",
+    "electrode_at",
+    "kept_channels",
     "kinds",
     "observed_seconds",
     "observed_ticks",
@@ -111,6 +117,7 @@ __all__ = [
     "read_sources",
     "resolve_sources",
     "resolved",
+    "runs_without_channels",
     "seconds",
     "session_scoped",
     "sources_schema",

@@ -52,6 +52,7 @@ revisions.** Almost all of them are about time:
 | a count needs the span it was observed over | R38 | `observation.unit_windows`, `observation.rate` |
 | several runs may have produced the same thing | R41, R44 | `runs.ambiguities`, `runs.preferred_run` |
 | an ASOF and a range join differ where windows overlap | R43 | `alignment.aligned_spikes` |
+| a channel index counts the channels a run kept, not contacts | R83 | `channels.electrode_at`, `channels.runs_without_channels` |
 
 That table is the justification for the module list. If you are adding something, either it
 extends a row or it adds one — and adding one means naming the revision that makes it a hazard.
@@ -81,7 +82,7 @@ function instead.**
 ### Two shapes worth copying
 
 **Refuse rather than choose.** Where the packet does not determine an answer, raise and name the
-revision. `NoTimeOrigin`, `NotAligned`, `AmbiguousRun` and `StaleSupport` are all this.
+revision. `NoTimeOrigin`, `NotAligned`, `AmbiguousRun`, `StaleSupport` and `UnresolvableChannelIndex` are all this.
 
 A rule from an **accepted** revision raises. Something only a **proposed** revision would catch
 warns instead — a non-binding revision must not turn a readable packet into an unreadable one.
