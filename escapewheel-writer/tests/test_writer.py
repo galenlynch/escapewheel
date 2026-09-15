@@ -1075,6 +1075,44 @@ def test_a_string_chosen_plain_is_written_without_a_dictionary(tmp_path, registr
     assert pq.read_table(path).column(0).to_pylist() == names.to_pylist()
 
 
+def _stream_units(tmp_path, registry, extra=None, report=None, **columns):
+    """Stream one batch of `core.units` through the writer and return each column's encodings."""
+    from escapewheel_writer.writer import _write_stream
+
+    rows = 1_000
+    batch = pa.record_batch({
+        "session_id": pa.array([0] * rows, type=pa.int32()),
+        "unit_id": pa.array(range(rows), type=pa.int32()),
+        **columns,
+    })
+    path = tmp_path / "units.parquet"
+    _write_stream(registry["tables"]["core.units"], iter([batch]), path, "core.units", extra, report)
+    metadata = pq.ParquetFile(path).metadata
+    return {metadata.schema.column(i).name: {str(e) for e in metadata.row_group(0).column(i).encodings}
+            for i in range(metadata.num_columns)}
+
+
+def test_a_column_a_stream_omits_is_encoded_as_the_nulls_it_is_written_as(tmp_path, registry):
+    """A nullable column absent from a delivery is written as nulls, and holds no value to index."""
+    encodings = _stream_units(tmp_path, registry)
+    assert not any("DICTIONARY" in e for e in encodings["firing_rate_hz"]), encodings["firing_rate_hz"]
+
+
+def test_a_recipe_exception_reaches_a_streamed_table(tmp_path, registry):
+    """The streaming loop once bound its unexpected columns to the name the exceptions arrive under."""
+    extra = {"dictionary": {"core.units": ("firing_rate_hz",)}}
+    encodings = _stream_units(tmp_path, registry, extra)
+    assert any("DICTIONARY" in e for e in encodings["firing_rate_hz"]), encodings["firing_rate_hz"]
+
+
+def test_a_streamed_column_is_reported_at_the_type_it_is_written_as(tmp_path, registry):
+    """A source's `int64` cast to the registry's `int32` is measured as written, not as delivered."""
+    report: list[str] = []
+    sizes = pa.array([[2, 4, 8][i % 3] for i in range(1_000)], type=pa.int64())
+    _stream_units(tmp_path, registry, {"plain": {"core.units": ("probe_id",)}}, report, probe_id=sizes)
+    assert not [line for line in report if ".probe_id " in line], report
+
+
 def test_an_inefficient_encoding_is_reported(tmp_path, registry, minimal):
     """Part 03 §5.5's rules are good guesses, and a column it guesses wrong about is said aloud.
 

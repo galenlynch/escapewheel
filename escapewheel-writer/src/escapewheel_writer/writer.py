@@ -227,27 +227,19 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
         # made it the bottleneck and gave back exactly what skipping the re-read saved. A queue
         # either side of it lets all three run at once, and the slowest one sets the pace.
         for batch in _prefetch(_prefetch(verify_order(batches, keys, unique)) if keys else batches):
+            first = out is None
             if out is None:
                 out = _as_held(schema(spec, set(batch.schema.names)), batch.schema)
-                options = _options(resource_id, spec, out, extra, batch)
-                writer = pq.ParquetWriter(path, out, **options)
-                if report is not None:
-                    report.extend(inefficient(resource_id, pa.Table.from_batches([batch]),
-                                              options.get("column_encoding", {}) and
-                                              list(options["column_encoding"]) or [],
-                                              [n for n in out.names
-                                               if n not in options.get("use_dictionary", out.names)
-                                               and n not in options.get("column_encoding", {})]))
-            if extra := sorted(set(batch.schema.names) - set(out.names)):
+            if unexpected := sorted(set(batch.schema.names) - set(out.names)):
                 # Two causes reach here and they send an author to different files: a column the
                 # registry never declared, and an optional one the first batch lacked so `schema`
                 # left it out. The check fires on the first batch too, where only the first is
                 # possible, so a message naming only the second described the rarer case.
                 declared = {c["name"] for c in spec["columns"]}
                 said = []
-                if undeclared := [n for n in extra if n not in declared]:
+                if undeclared := [n for n in unexpected if n not in declared]:
                     said.append(f"{undeclared} is declared by no registry this build loaded")
-                if late := [n for n in extra if n in declared]:
+                if late := [n for n in unexpected if n in declared]:
                     said.append(f"{late} is optional and absent from the first batch")
                 raise ValueError(
                     f"{resource_id}: {'; '.join(said)}; the column would be dropped silently"
@@ -256,11 +248,25 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
                 batch.column(name) if name in batch.schema.names else pa.nulls(batch.num_rows, field.type)
                 for name, field in zip(out.names, out, strict=True)
             ]
+            held = pa.record_batch(columns, schema=out)
+            if first:
+                # Chosen from the batch as it will be written, not as it arrived: a column the source
+                # omits is written as nulls and counts as none, and a column cast to the registry's
+                # type is measured at that type, where the source's can cost 77x as much plain.
+                options = _options(resource_id, spec, out, extra, held)
+                writer = pq.ParquetWriter(path, out, **options)
+                if report is not None:
+                    report.extend(inefficient(resource_id, pa.Table.from_batches([held]),
+                                              options.get("column_encoding", {}) and
+                                              list(options["column_encoding"]) or [],
+                                              [n for n in out.names
+                                               if n not in options.get("use_dictionary", out.names)
+                                               and n not in options.get("column_encoding", {})]))
             assert writer is not None
             # `row_group_size` is load-bearing, not decoration: left to pyarrow it defaults to
             # 2**20 rows and silently cuts a larger batch into several row groups, which would
             # break the boundary guarantee this docstring makes.
-            writer.write_batch(pa.record_batch(columns, schema=out), row_group_size=batch.num_rows)
+            writer.write_batch(held, row_group_size=batch.num_rows)
             written += batch.num_rows
     finally:
         if writer is not None:
