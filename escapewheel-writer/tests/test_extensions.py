@@ -498,3 +498,48 @@ def test_a_command_given_as_a_string_is_refused(tmp_path):
             tables={"vrf.sites": "sites.parquet"},
             command="python export.py",
         )
+
+
+#: Where the reference registry and the extensions this repository ships live, for the checks that
+#: go through the command rather than the function.
+_REGISTRY = Path(__file__).resolve().parents[2] / "registry" / "logical_schemas.json"
+_EXTENSIONS = Path(__file__).resolve().parents[2] / "registry" / "extensions"
+
+
+def test_the_check_command_passes_a_shipped_extension(capsys):
+    """Through `main`, so a pass proves the entry-point wiring and not just the handler."""
+    from escapewheel_reader.scripts.cli import main
+
+    document = _EXTENSIONS / "vr_foraging.json"
+    assert main(["extension", "check", str(document), "--registry", str(_REGISTRY)]) == 0
+    assert "sound" in capsys.readouterr().out
+
+
+def test_the_check_command_refuses_a_document_with_a_dangling_reference(tmp_path, capsys):
+    """The half of authoring that never shipped: an author learns now rather than at a build."""
+    from escapewheel_reader.scripts.cli import main
+
+    document = json.loads((_EXTENSIONS / "vr_foraging.json").read_text())
+    table = next(iter(document["tables"].values()))
+    table["references"].append(
+        {"columns": [table["primary_key"][0]], "resource": "core.absent", "resource_columns": ["x"]}
+    )
+    path = tmp_path / "vr_foraging.json"
+    path.write_text(json.dumps(document))
+    assert main(["extension", "check", str(path), "--registry", str(_REGISTRY)]) == 1
+    assert "reference targets exist" in capsys.readouterr().out
+
+
+def test_the_check_command_reads_the_registry_a_packet_embeds(tmp_path, capsys, registry, minimal):
+    """Part 02 §9.2 makes the packet's own copy the authority, and it is what an author has to hand."""
+    from escapewheel_reader.scripts.cli import main
+
+    writer = PacketWriter(registry, packet_id="p")
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    root = tmp_path / "packet"
+    assert writer.commit(root).passed
+
+    document = _EXTENSIONS / "aind_opto.json"
+    assert main(["extension", "check", str(document), "--packet", str(root)]) == 0
+    assert "sound" in capsys.readouterr().out

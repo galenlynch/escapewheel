@@ -204,7 +204,7 @@ Reading the resulting packet needs **none of those packages installed**.
 
 ### Drafting one
 
-`escapewheel extension <id> --table name=path.parquet` reads what the data shows — column names,
+`escapewheel extension draft <id> --table name=path.parquet` reads what the data shows — column names,
 their types in R2 §4's vocabulary, and whether a column is ever null — and reports everything it
 cannot know. It writes **no role**, so the draft does not validate until a human supplies them:
 R48 §2.2 refuses a default because a forgotten classification looks deliberate, and a generated

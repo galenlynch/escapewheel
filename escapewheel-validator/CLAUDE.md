@@ -56,6 +56,14 @@ reads are concurrent, so the choice is dependency weight and scheme coverage rat
 `src/escapewheel_validator/schemas/registry.schema.json` is a **vendored copy** from
 `registry/`. Re-copy it when the meta-schema changes there; it is not generated at build time.
 
+`registry_document.py` holds the invariants any registry document is held to — a reference relating
+columns of the same type, role and identity; a namespace prefixing its own tables; a discriminator
+declaring what it resolves to. They live here because they are checks, and because an author outside
+this repository has the same document and the same question: `escapewheel extension check` runs
+them, and `registry/check.py` imports the same functions, so core is held to exactly what an
+extension is. What stays in that script is what is true of this repository's *build* rather than of
+a document — the R9 §2 ledger, `derived_from`, the rule-expansion round trip.
+
 ## Scope
 
 Part 07 sets the phase plan. This package is Phase 2.

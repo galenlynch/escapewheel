@@ -90,36 +90,7 @@ commands, and that freedom is what R109 §3.1 exists to protect. Print for a per
 put anything a build should parse in the report file. Do not restate what the build already
 derives: rows per table come from the Parquet footer at Part 05 Stage 1.
 
-## 2. An extension can be drafted and cannot be checked
-
-`escapewheel extension` drafts a registry document from tables that already exist, which is the
-half of extension authoring that is shipped. The other half is not: `registry/check.py` runs **30
-structural invariants over each registry document**, core's and every extension's — that a
-reference relates columns of the same type (R114 §3), the same role, the same identity, that a
-namespace prefixes its own tables, that a discriminator declares what it resolves to — and it is a
-script in this repository, not a command anyone else can run.
-
-So an author outside this repo scaffolds a document and has no way to find out whether it is
-sound until a build refuses it, or worse does not. The four extensions here drift for the same
-reason and are caught only because they sit beside `check.py`, which its own comment says: nothing
-regenerates them.
-
-This is the extension's version of what R115 §3.9 does for
-an adapter — ship the thing an author would otherwise write badly — and the shape is the same:
-`escapewheel extension check <document>`, the invariants already written, run against a document
-and the core registry a packet embeds.
-
-**The rest of the parallel is already there**, which is worth saying so nobody builds it twice. An
-extension's *rows* cross by the same protocols an adapter's do, and R115 §3.9 ships both ends for
-either.
-Its *document* is already drafted for it by `escapewheel extension`, which reads what a Parquet file
-can tell it and names what it cannot, so a human finishes a draft rather than starting one — and
-that is not R109 §3.2's forbidden derivation, because what the extension delivers is the human's
-document and not a function of the rows. The document already carries its own versions too:
-`extends` names the logical standard (R17 §5) and `$schema` the meta-schema it is written in
-(R57 §2.1). Checking is the only half that never shipped.
-
-## 3. The adapter boundary reaches nine of the ten adapters
+## 2. The adapter boundary reaches nine of the ten adapters
 
 R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
 source; every piece of it was built by 2026-09-14 — a declaration, a document, a command, three
@@ -253,7 +224,7 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 4. The committed packets' encodings are unmeasured
+## 3. The committed packets' encodings are unmeasured
 
 **Not started, and the packets to measure are now in place.** Several tables changed shape
 substantially — R105's four coordinate tables at 74,223 value rows, R81's collapse of unit identity,
@@ -269,7 +240,7 @@ per table: which encoding each column got, whether a sort makes a column compres
 measured for `session_id` at 1.0005x, and whether any row group is small enough that its footer
 costs more than its rows.
 
-## 5. No code quality audit has run
+## 4. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
@@ -285,7 +256,7 @@ a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncon
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
 
-## 6. `registry_version` is held at `0.1.0`
+## 5. `registry_version` is held at `0.1.0`
 
 Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
 packets claiming one version with incompatible schemas is what the field exists to prevent, and it
@@ -293,19 +264,19 @@ is preventing nothing. Free to settle while nobody outside holds a packet, and f
 the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
 three at 0.2.0.
 
-## 7. The repository directory is still `nwb-lake/`
+## 6. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
 working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
 doing in one order or the other, not at once.
 
-## 8. Staging both packets to scratch needs a token
+## 7. Staging both packets to scratch needs a token
 
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 9. Parked: R42's write case survives its withdrawal
+## 8. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -323,7 +294,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 10. Smaller open items
+## 9. Smaller open items
 
 - **Trial-in-block containment has no consumer.** The measurement below concluded that a trial
   needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries `start_tick`
@@ -426,6 +397,15 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
 
 # Settled 2026-09-14
 
+- **An extension can be checked.** `escapewheel extension check <document> --registry <core>` runs
+  the invariants any registry document is held to, which were a script in this repository and are
+  now `escapewheel_validator.registry_document`: **31 to 35 per document**, depending on what its
+  tables declare. `registry/check.py` imports the same `structural` and `declarations`, so core is
+  held to exactly what an extension is and the two cannot drift; its own report is unchanged at 206
+  lines. `--packet` reads the core registry a packet embeds (R2 §8) instead of a path, since that is
+  what an author has to hand, and `--all` lists the invariants that held as well as those that did
+  not. Checking the four shipped extensions is now a test rather than a side effect of their sitting
+  beside the script. `escapewheel extension` gains a verb: `draft` is what it did, `check` is new.
 - **A build is driven end to end by a test.** `escapewheel-writer/tests/test_build_end_to_end.py`
   writes synthetic sources to disk, names them in a recipe, and runs `session.build` and
   `PacketWriter.commit`, which nothing did: `fixtures/build.py` calls `pq.write_table` directly, so

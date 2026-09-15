@@ -346,6 +346,51 @@ def _extension(args: argparse.Namespace) -> int:
     return 0
 
 
+def _extension_check(args: argparse.Namespace) -> int:
+    """Check an extension's registry document against the invariants any registry is held to.
+
+    The half of extension authoring that never shipped: `draft` writes a document and nothing told
+    an author whether it was sound, so the answer arrived when a build refused it, or did not
+    arrive. Core is checked by exactly this function, which is what keeps the two from drifting.
+    """
+    from escapewheel_validator.registry_document import check_extension
+
+    if not args.document.is_file():
+        print(f"error: {args.document} does not exist", file=sys.stderr)
+        return 2
+    if args.packet is not None:
+        from escapewheel_reader import open_packet
+
+        core = open_packet(args.packet).registry
+        if core is None:
+            print(f"error: {args.packet} embeds no registry to check against", file=sys.stderr)
+            return 2
+    else:
+        if not args.registry.is_file():
+            print(f"error: {args.registry} does not exist", file=sys.stderr)
+            return 2
+        core = json.loads(args.registry.read_text())
+
+    try:
+        document = json.loads(args.document.read_text())
+    except json.JSONDecodeError as exc:
+        print(f"error: {args.document} is not valid JSON: {exc}", file=sys.stderr)
+        return 2
+
+    # The stem is what the document is filed as, which its `extension_id` must match.
+    findings = check_extension(document, core, name=args.document.stem)
+    broken = [f for f in findings if not f.passed]
+    for finding in findings if args.all else broken:
+        print(f"{'FAIL' if not finding.passed else 'ok  '}  {finding}")
+    tables = len(document.get("tables", {}))
+    if broken:
+        print(f"\n{args.document}: {len(broken)} of {len(findings)} invariant(s) broken "
+              f"over {tables} table(s)", file=sys.stderr)
+        return 1
+    print(f"\n{args.document}: sound — {len(findings)} invariant(s) over {tables} table(s)")
+    return 0
+
+
 def _declare(args: argparse.Namespace) -> int:
     """Write one adapter's declarations as the document Part 03 §11.5 publishes the shape of."""
     from .. import declaration
@@ -410,17 +455,32 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     init.add_argument("--out", type=Path, help="write here rather than to stdout")
     init.set_defaults(func=_init)
 
-    extension = subcommands.add_parser("extension", help="draft an extension registry from tables that already exist")
-    extension.add_argument("extension_id", help="namespace every table is prefixed by (Part 09 §2)")
-    extension.add_argument(
+    extension = subcommands.add_parser("extension", help="draft an extension registry, or check one")
+    # Two verbs rather than two commands: drafting and checking are the two halves of authoring one
+    # document, and a verb is where a third would go.
+    authoring = extension.add_subparsers(dest="verb", required=True, metavar="{draft,check}")
+
+    drafting = authoring.add_parser("draft", help="draft a registry document from tables that already exist")
+    drafting.add_argument("extension_id", help="namespace every table is prefixed by (Part 09 §2)")
+    drafting.add_argument(
         "--table",
         action="append",
         default=[],
         metavar="NAME=PATH",
         help="a table and the parquet file whose schema it takes; repeatable",
     )
-    extension.add_argument("--out", type=Path, default=None, help="where to write (default: <id>.json)")
-    extension.set_defaults(func=_extension)
+    drafting.add_argument("--out", type=Path, default=None, help="where to write (default: <id>.json)")
+    drafting.set_defaults(func=_extension)
+
+    checking = authoring.add_parser("check", help="check a registry document against Part 09 §2's invariants")
+    checking.add_argument("document", type=Path, help="the extension's registry document")
+    source = checking.add_mutually_exclusive_group(required=True)
+    source.add_argument("--registry", type=Path, help="the core registry it extends, as logical_schemas.json")
+    source.add_argument("--packet", type=Path, help="a packet root, whose embedded registry is read instead")
+    checking.add_argument(
+        "--all", action="store_true", help="list every invariant checked, not only the ones that failed"
+    )
+    checking.set_defaults(func=_extension_check)
 
     verifier = subcommands.add_parser(
         "verify", help="record what is true about a committed packet's external resources"
