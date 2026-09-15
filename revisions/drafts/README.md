@@ -20,7 +20,7 @@ and on nothing below.
 
 | draft | words | appraised | why here |
 |---|---|---|---|
-| `an-adapter-declares-the-options-it-accepts` | 2,060 | not yet | The only one open. It depends on R115 §3.1 and §3.12 and on nothing unaccepted, and it is what the declared options `waveforms` and `lfp` each need are waiting on. |
+| `an-adapter-declares-the-options-it-accepts` | 2,172 | 2026-09-15 | The only one open. It depends on R115 §3.1 and §3.12 and on nothing unaccepted, and it is what the declared options `waveforms` and `lfp` each need are waiting on. Its appraisal found the refusal breaking every declaration document written against R115, which §5 now states and accepts. |
 
 A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
 records what bound something and a draft never did. Git holds the document, and whatever the

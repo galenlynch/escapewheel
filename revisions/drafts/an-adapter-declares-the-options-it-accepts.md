@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Draft** |
 | **Amends** | Part 03 §11.2 (an adapter declares the options it can run without, and a build refuses an option no declaration names); Part 03 §11.5 (the declaration document carries `accepts`); Part 05 §3.4 (an adapter declares five facts rather than four); Part 05 §3.5 (what a build refuses a recipe for); Part 07 §4 (the reference spelling) |
-| **Depends on** | R115 §3.1 (an adapter declares what a build supplies it, resolved against terms then options), R115 §3.12 (the declaration document and what a build refuses it for), R63 §2.2 (a build refuses a recipe it cannot satisfy, before any source is opened), R110 §3.4 (a choice about one packet's values belongs in its recipe) |
+| **Depends on** | R115 §3.1 (an adapter declares what a build supplies it, resolved against terms then options), R115 §3.12 (the declaration document and what a build refuses it for), R63 §2.1 (an adapter declares what it can supply, statically and as a class attribute), R87 §2.2 (the same discipline applied to the facts a source states) |
 | **Profile** | all |
 
 Normative, except §2, which is informative.
@@ -106,17 +106,18 @@ supplies: a term is filled by the build rather than offered by the recipe, so na
 claims a choice the recipe does not have.
 
 A build **MUST** supply an option the recipe sets and the adapter names in either list, and **MUST
-NOT** require a recipe to set one named in `accepts`. An adapter naming an option there **MUST**
-behave as though the recipe had not set it when it has not, which is what makes the default the
-adapter's own statement rather than a value the build invents.
+NOT** require a recipe to set one named in `accepts`. An adapter **MUST** apply its own default
+where the recipe sets no value, so what an omitted option means is the adapter's statement rather
+than a value the build invents.
 
 ### 3.2 A build refuses an option no declaration names
 
 A build **MUST** refuse a recipe whose source entry sets an option the adapter names in neither
 `needs` nor `accepts`, naming the source and the option, before any source is opened — where
 Part 05 §3.5 already refuses a declared name that resolves to nothing. This is the refusal
-R115 §3.1 argues for and could not deliver: an option a recipe sets and an adapter ignores is a statement about the
-packet that does not reach it, and the author's next evidence is its absence from the output.
+R115 §3.1 argues for and could not deliver: an option a recipe sets and an adapter ignores is a
+statement about the packet that does not reach it, and the author's next evidence is its absence
+from the output.
 
 A build **MUST NOT** refuse a recipe that omits an option named in `accepts`, and **MUST NOT** treat
 such an option's absence as a term it cannot fill.
@@ -124,10 +125,10 @@ such an option's absence as a term it cannot fill.
 ### 3.3 A build declares the options it injects
 
 A build **MUST NOT** supply an option the adapter names in neither list, including one the build
-itself adds rather than reads from the recipe. Where a build offers a facility through an option —
-sampling is the one this implementation has — the adapters it applies to **MUST** name that option
-in `accepts`, and a build **MUST NOT** apply the facility to an adapter that does not. Injecting
-silently is the same defect as a recipe setting an option nothing reads, with the build as the
+adds itself rather than reading from the recipe. §3.1 already puts such an option in the adapter's
+`accepts`, `sample` being one an adapter reads and can run without, so what this adds is the build's
+half: a build **MUST NOT** apply a facility of its own to an adapter that does not name the option
+carrying it. Injecting silently is a recipe setting an option nothing reads, with the build as the
 author of it.
 
 ### 3.4 The declaration document carries `accepts` beside `needs`
@@ -150,9 +151,6 @@ what an implementation calls it is the implementation's (R115 §3.1).
 
 ## 4. What this does not change
 
-- **No term is added to Part 03 §11.2's vocabulary.** §3.1 turns on the difference between a term
-  and an option, so a reader may take the new list for a way of adding terms. It is the opposite:
-  `accepts` may name only what the recipe carries, and the closed list is untouched.
 - **`needs` keeps its meaning and its refusal.** A name declared there is still one a build must
   supply and still refuses a recipe that cannot fill it; what changes is that an adapter now has
   somewhere else to put an option, rather than the choice between declaring it mandatory and not
@@ -160,7 +158,7 @@ what an implementation calls it is the implementation's (R115 §3.1).
 
 ## 5. Consequence
 
-No packet is invalidated, no table, column or rule changes, and nothing is rebuilt: this is a
+No packet is invalidated, no table, column or rule changes, and no packet is rebuilt: this is a
 declaration a build reads before it opens a source.
 
 What lands is one key and one check. The schema gains an `accepts` property; the generator that
@@ -171,9 +169,21 @@ its own, and the two adapters of §2.5 can then take the option each is waiting 
 moves `waveforms` and `lfp` from adapters carrying one producer's dialect to adapters a recipe
 configures.
 
+**Every declaration document written against R115 becomes one that accepts no option.**
+Part 03 §11.5's schema requires `kind`, `protocol`, `produces` and `needs` and nothing else, so a
+document written before this revision carries no `accepts`, §3.4 reads it as naming none, and §3.2
+then refuses any recipe setting an option for that adapter, naming the source and the option. An
+adapter reading an option with a default therefore stops building until its document declares one.
+The break is deliberate: scoping the refusal to documents that already carry `accepts` would make it
+inert on exactly the adapter it exists for — one a build cannot import, and so cannot check any
+other way — and would leave a misspelled option arriving at a constructor as it does today (§2.3).
+The ten shipped adapters are regenerated from their classes, which Part 03 §11.5 requires of an
+implementation shipping both, so the cost falls on an adapter released apart from a build, which is
+the case R115 §3.12 wrote the document for.
+
 The cost is that an adapter's author now writes down every option they accept, and an option left
 out of both lists is refused rather than ignored. That is the point of it, and it is the same cost
-R63 §2.2 imposed for resources and R87 §2.2 for stated fields.
+R63 §2.1 imposed for resources and R87 §2.2 for stated fields.
 
 ## 6. Open
 
