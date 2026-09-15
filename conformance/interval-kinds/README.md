@@ -43,7 +43,7 @@ is named anywhere in the reading code.
 ## What this does not show
 
 - **Scale.** 520 intervals. Nothing here says what a million would cost, and the containment
-  measurement in the root TODO §3 is the one that speaks to that.
+  measurement in the root TODO §11 is the one that speaks to that.
 - **That two kinds is common.** One synthetic session. The case is drawn from what a real session
   holds — a task, optotagging, inactivation windows — not from a packet that carries it.
 - **Anything about R55.** `interval_kind` is declared `role: data` here, because the
