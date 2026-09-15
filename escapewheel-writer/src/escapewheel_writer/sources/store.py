@@ -142,9 +142,55 @@ def _rooted(target: Any) -> bool:
 ANONYMOUS = frozenset({"s3", "gs", "gcs", "az", "abfs", "adl"})
 
 
+#: The environment variable naming the cache directory. Not a supplied term (Part 03 §11.2): an
+#: adapter that never reads it caches somewhere else and is conforming, so this says where the
+#: bytes should land rather than anything a delivery depends on.
+CACHE_VARIABLE = "ESCAPEWHEEL_SOURCE_CACHE"
+
+
 def cache_directory() -> Path:
-    """Where a store's fetched objects are kept, honouring `TMPDIR`."""
+    """Where a store's fetched objects are kept: `ESCAPEWHEEL_SOURCE_CACHE`, else under `TMPDIR`.
+
+    The variable is the channel because an adapter may run in another process, where a value
+    set in this one does not reach it; the environment is what a delivering command inherits.
+    """
+    named = os.environ.get(CACHE_VARIABLE)
+    if named:
+        return Path(named)
     return Path(os.environ.get("TMPDIR", tempfile.gettempdir())) / "escapewheel-source-cache"
+
+
+#: What the last `cache_beside` put in the environment, so a second packet moves the cache and an
+#: operator's own setting is left alone. Two recipes in one process is the case: the variable is
+#: how the location reaches a child, and a value this process wrote is not a declaration.
+_PLACED: str | None = None
+
+
+def cache_beside(packet: str | PurePath) -> Path:
+    """Put the cache in the packet's parent directory, and return where that is.
+
+    A default under `TMPDIR` is RAM wherever `/tmp` is a tmpfs, so a cgroup cap does not bound
+    what a build fetches and the kill arrives as system memory pressure. Beside the packet puts
+    it on the filesystem that is about to hold the packet, which is the same choice the
+    materializer and the validator make for their scratch.
+
+    The parent rather than the packet, so a rebuild into a new directory reads what the last
+    one fetched: `simplecache` keys on the URI, so two packets sharing a directory share
+    whatever objects they share and collide over none.
+
+    Call it before the first root resolves. A store root is opened through a chained path
+    carrying the cache location, so where the bytes land is fixed when the path is built and
+    moving the cache afterwards moves nothing.
+
+    An operator who has set `ESCAPEWHEEL_SOURCE_CACHE` keeps it.
+    """
+    global _PLACED
+    declared = os.environ.get(CACHE_VARIABLE)
+    if declared and declared != _PLACED:
+        return Path(declared)
+    where = Path(packet).parent / ".escapewheel-source-cache"
+    os.environ[CACHE_VARIABLE] = _PLACED = str(where)
+    return where
 
 
 def source_root(root: str | PurePath, *, cache: str | PurePath | None = None, **storage: Any) -> Any:
@@ -187,7 +233,11 @@ def source_root(root: str | PurePath, *, cache: str | PurePath | None = None, **
         return UPath(text, **options)
     where = cache_directory() if cache is None else Path(cache)
     where.mkdir(parents=True, exist_ok=True)
-    return UPath(f"simplecache::{text}", **{protocol: options, "simplecache": {"cache_storage": str(where)}})
+    # `cache_storage` at the top level, the target's options under its protocol. Nesting it under
+    # `simplecache`, as the chained-URL form suggests, parses and is then dropped: the filesystem
+    # comes back with `storage` at a `mkdtemp()` under `TMPDIR`, which is where every fetched
+    # object went while the directory named here stayed empty.
+    return UPath(f"simplecache::{text}", **{protocol: options, "cache_storage": str(where)})
 
 
 def store_for(root: str | PurePath, shared: dict[Any, SourceStore] | None = None) -> SourceStore:

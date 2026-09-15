@@ -30,7 +30,7 @@ from typing import Any
 import tomllib
 from upath import UPath
 
-from .sources.store import source_root
+from .sources.store import cache_beside, source_root
 
 #: Resources a recipe supplies from its own declarations rather than through a source: the
 #: session and subject it names, and the record of the run that read the sources.
@@ -543,7 +543,7 @@ class Recipe:
     limits: Mapping[str, Any]
 
     @classmethod
-    def load(cls, path: str | Path) -> Recipe:
+    def load(cls, path: str | Path, *, out: str | Path | None = None) -> Recipe:
         """Read and parse a recipe.
 
         Parameters
@@ -551,6 +551,10 @@ class Recipe:
         path : str or Path
             The ``.toml`` file. Relative paths inside it resolve against its directory, so a
             recipe travels with the tree it describes.
+        out : str or Path, optional
+            Where the packet goes, overriding ``[packet].out``. Settled here rather than by the
+            caller because a store root is opened through a cache that sits beside the packet,
+            and a root resolved against the wrong one cannot be moved afterwards.
 
         Returns
         -------
@@ -612,12 +616,17 @@ class Recipe:
             resolved = resolve_root(value, {})
             return str(resolved) if isinstance(resolved, Path) else value
 
+        destination = Path(out) if out else resolve(str(packet.get("out", packet["id"])))
+        # Before the first `resolve_root` below, which bakes the cache location into the chained
+        # path it returns.
+        cache_beside(destination)
+
         return cls(
             path=path,
             digest=hashlib.sha256(raw).hexdigest(),
             document=document,
             packet_id=str(packet["id"]),
-            out=resolve(str(packet.get("out", packet["id"]))),
+            out=destination,
             registry=resolve(str(packet["registry"])) if packet.get("registry") else None,
             extensions=tuple(str(e) for e in packet.get("extensions", [])),
             description=packet.get("description"),

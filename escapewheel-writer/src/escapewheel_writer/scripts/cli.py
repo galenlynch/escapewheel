@@ -24,7 +24,6 @@ import argparse
 import json
 import sys
 import time
-from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -200,7 +199,10 @@ def _wins(kind: str, offering: list[str]) -> bool:
 
 def _import(args: argparse.Namespace) -> int:
     """Build and commit a packet from a recipe (Part 05 Stages 2-6)."""
-    recipe = Recipe.load(args.recipe)
+    # The override goes into the load rather than onto the result: a build derives where a
+    # delivery lands and where the source cache sits from where the packet is going, and the
+    # second of those is fixed when the first source root resolves.
+    recipe = Recipe.load(args.recipe, out=args.out)
     registry_path = args.registry or recipe.registry
     if registry_path is None:
         print("error: no registry; declare [packet].registry or pass --registry", file=sys.stderr)
@@ -235,9 +237,6 @@ def _import(args: argparse.Namespace) -> int:
     # One budget for the build. The CLI wins over the recipe, because the recipe travels with
     # the data and the machine packaging it does not.
     budget = args.memory_budget or recipe.memory_budget
-    # The override is applied to the recipe rather than only to the commit: a build derives
-    # where a delivery lands from where the packet is going, and the two must name one place.
-    recipe = replace(recipe, out=args.out or recipe.out)
     writer = build(recipe, registry, say=say, strict=args.strict)
     derive = materializers(recipe, memory_budget=budget)
     limits = {k: v for k, v in recipe.limits.items() if k != "memory_budget"}

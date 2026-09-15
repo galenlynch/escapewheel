@@ -148,3 +148,45 @@ owns = ["core.array_channels"]
     built = [_build_source(spec, recipe, context) for spec in recipe.sources]
     assert built[0].store is built[1].store
     assert len(context.stores) == 1
+
+
+def test_the_cache_goes_beside_the_packet(tmp_path, monkeypatch):
+    """A default under `TMPDIR` is RAM wherever `/tmp` is a tmpfs; the packet's disk is not."""
+    from escapewheel_writer.sources import store as module
+
+    monkeypatch.delenv(module.CACHE_VARIABLE, raising=False)
+    monkeypatch.setattr(module, "_PLACED", None)
+    monkeypatch.setenv("TMPDIR", str(tmp_path / "tmpfs"))
+    where = module.cache_beside(tmp_path / "packets" / "786867-packet")
+    assert where == tmp_path / "packets" / ".escapewheel-source-cache"
+    # Through the environment, because an adapter delivering out of process reads it there.
+    assert module.cache_directory() == where
+
+
+def test_a_second_packet_moves_the_cache(tmp_path, monkeypatch):
+    """Two recipes in one process: the variable a build wrote is not a declaration."""
+    from escapewheel_writer.sources import store as module
+
+    monkeypatch.delenv(module.CACHE_VARIABLE, raising=False)
+    monkeypatch.setattr(module, "_PLACED", None)
+    module.cache_beside(tmp_path / "first" / "packet")
+    assert module.cache_beside(tmp_path / "second" / "packet") == tmp_path / "second" / ".escapewheel-source-cache"
+
+
+def test_a_declared_cache_location_stands(tmp_path, monkeypatch):
+    """An operator who named one has said where the bytes go, and a build does not overrule it."""
+    from escapewheel_writer.sources import store as module
+
+    monkeypatch.setenv(module.CACHE_VARIABLE, str(tmp_path / "declared"))
+    monkeypatch.setattr(module, "_PLACED", None)
+    assert module.cache_beside(tmp_path / "packets" / "786867-packet") == tmp_path / "declared"
+
+
+def test_a_store_root_caches_where_it_was_told(tmp_path):
+    """Asserted on the filesystem, not on the options: a dropped option parses and reads back."""
+    from escapewheel_writer.sources.store import source_root
+
+    root = source_root("s3://aind-open-data/nothing", cache=tmp_path / "cache")
+    assert root.fs.storage == [str(tmp_path / "cache")]
+    # The target's own options survive the chaining; anonymity is what a public bucket needs.
+    assert root.fs.fs.anon is True

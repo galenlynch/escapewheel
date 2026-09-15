@@ -38,6 +38,7 @@ from .extensions import load as load_extension
 from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, TERMS, Recipe, SourceSpec, declared, redacted
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
+from .sources.store import cache_directory
 from .writer import PacketWriter
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
@@ -777,6 +778,9 @@ def build(
         Loaded with every record, ready to commit.
     """
     session_id = str(recipe.session["session_id"])
+    # Reported rather than chosen here: `Recipe.load` places it, because a store root is opened
+    # through a chained path that carries the location and is built as the recipe parses.
+    say(f"source cache {cache_directory()}")
     context = Context(
         session_id=session_id,
         fact_types=_fact_types(registry),

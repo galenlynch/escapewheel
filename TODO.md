@@ -54,14 +54,34 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. Both packets are rebuilt, and not yet swapped in
+## 1. Both packets are rebuilt twice, and neither pair is swapped in
 
-Each sits in `packet-rebuilt/` beside the original, which is untouched. Committed with **0 errors
-and 0 warnings**: `ecephys_776259` in 467 s with 286,896,563 spikes, `ecephys_786867` in 296 s with
-7,570,450 media frames. Replacing the originals is a separate decision, governed by R32's amendment
-discipline and `escapewheel prune`.
+`packet-rebuilt-2/` is the current pair, built 2026-09-14 beside `packet-rebuilt/` and the
+original, both untouched. Committed with **0 errors and 1 warning** each: `ecephys_776259` in 550 s
+with 286,896,563 spikes, `ecephys_786867` in 306 s with 7,570,450 media frames. Replacing the
+originals is a separate decision, governed by R32's amendment discipline and `escapewheel prune`.
 
-What the rebuild corrected, measured on the committed bytes rather than predicted:
+The second rebuild changed **no row count in any of 40 tables** and two columns:
+
+| | `packet-rebuilt` | `packet-rebuilt-2` |
+|---|---|---|
+| `core.clocks.tick_zero_utc` on harp | null | `2025-04-11T20:34:55.351676Z`; `776259`'s is 2024-11-27 |
+| `core.array_assets.array_asset_name` | `ElectricalSeries46101-LFP`, `mean waveform per unit` | `46101.lfp`, `waveform_mean` |
+| names joining a manifest entry | 0 of 11 and 0 of 14 | **11 of 11 and 14 of 14** |
+
+`core.clock_observation_intervals` and `core.sessions.t_zero_tick` did not move, which places the
+20.5 ms epoch shift the sync adapter's derivation produced: it is inside `tick_zero_utc`, a column
+the earlier pair did not carry, so there was no value for it to shift.
+
+**The one warning is the new column being honest.** `core.clocks.tick_zero_plausible` reports that
+tick 0 is more than a day from `session_start_time`, which it is by **167 days** on `786867` and 498
+on `776259` — the harp counter runs from device power-on, as that clock's `origin` says. The
+derivation is `stamp - counter / 31250`, so the **absolute** instant carries the nominal rate's error
+over that span (1 ppm is 14 s at 167 days) while a tick converted through it cancels that and is
+accurate over the session's own duration. Two record nodes agree to 18 ms. Conforming, and the
+warning is the right level.
+
+What the **first** rebuild corrected, measured on the committed bytes rather than predicted:
 
 | | before | after |
 |---|---|---|
@@ -666,32 +686,42 @@ The packets on disk are not rebuilt for it: 14.8 kB against a 1.16 GB packet doe
 fifteen-minute build, and the declarations apply to the next one. The recipes live outside this
 repository, at `/mnt/Data/776259-packet/recipe.toml` and `/mnt/Data/786867-packet/recipe.toml`.
 
-## 1a₂. The source cache defaults onto tmpfs
+## 1a₂. The source cache went to a temporary directory nobody named
 
-**Found by the rebuild, twice.** `sources/store.py`'s `cache_directory()` returns
-`$TMPDIR/escapewheel-source-cache`, defaulting to `/tmp` — which on this machine is tmpfs, so every
-object fetched from an S3 asset is held in **RAM that a cgroup cap does not bound**. Two builds of
-`ecephys_786867` were killed for system memory pressure while capped at 24 GB and then 8 GB, because
-the cap never applied to the pages that mattered.
+**Settled 2026-09-14, and the location was the smaller half.** `sources/store.py` built a store root
+as `UPath("simplecache::s3://…", simplecache={"cache_storage": where})`, which is the chained-URL
+form fsspec documents and which **UPath parses and then drops**: the filesystem came back with
+`storage` at a `tempfile.mkdtemp()` under `TMPDIR`, while the directory `source_root` had just
+created stayed at 0 bytes. Every object a build fetched went to `/tmp`, which on this machine is
+tmpfs, so it was held in **RAM that a cgroup cap does not bound** — two builds of `ecephys_786867`
+were killed for system memory pressure while capped at 24 GB and then 8 GB, and `TMPDIR=/mnt/Data/tmp`
+worked around it only because `mkdtemp` honours the same variable.
 
-The cache itself is right: `store.py` measures that an adapter reads `spikes.npy` twice and that the
-second read costs another 344 MB over the network. What is wrong is where it lands by default, and
-the honouring of `TMPDIR` is what makes the workaround one variable — `TMPDIR=/mnt/Data/tmp`.
+`cache_storage` goes at the top level and the target's options under the protocol name
+(`{"s3": {"anon": True}, "cache_storage": where}`); both survive, and the chained path caches where
+it was told. The test asserts on `root.fs.storage` rather than on the options it was constructed
+with, which is what the old shape would have passed.
 
-Worth deciding whether a default that is RAM on any machine with a tmpfs `/tmp` is the right one, or
-whether the cache should sit beside the packet as the materializer's scratch already does
-(`dir=packet.root.parent`). The two temp locations in one build already disagree.
+The location is settled with it. `Recipe.load` calls `cache_beside(out)` before it resolves the
+first root — a store root is opened through a chained path carrying the cache location, so the
+placement has to precede the parse and cannot be moved afterwards, which is also why `--out` now
+reaches the load rather than being applied to the result. The cache goes in the packet's **parent**
+directory as `.escapewheel-source-cache`, the filesystem about to hold the packet and the same
+choice the materializer and the validator make for their scratch (`dir=packet.root.parent`). The
+parent rather than the packet, so a rebuild into a new directory reads what the last one fetched:
+`simplecache` keys on the URI, so two packets sharing a directory share whatever objects they share
+and collide over none.
 
-Threading the packet root down to `source_root` is the one shape to avoid: every adapter calls it
-itself, so that is a parameter through ten constructors, which is what `_build_source`'s unification
-just removed. `source_root` already takes a `cache` override, so a build setting the location once
-before it constructs anything costs one call and no plumbing; `escapewheel inspect` constructs an
-adapter with no packet in hand and is what still needs a default.
+The location crosses to a delivering command as `ESCAPEWHEEL_SOURCE_CACHE`, because nine of the ten
+adapters call `source_root` in a process where a value set in this one does not reach them, and the
+environment is what a child inherits. Not a supplied term (Part 03 §11.2): an adapter that never
+reads it caches somewhere else and is conforming. An operator who sets the variable keeps it, and
+`escapewheel inspect` constructs an adapter with no packet in hand and still falls back to `TMPDIR`.
 
-Two builds killed on 2026-09-13 were **not** this: both cache directories were empty, and `/tmp` held
-**27 GB in four ~6.8 GB Python environments** that no build wrote. Attributing a kill to this item
-needs the cache measured rather than assumed, since anything on a tmpfs `/tmp` presses on the same
-pages.
+Threading the packet root down through ten constructors was the shape to avoid, and this costs no
+plumbing. Two builds killed on 2026-09-13 were **not** attributable to the cache alone: both named
+cache directories were empty — as they always were — and `/tmp` held **27 GB in four ~6.8 GB Python
+environments** that no build wrote.
 
 ## 1b. A code quality audit of the whole project
 
