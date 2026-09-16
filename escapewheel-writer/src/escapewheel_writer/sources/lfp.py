@@ -39,7 +39,8 @@ from typing import Any, ClassVar
 import numpy as np
 
 from .compensations import Compensates
-from .nwb import SourceDefect, electrode_name
+from .defect import SourceDefect
+from .nwb import electrode_name
 from .store import SourceStore, source_root
 
 #: Where an NWB keeps its LFP series.

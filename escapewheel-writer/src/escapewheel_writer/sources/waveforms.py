@@ -39,7 +39,8 @@ from typing import Any, ClassVar, NamedTuple
 import numpy as np
 from numpy.typing import NDArray
 
-from .nwb import SourceDefect, electrode_name
+from .defect import SourceDefect
+from .nwb import electrode_name
 from .store import SourceStore, source_root
 
 #: Samples either side of the window used to estimate what the average left behind. Only for

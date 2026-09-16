@@ -28,7 +28,7 @@ from typing import Any, ClassVar
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .nwb import SourceDefect
+from .defect import SourceDefect
 from .store import source_root
 
 #: Rows per batch. Matched to `session.BATCH_ROWS` rather than imported, so a source does not

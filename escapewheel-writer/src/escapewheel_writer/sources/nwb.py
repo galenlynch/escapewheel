@@ -55,7 +55,10 @@ from numpy.typing import NDArray
 
 from ..clock import TickGrid, zone_of
 from .compensations import Compensates
+from .defect import SourceDefect
 from .store import SourceStore, source_root
+from .values import sex as _sex
+from .values import utc_offset as _offset
 from .zarr_compat import UnsupportedEncoding
 
 #: NWB writes the literal string ``None`` where a value is absent -- in `laser_location`,
@@ -111,26 +114,6 @@ FRAME_AXES: dict[str, tuple[str, ...]] = {
     "probe": ("rel_x", "rel_y"),
     "ccf": CCF_AXES,
 }
-
-
-#: Part 02 §9.3. `core.subjects.sex` closes to `male`, `female`, `hermaphrodite` and `other`, and NWB
-#: writes `M`/`F`/`U`/`O`. `U` is unknown, which becomes null rather than `other`: recording it as
-#: `other` asserts a sex the source never claimed, where a null column says the source did not say.
-_SEX = {
-    "m": "male", "male": "male",
-    "f": "female", "female": "female",
-    "h": "hermaphrodite", "hermaphrodite": "hermaphrodite",
-    "o": "other", "other": "other",
-}
-
-
-def _sex(stated: str | None) -> str | None:
-    """Map a source's spelling onto Part 02 §9.3's four values, or None where it states none."""
-    return _SEX.get(stated.strip().lower()) if stated else None
-
-
-class SourceDefect(ValueError):
-    """The NWB is missing something an importer cannot proceed without."""
 
 
 def _one(values: NDArray[Any]) -> str | None:
@@ -1315,14 +1298,6 @@ def _described(parsed: Any, raw: str) -> dict[str, str] | None:
     return {"description": parsed["description"]} if parsed["description"] else None
 
 
-def _offset(delta: Any) -> str:
-    """Render a UTC offset the way a timestamp writes it, not the way a timedelta prints."""
-    if delta is None:
-        return "none"
-    minutes = round(delta.total_seconds() / 60)
-    return f"{'-' if minutes < 0 else '+'}{abs(minutes) // 60:02d}:{abs(minutes) % 60:02d}"
-
-
 def _resolve(root: Path) -> Path:
     """Accept either the ``.nwb`` directory or the asset directory holding one."""
     if (root / ".zgroup").is_file():
@@ -1333,4 +1308,4 @@ def _resolve(root: Path) -> Path:
     raise SourceDefect(f"{root} is not an NWB-Zarr directory and holds {len(candidates)} of them")
 
 
-__all__ = ["ABSENT", "NWBSource", "SourceDefect"]
+__all__ = ["ABSENT", "NWBSource", "SourceDefect"]  # SourceDefect re-exported from `.defect`

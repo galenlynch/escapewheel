@@ -11,9 +11,10 @@ from importlib.metadata import entry_points
 from typing import Any
 
 from .aind import AcquisitionStream, SessionSource
+from .defect import SourceDefect
 from .harp import HarpSource
 from .lfp import LFPSource
-from .nwb import NWBSource, SourceDefect
+from .nwb import NWBSource
 from .openephys import OpenEphysSource
 from .sorter import SortedStream, SorterSource
 from .sync import SyncSource, SyncStream

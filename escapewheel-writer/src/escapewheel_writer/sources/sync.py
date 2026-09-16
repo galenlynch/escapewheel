@@ -54,7 +54,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..clock import HARP_TICK_RATE_HZ, Clock
-from .nwb import SourceDefect
+from .defect import SourceDefect
 from .store import source_root
 
 #: rig-qc archives the pre-alignment array under this name when it rewrites `timestamps.npy`.

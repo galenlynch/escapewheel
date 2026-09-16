@@ -44,8 +44,10 @@ from zoneinfo import ZoneInfo
 
 from ..clock import Clock, epoch_from, zone_of
 from .compensations import Compensates
-from .nwb import SourceDefect, _offset, _sex
+from .defect import SourceDefect
 from .store import source_root
+from .values import sex as _sex
+from .values import utc_offset as _offset
 
 #: `session.json`'s own name for the file, used to accept either it or its directory.
 SESSION_JSON = "session.json"
