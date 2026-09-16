@@ -41,7 +41,6 @@ the ones that disagree instead of trusting either blindly.
 from __future__ import annotations
 
 import math
-import re
 from collections.abc import Iterator, Mapping, Sequence
 from datetime import datetime
 from functools import cached_property
@@ -66,54 +65,6 @@ from .zarr_compat import UnsupportedEncoding
 #: column; left verbatim inside metadata, which is a faithful copy of the source.
 ABSENT = {"", "None", "none", "nan", "NaN"}
 
-#: ``Model: <model> - Serial number: <serial>``, which is how `aind-data-schema` renders a
-#: probe into an NWB `Device` description. The model itself contains hyphens.
-#: The NWB packs a device's model, serial and description into one string. The serial is bounded
-#: explicitly rather than by end-of-line: a lazy `.+?` anchored to `$` still swallows the
-#: description after it, which put "20403319544 - Description: duplicate of PRB2_1_2_0640_0" in a
-#: serial number column on every probe of a real session.
-DEVICE_DESCRIPTION = re.compile(
-    r"^Model:\s*(?P<model>.*?)\s*-\s*Serial number:\s*(?P<serial>[^\s-]+)"
-    r"(?:\s*-\s*Description:\s*(?P<description>.*?))?\s*$"
-)
-
-#: The instrument behind an acquired signal, named in the signal's description because
-#: `general/devices` lists probes alone -- "imported from HARP SniffDetector__32.bin". A signal
-#: acquired by a separate workflow has no rig metadata in this packet's sources at all, so this
-#: sentence is the only statement of what made the array that reaches the importer.
-SIGNAL_DEVICE = re.compile(r"\bfrom\s+(?P<bus>HARP)\s+(?P<device>[A-Za-z0-9]+?)__(?P<register>\d+)\b")
-
-#: `animal_response` in AIND's dynamic-foraging trials, per the column's own description.
-
-#: Trial columns that are *events*, and the type each becomes. A task writes these into the
-#: trials table because they happen once a trial, but a moment on a clock is an event whatever
-#: table it arrives in: they belong in `core.events` so a query can find them without knowing
-#: which task shape put them where. `analysis.trials_wide` denormalises them back (Part 06).
-TRIAL_EVENTS = {
-    "goCue_start_time": "go_cue",
-    "reward_outcome_time": "reward_outcome",
-    "delay_start_time": "delay_start",
-}
-
-#: Trial columns this adapter accounts for; the rest go to `core.intervals.metadata` verbatim.
-#: `animal_response` and the reward histories stay named here although R54 §2.3 struck their core
-#: columns: they belong to the task's extension, and naming them is what keeps them out of core
-#: metadata rather than swept in as unmapped.
-TRIAL_MAPPED = frozenset(
-    {"start_time", "stop_time", "animal_response", "rewarded_historyL", "rewarded_historyR", *TRIAL_EVENTS}
-)
-
-#: The CCF columns this file writes, in the order this adapter puts them on a frame's axes.
-CCF_AXES = ("ccf_ml", "ccf_ap", "ccf_dv")
-
-#: Part 02 §12.7: each frame's axes in index order, named for the field the values are read from.
-#: The name is carried verbatim (Part 01 §3.24) -- `rel_x` says the packet's axis 0 holds what this
-#: file called `rel_x`, which is a fact, where calling it `across_shank` would be a claim no
-#: source supports and calling it `x` would discard where the value came from.
-FRAME_AXES: dict[str, tuple[str, ...]] = {
-    "probe": ("rel_x", "rel_y"),
-    "ccf": CCF_AXES,
-}
 
 
 def _one(values: NDArray[Any]) -> str | None:
@@ -237,15 +188,50 @@ class NWBSource(Compensates):
             "core.probes",
             "core.sessions",
             "core.subjects",
-            "core.unit_coordinate_values",
-            "core.unit_coordinates",
         }
     )
+    # Not `core.unit_coordinates` or its values. Placing a unit needs the sorter's own label for
+    # it, and no column base NWB defines carries one -- `units/id` is the DynamicTable row number,
+    # which differs from the sorter's label in 6,775 of 6,781 rows on a measured session. A dialect
+    # that writes the label declares those two resources and supplies `_unit_identity`.
 
     #: Part 01 §3.24: the unit every coordinate this adapter writes is in. No NWB states one; what
     #: makes this the packet's answer is that this adapter passed the values through unconverted,
     #: and R19 §3 declared micrometres when it named the columns `x_um`, `y_um` and `z_um`.
     COORDINATE_UNIT: ClassVar[str] = "um"
+
+    #: Part 02 §12.7: each frame's axes in index order, named for the field the values are read
+    #: from. The name is carried verbatim (Part 01 §3.24) -- `rel_x` says the packet's axis 0 holds
+    #: what this file called `rel_x`, which is a fact, where calling it `across_shank` would be a
+    #: claim no source supports and calling it `x` would discard where the value came from.
+    #:
+    #: One frame here. `rel_x` and `rel_y` are columns core 2.9.0 declares on its electrodes table;
+    #: an atlas frame is a producer's addition, and a dialect adds it by extending this.
+    FRAME_AXES: ClassVar[dict[str, tuple[str, ...]]] = {"probe": ("rel_x", "rel_y")}
+
+    #: The axes a *unit* carries a position on, which base NWB gives none of: `Units` declares
+    #: `spike_times`, `electrodes` and the waveform columns, and no coordinate.
+    UNIT_AXES: ClassVar[tuple[str, ...]] = ()
+
+    #: The frame those axes are in, and what a position in it claims (R64 §1.3). Empty while
+    #: `UNIT_AXES` is, since a frame with no axes names nothing; a dialect sets both together.
+    UNIT_FRAME: ClassVar[str] = ""
+    UNIT_BASIS: ClassVar[str] = "measured"
+
+    #: Trial columns that are *events*, and the type each becomes. A task writes these into the
+    #: trials table because they happen once a trial, but a moment on a clock is an event whatever
+    #: table it arrives in. `TimeIntervals` declares `start_time`, `stop_time` and tags alone, so
+    #: every such column is a task's own and a dialect names them.
+    TRIAL_EVENTS: ClassVar[dict[str, str]] = {}
+
+    #: Trial columns this adapter accounts for; the rest go to `core.intervals.metadata` verbatim.
+    #: A dialect widens this with the task columns it maps, which is what keeps them out of the bag
+    #: rather than swept in as unmapped.
+    TRIAL_MAPPED: ClassVar[frozenset[str]] = frozenset({"start_time", "stop_time"})
+
+    #: Electrode columns carried into `core.electrodes.metadata` verbatim (Part 02 §8.6). Empty
+    #: here: every column core 2.9.0 declares is either mapped or unread, so nothing is left over.
+    CARRIED_ELECTRODE: ClassVar[tuple[str, ...]] = ()
 
     #: Part 05 §3.4: every column of `core.subjects` this file states. The recipe declares four of
     #: them by hand, and until R87 §2.8 the row built from these was discarded unread.
@@ -263,7 +249,9 @@ class NWBSource(Compensates):
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
     #: resolves to nothing, so declaring one makes it mandatory.
-    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "reference_clock", "units", "zone")
+    #: `units` is not here: the build fills it, and only a dialect that can read a unit's label
+    #: joins on it. A subclass that does declares it (Part 03 §11.2).
+    NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "reference_clock", "zone")
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
     #: unset (Part 03 §11.2). `interval_kind` is the one no declaration could carry until there
@@ -517,22 +505,21 @@ class NWBSource(Compensates):
         attached = self._attachment()
         for name in self.store.members("general/devices"):
             described = self._attrs(f"general/devices/{name}")
-            description = str(described.get("description", ""))
-            parsed = DEVICE_DESCRIPTION.match(description)
-            serial = parsed["serial"] if parsed else None
+            identity = self._device_identity(described)
+            serial = identity["serial_number"]
             attachment = attached.get(name) or {}
             row = {
                 "device_id": self.prefix + name,
                 "session_id": self.session_id,
                 "device_name": name,
                 "manufacturer": _clean(described.get("manufacturer")),
-                "model": (parsed["model"] or None) if parsed else None,
+                "model": identity["model"],
                 "serial_number": serial,
                 "parent_device_id": attachment.get("parent_device_id"),
                 # R85 §2.1: the dock of that headstage. Null where no attachment is stated, and
                 # null is what a consumer must read as unrecorded rather than parse out of a name.
                 "parent_port": attachment.get("parent_port"),
-                "metadata": _described(parsed, description),
+                "metadata": identity["metadata"],
             }
             # A device with no serial is its own object: nothing says two of them are one.
             key = serial or f"\0{name}"
@@ -557,13 +544,25 @@ class NWBSource(Compensates):
         """`core.devices`, computed once: it reads the store and the attachment file."""
         return self._devices
 
+    def _device_identity(self, described: Mapping[str, Any]) -> dict[str, Any]:
+        """Return what a `Device` states about the object it names: model, serial, and the rest.
+
+        Core 2.9.0 declares all three as attributes, so that is where they are read. A producer
+        that leaves them unset and packs the same facts into `description` needs a dialect.
+        """
+        description = _clean(described.get("description"))
+        return {
+            "model": _clean(described.get("model_number")) or _clean(described.get("model_name")),
+            "serial_number": _clean(described.get("serial_number")),
+            "metadata": {"description": description} if description else None,
+        }
+
     def _device_of(self) -> dict[str, dict[str, Any]]:
         """Every NWB Device name mapped to the `core.devices` row that covers it."""
         by_name = {}
         for name in self.store.members("general/devices"):
             described = self._attrs(f"general/devices/{name}")
-            parsed = DEVICE_DESCRIPTION.match(str(described.get("description", "")))
-            by_name[name] = parsed["serial"] if parsed else None
+            by_name[name] = self._device_identity(described)["serial_number"]
         rows = {row["serial_number"]: row for row in self.devices() if row["serial_number"]}
         named = {row["device_name"]: row for row in self.devices()}
         return {name: rows.get(serial) or named.get(name) for name, serial in by_name.items()}
@@ -605,13 +604,26 @@ class NWBSource(Compensates):
     def _electrode_ids(self, columns: Mapping[str, NDArray[Any]]) -> list[str]:
         """Compose electrode IDs, because no NWB column is unique on its own.
 
-        `electrode_name` repeats -- 1920 distinct values over 4608 rows, since the shanks of
-        a quad-base probe reuse the numbering -- and `channel_name` is per-probe. The pair
-        (group, channel) is unique, so that is the ID.
+        `group_name` names the probe and repeats down it; what distinguishes a contact within one
+        is `channel_name`, which no version of the NWB schema declares -- it is the convention
+        SpikeInterface reads out of files it did not write. Where a file has it, it is used, so a
+        packet built from such a file names contacts as it always has.
+
+        Where it is absent the row's own `id` stands in. Every `DynamicTable` has one, so the pair
+        is always available, and it identifies a contact exactly as well; what it loses is the
+        source's spelling, which `local_channel_label` then has nothing to carry.
         """
+        group = columns["group_name"]
+        if "channel_name" in columns:
+            within: NDArray[Any] = columns["channel_name"]
+        else:
+            within = columns.get("id", np.arange(len(group)))
+            self.notes.append(
+                "electrodes: no channel_name, so a contact is named by its group and row id"
+            )
         return [
-            electrode_name(group, channel, self.prefix)
-            for group, channel in zip(columns["group_name"], columns["channel_name"], strict=True)
+            electrode_name(one, other, self.prefix)
+            for one, other in zip(group, within, strict=True)
         ]
 
     def electrodes(self) -> list[dict[str, Any]]:
@@ -619,10 +631,7 @@ class NWBSource(Compensates):
         columns = self._table("general/extracellular_ephys/electrodes")
         if not columns:
             return []
-        # Part 02 §8.6: `ccf_id` and `ccf_acronym` are excluded because R59 §2 promoted both to
-        # columns of `core.electrode_coordinates`. The other two stay: R59 §2 declined to
-        # model them, so the bag is where they belong.
-        carried = ("ccf_name", "ccf_structure_id_path")
+        carried = self.CARRIED_ELECTRODE
         if "inter_sample_shift" in columns:
             self.notes.append(
                 "electrodes/inter_sample_shift: not emitted; R19 puts it on core.array_channels "
@@ -636,34 +645,30 @@ class NWBSource(Compensates):
                     "electrode_id": electrode_id,
                     "session_id": self.session_id,
                     "probe_id": self.prefix + str(columns["group_name"][index]),
-                    "local_electrode_label": _clean(columns["electrode_name"][index])
-                    if "electrode_name" in columns
+                    "local_electrode_label": self._local_electrode_label(columns, index),
+                    "local_channel_label": _clean(columns["channel_name"][index])
+                    if "channel_name" in columns
                     else None,
-                    "local_channel_label": _clean(columns["channel_name"][index]),
                     "impedance_ohm": _clean(columns["imp"][index]) if "imp" in columns else None,
                     "metadata": {k: v for k, v in metadata.items() if v is not None} or None,
                 }
             )
         return rows
 
-    def _signal_device_id(self, name: str) -> str | None:
-        """Return the device a signal's description names, or None where it names none.
+    def _local_electrode_label(self, columns: Mapping[str, NDArray[Any]], index: int) -> str | None:
+        """Return a contact's own label; None, because base NWB names only its group."""
+        return None
 
-        Part 01 §3.17 asks a writer to record which instrument produced an array. This file names it
-        in prose and nowhere else -- `general/devices` lists probes alone -- so the sentence is
-        parsed rather than ignored. The device *row* comes from the instrument's own schema
-        (`sources.harp`), which is the only place its version is stated; this is the join.
-        """
-        self.compensate("nwb.signal_device_declared")
-        matched = SIGNAL_DEVICE.search(str(self._attrs(f"acquisition/{name}").get("description", "")))
-        return self.prefix + matched["device"] if matched else None
+    def _signal_device_id(self, name: str) -> str | None:
+        """Return the instrument that made a stream; None, since base NWB links it to no Device."""
+        return None
 
     #: R64 §1.3: the basis travels with the columns a value comes from rather than with the
     #: frame's name. `rel_x` is the shank's own layout and so is true by construction, where a
     #: CCF triple is what a registration found. `planned` cannot be imported from either -- an
     #: exported file records where a probe was, never where it was aimed, and a targeting record
     #: does not reach NWB.
-    FRAME_BASIS: ClassVar[dict[str, str]] = {"probe": "nominal", "ccf": "measured"}
+    FRAME_BASIS: ClassVar[dict[str, str]] = {"probe": "nominal"}
 
     def _electrode_positions(self) -> list[tuple[dict[str, Any], tuple[float | None, ...]]]:
         """Each electrode coordinate paired with its values, in its frame's axis order.
@@ -677,7 +682,7 @@ class NWBSource(Compensates):
             return []
         found = []
         for index, electrode_id in enumerate(self._electrode_ids(columns)):
-            for frame, axes in FRAME_AXES.items():
+            for frame, axes in self.FRAME_AXES.items():
                 values = tuple(
                     _clean(columns[axis][index]) if axis in columns else None for axis in axes
                 )
@@ -733,7 +738,7 @@ class NWBSource(Compensates):
             *self._table("units"),
         }
         return [
-            frame for frame, axes in FRAME_AXES.items() if any(axis in named for axis in axes)
+            frame for frame, axes in self.FRAME_AXES.items() if any(axis in named for axis in axes)
         ]
 
     def coordinate_frames(self) -> list[dict[str, Any]]:
@@ -772,85 +777,35 @@ class NWBSource(Compensates):
                 "unit": self.COORDINATE_UNIT,
             }
             for frame in self._populated_frames()
-            for index, axis in enumerate(FRAME_AXES[frame])
+            for index, axis in enumerate(self.FRAME_AXES[frame])
         ]
 
-    #: Where an exporter puts the atlas structure id. The two spellings are the same fact from
-    #: two versions of one pipeline (R59 §1).
-    REGION_ID = ("brain_region_id", "ccf_id")
-    #: Where it puts the label. `location` is core NWB's; `ccf_acronym` is the AIND addition.
-    REGION_LABEL = ("ccf_acronym", "location")
-
     def _annotation(self, columns: Mapping[str, Any], index: int, frame: str) -> dict[str, Any]:
-        """Return the atlas annotation for one coordinate row (R59 §2.1).
-
-        Only an atlas frame carries one: the frame is the space the structure id is numbered in
-        (Part 01 §3.24), and a probe-relative position is in no atlas.
-        """
-        if frame == "probe":
-            return {}
-        found: dict[str, Any] = {}
-        for name in self.REGION_ID:
-            if name in columns and (value := _clean(columns[name][index])) is not None:
-                found["region_id"] = int(value)
-                break
-        for name in self.REGION_LABEL:
-            if name in columns and (value := _clean(columns[name][index])) is not None:
-                found["region_label"] = str(value)
-                break
-        return found
+        """Return a coordinate's atlas annotation; empty, since base NWB declares no atlas frame."""
+        return {}
 
     # -- units, which this file describes but does not date -----------------------------
 
     def _unit_identity(self) -> list[tuple[int, dict[str, Any]]]:
-        """NWB unit rows paired with the identity a sorter gave them, in row order.
+        """Return NWB unit rows paired with the build's unit identity, in row order.
 
-        The NWB is derived from the sorting, so it carries the sorter's own unit id as
-        `ks_unit_id` (identical to `original_cluster_id`, measured) and the probe as
-        `device_name`. Those two are the join back to `core.units`, which is why the caller
-        supplies the mapping rather than this adapter inventing identifiers: a packet numbers its
-        own units at commit (Part 05 §8), so the number does not exist until the build has minted
-        it.
-
-        The key is the file's own `device_name`, unprefixed, because it names a probe as *this
-        source* calls it. A quad-base probe is four device names here (`45883-1` through `-4`)
-        and one `core.probes` row, so `probe_id` cannot serve as the key.
-
-        A row whose pair is not in the mapping is skipped, which is what a unit the packet's
-        sorting does not contain should do.
+        Empty: no column base NWB declares carries the sorter's label, and `units/id` is the row
+        number, which differs from it in 6,775 of 6,781 rows on a measured session.
         """
-        if not self.units:
-            return []
-        columns = self._table("units")
-        if not columns or "ks_unit_id" not in columns or "device_name" not in columns:
-            self.notes.append("units: no ks_unit_id/device_name, so no unit-electrode link is emitted")
-            return []
-        paired: list[tuple[int, dict[str, Any]]] = []
-        missed = 0
-        for index in range(len(columns["ks_unit_id"])):
-            device = str(_clean(columns["device_name"][index]))
-            label = str(int(columns["ks_unit_id"][index]))
-            unit_id = self.units.get((device, label))
-            if unit_id is None:
-                missed += 1
-                continue
-            paired.append((index, {"unit_id": unit_id}))
-        if missed:
-            self.notes.append(f"units: {missed} NWB row(s) match no unit in the packet's sorting; skipped")
-        return paired
+        return []
 
     def _unit_positions(self) -> list[tuple[dict[str, Any], tuple[float | None, ...]]]:
         """Each unit coordinate paired with its CCF values, as `_electrode_positions` does."""
         paired = self._unit_identity()
-        if not paired:
+        if not paired or not self.UNIT_AXES:
             return []
         columns = self._table("units")
-        if not any(axis in columns for axis in CCF_AXES):
+        if not any(axis in columns for axis in self.UNIT_AXES):
             return []
         found = []
         for index, identity in paired:
             values = tuple(
-                _clean(columns[axis][index]) if axis in columns else None for axis in CCF_AXES
+                _clean(columns[axis][index]) if axis in columns else None for axis in self.UNIT_AXES
             )
             if all(value is None for value in values):
                 continue
@@ -859,9 +814,9 @@ class NWBSource(Compensates):
                     {
                         "session_id": self.session_id,
                         **identity,
-                        "coordinate_frame": "ccf",
-                        "coordinate_basis": "measured",
-                        **self._annotation(columns, index, "ccf"),
+                        "coordinate_frame": self.UNIT_FRAME,
+                        "coordinate_basis": self.UNIT_BASIS,
+                        **self._annotation(columns, index, self.UNIT_FRAME),
                     },
                     values,
                 )
@@ -871,10 +826,8 @@ class NWBSource(Compensates):
     def unit_coordinates(self) -> list[dict[str, Any]]:
         """`core.unit_coordinates`, a unit's position per populated frame (R28).
 
-        CCF only: the registration is applied downstream of the sorting, so this file is the
-        authority for it, while the probe-frame position belongs to the sorter's analyzer.
-        A unit whose coordinates are all absent contributes no row -- 241 of 6,781 here, the
-        electrode group the session's alignment does not cover.
+        Empty without `_unit_identity` and `UNIT_AXES`. Where a subclass supplies both, a unit
+        whose coordinates are all absent still gets no row -- 241 of 6,781 on a measured session.
         """
         return [row for row, _values in self._unit_positions()]
 
@@ -1108,7 +1061,7 @@ class NWBSource(Compensates):
     def _trial_event_columns(self) -> list[tuple[str, str]]:
         """Trial columns that carry a moment, in the order `TRIAL_EVENTS` names them."""
         columns = self._table("intervals/trials")
-        return [(name, kind) for name, kind in TRIAL_EVENTS.items() if name in columns]
+        return [(name, kind) for name, kind in self.TRIAL_EVENTS.items() if name in columns]
 
     def events(self) -> list[dict[str, Any]]:
         """`core.events`, one row per timestamp on an acquisition TimeSeries.
@@ -1185,7 +1138,7 @@ class NWBSource(Compensates):
         start = self.clock.ticks(columns["start_time"])
         stop = self.clock.ticks(columns["stop_time"])
         identifiers = columns.get("id", np.arange(len(start)))
-        unmapped = [name for name in columns if name not in TRIAL_MAPPED and name != "id"]
+        unmapped = [name for name in columns if name not in self.TRIAL_MAPPED and name != "id"]
         varying = self._trial_parameters(columns, unmapped, len(start))
         rows = []
         for index in range(len(start)):
@@ -1285,17 +1238,6 @@ class NWBSource(Compensates):
     def offers(self) -> dict[str, int]:
         """Which resources this source supplies from its root, and how many rows (Part 05 §1)."""
         return {resource: len(rows) for resource, rows in self.records().items()}
-
-
-def _described(parsed: Any, raw: str) -> dict[str, str] | None:
-    """Return what a device's description says beyond its model and serial, or nothing.
-
-    The raw string is kept only where it did not parse: carrying both a parsed description and
-    the sentence it came from would store one fact twice (Part 02 §6).
-    """
-    if parsed is None:
-        return {"description": raw} if raw else None
-    return {"description": parsed["description"]} if parsed["description"] else None
 
 
 def _resolve(root: Path) -> Path:

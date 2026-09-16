@@ -1,6 +1,7 @@
 """The NWB adapter reads records, refuses guesses, and reports what it dropped."""
 
 import json
+import shutil
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -15,7 +16,6 @@ from escapewheel_writer.sources.nwb import _sex
 from tests import nwbfixture
 
 KIND = "task.trials"
-TRIAL_EVENT_TYPES = {"go_cue", "reward_outcome"}
 PACIFIC = ZoneInfo("America/Los_Angeles")
 SESSION = "mini_2025-04-09"
 
@@ -58,47 +58,26 @@ def _units(nwb, *, refuses=True):
     """
     units = nwbfixture.group(nwb / "units", neurodata_type="Units", colnames=["spike_times"])
     nwbfixture.array(units / "id", np.array([0], dtype=np.int64))
-    nwbfixture.array(units / "ks_unit_id", np.array([7], dtype=np.int64))
-    nwbfixture.text(units / "device_name", ["probeA"])
-    for axis in ("ccf_ml", "ccf_ap", "ccf_dv"):
-        nwbfixture.array(units / axis, np.array([100.0]))
     if refuses:
         nwbfixture.array(units / "spike_times", ["<ref>"], filter_id="pickle")
     else:
         nwbfixture.array(units / "spike_times", np.array([0.1, 0.2, 0.3]))
     nwbfixture.array(units / "spike_times_index", np.array([3], dtype=np.int64))
-    return [{"device_name": "probeA", "local_unit_label": "7", "unit_id": 1}]
 
 
 def test_a_ragged_column_is_not_read_with_its_table(nwb, harp):
     """`units/spike_times` is 287 M values against 6,781 rows, and no builder can use it as
     one: it is written here in an encoding that refuses, so reading it would leave a note."""
-    units = _units(nwb)
-    source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, units=units, interval_kind=KIND)
-    assert source.unit_coordinates() == [
-        {
-            "session_id": SESSION,
-            # `unit_id` alone: `core.unit_coordinates` declares no other identity column, and the
-            # run and curation this expectation used to carry were dropped on the way to Parquet.
-            "unit_id": 1,
-            "coordinate_frame": "ccf",
-            # Part 01 §3.8: an exported file records where the probe was found, never where it was
-            # aimed, so an import can only assert `measured`.
-            "coordinate_basis": "measured",
-        }
-    ]
-    assert [(v["axis_index"], v["axis_value"]) for v in source.unit_coordinate_values()] == [
-        (0, 100.0),
-        (1, 100.0),
-        (2, 100.0),
-    ]
+    _units(nwb)
+    source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND)
+    source.records()
     assert [note for note in source.notes if "spike_times" in note] == []
 
 
 def test_the_index_beside_a_ragged_column_is_still_read(nwb, harp):
     """It is one value per row, which is what makes the column beside it ragged."""
-    units = _units(nwb, refuses=False)
-    source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, units=units, interval_kind=KIND)
+    _units(nwb, refuses=False)
+    source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND)
     columns = source._table("units")
     assert "spike_times" not in columns
     assert columns["spike_times_index"].tolist() == [3]
@@ -113,14 +92,17 @@ def test_it_reads_the_tables_the_nwb_is_the_authority_for(source):
         "core.devices": 1,
         "core.probes": 1,
         "core.electrodes": 2,
-        "core.electrode_coordinates": 3,  # both electrodes in the probe frame, one in CCF
-        # Part 01 §3.8: the same three positions as one row per axis -- two shank axes each and
-        # three CCF axes -- against the two frames and five axis rows they are stated on.
-        "core.electrode_coordinate_values": 7,
-        "core.coordinate_frames": 2,
-        "core.coordinate_frame_axes": 5,
-        "core.event_streams": 4,
-        "core.events": 4,
+        # One frame, because `rel_x` and `rel_y` are the only axes core 2.9.0 declares. An atlas
+        # triple is a producer's addition and reaches a packet through a dialect.
+        "core.electrode_coordinates": 2,
+        # Part 01 §3.8: the same positions as one row per axis, two shank axes each.
+        "core.electrode_coordinate_values": 4,
+        "core.coordinate_frames": 1,
+        "core.coordinate_frame_axes": 2,
+        # The two acquisition streams. A trial column carrying a moment is this task's, so no
+        # stream here comes from `intervals/trials`.
+        "core.event_streams": 2,
+        "core.events": 2,
         "core.intervals": 1,
     }
 
@@ -156,12 +138,6 @@ def test_seconds_become_ticks_on_the_declared_clock(source):
     events = records["core.events"]
     acquisition = [e["t_tick"] for e in events if kind[e["stream_id"]].endswith("lick")]
     assert acquisition == [31250, 62500]
-    # The trial columns land on the same clock: 1.2 s and 1.5 s at 31,250 Hz.
-    assert {kind[e["stream_id"]]: e["t_tick"] for e in events
-            if kind[e["stream_id"]] in TRIAL_EVENT_TYPES} == {
-        "go_cue": 37500,
-        "reward_outcome": 46875,
-    }
 
 
 def test_a_clock_the_times_are_not_on_is_refused(tmp_path, harp):
@@ -269,10 +245,27 @@ def test_notes_are_not_repeated_when_a_table_is_read_by_two_builders(source):
 
 
 def test_electrode_ids_are_composed_because_no_single_column_is_unique(source):
-    """`electrode_name` repeats across the shanks of a quad-base probe; (group, channel) does not."""
+    """`group_name` repeats down a probe and `channel_name` restarts per probe; the pair does not."""
     electrodes = source.records()["core.electrodes"]
-    assert [e["local_electrode_label"] for e in electrodes] == ["e0", "e0"]
     assert sorted(e["electrode_id"] for e in electrodes) == ["probeA.CH0", "probeA.CH1"]
+    # Base NWB names a contact's group and nothing else, so there is no label left to carry.
+    assert [e["local_electrode_label"] for e in electrodes] == [None, None]
+    assert [e["local_channel_label"] for e in electrodes] == ["CH0", "CH1"]
+
+
+def test_a_contact_falls_back_to_its_row_id_where_the_file_names_no_channel(tmp_path, harp):
+    """`channel_name` is the ecosystem's convention, not the schema's, so it can be absent.
+
+    Every `DynamicTable` has an `id`, so the pair is always available; what it loses is the
+    source's own spelling, which `local_channel_label` then has nothing to carry.
+    """
+    root = nwbfixture.build(tmp_path)
+    shutil.rmtree(root / "general/extracellular_ephys/electrodes/channel_name")
+    source = NWBSource(root, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND)
+    electrodes = source.records()["core.electrodes"]
+    assert sorted(e["electrode_id"] for e in electrodes) == ["probeA.0", "probeA.1"]
+    assert [e["local_channel_label"] for e in electrodes] == [None, None]
+    assert any("no channel_name" in note for note in source.notes)
 
 
 def test_a_prefix_disambiguates_ids_for_a_multi_session_packet(nwb, harp):
@@ -300,10 +293,7 @@ def test_coordinates_are_rows_per_frame_not_a_padded_triple(source):
         v for v in values if v["electrode_id"] == "probeA.CH1" and v["coordinate_frame"] == "probe"
     ]
     assert [(v["axis_index"], v["axis_value"]) for v in on_shank] == [(0, 32.0), (1, 0.0)]
-    ccf = [
-        v for v in values if v["electrode_id"] == "probeA.CH0" and v["coordinate_frame"] == "ccf"
-    ]
-    assert [v["axis_value"] for v in ccf] == [100.0, 200.0, 300.0]
+    assert {v["coordinate_frame"] for v in values} == {"probe"}
 
 
 def test_a_frame_declares_its_axes_by_the_names_it_read_them_from(source):
@@ -312,9 +302,6 @@ def test_a_frame_declares_its_axes_by_the_names_it_read_them_from(source):
     assert [(a["coordinate_frame"], a["axis_index"], a["axis_name"]) for a in axes] == [
         ("probe", 0, "rel_x"),
         ("probe", 1, "rel_y"),
-        ("ccf", 0, "ccf_ml"),
-        ("ccf", 1, "ccf_ap"),
-        ("ccf", 2, "ccf_dv"),
     ]
     assert {a["axis_direction"] for a in axes} == {None}
     assert {a["unit"] for a in axes} == {"um"}
@@ -323,22 +310,9 @@ def test_a_frame_declares_its_axes_by_the_names_it_read_them_from(source):
     assert {(f["atlas"], f["atlas_version"]) for f in frames} == {(None, None)}
 
 
-def test_an_electrodes_bag_carries_only_what_no_column_holds(source):
-    """Part 02 §8.6. R59 §2 promoted `ccf_id` and `ccf_acronym` to columns, so both leave the bag."""
-    bag = only(source.records()["core.electrodes"], electrode_id="probeA.CH0")["metadata"]
-    assert bag == {"ccf_name": "Field CA1", "ccf_structure_id_path": "/997/8/567/"}
-    ccf = only(source.records()["core.electrode_coordinates"], electrode_id="probeA.CH0",
-               coordinate_frame="ccf")
-    assert (ccf["region_id"], ccf["region_label"]) == (382, "CA1")
-
-
-def test_an_unregistered_electrode_gets_no_ccf_row(source):
-    """An absent frame is an absent row, which is the whole point of R19's shape."""
-    assert not [
-        c
-        for c in source.records()["core.electrode_coordinates"]
-        if c["electrode_id"] == "probeA.CH1" and c["coordinate_frame"] == "ccf"
-    ]
+def test_an_electrodes_bag_is_empty_where_every_column_is_mapped(source):
+    """Part 02 §8.6: only what no column holds may travel in the bag, and base NWB leaves nothing."""
+    assert only(source.records()["core.electrodes"], electrode_id="probeA.CH0")["metadata"] is None
 
 
 # -- trials --------------------------------------------------------------------------
@@ -423,7 +397,7 @@ def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
     # R91 §3.2 keys and sorts events `(session_id, stream_id, t_tick)`, so ticks ascend within a
     # stream and not across them -- the layout a filter on one stream prunes.
     written = packet.table("core.events")
-    assert sorted(written.column("t_tick").to_pylist()) == [31250, 37500, 46875, 62500]
+    assert sorted(written.column("t_tick").to_pylist()) == [31250, 62500]
     by_stream: dict[str, list[int]] = {}
     for stream, tick in zip(written.column("stream_id").to_pylist(),
                             written.column("t_tick").to_pylist(), strict=True):
@@ -444,64 +418,23 @@ def test_notes_do_not_grow_when_a_builder_is_called_twice(source):
     assert source.notes == once
 
 
-# -- a moment recorded as a trial column is still an event ---------------------------------
+# -- trial columns a base reader does not interpret ----------------------------------------
 
 
-def _stream_of(source, event_type):
-    """The stream emitting one kind of event, which R91 §3.1 makes the stream's property."""
-    return next(s["event_stream_id"] for s in source.event_streams()
-                if s["event_type"] == event_type)
-
-
-def test_trial_timing_columns_become_events(source):
-    """A task writes the go cue into its trials table because it happens once a trial. It is
-    still a moment on a clock, and a query should find it without knowing the task's shape.
-
-    The kind is the stream's since R91 §3.1, so finding one means finding its stream."""
-    kinds = {s["event_type"] for s in source.event_streams()}
-    assert {"go_cue", "reward_outcome"} <= kinds
-    emitting = {s["event_stream_id"] for s in source.event_streams()
-                if s["event_type"] in {"go_cue", "reward_outcome"}}
-    assert emitting <= {e["stream_id"] for e in source.events()}
-
-
-def test_a_trial_event_does_not_name_its_interval(source):
-    """R11 §5 struck the column; carrying it as JSON would keep the letter and lose the point."""
-    go = next(e for e in source.events() if e["stream_id"] == _stream_of(source, "go_cue"))
-    assert "payload" not in go or "trial_id" not in (go.get("payload") or {})
-    assert go["stream_id"] in {s["event_stream_id"] for s in source.event_streams()}
-
-
-def test_a_trial_event_is_on_the_declared_clock(source, harp):
-    """R91 §3.2 struck `core.events.clock_id`: the tick is on the clock its stream declares."""
-    stream = _stream_of(source, "go_cue")
-    go = next(e for e in source.events() if e["stream_id"] == stream)
-    assert "clock_id" not in go
-    assert next(s for s in source.event_streams()
-                if s["event_stream_id"] == stream)["clock_id"] == harp.clock_id
-    assert go["t_tick"] == harp.ticks(np.array([1.2]))[0]
-
-
-def test_a_trial_that_never_reached_the_moment_emits_no_event(tmp_path, harp):
-    """Absence is a fact about the trial, not a null to carry -- which is why these are events
-    rather than columns on `core.trials`."""
-    root = nwbfixture.build(tmp_path)
-    nwbfixture.array(root / "intervals/trials/goCue_start_time", np.array([np.nan]))
-    source = NWBSource(root, reference_clock=harp.record(), zone=PACIFIC, session_id=SESSION, units=())
-    assert not [e for e in source.events() if e["stream_id"] == _stream_of(source, "go_cue")]
-    assert "go_cue" in {s["event_stream_name"] for s in source.event_streams()}
+def test_no_stream_comes_from_a_trial_column(source):
+    """`TimeIntervals` declares `start_time`, `stop_time` and tags, so every other column is a
+    task's own. A moment recorded in one is still an event, and naming which columns those are
+    takes a dialect."""
+    assert {s["event_stream_name"] for s in source.event_streams()} == {
+        "left_lick_time",
+        "FIP_rising_time",
+    }
 
 
 def test_a_condition_is_named_where_the_task_varies_one(source):
     """A foraging session has no stimulus; what it varies is the reward probability pair."""
     assert {t.get("condition_id") for t in source.intervals()} == {None}, "one trial cannot vary"
 
-
-
-def test_a_trial_event_column_is_not_repeated_in_metadata(source):
-    """It is in core.events now, so carrying it again would be the duplication Part 02 §6 bans."""
-    metadata = next(t for t in source.intervals()).get("metadata") or {}
-    assert "goCue_start_time" not in metadata
 
 
 # -- Part 02 §6: a parameter constant across every trial is recorded once ----------------------

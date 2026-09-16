@@ -32,6 +32,7 @@ dependencies = [
 [project.entry-points."escapewheel.sources"]
 session = "escapewheel_aind.session:SessionSource"
 video = "escapewheel_aind.video:VideoSource"
+aind_nwb = "escapewheel_aind.nwb:AindNWBSource"
 
 # What these adapters work around in their sources, which reaches a packet's
 # `core.processing_runs.parameters` through `compensations.registered()`. Declared here because the
@@ -57,6 +58,8 @@ types = [
 dev = [
     { include-group = "types" },
     "codespell",
+    # The NWB fixture writes Zarr v2 chunks itself, as the writer's does, so it needs the codecs.
+    "numcodecs",
     "pytest",
     "pytest-cov",
     "ruff",

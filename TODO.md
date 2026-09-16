@@ -228,6 +228,27 @@ files it did not write, so it is the sorting ecosystem's convention rather than 
 base reader emits ten devices with no serial and the collapse to seven physical objects does not
 happen.
 
+**The carve is done**, 2026-09-16. `NWBSource` keeps all eighteen resources and gains hook points —
+`FRAME_AXES`, `UNIT_AXES`, `TRIAL_EVENTS`, `TRIAL_MAPPED` and `CARRIED_ELECTRODE` as class
+attributes, `_device_identity`, `_local_electrode_label`, `_annotation`, `_unit_identity` and
+`_signal_device_id` as methods reading only what core 2.9.0 declares — and
+`escapewheel_aind.nwb.AindNWBSource` subclasses it, supplying the seventeen columns and three
+conventions in about 120 lines. It declares the two unit-coordinate resources the base reader now
+does not, and `units` in its `NEEDS` where the base reader dropped it. Both fixtures split the same
+way: the writer's writes base NWB, and the dialect's writes base plus what this pipeline adds.
+
+Both findings above were repaired rather than recorded. A contact falls back to `(group_name, id)`
+where a file states no `channel_name`, so the reader opens a strictly base NWB instead of raising;
+and `core.devices` reads the three attributes core 2.9.0 declares, leaving the packed-description
+parse to the dialect. Neither changes a committed packet, since both real files carry
+`channel_name` and both are read by `aind_nwb`.
+
+**`tables` is the only adapter left that serves no standard**, and §2's opening table is now: four
+generic (`sorter`, `sync`, `openephys`, `harp`), two generic since the split (`nwb`, `lfp` — and
+`waveforms`, whose `(device_name, ks_unit_id)` pair is the same dialect read and has **not** moved
+yet), three one institution's in `escapewheel-aind` (`session`, `video`, `aind_nwb`), and `tables`,
+which is `files-v0.1` wearing the interface.
+
 **The plumbing is separated**, 2026-09-15 at `f1ef6f1`, which is the prerequisite: `SourceDefect`
 and the sex and UTC-offset helpers left `nwb.py` for `sources/defect.py` and `sources/values.py`, so
 lifting the NWB reading no longer drags the base exception type and two core-vocabulary helpers out

@@ -147,3 +147,17 @@ Four consequences worth carrying into the implementation:
    dialect. The frame machinery — `_populated_frames`, `coordinate_frames`,
    `coordinate_frame_axes` — is generic over whatever the dict holds.
 4. **`_unit_identity` moves whole**, and takes the two unit-coordinate resources with it.
+
+## 8. Outcome
+
+Carved 2026-09-16, and the four consequences held. `NWBSource` kept every method and gained hook
+points — `FRAME_AXES`, `UNIT_AXES`, `TRIAL_EVENTS`, `TRIAL_MAPPED`, `CARRIED_ELECTRODE` as class
+attributes, and `_device_identity`, `_local_electrode_label`, `_annotation`, `_unit_identity` and
+`_signal_device_id` as methods reading only what core 2.9.0 declares. `escapewheel_aind.nwb.
+AindNWBSource` subclasses it and supplies the seventeen columns and three conventions, which is
+about 120 lines against the 1,300 the base reader keeps.
+
+Two things changed behaviour rather than location. A contact now falls back to `(group_name, id)`
+where a file states no `channel_name`, so the reader opens a strictly base NWB rather than raising
+`KeyError`; and `core.devices` reads the `serial_number`, `model_number` and `model_name`
+attributes core 2.9.0 declares, leaving the packed-description parse to the dialect.

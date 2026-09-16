@@ -81,9 +81,12 @@ as built.
   A recipe is one TOML file declaring every source and which resources each owns; it is also
   the provenance record, landing in `core.processing_runs.parameters`.
 - `escapewheel-aind/` — the adapters serving one institution rather than a standard, which core
-  does not carry: `session`, which reads AIND's metadata schema, and `video`, which reads its
-  behaviour videos. The dialect columns an AIND pipeline writes into an otherwise ordinary NWB
-  belong here too and have not moved yet. It depends on the writer, never the reverse, and
+  does not carry: `session`, which reads AIND's metadata schema, `video`, which reads its
+  behaviour videos, and `aind_nwb`, which reads the columns an AIND pipeline writes into an
+  otherwise ordinary NWB. That last one subclasses the writer's own `NWBSource`, which does the
+  reading while the subclass says what the extra columns mean — so a recipe names one kind or the
+  other and the winner owns whole rows, which is what Part 05 §3.3 requires. It depends on the
+  writer, never the reverse, and
   registers its kinds through the `escapewheel.sources` entry-point group rather than by being
   listed in that package's built-in table — so it is built against the same boundary an adapter
   released separately would use, and moving it to its own repository is packaging rather than a

@@ -96,7 +96,9 @@ distinct values within a series -- which is what R19 added the column for.
   (`fill_value: 0` on vlen-string arrays), so `use_consolidated=False` is mandatory.
 - **`session.json` carries a 7-hour timezone error** on this dataset —
   `2025-04-09T17:25:12+00:00` for a Pacific wall clock. The NWB gets it right. Identity comes
-  from the JSONs, so the importer must not trust that offset.
+  from the JSONs, so the importer must not trust that offset. The adapter that reads them is
+  `escapewheel-aind`'s `session`, not this package's; what stays here is the clock the correction
+  lands on.
 
 ## Developer guidance
 

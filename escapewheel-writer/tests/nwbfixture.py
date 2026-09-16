@@ -4,6 +4,11 @@ The real file this adapter was written against is 8.49 GB and not in any reposit
 tests build their own. It reproduces both faults measured in
 `inventory/nwb-zarr-776259-2025-04-09.md` §1 -- vlen-bytes scalars with a numeric fill value,
 and a pickled object-reference column -- because those are what the adapter exists to survive.
+
+What it writes is what core NWB 2.9.0 declares, plus `channel_name`, which the schema does not
+and SpikeInterface reads out of files it did not write. A producer's own columns belong in the
+fixture of whichever adapter reads them: `escapewheel-aind` builds on this shape and adds the
+atlas triple, the packed device description and the task's trial columns.
 """
 
 import json
@@ -94,11 +99,16 @@ def build(root: Path, *, seconds=(1.0, 2.0), trial_stop=None, session_offset="-0
     array(subject / "date_of_birth", [b"2024-09-24T00:00:00-07:53"], filter_id="vlen-bytes")
 
     group(general / "devices")
+    # The three attributes core 2.9.0 declares for a Device, each holding what it is for. A
+    # producer that leaves them empty and packs the same facts into `description` is the case
+    # `escapewheel-aind` tests.
     group(
         general / "devices" / "probeA",
         neurodata_type="Device",
         manufacturer="IMEC",
-        description="Model: Neuropixels 2.0 - Quad Base - Serial number: 12345",
+        model_number="Neuropixels 2.0 - Quad Base",
+        serial_number="12345",
+        description="a probe",
     )
     ephys = group(general / "extracellular_ephys")
     group(
@@ -112,20 +122,9 @@ def build(root: Path, *, seconds=(1.0, 2.0), trial_stop=None, session_offset="-0
     array(electrodes / "id", np.array([0, 1], dtype=np.int64))
     text(electrodes / "group_name", ["probeA", "probeA"])
     text(electrodes / "channel_name", ["CH0", "CH1"])
-    text(electrodes / "electrode_name", ["e0", "e0"])  # repeats, as the real file's does
     text(electrodes / "location", ["CA1", "unknown"])
-    # The four the AIND exporter adds. R59 §2 promoted the first two to columns of
-    # core.electrode_coordinates and declined the other two, which is the split Part 02 §8.6
-    # turns on: only what no column holds may travel in the bag.
-    array(electrodes / "ccf_id", np.array([382, 0], dtype=np.int64))
-    text(electrodes / "ccf_acronym", ["CA1", "root"])
-    text(electrodes / "ccf_name", ["Field CA1", "root"])
-    text(electrodes / "ccf_structure_id_path", ["/997/8/567/", "/997/"])
     array(electrodes / "rel_x", np.array([0.0, 32.0]))
     array(electrodes / "rel_y", np.array([0.0, 0.0]))
-    array(electrodes / "ccf_ml", np.array([100.0, np.nan]))
-    array(electrodes / "ccf_ap", np.array([200.0, np.nan]))
-    array(electrodes / "ccf_dv", np.array([300.0, np.nan]))
     array(electrodes / "x", np.array([np.nan, np.nan]))
     array(electrodes / "imp", np.array([np.nan, np.nan]))
     # object references, pickled: unreadable and unnecessary, group_name says the same thing
@@ -143,12 +142,9 @@ def build(root: Path, *, seconds=(1.0, 2.0), trial_stop=None, session_offset="-0
     array(trials / "id", np.array([0], dtype=np.int64))
     array(trials / "start_time", np.array([1.0]))
     array(trials / "stop_time", np.array([2.0 if trial_stop is None else trial_stop]))
-    array(trials / "animal_response", np.array([1.0]))
-    array(trials / "rewarded_historyL", np.array([False]))
-    array(trials / "rewarded_historyR", np.array([True]))
+    # Columns `TimeIntervals` does not declare, which a base reader carries verbatim rather than
+    # interpreting. They exercise the constant/varying split, not any task's shape.
     array(trials / "reward_probabilityL", np.array([0.4]))
-    array(trials / "goCue_start_time", np.array([1.2]))
-    array(trials / "reward_outcome_time", np.array([1.5]))
     array(trials / "laser_on_trial", np.array([0], dtype=np.int64))
     array(trials / "auto_train_engaged", np.array([False]))
     text(trials / "auto_train_stage", ["None"])
