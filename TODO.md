@@ -192,13 +192,26 @@ commented example of, depending on the writer as the writer depends on the valid
 is what makes moving it out later a packaging change rather than a rewrite. Until it moves, keep it
 honest: no import of a writer internal the boundary does not offer.
 
-**What is dialect has not been inventoried, and a grep will not do it.** The paths `nwb.py` walks
-are base NWB — `units`, `intervals/trials`, `general/extracellular_ephys/electrodes`, `acquisition`
-— so what is one producer's sits inside them: `ks_unit_id` and `device_name` on units, the CCF axes
-and region columns R59 measured, and the conventions constants hold rather than call sites —
-`DEVICE_DESCRIPTION`, `SIGNAL_DEVICE`'s HARP register spelling, `TRIAL_EVENTS`, `TRIAL_MAPPED`,
-`FRAME_AXES`. Pattern-matching the call sites finds a handful and misses those, so the first step is
-an inventory naming each read base or dialect, and that is what decides which methods move.
+**The inventory is done**, 2026-09-16, and it is
+[`inventory/nwb-adapter-base-and-dialect.md`](inventory/nwb-adapter-base-and-dialect.md): every read
+classified against the schema the file itself caches, `specifications/core/2.9.0`. Base NWB defines
+**36** of the names this adapter reads and one producer's pipeline **17**, plus three conventions no
+call site shows — a device's model and serial packed into its `description`, an instrument named in
+a stream's prose, and the `_time` suffix `event_type` strips.
+
+**Moving methods will not separate them.** Of the 18 resources the adapter produces, 4 are base
+throughout, 2 are dialect throughout, and **12 are base reads with a seam** of a line or two — a
+column name, a dict entry, a regex. That is what the shape decided above handles and what a
+method-level carve would have broken: the dialect adapter calls the base reader as a library and
+emits whole rows, so no row is composed from two sources (R108 §3.2).
+
+Two findings change what a base reader can do at all. `core.electrodes` takes its identifier from
+`channel_name`, which **no version of the NWB schema defines** — SpikeInterface reads it out of
+files it did not write, so it is the sorting ecosystem's convention rather than this rig's, and
+`_electrode_ids` raises `KeyError` where it is absent. And `core.devices` loses the serial: **0 of
+10** devices set the `serial_number` core 2.9.0 defines, all 10 pack it into `description`, so a
+base reader emits ten devices with no serial and the collapse to seven physical objects does not
+happen.
 
 **The plumbing is separated**, 2026-09-15 at `f1ef6f1`, which is the prerequisite: `SourceDefect`
 and the sex and UTC-offset helpers left `nwb.py` for `sources/defect.py` and `sources/values.py`, so
