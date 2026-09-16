@@ -51,10 +51,9 @@ from typing import Any, ClassVar
 
 import numpy as np
 import pyarrow as pa
-
-from ..writer import ExternalMedia
-from .compensations import Compensates
-from .store import source_root
+from escapewheel_writer.sources.compensations import Compensates
+from escapewheel_writer.sources.store import source_root
+from escapewheel_writer.writer import ExternalMedia
 
 #: Rows per emitted batch. A camera writes ~2.5 M frames a session and three cameras 7.5 M, which
 #: is why the frame table streams rather than being held as records.

@@ -179,7 +179,7 @@ class Clock:
     tick_zero_utc : datetime, optional
         Wall-clock instant of tick 0 (R6). Offset-aware, or omitted. A free-running clock's
         tick 0 is a power-on instant that no source declares, so this is usually derived --
-        see :meth:`~escapewheel_writer.sources.aind.SessionSource.epoch`, which records the
+        see `escapewheel_aind.session.SessionSource.epoch`, which records the
         derivation as a note because the packet has nowhere to carry its ±1 s uncertainty.
         Derive it only where an independent check exists; omit it rather than guess.
     parent_clock_id : str, optional

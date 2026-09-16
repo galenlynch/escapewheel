@@ -8,6 +8,7 @@ registers a kind no build ever sees, and the failure is silence rather than an e
 
 from __future__ import annotations
 
+import ast
 import tomllib
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -15,6 +16,10 @@ from pathlib import Path
 from escapewheel_writer.sources import SOURCE_GROUP
 
 PYPROJECT = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text())
+
+#: The import name, which is what a dependency is spelled as. The distribution name differs by a
+#: hyphen, and `entry_points` reports that one.
+PACKAGE = "escapewheel_aind"
 
 
 def test_the_group_this_package_publishes_under_is_the_one_the_writer_loads():
@@ -40,12 +45,23 @@ def test_every_registered_kind_loads():
 
 
 def test_the_writer_does_not_import_this_package():
-    """One direction only, or the boundary is a cycle and moving this out stops being packaging."""
+    """One direction only, or the boundary is a cycle and moving this out stops being packaging.
+
+    Read as imports rather than as text. The writer may **name** this package and may not depend on
+    it: `clock.py` points a reader at the adapter that moved, which is worth keeping and is not a
+    dependency, where matching the name anywhere would forbid the two together.
+    """
     writer = Path(__file__).resolve().parents[2] / "escapewheel-writer" / "src"
-    offending = [
-        f"{path.relative_to(writer)}:{number}"
-        for path in sorted(writer.rglob("*.py"))
-        for number, line in enumerate(path.read_text().splitlines(), start=1)
-        if "escapewheel_aind" in line
-    ]
+    offending = []
+    for path in sorted(writer.rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Import):
+                imported = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                # A relative import has no module name and cannot reach another distribution.
+                imported = [node.module or ""]
+            else:
+                continue
+            if any(name == PACKAGE or name.startswith(f"{PACKAGE}.") for name in imported):
+                offending.append(f"{path.relative_to(writer)}:{node.lineno}")
     assert offending == []

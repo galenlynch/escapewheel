@@ -37,17 +37,17 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
-from ..clock import Clock, epoch_from, zone_of
-from .compensations import Compensates
-from .defect import SourceDefect
-from .store import source_root
-from .values import sex as _sex
-from .values import utc_offset as _offset
+from escapewheel_writer.clock import Clock, epoch_from, zone_of
+from escapewheel_writer.sources.compensations import Compensates
+from escapewheel_writer.sources.defect import SourceDefect
+from escapewheel_writer.sources.store import source_root
+from escapewheel_writer.sources.values import sex as _sex
+from escapewheel_writer.sources.values import utc_offset as _offset
 
 #: `session.json`'s own name for the file, used to accept either it or its directory.
 SESSION_JSON = "session.json"
@@ -417,8 +417,8 @@ class SessionSource(Compensates):
         if not windows:
             raise SourceDefect(f"{self.path}: no data_streams, so the session has no extent")
         return (
-            min(w.start for w in windows).astimezone(timezone.utc),
-            max(w.stop for w in windows).astimezone(timezone.utc),
+            min(w.start for w in windows).astimezone(UTC),
+            max(w.stop for w in windows).astimezone(UTC),
         )
 
     # -- calibrations (R89) -----------------------------------------------------------
@@ -634,7 +634,7 @@ class SessionSource(Compensates):
         parsed = datetime.fromisoformat(raw)
         if parsed.tzinfo is None:
             parsed = self._instant(raw, f"calibration {label}")
-        return parsed.astimezone(timezone.utc)
+        return parsed.astimezone(UTC)
 
     def offers(self) -> dict[str, int]:
         """Part 05 Stage 1: how many rows of each resource this root holds."""
@@ -675,7 +675,7 @@ def _instant(value: Any) -> datetime | None:
     """Read a wall clock the build supplied, which crosses a boundary as a string."""
     if value is None or isinstance(value, datetime):
         return value
-    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return datetime.fromisoformat(str(value))
 
 
 def _clean(value: Any) -> str | None:

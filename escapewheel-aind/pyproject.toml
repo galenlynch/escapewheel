@@ -18,16 +18,32 @@ version = "0.1.0"
 # The writer, because an adapter is constructed by a build and hands back records it defines.
 # One direction only: nothing in the writer may import this package, which is what keeps the
 # dependency a boundary rather than a cycle.
+#
+# numpy and pyarrow are the video adapter's: it builds frame tables rather than record dicts.
 dependencies = [
     "escapewheel-writer",
+    "numpy>=1.26",
+    "pyarrow>=25.0.1",
 ]
 
 # Source kinds this distribution registers, by the name a recipe names them. The group is
 # `escapewheel_writer.sources.SOURCE_GROUP`, and `sources.discovered()` loads it; a registered kind
 # is constructed exactly as a built-in one is (`session.build`), so nothing here is a lesser source.
-#
-# Empty until the adapters move, which is the next commit rather than this one.
 [project.entry-points."escapewheel.sources"]
+session = "escapewheel_aind.session:SessionSource"
+video = "escapewheel_aind.video:VideoSource"
+
+# What these adapters work around in their sources, which reaches a packet's
+# `core.processing_runs.parameters` through `compensations.registered()`. Declared here because the
+# faults belong to this institution's sources, and the writer stands behind only its own.
+[project.entry-points."escapewheel.compensations"]
+aind = "escapewheel_aind.compensations:COMPENSATIONS"
+
+# Which resources these kinds win where a build has more than one producer (Part 05 §3.4).
+# Declared here rather than in the writer, which can neither import these adapters nor see that
+# they produce the resource, and so could not keep the preference honest.
+[project.entry-points."escapewheel.preferences"]
+aind = "escapewheel_aind.preferences:PREFERRED"
 
 [project.urls]
 Repository = "https://github.com/AllenNeuralDynamics/escapewheel-aind/"

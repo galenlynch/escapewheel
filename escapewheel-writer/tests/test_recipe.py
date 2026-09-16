@@ -6,9 +6,8 @@ from typing import ClassVar
 
 import pytest
 
-from escapewheel_writer.recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe, produces
+from escapewheel_writer.recipe import RECIPE_SUPPLIES, SHARED, Recipe, arbitrated, preferences, produces
 from escapewheel_writer.session import (
-    _ARBITRATED,
     Context,
     RecipeError,
     _encoding_exceptions,
@@ -16,7 +15,7 @@ from escapewheel_writer.session import (
     _refuse_a_discarded_fact,
     order,
 )
-from escapewheel_writer.sources import ADAPTERS, SourceDefect
+from escapewheel_writer.sources import ADAPTERS, SourceDefect, discovered
 
 BASE = """
 [packet]
@@ -321,16 +320,19 @@ def test_a_preference_is_what_makes_a_discard_silent(tmp_path):
 def test_a_preferred_resource_draws_a_refusal_rather_than_a_note(tmp_path):
     """Part 05 §3.4 replaces the note for a preferred resource with something stronger.
 
-    Part 05 §3.1 took `core.subjects` out of the recipe-supplied set so Part 05 §3.5's warning could see
-    it, and a preference then exempts it from Part 05 §3.4's report. What makes that sound is not the
+    A preference exempts a resource from Part 05 §3.4's report. What makes that sound is not the
     silence but the refusal: `_refuse_a_discarded_fact` fails the build where the displaced source
     stated a value the preferred one did not, which a note only mentioned.
+
+    Checked on `core.probes`, which this package both prefers and produces from two kinds. The
+    other case, `core.subjects`, is declared by the distribution shipping the `session` kind and is
+    checked there, since a preference is kept honest by whoever can see both producers.
     """
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
     source = Noted()
-    _note_unclaimed(recipe.sources[0], source, {"core.subjects": 1})
+    _note_unclaimed(recipe.sources[0], source, {"core.probes": 1})
     assert source.notes == []
-    assert PREFERRED["core.subjects"] == "session"
+    assert preferences()["core.probes"] == "nwb"
 
 
 # -- R108: a preference discards no stated fact --------------------------------------------
@@ -361,8 +363,8 @@ def test_a_preference_names_a_resource_more_than_one_source_produces(tmp_path):
     noticed. This is Part 02 §4's discipline for a declared naming exception, one table over.
     """
     uncontested = {
-        resource: [kind for kind in sorted(ADAPTERS) if resource in produces(kind)]
-        for resource in sorted(PREFERRED)
+        resource: [kind for kind in sorted({**ADAPTERS, **discovered()}) if resource in produces(kind)]
+        for resource in sorted(preferences())
     }
     assert {r: k for r, k in uncontested.items() if len(k) < 2} == {}
 
@@ -375,8 +377,8 @@ def test_a_shared_resource_is_not_compared(tmp_path, registry):
     build refused on exactly these: the sync source's reference clock read as a loss against the
     sorter's twelve probe clocks, which are different rows and not a displaced copy.
     """
-    assert _ARBITRATED == {"core.probes", "core.subjects"}
-    assert not _ARBITRATED & SHARED
+    assert "core.probes" in arbitrated()
+    assert not arbitrated() & SHARED
 
 
 def test_a_preference_that_discards_a_stated_fact_is_refused(tmp_path, registry):

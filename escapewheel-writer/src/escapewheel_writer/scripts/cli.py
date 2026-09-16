@@ -29,7 +29,7 @@ from typing import Any
 
 from .. import compare
 from ..extensions import load as load_extension
-from ..recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, Recipe
+from ..recipe import RECIPE_SUPPLIES, SHARED, Recipe, preferences
 from ..session import build, materializers
 from ..writer import CommitRefused
 
@@ -157,7 +157,7 @@ def _init(args: argparse.Namespace) -> int:
         lines += ["]"]
         for option, value, why in REQUIRED.get(kind, ()):
             lines += [f"# {why}", f"{option} = {value}{GUESSED}"]
-        lines += [f"# also offers {r}, owned here by {PREFERRED.get(r, 'another source')}" for r in passed]
+        lines += [f"# also offers {r}, owned here by {preferences().get(r, 'another source')}" for r in passed]
         lines += [f"# supplies {r}, which the recipe declares itself" for r in sorted(set(offers[kind]) & supplies)]
         lines += [*HINTS.get(kind, ()), ""]
 
@@ -193,8 +193,9 @@ def _wins(kind: str, offering: list[str]) -> bool:
     """
     if len(offering) == 1:
         return True
-    resource_owner = next((r for r, k in PREFERRED.items() if k == kind and kind in offering), None)
-    return kind == PREFERRED.get(resource_owner or "", offering[0]) if resource_owner else kind == offering[0]
+    preferred = preferences()
+    resource_owner = next((r for r, k in preferred.items() if k == kind and kind in offering), None)
+    return kind == preferred.get(resource_owner or "", offering[0]) if resource_owner else kind == offering[0]
 
 
 def _import(args: argparse.Namespace) -> int:
@@ -572,4 +573,4 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     deliver.set_defaults(func=_deliver)
 
 
-__all__ = ["KINDS", "PREFERRED", "register"]
+__all__ = ["KINDS", "register"]

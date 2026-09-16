@@ -4,13 +4,17 @@ An adapter reads one source and returns records. It never writes: the packet is 
 :class:`~escapewheel_writer.writer.PacketWriter`, which validates before it commits. That split
 exists because no single source carries a whole session -- see
 `inventory/nwb-zarr-776259-2025-04-09.md` §6.
+
+What is here reads a **standard** -- SpikeInterface, Open Ephys, Harp, NWB -- because many
+institutions write them. An adapter serving one institution is registered rather than built in,
+and `escapewheel-aind` is where this repository's own are: `session` and `video` moved there,
+and are reached through `SOURCE_GROUP` exactly as any other distribution's would be.
 """
 
 import warnings
 from importlib.metadata import entry_points
 from typing import Any
 
-from .aind import AcquisitionStream, SessionSource
 from .defect import SourceDefect
 from .harp import HarpSource
 from .lfp import LFPSource
@@ -19,7 +23,6 @@ from .openephys import OpenEphysSource
 from .sorter import SortedStream, SorterSource
 from .sync import SyncSource, SyncStream
 from .tables import TablesSource
-from .video import VideoSource
 from .waveforms import WaveformSource
 
 #: Entry-point group a distribution registers a source adapter under. Part 07 names one CLI and the
@@ -33,8 +36,10 @@ SOURCE_GROUP = "escapewheel.sources"
 #: The built-in kinds a recipe may name, by the name it names them. `session.build` maps a kind to
 #: a constructed adapter; this maps it to the class, which is what Part 05 §3.4's `PRODUCES` hangs on
 #: and what a recipe check reads with nothing open.
+#:
+#: A kind absent here is not unknown: `discovered()` supplies the rest, and a recipe naming one
+#: declares how a build reaches it (Part 05 §3.9).
 ADAPTERS: dict[str, Any] = {
-    "session": SessionSource,
     "harp": HarpSource,
     "openephys": OpenEphysSource,
     "sorter": SorterSource,
@@ -43,7 +48,6 @@ ADAPTERS: dict[str, Any] = {
     "waveforms": WaveformSource,
     "lfp": LFPSource,
     "tables": TablesSource,
-    "video": VideoSource,
 }
 
 
@@ -68,19 +72,16 @@ def discovered() -> dict[str, Any]:
 __all__ = [
     "ADAPTERS",
     "SOURCE_GROUP",
-    "AcquisitionStream",
     "HarpSource",
     "LFPSource",
     "NWBSource",
     "OpenEphysSource",
-    "SessionSource",
     "SortedStream",
     "SorterSource",
     "SourceDefect",
     "SyncSource",
     "SyncStream",
     "TablesSource",
-    "VideoSource",
     "WaveformSource",
     "discovered",
 ]

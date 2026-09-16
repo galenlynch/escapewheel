@@ -16,21 +16,26 @@ from pathlib import Path
 
 import pytest
 
-from escapewheel_writer.recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, produces
+from escapewheel_writer.recipe import RECIPE_SUPPLIES, SHARED, preferences, produces
 from escapewheel_writer.scripts.cli import KINDS
-from escapewheel_writer.sources import ADAPTERS
+from escapewheel_writer.sources import ADAPTERS, discovered
 
 
 def _by_resource() -> dict[str, list[str]]:
-    """Which adapters can produce each resource, over every kind a build accepts."""
+    """Which adapters can produce each resource, over every kind a build accepts.
+
+    Registered kinds count, because a preference may name one: a build resolves ownership over
+    everything it can reach, so a check reading only the built-in table would pass a preference
+    that arbitrates nothing wherever the other producer ships elsewhere.
+    """
     found: dict[str, list[str]] = {}
-    for kind in ADAPTERS:
+    for kind in {**ADAPTERS, **discovered()}:
         for resource in produces(kind):
             found.setdefault(resource, []).append(kind)
     return found
 
 
-@pytest.mark.parametrize("resource,winner", sorted(PREFERRED.items()))
+@pytest.mark.parametrize("resource,winner", sorted(preferences().items()))
 def test_a_preference_arbitrates_something(resource, winner):
     """A preference names the winner among several producers, so there must be several.
 

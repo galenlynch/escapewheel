@@ -183,14 +183,29 @@ R108 §3.2. Sharing the reader is safe across a release boundary because R115 §
 out-of-process adapter import whatever version it was written against: the boundary unshares the
 environment, so a shared library is not a shared closure.
 
-**The AIND adapters get a distribution in this monorepo, built as though it already lived
-elsewhere.** `session`, `video` and the NWB dialect are one institution's. They move to a sibling
-project registering its kinds through the `escapewheel.sources` entry-point group, which
-`sources.discovered()` already loads and which `escapewheel-writer/pyproject.toml` carries a
-commented example of, depending on the writer as the writer depends on the validator — a
-`[tool.uv.sources]` path, editable. Writing it against the boundary rather than against the package
-is what makes moving it out later a packaging change rather than a rewrite. Until it moves, keep it
-honest: no import of a writer internal the boundary does not offer.
+**`escapewheel-aind` exists and holds two of the three**, 2026-09-16. `session` (726 lines) and
+`video` (323) moved with `git mv`, so `git log --follow` reaches back through it; the NWB dialect
+follows once the carve below is done. The distribution depends on the writer as the writer depends
+on the validator — a `[tool.uv.sources]` editable path — registers both kinds through the
+`escapewheel.sources` entry-point group that `sources.discovered()` already loaded, and joins
+`verify.py`'s `SUITES` and the CI package loop. Nothing in the writer imports it, which
+`test_boundary.py` asserts by parsing the writer's imports rather than by matching the name, since
+a docstring may name what it must not import.
+
+**Two writer registries had to open for the boundary to be real.** Both named a departing kind and
+neither could be checked from the writer once it left. `COMPENSATIONS` was the hard case:
+`compensate()` raises on an unregistered id, and three of its six entries — the two `aind.*` and
+`video.zip_pairing_repaired` — belonged to the movers. `PREFERRED` was the quiet one: nothing
+breaks at build time, because `_resolve_ownership` and `_refuse_a_discarded_fact` both guard with
+`in kinds`, but `core.subjects` named `session` and no writer test could see that kind again. Each
+now merges built-ins with an entry-point group — `escapewheel.compensations` and
+`escapewheel.preferences` — on the terms `extensions.installed()` already set: a broken
+distribution is skipped with its reason, and a registered entry never replaces a built-in one.
+
+**A recipe naming one of these kinds now declares how a build reaches it.** `_builtin()` is false
+for a registered kind, so `_delivery_problems` refuses it unless the recipe sets `in_process` or a
+`[source.delivery]` command (Part 05 §3.9). The refusal names the kind and says what to add, and no
+recipe is tracked in this repository, so nothing broke — but a real AIND recipe needs the line.
 
 **The inventory is done**, 2026-09-16, and it is
 [`inventory/nwb-adapter-base-and-dialect.md`](inventory/nwb-adapter-base-and-dialect.md): every read

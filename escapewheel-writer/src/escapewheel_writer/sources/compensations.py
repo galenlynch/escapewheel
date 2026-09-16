@@ -21,7 +21,20 @@ choosing to.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
+from importlib.metadata import entry_points
+from typing import Any
+
+#: Entry-point group a distribution registers its own compensations under. The value loads to a
+#: mapping of identifier to :class:`Compensation`, or to a callable returning one.
+#:
+#: An adapter shipped elsewhere works around its own source's faults, and the record of what it
+#: assumed has to reach the packet the same way a built-in adapter's does -- so the registry is
+#: open for the same reason `escapewheel.extensions` and `escapewheel.sources` are. What stays
+#: closed is this module's own dict: the writer declares the faults of the sources it reads, and
+#: nothing else.
+COMPENSATION_GROUP = "escapewheel.compensations"
 
 
 @dataclass(frozen=True)
@@ -46,33 +59,6 @@ class Compensation:
 #: Every compensation an adapter may declare. A new one goes here with its evidence, so the
 #: list stays a record of measured faults rather than a place to park a guess.
 COMPENSATIONS: dict[str, Compensation] = {
-    "aind.stored_offset_distrusted": Compensation(
-        defect="aind-data-schema JSONs stamp an offset that disagrees with the reading, "
-        "notably +00:00 on a Pacific wall clock -- a seven-hour error",
-        action="the stored offset is dropped and the reading localised to the declared zone",
-        evidence="inventory/upstream-defects.md, nwb-zarr-776259-2025-04-09.md §3.1",
-    ),
-    "aind.tick_zero_from_stream_start": Compensation(
-        defect="a HARP clock free-runs from device power-on, so tick 0 is a power-on instant "
-        "no file records; the NWB's timestamps_reference_time claims to locate it and is wrong "
-        "by 134 days",
-        action="tick 0 is placed by pairing the ephys stream's declared start with the first "
-        "spike observed on the clock, which is accurate to about a second -- the stream's "
-        "whole-second stamp plus the sub-second wait for the first of thousands of units",
-        evidence="inventory/nwb-zarr-776259-2025-04-09.md §3.1, §3.3",
-    ),
-    "video.zip_pairing_repaired": Compensation(
-        defect="the acquiring workflow joins the camera stream to the rig's timestamp stream "
-        "with rx:Zip (dynamic-foraging-task, src/workflows/foraging.bonsai:8112), which pairs by "
-        "position. The host drops frames in bursts, so each drop shifts every later pairing by "
-        "one and the recorded time falls behind by one trigger period per lost frame -- measured "
-        "at 93.4 s over one 85-minute session, from 46,723 lost frames",
-        action="the time is reconstructed from the camera's own chunk data, which survived: "
-        "t_tick = t0 + (FrameID - FrameID_0) x trigger period, where t0 is the one pairing still "
-        "correct and the period is measured from the file. Checked against the camera's "
-        "independent hardware clock, the two agree to 35-85 ms over 85 minutes",
-        evidence="inventory/upstream-defects.md §video-zip-pairing",
-    ),
     "nwb.signal_device_declared": Compensation(
         defect="an instrument acquired by a separate workflow contributes its data and none of "
         "its metadata: the stream lands in the packet while no metadata document mentions it at "
@@ -102,6 +88,50 @@ COMPENSATIONS: dict[str, Compensation] = {
 }
 
 
+def _mapping(loaded: Any, source: str) -> dict[str, Compensation]:
+    """Coerce whatever an entry point loaded into a mapping of identifier to compensation."""
+    if callable(loaded) and not isinstance(loaded, type):
+        loaded = loaded()
+    if not isinstance(loaded, dict):
+        raise TypeError(f"{source} loaded {type(loaded).__name__}, not a mapping of compensations")
+    for identifier, entry in loaded.items():
+        if not isinstance(entry, Compensation):
+            raise TypeError(f"{source} registered {identifier!r} as {type(entry).__name__}, not a Compensation")
+        if not (entry.defect and entry.action and entry.evidence):
+            raise ValueError(f"{source} registered {identifier!r} with no {'defect' if not entry.defect else ''}"
+                             f"{'action' if not entry.action else ''}{'evidence' if not entry.evidence else ''}")
+    return dict(loaded)
+
+
+def registered() -> dict[str, Compensation]:
+    """Every compensation an adapter may declare: this package's, plus what distributions register.
+
+    A distribution that fails to load is skipped with its reason rather than raised, as an
+    extension is: one broken package must not make every other compensation unregistered, which
+    would turn a bad install into a build that refuses every adapter's `compensate`.
+
+    A registered identifier never replaces a built-in one. The dict here is what this package
+    measured and stands behind, and a third party silently redefining `lfp.timestamps_distrusted`
+    would put its account of the defect into packets this writer built.
+    """
+    found = dict(COMPENSATIONS)
+    for entry in entry_points(group=COMPENSATION_GROUP):
+        try:
+            loaded = _mapping(entry.load(), f"compensations {entry.name!r}")
+        except Exception as exc:  # noqa: BLE001 - one broken package is one distribution, not all
+            warnings.warn(f"compensations {entry.name!r} could not be loaded: {exc}", stacklevel=2)
+            continue
+        for identifier, compensation in loaded.items():
+            if identifier in found:
+                warnings.warn(
+                    f"compensations {entry.name!r} redefines {identifier!r}, which is kept as declared here",
+                    stacklevel=2,
+                )
+                continue
+            found[identifier] = compensation
+    return found
+
+
 class Compensates:
     """Mixin giving an adapter somewhere to declare what it worked around.
 
@@ -114,7 +144,7 @@ class Compensates:
 
     def compensate(self, identifier: str) -> None:
         """Declare that a registered compensation was applied."""
-        if identifier not in COMPENSATIONS:
+        if identifier not in registered():
             raise KeyError(f"{identifier!r} is not a registered compensation; add it with its evidence")
         if identifier not in self.compensations:
             self.compensations.append(identifier)
@@ -122,11 +152,12 @@ class Compensates:
 
 def describe(applied: list[str]) -> list[dict[str, str]]:
     """Render applied compensations for `core.processing_runs.parameters`."""
+    known = registered()
     return [
         {"id": identifier, "defect": c.defect, "action": c.action, "evidence": c.evidence}
         for identifier in sorted(set(applied))
-        if (c := COMPENSATIONS.get(identifier)) is not None
+        if (c := known.get(identifier)) is not None
     ]
 
 
-__all__ = ["COMPENSATIONS", "Compensates", "Compensation", "describe"]
+__all__ = ["COMPENSATIONS", "COMPENSATION_GROUP", "Compensates", "Compensation", "describe", "registered"]

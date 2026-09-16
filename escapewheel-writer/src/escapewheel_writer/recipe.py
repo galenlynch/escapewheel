@@ -22,8 +22,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
@@ -66,12 +68,19 @@ RECIPE_MAY_SUPPLY = ("core.subjects",)
 #: knows only the stream, and the waveform source is the only one that can see a unit's channel
 #: support. Held here rather than in the scaffolder, so a draft and a build resolve alike.
 PREFERRED = {
-    # `subject.json` is the record `general/subject` is a projection of: it carries a
-    # `background_strain` key the projection lacks and a date of birth with no timezone. Safe to
-    # declare because Part 05 §3.4 refuses a build where preferring it drops a fact the NWB stated.
-    "core.subjects": "session",
     "core.probes": "nwb",
 }
+
+#: Entry-point group a distribution registers its own preferences under, loading to a mapping of
+#: resource to the kind that wins it, or to a callable returning one.
+#:
+#: A preference names a **kind**, so one naming a registered kind cannot live here: this package
+#: can neither import that adapter nor see that it produces the resource, and a preference it
+#: cannot check is one nothing keeps honest. The distribution shipping the kind declares it
+#: instead, which is where the knowledge is -- `escapewheel-aind` declares `core.subjects`,
+#: because `subject.json` is the record `general/subject` is a projection of and carries a
+#: `background_strain` key the projection lacks.
+PREFERENCE_GROUP = "escapewheel.preferences"
 # `core.clocks`, `core.array_assets` and `core.array_dimensions` were declared here and struck:
 # `_resolve_ownership` checks `SHARED` first and returns, so a preference for a shared resource is
 # never consulted. R108 §3.4 struck `core.unit_electrodes` for arbitrating nothing; these three
@@ -81,6 +90,58 @@ PREFERRED = {
 #: A defaulted source contributes to these rather than owning them.
 SHARED = frozenset({"core.clocks", "core.clock_anchors", "core.clock_observation_intervals",
                     "core.array_assets", "core.array_dimensions", "core.devices"})
+
+
+def _preferences(loaded: Any, source: str) -> dict[str, str]:
+    """Coerce whatever an entry point loaded into a mapping of resource to the kind that wins it."""
+    if callable(loaded) and not isinstance(loaded, type):
+        loaded = loaded()
+    if not isinstance(loaded, dict):
+        raise TypeError(f"{source} loaded {type(loaded).__name__}, not a mapping of preferences")
+    for resource, kind in loaded.items():
+        if not isinstance(resource, str) or not isinstance(kind, str):
+            raise TypeError(f"{source} maps {resource!r} to {kind!r}; both must be strings")
+    return dict(loaded)
+
+
+def preferences() -> dict[str, str]:
+    """Where a resource goes when more than one adapter produces it: this package's, plus registered.
+
+    Computed rather than held, because a distribution registering a kind registers its preferences
+    with it. A module constant would be read once at import and never see them.
+
+    A registered preference never replaces a built-in one, and a distribution that fails to load is
+    skipped with its reason rather than raised -- the same terms `compensations.registered` sets,
+    for the same reason: one bad install must not silently re-arbitrate ownership in a packet this
+    writer builds.
+    """
+    found = dict(PREFERRED)
+    for entry in entry_points(group=PREFERENCE_GROUP):
+        try:
+            loaded = _preferences(entry.load(), f"preferences {entry.name!r}")
+        except Exception as exc:  # noqa: BLE001 - one broken package is one distribution, not all
+            warnings.warn(f"preferences {entry.name!r} could not be loaded: {exc}", stacklevel=2)
+            continue
+        for resource, kind in loaded.items():
+            if resource in found:
+                warnings.warn(
+                    f"preferences {entry.name!r} redefines {resource!r}, which is kept as declared here",
+                    stacklevel=2,
+                )
+                continue
+            found[resource] = kind
+    return found
+
+
+def arbitrated() -> frozenset[str]:
+    """Resources a preference actually decides (Part 05 §3.4).
+
+    Not every resource a preference names: `_resolve_ownership` checks `SHARED` first and returns,
+    so for a resource in both tables the preference decides nothing and the sources hold
+    *different* rows (R108 §4). Comparing those would report a probe clock against a reference
+    clock and call the difference a loss.
+    """
+    return frozenset(preferences()) - SHARED
 
 
 def adapter_for(kind: str) -> Any:

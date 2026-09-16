@@ -35,7 +35,7 @@ from escapewheel_reader.clocks import BOUND, align
 from numpy.typing import NDArray
 
 from .extensions import load as load_extension
-from .recipe import PREFERRED, RECIPE_SUPPLIES, SHARED, TERMS, Recipe, SourceSpec, declared, redacted
+from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, arbitrated, declared, preferences, redacted
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
 from .sources.store import cache_directory
@@ -960,9 +960,10 @@ def _add_records(
         Rows the source produced per resource, claimed or not, for `_unclaimed` to report.
     """
     produced: dict[str, int] = {}
+    arbitrating = arbitrated()
     for resource, rows in {**records, **_composed(spec, context)}.items():
         produced[resource] = len(rows)
-        if resource in _ARBITRATED:
+        if resource in arbitrating:
             # Kept rather than counted, so Part 05 §3.4 can compare what the winner staged against
             # what the source it displaced stated. Only where a preference arbitrates, which is
             # what keeps this bounded.
@@ -975,13 +976,6 @@ def _add_records(
         writer.add(resource, rows)
         counts[resource] = counts.get(resource, 0) + len(rows)
     return produced
-
-
-#: Part 05 §3.4 reaches a resource a preference arbitrates, which is not every resource one names:
-#: `_resolve_ownership` checks `SHARED` first and returns, so for a resource in both tables the
-#: preference decides nothing and the sources hold *different* rows (R108 §4). Comparing those
-#: would report a probe clock against a reference clock and call the difference a loss.
-_ARBITRATED = frozenset(PREFERRED) - SHARED
 
 
 def _encoding_exceptions(recipe: Recipe) -> dict[str, dict[str, tuple[str, ...]]]:
@@ -1017,13 +1011,14 @@ def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Rec
     """
     kinds = {spec.kind for spec in recipe.sources}
     lost: list[str] = []
+    preferred = preferences()
     for resource, by_kind in sorted(context.stated.items()):
         table = writer.spec(resource)
         if table is None or len(by_kind) < 2:
             continue
         # The preference names the winner. Reading it off whoever claims the resource is wrong for
         # a contributed one, where every claimant is a legitimate supplier of different rows.
-        winner = PREFERRED[resource]
+        winner = preferred[resource]
         if winner not in kinds:
             continue
         kept = by_kind.get(winner, [])
@@ -1078,7 +1073,7 @@ def _note_unclaimed(spec: SourceSpec, source: Any, produced: Mapping[str, int]) 
     """
     # Discarded by design: the recipe writes these itself, or a preference names the winner.
     # Everything else this source produced and does not claim is discarded by omission.
-    by_design = set(RECIPE_SUPPLIES) | {r for r in produced if PREFERRED.get(r) is not None}
+    by_design = set(RECIPE_SUPPLIES) | {r for r in produced if preferences().get(r) is not None}
     dropped = {resource: rows for resource, rows in produced.items()
                if rows and resource not in spec.claims and resource not in by_design}
     notes = getattr(source, "notes", None)

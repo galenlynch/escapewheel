@@ -403,6 +403,8 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "escapewheel-writer" },
+    { name = "numpy" },
+    { name = "pyarrow" },
 ]
 
 [package.dev-dependencies]
@@ -421,7 +423,11 @@ types = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "escapewheel-writer", editable = "../escapewheel-writer" }]
+requires-dist = [
+    { name = "escapewheel-writer", editable = "../escapewheel-writer" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "pyarrow", specifier = ">=25.0.1" },
+]
 
 [package.metadata.requires-dev]
 dev = [

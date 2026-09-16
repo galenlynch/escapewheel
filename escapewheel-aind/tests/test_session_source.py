@@ -1,16 +1,17 @@
 """The JSON adapter locates tick zero and declares the windows the NWB cannot."""
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
-
 from escapewheel_writer import Clock
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
 from escapewheel_writer.recipe import SourceSpec
 from escapewheel_writer.session import Context, _composed
-from escapewheel_writer.sources import SessionSource, SourceDefect
+from escapewheel_writer.sources import SourceDefect
+
+from escapewheel_aind.session import SessionSource
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 SESSION = "ecephys_776259_2025-04-09_17-25-12"
@@ -174,7 +175,7 @@ def test_the_ephys_duration_survives_the_correction(source):
 def test_the_epoch_lands_on_the_measured_instant(source):
     """Derived from the ephys start and the first spike; verified against the real asset."""
     assert source.epoch(FIRST_SPIKE_TICK, tick_rate_num=HARP_TICK_RATE_HZ) == datetime(
-        2024, 11, 27, 0, 53, 55, 780992, tzinfo=timezone.utc
+        2024, 11, 27, 0, 53, 55, 780992, tzinfo=UTC
     )
 
 
@@ -189,7 +190,7 @@ def test_the_epoch_says_it_was_derived(source):
 
 
 def test_the_clock_carries_the_epoch_and_the_session(harp):
-    assert harp.tick_zero_utc == datetime(2024, 11, 27, 0, 53, 55, 780992, tzinfo=timezone.utc)
+    assert harp.tick_zero_utc == datetime(2024, 11, 27, 0, 53, 55, 780992, tzinfo=UTC)
     assert (harp.clock_id, harp.session_id, harp.tick_rate_num) == ("harp", SESSION, HARP_TICK_RATE_HZ)
 
 
@@ -201,7 +202,7 @@ def test_the_clock_round_trips_its_own_anchor(harp):
 def test_a_clock_without_an_epoch_locates_nothing():
     bare = Clock("harp", session_id=SESSION, name="HARP", tick_rate_num=HARP_TICK_RATE_HZ, origin="epoch")
     with pytest.raises(ValueError, match="no tick_zero_utc"):
-        bare.tick_at(datetime.now(timezone.utc))
+        bare.tick_at(datetime.now(UTC))
 
 
 def test_a_naive_instant_locates_nothing(harp):
@@ -284,7 +285,7 @@ def test_records_emit_the_clock_row_the_build_supplied(source):
 
 def test_a_located_tick_zero_reaches_the_row_unchanged(asset):
     """A build that located tick 0 from the record nodes' stamps knows better than this JSON."""
-    located = datetime(2024, 11, 27, 0, 53, 55, 855_000, tzinfo=timezone.utc)
+    located = datetime(2024, 11, 27, 0, 53, 55, 855_000, tzinfo=UTC)
     source = _session(asset, reference_clock={**HARP_ROW, "tick_zero_utc": located})
     assert source.records()["core.clocks"][0]["tick_zero_utc"] == located
     assert "aind.tick_zero_from_stream_start" not in source.compensations
@@ -342,7 +343,7 @@ def test_a_water_calibration_becomes_a_row_with_both_units(asset):
     assert (row["input_unit"], row["output_unit"]) == ("s", "ul")
     # Open (Part 02 §9.3): the type is what the source called the quantity it measured.
     assert row["calibration_type"] == "water_volume"
-    assert row["calibrated_at"] == datetime(2024, 11, 27, 8, tzinfo=timezone.utc)
+    assert row["calibrated_at"] == datetime(2024, 11, 27, 8, tzinfo=UTC)
 
 
 def test_the_curve_becomes_points_in_the_order_stated(asset):
@@ -366,7 +367,7 @@ def test_six_modules_citing_one_file_are_one_calibration(tmp_path):
     source = _session(asset)
     row, = source.calibrations()
     assert row["calibration_type"] == "manipulator_transform"
-    assert row["calibrated_at"] == datetime(2025, 4, 9, 10, tzinfo=timezone.utc)
+    assert row["calibrated_at"] == datetime(2025, 4, 9, 10, tzinfo=UTC)
     covered = source.calibration_devices()
     assert [d["device_id"] for d in covered] == ["46100", "46122", "50209", "46113", "45883", "46116"]
     assert {d["calibration_id"] for d in covered} == {TRANSFORM}
