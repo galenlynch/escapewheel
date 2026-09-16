@@ -173,13 +173,39 @@ between two exporters of one pipeline. Those columns share rows with the standar
 §3.2 forbids composing a row from more than one source, so the dialect cannot be split off as a
 second adapter contributing columns.
 
-What splits instead is the **code**: a base NWB reader as its own distribution, and an adapter that
-speaks one institution's dialect as another, importing the reader and emitting whole rows of whole
+What splits is the **code**, and how was decided 2026-09-15. The base NWB reader **stays in
+`escapewheel-writer`**, since core ships adapters for standards; the dialect becomes its own adapter
+that calls the base one as a library for its internal processing and emits whole rows of whole
 resources. Ownership between the two is the arbitration that already exists — the recipe declares
 which owns `core.electrode_coordinates` (Part 05 §3.3), and R108 §3.1 refuses a preference that
-discards a value the passed-over source stated. Sharing the reader is safe across a release boundary
-because R115 §3.9 lets an out-of-process adapter import whatever version it was written against: the
-boundary unshares the environment, so a shared library is not a shared closure.
+discards a value the passed-over source stated — and whole rows rather than contributed columns is
+R108 §3.2. Sharing the reader is safe across a release boundary because R115 §3.9 lets an
+out-of-process adapter import whatever version it was written against: the boundary unshares the
+environment, so a shared library is not a shared closure.
+
+**The AIND adapters get a distribution in this monorepo, built as though it already lived
+elsewhere.** `session`, `video` and the NWB dialect are one institution's. They move to a sibling
+project registering its kinds through the `escapewheel.sources` entry-point group, which
+`sources.discovered()` already loads and which `escapewheel-writer/pyproject.toml` carries a
+commented example of, depending on the writer as the writer depends on the validator — a
+`[tool.uv.sources]` path, editable. Writing it against the boundary rather than against the package
+is what makes moving it out later a packaging change rather than a rewrite. Until it moves, keep it
+honest: no import of a writer internal the boundary does not offer.
+
+**What is dialect has not been inventoried, and a grep will not do it.** The paths `nwb.py` walks
+are base NWB — `units`, `intervals/trials`, `general/extracellular_ephys/electrodes`, `acquisition`
+— so what is one producer's sits inside them: `ks_unit_id` and `device_name` on units, the CCF axes
+and region columns R59 measured, and the conventions constants hold rather than call sites —
+`DEVICE_DESCRIPTION`, `SIGNAL_DEVICE`'s HARP register spelling, `TRIAL_EVENTS`, `TRIAL_MAPPED`,
+`FRAME_AXES`. Pattern-matching the call sites finds a handful and misses those, so the first step is
+an inventory naming each read base or dialect, and that is what decides which methods move.
+
+**The plumbing is separated**, 2026-09-15 at `f1ef6f1`, which is the prerequisite: `SourceDefect`
+and the sex and UTC-offset helpers left `nwb.py` for `sources/defect.py` and `sources/values.py`, so
+lifting the NWB reading no longer drags the base exception type and two core-vocabulary helpers out
+from under `harp`, `openephys`, `video` and `sorter`. `nwb.py` is imported by three files rather than
+eight, and the two that remain take `electrode_name`, which is NWB contact naming and travels with
+it.
 
 It is cheap because the boundary work already done is the extraction. `sources/nwb.py` needs exactly
 two things of the build — `Clock` and `StagedArray` — and R115 §3.1 has the reference clock cross as
