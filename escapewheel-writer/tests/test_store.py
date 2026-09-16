@@ -108,7 +108,12 @@ def test_an_adapter_built_alone_gets_its_own_store(tmp_path):
 
 
 def test_the_adapters_that_share_a_root_share_its_store(tmp_path, registry):
-    """Three adapters read the same .nwb, and two of them read the electrode table."""
+    """Two adapters read the same .nwb, and both read the electrode table.
+
+    The waveform adapter used to be a third. It reads the analyzer that computed the templates
+    now, which is a different root, so it shares nothing with these two and needs no store of
+    theirs.
+    """
     from escapewheel_writer.recipe import Recipe
     from escapewheel_writer.session import Context, _build_source
 
@@ -126,9 +131,10 @@ name = "HARP"
 tick_rate_num = 31250
 origin = "e"
 [[source]]
-kind = "waveforms"
+kind = "nwb"
 root = "{root}"
-owns = ["core.unit_electrodes"]
+owns = ["core.electrodes"]
+zone = "America/Los_Angeles"
 [[source]]
 kind = "lfp"
 root = "{root}"
@@ -137,7 +143,7 @@ owns = ["core.array_channels"]
     path = tmp_path / "session.toml"
     path.write_text(text)
     recipe = Recipe.load(path)
-    # The three declare `units` and `clocks`, which a build fills from the sorter's output and
+    # Both declare `units` and `clocks`, which a build fills from the sorter's output and
     # refuses to pass empty (Part 03 §11.2), so the context carries both as it would by the time any
     # of them is built.
     context = Context(

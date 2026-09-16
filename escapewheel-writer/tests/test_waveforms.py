@@ -1,9 +1,12 @@
 """What `WaveformSource` stores, and what it refuses.
 
-The adapter's contract is that both arrays describe one channel axis: the deviation is cut on
-the mean's support, so position *k* names the same contact in each and one `core.unit_electrodes`
-row serves both. The fixture makes that testable by giving one unit a contact the mean has signal
-on and the deviation does not, which is the real file's case -- 52 such cells in 2,603,904.
+The adapter reads the analyzer that computed the templates rather than the NWB exported from it,
+so the fixture is a miniature `SortingAnalyzer`: templates, the sparsity mask beside them, the
+unit ids, and the two attribute blocks that say what the values are in and where the spike sits.
+
+The contract those buy is what most of these test. The support is the **mask**, not the values, so
+a contact whose template happens to be flat keeps its row and a non-zero outside the mask is not
+stored -- neither of which a reader of the padded export could get right.
 """
 
 import json
@@ -15,24 +18,41 @@ import zarr
 
 from escapewheel_writer.sources import SourceDefect
 from escapewheel_writer.sources.waveforms import WaveformSource
-from tests.nwbfixture import array, group
 
 UNITS, CHANNELS, SAMPLES = 3, 5, 4
+STREAM = "experiment1_Record Node 109#probeA_recording1.zarr"
 
-#: Which source channels each unit has signal on in `waveform_mean`.
+#: Which channels the analyzer says each unit was computed on.
 SUPPORT = {0: (1, 2), 1: (0, 3, 4), 2: (2,)}
 
-#: Live in the mean and zero in the deviation, as the real file's 52 cells are.
-MEAN_ONLY = (1, 4)
+#: The contacts, named as the sorting analyzer lists them.
+CHANNEL_IDS = [f"CH{c}" for c in range(CHANNELS)]
 
-#: What the file says the peak is, chosen to be wrong in both of the ways the real one is:
-#: unit 0's value names a contact in the support that is not the peak, and unit 1's names one
-#: outside the support entirely. Unit 2's is right. The adapter reads none of them.
-EXTREMUM = [1, 1, 2]
+#: A rate and a window that make `nbefore` a small round number: 2.0 ms at 1 kHz is 2 samples.
+RATE, MS_BEFORE = 1000.0, 2.0
+NBEFORE = 2
 
 
-def _dense(support: dict[int, tuple[int, ...]], skip: tuple[int, int] | None = None) -> np.ndarray:
-    """A `(unit, sample, channel)` array, zero off each unit's support as the NWB pads it.
+def _write(path: Path, values: np.ndarray, chunks: tuple[int, ...]) -> None:
+    """Write a Zarr v2 array by path.
+
+    A `LocalStore` rather than a string: a stream folder carries a `#`, which zarr reads as a URL
+    fragment and which silently truncates the store root.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    written = zarr.create_array(
+        store=zarr.storage.LocalStore(path), shape=values.shape, chunks=chunks, dtype=values.dtype, zarr_format=2
+    )
+    written[:] = values
+
+
+def _attrs(path: Path, **payload) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    (path / ".zattrs").write_text(json.dumps(payload))
+
+
+def _templates(support: dict[int, tuple[int, ...]], skip: tuple[int, int] | None = None) -> np.ndarray:
+    """A `(unit, sample, channel)` array, zero off each unit's support.
 
     A spike goes down, so the trough identifies the peak contact. It deepens along each unit's
     support, which puts the peak on the last contact rather than the first.
@@ -47,48 +67,44 @@ def _dense(support: dict[int, tuple[int, ...]], skip: tuple[int, int] | None = N
     return values
 
 
-def _wide(path: Path, values: np.ndarray) -> None:
-    """Write a rank-3 Zarr v2 array, which is the form hdmf-zarr writes and the adapter opens."""
-    written = zarr.create_array(
-        store=str(path), shape=values.shape, chunks=(2, *values.shape[1:]), dtype="<f8", zarr_format=2
-    )
-    written[:] = values
-
-
-@pytest.fixture
-def nwb(tmp_path: Path) -> Path:
-    """A miniature `units/` group with everything the adapter reads."""
-    root = tmp_path / "session.nwb"
-    units = group(root / "units")
-    _wide(units / "waveform_mean", _dense(SUPPORT))
-    _wide(units / "waveform_sd", _dense(SUPPORT, skip=MEAN_ONLY) * 0.1)
-    array(units / "device_name", ["probeA"] * UNITS, filter_id="vlen-utf8")
-    array(units / "ks_unit_id", np.arange(UNITS, dtype="<i8"))
-    array(units / "electrodes", np.arange(UNITS * CHANNELS, dtype="<i8"))
-    array(units / "electrodes_index", np.arange(1, UNITS + 1, dtype="<i8") * CHANNELS)
-    array(units / "extremum_channel_index", np.array(EXTREMUM, dtype="<i8"))
-    # The electrode table the adapter names its contacts from, one row per (unit, channel) cell
-    # the ragged `electrodes` region indexes. `channel_name` alone repeats across probes, so the
-    # name is the pair, composed as the adapter owning `core.electrodes` composes it.
-    contacts = group(root / "general/extracellular_ephys/electrodes")
-    array(contacts / "group_name", ["probeA"] * (UNITS * CHANNELS), filter_id="vlen-utf8")
-    array(contacts / "channel_name", [str(row) for row in range(UNITS * CHANNELS)], filter_id="vlen-utf8")
-    (root / ".zgroup").write_text(json.dumps({"zarr_format": 2}))
+def build(root: Path, *, mask: dict[int, tuple[int, ...]] | None = None, sd: bool = True) -> Path:
+    """Write a miniature analyzer under `postprocessed/` and return the asset root."""
+    an = root / "postprocessed" / STREAM
+    _attrs(an, settings={"return_in_uV": True})
+    _write(an / "sorting/unit_ids", np.arange(UNITS, dtype=np.int64), (UNITS,))
+    held = SUPPORT if mask is None else mask
+    sparsity = np.zeros((UNITS, CHANNELS), dtype=bool)
+    for unit, channels in held.items():
+        for channel in channels:
+            sparsity[unit, channel] = True
+    _write(an / "sparsity_mask", sparsity, (UNITS, CHANNELS))
+    _write(an / "extensions/templates/average", _templates(SUPPORT), (2, SAMPLES, CHANNELS))
+    if sd:
+        _write(an / "extensions/templates/std", _templates(SUPPORT) * 0.1, (2, SAMPLES, CHANNELS))
+    _attrs(an / "extensions/templates", params={"ms_before": MS_BEFORE, "ms_after": 2.0})
+    _attrs(an / "recording_info", recording_attributes={"channel_ids": CHANNEL_IDS, "sampling_frequency": RATE})
     return root
 
 
-def _source(root: Path, **options) -> WaveformSource:
+@pytest.fixture
+def asset(tmp_path: Path) -> Path:
+    return build(tmp_path / "sorted")
+
+
+def _source(root: Path, *, units: int = UNITS, **options) -> WaveformSource:
     return WaveformSource(
         root,
         session_id="s1",
-        units=[{"device_name": "probeA", "local_unit_label": str(u), "unit_id": u} for u in range(UNITS)],
+        units=[{"device_name": "probeA", "local_unit_label": str(u), "unit_id": u} for u in range(units)],
         **options,
     )
 
 
-def test_mean_alone_is_one_array(nwb: Path) -> None:
-    """Without `sd` the adapter is what it was: one asset, one array, three axes."""
-    source = _source(nwb)
+# -- the arrays ------------------------------------------------------------------------
+
+
+def test_mean_alone_is_one_array(asset: Path) -> None:
+    source = _source(asset)
     assets = source.array_assets()
     assert [a["array_asset_id"] for a in assets] == ["waveform_mean"]
     assert assets[0]["uri"] == "arrays/core/waveform_mean.zarr"
@@ -96,97 +112,103 @@ def test_mean_alone_is_one_array(nwb: Path) -> None:
     assert [s.array_asset_id for s in source.staged_arrays()] == ["waveform_mean"]
 
 
-def test_sd_is_a_second_array_of_the_same_shape(nwb: Path) -> None:
-    """Both arrays are stored, each with its own scale and its own three axes."""
-    source = _source(nwb, sd=True)
+def test_sd_is_a_second_array_of_the_same_shape(asset: Path) -> None:
+    source = _source(asset, sd=True)
     assets = source.array_assets()
     assert [a["array_asset_id"] for a in assets] == ["waveform_mean", "waveform_sd"]
-    assert [a["semantic_type"] for a in assets] == ["waveform_mean", "waveform_sd"]
-    assert assets[1]["uri"] == "arrays/core/waveform_sd.zarr"
     # Quantised against its own peak, so the smaller quantity keeps its resolution.
     assert assets[1]["conversion"] < assets[0]["conversion"]
-
     staged = {s.array_asset_id: s for s in source.staged_arrays()}
-    assert set(staged) == {"waveform_mean", "waveform_sd"}
     assert staged["waveform_sd"].values.shape == staged["waveform_mean"].values.shape
 
-    axes = source.array_dimensions()
-    assert len(axes) == 6
-    for asset in ("waveform_mean", "waveform_sd"):
-        channel = next(a for a in axes if a["array_asset_id"] == asset and a["axis_index"] == 1)
-        assert channel["coordinate_resource"] == "core.unit_electrodes"
 
-
-def test_sd_is_cut_on_the_means_support(nwb: Path) -> None:
-    """A contact the mean has and the deviation does not keeps its position, holding zeros.
-
-    Recomputing the support per array is what would shift every later contact of that unit by
-    one, so a `channel_index` would name a different electrode in each array.
-    """
-    source = _source(nwb, sd=True)
-    staged = {s.array_asset_id: s for s in source.staged_arrays()}
-    unit, channel = MEAN_ONLY
-    position = SUPPORT[unit].index(channel)
-    assert staged["waveform_mean"].values[unit, position].any()
-    assert not staged["waveform_sd"].values[unit, position].any()
-    # The support is the mean's, so it is still this unit's full width in both.
-    rows = [r for r in source.unit_electrodes() if r["unit_id"] == unit]
-    assert len(rows) == len(SUPPORT[unit])
-    assert [r["channel_index"] for r in rows] == list(range(len(SUPPORT[unit])))
-
-
-def test_sd_asked_for_and_absent_is_refused(nwb: Path) -> None:
+def test_sd_asked_for_and_absent_is_refused(tmp_path: Path) -> None:
     """A recipe that asks for the deviation and does not get it is a defect, not a note."""
-    import shutil
-
-    shutil.rmtree(nwb / "units" / "waveform_sd")
-    with pytest.raises(SourceDefect, match="waveform_sd"):
-        _source(nwb, sd=True).array_assets()
+    root = build(tmp_path / "sorted", sd=False)
+    with pytest.raises(SourceDefect, match="std"):
+        _source(root, sd=True).array_assets()
 
 
-def test_the_primary_contact_is_the_templates_own_trough(nwb: Path) -> None:
+def test_an_asset_directory_is_accepted_as_well_as_postprocessed(asset: Path) -> None:
+    assert _source(asset).offers() == _source(asset / "postprocessed").offers()
+
+
+# -- the support is what the analyzer says, not what the values show --------------------
+
+
+def test_a_contact_inside_the_mask_keeps_its_row_though_its_template_is_flat(tmp_path: Path) -> None:
+    """The export cannot represent this: padded to every channel, a flat contact reads as absent.
+
+    Unit 0 is masked on a third contact it has no signal on. The analyzer says the template was
+    computed there, so the packet stores it -- a zero the sorter measured, not a gap.
+    """
+    root = build(tmp_path / "sorted", mask={**SUPPORT, 0: (1, 2, 3)})
+    rows = [r for r in _source(root).unit_electrodes() if r["unit_id"] == 0]
+    assert [r["electrode_id"] for r in rows] == ["probeA.CH1", "probeA.CH2", "probeA.CH3"]
+
+
+def test_a_contact_outside_the_mask_is_not_stored_though_its_template_is_not_zero(tmp_path: Path) -> None:
+    """The converse: scanning for non-zeros would keep a contact the analyzer excluded."""
+    root = build(tmp_path / "sorted", mask={**SUPPORT, 1: (0, 3)})
+    rows = [r for r in _source(root).unit_electrodes() if r["unit_id"] == 1]
+    assert [r["electrode_id"] for r in rows] == ["probeA.CH0", "probeA.CH3"]
+
+
+def test_contacts_are_named_as_the_sorting_run_names_them(asset: Path) -> None:
+    """`<probe>.<channel>` is what `SorterSource.sorting_run_channels` composes, so the two agree."""
+    rows = [r for r in _source(asset).unit_electrodes() if r["unit_id"] == 2]
+    assert [r["electrode_id"] for r in rows] == ["probeA.CH2"]
+
+
+def test_the_primary_contact_is_the_templates_own_trough(asset: Path) -> None:
     """The deepest trough, per unit, in the channel positions the packet actually stores."""
-    rows = _source(nwb).unit_electrodes()
+    rows = _source(asset).unit_electrodes()
     primary = {r["unit_id"]: r["channel_index"] for r in rows if r["is_primary"]}
     assert primary == {unit: len(channels) - 1 for unit, channels in SUPPORT.items()}
 
 
-def test_every_unit_gets_exactly_one_primary(nwb: Path) -> None:
-    """R81 §2.7 struck `default_electrode_id` on the grounds that this column carries the fact.
-
-    A unit with none is what the real session had for 609 of 6,781 -- the file's index landing
-    outside the support, so no row matched it and the fact went missing rather than wrong.
-    """
-    rows = _source(nwb).unit_electrodes()
+def test_every_unit_gets_exactly_one_primary(asset: Path) -> None:
+    rows = _source(asset).unit_electrodes()
     counts = {unit: 0 for unit in SUPPORT}
     for row in rows:
         counts[row["unit_id"]] += bool(row["is_primary"])
     assert counts == {unit: 1 for unit in SUPPORT}
 
 
-def test_the_files_extremum_column_is_not_read(nwb: Path) -> None:
-    """It counts the channels the sorting kept, and the packet's positions count the support.
-
-    Changing it changes nothing, which is the regression: read as a contact it named the wrong
-    electrode for 5,071 of 6,781 units on the measured session.
-    """
-    before = _source(nwb).unit_electrodes()
-    array(nwb / "units" / "extremum_channel_index", np.array([0, 0, 0], dtype="<i8"))
-    assert _source(nwb).unit_electrodes() == before
+# -- what the analyzer states and the export does not ----------------------------------
 
 
-def test_a_wrong_key_and_a_padded_row_are_counted_apart(nwb: Path) -> None:
-    """One count for both would report a broken pairing as the padding every file carries.
+def test_the_sample_axis_begins_where_the_analyzer_says_the_spike_is(asset: Path) -> None:
+    """`ms_before` puts sample 0 at the spike. Reading the export, an importer can only assume
+    the window is centred, which it is not: 3 ms before and 4 ms after on the measured session."""
+    axis = next(a for a in _source(asset).array_dimensions() if a["axis_index"] == 2)
+    assert axis["origin_value"] == -float(NBEFORE)
+    assert axis["coordinate_unit"] == "sample"
 
-    Unit 1 is left out of the mapping, so its row matches nothing; unit 2 keeps its mapping and
-    loses its signal, which is what the NWB writes for a contact the sorter never computed.
-    """
-    import shutil
 
-    shutil.rmtree(nwb / "units" / "waveform_mean")
-    _wide(nwb / "units" / "waveform_mean", _dense({0: SUPPORT[0], 1: SUPPORT[1]}))
+def test_the_values_are_in_what_return_in_uv_declares(asset: Path) -> None:
+    """The export writes `unit: volts` with no conversion on values that are microvolts."""
+    asset_row = _source(asset).array_assets()[0]
+    assert asset_row["unit"] == "uV"
+    assert asset_row["sample_rate_hz"] == RATE
+
+
+def test_an_analyzer_that_declares_no_unit_says_so(tmp_path: Path) -> None:
+    root = build(tmp_path / "sorted")
+    _attrs(root / "postprocessed" / STREAM)
+    source = _source(root)
+    assert source.array_assets()[0]["unit"] is None
+    assert any("return_in_uV" in note for note in source.notes)
+
+
+# -- units the build did not mint ------------------------------------------------------
+
+
+def test_a_unit_matching_nothing_and_a_unit_masked_nowhere_are_counted_apart(tmp_path: Path) -> None:
+    """One count for both would report a disagreement about which units exist as an empty mask."""
+    root = build(tmp_path / "sorted", mask={**SUPPORT, 2: ()})
     source = WaveformSource(
-        nwb,
+        root,
         session_id="s1",
         units=[
             {"device_name": "probeA", "local_unit_label": "0", "unit_id": 0},
@@ -195,6 +217,18 @@ def test_a_wrong_key_and_a_padded_row_are_counted_apart(nwb: Path) -> None:
     )
     source.array_assets()
     assert source.notes == [
-        "units: 1 NWB row(s) match no unit in the packet's sorting; skipped",
-        "units: 1 NWB row(s) are zero on every contact; skipped",
+        "units: 1 analyzer unit(s) match no unit in the packet's sorting; skipped",
+        "units: 1 analyzer unit(s) are sparse on no contact at all; skipped",
     ]
+
+
+def test_no_unit_matching_at_all_is_a_defect(asset: Path) -> None:
+    """An array of nothing is not an array, so the build stops rather than committing one."""
+    source = WaveformSource(asset, session_id="s1", units=[])
+    with pytest.raises(SourceDefect, match="matches the packet's sorting"):
+        source.array_assets()
+
+
+def test_an_asset_with_no_analyzer_is_a_defect(tmp_path: Path) -> None:
+    with pytest.raises(SourceDefect, match="postprocessed"):
+        _source(tmp_path / "empty")

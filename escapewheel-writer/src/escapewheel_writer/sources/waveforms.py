@@ -1,51 +1,74 @@
-"""Read a unit's mean waveform out of an NWB and describe it as a packet array asset.
+"""Read a unit's mean waveform from the analyzer that computed it.
 
-What the source stores and what a packet should store differ in three ways, each measured in
-`conformance/zarr-probe/waveforms.py` against 6,781 real units.
+A template is read from the `SortingAnalyzer` beside the curated sorting rather than from the NWB
+the pipeline exports afterwards. The two hold the same array -- measured at `(4559, 210, 384)`
+float64 in both on one session -- and the copy loses three things the source states outright:
 
-**It is sparse, densified.** SpikeInterface computes a waveform on the contacts a unit sits
-near -- 26 of 384 here, fewer at a probe's edge -- and the NWB pads the rest with zeros so it
-need not record which contacts those were. 93.3% of the rectangle is padding. A packet records
-the support instead, in `core.unit_electrodes`, which R28 added for the link and whose
-`channel_index` is the position along the array's channel axis. R20 §2's labelled form on
-that axis is what ties the two together.
+**Which contacts a unit sits on.** SpikeInterface computes a template on the contacts near the
+unit and records the set in `sparsity_mask`, a `(units, channels)` boolean. The export densifies
+to every channel and pads the rest with zeros, so `units/electrodes` became a constant `[0 … 383]`
+for every unit -- 384 wide on all 4,559 -- and the support could only be recovered by scanning the
+padded rectangle for non-zeros. The mask keeps **6.7%** of it, 14 to 26 contacts a unit.
 
-**It is float64 over int16 samples.** Every value round-trips through float32 with zero error,
-and the samples averaged were 10-bit ADC counts. Stored as int16 with a scale on
-`core.array_assets.conversion` -- the form an `ElectricalSeries` already uses -- the array is
-a quarter of the width and the packet says what the scale is.
+**Which unit each row is.** The analyzer names its units in `sorting/unit_ids`, identical to the
+curated sorting's own ids on 10 of 10 streams, and those are the labels `core.units` carries as
+`local_unit_label`. The export renumbers rows by `DynamicTable` position, so recovering identity
+there needs a column the pipeline adds and the NWB schema does not define.
 
-**Time is not the fastest axis.** The source stores (unit, sample, channel), mirroring a
-recording. A template is not a recording: one channel's trace is a smooth curve and adjacent
-channels are independent noise, so (unit, channel, sample) both compresses better and matches
-how a trace is read -- 11% smaller and a trace 3.8x faster. Part 03 §6.2 makes the stored order the
-packet's to declare.
+**What the values are in.** The analyzer declares `settings.return_in_uV`. The export writes
+`unit: "volts"` with no conversion attribute on values reaching ±1654, which read as declared are
+kilovolt-scale extracellular spikes.
 
-`waveform_sd` is the same array of a different quantity and is stored the same way, on the
-mean's support rather than on its own. Measured over 6,781 units the two live-channel masks
-disagree on 52 of 2,603,904 (unit, channel) cells, every one of them live in the mean and zero
-in the deviation and none the other way -- so the mean's support is a superset, cutting the
-deviation on it loses nothing, and one `core.unit_electrodes` describes both channel axes.
-Letting each array find its own support is what would make a position mean different contacts
-in the two.
+What the packet stores still differs from the source in the three ways
+`conformance/zarr-probe/waveforms.py` measured -- sparse rather than padded, int16 rather than
+float64, and `(unit, channel, sample)` rather than `(unit, sample, channel)`. Those are storage
+decisions this adapter makes; the three above were losses it used to work around.
+
+`waveform_sd` is the same array of a different quantity, cut on the mean's support rather than its
+own, so one `core.unit_electrodes` describes both channel axes.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, ClassVar, NamedTuple
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import NDArray
 
 from .defect import SourceDefect
-from .nwb import contact_columns, contact_ids
+from .sorter import STREAM, SortedStream
 from .store import SourceStore, source_root
+from .zarr_compat import attrs, attrs_at
 
-#: Samples either side of the window used to estimate what the average left behind. Only for
-#: reporting; the scale comes from the range, not from this.
-EDGE = 20
+#: Where SpikeInterface writes the analyzer, beside the `curated` tree a sorting is read from.
+ANALYZERS = "postprocessed"
+
+#: The extension holding the templates, and the operator each quantity is stored under.
+TEMPLATES = "extensions/templates"
+MEAN, DEVIATION = "average", "std"
+
+
+@dataclass
+class _Kept:
+    """What the pass over every stream kept, and the two separate reasons it kept less.
+
+    A unit matching nothing means the build's sorting and this analyzer disagree about which
+    units exist; one sparse on no contact means the mask says the template was computed nowhere.
+    One count covering both would hide the first behind the second.
+    """
+
+    identity: list[dict[str, Any]] = field(default_factory=list)
+    electrodes: list[list[str]] = field(default_factory=list)
+    primary: list[int] = field(default_factory=list)
+    slabs: list[NDArray[np.float64]] = field(default_factory=list)
+    sd_slabs: list[NDArray[np.float64]] = field(default_factory=list)
+    peak: float = 0.0
+    sd_peak: float = 0.0
+    missed: int = 0
+    blank: int = 0
 
 
 def _uri(asset_id: str) -> str:
@@ -53,54 +76,39 @@ def _uri(asset_id: str) -> str:
     return f"arrays/core/{asset_id}.zarr"
 
 
-def _support(dense: NDArray[Any], width: int) -> list[NDArray[np.int64]]:
-    """Which channel each unit actually has signal on, in the source's channel order."""
-    live = (dense != 0).any(axis=1)
-    return [np.flatnonzero(row)[:width] for row in live]
+def _dense(path: Path) -> Any:
+    """Open a multi-dimensional Zarr v2 array by path rather than by name.
 
-
-class Scan(NamedTuple):
-    """What one pass over `waveform_mean` kept, and the two separate reasons it kept less.
-
-    A row matching no unit means the pair this adapter joins on is wrong, which is a build
-    defect; a row zero on every contact is the padding the file writes for contacts a unit was
-    not computed on. One count covering both hides the first behind the second.
+    A stream is named `experiment1_Record Node 109#Neuropix-PXI-100.46101_recording1.zarr`, and
+    zarr reads a string store as a URL, where `#` opens a fragment -- which truncates the root
+    silently at "Record Node 109" rather than failing on what is missing.
     """
+    import zarr
 
-    keep: list[int]
-    identity: list[dict[str, str]]
-    support: list[NDArray[np.int64]]
-    primary: list[int]
-    slabs: list[NDArray[np.float64]]
-    peak: float
-    sd_slabs: list[NDArray[np.float64]]
-    sd_peak: float
-    missed: int
-    blank: int
+    return zarr.open_array(store=zarr.storage.LocalStore(path), mode="r", zarr_format=2)
 
 
 class WaveformSource:
-    """`waveform_mean` from an NWB, as a sparse int16 array plus the tables describing it.
+    """A SpikeInterface analyzer's templates, as a sparse int16 array and the tables describing it.
 
     Parameters
     ----------
     root : str or Path
-        The `.nwb` directory.
+        The `postprocessed` directory, or an asset directory containing one.
     session_id : str
         The session these units belong to.
     units : sequence of Mapping
-        One record per unit, as `NWBSource` takes: `device_name` and `local_unit_label`, the
-        pair this file's rows join on, and the `unit_id` assigned. The array rows follow the
-        NWB's own unit order, and a unit the packet's sorting does not contain is skipped
-        rather than stored as padding.
-    array_asset_id : str
-        Identifier for the mean array.
+        One record per unit, as the build supplies it: `device_name` and `local_unit_label`, which
+        are the stream's probe and the sorter's own label for the unit, and the `unit_id` assigned.
+        A unit the packet's sorting does not contain is skipped rather than stored as padding.
+    experiment : str, optional
+        Restrict to one experiment, as `SorterSource` does. Each experiment restarts its sample
+        index, so its streams are not comparable with another's.
+    array_asset_id, sd_asset_id : str
+        Identifiers for the mean and the deviation.
     sd : bool
-        Also read `waveform_sd` and store it as a second array. Off by default: it doubles what
-        the read holds and costs a second pass over 3.1 GB, and a packet that wants only the
-        template should not pay for it.
-    sd_asset_id : str
-        Identifier for the deviation array, when `sd` is set.
+        Also read the deviation and store it as a second array. Off by default: it doubles what
+        the read holds, and a packet wanting only the template should not pay for it.
     compressed_per_chunk : float
         Expected compressed bytes per chunk, which is what `arrays.shard_for` sizes a shard
         against.
@@ -111,8 +119,6 @@ class WaveformSource:
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
-    #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and
-    #: therefore needs the data.
     PRODUCES = frozenset(
         {
             "core.array_assets",
@@ -127,16 +133,13 @@ class WaveformSource:
 
     #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
     #: recipe's options second. A name resolving to neither is refused before any source is opened.
-    #:
-    #: An option the adapter can run without is left out: a declared name a recipe does not set
-    #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "units", "array_location")
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
     #: unset (Part 03 §11.2). `store` is absent because it is a handle, which a recipe cannot
     #: carry and a declaration may not name.
     ACCEPTS: ClassVar[tuple[str, ...]] = (
-        "array_asset_id", "sd", "sd_asset_id", "compressed_per_chunk", "prefix",
+        "array_asset_id", "sd", "sd_asset_id", "compressed_per_chunk", "prefix", "experiment",
     )
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
@@ -148,6 +151,7 @@ class WaveformSource:
         *,
         session_id: str,
         units: Sequence[Mapping[str, Any]],
+        experiment: str | None = None,
         array_asset_id: str = "waveform_mean",
         sd: bool = False,
         sd_asset_id: str = "waveform_sd",
@@ -156,9 +160,13 @@ class WaveformSource:
         array_location: str | None = None,
         store: Any = None,
     ) -> None:
-        self.root = source_root(root)
+        path = source_root(root)
+        self.root = path if path.name == ANALYZERS else path / ANALYZERS
+        if not self.root.is_dir():
+            raise SourceDefect(f"{path} holds no {ANALYZERS}/ directory")
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
+        self.experiment = experiment
         # Records in, lookup here: a mapping keyed by a pair does not cross a boundary
         # (Part 03 §11.2), so the build hands over rows and each adapter keys them itself.
         self.units = {(str(row["device_name"]), str(row["local_unit_label"])): row["unit_id"] for row in units}
@@ -169,151 +177,161 @@ class WaveformSource:
         self.prefix = prefix
         #: Where an array goes when this source is delivered out of process (Part 03 §11.3). Held
         #: rather than used: the values are what `staged_arrays` hands over, and what writes them
-        #: is whichever side of the boundary is staging -- the writer here, the delivery there.
+        #: is whichever side of the boundary is staging.
         self.array_location = array_location
         self.notes: list[str] = []
         self._built: dict[str, Any] | None = None
 
+    # -- the analyzer -------------------------------------------------------------------
+
+    def streams(self) -> list[SortedStream]:
+        """Every analyzer in the tree, named as the curated sorting names its streams."""
+        found = []
+        for child in sorted(self.root.iterdir()):
+            if not child.is_dir() or child.suffix != ".zarr":
+                continue
+            if matched := STREAM.match(child.stem):
+                found.append(SortedStream(path=child, **matched.groupdict()))
+        if self.experiment is not None:
+            found = [s for s in found if s.experiment == self.experiment]
+        if not found:
+            raise SourceDefect(f"{self.root} holds no analyzer for experiment {self.experiment!r}")
+        return found
+
+    def _channels(self, stream: SortedStream) -> list[str]:
+        """Return the contacts the sorting ran on, in the order its channel axis counts them (R83 §2.1).
+
+        Named the way `SorterSource.sorting_run_channels` names them, so the two agree without
+        either adapter having to run after the other.
+        """
+        recorded = attrs_at(stream.path, "recording_info").get("recording_attributes") or {}
+        found = recorded.get("channel_ids")
+        if not found:
+            raise SourceDefect(f"{stream.key}: the analyzer states no channel list, so no contact can be named")
+        return [f"{self.prefix}{stream.device}.{channel}" for channel in found]
+
+    def _window(self, stream: SortedStream) -> tuple[int, float]:
+        """How many samples precede the spike, and the rate they are sampled at.
+
+        `ms_before` is what puts sample 0 of a template where the spike is, which the export
+        does not record at all -- an importer reading it can only guess the window is centred.
+        """
+        params = attrs(stream.path / TEMPLATES).get("params") or {}
+        recorded = attrs_at(stream.path, "recording_info").get("recording_attributes") or {}
+        rate = recorded.get("sampling_frequency")
+        if "ms_before" not in params or not rate:
+            raise SourceDefect(f"{stream.key}: the analyzer states no ms_before or sampling rate for its templates")
+        return round(float(params["ms_before"]) * float(rate) / 1000.0), float(rate)
+
+    def _unit(self, stream: SortedStream) -> str | None:
+        """Return what the values are in, which the analyzer declares and the export does not."""
+        settings = attrs(stream.path).get("settings") or {}
+        if "return_in_uV" not in settings:
+            self.notes.append(f"{stream.key}: the analyzer declares no return_in_uV; the unit is left unstated")
+            return None
+        return "uV" if settings["return_in_uV"] else "adc"
+
     # -- reading ------------------------------------------------------------------------
 
-    def _scan(self, array: Any, device: Any, ks: Any, spread: Any = None) -> Scan:
-        """Walk the source a chunk row at a time, keeping only each unit's own contacts.
+    def _read(self) -> dict[str, Any]:
+        """Cut every unit's template down to its own contacts, one chunk row at a time.
 
-        The block is the source's own chunk along the unit axis, so every chunk is read exactly
-        once and none is read twice. What survives a block is the slabs, which are two orders
-        smaller than the block that produced them. They stay float64: the arithmetic that follows
-        is a division and a round, and in float32 fourteen values in twenty-six million land on
-        the other side of a tie.
-
-        `spread` is cut on the mean's live mask rather than on its own, which is what keeps one
-        `core.unit_electrodes` describing both arrays.
-
-        The peak contact is taken here rather than from `extremum_channel_index`, which indexes
-        the channels the sorting kept while every other channel axis in the file is the probe's
-        full contact list. It is the most negative sample, not the largest absolute one: measured
-        against the retained lists over 6,781 units, the negative peak reproduces the source's
-        index in 6,781 and the absolute peak in 6,346.
+        The block is the source's own chunk along the unit axis, so every chunk is read once and
+        none twice. What survives is the slabs, two orders smaller than the block that produced
+        them: 0.38 GB dense a stream against 0.025 GB on the mask. They stay float64, because the
+        arithmetic that follows is a division and a round, and in float32 fourteen values in
+        twenty-six million land on the other side of a tie.
         """
-        total = array.shape[0]
+        if self._built is not None:
+            return self._built
+        kept = _Kept()
+        windows: set[tuple[int, float]] = set()
+        samples: set[int] = set()
+        units: set[str | None] = set()
+        for stream in self.streams():
+            windows.add(self._window(stream))
+            units.add(self._unit(stream))
+            samples.add(self._cut(stream, kept))
+
+        if not kept.slabs:
+            raise SourceDefect("no unit in the analyzer's templates matches the packet's sorting")
+        if kept.missed:
+            self.notes.append(f"units: {kept.missed} analyzer unit(s) match no unit in the packet's sorting; skipped")
+        if kept.blank:
+            self.notes.append(f"units: {kept.blank} analyzer unit(s) are sparse on no contact at all; skipped")
+        if len(samples) != 1 or len(windows) != 1:
+            raise SourceDefect(f"the streams disagree about the template window: {sorted(samples)}, {sorted(windows)}")
+        if len(units) != 1:
+            raise SourceDefect(f"the streams disagree about what their values are in: {sorted(str(u) for u in units)}")
+        if not kept.peak:
+            raise SourceDefect("every template is zero, so no unit has a channel support")
+
+        held = samples.pop()
+        nbefore, rate = windows.pop()
+        width = max(s.shape[0] for s in kept.slabs)
+        values, scale = _quantise(kept.slabs, kept.peak, width, held)
+        self._built = {
+            "values": values,
+            "scale": scale,
+            "identity": kept.identity,
+            "electrodes": kept.electrodes,
+            "primary": kept.primary,
+            "samples": held,
+            "nbefore": nbefore,
+            "rate": rate,
+            "unit": units.pop(),
+        }
+        if self.sd:
+            if not kept.sd_peak:
+                raise SourceDefect("every deviation is zero over the mean's support")
+            sd_values, sd_scale = _quantise(kept.sd_slabs, kept.sd_peak, width, held)
+            self._built |= {"sd_values": sd_values, "sd_scale": sd_scale}
+        return self._built
+
+    def _cut(self, stream: SortedStream, kept: _Kept) -> int:
+        """Append one stream's kept units to `kept`, and return its template window in samples."""
+        labels = self.store.array(stream.path / "sorting/unit_ids")
+        mask = np.asarray(_dense(stream.path / "sparsity_mask")[:], dtype=bool)
+        array = _dense(stream.path / f"{TEMPLATES}/{MEAN}")
+        spread = None
+        if self.sd:
+            if not (stream.path / f"{TEMPLATES}/{DEVIATION}").is_dir():
+                raise SourceDefect(f"{stream.key}: sd was asked for and the analyzer holds no {DEVIATION}")
+            spread = _dense(stream.path / f"{TEMPLATES}/{DEVIATION}")
+        channels = self._channels(stream)
+        if len(labels) != array.shape[0] or mask.shape[0] != array.shape[0]:
+            raise SourceDefect(
+                f"{stream.key}: {len(labels)} unit ids and {mask.shape[0]} mask rows "
+                f"against {array.shape[0]} templates"
+            )
+
+        total = int(array.shape[0])
         block = int(array.chunks[0]) or total
-        keep: list[int] = []
-        identity: list[dict[str, str]] = []
-        support: list[NDArray[np.int64]] = []
-        primary: list[int] = []
-        slabs: list[NDArray[np.float64]] = []
-        sd_slabs: list[NDArray[np.float64]] = []
-        peak = sd_peak = 0.0
-        missed = blank = 0
         for start in range(0, total, block):
             dense = np.asarray(array[start : start + block])
             deviation = np.asarray(spread[start : start + block]) if spread is not None else None
             for offset in range(dense.shape[0]):
-                found = self.units.get((str(device[start + offset]), str(int(ks[start + offset]))))
+                row = start + offset
+                found = self.units.get((stream.device, str(int(labels[row]))))
                 if found is None:
-                    missed += 1
+                    kept.missed += 1
                     continue
-                identified = {"unit_id": found}
-                live = np.flatnonzero((dense[offset] != 0).any(axis=0))
+                live = np.flatnonzero(mask[row])
                 if not live.size:
-                    blank += 1
+                    kept.blank += 1
                     continue
                 slab = dense[offset][:, live].T.copy()
-                peak = max(peak, float(np.abs(slab).max()))
-                keep.append(start + offset)
-                identity.append(identified)
-                support.append(live)
-                primary.append(int(slab.min(axis=1).argmin()))
-                slabs.append(slab)
+                kept.peak = max(kept.peak, float(np.abs(slab).max()))
+                kept.identity.append({"unit_id": found})
+                kept.electrodes.append([channels[int(c)] for c in live])
+                kept.primary.append(int(slab.min(axis=1).argmin()))
+                kept.slabs.append(slab)
                 if deviation is not None:
                     sd_slab = deviation[offset][:, live].T.copy()
-                    sd_peak = max(sd_peak, float(np.abs(sd_slab).max()))
-                    sd_slabs.append(sd_slab)
+                    kept.sd_peak = max(kept.sd_peak, float(np.abs(sd_slab).max()))
+                    kept.sd_slabs.append(sd_slab)
             del dense, deviation
-        return Scan(keep, identity, support, primary, slabs, peak, sd_slabs, sd_peak, missed, blank)
-
-    @staticmethod
-    def _quantise(
-        slabs: list[NDArray[np.float64]], peak: float, width: int, samples: int
-    ) -> tuple[NDArray[np.int16], float]:
-        """Scale float64 slabs onto int16, the peak landing on the last code.
-
-        The quantisation this leaves is well under the standard error of the means themselves --
-        measured at 0.052 uV for the best-resolved tenth, against a step of peak/32767. The
-        deviation is non-negative and still stored signed, spending a bit it never uses: unsigned
-        would buy one bit of resolution on a quantity whose own sampling error is far larger, at
-        the cost of a second convention for reading these arrays.
-        """
-        scale = peak / 32767.0
-        values = np.zeros((len(slabs), width, samples), dtype=np.int16)
-        for position, slab in enumerate(slabs):
-            values[position, : slab.shape[0]] = np.rint(slab / scale).astype(np.int16)
-        return values, scale
-
-    def _read(self) -> dict[str, Any]:
-        """Pack the array once, and remember what packing it revealed.
-
-        Read a chunk row at a time rather than whole. The source is `(units, samples,
-        channels)` float64 chunked `(424, 19, 48)`, so materialising it costs 3.1 GB while one
-        chunk row is 195 MB, and a unit's own slab -- the contacts it actually has signal on --
-        is 31 KB. Keeping the slabs and discarding each block holds about 0.4 GB, and reads
-        every chunk exactly once: the peak the scale needs is accumulated as the blocks go by
-        rather than found in a second pass over an array held for the purpose. Asking for the
-        deviation doubles both, since it is the same shape read the same way.
-        """
-        if self._built is not None:
-            return self._built
-        import zarr
-
-        group = self.root / "units"
-        array = zarr.open_array(str(group / "waveform_mean"), mode="r", zarr_format=2)
-        spread = None
-        if self.sd:
-            try:
-                # Broad, because which error an absent array raises is the store's business.
-                spread = zarr.open_array(str(group / "waveform_sd"), mode="r", zarr_format=2)
-            except Exception as absent:
-                raise SourceDefect(f"sd was asked for and {group / 'waveform_sd'} does not open") from absent
-            if spread.shape != array.shape:
-                raise SourceDefect(f"waveform_sd is {spread.shape} where waveform_mean is {array.shape}")
-        device = self.store.array(group / "device_name")
-        ks = self.store.array(group / "ks_unit_id")
-        electrode_rows = self.store.array(group / "electrodes")
-        bounds = self.store.array(group / "electrodes_index")
-
-        samples = array.shape[1]
-        keep, identity, support, primary, slabs, peak, sd_slabs, sd_peak, missed, blank = self._scan(
-            array, device, ks, spread
-        )
-
-        if not keep:
-            self.notes.append("units: no NWB row matches a unit in the packet's sorting")
-            raise SourceDefect("no unit in waveform_mean matches the packet's sorting")
-        if missed:
-            self.notes.append(f"units: {missed} NWB row(s) match no unit in the packet's sorting; skipped")
-        if blank:
-            self.notes.append(f"units: {blank} NWB row(s) are zero on every contact; skipped")
-        width = max(s.size for s in support)
-        if not peak:
-            raise SourceDefect("waveform_mean is entirely zero, so no unit has a channel support")
-
-        values, scale = self._quantise(slabs, peak, width, samples)
-        self._built = {
-            "primary": primary,
-            "values": values,
-            "scale": scale,
-            "identity": identity,
-            "support": support,
-            "rows": keep,
-            "electrode_rows": electrode_rows,
-            "bounds": bounds,
-            "samples": samples,
-        }
-        if self.sd:
-            if not sd_peak:
-                raise SourceDefect("waveform_sd is entirely zero over the mean's support")
-            sd_values, sd_scale = self._quantise(sd_slabs, sd_peak, width, samples)
-            self._built |= {"sd_values": sd_values, "sd_scale": sd_scale}
-        return self._built
+        return int(array.shape[1])
 
     # -- what the packet stores ----------------------------------------------------------
 
@@ -323,27 +341,24 @@ class WaveformSource:
         built = self._read()
         return built["values"]  # type: ignore[no-any-return]
 
-    def _asset(
-        self, asset_id: str, semantic_type: str, name: str, scale: float, uri: str, clock_id: str | None
-    ) -> dict[str, Any]:
+    def _asset(self, asset_id: str, semantic_type: str, scale: float, uri: str, clock_id: str | None) -> dict[str, Any]:
         """One `core.array_assets` row.
 
         No `dtype` or `shape`: the Zarr array declares both, and Part 02 §6 forbids a table from
-        restating what the data already says. `conversion` is the one thing the array cannot
-        say, so it is the one thing recorded here.
+        restating what the data already says. `conversion` is the one thing the array cannot say.
         """
+        built = self._read()
         return {
             "array_asset_id": asset_id,
             "session_id": self.session_id,
             "semantic_type": semantic_type,
-            # No `array_asset_name`: the numbering fills it from what `array_asset_id` stands
-            # for (R53 §2.5), and a phrase this adapter invented is not that. `semantic_type`
-            # is where what the array holds is already declared.
+            # No `array_asset_name`: the numbering fills it from what `array_asset_id` stands for
+            # (R53 §2.5), and a phrase this adapter invented is not that.
             "uri": uri,
             "format": "zarr_v3",
             "clock_id": clock_id,
-            "sample_rate_hz": 30000.0,
-            "unit": "uV",
+            "sample_rate_hz": built["rate"],
+            "unit": built["unit"],
             "conversion": scale,
             "offset": 0.0,
             "metadata": {"quantisation": "int16, scale = peak / 32767"},
@@ -352,39 +367,25 @@ class WaveformSource:
     def array_assets(self, uri: str | None = None, clock_id: str | None = None) -> list[dict[str, Any]]:
         """`core.array_assets`, one row per array this source stores.
 
-        The deviation gets its own row and its own `conversion`, because it is quantised against
-        its own peak; sharing the mean's scale would spend resolution on a range it never
-        reaches. Everything else about the two is identical, the deviation being the mean's
-        shape on the mean's contacts.
+        The deviation gets its own `conversion`, because it is quantised against its own peak;
+        sharing the mean's scale would spend resolution on a range it never reaches.
         """
         built = self._read()
         rows = [
             self._asset(
-                self.array_asset_id,
-                "waveform_mean",
-                "mean waveform per unit",
-                built["scale"],
-                uri or _uri(self.array_asset_id),
-                clock_id,
+                self.array_asset_id, "waveform_mean", built["scale"], uri or _uri(self.array_asset_id), clock_id
             )
         ]
         if self.sd:
             rows.append(
-                self._asset(
-                    self.sd_asset_id,
-                    "waveform_sd",
-                    "waveform standard deviation per unit",
-                    built["sd_scale"],
-                    _uri(self.sd_asset_id),
-                    clock_id,
-                )
+                self._asset(self.sd_asset_id, "waveform_sd", built["sd_scale"], _uri(self.sd_asset_id), clock_id)
             )
         return rows
 
     def _axes(self, asset_id: str, clock_id: str | None, origin: int | None) -> list[dict[str, Any]]:
         """One array's three axes, in stored order (Part 03 §6.2)."""
         built = self._read()
-        start = origin if origin is not None else -(built["samples"] // 2)
+        start = origin if origin is not None else -built["nbefore"]
         sample_axis: dict[str, Any] = {
             "array_asset_id": asset_id,
             "axis_index": 2,
@@ -409,21 +410,15 @@ class WaveformSource:
     def array_dimensions(self, clock_id: str | None = None, origin: int | None = None) -> list[dict[str, Any]]:
         """`core.array_dimensions`, one row per axis of each array, in stored order (Part 03 §6.2).
 
-        The channel axis takes R20 §2's labelled form, pointing at `core.unit_electrodes`,
-        because which contact a position means is per unit and no coordinate array can say it.
-        Both arrays point at the same rows: the deviation is cut on the mean's support, so a
-        position means the same contact in each.
+        The channel axis takes R20 §2's labelled form, pointing at `core.unit_electrodes`, because
+        which contact a position means is per unit and no coordinate array can say it. Both arrays
+        point at the same rows, the deviation being cut on the mean's support.
 
-        The sample axis takes the **numeric** form, in samples, and not the tick form. A
-        waveform window is not positioned on any session clock: position *k* is *k - origin*
-        samples from the spike, and each unit's spike sits on the clock of the probe that
-        recorded it -- twelve of them here, at slightly different true rates. Naming one would
-        be wrong for eleven. Samples rather than seconds for the same reason: every waveform is
-        150 consecutive samples of its own probe exactly, where seconds would be a nominal
-        30 kHz that no probe quite runs at.
-
-        Passing `clock_id` switches to the tick form, which is right only for an array whose
-        units all sit on one clock.
+        The sample axis takes the **numeric** form, in samples, and not the tick form. A waveform
+        window is not positioned on any session clock: position *k* is *k - origin* samples from
+        the spike, and each unit's spike sits on the clock of the probe that recorded it. Its
+        origin is the analyzer's own `ms_before` rather than half the window, which is what an
+        importer reading the export had to assume.
         """
         axes = self._axes(self.array_asset_id, clock_id, origin)
         if self.sd:
@@ -433,39 +428,23 @@ class WaveformSource:
     def unit_electrodes(self) -> list[dict[str, Any]]:
         """`core.unit_electrodes`, one row per unit per contact it has signal on (R28).
 
-        This is the array's channel axis written down. Without it the array's second axis is
-        an offset into nothing, which is exactly the state the NWB is in -- it pads to 384 so
-        that it never has to say which contacts a unit was computed on.
+        This is the array's channel axis written down, and it is the analyzer's `sparsity_mask`
+        rather than an inspection of the values: the export pads to every channel, so a reader of
+        it can only recover the support by looking for zeros, which cannot tell a contact that was
+        never computed from one whose template happens to be flat.
 
-        Supersedes `NWBSource.unit_electrodes`, which emits nothing because the peak contact
-        is not resolvable from the file's own columns. One relation, one emitter: a packet with
-        waveforms takes the support from here, and the peak is marked among it rather than
-        standing as a separate row that would collide on the key.
-
-        `is_primary` is the template's own negative peak, taken in `_scan`. Reading
-        `extremum_channel_index` as a contact position names the wrong electrode whenever the
-        sorting dropped a channel below it -- 5,071 of 6,781 units on the measured session, of
-        which 609 were marked on no contact at all because the index landed outside the unit's
-        support and the other 4,462 were marked on a contact that is not the peak.
+        `is_primary` is the template's own negative peak. Reading `extremum_channel_index` instead
+        names the wrong electrode whenever the sorting dropped a channel below it -- 5,071 of 6,781
+        units on the measured session, 609 of them marked on no contact at all.
 
         R28 `amplitude` is left null. The source measures one amplitude per unit, not per
-        electrode, and it is not a reduction of the template either -- no peak, trough,
-        absolute extremum or peak-to-trough of `waveform_mean` reproduces it. Filling the
-        column would mean inventing a number the source disagrees with.
+        electrode, and no reduction of the template reproduces it.
         """
         built = self._read()
-        table = self.root / "general/extracellular_ephys/electrodes"
-        # The same rule the adapter owning `core.electrodes` uses, since a writer numbers a name.
-        names, note = contact_ids(contact_columns(self.store, table), self.prefix)
-        if note is not None and note not in self.notes:
-            self.notes.append(note)
         rows = []
-        for position, (row, channels) in enumerate(zip(built["rows"], built["support"], strict=True)):
-            start = 0 if row == 0 else int(built["bounds"][row - 1])
+        for position, contacts in enumerate(built["electrodes"]):
             identity = built["identity"][position]
-            for ordinal, channel in enumerate(channels):
-                source_row = int(built["electrode_rows"][start + int(channel)])
-                electrode = names[source_row]
+            for ordinal, electrode in enumerate(contacts):
                 rows.append(
                     {
                         "session_id": self.session_id,
@@ -480,8 +459,8 @@ class WaveformSource:
     def staged_arrays(self) -> list[Any]:
         """Return the arrays themselves, sized for the store they will live in.
 
-        The chunk is one unit, which is the unit of the question, and `shard_for` keeps that
-        from becoming one object per chunk (`conformance/zarr-probe/waveforms.py`).
+        The chunk is one unit, which is the unit of the question, and `shard_for` keeps that from
+        becoming one object per chunk (`conformance/zarr-probe/waveforms.py`).
         """
         from ..arrays import shard_for
         from ..writer import StagedArray
@@ -521,4 +500,22 @@ class WaveformSource:
         return {resource: len(rows) for resource, rows in self.records().items()}
 
 
-__all__ = ["EDGE", "WaveformSource"]
+def _quantise(
+    slabs: list[NDArray[np.float64]], peak: float, width: int, samples: int
+) -> tuple[NDArray[np.int16], float]:
+    """Scale float64 slabs onto int16, the peak landing on the last code.
+
+    The quantisation this leaves is well under the standard error of the means themselves --
+    measured at 0.052 uV for the best-resolved tenth, against a step of peak/32767. The deviation
+    is non-negative and still stored signed, spending a bit it never uses: unsigned would buy one
+    bit of resolution on a quantity whose own sampling error is far larger, at the cost of a
+    second convention for reading these arrays.
+    """
+    scale = peak / 32767.0
+    values = np.zeros((len(slabs), width, samples), dtype=np.int16)
+    for position, slab in enumerate(slabs):
+        values[position, : slab.shape[0]] = np.rint(slab / scale).astype(np.int16)
+    return values, scale
+
+
+__all__ = ["ANALYZERS", "WaveformSource"]

@@ -101,6 +101,13 @@ falls back to all channels.
 **Repro:** compare `numpy.diff(units/electrodes_index)` against the analyzer's
 `sparsity_mask.sum(axis=1)`. Densified files give a constant equal to the channel count.
 
+**Taken, 2026-09-16, by not reading the export.** `WaveformSource` reads the analyzer's
+`extensions/templates` and its `sparsity_mask` directly, so the support is what the sorting
+declared rather than what survives an inspection for non-zeros — which cannot tell a contact the
+template is flat on from one that was never computed. Measured on `ecephys_786867`, the mask keeps
+**6.7%** of the rectangle at 14 to 26 contacts a unit, and the two arrays are the same
+`(4559, 210, 384)` float64 in the analyzer and in the export.
+
 ---
 
 ## 3. Waveform arrays are `float64` where the source is `float32`
@@ -239,6 +246,11 @@ never had, since the samples averaged are int16 ADC counts.
 **Workaround:** take the unit from `core.sorting_runs.amplitude_unit`, which the analyzer
 actually declares, and record the scale on `core.array_assets.conversion` where a reader can
 find it.
+
+**Superseded, 2026-09-16.** No workaround is needed once the values come from the analyzer:
+`WaveformSource` reads `settings.return_in_uV` from the analyzer's own root attributes and writes
+`core.array_assets.unit` from it, so the declaration travels with the array it describes rather
+than being recovered from another table.
 
 ---
 

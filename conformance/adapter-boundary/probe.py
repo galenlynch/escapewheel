@@ -18,7 +18,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from zoneinfo import ZoneInfo
 
-import numpy
 
 HERE = Path(__file__).resolve().parent
 #  imports `tests.nwbfixture`, so the package root goes on the path too.
@@ -108,28 +107,12 @@ def waveforms(tmp: Path) -> None:
     """What the waveform adapter is passed and hands back, on the same test."""
     import test_waveforms as fixture
 
-    root = tmp / "session.nwb"
-    units = fixture.group(root / "units")
-    fixture._wide(units / "waveform_mean", fixture._dense(fixture.SUPPORT))
-    fixture.array(
-        units / "device_name", ["probeA"] * fixture.UNITS, filter_id="vlen-utf8"
-    )
-    fixture.array(units / "ks_unit_id", numpy.arange(fixture.UNITS, dtype="<i8"))
-    fixture.array(
-        units / "electrodes",
-        numpy.arange(fixture.UNITS * fixture.CHANNELS, dtype="<i8"),
-    )
-    fixture.array(
-        units / "electrodes_index",
-        numpy.arange(1, fixture.UNITS + 1, dtype="<i8") * fixture.CHANNELS,
-    )
-    fixture.array(
-        units / "extremum_channel_index", numpy.array(fixture.EXTREMUM, dtype="<i8")
-    )
-    (root / ".zgroup").write_text(json.dumps({"zarr_format": 2}))
+    # The sorting analyzer, not the NWB exported from it: the templates are the same array in
+    # both, and only the analyzer states the sparsity, the unit ids and what the values are in.
+    root = fixture.build(tmp / "sorted")
 
-    # One term now, not two: the electrode map a build used to pass was deleted once both adapters
-    # composed a contact's name from the electrode table they open themselves.
+    # One term now, not two: the electrode map a build used to pass was deleted once the contact
+    # names came from the channel list the sorting itself declares.
     #
     # What a mapping costs is measured first, because that is why the term is records. Keyed by
     # the pair a waveform row joins on, it does not write down at all; keyed by an integer it

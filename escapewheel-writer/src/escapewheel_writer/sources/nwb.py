@@ -304,8 +304,8 @@ class NWBSource(Compensates):
     #: `general/extracellular_ephys/electrodes` lists every contact of the probe and nothing
     #: records which were dropped, so the index cannot be resolved here -- read as a contact
     #: position it named the wrong electrode for 5,071 of 6,781 units on the measured session,
-    #: eleven of twelve probes having dropped between 1 and 18 channels. `WaveformSource` takes
-    #: the peak from `waveform_mean` itself, reproducing the source's index in 6,781 of 6,781.
+    #: eleven of twelve probes having dropped between 1 and 18 channels. The adapter that owns the
+    #: table reads the sorting analyzer, where the kept channels and the support are both stated.
 
     def __init__(
         self,

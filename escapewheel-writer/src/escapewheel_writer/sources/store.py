@@ -1,11 +1,10 @@
 """One source root, read once and shared by every adapter that reads it.
 
-Three adapters in a real recipe open the same `.nwb` directory -- `NWBSource` for the tables
-it is the authority for, `WaveformSource` for the templates, `LFPSource` for the series -- and
-two of them independently read `general/extracellular_ephys/electrodes`. `WaveformSource` reads
-its six `units/` arrays twice within itself. None of that is expensive enough to matter on its
-own; what matters is that two readers of the same bytes can disagree, and a cache shared by
-both makes that impossible rather than unlikely.
+Two adapters in a real recipe open the same `.nwb` directory -- `NWBSource` for the tables it is
+the authority for and `LFPSource` for the series -- and both read
+`general/extracellular_ephys/electrodes`. None of that is expensive enough to matter on its own;
+what matters is that two readers of the same bytes can disagree, and a cache shared by both makes
+that impossible rather than unlikely.
 
 A memo retains what it reads, for the whole build. That is free for the columns an adapter
 keeps anyway and expensive for one it samples: reading an array whole to look at its head

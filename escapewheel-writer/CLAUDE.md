@@ -149,11 +149,14 @@ known from two documents with no data in hand. A nullable one is a warning, beca
 
 ### One source is read once
 
-Three adapters in a real recipe open the same `.nwb`, and two of them read the electrode
-table; `WaveformSource` read its six `units/` arrays twice within itself. `SourceStore` holds
-one memoized reader per resolved root and `Context` shares it. The saving is small; the point
-is that two readers of the same bytes can no longer disagree. An adapter built on its own gets
-a private store, so nothing about sharing leaks into how one is written or tested.
+Two adapters in a real recipe open the same `.nwb` — `NWBSource` and `LFPSource` — and both read
+the electrode table. `SourceStore` holds one memoized reader per resolved root and `Context`
+shares it. The saving is small; the point is that two readers of the same bytes can no longer
+disagree. An adapter built on its own gets a private store, so nothing about sharing leaks into
+how one is written or tested.
+
+`WaveformSource` was a third until it was re-sourced: it reads the analyzer that computed the
+templates rather than the NWB exported from them, so it opens a different root entirely.
 
 `NWBSource._table` stays outside the store because it produces notes, and a note about a
 skipped column belongs to the adapter that asked rather than to whichever asked first.

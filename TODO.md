@@ -247,20 +247,32 @@ and `core.devices` reads the three attributes core 2.9.0 declares, leaving the p
 parse to the dialect. Neither changes a committed packet, since both real files carry
 `channel_name` and both are read by `aind_nwb`.
 
-**Nine of the ten adapters now serve a standard or nothing but a protocol.** Six are generic —
-`sorter`, `sync`, `openephys`, `harp`, `nwb` and `lfp` — three are one institution's and live in
-`escapewheel-aind` (`session`, `video`, `aind_nwb`), and `tables` is `files-v0.1` wearing the
-interface. **`waveforms` is the one left**: it pairs an array row to a unit on
-`(device_name, ks_unit_id)`, the same dialect key the NWB adapter shed, and it has not moved.
+**Every adapter now serves a standard, one institution, or nothing but a protocol.** Seven are
+generic — `sorter`, `sync`, `openephys`, `harp`, `nwb`, `lfp` and `waveforms` — three are one
+institution's and live in `escapewheel-aind` (`session`, `video`, `aind_nwb`), and `tables` is
+`files-v0.1` wearing the interface. No adapter in the writer reads a column no standard declares.
 
-What makes it harder than the others is that the pair has no base substitute. The probe half is
-derivable — a unit's own `electrodes` region spans one `group_name` — but the label half is not,
-and matching by row position is unsafe: where the NWB and the sorted asset hold different sortings,
-4,322 of 4,505 units pair and **0 of 4,322** agree on spike count, so a positional match hands a
-template to the wrong unit silently where the pair match skips the row and says so. A base
-`WaveformSource` could therefore pair nothing and produce nothing, unlike `NWBSource`, which still
-produced fourteen resources after its dialect left. Whether an adapter that yields nothing without
-a dialect should exist at all is the open question.
+**`waveforms` was never a dialect; it was mis-sourced**, and re-sourcing it on 2026-09-16 removed
+the dialect read as a side effect. It read `waveform_mean` out of the NWB, which is a *derived
+copy* of the analyzer's `extensions/templates/average` — the same `(4559, 210, 384)` float64 array
+in both — and paid for the copy three times over. `(device_name, ks_unit_id)` existed only to
+rejoin rows to the identity the sorter had already minted, since the export renumbers by
+`DynamicTable` position. The export also densifies to every channel, so `units/electrodes` was a
+constant `[0 … 383]` on all 4,559 units and the support could only be recovered by scanning 3.1 GB
+for non-zeros. And it declares `unit: "volts"` with no conversion on values reaching ±1654.
+
+The analyzer states all three: `sorting/unit_ids`, identical to the curated sorting's own ids on
+**10 of 10** streams and equal to the `local_unit_label` that `core.units` carries; `sparsity_mask`,
+keeping **6.7%** of the rectangle at 14 to 26 contacts a unit; and `settings.return_in_uV`. So the
+join is now `self.units[(stream.device, str(label))]` — the key the build already supplies — and
+the adapter reads no electrodes table at all, naming contacts from the sorting's own channel list
+exactly as `sorting_run_channels` does. It also gains a fact the export never carried: the sample
+axis begins at `-ms_before`, where reading the copy could only assume the window was centred.
+
+Two loose ends. A recipe's `waveforms` source now points at the **sorted asset**, not the `.nwb`;
+no recipe is tracked here, so nothing broke, but a real one takes a new `root`. And the committed
+786867 packet holds 4,505 units where its curated sorting holds 4,559 — an older build against a
+different asset state, not a filter in the sorter, which emits a row per curated unit.
 
 **One contact-naming rule now serves all three readers of an electrodes table.**
 `nwb.contact_ids` composes every contact's name, falling back to the row `id` where a file states
