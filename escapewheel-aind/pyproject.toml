@@ -1,0 +1,110 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "escapewheel-aind"
+description = "AIND source adapters for escapewheel packets"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+  { name = "Allen Institute for Neural Dynamics" },
+  { name = "Galen Lynch", email = "galen@galenlynch.com" },
+]
+classifiers = ["Programming Language :: Python :: 3"]
+readme = "README.md"
+version = "0.1.0"
+
+# The writer, because an adapter is constructed by a build and hands back records it defines.
+# One direction only: nothing in the writer may import this package, which is what keeps the
+# dependency a boundary rather than a cycle.
+dependencies = [
+    "escapewheel-writer",
+]
+
+# Source kinds this distribution registers, by the name a recipe names them. The group is
+# `escapewheel_writer.sources.SOURCE_GROUP`, and `sources.discovered()` loads it; a registered kind
+# is constructed exactly as a built-in one is (`session.build`), so nothing here is a lesser source.
+#
+# Empty until the adapters move, which is the next commit rather than this one.
+[project.entry-points."escapewheel.sources"]
+
+[project.urls]
+Repository = "https://github.com/AllenNeuralDynamics/escapewheel-aind/"
+Issues = "https://github.com/AllenNeuralDynamics/escapewheel-aind/issues"
+
+[dependency-groups]
+types = [
+    "mypy",
+    "pyarrow-stubs>=20.0.0.20260819",
+]
+dev = [
+    { include-group = "types" },
+    "codespell",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "interrogate",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/escapewheel_aind"]
+
+[tool.ruff]
+line-length = 120
+# Matches `requires-python` above, unlike the siblings' inherited `py310`. It has to: below 3.11
+# ruff reads `tomllib` as third-party and sorts it into the wrong block.
+target-version = "py312"
+extend-exclude = ["scratch"]
+
+[tool.ruff.lint]
+extend-select = ["Q", "RUF100", "C90", "I", "F", "E", "W", "D", "UP", "ANN", "PYI"]
+extend-ignore = ["ANN401"]  # Skip self/cls type annotations
+per-file-ignores = { "tests/*.py" = ["ANN", "D"] }
+mccabe = { max-complexity = 14 }
+pydocstyle = { convention = "numpy" }
+
+[tool.codespell]
+skip = ".git,*.pdf,*.svg,./docs/build,uv.lock,scratch"
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --tb=short --cov=src --cov-report=term-missing --cov-fail-under=0"
+testpaths = ["tests"]
+
+[tool.interrogate]
+ignore-init-method = true
+ignore-magic = true
+ignore_module = true
+fail-under = 30
+exclude = [
+  "__init__.py",
+  "tests",
+  "docs",
+  "build",
+  "examples",
+  "site",
+  "scratch",
+  ".venv",
+]
+
+[tool.commitizen]
+version_provider = "pep621"
+update_changelog_on_bump = true
+tag_format = "v$version"
+major_version_zero = true
+
+[tool.mypy]
+files = ["src/escapewheel_aind"]
+strict = true
+show_error_codes = true
+exclude = ["scratch"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.uv.sources]
+# A sibling in this monorepo; nothing is published yet. Editable, as the writer declares its own
+# two, so a change to the boundary is visible here without a reinstall.
+escapewheel-writer = { path = "../escapewheel-writer", editable = true }

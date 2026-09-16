@@ -74,7 +74,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
 
 #: Run after the generators, never before: a suite passing against stale generated input says
 #: nothing. Skipped by --quick, since they are most of the runtime.
-SUITES = ("escapewheel-reader", "escapewheel-validator", "escapewheel-writer")
+SUITES = ("escapewheel-reader", "escapewheel-validator", "escapewheel-writer", "escapewheel-aind")
 
 #: Directories whose tracked content must be unchanged once the generators have run. Only the
 #: ones holding generated output; an unrelated edit elsewhere is not this tool's business.

@@ -7,8 +7,9 @@ This file provides guidance to coding agents when working with code in this mono
 A monorepo implementing the proof-of-principle specified in `escapewheel_poc_docs_v0.2/`, which is
 v0.1 plus every accepted revision. **Phases 0-6 of Part 07's plan are complete**; Phase 7
 (Iceberg) is untouched and explicitly last. Three distributions
-(reader, validator, writer) sharing one `escapewheel` CLI, a generated schema registry, the
-conformance corpus, and a test suite `verify.py` runs.
+(reader, validator, writer) sharing one `escapewheel` CLI, a fourth registering one institution's
+source adapters through an entry point, a generated schema registry, the conformance corpus, and a
+test suite `verify.py` runs.
 
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -79,11 +80,20 @@ as built.
   them (Phase 3). Depends on the validator, because Part 05's commit is validate-then-rename.
   A recipe is one TOML file declaring every source and which resources each owns; it is also
   the provenance record, landing in `core.processing_runs.parameters`.
+- `escapewheel-aind/` — the adapters serving one institution rather than a standard, which core
+  does not carry: AIND's metadata schema, its behaviour videos, and the dialect columns its
+  pipeline writes into an otherwise ordinary NWB. It depends on the writer, never the reverse, and
+  registers its kinds through the `escapewheel.sources` entry-point group rather than by being
+  listed in that package's built-in table — so it is built against the same boundary an adapter
+  released separately would use, and moving it to its own repository is packaging rather than a
+  rewrite. A recipe naming one of its kinds declares `in_process` or a delivery command, where
+  naming a built-in kind declares nothing (Part 05 §3.9).
 
 The three share one CLI. `escapewheel-reader` owns the `escapewheel` console script; the others
 register subcommands under the `escapewheel.commands` entry-point group, because two
 distributions declaring the same `[project.scripts]` name is a conflict in which the last
-installed wins silently.
+installed wins silently. `escapewheel-aind` registers no command and joins none of this: it ships
+sources, not a CLI.
 - `prototype/` — working demonstrations, not the reference implementation.
   `registry-codegen/` shows R2's chain end to end: registry JSON, a ~40-line generator, and
   DuckDB executing the emitted SQL against a deliberately broken packet.
