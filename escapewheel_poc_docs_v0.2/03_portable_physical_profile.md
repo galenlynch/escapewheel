@@ -354,6 +354,10 @@ The vocabulary is closed. Each term names one value and the form it takes, so an
 
 A build MUST resolve each declared name against that list first and the recipe's options second, and MUST refuse a recipe where a name resolves to neither (R115 §3.1). A profile adding a term amends this section.
 
+An adapter MUST declare in `accepts` every option it reads and can be constructed without, and in `needs` every value it cannot; it MUST NOT name one option in both, and MUST NOT name in `accepts` a term of the list above or a term a protocol requires (R119 §3.1). Declaring a name in `needs` is what makes a recipe carry it, so an option holding a default is declarable only as an accepted one. An adapter MUST apply its own default where the recipe sets no value, so what an omitted option means is the adapter's statement rather than a value the build invents.
+
+A build MUST supply an option the recipe sets and the adapter names in either list, and MUST NOT require a recipe to set one named in `accepts`. A build MUST refuse a recipe whose source entry sets an option the adapter names in neither, naming the source and the option, before any source is opened (R119 §3.2). A build MUST NOT supply an option the adapter names in neither list, including one it adds itself rather than reading from the recipe, and MUST NOT apply a facility of its own to an adapter that does not name the option carrying it (R119 §3.3).
+
 A build MUST refuse a recipe where a term the list carries cannot be filled, naming the term and the source, and MUST NOT pass such a term absent or empty: `first_samples` needs a source that states them and `units` one that produced them, and an adapter cannot tell a term nobody filled from one whose value is legitimately empty (R115 §3.1).
 
 A build MUST pass a collection as records carrying its key as columns. A mapping's keys are a type the crossing does not keep: an integer key returns as a string, and a compound key does not cross at all.
@@ -400,11 +404,13 @@ Where rows travel on standard output they are bytes. An adapter MUST write the s
 
 A build reads what an adapter declares before it opens any source, and for a class it reads that by importing the adapter — which this section forbids requiring. An adapter a build cannot import MUST publish its declarations as a JSON document the recipe names, and a build MUST read that document before it launches anything (R115 §3.12).
 
-The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocol`, `produces`, `states`, `needs` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. Its shape is published as `registry/adapter.schema.json`.
+The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocol`, `produces`, `states`, `needs`, `accepts` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. Its shape is published as `registry/adapter.schema.json`.
+
+A document carries `accepts` where the adapter names any, as an array of option names in the same form as `needs`, and a build MUST read a document without it as an adapter accepting no option beyond what it needs (R119 §3.4). A document written before `accepts` existed therefore accepts none, and a recipe setting an option for such an adapter is refused until its document declares one.
 
 A build MUST treat a document and an importable declaration of the same facts as one declaration, and MUST NOT prefer either where both are present. An implementation shipping both MUST generate the document rather than maintain it.
 
-A build MUST refuse a declaration whose `protocol` names no protocol of a group this profile names, whose `produces` names a resource no loaded registry declares, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option (R115 §3.12). None of those need the adapter opened or imported.
+A build MUST refuse a declaration whose `protocol` names no protocol of a group this profile names, whose `produces` names a resource no loaded registry declares, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option (R115 §3.12). A build MUST also refuse one whose `accepts` names a term, names an option its `needs` also names, or is not an array of names (R119 §3.4). None of those need the adapter opened or imported.
 
 `states` names the recipe fields a source can state and the values need the source read, so no static document carries them: they travel under `stated` in the run's report (Part 09 §5.8), keyed by the same `block.field` name. An adapter declaring a non-empty `states` MUST return them. A build MUST read a declared field absent from the report as unstated rather than as disagreeing, since a source stating nothing is a fact and not a mismatch (Part 05 §3.6).
 

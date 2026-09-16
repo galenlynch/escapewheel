@@ -13,7 +13,7 @@ part number here as it does there.
 This document set specifies the Escapewheel proof-of-principle data packet. It is v0.1 with every accepted revision applied:
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R118 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/. A draft is not binding and takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R119 accepted. R42 and R73 withdrawn. No draft is open.
 <!-- END facts: revisions -->
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
@@ -1642,6 +1642,10 @@ The vocabulary is closed. Each term names one value and the form it takes, so an
 
 A build MUST resolve each declared name against that list first and the recipe's options second, and MUST refuse a recipe where a name resolves to neither (R115 §3.1). A profile adding a term amends this section.
 
+An adapter MUST declare in `accepts` every option it reads and can be constructed without, and in `needs` every value it cannot; it MUST NOT name one option in both, and MUST NOT name in `accepts` a term of the list above or a term a protocol requires (R119 §3.1). Declaring a name in `needs` is what makes a recipe carry it, so an option holding a default is declarable only as an accepted one. An adapter MUST apply its own default where the recipe sets no value, so what an omitted option means is the adapter's statement rather than a value the build invents.
+
+A build MUST supply an option the recipe sets and the adapter names in either list, and MUST NOT require a recipe to set one named in `accepts`. A build MUST refuse a recipe whose source entry sets an option the adapter names in neither, naming the source and the option, before any source is opened (R119 §3.2). A build MUST NOT supply an option the adapter names in neither list, including one it adds itself rather than reading from the recipe, and MUST NOT apply a facility of its own to an adapter that does not name the option carrying it (R119 §3.3).
+
 A build MUST refuse a recipe where a term the list carries cannot be filled, naming the term and the source, and MUST NOT pass such a term absent or empty: `first_samples` needs a source that states them and `units` one that produced them, and an adapter cannot tell a term nobody filled from one whose value is legitimately empty (R115 §3.1).
 
 A build MUST pass a collection as records carrying its key as columns. A mapping's keys are a type the crossing does not keep: an integer key returns as a string, and a compound key does not cross at all.
@@ -1688,11 +1692,13 @@ Where rows travel on standard output they are bytes. An adapter MUST write the s
 
 A build reads what an adapter declares before it opens any source, and for a class it reads that by importing the adapter — which this section forbids requiring. An adapter a build cannot import MUST publish its declarations as a JSON document the recipe names, and a build MUST read that document before it launches anything (R115 §3.12).
 
-The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocol`, `produces`, `states`, `needs` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. Its shape is published as `registry/adapter.schema.json`.
+The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocol`, `produces`, `states`, `needs`, `accepts` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. Its shape is published as `registry/adapter.schema.json`.
+
+A document carries `accepts` where the adapter names any, as an array of option names in the same form as `needs`, and a build MUST read a document without it as an adapter accepting no option beyond what it needs (R119 §3.4). A document written before `accepts` existed therefore accepts none, and a recipe setting an option for such an adapter is refused until its document declares one.
 
 A build MUST treat a document and an importable declaration of the same facts as one declaration, and MUST NOT prefer either where both are present. An implementation shipping both MUST generate the document rather than maintain it.
 
-A build MUST refuse a declaration whose `protocol` names no protocol of a group this profile names, whose `produces` names a resource no loaded registry declares, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option (R115 §3.12). None of those need the adapter opened or imported.
+A build MUST refuse a declaration whose `protocol` names no protocol of a group this profile names, whose `produces` names a resource no loaded registry declares, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option (R115 §3.12). A build MUST also refuse one whose `accepts` names a term, names an option its `needs` also names, or is not an array of names (R119 §3.4). None of those need the adapter opened or imported.
 
 `states` names the recipe fields a source can state and the values need the source read, so no static document carries them: they travel under `stated` in the run's report (Part 09 §5.8), keyed by the same `block.field` name. An adapter declaring a non-empty `states` MUST return them. A build MUST read a declared field absent from the report as unstated rather than as disagreeing, since a source stating nothing is a fact and not a mismatch (Part 05 §3.6).
 
@@ -1964,7 +1970,7 @@ A preference MUST NOT name a resource only one source produces (R108 §3.4). Suc
 
 Every source adapter MUST declare the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-An adapter declares four such facts, all read before any source is opened: the resources it can supply, the recipe fields it can state (§3.6), the values a build must supply it (Part 03 §11.2), and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `states`, `needs` and `consumes`; what an implementation calls them in code is Part 07 §4's (R115 §3.12).
+An adapter declares five such facts, all read before any source is opened: the resources it can supply, the recipe fields it can state (§3.6), the values a build must supply it (Part 03 §11.2), the options it reads and can run without (Part 03 §11.2), and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's (R115 §3.12, R119 §3.4).
 
 A build MUST read a source entry that declares no `owns` as owning every resource its adapter declares it can supply and no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
 
@@ -1988,13 +1994,15 @@ A build MUST check a recipe against the registry before it opens any source. A b
 - a clock declared twice, referenced but absent, or parented to nothing;
 - a required source option that is not set.
 
-A build MUST also refuse, on the same terms and before any source is opened (R115 §3.1, §3.12):
+A build MUST also refuse, on the same terms and before any source is opened (R115 §3.1, §3.12; R119 §3.2, §3.4):
 
 - an adapter declaring a value Part 03 §11.2 resolves to neither a term nor a recipe option;
 - an adapter declaring a term that list carries and this recipe cannot fill, naming the term and the source;
 - an adapter declaring no protocol of a group the profile names, or one it does not name;
 - a declaration whose resources include one no loaded registry declares;
-- a declaration whose stated fields include one no recipe block carries.
+- a declaration whose stated fields include one no recipe block carries;
+- a source entry setting an option the adapter names in neither `needs` nor `accepts`, naming the source and the option;
+- a declaration whose accepted options include a term, or one its `needs` also names.
 
 A build MUST report as a **warning**:
 
@@ -2355,7 +2363,7 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 
 An adapter's return type is records, not a path, and stays records whichever route delivers them. That is what lets an adapter be tested without a filesystem and stops normalization decisions leaking into I/O code. Out of process the transport carries a table and the receiving end returns records again, so nothing downstream of the boundary knows which route was taken (R115 §3.6).
 
-An adapter carries four static declarations, all readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4); `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2); `NEEDS`, the values a build must supply it, drawn from Part 03 §11.2's terms and the recipe's options (R115 §3.1); and `CONSUMES`, the kinds whose output it reads, which is what orders a build. For each name in `STATES` the adapter exposes the value it holds. All four are class attributes here, and Part 03 §11.5's document is the same facts for an adapter a build cannot import; the requirements in Part 05 and Part 03 are on what a build can determine, not on how an implementation stores it.
+An adapter carries five static declarations, all readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4); `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2); `NEEDS`, the values a build must supply it, drawn from Part 03 §11.2's terms and the recipe's options (R115 §3.1); `ACCEPTS`, the options it reads and can run without, which a recipe may leave unset (Part 03 §11.2, R119 §3.1); and `CONSUMES`, the kinds whose output it reads, which is what orders a build. For each name in `STATES` the adapter exposes the value it holds. All five are class attributes here, and Part 03 §11.5's document is the same facts for an adapter a build cannot import; the requirements in Part 05 and Part 03 are on what a build can determine, not on how an implementation stores it.
 
 An adapter declares its protocol by naming a constant the implementation exports rather than a string it spells, so an adapter resolves the version it was written against and that version speaks what it names (R115 §3.9).
 

@@ -5,7 +5,7 @@
 This document set specifies the Escapewheel proof-of-principle data packet. It is v0.1 with every accepted revision applied:
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R118 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/. A draft is not binding and takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R119 accepted. R42 and R73 withdrawn. No draft is open.
 <!-- END facts: revisions -->
 
 The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.

@@ -2762,3 +2762,48 @@ note = "any other column, a float included, SHOULD take a dictionary where it ho
 disposition = "applied"
 where = [{ part = "03", section = "5.5" }]
 note = "the report SHOULD measure a column's own chunks and judge a string, timestamp or date column between a dictionary and plain; R110 §3.3's override and R110 §3.4's recipe declaration stand"
+
+[clause."R119 §2.1"]
+disposition = "rationale"
+where = "R119 §2.1"
+note = "declaring a name in needs is what makes a recipe carry it, since a build refuses a recipe where a declared name resolves to neither a term nor an option the entry sets, so an option holding a default cannot be declared at all. R115 §3.1's NWB example of six declared names with two options never shipped: the declaration has read five names with zone its only option since NEEDS was introduced, and interval_kind has never been among them"
+
+[clause."R119 §2.2"]
+disposition = "rationale"
+where = "R119 §2.2"
+note = "the ten adapters take 32 constructor options beyond what they declare — nwb 7, waveforms 6, sorter 5, sync 5, lfp 4, tables 3, video 2 — of which 28 are the recipe's to set and none lacks a default; two adapters declare an option at all and both declare zone, and the two packaged recipes set 10 distinct names between them"
+
+[clause."R119 §2.3"]
+disposition = "rationale"
+where = "R119 §2.3"
+note = "both construction paths pass the recipe's options through as keyword arguments, so a misspelled option raises TypeError inside the adapter once the build is running rather than being refused before any source is opened, naming a class rather than the recipe entry; all ten adapters refuse an unknown keyword, none taking a keyword catch-all, so the catch is reliable and its timing is not"
+
+[clause."R119 §2.4"]
+disposition = "rationale"
+where = "R119 §2.4"
+note = "a sampled build adds sample to the sorter source's options, and sample is in no adapter's declaration and is not one of Part 03 §11.2's terms, so the reference build supplies a name the adapter never declared"
+
+[clause."R119 §2.5"]
+disposition = "rationale"
+where = "R119 §2.5"
+note = "waveforms needs an option naming the sorter's label column and base NWB carries none: the Units table's id is arange(n), differing from ks_unit_id in 6,775 of 6,781 and 4,138 of 4,505 rows, and unit_name holds a UUID in both files, while the probe half of the pair is derivable from the electrodes region in 6,781 of 6,781 and 4,505 of 4,505 units. lfp needs the same shape for a series name. Both options hold a default, so neither can be declared"
+
+[clause."R119 §3.1"]
+disposition = "applied"
+where = [{ part = "03", section = "11.2" }, { part = "07", section = "4" }]
+note = "an adapter MUST declare in accepts every option it reads and can be constructed without and in needs every value it cannot, MUST NOT name one option in both or a term in accepts, and MUST apply its own default where the recipe sets no value; Part 07 §4 carries the reference spelling ACCEPTS"
+
+[clause."R119 §3.2"]
+disposition = "applied"
+where = [{ part = "03", section = "11.2" }, { part = "05", section = "3.5" }]
+note = "a build MUST supply an option the recipe sets and the adapter names in either list, MUST refuse a recipe setting an option the adapter names in neither, naming the source and the option, before any source is opened, and MUST NOT require a recipe to set one named in accepts"
+
+[clause."R119 §3.3"]
+disposition = "applied"
+where = [{ part = "03", section = "11.2" }]
+note = "a build MUST NOT supply an option the adapter names in neither list, including one it adds itself rather than reading from the recipe, and MUST NOT apply a facility of its own to an adapter that does not name the option carrying it"
+
+[clause."R119 §3.4"]
+disposition = "applied"
+where = [{ part = "03", section = "11.5" }, { part = "05", section = "3.4" }, { part = "05", section = "3.5" }]
+note = "the declaration document carries accepts beside needs, a build MUST read a document without it as an adapter accepting no option, and MUST refuse one whose accepts names a term, names an option its needs also names, or is not an array of names; an adapter declares five facts rather than four"

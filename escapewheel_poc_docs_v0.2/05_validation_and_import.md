@@ -65,7 +65,7 @@ A preference MUST NOT name a resource only one source produces (R108 §3.4). Suc
 
 Every source adapter MUST declare the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-An adapter declares four such facts, all read before any source is opened: the resources it can supply, the recipe fields it can state (§3.6), the values a build must supply it (Part 03 §11.2), and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `states`, `needs` and `consumes`; what an implementation calls them in code is Part 07 §4's (R115 §3.12).
+An adapter declares five such facts, all read before any source is opened: the resources it can supply, the recipe fields it can state (§3.6), the values a build must supply it (Part 03 §11.2), the options it reads and can run without (Part 03 §11.2), and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's (R115 §3.12, R119 §3.4).
 
 A build MUST read a source entry that declares no `owns` as owning every resource its adapter declares it can supply and no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
 
@@ -89,13 +89,15 @@ A build MUST check a recipe against the registry before it opens any source. A b
 - a clock declared twice, referenced but absent, or parented to nothing;
 - a required source option that is not set.
 
-A build MUST also refuse, on the same terms and before any source is opened (R115 §3.1, §3.12):
+A build MUST also refuse, on the same terms and before any source is opened (R115 §3.1, §3.12; R119 §3.2, §3.4):
 
 - an adapter declaring a value Part 03 §11.2 resolves to neither a term nor a recipe option;
 - an adapter declaring a term that list carries and this recipe cannot fill, naming the term and the source;
 - an adapter declaring no protocol of a group the profile names, or one it does not name;
 - a declaration whose resources include one no loaded registry declares;
-- a declaration whose stated fields include one no recipe block carries.
+- a declaration whose stated fields include one no recipe block carries;
+- a source entry setting an option the adapter names in neither `needs` nor `accepts`, naming the source and the option;
+- a declaration whose accepted options include a term, or one its `needs` also names.
 
 A build MUST report as a **warning**:
 

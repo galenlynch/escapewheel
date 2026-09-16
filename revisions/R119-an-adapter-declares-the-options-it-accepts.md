@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-15 |
 | **Amends** | Part 03 §11.2 (an adapter declares the options it can run without, and a build refuses an option no declaration names); Part 03 §11.5 (the declaration document carries `accepts`); Part 05 §3.4 (an adapter declares five facts rather than four); Part 05 §3.5 (what a build refuses a recipe for); Part 07 §4 (the reference spelling) |
 | **Depends on** | R115 §3.1 (an adapter declares what a build supplies it, resolved against terms then options), R115 §3.12 (the declaration document and what a build refuses it for), R63 §2.1 (an adapter declares what it can supply, statically and as a class attribute), R87 §2.2 (the same discipline applied to the facts a source states) |
 | **Profile** | all |

@@ -14,7 +14,7 @@ conformance corpus, and a test suite `verify.py` runs.
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R118 accepted. R42 and R73 withdrawn. 1 draft is open in revisions/drafts/. A draft is not binding and takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R119 accepted. R42 and R73 withdrawn. No draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: extensions -->
 4 extension registries: aind_opto, aind_unit_qc, dynamic_foraging, vr_foraging

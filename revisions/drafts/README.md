@@ -14,13 +14,19 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-One draft is open. A draft added here takes a row naming its word count, when it was appraised, and
+Nothing is open. A draft added here takes a row naming its word count, when it was appraised, and
 why it sits where it does: dependencies run downward, so a draft may depend on the ones above it
 and on nothing below.
 
-| draft | words | appraised | why here |
-|---|---|---|---|
-| `an-adapter-declares-the-options-it-accepts` | 2,172 | 2026-09-15 | The only one open. It depends on R115 §3.1 and §3.12 and on nothing unaccepted, and it is what the declared options `waveforms` and `lfp` each need are waiting on. Its appraisal found the refusal breaking every declaration document written against R115, which §5 now states and accepts. |
+The last to leave was `an-adapter-declares-the-options-it-accepts`, accepted as **R119** on
+2026-09-15 at 2,172 words: an adapter declares in `accepts` the options it can run without, where
+declaring one in `needs` makes a recipe carry it — which left 28 of the ten adapters' options
+undeclarable and so unchecked, 10 of them set by the two packaged recipes. Its appraisal found the
+new refusal breaking every declaration document written against R115, since none carries the key and
+§3.2 refuses a recipe setting an option for an adapter that names none; §5 states that break and
+accepts it, because scoping the refusal would make it inert on the adapter it exists for. The
+appraisal also found `R63 §2.2` cited for a cost that section removes rather than imposes, which is
+R63 §2.1's.
 
 A draft withdrawn before acceptance is **deleted rather than numbered**, since the `R<N>` space
 records what bound something and a draft never did. Git holds the document, and whatever the
