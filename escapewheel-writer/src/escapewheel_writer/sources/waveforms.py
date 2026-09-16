@@ -40,7 +40,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .defect import SourceDefect
-from .nwb import electrode_name
+from .nwb import contact_columns, contact_ids
 from .store import SourceStore, source_root
 
 #: Samples either side of the window used to estimate what the average left behind. Only for
@@ -455,18 +455,17 @@ class WaveformSource:
         """
         built = self._read()
         table = self.root / "general/extracellular_ephys/electrodes"
-        for column in ("group_name", "channel_name"):
-            if not (table / column).is_dir():
-                raise SourceDefect(f"electrodes/{column}: absent, so no contact can be named")
-        group = self.store.array(table / "group_name")
-        channel_names = self.store.array(table / "channel_name")
+        # The same rule the adapter owning `core.electrodes` uses, since a writer numbers a name.
+        names, note = contact_ids(contact_columns(self.store, table), self.prefix)
+        if note is not None and note not in self.notes:
+            self.notes.append(note)
         rows = []
         for position, (row, channels) in enumerate(zip(built["rows"], built["support"], strict=True)):
             start = 0 if row == 0 else int(built["bounds"][row - 1])
             identity = built["identity"][position]
             for ordinal, channel in enumerate(channels):
                 source_row = int(built["electrode_rows"][start + int(channel)])
-                electrode = electrode_name(group[source_row], channel_names[source_row], self.prefix)
+                electrode = names[source_row]
                 rows.append(
                     {
                         "session_id": self.session_id,

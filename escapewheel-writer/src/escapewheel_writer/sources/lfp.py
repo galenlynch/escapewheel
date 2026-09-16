@@ -40,7 +40,7 @@ import numpy as np
 
 from .compensations import Compensates
 from .defect import SourceDefect
-from .nwb import electrode_name
+from .nwb import contact_columns, contact_ids
 from .store import SourceStore, source_root
 
 #: Where an NWB keeps its LFP series.
@@ -157,6 +157,7 @@ class LFPSource(Compensates):
             )
             for row in self.clocks
         }
+        self._probe: dict[str, str] = {}
         self._series = (
             sorted(p for p in (self.root / GROUP).iterdir() if p.is_dir()) if (self.root / GROUP).is_dir() else []
         )
@@ -165,10 +166,26 @@ class LFPSource(Compensates):
 
     # -- identity ---------------------------------------------------------------------
 
-    @staticmethod
-    def probe_of(series: Path) -> str:
-        """Return the probe a series belongs to, from the name NWB gives it."""
-        return series.name.removeprefix("ElectricalSeries").removesuffix("-LFP")
+    def probe_of(self, series: Path) -> str:
+        """Return the probe a series records, from the contacts its own electrode region names.
+
+        Derived rather than parsed out of the series name, which NWB does not constrain at all: an
+        `ElectricalSeries` declares an electrode region, and the contacts in one belong to a single
+        `ElectrodeGroup`. Measured on ten real series, the derivation and the parse agree exactly,
+        so no committed packet's `array_asset_id` moves.
+        """
+        if series.name not in self._probe:
+            columns = contact_columns(self.store, self.root / "general/extracellular_ephys/electrodes")
+            if "group_name" not in columns:
+                raise SourceDefect("electrodes/group_name: absent, so no series can name its probe")
+            group = columns["group_name"]
+            found = {str(group[int(row)]) for row in self.store.array(series / "electrodes")}
+            if len(found) != 1:
+                raise SourceDefect(
+                    f"{series.name}: its contacts span {len(found)} electrode groups, so it records no one probe"
+                )
+            self._probe[series.name] = found.pop()
+        return self._probe[series.name]
 
     def array_asset_id(self, series: Path) -> str:
         """Return the asset ID for a series, which is its probe plus what it holds."""
@@ -373,14 +390,13 @@ class LFPSource(Compensates):
         if not self._series:
             return []
         table = self.root / "general/extracellular_ephys/electrodes"
-        for column in ("group_name", "channel_name"):
-            if not (table / column).is_dir():
-                # Refusing rather than writing a null electrode: the pair is what names a contact,
-                # and a channel row naming none ties an array axis to nothing. `NWBSource` reads
-                # both columns unguarded, so a file missing one fails the build either way.
-                raise SourceDefect(f"electrodes/{column}: absent, so no contact can be named")
-        group = self.store.array(table / "group_name")
-        channel = self.store.array(table / "channel_name")
+        # One rule for naming a contact, shared with the adapter owning `core.electrodes`: a second
+        # spelling here would mint a second electrode and leave this axis pointing at neither.
+        columns = contact_columns(self.store, table)
+        names, note = contact_ids(columns, self.prefix)
+        if note is not None and note not in self.notes:
+            self.notes.append(note)
+        channel = columns.get("channel_name")
         shift = self.store.array(table / "inter_sample_shift") if (table / "inter_sample_shift").is_dir() else None
         if shift is None:
             self.notes.append("electrodes/inter_sample_shift: absent, so array channels carry no acquisition offset")
@@ -393,8 +409,8 @@ class LFPSource(Compensates):
                         "array_asset_id": self.array_asset_id(series),
                         "axis_index": 1,
                         "channel_index": index,
-                        "electrode_id": electrode_name(group[source_row], channel[source_row], self.prefix),
-                        "channel_label": str(channel[source_row]),
+                        "electrode_id": names[source_row],
+                        "channel_label": str(channel[source_row]) if channel is not None else None,
                         "inter_sample_shift": float(shift[source_row]) if shift is not None else None,
                     }
                 )

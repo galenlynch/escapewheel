@@ -118,6 +118,35 @@ def electrode_name(group: Any, channel: Any, prefix: str = "") -> str:
     return f"{prefix}{group}.{channel}"
 
 
+def contact_columns(store: Any, table: Path) -> dict[str, Any]:
+    """Read the electrode columns a contact's name is composed from, whichever the file carries."""
+    return {
+        column: store.array(table / column)
+        for column in ("group_name", "channel_name", "id")
+        if (table / column).is_dir()
+    }
+
+
+def contact_ids(columns: Mapping[str, Any], prefix: str = "") -> tuple[list[str], str | None]:
+    """Name every contact in electrode-table row order, and say if the fallback was needed.
+
+    Three adapters name the same contacts, and a writer numbers a name (Part 05 §8), so a second
+    spelling of one contact mints a second electrode and the packet then references a row that is
+    not there. The rule lives here once rather than in each of them.
+    """
+    if "group_name" not in columns:
+        raise SourceDefect("electrodes/group_name: absent, so no contact can be named")
+    group = columns["group_name"]
+    if "channel_name" in columns:
+        pairs, note = columns["channel_name"], None
+    else:
+        # Every `DynamicTable` has an `id`, so a contact is always nameable; what the fallback
+        # loses is the source's own spelling, which `local_channel_label` then cannot carry.
+        pairs = columns["id"] if "id" in columns else np.arange(len(group))
+        note = "electrodes: no channel_name, so a contact is named by its group and row id"
+    return [electrode_name(one, other, prefix) for one, other in zip(group, pairs, strict=True)], note
+
+
 def _subject_fact(key: str) -> property:
     """Return a `subject.*` fact this file states, from the row `subjects()` already builds.
 
@@ -602,29 +631,11 @@ class NWBSource(Compensates):
         return rows
 
     def _electrode_ids(self, columns: Mapping[str, NDArray[Any]]) -> list[str]:
-        """Compose electrode IDs, because no NWB column is unique on its own.
-
-        `group_name` names the probe and repeats down it; what distinguishes a contact within one
-        is `channel_name`, which no version of the NWB schema declares -- it is the convention
-        SpikeInterface reads out of files it did not write. Where a file has it, it is used, so a
-        packet built from such a file names contacts as it always has.
-
-        Where it is absent the row's own `id` stands in. Every `DynamicTable` has one, so the pair
-        is always available, and it identifies a contact exactly as well; what it loses is the
-        source's spelling, which `local_channel_label` then has nothing to carry.
-        """
-        group = columns["group_name"]
-        if "channel_name" in columns:
-            within: NDArray[Any] = columns["channel_name"]
-        else:
-            within = columns.get("id", np.arange(len(group)))
-            self.notes.append(
-                "electrodes: no channel_name, so a contact is named by its group and row id"
-            )
-        return [
-            electrode_name(one, other, self.prefix)
-            for one, other in zip(group, within, strict=True)
-        ]
+        """Compose electrode IDs, because no NWB column is unique on its own."""
+        names, note = contact_ids(columns, self.prefix)
+        if note is not None and note not in self.notes:
+            self.notes.append(note)
+        return names
 
     def electrodes(self) -> list[dict[str, Any]]:
         """`core.electrodes`, one row per recorded contact."""

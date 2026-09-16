@@ -122,9 +122,14 @@ def test_the_step_comes_from_the_interval_not_the_values(nwb):
 
 
 def test_a_non_integer_decimation_is_refused(nwb):
-    """If a sample is not a whole number of probe ticks, this is not a decimation of it."""
+    """If a sample is not a whole number of probe ticks, this is not a decimation of it.
+
+    The contacts are written because a series names its probe from them, so a file without them
+    is refused for that before it is read far enough to judge the step.
+    """
     root = nwb.parent / "odd.nwb"
     _series(root, step_hz=1111.0)
+    _contacts(root)
     with pytest.raises(SourceDefect, match="not an integer"):
         _source(root).records()
 
@@ -222,8 +227,9 @@ def test_offers_counts_the_channels_it_can_supply(nwb):
 def test_a_contact_the_source_cannot_name_is_refused(tmp_path):
     """A channel row naming no electrode ties an array axis to nothing, so the adapter refuses.
 
-    Both columns are needed because a contact's name is the pair; the adapter owning
-    `core.electrodes` reads them unguarded, so a file missing one fails the build either way.
+    `group_name` is the half that has no substitute: it names the probe, so without it neither a
+    contact nor the series' own probe can be named. `channel_name` is the half that does have one
+    — every adapter falls back to the row's `id` for it, by the single rule in `nwb.contact_ids`.
     """
     root = tmp_path / "unnamed.nwb"
     _series(root)

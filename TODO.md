@@ -124,11 +124,15 @@ serves one. Measured against what each module actually names, the ten sort four 
 derived from `frame_counter` and the `rx:Zip` pairing repair on top. One `ffprobe` call for
 container metadata is the only generic part, so it leaves whole rather than as a carving.
 
-`lfp` is nearly generic and worth keeping: `processing/ecephys/LFP` is where pynwb's own `LFP`
-container lives, and the Zarr v2 referencing, the axis description and the band declaration are all
-format-level. Its one line of dialect recovers a probe from a series name NWB does not constrain —
-`series.name.removeprefix("ElectricalSeries").removesuffix("-LFP")` — and that line moves with the
-split below rather than becoming a declared option, for the reason `waveforms` does.
+`lfp` **is generic**, since 2026-09-16, and nothing left it. `processing/ecephys/LFP` is where
+pynwb's own `LFP` container lives, and the Zarr v2 referencing, the axis description and the band
+declaration are all format-level. Its one line of dialect recovered a probe from a series name NWB
+does not constrain — `series.name.removeprefix("ElectricalSeries").removesuffix("-LFP")` — and that
+was repaired rather than moved: an `ElectricalSeries` declares an electrode region, the contacts in
+one belong to a single `ElectrodeGroup`, and `probe_of` now reads that. Measured on the ten real
+series, the derivation and the parse agree in **10 of 10**, so no committed packet's
+`array_asset_id` moves. What it costs is a dependency: a series names its probe from the electrodes
+table, where parsing its own name needed nothing.
 
 `waveforms` reads `waveform_mean`, `waveform_sd` and the ragged `electrodes`/`electrodes_index`, all
 base NWB, and matches an array row to a unit by a **pair**: `(device_name, ks_unit_id)`, the probe
@@ -243,11 +247,28 @@ and `core.devices` reads the three attributes core 2.9.0 declares, leaving the p
 parse to the dialect. Neither changes a committed packet, since both real files carry
 `channel_name` and both are read by `aind_nwb`.
 
-**`tables` is the only adapter left that serves no standard**, and §2's opening table is now: four
-generic (`sorter`, `sync`, `openephys`, `harp`), two generic since the split (`nwb`, `lfp` — and
-`waveforms`, whose `(device_name, ks_unit_id)` pair is the same dialect read and has **not** moved
-yet), three one institution's in `escapewheel-aind` (`session`, `video`, `aind_nwb`), and `tables`,
-which is `files-v0.1` wearing the interface.
+**Nine of the ten adapters now serve a standard or nothing but a protocol.** Six are generic —
+`sorter`, `sync`, `openephys`, `harp`, `nwb` and `lfp` — three are one institution's and live in
+`escapewheel-aind` (`session`, `video`, `aind_nwb`), and `tables` is `files-v0.1` wearing the
+interface. **`waveforms` is the one left**: it pairs an array row to a unit on
+`(device_name, ks_unit_id)`, the same dialect key the NWB adapter shed, and it has not moved.
+
+What makes it harder than the others is that the pair has no base substitute. The probe half is
+derivable — a unit's own `electrodes` region spans one `group_name` — but the label half is not,
+and matching by row position is unsafe: where the NWB and the sorted asset hold different sortings,
+4,322 of 4,505 units pair and **0 of 4,322** agree on spike count, so a positional match hands a
+template to the wrong unit silently where the pair match skips the row and says so. A base
+`WaveformSource` could therefore pair nothing and produce nothing, unlike `NWBSource`, which still
+produced fourteen resources after its dialect left. Whether an adapter that yields nothing without
+a dialect should exist at all is the open question.
+
+**One contact-naming rule now serves all three readers of an electrodes table.**
+`nwb.contact_ids` composes every contact's name, falling back to the row `id` where a file states
+no `channel_name`, and `nwb`, `lfp` and `waveforms` all call it. Before this they disagreed: the
+base reader fell back while the other two refused outright, which would have minted one contact
+under two spellings — and a writer numbers a name (Part 05 §8), so the packet would then reference
+a row that is not there. This is the `prefix` coupling recorded below, fixed for the half that had
+a rule to share.
 
 **The plumbing is separated**, 2026-09-15 at `f1ef6f1`, which is the prerequisite: `SourceDefect`
 and the sex and UTC-offset helpers left `nwb.py` for `sources/defect.py` and `sources/values.py`, so
