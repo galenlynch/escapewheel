@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from escapewheel_writer.sources.zarr_compat import UnsupportedEncoding, attrs, members, read_array
+from escapewheel_writer.sources.zarr_compat import DenseV2, UnsupportedEncoding, attrs, members, read_array
 from tests import nwbfixture
 
 
@@ -77,6 +77,78 @@ def test_members_lists_children_without_zarrs_dot_files(tmp_path):
     assert members(tmp_path / "g") == ["a", "b"]
     assert attrs(tmp_path / "g") == {"note": "hello"}
     assert attrs(tmp_path) == {}
+
+
+def _dense(path, values, chunks, *, omit=()):
+    """Write a rank-N Zarr v2 array as a grid of chunks, edge chunks padded as zarr writes them.
+
+    `omit` leaves those chunks unwritten, which is what zarr does for a chunk that is entirely
+    the fill value -- the case a reader has to stand in for rather than fail on.
+    """
+    import itertools
+    import json
+
+    import numcodecs
+
+    path.mkdir(parents=True, exist_ok=True)
+    codec = numcodecs.get_codec(nwbfixture.BLOSC)
+    (path / ".zarray").write_text(
+        json.dumps(
+            {
+                "zarr_format": 2,
+                "shape": list(values.shape),
+                "chunks": list(chunks),
+                "dtype": values.dtype.str,
+                "compressor": nwbfixture.BLOSC,
+                "filters": None,
+                "fill_value": 0,
+                "order": "C",
+            }
+        )
+    )
+    grid = [range((n + c - 1) // c) for n, c in zip(values.shape, chunks, strict=True)]
+    for index in itertools.product(*grid):
+        if index in omit:
+            continue
+        cut = tuple(slice(i * c, i * c + c) for i, c in zip(index, chunks, strict=True))
+        block = np.zeros(chunks, dtype=values.dtype)
+        held = values[cut]
+        block[tuple(slice(0, n) for n in held.shape)] = held
+        (path / ".".join(str(i) for i in index)).write_bytes(codec.encode(block.tobytes()))
+    return path
+
+
+def test_a_dense_array_reads_whole_and_in_slabs(tmp_path):
+    """Chunks divide no axis evenly, so every edge chunk is partial in all three."""
+    values = np.arange(7 * 5 * 4, dtype=np.float64).reshape(7, 5, 4)
+    path = _dense(tmp_path / "a", values, (3, 2, 3))
+    held = DenseV2(path)
+    assert (held.shape, held.chunks, held.dtype) == ((7, 5, 4), (3, 2, 3), np.dtype("<f8"))
+    assert np.array_equal(held[0 : held.shape[0]], values)
+    for low, high in ((0, 1), (2, 5), (6, 7), (3, 3)):
+        assert np.array_equal(held[low:high], values[low:high]), (low, high)
+
+
+def test_an_unwritten_chunk_reads_as_the_fill_value(tmp_path):
+    """Zarr writes no chunk where one is entirely the fill, so a reader stands in for it."""
+    values = np.arange(4 * 4, dtype=np.int16).reshape(4, 4)
+    values[2:, 2:] = 0
+    path = _dense(tmp_path / "a", values, (2, 2), omit={(1, 1)})
+    assert np.array_equal(DenseV2(path)[0:4], values)
+
+
+def test_a_one_dimensional_array_is_sent_to_read_array(tmp_path):
+    """The two readers split on rank, and each says which one the caller wanted."""
+    nwbfixture.array(tmp_path / "a", np.arange(3, dtype=np.int64))
+    with pytest.raises(UnsupportedEncoding, match="read_array"):
+        DenseV2(tmp_path / "a")
+
+
+def test_a_strided_slab_is_refused(tmp_path):
+    """Every caller wants a contiguous block of units, and a stride would quietly mis-place rows."""
+    path = _dense(tmp_path / "a", np.zeros((4, 2), dtype=np.int16), (2, 2))
+    with pytest.raises(UnsupportedEncoding, match="strided"):
+        DenseV2(path)[0:4:2]
 
 
 def _rechunk(path, values, stride):

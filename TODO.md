@@ -254,25 +254,47 @@ institution's and live in `escapewheel-aind` (`session`, `video`, `aind_nwb`), a
 
 **`waveforms` was never a dialect; it was mis-sourced**, and re-sourcing it on 2026-09-16 removed
 the dialect read as a side effect. It read `waveform_mean` out of the NWB, which is a *derived
-copy* of the analyzer's `extensions/templates/average` — the same `(4559, 210, 384)` float64 array
-in both — and paid for the copy three times over. `(device_name, ks_unit_id)` existed only to
-rejoin rows to the identity the sorter had already minted, since the export renumbers by
-`DynamicTable` position. The export also densifies to every channel, so `units/electrodes` was a
-constant `[0 … 383]` on all 4,559 units and the support could only be recovered by scanning 3.1 GB
-for non-zeros. And it declares `unit: "volts"` with no conversion on values reaching ±1654.
+copy* of the analyzer's `extensions/templates/average` — the same array in both — and paid for the
+copy three times over. `(device_name, ks_unit_id)` existed only to rejoin rows to the identity the
+sorter had already minted, since the export renumbers by `DynamicTable` position. The export also
+densifies to every channel, so `units/electrodes` was a constant `[0 … n]` on every unit and the
+support could only be recovered by scanning for non-zeros. And it declares `unit: "volts"` with no
+conversion on values reaching ±1654.
 
-The analyzer states all three: `sorting/unit_ids`, identical to the curated sorting's own ids on
-**10 of 10** streams and equal to the `local_unit_label` that `core.units` carries; `sparsity_mask`,
-keeping **6.7%** of the rectangle at 14 to 26 contacts a unit; and `settings.return_in_uV`. So the
-join is now `self.units[(stream.device, str(label))]` — the key the build already supplies — and
-the adapter reads no electrodes table at all, naming contacts from the sorting's own channel list
-exactly as `sorting_run_channels` does. It also gains a fact the export never carried: the sample
-axis begins at `-ms_before`, where reading the copy could only assume the window was centred.
+The analyzer states all three: `sorting/unit_ids`, equal to the `local_unit_label` that
+`core.units` carries and identical to the curated sorting's own ids on **10 of 10** streams;
+`sparsity_mask`, keeping **6.7%** of the rectangle at 14 to 26 contacts a unit; and
+`settings.return_in_uV`. So the join is `self.units[(stream.device, str(label))]` — the key the
+build already supplies — and the adapter reads no electrodes table at all, naming contacts from
+the sorting's own channel list exactly as `sorting_run_channels` does. It also gains a fact the
+export never carried: the sample axis begins at `-ms_before` rather than at a guessed centre.
 
-Two loose ends. A recipe's `waveforms` source now points at the **sorted asset**, not the `.nwb`;
-no recipe is tracked here, so nothing broke, but a real one takes a new `root`. And the committed
-786867 packet holds 4,505 units where its curated sorting holds 4,559 — an older build against a
-different asset state, not a filter in the sorter, which emits a row per curated unit.
+**The evidence first published here described the wrong asset**, corrected 2026-09-16. Every figure
+— 4,559 units, 210 samples, `ms_before 3.0` — came from
+`ecephys_786867_…_sorted_2026-01-10_10-30-10`, a SpikeInterface 0.103.0 sorting **no packet uses**.
+`/home/galen.lynch/Downloads/AnotherNWBCreationTracker-2026-09-06.xlsx` names the authoritative one
+per session in its `Sorted file` column, and both recipes' `sorter` sources already pointed at it.
+Measured against those instead: 786867's `sorted_2026-07-29_16-03-08` (SpikeInterface 0.104.7) is
+10 streams and **4,505 units, exactly the committed packet**, 150 samples at `ms_before 2.0` so the
+origin is −60, and 373 to 384 channels varying per stream as R83 predicts. 776259's
+`sorted_2026-08-11_14-40-50` is 24 streams over two experiments, of which `experiment1` is 12
+streams and **6,781 units, exactly its packet**. There was never a 54-unit discrepancy to explain;
+it was two different sortings being compared.
+
+**The three recipes now name the analyzer**, each matching its own `sorter` source:
+`776259-packet` and `df-packet` and `786867-packet` all point `waveforms` at the `s3://` prefix
+their sorting lives under, with `experiment = "experiment1"` on 776259 to match its sorter's scope.
+`df-packet`'s sorted tree carries no `postprocessed/` at all, so it reads 786867's asset; its local
+curated `unit_ids` agree with that analyzer's on **10 of 10** streams, checked rather than assumed.
+Backups sit beside each as `recipe.toml.bak`.
+
+**Reading a sorted asset on a store is what made that possible.** `zarr_compat.DenseV2` decodes a
+rank-N Zarr v2 array from its chunk bytes as `read_array` does for rank 1, so it asks a path only
+whether it is a file and for its bytes — which a cached `simplecache::s3://` path answers exactly
+as a local one does, and which keeps the `#` in `…Record Node 109#Neuropix-PXI-100…` a path segment
+rather than the URL fragment `zarr.open_array` truncates at. Verified identical to zarr on every
+slab of a `(586, 210, 384)` array chunked `(74, 27, 96)`, edge chunks included, and run end to end
+against S3: 534 units cut in 15.2 s with **0 missed and 0 blank**.
 
 **One contact-naming rule now serves all three readers of an electrodes table.**
 `nwb.contact_ids` composes every contact's name, falling back to the row `id` where a file states

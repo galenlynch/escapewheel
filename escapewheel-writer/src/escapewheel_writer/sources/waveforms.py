@@ -41,7 +41,7 @@ from numpy.typing import NDArray
 from .defect import SourceDefect
 from .sorter import STREAM, SortedStream
 from .store import SourceStore, source_root
-from .zarr_compat import attrs, attrs_at
+from .zarr_compat import DenseV2, attrs, attrs_at
 
 #: Where SpikeInterface writes the analyzer, beside the `curated` tree a sorting is read from.
 ANALYZERS = "postprocessed"
@@ -76,16 +76,14 @@ def _uri(asset_id: str) -> str:
     return f"arrays/core/{asset_id}.zarr"
 
 
-def _dense(path: Path) -> Any:
-    """Open a multi-dimensional Zarr v2 array by path rather than by name.
+def _dense(path: Any) -> DenseV2:
+    """Open a multi-dimensional Zarr v2 array, wherever it is stored.
 
-    A stream is named `experiment1_Record Node 109#Neuropix-PXI-100.46101_recording1.zarr`, and
-    zarr reads a string store as a URL, where `#` opens a fragment -- which truncates the root
-    silently at "Record Node 109" rather than failing on what is missing.
+    `DenseV2` asks a path only whether it is a file and for its bytes, so a sorted asset on a
+    store reads exactly as a local one does -- which is what lets a recipe name the same `s3://`
+    prefix for this source and for the sorter, and have the unit ids line up by construction.
     """
-    import zarr
-
-    return zarr.open_array(store=zarr.storage.LocalStore(path), mode="r", zarr_format=2)
+    return DenseV2(path)
 
 
 class WaveformSource:
