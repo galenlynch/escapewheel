@@ -113,8 +113,8 @@ serves one. Measured against what each module actually names, the ten sort four 
 
 | | adapters |
 |---|---|
-| generic | `sorter`, `sync`, `openephys`, `harp`; `nwb` once its dialect columns go |
-| one option short | `lfp`, `waveforms` |
+| generic | `sorter`, `sync`, `openephys`, `harp` |
+| generic once the dialect leaves with the NWB split | `nwb`, `lfp`, `waveforms` |
 | one institution's, whole | `session`, `video` |
 | not an adapter | `tables` |
 
@@ -127,8 +127,8 @@ container metadata is the only generic part, so it leaves whole rather than as a
 `lfp` is nearly generic and worth keeping: `processing/ecephys/LFP` is where pynwb's own `LFP`
 container lives, and the Zarr v2 referencing, the axis description and the band declaration are all
 format-level. Its one line of dialect recovers a probe from a series name NWB does not constrain —
-`series.name.removeprefix("ElectricalSeries").removesuffix("-LFP")` — and a declared pattern option
-settles it.
+`series.name.removeprefix("ElectricalSeries").removesuffix("-LFP")` — and that line moves with the
+split below rather than becoming a declared option, for the reason `waveforms` does.
 
 `waveforms` reads `waveform_mean`, `waveform_sd` and the ragged `electrodes`/`electrodes_index`, all
 base NWB, and matches an array row to a unit by a **pair**: `(device_name, ks_unit_id)`, the probe
@@ -150,9 +150,16 @@ row order — 12 of 12 devices in one session, 10 of 10 in the other — so the 
 nth label and no dialect column is needed to pair them. What that spends is the detection: the NWB
 and the sorted asset it derives from hold different sortings, pairing 4,322 of 4,505 units with **0
 of 4,322** agreeing on spike count (`STATUS.md`, "Benchmark revisited"), and a positional match hands
-a template to the wrong unit there, where the pair match skips the row and says so. So what settles
-it is a **declared option naming the label column**, defaulting to `unit_name` — `lfp`'s declared
-pattern option one more time, and blocked by the same gap below.
+a template to the wrong unit there, where the pair match skips the row and says so.
+
+**Identity is the part no option makes generic.** An option names the column holding the label and
+cannot make one exist, so an adapter configured that way reaches producers that wrote the label
+somewhere rather than base NWB. Everything around it is base NWB and even the probe half of the key
+is derivable, so this is one dialect read in an otherwise generic adapter, and it moves with the
+split below rather than becoming an option of its own: a per-column option is the dialect mapping
+rejected further down, rebuilt one column at a time. R119 §2.5 argues for that option and is not
+taken up; what its Decision rests on is §2.2's 28 undeclared options and §2.3's constructor failure,
+neither of which needs a dialect option to exist.
 
 The repair recorded here is done: `units: {n} NWB row(s) match no unit or are all zero; skipped`
 summed two causes and now counts them apart, since a wrong key is a different finding from a row the
