@@ -105,6 +105,10 @@ class VideoSource(Compensates):
     #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "reference_clock")
 
+    #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
+    #: unset (Part 03 §11.2).
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "batch_rows")
+
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ()
 

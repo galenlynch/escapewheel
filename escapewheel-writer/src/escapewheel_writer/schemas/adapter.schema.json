@@ -46,6 +46,16 @@
       },
       "description": "Every value a build supplies this adapter, each resolving against Part 03 §11.2's terms first and the recipe's options second. A term a protocol requires is not declared here: declaring the protocol is what asks for it."
     },
+    "accepts": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_]*$",
+        "maxLength": 64
+      },
+      "description": "The options this adapter reads and can be constructed without, which a recipe may leave unset (Part 03 §11.2). A name here must be an option and not a term, and must not also appear in `needs`; a document without this key accepts no option beyond what it needs."
+    },
     "states": {
       "type": "array",
       "uniqueItems": true,

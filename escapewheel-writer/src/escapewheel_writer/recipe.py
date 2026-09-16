@@ -134,6 +134,24 @@ def needs(kind: str) -> tuple[str, ...]:
     return tuple(getattr(adapter, "NEEDS", ("root", "session_id")) if adapter is not None else ())
 
 
+#: Options a build reaches a source with rather than an adapter reading them, so no declaration
+#: names them and none is refused. `storage_options` says how to open the root and is consumed
+#: where the store is opened (Part 03 §11.2). A facility a build applies through an option the
+#: *adapter* reads is not one of these: Part 03 §11.2 makes the adapter declare it, which is why
+#: `sample` is `sorter`'s to accept and not a build's to inject silently.
+_BUILD_OPTIONS = frozenset({"storage_options"})
+
+
+def accepts(kind: str) -> tuple[str, ...]:
+    """Return the options an adapter of this kind reads and can run without (Part 05 §3.4).
+
+    Separate from `needs` because the two differ in what a recipe owes: a declared need a recipe
+    does not set is refused, so an option holding a default is declarable only here (R119 §2.1).
+    """
+    adapter = adapter_for(kind)
+    return tuple(getattr(adapter, "ACCEPTS", ()) if adapter is not None else ())
+
+
 def consumes(kind: str) -> tuple[str, ...]:
     """Return the kinds whose output an adapter of this kind reads (Part 05 §3.4)."""
     adapter = adapter_for(kind)
@@ -415,11 +433,14 @@ def _importable(kind: str) -> bool:
 
 
 def declared(spec: SourceSpec) -> dict[str, Any]:
-    """Return one source's four declarations, from the document the recipe names or the class.
+    """Return one source's five declarations, from the document the recipe names or the class.
 
     A document and an importable class declaring the same facts are one declaration, and a build
     prefers neither (Part 03 §11.5) -- so everything reading a declaration reads it through here,
     and nothing downstream has to know which form this source took.
+
+    A document written before `accepts` existed carries none, which reads as an adapter accepting
+    no option beyond what it needs (Part 03 §11.5).
     """
     document = spec.delivery.declaration if spec.delivery is not None else None
     if document is not None and "unreadable" not in document:
@@ -427,6 +448,7 @@ def declared(spec: SourceSpec) -> dict[str, Any]:
             "produces": frozenset(document.get("produces", ())),
             "states": tuple(document.get("states", ())),
             "needs": tuple(document.get("needs", ())),
+            "accepts": tuple(document.get("accepts", ())),
             "consumes": tuple(document.get("consumes", ())),
             "declares_states": "states" in document,
         }
@@ -434,6 +456,7 @@ def declared(spec: SourceSpec) -> dict[str, Any]:
         "produces": produces(spec.kind),
         "states": tuple(sorted(states(spec.kind))),
         "needs": needs(spec.kind),
+        "accepts": accepts(spec.kind),
         "consumes": consumes(spec.kind),
         "declares_states": declares_states(spec.kind),
     }
@@ -1009,16 +1032,28 @@ class Recipe:
         return problems
 
     def _option_problems(self) -> list[str]:
-        """Options a source kind requires and this recipe does not carry."""
-        # A declared name a build cannot resolve is refused before any source is opened
-        # (Part 03 §11.2). A term the build fills is not a recipe's business, so only the names
-        # that fall through to the recipe's options are reported here.
-        return [
+        """Options a source kind requires and this recipe does not carry, and options it reads at all.
+
+        Both are refused before any source is opened (Part 03 §11.2). A term the build fills is not
+        a recipe's business, so only the names that fall through to the recipe's options are
+        reported here. An option the adapter names nowhere is the converse: the recipe states
+        something about the packet that never reaches the source, and its author's next evidence
+        would be its absence from the output (Part 03 §11.2).
+        """
+        problems = [
             f"source {spec.kind} requires {name!r}, which this entry does not set"
             for spec in self.sources
             for name in declared(spec)["needs"]
             if name not in TERMS and name not in spec.options
         ]
+        for spec in self.sources:
+            known = set(declared(spec)["needs"]) | set(declared(spec)["accepts"])
+            problems += [
+                f"source {spec.kind} sets {name!r}, which it declares neither as needed nor as accepted"
+                for name in sorted(spec.options)
+                if name not in known and name not in _BUILD_OPTIONS
+            ]
+        return problems
 
     def _clock_problems(self) -> list[str]:
         """Clock IDs that are declared twice, referenced but absent, or parented to nothing."""

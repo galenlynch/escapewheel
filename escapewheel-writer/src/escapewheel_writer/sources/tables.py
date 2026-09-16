@@ -70,6 +70,11 @@ class TablesSource:
     #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id")
 
+    #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
+    #: unset (Part 03 §11.2). `tables` is among them rather than in `NEEDS` because a recipe
+    #: naming no table is refused by this adapter with what is wrong, not by a missing name.
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("tables", "command", "batch_rows")
+
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ()
 

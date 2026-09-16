@@ -282,6 +282,13 @@ class NWBSource(Compensates):
     #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "reference_clock", "units", "zone")
 
+    #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
+    #: unset (Part 03 §11.2). `interval_kind` is the one no declaration could carry until there
+    #: was a list for it: it defaults to no intervals, which is right for a session holding none.
+    ACCEPTS: ClassVar[tuple[str, ...]] = (
+        "prefix", "trial_metadata", "signals", "interval_kind", "emit_clock", "attachments",
+    )
+
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
 

@@ -131,6 +131,13 @@ class WaveformSource:
     #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "units", "array_location")
 
+    #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
+    #: unset (Part 03 §11.2). `store` is absent because it is a handle, which a recipe cannot
+    #: carry and a declaration may not name.
+    ACCEPTS: ClassVar[tuple[str, ...]] = (
+        "array_asset_id", "sd", "sd_asset_id", "compressed_per_chunk", "prefix",
+    )
+
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
 

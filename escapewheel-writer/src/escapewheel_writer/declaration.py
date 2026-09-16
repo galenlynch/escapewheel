@@ -1,9 +1,9 @@
 """What an adapter declares, as a document a build reads instead of importing it.
 
-A build reads `produces`, `states`, `needs` and `consumes` before it opens any source, and for a
-class it reads them by importing the adapter -- which Part 03 §11.5 forbids requiring. So an adapter
-a build cannot import publishes the same four facts as JSON, and the two forms are one declaration:
-a build treats a document and an importable class alike and prefers neither.
+A build reads `produces`, `states`, `needs`, `accepts` and `consumes` before it opens any source, and
+for a class it reads them by importing the adapter -- which Part 03 §11.5 forbids requiring. So an
+adapter a build cannot import publishes the same five facts as JSON, and the two forms are one
+declaration: a build treats a document and an importable class alike and prefers neither.
 
 The document is **generated** here rather than maintained, because every field is read off the class
 with no judgement in it. What it does not carry is anything about the machine -- the command, the
@@ -59,7 +59,7 @@ def of(adapter: Any, kind: str, protocol: str) -> dict[str, Any]:
     Parameters
     ----------
     adapter : type
-        The adapter class, carrying `PRODUCES`, `STATES`, `NEEDS` and `CONSUMES`.
+        The adapter class, carrying `PRODUCES`, `STATES`, `NEEDS`, `ACCEPTS` and `CONSUMES`.
     kind : str
         The name a recipe's source entry uses for it.
     protocol : str
@@ -78,6 +78,7 @@ def of(adapter: Any, kind: str, protocol: str) -> dict[str, Any]:
         "produces": sorted(getattr(adapter, "PRODUCES", ())),
         "states": sorted(getattr(adapter, "STATES", {})),
         "needs": list(getattr(adapter, "NEEDS", ())),
+        "accepts": list(getattr(adapter, "ACCEPTS", ())),
         "consumes": list(getattr(adapter, "CONSUMES", ())),
     }
 
@@ -153,6 +154,14 @@ def refusals(
             found.append(f"needs {name}, which a protocol supplies rather than an adapter declaring it")
         elif name not in terms and name not in options:
             found.append(f"needs {name}, neither a term nor an option this entry sets")
+    # An accepted option is one the recipe may leave unset, so it is never checked for presence --
+    # only that it is an option at all, and that it is not already mandatory (Part 03 §11.5).
+    declared_needs = set(document.get("needs", ()))
+    for name in document.get("accepts", ()):
+        if name in terms or name in _protocol_terms():
+            found.append(f"accepts {name}, which is a term a build fills rather than an option a recipe sets")
+        elif name in declared_needs:
+            found.append(f"accepts {name}, which it also needs, so it is both optional and required")
     return found
 
 

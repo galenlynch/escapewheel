@@ -340,6 +340,11 @@ class SyncSource:
     #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "clocks")
 
+    #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
+    #: unset (Part 03 §11.2). `first_samples` is absent because it is a term a build fills, which
+    #: a declaration may not name as an option.
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("experiment", "recording", "sync_line", "prefix")
+
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
 

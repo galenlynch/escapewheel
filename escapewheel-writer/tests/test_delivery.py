@@ -62,6 +62,36 @@ def test_every_shipped_adapter_generates_a_valid_document(kind):
     assert document["kind"] == kind
 
 
+def test_a_generated_document_carries_what_the_adapter_accepts():
+    """An option with a default is declarable only here, so `sample` crosses as the adapter's."""
+    document = declaration.of(ADAPTERS["sorter"], "sorter", "stream-v0.1")
+    assert "sample" in document["accepts"]
+    assert "sample" not in document["needs"]
+
+
+@pytest.mark.parametrize("kind", sorted(ADAPTERS))
+def test_every_option_an_adapter_reads_is_declared(kind):
+    """The declared list is checked against the constructor, so it cannot go stale.
+
+    A parameter holding a default is an option a recipe may set, and one a recipe may set and no
+    declaration names is refused (Part 03 §11.2) -- so an option added here without being declared
+    would refuse every recipe setting it. `store` is the exception: a handle a recipe cannot
+    carry, supplied where the class accepts one rather than declared (Part 03 §11.2).
+    """
+    adapter = ADAPTERS[kind]
+    parameters = list(inspect.signature(adapter.__init__).parameters.values())[1:]
+    optional = {
+        p.name
+        for p in parameters
+        if p.default is not inspect.Parameter.empty
+        and p.kind not in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
+        and p.name not in adapter.NEEDS
+        and p.name not in TERMS
+        and p.name != "store"
+    }
+    assert optional == set(getattr(adapter, "ACCEPTS", ()))
+
+
 def test_ownership_from_the_documents_is_ownership_from_the_classes():
     """The two forms are one declaration, so what a build settles from them cannot differ."""
     from_document = {
@@ -88,6 +118,9 @@ def test_a_document_round_trips_through_a_file(tmp_path):
         ({"states": ["subject.sbuject_id"]}, "is no column of"),
         ({"needs": ["open_store"]}, "neither a term nor an option"),
         ({"needs": ["socket"]}, "a protocol supplies"),
+        ({"accepts": ["units"]}, "a term a build fills"),
+        ({"accepts": ["socket"]}, "a term a build fills"),
+        ({"accepts": ["zone"]}, "both optional and required"),
     ],
 )
 def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected, registry):

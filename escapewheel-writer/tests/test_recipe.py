@@ -652,6 +652,37 @@ def test_a_declaration_needing_what_the_recipe_does_not_set_is_refused(tmp_path,
     assert any("neither a term nor an option" in p.message for p in recipe.check(registry))
 
 
+def test_an_option_no_declaration_names_is_refused(tmp_path, registry):
+    """An option nothing reads is a statement about the packet that never reaches the source."""
+    named = declaration_for(tmp_path, accepts=["smoothing_window"])
+    body = DELIVERED.format(declaration=named).replace(
+        "sample_rate_hz = 1000", "sample_rate_hz = 1000\nsmoothing_windwo = 3"
+    )
+    recipe = Recipe.load(write(tmp_path, body))
+    problems = [p.message for p in recipe.check(registry)]
+    assert any("smoothing_windwo" in m and "neither as needed nor as accepted" in m for m in problems), problems
+
+
+def test_an_accepted_option_the_recipe_leaves_unset_is_not_refused(tmp_path, registry):
+    """What separates the two lists: a needed name a recipe omits is refused and an accepted one is not."""
+    named = declaration_for(tmp_path, accepts=["smoothing_window"])
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
+    assert not [p for p in recipe.check(registry) if p.level == "error"]
+
+
+def test_a_document_written_before_accepts_accepts_nothing(tmp_path, registry):
+    """R119 §5's break, stated: such a document names no option, so a recipe setting one is refused."""
+    import json
+
+    named = declaration_for(tmp_path)
+    assert "accepts" not in json.loads((tmp_path / named).read_text())
+    body = DELIVERED.format(declaration=named).replace(
+        "sample_rate_hz = 1000", "sample_rate_hz = 1000\nsmoothing_window = 3"
+    )
+    recipe = Recipe.load(write(tmp_path, body))
+    assert any("neither as needed nor as accepted" in p.message for p in recipe.check(registry))
+
+
 def test_a_delivery_with_no_command_is_refused(tmp_path, registry):
     body = DELIVERED.format(declaration=declaration_for(tmp_path)).replace(
         'command = ["thermistor-adapter", "--verbose"]\n', ""
