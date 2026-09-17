@@ -5,11 +5,11 @@ settled item lives in the revision it produced and in git history, not here.
 
 ## State of the world
 
-Last checked 2026-09-09, by `python verify.py` — which is the way to check it, rather than by
-reading this block. Everything below is what that command reports.
+The generated state below is checked by `uv run --project escapewheel-writer python verify.py` —
+which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R119 accepted. R42 and R73 withdrawn. No draft is open.
+R1–R41, R43–R72 and R74–R119 accepted. R42 and R73 withdrawn. No proposal or draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -605,8 +605,8 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
   and chosen Parquet2.jl, but R3 §7.3 tested list columns and never an encoding. Of three ways out —
   name DuckDB.jl, drop delta at 1.24x on `core.spike_events.t_tick` and a rebuild of every packet, or
   add delta decoding to a package this project does not own — the first was chosen, since no packet
-  changes. The root `CLAUDE.md` now names DuckDB.jl; Part 02 §5.2 and Part 07 §2.2 name no reader and
-  stay true. `conformance/parquet-probe/readers.py` and `readers.jl` reproduce the reads, and what the
+  changes. `conformance/parquet-probe/readers.py` and `readers.jl` record and reproduce the
+  DuckDB.jl result; Part 02 §5.2 and Part 07 §2.2 name no reader and stay true. What the
   choice leaves open about `list` is a smaller item under §8.
 
 ---

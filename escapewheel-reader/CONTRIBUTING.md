@@ -1,6 +1,6 @@
 # Contributing to escapewheel-reader
 
-This is the reference reader for the **Escapewheel POC v0.1** format: it opens a packet, resolves
+This is the reference reader for the **Escapewheel POC v0.2** format: it opens a packet, resolves
 resources through the manifest, and gives tabular access. `README.md` covers installing and
 using it; this covers changing it.
 
@@ -14,22 +14,17 @@ Two rules carry most of the weight. Read them before adding anything:
 
 ## Where the rules come from
 
-The format is defined by a frozen specification plus a numbered series of revisions, both in the
-parent monorepo:
+Use the monorepo's [authority model](../README.md#authority). Reader behavior comes from the
+current v0.2 parts, while `../registry/logical_schemas.json` supplies the exact generated table,
+column, and validation declarations incorporated by Part 02.
 
-| | |
-|---|---|
-| `../nwb_lake_poc_docs/` | the specification. **Frozen** — never edit it, including to fix an error. |
-| `../revisions/` | `R<N>-kebab-summary.md`, one per change. Where an **accepted** revision and the spec disagree, the revision wins. |
-| `../registry/` | `logical_schemas.json`, generated. Tables, columns and validation rules as data. |
-
-**A defect you find while implementing goes into a revision, never into the specification and
-never into a workaround here.** If a rule is wrong, or two documents disagree, write the revision
-and cite it. Several revisions exist only because an implementation attempt exposed something —
+**A defect found while implementing starts as a proposal or revision draft, never as a silent
+workaround here.** The current v0.2 text continues to govern until the change is accepted and
+incorporated. Several revisions exist only because an implementation attempt exposed something —
 that is the process working, not a detour.
 
-Cite the revision in the code. `R38 §2.2`, not "the observation window rule". A reader who wants
-to know *why* a line exists should be one grep away from the argument for it.
+Cite the current specification section for a behavioral rule. Add an accepted-revision citation
+where the code also needs to preserve why the rule exists.
 
 ## What belongs in the reader
 
@@ -95,10 +90,9 @@ guard can afford to be strict.
 
 ## A note on Part 07
 
-Part 07's API sketch predates most of the revisions. Where it disagrees with an accepted revision
-the revision wins, and `CLAUDE.md`'s *Deviations from 07's API* records each case — a criterion
-naming a column R3 removed is superseded, not unmet. Check there before implementing something
-Part 07 describes.
+Part 07 is informative and may lag the normative parts. Implement the current normative v0.2 parts
+and registry declarations. If its API sketch contradicts them, treat that as a documentation defect
+to repair through the revision process, not as a package-local precedence rule.
 
 ## Both paths, or neither
 
@@ -119,8 +113,8 @@ view this package registers. A registry rule must be runnable by any implementat
 ## Testing
 
 Tests build their own minimal packet in `tmp_path` (`tests/conftest.py`) rather than depending on
-`../fixtures/`, whose output is gitignored and lives in a different repository. **Keep it that
-way — this package must be testable standalone.**
+`../fixtures/`, whose output is gitignored and belongs to the monorepo-level conformance corpus.
+**Keep it that way — this package must be testable standalone.**
 
 Size a fixture so the expected numbers can be read off by hand, and say in the docstring what
 makes them what they are. `test_alignment.py` uses two events and five spikes for exactly this

@@ -1,0 +1,45 @@
+# <Problem or decision to explore>
+
+| | |
+|---|---|
+| **Status** | **Proposal** |
+| **Opened** | YYYY-MM-DD |
+| **Affects** | <concepts and current specification locations, if known> |
+
+## 1. Problem
+
+<!-- Describe the current behavior and the concrete problem without prescribing a solution. -->
+
+## 2. Evidence
+
+<!-- Record reproducible observations, measurements, affected packets, or contradictory clauses.
+Say how each measurement was made and what population it covers. Distinguish facts from inference. -->
+
+## 3. Desired outcome and constraints
+
+<!-- State what a successful resolution must accomplish and what it must preserve. Do not use
+BCP 14 keywords to create requirements at this stage. -->
+
+## 4. Options and tradeoffs
+
+<!-- Compare plausible approaches, including keeping the current design. Name costs, compatibility
+effects, and which abstraction layer each option would change. A tentative preference is allowed. -->
+
+## 5. Impact sketch
+
+<!-- Identify likely effects on the semantic standard, logical resources, physical profiles,
+packet catalog, import/validation process, reference APIs, registries, extensions, adapters,
+existing packets, conformance fixtures, and documentation. Mark unknowns explicitly. -->
+
+## 6. Open questions
+
+<!-- List only questions that must be answered before a revision draft can state one coherent
+decision. Remove this section if no questions remain. -->
+
+## 7. Promotion criteria
+
+- [ ] The problem is demonstrated against the current generated v0.2 specification.
+- [ ] The affected abstraction layer and likely specification locations are identified.
+- [ ] Material alternatives and compatibility costs have been considered.
+- [ ] The intended direction is clear enough to express as testable normative clauses.
+- [ ] The user has agreed that the work should advance to a revision draft.

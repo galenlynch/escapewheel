@@ -147,7 +147,7 @@ def structural(
         for a, b in zip(r["columns"], r["resource_columns"])
         if role.get((n, a)) == "identifier" and identity.get((n, a)) != identity.get((r["resource"], b))])
     # A convention of this registry rather than a conformance requirement, so no revision mandates
-    # it and Part 02 states no column order at all (DEVELOPING.md §4). `build.py` emits it for core; an
+    # it and Part 02 states no column order at all (CONTRIBUTING.md §4). `build.py` emits it for core; an
     # extension is a registry document in the same format (Part 09 §2) and nothing regenerates one,
     # which is the case this check exists for.
     c_("a table carrying session_id leads with it",

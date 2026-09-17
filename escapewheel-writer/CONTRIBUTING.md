@@ -11,18 +11,14 @@ of what follows exists because one of those disagreements was silent once.
 
 ## Where the rules come from
 
-The format is a frozen specification plus a numbered series of revisions, in the parent monorepo:
+Use the monorepo's [authority model](../README.md#authority). Packet construction uses the current
+v0.2 parts and the generated declarations in `../registry/logical_schemas.json`.
+`../inventory/` records measured defects in real sources; every compensation cites one.
 
-| | |
-|---|---|
-| `../nwb_lake_poc_docs/` | the specification. **Frozen** — never edit it, including to fix an error. |
-| `../revisions/` | `R<N>-kebab-summary.md`. Where an **accepted** revision and the spec disagree, the revision wins. |
-| `../registry/` | `logical_schemas.json`, generated. Tables, columns and rules as data. |
-| `../inventory/` | measured defects in real sources. Every compensation cites one. |
-
-**A defect found while implementing goes into a revision, never into the specification and never
-into a silent workaround here.** Cite the revision in the code — `R38 §2.2`, not "the observation
-window rule" — so a reader is one grep from the argument.
+**A defect found while implementing starts as a proposal or revision draft, never as a silent
+workaround here.** The current v0.2 text continues to govern until the change is accepted and
+incorporated. Cite the current specification section for behavior; add an accepted-revision
+citation where the code also needs to preserve why the rule exists.
 
 ## Ownership is declared before a byte is read
 
@@ -80,6 +76,12 @@ changing an encoding, a row-group size or the spill format — each has already 
 reverted on evidence.
 
 ## Adding a source adapter
+
+A row-delivery adapter returns records and leaves packet layout and I/O to the build. A
+packet-owned dense array is the explicit exception: the build supplies a source-specific staging
+`array_location`, the adapter writes the Zarr array there, and it returns the corresponding asset
+record. A referenced array is not copied; the adapter returns its resource declaration. Keep that
+exception narrow so an adapter never chooses final packet paths or commits resources.
 
 1. **Declare what it owns** in the recipe, and `contributes` only where a resource genuinely has
    more than one supplier. `Recipe.check` is your first test and it needs no data.

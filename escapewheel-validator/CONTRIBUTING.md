@@ -3,8 +3,18 @@
 This package checks a packet against the registry it embeds. `README.md` covers running it; this
 covers changing it.
 
+## Where the rules come from
+
+Use the monorepo's [authority model](../README.md#authority). The registry embedded in a packet
+governs that packet's declared tables and rules; the current reference registry in `../registry/`
+is generated source data for new packets.
+
+`src/escapewheel_validator/schemas/registry.schema.json` is vendored by `../registry/build.py`.
+Change the hand-written schema in `../registry/`, run the generator, and commit both; never edit the
+vendored copy directly.
+
 **Read the next section before writing any code here.** The most common contribution to this
-package belongs in a different repository, and the design is what makes that true.
+package belongs in the registry, and the design is what makes that true.
 
 ---
 

@@ -14,10 +14,10 @@ Three forms are resolved:
     §3.1            against the citing document itself
 
 What fails the build is a revision-to-revision citation that does not resolve, anywhere, and a
-part citation that does not resolve in a **draft**. A draft is what gets accepted next, so a broken
-part citation there becomes a broken clause in the spec; an accepted revision is history, and the
-early ones cite the frozen v0.1 numbering, which exists as headings in neither compiled spec.
-Those are counted and shown, not failed.
+part citation that does not resolve in an active **proposal or draft**. Those are the live inputs to
+the next specification change, so a broken citation there can become a broken clause in the spec;
+an accepted revision is history, and the early ones cite the frozen v0.1 numbering, which exists as
+headings in neither compiled spec. Those are counted and shown, not failed.
 
 An unprefixed `§N` that matches no local heading is reported and does not fail: it is usually a
 reference whose antecedent is the previous clause ("R86 ... its §1.1"), which reads correctly and
@@ -95,8 +95,6 @@ NOT_A_PART: tuple[tuple[str, str, str], ...] = (
     ("R113", "becomes", "the possessive form the sweep had to rewrite by hand"),
     ("R113", "name a part and a stage rather than a section",
      "a shape that takes more than inserting the word"),
-    ("CLAUDE.md", "a backtick marks a literal a",
-     "the house rule, quoting the spelling it forbids"),
 )
 
 
@@ -244,18 +242,18 @@ def main() -> int:
                     print(f"  order   {target.name}: §{after} follows §{before}")
 
     for path in paths + code:
-        # A draft is what gets accepted next and a part is the statement of record, so a broken
-        # part citation in either is an error rather than history. The 428 citations the parts
-        # carry were read for numbering alone until this included them, and one named a section
-        # of R55 that revision has never had.
-        draft = path.parent.name == "drafts" or path.suffix == ".py" or path.parent == PARTS
+        # Proposals and drafts feed the next change and a part is the statement of record, so a
+        # broken part citation in any of them is an error rather than history. The 428 citations
+        # the parts carry were read for numbering alone until this included them, and one named a
+        # section of R55 that revision has never had.
+        live = path.parent.name in {"proposals", "drafts"} or path.suffix == ".py" or path.parent == PARTS
         errors, parts, loose = check(path)
         # Part 00 §10.4 binds a part and a revision; a source file is read only for resolution.
         if path.suffix == ".md":
             spelled, fired = numbered(path, path.read_text())
             errors += spelled
             excused |= fired
-        if draft:
+        if live:
             errors += parts
         else:
             historical += len(parts)
@@ -264,7 +262,7 @@ def main() -> int:
         for line in errors:
             print(f"  BROKEN  {shown}: {line}")
         if not args.quiet:
-            for line in parts if not draft else []:
+            for line in parts if not live else []:
                 print(f"  v0.1    {shown}: {line}")
             for line in loose:
                 print(f"  loose   {shown}: {line}")

@@ -1,6 +1,6 @@
 """Fill the counts in this repository's documents from the things they count.
 
-Every number in `CLAUDE.md`, `STATUS.md` and `TODO.md` was hand-maintained, and every one of them
+Every number in the former root instruction file, `STATUS.md` and `TODO.md` was hand-maintained, and every one of them
 went stale: 35 tables against 34, 292 columns against 315, 282 checks against 299, 24 corpus
 packets against 26, "R43-R53 accepted" against R43-R70. They were corrected three times in one
 day and drifted again within the same day, which is the signature of a number that should not be
@@ -134,8 +134,9 @@ def facts() -> dict[str, str]:
         number = int(re.match(r"R(\d+)", path.name).group(1))
         head = path.read_text()[:400]
         (accepted if "**Accepted**" in head else withdrawn if "withdrawn" in head.lower() else proposed).add(number)
-    # A draft carries no number until it is accepted, so the numbered space reads in the order
-    # revisions were applied rather than written. `revisions/drafts/README.md` holds the order.
+    # Proposals and drafts carry no number; the numbered space reads in application order.
+    # `revisions/drafts/README.md` holds the order of drafts awaiting acceptance.
+    proposals = [p for p in (ROOT / "revisions/proposals").glob("*.md") if p.name != "README.md"]
     drafts = [p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"]
 
     extensions = sorted(p.stem for p in (ROOT / "registry/extensions").glob("*.json"))
@@ -149,10 +150,10 @@ def facts() -> dict[str, str]:
         "revisions": (f"{_revision_span(accepted)} accepted. "
                       + (f"{_revision_span(withdrawn)} withdrawn. " if withdrawn else "")
                       + (f"{_revision_span(proposed)} proposed and not binding. " if proposed else "")
-                      + (f"{len(drafts)} draft{'s' if len(drafts) != 1 else ''} "
-                         f"{'are' if len(drafts) != 1 else 'is'} open in revisions/drafts/. "
-                         "A draft is not binding and takes no number until it is accepted." if drafts
-                         else "No draft is open.")),
+                      + (f"{len(proposals)} proposal{'s' if len(proposals) != 1 else ''} and "
+                         f"{len(drafts)} draft{'s' if len(drafts) != 1 else ''} are open. "
+                         "Neither is binding; a draft takes no number until it is accepted."
+                         if proposals or drafts else "No proposal or draft is open.")),
         "tier1": (f"{not_null} not-null, {references} foreign-key, {vocabulary} closed-vocabulary "
                   f"and {2 * discriminators} discriminator checks, plus one uniqueness check per "
                   f"table whose sort does not begin with its primary key"),

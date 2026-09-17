@@ -79,7 +79,7 @@ SUITES = ("escapewheel-reader", "escapewheel-validator", "escapewheel-writer", "
 #: Directories whose tracked content must be unchanged once the generators have run. Only the
 #: ones holding generated output; an unrelated edit elsewhere is not this tool's business.
 GENERATED = ("registry", "prototype", "fixtures", "escapewheel_poc_docs_v0.2",
-             "CLAUDE.md", "STATUS.md", "TODO.md", "DEVELOPING.md")
+             "STATUS.md", "TODO.md", "CONTRIBUTING.md")
 
 
 def run(cwd: Path, argv: list[str]) -> tuple[bool, str]:

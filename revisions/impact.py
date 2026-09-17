@@ -32,9 +32,9 @@ HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
 CITATION = re.compile(r"(?:`(\d\d)`|Part (\d\d))\s+§(\d+(?:\.\d+)*)")
 
 #: Not searched. Everything else tracked is, because a citation is load-bearing wherever it is
-#: written: a test asserting `03` §5.5's rule and a CLAUDE.md explaining it both go stale when
+#: written: a test asserting `03` §5.5's rule and a contribution guide explaining it both go stale when
 #: that section is rewritten. Listing directories instead left **234 citations across 38 files**
-#: unreachable -- every CLAUDE.md, every root document and every test -- so the one tool that
+#: unreachable -- every instruction file, every root document and every test -- so the one tool that
 #: finds what a change invalidates could not name the documents a sweep later found stale.
 SKIPPED = ("nwb_lake_poc_docs/",)
 

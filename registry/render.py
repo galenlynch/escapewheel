@@ -5,8 +5,8 @@ revisions that amended it, or by reading generated JSON. Neither is a document. 
 generated from `logical_schemas.json` at build time, so it states the registry's content and
 cannot drift from it.
 
-It is not a specification. `nwb_lake_poc_docs/` is frozen and the revisions bind where they
-disagree with it; this says what the two together produced.
+It is not a standalone specification. The repository authority model identifies the sources that
+bind; this rendering exposes the generated registry content for inspection.
 """
 
 import json
@@ -109,9 +109,8 @@ def render(registry: dict[str, Any]) -> str:
         "**Generated** by `render.py` from `logical_schemas.json`. Do not edit; run",
         "`python registry/build.py` to regenerate.",
         "",
-        "This is not a specification. `nwb_lake_poc_docs/` is frozen and the revisions bind",
-        "where they disagree with it — this states what the two together produced, which is",
-        "otherwise answerable only by reading a frozen document and then every amendment to it.",
+        "This generated rendering is not a standalone specification. See the repository",
+        "[authority model](../README.md#authority) for the sources that bind.",
         "",
         "```text",
         f"{len(tables)} tables, {columns} columns, {references} references, {rules} Tier 2 rules",

@@ -1998,7 +1998,7 @@ def build() -> dict:
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column
     # by name and no clause of Part 02 or Part 03 states an order, so no revision mandates this and the
-    # specification says nothing about it (DEVELOPING.md §4). Part 02 §7.1 settled that the column
+    # specification says nothing about it (CONTRIBUTING.md §4). Part 02 §7.1 settled that the column
     # exists and left where it goes unsaid, so it went two ways -- 24 tables led with it and 12
     # placed it after the identifier they own.
     #
