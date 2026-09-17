@@ -98,8 +98,10 @@ def _mapping(loaded: Any, source: str) -> dict[str, Compensation]:
         if not isinstance(entry, Compensation):
             raise TypeError(f"{source} registered {identifier!r} as {type(entry).__name__}, not a Compensation")
         if not (entry.defect and entry.action and entry.evidence):
-            raise ValueError(f"{source} registered {identifier!r} with no {'defect' if not entry.defect else ''}"
-                             f"{'action' if not entry.action else ''}{'evidence' if not entry.evidence else ''}")
+            raise ValueError(
+                f"{source} registered {identifier!r} with no {'defect' if not entry.defect else ''}"
+                f"{'action' if not entry.action else ''}{'evidence' if not entry.evidence else ''}"
+            )
     return dict(loaded)
 
 

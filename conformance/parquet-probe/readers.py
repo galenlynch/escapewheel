@@ -26,11 +26,16 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
-STRINGS = {"electrodes": ["electrode_name", "local_electrode_label", "local_channel_label"],
-           "units": ["unit_name", "local_unit_label"]}
+STRINGS = {
+    "electrodes": ["electrode_name", "local_electrode_label", "local_channel_label"],
+    "units": ["unit_name", "local_unit_label"],
+}
 
-BY_NAME = {"delta": "DELTA_BINARY_PACKED", "delta_length": "DELTA_LENGTH_BYTE_ARRAY",
-           "delta_bytes": "DELTA_BYTE_ARRAY"}
+BY_NAME = {
+    "delta": "DELTA_BINARY_PACKED",
+    "delta_length": "DELTA_LENGTH_BYTE_ARRAY",
+    "delta_bytes": "DELTA_BYTE_ARRAY",
+}
 
 
 def write(table: pa.Table, path: Path, how: str) -> None:
@@ -68,7 +73,9 @@ def _fastparquet(path: Path) -> dict[str, list[Any]]:
 READERS: dict[str, Callable[[Path], dict[str, list[Any]] | None]] = {
     f"pyarrow {pa.__version__}": lambda p: pq.read_table(p).to_pydict(),
     "pyarrow read_dictionary": _coded,
-    f"duckdb {duckdb.__version__}": lambda p: duckdb.sql(f"select * from read_parquet('{p}')").to_arrow_table().to_pydict(),
+    f"duckdb {duckdb.__version__}": lambda p: (
+        duckdb.sql(f"select * from read_parquet('{p}')").to_arrow_table().to_pydict()
+    ),
     f"polars {pl.__version__}": lambda p: pl.read_parquet(p).to_arrow().to_pydict(),
     f"fastparquet {version('fastparquet')}": _fastparquet,
 }
@@ -90,9 +97,20 @@ def decoding(paths: list[Path]) -> None:
 
 def scale(packet: Path, out: Path, rows: int = 1_000_000) -> None:
     """Size and read time of a million unique ascending names, as an assigned `*_name` column holds."""
-    names = pq.read_table(packet / "tables/core/units.parquet", columns=["unit_name"]).column(0).combine_chunks()
-    copies = [pc.binary_join_element_wise(names, pa.scalar(f"{i:04d}"), "|") for i in range(rows // len(names) + 1)]
-    table = pa.table({"unit_name": pa.concat_arrays(copies)}).slice(0, rows).sort_by("unit_name")
+    names = (
+        pq.read_table(packet / "tables/core/units.parquet", columns=["unit_name"])
+        .column(0)
+        .combine_chunks()
+    )
+    copies = [
+        pc.binary_join_element_wise(names, pa.scalar(f"{i:04d}"), "|")
+        for i in range(rows // len(names) + 1)
+    ]
+    table = (
+        pa.table({"unit_name": pa.concat_arrays(copies)})
+        .slice(0, rows)
+        .sort_by("unit_name")
+    )
     probe = table.column(0)[rows // 8].as_py()
     con = duckdb.connect()
 
@@ -104,17 +122,28 @@ def scale(packet: Path, out: Path, rows: int = 1_000_000) -> None:
             times.append(time.perf_counter() - start)
         return min(times) * 1000
 
-    print(f"\n{'encoding':14s} {'bytes':>10s} {'pyarrow':>9s} {'polars':>9s} {'duckdb =':>9s}")
+    print(
+        f"\n{'encoding':14s} {'bytes':>10s} {'pyarrow':>9s} {'polars':>9s} {'duckdb =':>9s}"
+    )
     for how in ("dict", "plain", "delta_length", "delta_bytes"):
         path = out / f"scale-{how}.parquet"
-        options: dict[str, Any] = {"compression": "zstd", "use_dictionary": how == "dict"}
+        options: dict[str, Any] = {
+            "compression": "zstd",
+            "use_dictionary": how == "dict",
+        }
         if how in BY_NAME:
             options["column_encoding"] = {"unit_name": BY_NAME[how]}
         pq.write_table(table, path, row_group_size=rows, **options)
-        chunk = pq.ParquetFile(path).metadata.row_group(0).column(0).total_compressed_size
-        query = f"select count(*) from read_parquet('{path}') where unit_name = '{probe}'"
-        print(f"{how:14s} {chunk:10,d} {best(lambda: pq.read_table(path)):7.1f}ms "
-              f"{best(lambda: pl.read_parquet(path)):7.1f}ms {best(lambda: con.sql(query).fetchone()):7.1f}ms")
+        chunk = (
+            pq.ParquetFile(path).metadata.row_group(0).column(0).total_compressed_size
+        )
+        query = (
+            f"select count(*) from read_parquet('{path}') where unit_name = '{probe}'"
+        )
+        print(
+            f"{how:14s} {chunk:10,d} {best(lambda: pq.read_table(path)):7.1f}ms "
+            f"{best(lambda: pl.read_parquet(path)):7.1f}ms {best(lambda: con.sql(query).fetchone()):7.1f}ms"
+        )
         path.unlink()
 
 

@@ -40,55 +40,120 @@ TOOLS = ROOT / "escapewheel-writer"
 STAGES: list[tuple[str, Path, list[str]]] = [
     ("registry: generate", ROOT / "registry", [sys.executable, "build.py"]),
     ("root: the documents' counts are current", ROOT, [sys.executable, "facts.py"]),
-    ("revisions: open stages are structurally complete", ROOT,
-     [sys.executable, "revisions/stages.py"]),
-    ("revisions: process tooling tests", ROOT,
-     [sys.executable, "-m", "unittest", "revisions.test_evidence"]),
-    ("revisions: accepted evidence manifests resolve", ROOT,
-     [sys.executable, "revisions/evidence.py"]),
-    ("registry: structural checks", ROOT / "registry",
-     ["uv", "run", "--project", str(TOOLS), "python", "check.py"]),
-    ("citations: every one resolves, and no part number repeats", ROOT / "revisions",
-     [sys.executable, "check_citations.py", "--quiet"]),
+    (
+        "revisions: open stages are structurally complete",
+        ROOT,
+        [sys.executable, "revisions/stages.py"],
+    ),
+    (
+        "revisions: process tooling tests",
+        ROOT,
+        [sys.executable, "-m", "unittest", "revisions.test_evidence"],
+    ),
+    (
+        "revisions: accepted evidence manifests resolve",
+        ROOT,
+        [sys.executable, "revisions/evidence.py"],
+    ),
+    (
+        "registry: structural checks",
+        ROOT / "registry",
+        ["uv", "run", "--project", str(TOOLS), "python", "check.py"],
+    ),
+    (
+        "citations: every one resolves, and no part number repeats",
+        ROOT / "revisions",
+        [sys.executable, "check_citations.py", "--quiet"],
+    ),
     # The other half of Part 00 §10.1: a citation of a clause that landed in a part resolves
     # perfectly while still sending a reader to the change record, so nothing else can see it.
-    ("citations: a requirement names its part", ROOT / "revisions",
-     [sys.executable, "repoint.py", "--quiet"]),
-    ("citations: every exemption is still needed", ROOT / "revisions",
-     [sys.executable, "repoint.py", "--exempt"]),
+    (
+        "citations: a requirement names its part",
+        ROOT / "revisions",
+        [sys.executable, "repoint.py", "--quiet"],
+    ),
+    (
+        "citations: every exemption is still needed",
+        ROOT / "revisions",
+        [sys.executable, "repoint.py", "--exempt"],
+    ),
     # A ratchet for undisposed clauses, exact JSON Pointers for registry dispositions, and an
     # exact allowlist for historical prose targets whose current section lacks provenance.
-    ("spec: every revision clause has a disposition", ROOT / "escapewheel_poc_docs_v0.2",
-     [sys.executable, "ledger.py", "--summary"]),
+    (
+        "spec: every revision clause has a disposition",
+        ROOT / "escapewheel_poc_docs_v0.2",
+        [sys.executable, "ledger.py", "--summary"],
+    ),
     # The other half of what a citation needs. `check_citations.py` resolves a number and this
     # records what the number is about, so a section that keeps one and changes the other cannot
     # leave its citers resolving perfectly to prose that no longer says what they cited.
-    ("spec: every changed heading has been read", ROOT / "escapewheel_poc_docs_v0.2",
-     [sys.executable, "headings.py", "--check"]),
+    (
+        "spec: every changed heading has been read",
+        ROOT / "escapewheel_poc_docs_v0.2",
+        [sys.executable, "headings.py", "--check"],
+    ),
     # Before the rendering, since a part's column tables come from the registry: a stale one
     # would otherwise be concatenated into the single file and look authoritative.
-    ("spec: the column tables come from the registry", ROOT / "escapewheel_poc_docs_v0.2",
-     [sys.executable, "columns.py", "--check"]),
-    ("spec: the single-file rendering is current", ROOT / "escapewheel_poc_docs_v0.2",
-     [sys.executable, "combine.py", "--check"]),
-    ("prototype: write packets", ROOT / "prototype/registry-codegen",
-     ["uv", "run", "--project", str(TOOLS), "python", "fixture.py"]),
-    ("prototype: conforming packet is clean", ROOT / "prototype/registry-codegen",
-     ["uv", "run", "--project", str(TOOLS), "python", "validate.py", "packets/valid"]),
-    ("corpus: write every packet", ROOT / "fixtures",
-     ["uv", "run", "--project", str(TOOLS), "python", "build.py"]),
-    ("corpus: every packet behaves as specified", ROOT / "fixtures",
-     ["uv", "run", "--project", str(TOOLS), "python", "corpus.py"]),
+    (
+        "spec: the column tables come from the registry",
+        ROOT / "escapewheel_poc_docs_v0.2",
+        [sys.executable, "columns.py", "--check"],
+    ),
+    (
+        "spec: the single-file rendering is current",
+        ROOT / "escapewheel_poc_docs_v0.2",
+        [sys.executable, "combine.py", "--check"],
+    ),
+    (
+        "prototype: write packets",
+        ROOT / "prototype/registry-codegen",
+        ["uv", "run", "--project", str(TOOLS), "python", "fixture.py"],
+    ),
+    (
+        "prototype: conforming packet is clean",
+        ROOT / "prototype/registry-codegen",
+        [
+            "uv",
+            "run",
+            "--project",
+            str(TOOLS),
+            "python",
+            "validate.py",
+            "packets/valid",
+        ],
+    ),
+    (
+        "corpus: write every packet",
+        ROOT / "fixtures",
+        ["uv", "run", "--project", str(TOOLS), "python", "build.py"],
+    ),
+    (
+        "corpus: every packet behaves as specified",
+        ROOT / "fixtures",
+        ["uv", "run", "--project", str(TOOLS), "python", "corpus.py"],
+    ),
 ]
 
 #: Run after the generators, never before: a suite passing against stale generated input says
 #: nothing. Skipped by --quick, since they are most of the runtime.
-SUITES = ("escapewheel-reader", "escapewheel-validator", "escapewheel-writer", "escapewheel-aind")
+SUITES = (
+    "escapewheel-reader",
+    "escapewheel-validator",
+    "escapewheel-writer",
+    "escapewheel-aind",
+)
 
 #: Directories whose tracked content must be unchanged once the generators have run. Only the
 #: ones holding generated output; an unrelated edit elsewhere is not this tool's business.
-GENERATED = ("registry", "prototype", "fixtures", "escapewheel_poc_docs_v0.2",
-             "STATUS.md", "TODO.md", "CONTRIBUTING.md")
+GENERATED = (
+    "registry",
+    "prototype",
+    "fixtures",
+    "escapewheel_poc_docs_v0.2",
+    "STATUS.md",
+    "TODO.md",
+    "CONTRIBUTING.md",
+)
 
 
 def run(cwd: Path, argv: list[str], timeout: float | None) -> tuple[bool, str]:
@@ -102,7 +167,13 @@ def run(cwd: Path, argv: list[str], timeout: float | None) -> tuple[bool, str]:
     env = {k: v for k, v in os.environ.items() if k != "TMPDIR"}
     try:
         done = subprocess.run(
-            argv, cwd=cwd, capture_output=True, text=True, check=False, env=env, timeout=timeout
+            argv,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired as exc:
         output = exc.stdout or exc.stderr or ""
@@ -125,11 +196,15 @@ def candidate_state(where: str) -> dict[str, tuple[int, str]]:
     """
     changed = subprocess.run(
         ["git", "diff", "--no-renames", "--name-only", "-z", "HEAD", "--", where],
-        cwd=ROOT, capture_output=True, check=True
+        cwd=ROOT,
+        capture_output=True,
+        check=True,
     ).stdout.split(b"\0")
     untracked = subprocess.run(
         ["git", "ls-files", "--others", "--exclude-standard", "-z", "--", where],
-        cwd=ROOT, capture_output=True, check=True
+        cwd=ROOT,
+        capture_output=True,
+        check=True,
     ).stdout.split(b"\0")
     paths = sorted({name.decode() for name in changed + untracked if name})
     state = {}
@@ -153,7 +228,11 @@ def state_changes(
     before: dict[str, tuple[int, str]], after: dict[str, tuple[int, str]]
 ) -> list[str]:
     """Return paths whose candidate state changed between two snapshots."""
-    return sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
+    return sorted(
+        name
+        for name in before.keys() | after.keys()
+        if before.get(name) != after.get(name)
+    )
 
 
 def main() -> int:
@@ -161,7 +240,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--quick", action="store_true", help="skip the test suites")
     parser.add_argument(
-        "--stage-timeout", type=float, default=300,
+        "--stage-timeout",
+        type=float,
+        default=300,
         help="maximum seconds for one stage; 0 disables the timeout (default: 300)",
     )
     args = parser.parse_args()
@@ -171,7 +252,9 @@ def main() -> int:
 
     stages = list(STAGES)
     if not args.quick:
-        stages += [(f"{p}: tests", ROOT / p, ["uv", "run", "pytest", "-q"]) for p in SUITES]
+        stages += [
+            (f"{p}: tests", ROOT / p, ["uv", "run", "pytest", "-q"]) for p in SUITES
+        ]
 
     baseline = {where: candidate_state(where) for where in GENERATED}
     failed = []

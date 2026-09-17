@@ -120,7 +120,10 @@ def waveforms(tmp: Path) -> None:
     keyed = {("probeA", str(u)): {"unit_id": u} for u in range(fixture.UNITS)}
     numbered = {u: {"unit_id": u} for u in range(fixture.UNITS)}
     print("\nwaveform adapter, what a mapping does at the boundary:")
-    for name, value in (("units keyed by a pair", keyed), ("units keyed by an integer", numbered)):
+    for name, value in (
+        ("units keyed by a pair", keyed),
+        ("units keyed by an integer", numbered),
+    ):
         wrote = _dumps(value)
         back = list(json.loads(json.dumps(value))) if wrote == "yes" else []
         note = "; keys return as strings" if back and back != list(value) else ""

@@ -51,14 +51,24 @@ def sections(path: Path) -> list[tuple[int, str, str]]:
 
 def touched(ref: str | None) -> dict[str, set[str]]:
     """Which section of which part each changed line falls in."""
-    args = ["git", "diff", "--unified=0"] + ([ref] if ref else []) + ["--", "escapewheel_poc_docs_v0.2"]
-    diff = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, check=False).stdout
+    args = (
+        ["git", "diff", "--unified=0"]
+        + ([ref] if ref else [])
+        + ["--", "escapewheel_poc_docs_v0.2"]
+    )
+    diff = subprocess.run(
+        args, cwd=ROOT, capture_output=True, text=True, check=False
+    ).stdout
     changed: dict[str, set[str]] = defaultdict(set)
     part = None
     for line in diff.splitlines():
         if line.startswith("+++ b/"):
             name = Path(line[6:]).name
-            part = name if re.match(r"\d\d_", name) and "Implementation_Spec" not in name else None
+            part = (
+                name
+                if re.match(r"\d\d_", name) and "Implementation_Spec" not in name
+                else None
+            )
         elif line.startswith("@@") and part:
             if m := re.search(r"\+(\d+)(?:,(\d+))?", line):
                 start, count = int(m.group(1)), int(m.group(2) or 1)
@@ -79,7 +89,10 @@ def index() -> dict[tuple[str, str], tuple[str, ...]]:
     found: dict[tuple[str, str], list[str]] = defaultdict(list)
     listed = subprocess.run(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-        cwd=ROOT, capture_output=True, text=True, check=True
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.split()
     for name in listed:
         # The combined rendering is generated from the parts, so a citation inside it is one of
@@ -106,9 +119,14 @@ def citers(part: str, section: str) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("ref", nargs="?", help="Git revision or range to compare with the working tree")
     parser.add_argument(
-        "--section", action="append", default=[], metavar="PART:SECTION",
+        "ref", nargs="?", help="Git revision or range to compare with the working tree"
+    )
+    parser.add_argument(
+        "--section",
+        action="append",
+        default=[],
+        metavar="PART:SECTION",
         help="also report one explicit section, for example 02:7.1",
     )
     args = parser.parse_args()
@@ -126,20 +144,30 @@ def main() -> int:
             parser.error(f"--section names absent Part {part} §{section}")
         changed[part].add(section)
     if not changed:
-        print("no part changed" + (f" since {args.ref}" if args.ref else " in the working tree"))
+        print(
+            "no part changed"
+            + (f" since {args.ref}" if args.ref else " in the working tree")
+        )
         return 0
     total = 0
     for part in sorted(changed):
-        titles = {n: t for _, n, t in sections(PARTS / next(
-            p.name for p in PARTS.glob(f"{part}_*.md")))}
-        for section in sorted(changed[part], key=lambda s: [int(x) for x in s.split(".")]):
+        titles = {
+            n: t
+            for _, n, t in sections(
+                PARTS / next(p.name for p in PARTS.glob(f"{part}_*.md"))
+            )
+        }
+        for section in sorted(
+            changed[part], key=lambda s: [int(x) for x in s.split(".")]
+        ):
             who = citers(part, section)
             total += len(who)
             head = f"`{part}` §{section}  {titles.get(section, '')}"
             print(f"\n{head}\n{'-' * len(head)}")
-            print("  cited by nothing" if not who else
-                  "\n".join(f"  {w}" for w in who))
-    print(f"\n{sum(len(v) for v in changed.values())} section(s) changed, {total} citation(s) to read")
+            print("  cited by nothing" if not who else "\n".join(f"  {w}" for w in who))
+    print(
+        f"\n{sum(len(v) for v in changed.values())} section(s) changed, {total} citation(s) to read"
+    )
     return 0
 
 

@@ -51,7 +51,10 @@ def _sources(root: Path) -> tuple[Path, Path]:
     recording = raw / "Record Node 109" / "experiment1" / "recording1"
     for name, first in FIRST_SAMPLE.items():
         syncfixture.stream(
-            recording / "events", name, first_sample=first, aligned=True,
+            recording / "events",
+            name,
+            first_sample=first,
+            aligned=True,
             continuous=recording / "continuous",
         )
     (raw / "structure.json").write_text(json.dumps({"note": "fixture"}))
@@ -194,8 +197,7 @@ def test_the_writer_applies_its_own_encoding_rules(committed):
         if parquet.metadata.num_rows == 0:
             continue
         # The writer counted the table it wrote, or its first batch, which is this row group.
-        delta, plain = encodings(resource.resource_id, spec, parquet.schema_arrow,
-                                 sample=parquet.read_row_group(0))
+        delta, plain = encodings(resource.resource_id, spec, parquet.schema_arrow, sample=parquet.read_row_group(0))
         used = {}
         for group in range(parquet.metadata.num_row_groups):
             for i in range(parquet.metadata.num_columns):
@@ -203,11 +205,13 @@ def test_the_writer_applies_its_own_encoding_rules(committed):
                 used.setdefault(column.path_in_schema, set()).update(column.encodings)
         for name in delta:
             assert "DELTA_BINARY_PACKED" in used.get(name, set()), (
-                f"{resource.resource_id}.{name} took {used.get(name)} where the rule asks for delta")
+                f"{resource.resource_id}.{name} took {used.get(name)} where the rule asks for delta"
+            )
             asserted += 1
         for name in delta + plain:
             assert "RLE_DICTIONARY" not in used.get(name, set()), (
-                f"{resource.resource_id}.{name} is dictionary-encoded against the rule")
+                f"{resource.resource_id}.{name} is dictionary-encoded against the rule"
+            )
             asserted += 1
     assert asserted, "no column exercised a rule, so this asserted nothing"
 
@@ -216,13 +220,33 @@ def test_the_writer_applies_its_own_encoding_rules(committed):
 #: clock with a parent, and an observation window per clock for anything on them to inherit.
 TWO_CLOCKS = {
     "core.subjects": [{"subject_id": "m001", "species": "Mus musculus", "sex": "male"}],
-    "core.sessions": [{"session_id": "s001", "subject_id": "m001", "reference_clock_id": "harp",
-                       "session_start_time": "2026-08-27T00:00:00Z", "t_zero_tick": 0}],
+    "core.sessions": [
+        {
+            "session_id": "s001",
+            "subject_id": "m001",
+            "reference_clock_id": "harp",
+            "session_start_time": "2026-08-27T00:00:00Z",
+            "t_zero_tick": 0,
+        }
+    ],
     "core.clocks": [
-        {"clock_id": "harp", "session_id": "s001", "clock_name": "harp",
-         "tick_rate_num": 31250, "tick_rate_den": 1, "origin": "harp epoch"},
-        {"clock_id": "probe", "session_id": "s001", "clock_name": "probe", "parent_clock_id": "harp",
-         "tick_rate_num": 30000, "tick_rate_den": 1, "origin": "sample 0"},
+        {
+            "clock_id": "harp",
+            "session_id": "s001",
+            "clock_name": "harp",
+            "tick_rate_num": 31250,
+            "tick_rate_den": 1,
+            "origin": "harp epoch",
+        },
+        {
+            "clock_id": "probe",
+            "session_id": "s001",
+            "clock_name": "probe",
+            "parent_clock_id": "harp",
+            "tick_rate_num": 30000,
+            "tick_rate_den": 1,
+            "origin": "sample 0",
+        },
     ],
     "core.clock_observation_intervals": [
         {"session_id": "s001", "clock_id": "harp", "start_tick": 0, "stop_tick": 500_000},
@@ -232,8 +256,13 @@ TWO_CLOCKS = {
 
 #: Anchors in the declared sort order, which `add_batches` requires of its caller and `add` does not.
 ANCHORS = [
-    {"session_id": "s001", "clock_id": "probe", "anchor_index": i,
-     "t_tick": i * 1000, "parent_tick": i * 1000 * 31250 // 30000}
+    {
+        "session_id": "s001",
+        "clock_id": "probe",
+        "anchor_index": i,
+        "t_tick": i * 1000,
+        "parent_tick": i * 1000 * 31250 // 30000,
+    }
     for i in range(6)
 ]
 

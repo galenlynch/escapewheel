@@ -87,15 +87,27 @@ NUMBERED = re.compile(r"`(\d\d)`")
 #: `00` §10.4 replaced, each with why. Matched as a substring of the line, and checked to still
 #: match something, so an entry cannot outlive the text it excuses.
 NOT_A_PART: tuple[tuple[str, str, str], ...] = (
-    ("R113", "at 340**",
-     "the revision that chose the spelling, quoting the one it replaced"),
-    ("R113", "in two, both accepted on",
-     "the same, showing which of two revisions wrote which"),
-    ("R113", "one sentence, two backticked tokens",
-     "the exhibit: a registry field and a part under one markup"),
+    (
+        "R113",
+        "at 340**",
+        "the revision that chose the spelling, quoting the one it replaced",
+    ),
+    (
+        "R113",
+        "in two, both accepted on",
+        "the same, showing which of two revisions wrote which",
+    ),
+    (
+        "R113",
+        "one sentence, two backticked tokens",
+        "the exhibit: a registry field and a part under one markup",
+    ),
     ("R113", "becomes", "the possessive form the sweep had to rewrite by hand"),
-    ("R113", "name a part and a stage rather than a section",
-     "a shape that takes more than inserting the word"),
+    (
+        "R113",
+        "name a part and a stage rather than a section",
+        "a shape that takes more than inserting the word",
+    ),
 )
 
 
@@ -113,8 +125,12 @@ def numbering(text: str) -> tuple[list[str], list[tuple[str, str]]]:
     """
     found = HEADING.findall(text)
     keys = [tuple(int(part) for part in number.split(".")) for number in found]
-    repeated = sorted({n for n in found if found.count(n) > 1}, key=lambda n: keys[found.index(n)])
-    descending = [(found[i], found[i + 1]) for i in range(len(keys) - 1) if keys[i + 1] <= keys[i]]
+    repeated = sorted(
+        {n for n in found if found.count(n) > 1}, key=lambda n: keys[found.index(n)]
+    )
+    descending = [
+        (found[i], found[i + 1]) for i in range(len(keys) - 1) if keys[i + 1] <= keys[i]
+    ]
     return repeated, descending
 
 
@@ -137,14 +153,24 @@ def numbered(path: Path, text: str) -> tuple[list[str], set[str]]:
     for whether its citations resolve and never for how they are spelled.
     """
     found, used = [], set()
-    for number, line in ((m, text[:m.start()].count("\n") + 1) for m in NUMBERED.finditer(text)):
+    for number, line in (
+        (m, text[: m.start()].count("\n") + 1) for m in NUMBERED.finditer(text)
+    ):
         whole = text.splitlines()[line - 1]
-        excuse = next((reason for site, marker, reason in NOT_A_PART
-                       if path.name.startswith(site) and marker in whole), None)
+        excuse = next(
+            (
+                reason
+                for site, marker, reason in NOT_A_PART
+                if path.name.startswith(site) and marker in whole
+            ),
+            None,
+        )
         if excuse is not None:
             used.add(excuse)
             continue
-        found.append(f"`{number.group(1)}` on line {line} — a part is named as Part {number.group(1)}")
+        found.append(
+            f"`{number.group(1)}` on line {line} — a part is named as Part {number.group(1)}"
+        )
     return found, used
 
 
@@ -163,9 +189,13 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
         claimed.add(match.span())
         target = document(match.group(1))
         if target is None:
-            errors.append(f"R{match.group(1)} §{match.group(2)} — no such accepted revision")
+            errors.append(
+                f"R{match.group(1)} §{match.group(2)} — no such accepted revision"
+            )
         elif match.group(2) not in headings(target.read_text()):
-            errors.append(f"R{match.group(1)} §{match.group(2)} — {target.name} has no §{match.group(2)}")
+            errors.append(
+                f"R{match.group(1)} §{match.group(2)} — {target.name} has no §{match.group(2)}"
+            )
     for match in PART.finditer(text):
         claimed.add(match.span())
         name, section = match.group(1) or match.group(2), match.group(3)
@@ -180,7 +210,9 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
         if any(a <= match.start() < b for a, b in spans):
             continue
         if match.group(1) not in own:
-            loose.append(f"§{match.group(1)} — unprefixed, and this document has no such section")
+            loose.append(
+                f"§{match.group(1)} — unprefixed, and this document has no such section"
+            )
     return errors, parts, sorted(set(loose))
 
 
@@ -198,8 +230,13 @@ def elsewhere() -> list[Path]:
     section of Part 09 that part has never carried. Spelled in prose rather than as citations,
     since this file is one of the files it reads.
     """
-    listed = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard"], cwd=HERE.parent,
-                            capture_output=True, text=True, check=True).stdout.split()
+    listed = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+        cwd=HERE.parent,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
     found = []
     for name in listed:
         path = HERE.parent / name
@@ -208,7 +245,9 @@ def elsewhere() -> list[Path]:
         if path.suffix not in {".py", ".md"} or not path.is_file():
             continue
         # The revisions and the drafts are read in their own pass.
-        if name.startswith(("revisions/accepted/", "revisions/drafts/", "revisions/proposals/")):
+        if name.startswith(
+            ("revisions/accepted/", "revisions/drafts/", "revisions/proposals/")
+        ):
             continue
         found.append(path)
     return found
@@ -219,7 +258,9 @@ def main() -> int:
     ap.add_argument("--quiet", action="store_true", help="errors only")
     args = ap.parse_args()
 
-    paths = sorted(ACCEPTED.glob("R[0-9]*.md"), key=lambda p: int(NUMBER.match(p.name).group(1)))
+    paths = sorted(
+        ACCEPTED.glob("R[0-9]*.md"), key=lambda p: int(NUMBER.match(p.name).group(1))
+    )
     paths += sorted((HERE / "proposals").glob("*.md"))
     paths += sorted((HERE / "drafts").glob("*.md"))
     # An editor's lock file is a symlink to a target that never existed -- Emacs writes
@@ -248,7 +289,11 @@ def main() -> int:
         # broken part citation in any of them is an error rather than history. The 428 citations
         # the parts carry were read for numbering alone until this included them, and one named a
         # section of R55 that revision has never had.
-        live = path.parent.name in {"proposals", "drafts"} or path.suffix == ".py" or path.parent == PARTS
+        live = (
+            path.parent.name in {"proposals", "drafts"}
+            or path.suffix == ".py"
+            or path.parent == PARTS
+        )
         errors, parts, loose = check(path)
         # Part 00 §10.4 binds a part and a revision; a source file is read only for resolution.
         if path.suffix == ".md":
@@ -276,8 +321,10 @@ def main() -> int:
             broken += 1
 
     tail = f", {historical} citing the frozen v0.1 numbering" if historical else ""
-    print(f"{len(paths)} revision documents and {len(code)} other working-tree files, "
-          f"{broken} unresolved citation(s){tail}")
+    print(
+        f"{len(paths)} revision documents and {len(code)} other working-tree files, "
+        f"{broken} unresolved citation(s){tail}"
+    )
     return 1 if broken else 0
 
 

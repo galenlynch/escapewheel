@@ -32,11 +32,10 @@ def _resource(resource_id, uri, **extra):
 def _col(name, type_, presence, **extra):
     # R48 §2.1: every column declares a role. Inferred here from the same two conventions the
     # registry's own map rests on, because a test fixture's columns are all ordinary shapes.
-    role = ("coordinate" if name.endswith("_tick")
-            else "identifier" if name.endswith("_id")
-            else extra.pop("role", "data"))
-    entry = {"name": name, "type": type_, "presence": presence, "role": role,
-             "description": name, **extra}
+    role = (
+        "coordinate" if name.endswith("_tick") else "identifier" if name.endswith("_id") else extra.pop("role", "data")
+    )
+    entry = {"name": name, "type": type_, "presence": presence, "role": role, "description": name, **extra}
     if role == "identifier":
         # R53 §2.3: required exactly where the role is identifier. `assigned` unless the fixture
         # says otherwise, since a fixture invents its own ids rather than carrying anyone's.

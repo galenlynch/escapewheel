@@ -56,6 +56,7 @@ def _decodable(version: str) -> set[str]:
     """Give what this reader decodes for a declared Zarr version, or the shared row for none."""
     return set(DECODABLE.get(version, BASELINE_CODECS))
 
+
 #: Ask for ticks exactly as the file stores them. Spikes are counted on the probe that
 #: recorded them, so stored ticks from two probes are not comparable and neither is a stored
 #: tick against a behavioural event -- which is why reaching them takes saying so.
@@ -346,7 +347,8 @@ class Packet:
         if missing := sorted(set(resource.codecs) - available):
             named = f"{version} " if version else ""
             raise UnsupportedCodecError(
-                f"{resource_id} uses {named}codecs this reader does not support: {', '.join(missing)}")
+                f"{resource_id} uses {named}codecs this reader does not support: {', '.join(missing)}"
+            )
 
     def unopenable(self, supported: Iterable[str] | None = None) -> dict[str, tuple[str, ...]]:
         """Report which resources this reader cannot open, and why.
@@ -366,6 +368,7 @@ class Packet:
             Resource ID to the codecs it needs that are unsupported. Empty when the whole
             packet is readable.
         """
+
         def short(r: Resource) -> tuple[str, ...]:
             version = str(r.entry.get("physical_profile", ""))
             available = _decodable(version) if supported is None else set(supported)
@@ -684,22 +687,37 @@ class Packet:
         if event_type is not None:
             # R91 §3.1: one lookup in a table of streams, then a key filter on the events --
             # the shape R86 §2.4 measured as cheaper than carrying the type on every row.
-            streams = self.table(
-                "core.event_streams", columns=["event_stream_id"],
-                event_type=event_type, session_id=session_id,
-            ).column("event_stream_id").to_pylist()
+            streams = (
+                self.table(
+                    "core.event_streams",
+                    columns=["event_stream_id"],
+                    event_type=event_type,
+                    session_id=session_id,
+                )
+                .column("event_stream_id")
+                .to_pylist()
+            )
         found = self.table(
-            "core.events", session_id=session_id, t_tick=self._span(t_tick, clock),
+            "core.events",
+            session_id=session_id,
+            t_tick=self._span(t_tick, clock),
             **({"stream_id": streams} if streams is not None else {}),
         )
         # A tick has no meaning without its clock, and R91 §3.2 puts the clock on the stream, so
         # the accessor attaches it: `core.event_streams` is tens of rows against an event table's
         # thousands, and every caller of this needs it either to convert or to report.
-        clocks = dict(zip(*(self.table("core.event_streams", columns=["event_stream_id", "clock_id"])
-                            .column(c).to_pylist() for c in ("event_stream_id", "clock_id")),
-                          strict=True))
+        clocks = dict(
+            zip(
+                *(
+                    self.table("core.event_streams", columns=["event_stream_id", "clock_id"]).column(c).to_pylist()
+                    for c in ("event_stream_id", "clock_id")
+                ),
+                strict=True,
+            )
+        )
         found = found.append_column(
-            "clock_id", pa.array([clocks.get(s) for s in found.column("stream_id").to_pylist()]))
+            "clock_id", pa.array([clocks.get(s) for s in found.column("stream_id").to_pylist()])
+        )
         if clock != STORED:
             found = self._narrowed(self.on_clock(found, clock), t_tick)
         return self.seconds(found, session_id=session_id) if seconds else found
@@ -802,8 +820,7 @@ class Packet:
                 t_tick=self._span(t_tick, clock),
             )
             clocks = self._unit_clocks(["unit_id"], unit_id=unit_id, session_id=session_id)
-            found = found.append_column(
-                "clock_id", pa.array([clocks.get((unit_id,))] * found.num_rows))
+            found = found.append_column("clock_id", pa.array([clocks.get((unit_id,))] * found.num_rows))
             if clock != STORED:
                 found = self._narrowed(self.on_clock(found, clock), t_tick)
             if seconds:
@@ -839,8 +856,8 @@ class Packet:
         found = self.scan("core.spike_events").to_table(columns=["t_tick", *keys], filter=wanted)
         clocks = self._unit_clocks(keys, session_id=session_id)
         found = found.append_column(
-            "clock_id",
-            pa.array([clocks.get(tuple(r[k] for k in keys)) for r in found.select(keys).to_pylist()]))
+            "clock_id", pa.array([clocks.get(tuple(r[k] for k in keys)) for r in found.select(keys).to_pylist()])
+        )
         found = found.select(["t_tick", "clock_id"])
         if clock != STORED:
             found = self._narrowed(self.on_clock(found, clock), t_tick)

@@ -602,8 +602,7 @@ class SyncSource:
                     per_node.setdefault(stream.node, []).append(int(converted[0]))
                     stamps[stream.node] = started.started
             estimates = [
-                stamps[node] - timedelta(seconds=min(ticks) / HARP_TICK_RATE_HZ)
-                for node, ticks in per_node.items()
+                stamps[node] - timedelta(seconds=min(ticks) / HARP_TICK_RATE_HZ) for node, ticks in per_node.items()
             ]
             if not estimates:
                 return None
@@ -746,8 +745,13 @@ class SyncSource:
         """
         self.anchors()
         return [
-            {"clock_id": clock, "t_tick": event["t_tick"], "parent_tick": event["parent_tick"],
-             "shift_seconds": event["seconds"], "anchor_interval_span": event["anchor_intervals"]}
+            {
+                "clock_id": clock,
+                "t_tick": event["t_tick"],
+                "parent_tick": event["parent_tick"],
+                "shift_seconds": event["seconds"],
+                "anchor_interval_span": event["anchor_intervals"],
+            }
             for clock, events in sorted(self.discontinuities.items())
             for event in events
         ]

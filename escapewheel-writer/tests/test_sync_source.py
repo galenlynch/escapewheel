@@ -206,9 +206,7 @@ def test_the_reference_clock_is_harp_and_claims_no_epoch(source):
 
 
 def test_a_prefix_reaches_the_clock_and_the_anchors(tree):
-    source = SyncSource(
-        tree, session_id=SESSION, prefix="A_", clocks=prefixed("A_"), first_samples=FIRST_SAMPLES
-    )
+    source = SyncSource(tree, session_id=SESSION, prefix="A_", clocks=prefixed("A_"), first_samples=FIRST_SAMPLES)
     assert source.clock().clock_id == "A_harp"
     rows = source.anchors()
     assert all(r["clock_id"].startswith("A_") for r in rows)
@@ -349,10 +347,7 @@ def test_without_the_file_the_older_routes_still_apply(tree):
 def test_phase_steps_are_rows_of_their_own_table(source):
     """R99 §3.3: a step is a row, not a list inside a JSON string keyed by a clock name."""
     rows = source.phase_steps()
-    assert all(
-        set(r) == {"clock_id", "t_tick", "parent_tick", "shift_seconds", "anchor_interval_span"}
-        for r in rows
-    )
+    assert all(set(r) == {"clock_id", "t_tick", "parent_tick", "shift_seconds", "anchor_interval_span"} for r in rows)
     # The clock is named the way an anchor row names it, so R53 assigns both the same id.
     assert {r["clock_id"] for r in rows} <= set(anchors_of(source))
 

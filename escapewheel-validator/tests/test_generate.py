@@ -1,5 +1,3 @@
-
-
 def test_a_tree_digest_does_not_depend_on_enumeration_order(tmp_path):
     """Part 04 §5.4 sorts the member keys, which is what makes the digest reproducible.
 

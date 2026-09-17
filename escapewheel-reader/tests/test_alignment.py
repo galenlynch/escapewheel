@@ -69,11 +69,11 @@ def aligned_packet(tmp_path, packet_root):
             "clock_id": pa.array([CLOCK_BEHAVIOUR]),
         }
     )
-    manifest["resources"] = [r for r in manifest["resources"]
-                             if r["resource_id"] not in {"core.events", "core.event_streams"}]
+    manifest["resources"] = [
+        r for r in manifest["resources"] if r["resource_id"] not in {"core.events", "core.event_streams"}
+    ]
     manifest["resources"].append(_resource("core.events", write("core", "events", events)))
-    manifest["resources"].append(
-        _resource("core.event_streams", write("core", "event_streams", streams)))
+    manifest["resources"].append(_resource("core.event_streams", write("core", "event_streams", streams)))
     entry = _resource("analysis.spike_events", write("analysis", "spike_events", spikes))
     entry["layer"] = "analysis"
     manifest["resources"].append(entry)
@@ -108,8 +108,7 @@ def test_disjoint_windows_return_each_spike_once(aligned_packet):
 
 def test_the_asof_shortcut_returns_the_same_rows(aligned_packet):
     """The optimisation is invisible: the disjoint path must agree with the range join."""
-    con = aligned_packet.duckdb(
-        tables=("analysis.spike_events", "core.events", "core.event_streams"))
+    con = aligned_packet.duckdb(tables=("analysis.spike_events", "core.events", "core.event_streams"))
     half = 30
     reference = con.sql(
         "SELECT s.t_tick, e.t_tick FROM analysis_spike_events s "

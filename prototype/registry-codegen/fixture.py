@@ -3,6 +3,7 @@
 The broken packet is the generator's test: each defect must be caught by exactly the
 check that covers it, and nothing else must fail.
 """
+
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,43 +28,69 @@ I32 = pa.int32()
 
 
 def sessions():
-    return pa.table({"session_id": pa.array([1], I32), "subject_id": pa.array([1], I32),
-                     "session_start_time": pa.array([datetime(2026, 1, 5, 9, 30, tzinfo=UTC)], type=TS),
-                     "reference_clock_id": pa.array([1], I32)})
+    return pa.table(
+        {
+            "session_id": pa.array([1], I32),
+            "subject_id": pa.array([1], I32),
+            "session_start_time": pa.array(
+                [datetime(2026, 1, 5, 9, 30, tzinfo=UTC)], type=TS
+            ),
+            "reference_clock_id": pa.array([1], I32),
+        }
+    )
 
 
 def clocks():
     """Two clocks, so the nullable self-reference has both a null and a value to guard."""
-    return pa.table({"clock_id": pa.array([1, 2], I32), "session_id": pa.array([1, 1], I32),
-                     "name": ["Neuropixels AP sample clock", "behaviour counter"],
-                     "tick_rate_hz": [30000.0, 1000.0],
-                     "origin": ["sample 0 at acquisition start", "first behaviour tick"],
-                     "parent_clock_id": pa.array([None, 1], I32)})
+    return pa.table(
+        {
+            "clock_id": pa.array([1, 2], I32),
+            "session_id": pa.array([1, 1], I32),
+            "name": ["Neuropixels AP sample clock", "behaviour counter"],
+            "tick_rate_hz": [30000.0, 1000.0],
+            "origin": ["sample 0 at acquisition start", "first behaviour tick"],
+            "parent_clock_id": pa.array([None, 1], I32),
+        }
+    )
 
 
 def valid(out: Path):
     write(out, "core_sessions", sessions())
     write(out, "core_clocks", clocks())
-    write(out, "core_intervals", pa.table({
-        "session_id":    pa.array([1, 1, 1], I32),
-        "interval_kind": [KIND] * 3,
-        "interval_id":   pa.array([1, 2, 3], I32),
-        "start_tick":    [1000, 6000, 11000],
-        "stop_tick":     [5000, 10000, 15000],
-        "clock_id":      pa.array([1, 1, 1], I32)}))
+    write(
+        out,
+        "core_intervals",
+        pa.table(
+            {
+                "session_id": pa.array([1, 1, 1], I32),
+                "interval_kind": [KIND] * 3,
+                "interval_id": pa.array([1, 2, 3], I32),
+                "start_tick": [1000, 6000, 11000],
+                "stop_tick": [5000, 10000, 15000],
+                "clock_id": pa.array([1, 1, 1], I32),
+            }
+        ),
+    )
 
 
 def broken(out: Path):
     """Three defects: a duplicate key, an unresolvable clock, an inverted interval."""
     write(out, "core_sessions", sessions())
     write(out, "core_clocks", clocks())
-    write(out, "core_intervals", pa.table({
-        "session_id":    pa.array([1, 1, 1, 1], I32),
-        "interval_kind": [KIND] * 4,
-        "interval_id":   pa.array([1, 1, 3, 4], I32),
-        "start_tick":    [1000, 2000, 9000, 4000],
-        "stop_tick":     [5000, 6000, 7000, 8000],
-        "clock_id":      pa.array([1, 1, 1, 99], I32)}))
+    write(
+        out,
+        "core_intervals",
+        pa.table(
+            {
+                "session_id": pa.array([1, 1, 1, 1], I32),
+                "interval_kind": [KIND] * 4,
+                "interval_id": pa.array([1, 1, 3, 4], I32),
+                "start_tick": [1000, 2000, 9000, 4000],
+                "stop_tick": [5000, 6000, 7000, 8000],
+                "clock_id": pa.array([1, 1, 1, 99], I32),
+            }
+        ),
+    )
 
 
 if __name__ == "__main__":

@@ -1029,8 +1029,7 @@ def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Rec
             if kind == winner or not rows:
                 continue
             if not kept:
-                lost.append(f"{resource}: {kind} stated {len(rows):,} row(s) and "
-                            f"{winner or 'no source'} staged none")
+                lost.append(f"{resource}: {kind} stated {len(rows):,} row(s) and {winner or 'no source'} staged none")
                 continue
             held = {tuple(r.get(k) for k in key): r for r in kept} if key else {}
             for row in rows:
@@ -1075,8 +1074,11 @@ def _note_unclaimed(spec: SourceSpec, source: Any, produced: Mapping[str, int]) 
     # Discarded by design: the recipe writes these itself, or a preference names the winner.
     # Everything else this source produced and does not claim is discarded by omission.
     by_design = set(RECIPE_SUPPLIES) | {r for r in produced if preferences().get(r) is not None}
-    dropped = {resource: rows for resource, rows in produced.items()
-               if rows and resource not in spec.claims and resource not in by_design}
+    dropped = {
+        resource: rows
+        for resource, rows in produced.items()
+        if rows and resource not in spec.claims and resource not in by_design
+    }
     notes = getattr(source, "notes", None)
     if not dropped or notes is None:
         return
@@ -1106,13 +1108,19 @@ def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None])
     stamped = writer.stamp(
         "core.clocks",
         "clock_id",
-        {clock: {"withheld_first_anchor": "first" in entry["anchors"],
-                 "withheld_last_anchor": "last" in entry["anchors"]}
-         for clock, entry in withheld.items()},
+        {
+            clock: {
+                "withheld_first_anchor": "first" in entry["anchors"],
+                "withheld_last_anchor": "last" in entry["anchors"],
+            }
+            for clock, entry in withheld.items()
+        },
     )
     dropped = sum(entry["n_withheld"] for entry in withheld.values())
-    say(f"  terminal-anchor test recorded on {stamped} of {len(withheld)} clocks, "
-        f"{dropped} anchor(s) withheld (R99 §3.2)")
+    say(
+        f"  terminal-anchor test recorded on {stamped} of {len(withheld)} clocks, "
+        f"{dropped} anchor(s) withheld (R99 §3.2)"
+    )
     if stamped != len(withheld):
         context.notes.append(
             f"the terminal-anchor test examined {len(withheld)} clocks and {stamped} of them are "

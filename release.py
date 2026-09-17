@@ -26,10 +26,17 @@ OUT = ROOT / "RELEASE.json"
 
 #: What a consumer needs, and why each is in the bundle rather than assumed.
 PARTS: dict[str, tuple[str, ...]] = {
-    "specification": ("escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",),
+    "specification": (
+        "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+    ),
     "registry": ("registry/logical_schemas.json", "registry/tables.md"),
     "schemas": ("registry/registry.schema.json", "registry/manifest.schema.json"),
-    "extensions": tuple(sorted(str(p.relative_to(ROOT)) for p in (ROOT / "registry/extensions").glob("*.json"))),
+    "extensions": tuple(
+        sorted(
+            str(p.relative_to(ROOT))
+            for p in (ROOT / "registry/extensions").glob("*.json")
+        )
+    ),
     "conformance": ("fixtures/build.py", "fixtures/corpus.py"),
     "provenance": ("escapewheel_poc_docs_v0.2/applied.toml",),
 }
@@ -42,16 +49,28 @@ def digest(path: Path) -> str:
 
 def described() -> dict[str, object]:
     """The bundle: every part, its files, and what each hashes to."""
-    revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
-                              capture_output=True, text=True, check=False).stdout.strip()
-    dirty = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
-                           capture_output=True, text=True, check=False).stdout.strip()
+    revision = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
+    dirty = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
     return {
         "standard": {
             "semantic": "escapewheel-semantic-v0.1",
             "logical": "escapewheel-logical-v0.1",
             "profile": "escapewheel-portable-v0.1",
-            "registry_version": json.loads((ROOT / "registry/logical_schemas.json").read_text())["registry_version"],
+            "registry_version": json.loads(
+                (ROOT / "registry/logical_schemas.json").read_text()
+            )["registry_version"],
         },
         "commit": revision,
         # A release assembled from a dirty tree names files that are not what the commit holds.
@@ -71,8 +90,10 @@ def main() -> int:
 
     bundle = described()
     total = sum(len(files) for files in bundle["parts"].values())
-    print(f"{total} files across {len(bundle['parts'])} parts, at {bundle['commit'][:12]}"
-          f"{'' if bundle['clean'] else ' (WORKING TREE DIRTY)'}")
+    print(
+        f"{total} files across {len(bundle['parts'])} parts, at {bundle['commit'][:12]}"
+        f"{'' if bundle['clean'] else ' (WORKING TREE DIRTY)'}"
+    )
     for part, files in bundle["parts"].items():
         print(f"  {part}")
         for name, value in files.items():

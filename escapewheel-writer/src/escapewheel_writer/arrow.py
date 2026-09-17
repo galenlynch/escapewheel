@@ -351,8 +351,7 @@ def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> p
     return pa.RecordBatch.from_arrays(list(columns.values()), names=list(columns))
 
 
-def build(resource: str, spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]],
-          keys: Any = None) -> pa.Table:
+def build(resource: str, spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]], keys: Any = None) -> pa.Table:
     """Build a sorted Arrow table for one resource.
 
     Parameters

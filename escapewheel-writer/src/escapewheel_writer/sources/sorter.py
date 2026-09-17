@@ -218,7 +218,11 @@ class SorterSource:
     #: unset (Part 03 §11.2). `sample` is among them because a build applies `--sample` by setting
     #: it, and a build may not supply what the adapter does not declare (Part 03 §11.2).
     ACCEPTS: ClassVar[tuple[str, ...]] = (
-        "experiment", "prefix", "emit_probes", "parent_clock_id", "sample",
+        "experiment",
+        "prefix",
+        "emit_probes",
+        "parent_clock_id",
+        "sample",
     )
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.

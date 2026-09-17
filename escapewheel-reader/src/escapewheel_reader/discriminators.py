@@ -115,27 +115,29 @@ def declared(packet: Any) -> list[Discriminator]:
         for column in table.get("columns", []):
             if column.get("role") != "discriminator":
                 continue
-            found.append(Discriminator(
-                resource=resource,
-                column=column["name"],
-                resolves=column.get("resolves", "required"),
-                discriminates=column.get("discriminates"),
-                discriminates_via=column.get("discriminates_via"),
-                positions_in=column.get("positions_in"),
-            ))
+            found.append(
+                Discriminator(
+                    resource=resource,
+                    column=column["name"],
+                    resolves=column.get("resolves", "required"),
+                    discriminates=column.get("discriminates"),
+                    discriminates_via=column.get("discriminates_via"),
+                    positions_in=column.get("positions_in"),
+                )
+            )
     return found
 
 
 def _one(packet: Any, resource_id: str, column: str | None) -> Discriminator:
     """Find the discriminator on a resource, or the named one where a table declares several."""
-    on = [d for d in declared(packet) if d.resource == resource_id
-          and (column is None or d.column == column)]
+    on = [d for d in declared(packet) if d.resource == resource_id and (column is None or d.column == column)]
     if not on:
         named = f" named {column}" if column else ""
         raise LookupError(f"{resource_id} declares no discriminator{named}")
     if len(on) > 1:
-        raise LookupError(f"{resource_id} declares several discriminators; name one of "
-                          f"{', '.join(sorted(d.column for d in on))}")
+        raise LookupError(
+            f"{resource_id} declares several discriminators; name one of {', '.join(sorted(d.column for d in on))}"
+        )
     return on[0]
 
 
@@ -182,8 +184,10 @@ def _reference_back(packet: Any, kind: str, target: str) -> tuple[list[str], lis
     for reference in registries(packet).get(kind, {}).get("references", []):
         if reference.get("resource") == target:
             return list(reference["columns"]), list(reference["resource_columns"])
-    raise LookupError(f"{kind} declares no reference back to {target}, which a shared-key "
-                      f"discriminator requires of what it names (Part 02 §8.3)")
+    raise LookupError(
+        f"{kind} declares no reference back to {target}, which a shared-key "
+        f"discriminator requires of what it names (Part 02 §8.3)"
+    )
 
 
 def _key(packet: Any, resource: str) -> list[str]:
@@ -205,8 +209,9 @@ def _paired_target(packet: Any, kind: str) -> str:
         return key[0]
     named = f"{key[0].removesuffix('_id')}_name"
     if named not in declared_columns:
-        raise LookupError(f"{kind} keys on an assigned {key[0]} and carries no {named} to match a "
-                          f"paired value against (Part 02 §8.3)")
+        raise LookupError(
+            f"{kind} keys on an assigned {key[0]} and carries no {named} to match a paired value against (Part 02 §8.3)"
+        )
     return named
 
 
@@ -249,8 +254,9 @@ def resolved(packet: Any, resource_id: str, kind: str, *, column: str | None = N
     if found.shape == "paired value":
         # The value is an identifier in the named resource's key space, and that key is one
         # column because a paired value holds one identifier (Part 02 §8.3).
-        return rows.join(named, keys=[found.discriminates],
-                         right_keys=[_paired_target(packet, kind)], join_type="inner")
+        return rows.join(
+            named, keys=[found.discriminates], right_keys=[_paired_target(packet, kind)], join_type="inner"
+        )
 
     # Against the **discriminated** table, which `discriminates_via` moves away from the one
     # carrying the column: a detail table shares a key with the rows it specialises.
@@ -268,9 +274,11 @@ def specialised(packet: Any, resource_id: str, *, column: str | None = None) -> 
     """
     found = _one(packet, resource_id, column)
     held = {r.resource_id for r in packet.resources()}
-    return {kind: resolved(packet, resource_id, kind, column=found.column)
-            for kind in kinds(packet, resource_id, found.column)
-            if kind is not None and kind in held}
+    return {
+        kind: resolved(packet, resource_id, kind, column=found.column)
+        for kind in kinds(packet, resource_id, found.column)
+        if kind is not None and kind in held
+    }
 
 
 __all__ = [

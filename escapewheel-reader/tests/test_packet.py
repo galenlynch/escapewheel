@@ -238,7 +238,9 @@ def test_a_caller_document_wins_over_the_packets_own(packet_root):
     import json
 
     (packet_root / "sources.json").write_text(
-        json.dumps({"sources_standard_version": "escapewheel-sources-v0.1", "sources": {"raw": {"uri": "s3://stale/raw"}}})
+        json.dumps(
+            {"sources_standard_version": "escapewheel-sources-v0.1", "sources": {"raw": {"uri": "s3://stale/raw"}}}
+        )
     )
     packet = open_packet(packet_root, sources=[{"raw": "/scratch/staged"}])
     assert dict(packet.location.sources)["raw"] == "/scratch/staged"

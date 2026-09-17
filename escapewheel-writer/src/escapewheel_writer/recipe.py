@@ -88,8 +88,16 @@ PREFERENCE_GROUP = "escapewheel.preferences"
 
 #: Resources several sources each supply *part* of, which `owns` refuses and `contributes` is for.
 #: A defaulted source contributes to these rather than owning them.
-SHARED = frozenset({"core.clocks", "core.clock_anchors", "core.clock_observation_intervals",
-                    "core.array_assets", "core.array_dimensions", "core.devices"})
+SHARED = frozenset(
+    {
+        "core.clocks",
+        "core.clock_anchors",
+        "core.clock_observation_intervals",
+        "core.array_assets",
+        "core.array_dimensions",
+        "core.devices",
+    }
+)
 
 
 def _preferences(loaded: Any, source: str) -> dict[str, str]:
@@ -888,9 +896,7 @@ class Recipe:
         problems = []
         for spec in sorted(self.sources, key=lambda s: s.kind):
             if not declared(spec)["declares_states"]:
-                problems.append(
-                    f"source {spec.kind} declares no STATES, so a build cannot tell what facts it states"
-                )
+                problems.append(f"source {spec.kind} declares no STATES, so a build cannot tell what facts it states")
             if spec.delivery is not None:
                 # An adapter a build cannot import exposes its stated values in its report rather
                 # than through an attribute, so there is nothing here to look for (Part 09 §5.8).
@@ -930,8 +936,10 @@ class Recipe:
             if chosen not in {"delta", "plain", "dictionary"}:
                 found.append(f"[encoding] {name} declares {chosen!r}; one of delta, plain, dictionary")
             if not str(declared.get("reason", "")).strip():
-                found.append(f"[encoding] {name} carries no reason; a measurement is what makes an "
-                             "entry re-judgeable when the data changes")
+                found.append(
+                    f"[encoding] {name} carries no reason; a measurement is what makes an "
+                    "entry re-judgeable when the data changes"
+                )
             resource, _, column = name.rpartition(".")
             if name.count(".") < 2 or resource not in tables:
                 found.append(f"[encoding] {name} names no declared table")

@@ -209,7 +209,13 @@ def test_a_subjects_sex_lands_inside_the_closed_vocabulary(source):
     """
     assert source.records()["core.subjects"][0]["sex"] == "male"
     assert [_sex(v) for v in ("M", "Male", "male", "F", "Female", "H", "O")] == [
-        "male", "male", "male", "female", "female", "hermaphrodite", "other"
+        "male",
+        "male",
+        "male",
+        "female",
+        "female",
+        "hermaphrodite",
+        "other",
     ]
     # `U` is unknown, and Part 02 §9.3 makes that a null rather than `other`: recording it as `other`
     # asserts a sex the source never claimed, where a null says the source did not say.
@@ -289,9 +295,7 @@ def test_the_probe_takes_its_model_and_serial_from_the_linked_device(source):
 
 def test_coordinates_are_rows_per_frame_not_a_padded_triple(source):
     values = source.records()["core.electrode_coordinate_values"]
-    on_shank = [
-        v for v in values if v["electrode_id"] == "probeA.CH1" and v["coordinate_frame"] == "probe"
-    ]
+    on_shank = [v for v in values if v["electrode_id"] == "probeA.CH1" and v["coordinate_frame"] == "probe"]
     assert [(v["axis_index"], v["axis_value"]) for v in on_shank] == [(0, 32.0), (1, 0.0)]
     assert {v["coordinate_frame"] for v in values} == {"probe"}
 
@@ -362,17 +366,36 @@ TASK_EXTENSION = {
     "tables": {
         "task.trials": {
             "columns": [
-                {"name": "session_id", "type": "int32", "presence": "required",
-                 "role": "identifier", "identity": "assigned"},
-                {"name": "interval_kind", "type": "string", "presence": "required",
-                 "role": "discriminator", "resolves": "required"},
-                {"name": "interval_id", "type": "int32", "presence": "required",
-                 "role": "identifier", "identity": "carried"},
+                {
+                    "name": "session_id",
+                    "type": "int32",
+                    "presence": "required",
+                    "role": "identifier",
+                    "identity": "assigned",
+                },
+                {
+                    "name": "interval_kind",
+                    "type": "string",
+                    "presence": "required",
+                    "role": "discriminator",
+                    "resolves": "required",
+                },
+                {
+                    "name": "interval_id",
+                    "type": "int32",
+                    "presence": "required",
+                    "role": "identifier",
+                    "identity": "carried",
+                },
             ],
             "primary_key": ["session_id", "interval_id"],
-            "references": [{"columns": ["session_id", "interval_kind", "interval_id"],
-                            "resource": "core.intervals",
-                            "resource_columns": ["session_id", "interval_kind", "interval_id"]}],
+            "references": [
+                {
+                    "columns": ["session_id", "interval_kind", "interval_id"],
+                    "resource": "core.intervals",
+                    "resource_columns": ["session_id", "interval_kind", "interval_id"],
+                }
+            ],
             "rules": [],
         }
     },
@@ -385,9 +408,13 @@ def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
     source = carrying
     writer = PacketWriter(registry, packet_id=SESSION, extensions=[TASK_EXTENSION])
     counted = source.into(writer)
-    writer.add("task.trials", [{"session_id": SESSION, "interval_kind": KIND,
-                                "interval_id": t["interval_id"]}
-                               for t in source.records()["core.intervals"]])
+    writer.add(
+        "task.trials",
+        [
+            {"session_id": SESSION, "interval_kind": KIND, "interval_id": t["interval_id"]}
+            for t in source.records()["core.intervals"]
+        ],
+    )
     report = writer.commit(tmp_path / "packet")
     assert report.passed, [f.check for f in report.findings]
     assert counted["core.electrodes"] == 2
@@ -399,8 +426,7 @@ def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
     written = packet.table("core.events")
     assert sorted(written.column("t_tick").to_pylist()) == [31250, 62500]
     by_stream: dict[str, list[int]] = {}
-    for stream, tick in zip(written.column("stream_id").to_pylist(),
-                            written.column("t_tick").to_pylist(), strict=True):
+    for stream, tick in zip(written.column("stream_id").to_pylist(), written.column("t_tick").to_pylist(), strict=True):
         by_stream.setdefault(stream, []).append(tick)
     assert all(ticks == sorted(ticks) for ticks in by_stream.values())
     carried = json.loads(packet.table("core.intervals").column("metadata").to_pylist()[0])
@@ -434,7 +460,6 @@ def test_no_stream_comes_from_a_trial_column(source):
 def test_a_condition_is_named_where_the_task_varies_one(source):
     """A foraging session has no stimulus; what it varies is the reward probability pair."""
     assert {t.get("condition_id") for t in source.intervals()} == {None}, "one trial cannot vary"
-
 
 
 # -- Part 02 §6: a parameter constant across every trial is recorded once ----------------------

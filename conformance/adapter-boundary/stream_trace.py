@@ -109,7 +109,9 @@ def main() -> int:
         print("1. what the build hands over\n")
         print(f"   argv[0] {sys.executable}")
         print(f"   argv[1] {HERE / 'serve_stream.py'}, and no argument beyond it")
-        print(f"   stdin   {len(wire)} bytes of JSON, which is the whole of what crosses:")
+        print(
+            f"   stdin   {len(wire)} bytes of JSON, which is the whole of what crosses:"
+        )
         for term, value in supplied.items():
             print(f"           {term} = {json.dumps(value)[:84]}")
         print(

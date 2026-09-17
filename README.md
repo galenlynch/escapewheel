@@ -85,8 +85,8 @@ escapewheel ls packet/                           # what is in it
 from escapewheel_reader import open_packet
 
 packet = open_packet("packet/")
-trials = packet.trials(session_id="s001")            # a pyarrow.Table
-spikes = packet.spike_times(units=["unit_0001"])     # predicate pushdown, no full scan
+trials = packet.trials(session_id="s001")  # a pyarrow.Table
+spikes = packet.spike_times(units=["unit_0001"])  # predicate pushdown, no full scan
 waveform = packet.array_resource("core.waveform_mean").read((slice(0, 1),))
 ```
 

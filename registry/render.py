@@ -59,8 +59,10 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
         note = f"*Introduced by {introduced} (R29 §2). A column with no revision came from Part 02 unamended.*"
         out += [note, ""]
 
-    out += ["| Column | Type | Presence | Declares | Since | Description |",
-            "|---|---|:---:|---|---|---|"]
+    out += [
+        "| Column | Type | Presence | Declares | Since | Description |",
+        "|---|---|:---:|---|---|---|",
+    ]
     for column in spec["columns"]:
         description = (column.get("description") or "").replace("|", "\\|")
         out.append(
@@ -89,7 +91,9 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
         for rule in rules:
             level = rule.get("level", "error")
             advisory = " *(advisory, R26)*" if rule.get("advisory") else ""
-            out.append(f"- `{rule['id']}` — {level}{advisory}: {rule.get('message', '')}")
+            out.append(
+                f"- `{rule['id']}` — {level}{advisory}: {rule.get('message', '')}"
+            )
         out.append("")
 
     return out
@@ -146,7 +150,9 @@ README = HERE / "README.md"
 #: Where the README's generated regions begin and end. A count stated in prose is a count that
 #: goes stale: the README claimed 33 tables and 51 rules against a registry holding 34 and 61,
 #: and listed two rules that revisions had since removed.
-REGION = re.compile(r"(<!-- BEGIN generated: (\w+) -->\n).*?(<!-- END generated: \2 -->)", re.DOTALL)
+REGION = re.compile(
+    r"(<!-- BEGIN generated: (\w+) -->\n).*?(<!-- END generated: \2 -->)", re.DOTALL
+)
 
 
 def regions(registry: dict[str, Any]) -> dict[str, str]:
@@ -162,25 +168,39 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
     rules = [r for t in tables.values() for r in t["rules"]]
     levels = Counter(r["level"] for r in rules)
     declared = [
-        (sum(1 for c in columns if c["presence"] == "required"), "required column, not null"),
+        (
+            sum(1 for c in columns if c["presence"] == "required"),
+            "required column, not null",
+        ),
         (sum(len(t["references"]) for t in tables.values()), "reference, resolves"),
         (sum(1 for t in tables.values() if t["primary_key"]), "primary key, unique"),
         (sum(1 for c in columns if c.get("enum")), "closed vocabulary, member of"),
-        (sum(1 for c in columns if c.get("role") == "discriminator"), "discriminator, resolvable"),
+        (
+            sum(1 for c in columns if c.get("role") == "discriminator"),
+            "discriminator, resolvable",
+        ),
     ]
-    by_table = sorted(((n, t) for n, t in tables.items() if t["rules"]),
-                      key=lambda kv: (-len(kv[1]["rules"]), kv[0]))
+    by_table = sorted(
+        ((n, t) for n, t in tables.items() if t["rules"]),
+        key=lambda kv: (-len(kv[1]["rules"]), kv[0]),
+    )
     return {
-        "counts": (f"```\n{len(tables)} tables, {len(columns)} columns, "
-                   f"{sum(len(t['references']) for t in tables.values())} references, "
-                   f"{len(rules)} Tier 2 rules\n```"),
-        "structure": "```\n" + "\n".join(f"{n:<4}{label}" for n, label in declared) + "\n```",
-        "rules": (f"{len(rules)} rules over {len(by_table)} tables: {levels['error']} error, "
-                  f"{levels['warning']} warning, {levels['info']} info — the "
-                  f"{sum(1 for r in rules if r.get('advisory'))} at `info` being the advisory ones "
-                  f"(Part 02 §10.2), off unless asked for.\n\n"
-                  "| Table | Rules |\n|---|---:|\n"
-                  + "\n".join(f"| `{n}` | {len(t['rules'])} |" for n, t in by_table)),
+        "counts": (
+            f"```\n{len(tables)} tables, {len(columns)} columns, "
+            f"{sum(len(t['references']) for t in tables.values())} references, "
+            f"{len(rules)} Tier 2 rules\n```"
+        ),
+        "structure": "```\n"
+        + "\n".join(f"{n:<4}{label}" for n, label in declared)
+        + "\n```",
+        "rules": (
+            f"{len(rules)} rules over {len(by_table)} tables: {levels['error']} error, "
+            f"{levels['warning']} warning, {levels['info']} info — the "
+            f"{sum(1 for r in rules if r.get('advisory'))} at `info` being the advisory ones "
+            f"(Part 02 §10.2), off unless asked for.\n\n"
+            "| Table | Rules |\n|---|---:|\n"
+            + "\n".join(f"| `{n}` | {len(t['rules'])} |" for n, t in by_table)
+        ),
     }
 
 
@@ -188,8 +208,10 @@ def fill(text: str, filled: dict[str, str]) -> str:
     """Replace each generated region's body, leaving the prose around it untouched."""
     named = {name for _, name, _ in REGION.findall(text)}
     if named != set(filled):
-        raise SystemExit(f"README regions {sorted(named)} do not match what render.py fills "
-                         f"{sorted(filled)}")
+        raise SystemExit(
+            f"README regions {sorted(named)} do not match what render.py fills "
+            f"{sorted(filled)}"
+        )
     return REGION.sub(lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", text)
 
 

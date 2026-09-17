@@ -352,8 +352,9 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             detail.append(f"the store uses {', '.join(undeclared)}, which the manifest omits")
         if unused := sorted(declared - actual):
             detail.append(f"the manifest declares {', '.join(unused)}, which the store does not use")
-        report.add("error", "array.codecs_disagree_with_store",
-                   f"{resource.resource_id}: {'; '.join(detail)} (Part 04 §5.3)")
+        report.add(
+            "error", "array.codecs_disagree_with_store", f"{resource.resource_id}: {'; '.join(detail)} (Part 04 §5.3)"
+        )
 
     if "transpose" in actual:
         report.add(
@@ -372,8 +373,9 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
 
     if "fill_value" not in metadata:
         report.add(
-            "error", "array.no_fill_value",
-            f"{resource.resource_id} declares no fill_value, which Part 03 §6.1 requires"
+            "error",
+            "array.no_fill_value",
+            f"{resource.resource_id} declares no fill_value, which Part 03 §6.1 requires",
         )
 
     asset = resource.entry.get("array_asset_id")
@@ -425,9 +427,7 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     """
     # A resource naming a source is not packet-owned whatever `external` says, and `_check_sources`
     # has already reported the contradiction; resolving it here would raise instead of report.
-    owned = [
-        r for r in packet.resources(kind="dense_array_asset") if not r.is_external and r.source is None
-    ]
+    owned = [r for r in packet.resources(kind="dense_array_asset") if not r.is_external and r.source is None]
     if not owned:
         return
     extents = _declared_extents(packet)
@@ -1140,9 +1140,11 @@ def _duplicated_columns(handle: Any, spec: Mapping[str, Any]) -> list[tuple[str,
                 break
             chunks.append((stats.min, stats.max, stats.null_count))
         ranges[name] = chunks
-    candidates = [(a, b) for a, b in itertools.combinations(names, 2)
-                  if ranges[a] and ranges[a] == ranges[b]
-                  and any(c[0] != c[1] for c in ranges[a])]
+    candidates = [
+        (a, b)
+        for a, b in itertools.combinations(names, 2)
+        if ranges[a] and ranges[a] == ranges[b] and any(c[0] != c[1] for c in ranges[a])
+    ]
     if not candidates:
         return []
     wanted = sorted({n for pair in candidates for n in pair})
@@ -1162,8 +1164,7 @@ def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], re
         except (OSError, pa.ArrowException):
             continue
         for a, b in pairs:
-            report.add("info", f"{resource_id}.columns_duplicated",
-                       f"{a} and {b} hold equal values in every row")
+            report.add("info", f"{resource_id}.columns_duplicated", f"{a} and {b} hold equal values in every row")
 
 
 def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
@@ -1220,14 +1221,13 @@ def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any]
                 table = pq.read_table(handle.path, columns=[name])
             except (OSError, pa.ArrowException, KeyError):
                 continue
-            outside = sorted({v for v in table.column(name).to_pylist()
-                              if v is not None and v not in set(reserved)})
+            outside = sorted({v for v in table.column(name).to_pylist() if v is not None and v not in set(reserved)})
             if outside:
                 report.add(
-                    "info", f"{resource_id}.{name}.outside_reserved_set",
+                    "info",
+                    f"{resource_id}.{name}.outside_reserved_set",
                     f"{len(outside)} value(s) outside the reserved set: "
-                    f"{', '.join(repr(v) for v in outside[:5])}"
-                    + (" ..." if len(outside) > 5 else ""),
+                    f"{', '.join(repr(v) for v in outside[:5])}" + (" ..." if len(outside) > 5 else ""),
                 )
 
 
@@ -1269,9 +1269,15 @@ def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], r
     keys = stored_order(resource_id, spec)
     unique = spec["primary_key"] if adjacency_settles_uniqueness(resource_id, spec) else None
     # Part 03 §5.3: the declarations this table's adjacency argument leans on.
-    determined = [c["name"] for c in spec.get("columns", ())
-                  if c["name"] in keys and "determined_by" in c
-                  and set(c["determined_by"]) <= set(spec["primary_key"])] if unique else []
+    determined = (
+        [
+            c["name"]
+            for c in spec.get("columns", ())
+            if c["name"] in keys and "determined_by" in c and set(c["determined_by"]) <= set(spec["primary_key"])
+        ]
+        if unique
+        else []
+    )
     offending: list[tuple[int, Any, Any]] = []
     duplicated: list[tuple[int, Any]] = []
     broken: list[tuple[int, str, Any, Any]] = []
@@ -1529,8 +1535,14 @@ def _run_rules(
                 connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
 
             kinds = _declared_kinds(packet, registry)
-            checks = generate(registry, only=set(present), advisory=advisory, aggregate=unsound or set(),
-                              kinds=kinds, specialises=_specialisations(packet, registry))
+            checks = generate(
+                registry,
+                only=set(present),
+                advisory=advisory,
+                aggregate=unsound or set(),
+                kinds=kinds,
+                specialises=_specialisations(packet, registry),
+            )
             if recheck is not None:
                 checks = [check for check in checks if concerns(check, recheck)]
             _run_checks(connection, checks, report, None)

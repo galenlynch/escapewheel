@@ -27,7 +27,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 REGISTRY = ROOT / "registry/logical_schemas.json"
 
-REGION = re.compile(r"(<!-- BEGIN facts: (\w+) -->\n).*?(<!-- END facts: \2 -->)", re.DOTALL)
+REGION = re.compile(
+    r"(<!-- BEGIN facts: (\w+) -->\n).*?(<!-- END facts: \2 -->)", re.DOTALL
+)
 
 
 def documents() -> list[Path]:
@@ -38,8 +40,12 @@ def documents() -> list[Path]:
     none of which any list named, and all of which were years of revisions out of date.
     """
     listed = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.md"], cwd=ROOT,
-                            capture_output=True, text=True, check=True).stdout.split()
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.md"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
     found = []
     for name in listed:
         path = ROOT / name
@@ -50,7 +56,9 @@ def documents() -> list[Path]:
 
 #: Where the invariants that hold of any registry document live. They left `registry/check.py` so
 #: that `escapewheel extension check` could run them, and that script now imports them.
-DOCUMENT_INVARIANTS = "escapewheel-validator/src/escapewheel_validator/registry_document.py"
+DOCUMENT_INVARIANTS = (
+    "escapewheel-validator/src/escapewheel_validator/registry_document.py"
+)
 
 
 def _check_counts() -> tuple[int, int]:
@@ -60,17 +68,35 @@ def _check_counts() -> tuple[int, int]:
     over the whole set and are facts about the build rather than about any document. Counted by
     parsing rather than by running, since `check.py` needs DuckDB to finish and this must not.
     """
+
     def calls(scope, name, exclude=frozenset()):
-        return sum(1 for n in ast.walk(scope) if isinstance(n, ast.Call)
-                   and getattr(n.func, "id", None) == name and id(n) not in exclude)
+        return sum(
+            1
+            for n in ast.walk(scope)
+            if isinstance(n, ast.Call)
+            and getattr(n.func, "id", None) == name
+            and id(n) not in exclude
+        )
 
     shared = ast.parse((ROOT / DOCUMENT_INVARIANTS).read_text())
-    structural = next(n for n in shared.body if isinstance(n, ast.FunctionDef) and n.name == "structural")
-    declarations = next(n for n in shared.body if isinstance(n, ast.FunctionDef) and n.name == "declarations")
-    per_document = calls(structural, "c_") + sum(
-        1 for n in ast.walk(declarations) if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "Finding"
+    structural = next(
+        n
+        for n in shared.body
+        if isinstance(n, ast.FunctionDef) and n.name == "structural"
     )
-    return per_document, calls(ast.parse((ROOT / "registry/check.py").read_text()), "check")
+    declarations = next(
+        n
+        for n in shared.body
+        if isinstance(n, ast.FunctionDef) and n.name == "declarations"
+    )
+    per_document = calls(structural, "c_") + sum(
+        1
+        for n in ast.walk(declarations)
+        if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "Finding"
+    )
+    return per_document, calls(
+        ast.parse((ROOT / "registry/check.py").read_text()), "check"
+    )
 
 
 def _clause_count() -> int:
@@ -95,9 +121,14 @@ def _corpus_count() -> int:
     tree = ast.parse((ROOT / "fixtures/corpus.py").read_text())
     for node in tree.body:
         # Annotated, so `ast.Assign` alone does not find it.
-        targets = node.targets if isinstance(node, ast.Assign) else [getattr(node, "target", None)]
+        targets = (
+            node.targets
+            if isinstance(node, ast.Assign)
+            else [getattr(node, "target", None)]
+        )
         if isinstance(node, ast.Assign | ast.AnnAssign) and any(
-                getattr(t, "id", None) == "EXPECTED" for t in targets):
+            getattr(t, "id", None) == "EXPECTED" for t in targets
+        ):
             return len(node.value.keys)
     raise SystemExit("fixtures/corpus.py declares no EXPECTED mapping")
 
@@ -134,11 +165,21 @@ def facts() -> dict[str, str]:
     for path in (ROOT / "revisions/accepted").glob("R[0-9]*.md"):
         number = int(re.match(r"R(\d+)", path.name).group(1))
         head = path.read_text()[:400]
-        (accepted if "**Accepted**" in head else withdrawn if "withdrawn" in head.lower() else proposed).add(number)
+        (
+            accepted
+            if "**Accepted**" in head
+            else withdrawn
+            if "withdrawn" in head.lower()
+            else proposed
+        ).add(number)
     # Proposals and drafts carry no number; the numbered space reads in application order.
     # `revisions/drafts/README.md` holds the order of drafts awaiting acceptance.
-    proposals = [p for p in (ROOT / "revisions/proposals").glob("*.md") if p.name != "README.md"]
-    drafts = [p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"]
+    proposals = [
+        p for p in (ROOT / "revisions/proposals").glob("*.md") if p.name != "README.md"
+    ]
+    drafts = [
+        p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"
+    ]
 
     extensions = sorted(p.stem for p in (ROOT / "registry/extensions").glob("*.json"))
     per_document, whole = _check_counts()
@@ -146,25 +187,42 @@ def facts() -> dict[str, str]:
     corpus = _corpus_count()
 
     return {
-        "registry": (f"{len(tables)} tables, {len(columns)} columns, {references} references, "
-                     f"{len(rules)} Tier 2 rules ({advisory} advisory)"),
-        "revisions": (f"{_revision_span(accepted)} accepted. "
-                      + (f"{_revision_span(withdrawn)} withdrawn. " if withdrawn else "")
-                      + (f"{_revision_span(proposed)} proposed and not binding. " if proposed else "")
-                      + (f"{len(proposals)} proposal{'s' if len(proposals) != 1 else ''} and "
-                         f"{len(drafts)} draft{'s' if len(drafts) != 1 else ''} are open. "
-                         "Neither is binding; a draft takes no number until it is accepted."
-                         if proposals or drafts else "No proposal or draft is open.")),
-        "tier1": (f"{not_null} not-null, {references} foreign-key, {vocabulary} closed-vocabulary "
-                  f"and {2 * discriminators} discriminator checks, plus one uniqueness check per "
-                  f"table whose sort does not begin with its primary key"),
+        "registry": (
+            f"{len(tables)} tables, {len(columns)} columns, {references} references, "
+            f"{len(rules)} Tier 2 rules ({advisory} advisory)"
+        ),
+        "revisions": (
+            f"{_revision_span(accepted)} accepted. "
+            + (f"{_revision_span(withdrawn)} withdrawn. " if withdrawn else "")
+            + (
+                f"{_revision_span(proposed)} proposed and not binding. "
+                if proposed
+                else ""
+            )
+            + (
+                f"{len(proposals)} proposal{'s' if len(proposals) != 1 else ''} and "
+                f"{len(drafts)} draft{'s' if len(drafts) != 1 else ''} are open. "
+                "Neither is binding; a draft takes no number until it is accepted."
+                if proposals or drafts
+                else "No proposal or draft is open."
+            )
+        ),
+        "tier1": (
+            f"{not_null} not-null, {references} foreign-key, {vocabulary} closed-vocabulary "
+            f"and {2 * discriminators} discriminator checks, plus one uniqueness check per "
+            f"table whose sort does not begin with its primary key"
+        ),
         "extensions": f"{len(extensions)} extension registries: {', '.join(extensions)}",
         "corpus": f"{corpus} conformance packets",
-        "checks": (f"{per_document} structural invariants, each applied to core and to each of the "
-                   f"{len(extensions)} extension registries, and {whole} further checks over the "
-                   f"whole set"),
-        "clauses": (f"`ledger.py` enumerates {decision_clauses} Decision clauses across the "
-                    f"accepted revisions."),
+        "checks": (
+            f"{per_document} structural invariants, each applied to core and to each of the "
+            f"{len(extensions)} extension registries, and {whole} further checks over the "
+            f"whole set"
+        ),
+        "clauses": (
+            f"`ledger.py` enumerates {decision_clauses} Decision clauses across the "
+            f"accepted revisions."
+        ),
     }
 
 
@@ -177,12 +235,19 @@ def main() -> int:
         before = path.read_text()
         named = {n for _, n, _ in REGION.findall(before)}
         if unknown := named - set(filled):
-            raise SystemExit(f"{name} declares facts {sorted(unknown)} that facts.py does not compute")
-        after = REGION.sub(lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", before)
+            raise SystemExit(
+                f"{name} declares facts {sorted(unknown)} that facts.py does not compute"
+            )
+        after = REGION.sub(
+            lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", before
+        )
         if after != before:
             path.write_text(after)
             changed.append(name)
-    print(f"filled {len(found)} document(s)" + (f"; changed {', '.join(changed)}" if changed else "; no change"))
+    print(
+        f"filled {len(found)} document(s)"
+        + (f"; changed {', '.join(changed)}" if changed else "; no change")
+    )
     for key, value in sorted(filled.items()):
         print(f"  {key:<11} {value}")
     return 0

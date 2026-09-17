@@ -214,7 +214,9 @@ def main() -> int:
         # The recipe's options, which a declared name resolves against after the vocabulary.
         options = {"zone": "America/Los_Angeles", "interval_kind": "task.trials"}
         supplied = supply(serve_nwb.NEEDS, context, options)
-        wire = json.dumps(supplied)  # what crosses on standard input, before a protocol adds its own term
+        wire = json.dumps(
+            supplied
+        )  # what crosses on standard input, before a protocol adds its own term
         wanted = context["wanted"]
         print(f"a build supplies {sorted(serve_nwb.NEEDS)}")
         print(

@@ -154,8 +154,7 @@ def test_a_clock_the_test_kept_records_false_not_nothing():
 def test_which_terminal_went_is_what_the_two_columns_say():
     writer = _Staged()
     _declare_withheld(_context({"probeA": {"anchors": ["first"], "n_withheld": 1}}), writer, lambda _: None)
-    assert writer.calls[0][2]["probeA"] == {"withheld_first_anchor": True,
-                                            "withheld_last_anchor": False}
+    assert writer.calls[0][2]["probeA"] == {"withheld_first_anchor": True, "withheld_last_anchor": False}
 
 
 def test_a_clock_the_test_never_reached_is_not_stamped_at_all():
@@ -167,7 +166,6 @@ def test_a_clock_the_test_never_reached_is_not_stamped_at_all():
 
 def test_a_clock_the_stamp_could_not_reach_is_noted():
     """A silent miss would leave the packet saying the test never ran on that clock."""
-    context = _context({"probeA": {"anchors": [], "n_withheld": 0},
-                        "probeB": {"anchors": ["last"], "n_withheld": 1}})
+    context = _context({"probeA": {"anchors": [], "n_withheld": 0}, "probeB": {"anchors": ["last"], "n_withheld": 1}})
     _declare_withheld(context, _Staged(reach=1), lambda _: None)
     assert any("2 clocks and 1 of them are staged" in note for note in context.notes)

@@ -17,20 +17,46 @@ import numpy as np
 import zarr
 from zarr.codecs import BloscCodec, BytesCodec, GzipCodec, ShardingCodec, ZstdCodec
 
-NWB = Path("/mnt/Data/escapewheel/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/"
-           "ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb")
+NWB = Path(
+    "/mnt/Data/escapewheel/ecephys_776259_2025-04-09_17-25-12_nwb_2026-08-17_09-30-31/"
+    "ecephys_776259_2025-04-09_17-25-12_experiment1_recording1.nwb"
+)
 OUT = Path("/mnt/Data/escapewheel/scratch/waveforms")
 
 #: (label, dtype, chunks, codecs, shard)
 LAYOUTS = [
-    ("source shape, f64, blosc", "float64", (424, 19, 48), [BloscCodec(cname="zstd", shuffle="shuffle")], None),
-    ("source shape, f32, blosc", "float32", (424, 19, 48), [BloscCodec(cname="zstd", shuffle="shuffle")], None),
+    (
+        "source shape, f64, blosc",
+        "float64",
+        (424, 19, 48),
+        [BloscCodec(cname="zstd", shuffle="shuffle")],
+        None,
+    ),
+    (
+        "source shape, f32, blosc",
+        "float32",
+        (424, 19, 48),
+        [BloscCodec(cname="zstd", shuffle="shuffle")],
+        None,
+    ),
     ("unit chunks, f32, none", "float32", (1, 150, 384), [], None),
     ("unit chunks, f32, gzip", "float32", (1, 150, 384), [GzipCodec()], None),
     ("unit chunks, f32, zstd", "float32", (1, 150, 384), [ZstdCodec()], None),
-    ("unit chunks, f32, blosc", "float32", (1, 150, 384), [BloscCodec(cname="zstd", shuffle="shuffle")], None),
+    (
+        "unit chunks, f32, blosc",
+        "float32",
+        (1, 150, 384),
+        [BloscCodec(cname="zstd", shuffle="shuffle")],
+        None,
+    ),
     ("unit chunks + shard 64", "float32", (1, 150, 384), [ZstdCodec()], (64, 150, 384)),
-    ("unit chunks + shard 512", "float32", (1, 150, 384), [ZstdCodec()], (512, 150, 384)),
+    (
+        "unit chunks + shard 512",
+        "float32",
+        (1, 150, 384),
+        [ZstdCodec()],
+        (512, 150, 384),
+    ),
     ("64-unit chunks, f32, zstd", "float32", (64, 150, 384), [ZstdCodec()], None),
     # int16 with a derived scale, which is what the samples averaged actually were. The step
     # sits 20x below the standard error of the mean it stores, so the discarded bits were
@@ -53,11 +79,19 @@ def build(label, dtype, chunks, codecs, shard, data):
         serializer, chunk_shape = [BytesCodec(), *codecs], chunks
     else:
         # Part 03 §6.4 permits sharding_indexed: many small chunks inside few files.
-        serializer, chunk_shape = [ShardingCodec(chunk_shape=chunks, codecs=[BytesCodec(), *codecs])], shard
+        serializer, chunk_shape = (
+            [ShardingCodec(chunk_shape=chunks, codecs=[BytesCodec(), *codecs])],
+            shard,
+        )
     start = time.perf_counter()
     array = zarr.create_array(
-        store=str(path), shape=data.shape, dtype=dtype, chunks=chunk_shape,
-        serializer=serializer[0], compressors=serializer[1:] or None, fill_value=0,
+        store=str(path),
+        shape=data.shape,
+        dtype=dtype,
+        chunks=chunk_shape,
+        serializer=serializer[0],
+        compressors=serializer[1:] or None,
+        fill_value=0,
     )
     array[:] = data
     return path, time.perf_counter() - start
@@ -91,21 +125,31 @@ def read_patterns(path, picked):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    source = zarr.open_array(str(NWB / "units" / "waveform_mean"), mode="r", zarr_format=2)
+    source = zarr.open_array(
+        str(NWB / "units" / "waveform_mean"), mode="r", zarr_format=2
+    )
     data = np.asarray(source[:])
-    print(f"source {data.shape} {data.dtype}  {data.nbytes / 1e9:.2f} GB raw, "
-          f"{(data == 0).mean() * 100:.1f}% zero\n")
-    picked = np.arange(24) * 211                      # spread over the array, not one chunk
+    print(
+        f"source {data.shape} {data.dtype}  {data.nbytes / 1e9:.2f} GB raw, "
+        f"{(data == 0).mean() * 100:.1f}% zero\n"
+    )
+    picked = np.arange(24) * 211  # spread over the array, not one chunk
     global SCALE
     SCALE = float(np.abs(data).max()) / 32767.0
-    print(f"int16 scale {SCALE:.6f} uV/LSB, so the peak {np.abs(data).max():.1f} uV just fits\n")
+    print(
+        f"int16 scale {SCALE:.6f} uV/LSB, so the peak {np.abs(data).max():.1f} uV just fits\n"
+    )
 
     header = f"{'layout':28s} {'MB':>8s} {'files':>7s} {'write':>7s}"
     for label in ("1 unit", "24 units", "1 channel, all units"):
         header += f" {label:>21s}"
     print(header)
     for label, dtype, chunks, codecs, shard in LAYOUTS:
-        payload = np.rint(data / SCALE).astype(dtype) if dtype == "int16" else data.astype(dtype)
+        payload = (
+            np.rint(data / SCALE).astype(dtype)
+            if dtype == "int16"
+            else data.astype(dtype)
+        )
         path, wrote = build(label, dtype, chunks, codecs, shard, payload)
         times = read_patterns(path, picked)
         row = f"{label:28s} {size(path) / 1e6:8.1f} {files(path):7,} {wrote:6.1f}s"

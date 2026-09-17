@@ -30,9 +30,9 @@ def test_stamp_sets_columns_on_rows_already_added(registry, minimal):
     writer = PacketWriter(registry, packet_id="s001")
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
-    changed = writer.stamp("core.clocks", "clock_id",
-                           {"harp_s001": {"withheld_first_anchor": True,
-                                          "withheld_last_anchor": False}})
+    changed = writer.stamp(
+        "core.clocks", "clock_id", {"harp_s001": {"withheld_first_anchor": True, "withheld_last_anchor": False}}
+    )
     assert changed == 1
     (clock,) = writer._tables["core.clocks"]
     assert clock["withheld_first_anchor"] is True and clock["withheld_last_anchor"] is False
@@ -258,8 +258,19 @@ def _add_spike_context(writer):
     writer.add("core.curation_versions", [{"curation_id": "cur_1", "sorting_run_id": "sort_1", "session_id": "s001"}])
     # R96 §3: the unit names the clock its ticks are counted on and the unit of measure its
     # amplitudes are in, and a spike reaches both in one hop.
-    writer.add("core.units", [{"session_id": "s001", "unit_id": 1, "sorting_run_id": "sort_1",
-                               "curation_id": "cur_1", "clock_id": "harp_s001", "amplitude_unit": "uV"}])
+    writer.add(
+        "core.units",
+        [
+            {
+                "session_id": "s001",
+                "unit_id": 1,
+                "sorting_run_id": "sort_1",
+                "curation_id": "cur_1",
+                "clock_id": "harp_s001",
+                "amplitude_unit": "uV",
+            }
+        ],
+    )
 
 
 def test_batches_reach_the_packet(tmp_path, registry, minimal):
@@ -765,8 +776,7 @@ def test_a_batch_says_which_of_the_two_causes_it_hit(tmp_path, registry, minimal
     _add_spike_context(writer)
     batch = _spike_batch(4, 1, 0)
     stray = pa.record_batch(
-        {**{n: batch.column(n) for n in batch.schema.names},
-         "nonsense": pa.array([1, 2, 3, 4], type=pa.int64())}
+        {**{n: batch.column(n) for n in batch.schema.names}, "nonsense": pa.array([1, 2, 3, 4], type=pa.int64())}
     )
     writer.add_batches("core.spike_events", iter([stray]))
     with pytest.raises(ValueError, match=r"\['nonsense'\] is declared by no registry"):
@@ -782,13 +792,15 @@ def test_an_optional_column_absent_from_the_first_batch_says_so(tmp_path, regist
     writer = PacketWriter(registry, packet_id="s001")
     for resource, rows in minimal.items():
         writer.add(resource, rows)
-    rows = {"session_id": pa.array(["s001"]), "stream_id": pa.array(["s"]),
-            "t_tick": pa.array([1], type=pa.int64())}
+    rows = {"session_id": pa.array(["s001"]), "stream_id": pa.array(["s"]), "t_tick": pa.array([1], type=pa.int64())}
     writer.add_batches(
         "core.events",
-        iter([pa.record_batch(rows),
-              pa.record_batch({**rows, "t_tick": pa.array([2], type=pa.int64()),
-                               "metadata": pa.array(['{"a": 1}'])})]),
+        iter(
+            [
+                pa.record_batch(rows),
+                pa.record_batch({**rows, "t_tick": pa.array([2], type=pa.int64()), "metadata": pa.array(['{"a": 1}'])}),
+            ]
+        ),
     )
     with pytest.raises(ValueError, match=r"\['metadata'\] is optional and absent"):
         writer.commit(tmp_path / "pkt")
@@ -822,8 +834,11 @@ def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, regist
         # Part 04 §3: a materialization records what produced it, which its own rule checks.
         target.add(
             "core.processing_runs",
-            [dict(_run("run_derived", "materialization"),
-                  software_name="escapewheel_writer", software_version="0.0.0")],
+            [
+                dict(
+                    _run("run_derived", "materialization"), software_name="escapewheel_writer", software_version="0.0.0"
+                )
+            ],
         )
 
     writer.commit(root, materialize=[derive])
@@ -871,9 +886,7 @@ def test_a_referenced_array_is_declared_external_and_copied_nowhere(tmp_path, re
     )
     assert writer.commit(root).passed
     entry = next(
-        r
-        for r in json.loads((root / "packet.json").read_text())["resources"]
-        if r["resource_id"] == "core.probe.lfp"
+        r for r in json.loads((root / "packet.json").read_text())["resources"] if r["resource_id"] == "core.probe.lfp"
     )
     assert entry["external"] is True
     assert entry["physical_profile"] == "zarr_v2"
@@ -938,8 +951,15 @@ def test_a_refused_commit_publishes_no_catalog(tmp_path, registry, minimal):
     # A clock that names a parent it does not have: refused by the generated foreign key.
     writer.add(
         "core.clocks",
-        [{"clock_id": "orphan", "session_id": "s1", "clock_name": "x", "origin": "sample 0",
-          "parent_clock_id": "nowhere"}],
+        [
+            {
+                "clock_id": "orphan",
+                "session_id": "s1",
+                "clock_name": "x",
+                "origin": "sample 0",
+                "parent_clock_id": "nowhere",
+            }
+        ],
     )
     with pytest.raises(CommitRefused):
         writer.commit(root)
@@ -1000,9 +1020,7 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
     exists and has a type its list can encode is decidable here, with no packet in hand.
     """
     tables = dict(registry["tables"])
-    named = [resource
-             for entries in (DELTA_COLUMNS, NO_DICTIONARY, DICTIONARY_COLUMNS)
-             for resource in entries]
+    named = [resource for entries in (DELTA_COLUMNS, NO_DICTIONARY, DICTIONARY_COLUMNS) for resource in entries]
     assert [r for r in named if not r.startswith(("core.", "analysis."))] == [], (
         "core names an extension's table; an extension supplies its own to PacketWriter"
     )
@@ -1010,9 +1028,11 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
     strings = {"string", "json_string"}
     stale = [
         f"{listed}: {resource}.{column}"
-        for listed, entries, types in (("DELTA_COLUMNS", DELTA_COLUMNS, {"int32", "int64"}),
-                                       ("NO_DICTIONARY", NO_DICTIONARY, numeric | strings),
-                                       ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS, numeric | strings))
+        for listed, entries, types in (
+            ("DELTA_COLUMNS", DELTA_COLUMNS, {"int32", "int64"}),
+            ("NO_DICTIONARY", NO_DICTIONARY, numeric | strings),
+            ("DICTIONARY_COLUMNS", DICTIONARY_COLUMNS, numeric | strings),
+        )
         for resource, columns in entries.items()
         for column in columns
         if resource not in tables
@@ -1104,16 +1124,20 @@ def _stream_units(tmp_path, registry, extra=None, report=None, **columns):
     from escapewheel_writer.writer import _write_stream
 
     rows = 1_000
-    batch = pa.record_batch({
-        "session_id": pa.array([0] * rows, type=pa.int32()),
-        "unit_id": pa.array(range(rows), type=pa.int32()),
-        **columns,
-    })
+    batch = pa.record_batch(
+        {
+            "session_id": pa.array([0] * rows, type=pa.int32()),
+            "unit_id": pa.array(range(rows), type=pa.int32()),
+            **columns,
+        }
+    )
     path = tmp_path / "units.parquet"
     _write_stream(registry["tables"]["core.units"], iter([batch]), path, "core.units", extra, report)
     metadata = pq.ParquetFile(path).metadata
-    return {metadata.schema.column(i).name: {str(e) for e in metadata.row_group(0).column(i).encodings}
-            for i in range(metadata.num_columns)}
+    return {
+        metadata.schema.column(i).name: {str(e) for e in metadata.row_group(0).column(i).encodings}
+        for i in range(metadata.num_columns)
+    }
 
 
 def test_a_column_a_stream_omits_is_encoded_as_the_nulls_it_is_written_as(tmp_path, registry):

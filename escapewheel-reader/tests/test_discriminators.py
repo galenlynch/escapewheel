@@ -22,22 +22,26 @@ def _with_detail(packet_root, *, kind="task.trials"):
     rows = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
     intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
 
-    detail = pa.table({
-        "session_id": intervals.column("session_id"),
-        "interval_kind": intervals.column("interval_kind"),
-        "trial_id": intervals.column("interval_id"),
-        "outcome": pa.array(["hit", "miss"]),
-    })
+    detail = pa.table(
+        {
+            "session_id": intervals.column("session_id"),
+            "interval_kind": intervals.column("interval_kind"),
+            "trial_id": intervals.column("interval_id"),
+            "outcome": pa.array(["hit", "miss"]),
+        }
+    )
     path = packet_root / "tables" / "task"
     path.mkdir(parents=True, exist_ok=True)
     pq.write_table(detail, path / "trials.parquet")
 
-    entry["resources"].append({
-        "resource_id": kind,
-        "layer": "core",
-        "kind": "table",
-        "uri": "tables/task/trials.parquet",
-    })
+    entry["resources"].append(
+        {
+            "resource_id": kind,
+            "layer": "core",
+            "kind": "table",
+            "uri": "tables/task/trials.parquet",
+        }
+    )
     manifest.write_text(json.dumps(entry))
 
     rows["tables"][kind] = {
@@ -48,11 +52,13 @@ def _with_detail(packet_root, *, kind="task.trials"):
             {"name": "outcome", "type": "string", "presence": "optional", "role": "data"},
         ],
         "primary_key": ["session_id", "trial_id"],
-        "references": [{
-            "columns": ["session_id", "interval_kind", "trial_id"],
-            "resource": "core.intervals",
-            "resource_columns": ["session_id", "interval_kind", "interval_id"],
-        }],
+        "references": [
+            {
+                "columns": ["session_id", "interval_kind", "trial_id"],
+                "resource": "core.intervals",
+                "resource_columns": ["session_id", "interval_kind", "interval_id"],
+            }
+        ],
         "rules": [],
     }
     (packet_root / "schemas" / "logical_schemas.json").write_text(json.dumps(rows))

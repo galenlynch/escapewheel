@@ -24,10 +24,11 @@ through observed sync pulses rather than a fitted line:
 
 ```python
 local_aligned = align_timestamps_to_anchor_points(
-    stream.sample_numbers, sync_events.sample_number.values,
-    main_events.sample_number.values / 30000)
-harp_aligned  = align_timestamps_to_anchor_points(
-    local_aligned, start_times, harp_times)
+    stream.sample_numbers,
+    sync_events.sample_number.values,
+    main_events.sample_number.values / 30000,
+)
+harp_aligned = align_timestamps_to_anchor_points(local_aligned, start_times, harp_times)
 ```
 
 The raw acquisition carries the consequence: each compressed stream stores `times_seg0`, one

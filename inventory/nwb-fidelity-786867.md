@@ -95,11 +95,11 @@ change would be visible, and none changed.
 
 ```python
 if Harp == "":
-    goCue_start_time_t = obj.B_GoCueTime[i]            # CPU time, old sessions only
+    goCue_start_time_t = obj.B_GoCueTime[i]  # CPU time, old sessions only
 elif hasattr(obj, "B_GoCueTimeHarp"):
-    goCue_start_time_t = obj.B_GoCueTimeHarp[i]        # Harp time, old format
+    goCue_start_time_t = obj.B_GoCueTimeHarp[i]  # Harp time, old format
 else:
-    goCue_start_time_t = obj.B_GoCueTimeSoundCard[i]   # Harp time, new format
+    goCue_start_time_t = obj.B_GoCueTimeSoundCard[i]  # Harp time, new format
 ```
 
 `B_GoCueTime` is the software's own clock and the export drops it deliberately, taking the

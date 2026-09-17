@@ -518,8 +518,7 @@ class SessionSource(Compensates):
 
     def _modules(self) -> list[dict[str, Any]]:
         """Every `ephys_module` of every stream, in file order."""
-        return [m for s in self._document.get("data_streams", []) or []
-                for m in s.get("ephys_modules", []) or []]
+        return [m for s in self._document.get("data_streams", []) or [] for m in s.get("ephys_modules", []) or []]
 
     def calibrations(self) -> list[dict[str, Any]]:
         """`core.calibrations`: what was measured about an instrument so its numbers can be read.
@@ -538,38 +537,42 @@ class SessionSource(Compensates):
             if name is None:
                 continue
             output = _label(entry.get("output"))
-            rows.append({
-                "calibration_id": name,
-                "session_id": self.session_id,
-                "calibration_name": name,
-                "calibration_type": _quantity(output) or "unknown",
-                "calibrated_at": self._calibrated_at(entry.get("calibration_date"), name),
-                "description": _clean(entry.get("description")),
-                "input_unit": _unit(_label(entry.get("input"))),
-                "output_unit": _unit(output),
-                "array_asset_id": None,
-                "detail_kind": None,
-                # R89 §2.6: what the source said that no column above models. The note is not
-                # `description`, which carries the source's own description field.
-                "metadata": _bag(notes=_clean(entry.get("notes"))),
-            })
+            rows.append(
+                {
+                    "calibration_id": name,
+                    "session_id": self.session_id,
+                    "calibration_name": name,
+                    "calibration_type": _quantity(output) or "unknown",
+                    "calibrated_at": self._calibrated_at(entry.get("calibration_date"), name),
+                    "description": _clean(entry.get("description")),
+                    "input_unit": _unit(_label(entry.get("input"))),
+                    "output_unit": _unit(output),
+                    "array_asset_id": None,
+                    "detail_kind": None,
+                    # R89 §2.6: what the source said that no column above models. The note is not
+                    # `description`, which carries the source's own description field.
+                    "metadata": _bag(notes=_clean(entry.get("notes"))),
+                }
+            )
         for transform, when in self._transforms().items():
-            rows.append({
-                "calibration_id": transform,
-                "session_id": self.session_id,
-                "calibration_name": transform,
-                "calibration_type": "manipulator_transform",
-                "calibrated_at": self._calibrated_at(when, transform),
-                "description": None,
-                "input_unit": None,
-                "output_unit": None,
-                # R89 §2.4 wants the array asset; this adapter does not read the `.npy`, so the
-                # content is unrecorded (Part 02 §12.3). The path is `calibration_name`, which is the
-                # identifier the source used for it, so nothing repeats it in `metadata`.
-                "array_asset_id": None,
-                "detail_kind": None,
-                "metadata": None,
-            })
+            rows.append(
+                {
+                    "calibration_id": transform,
+                    "session_id": self.session_id,
+                    "calibration_name": transform,
+                    "calibration_type": "manipulator_transform",
+                    "calibrated_at": self._calibrated_at(when, transform),
+                    "description": None,
+                    "input_unit": None,
+                    "output_unit": None,
+                    # R89 §2.4 wants the array asset; this adapter does not read the `.npy`, so the
+                    # content is unrecorded (Part 02 §12.3). The path is `calibration_name`, which is the
+                    # identifier the source used for it, so nothing repeats it in `metadata`.
+                    "array_asset_id": None,
+                    "detail_kind": None,
+                    "metadata": None,
+                }
+            )
         return rows
 
     def calibration_points(self) -> list[dict[str, Any]]:
@@ -590,8 +593,13 @@ class SessionSource(Compensates):
                     "outputs; a point needs both sides (R89 §2.3)"
                 )
             rows.extend(
-                {"session_id": self.session_id, "calibration_id": name, "point_index": index,
-                 "input_value": float(x), "output_value": float(y)}
+                {
+                    "session_id": self.session_id,
+                    "calibration_id": name,
+                    "point_index": index,
+                    "input_value": float(x),
+                    "output_value": float(y),
+                }
                 for index, (x, y) in enumerate(zip(inputs, outputs, strict=True))
             )
         return rows
@@ -610,8 +618,7 @@ class SessionSource(Compensates):
             transform = _clean(module.get("coordinate_transform"))
             device = _clean(module.get("assembly_name"))
             if transform is not None and device is not None:
-                rows.append({"session_id": self.session_id,
-                             "calibration_id": transform, "device_id": device})
+                rows.append({"session_id": self.session_id, "calibration_id": transform, "device_id": device})
         return rows
 
     def _transforms(self) -> dict[str, str | None]:
@@ -640,10 +647,12 @@ class SessionSource(Compensates):
 
     def offers(self) -> dict[str, int]:
         """Part 05 Stage 1: how many rows of each resource this root holds."""
-        return {"core.subjects": len(self.subjects()),
-                "core.calibrations": len(self.calibrations()),
-                "core.calibration_points": len(self.calibration_points()),
-                "core.calibration_devices": len(self.calibration_devices())}
+        return {
+            "core.subjects": len(self.subjects()),
+            "core.calibrations": len(self.calibrations()),
+            "core.calibration_points": len(self.calibration_points()),
+            "core.calibration_devices": len(self.calibration_devices()),
+        }
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Return the tables this source owns.

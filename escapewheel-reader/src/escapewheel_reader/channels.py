@@ -42,8 +42,10 @@ class ChannelsUndeclared:
     def __str__(self) -> str:
         """One line naming the run and what a caller cannot do with it."""
         where = f" in session {self.session_id}" if self.session_id is not None else ""
-        return (f"sorting run {self.sorting_run_id}{where} declares no channels, so a channel "
-                f"index into it names no electrode")
+        return (
+            f"sorting run {self.sorting_run_id}{where} declares no channels, so a channel "
+            f"index into it names no electrode"
+        )
 
 
 def _rows(packet: Any, resource_id: str, columns: list[str], *, required: bool = False) -> list[dict[str, Any]]:

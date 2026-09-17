@@ -76,7 +76,9 @@ DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
 #: The same, keeping the depth, so a section's own text can be cut from its subsections'.
 NUMBERED = re.compile(r"^(#{1,4}) (\d+(?:\.\d+)*)\.?(?:\s|$)")
-DECLARED = re.compile(r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
+DECLARED = re.compile(
+    r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE
+)
 DECLARED_SECTION = re.compile(r"§(\d+(?:\.\d+)*)")
 
 
@@ -93,8 +95,11 @@ def targets(where: object) -> tuple[list[tuple[str, str]], list[str]]:
         return [], [f"{where!r}, which is not a list of targets"]
     found, malformed = [], []
     for target in where:
-        if (isinstance(target, dict) and isinstance(target.get("part"), str)
-                and isinstance(target.get("section"), str)):
+        if (
+            isinstance(target, dict)
+            and isinstance(target.get("part"), str)
+            and isinstance(target.get("section"), str)
+        ):
             found.append((target["part"], target["section"]))
         else:
             malformed.append(f"{target!r}, which is not a `part` and a `section`")
@@ -119,11 +124,16 @@ def bodies(part: str) -> dict[str, str]:
     if not found:
         return {}
     lines = found[0].read_text().splitlines()
-    marks = [(n, m.group(2)) for n, line in enumerate(lines) if (m := NUMBERED.match(line))]
+    marks = [
+        (n, m.group(2)) for n, line in enumerate(lines) if (m := NUMBERED.match(line))
+    ]
     out = {}
     for index, (start, number) in enumerate(marks):
         depth = number.count(".")
-        end = next((s for s, other in marks[index + 1:] if other.count(".") <= depth), len(lines))
+        end = next(
+            (s for s, other in marks[index + 1 :] if other.count(".") <= depth),
+            len(lines),
+        )
         out[number] = "\n".join(lines[start:end])
     return out
 
@@ -143,7 +153,9 @@ def corroborated(revision: str, part: str, section: str) -> bool:
     text = bodies(part)
     here = text.get(section, "")
     parent = text.get(section.rsplit(".", 1)[0], "") if "." in section else ""
-    return any(re.search(rf"\b{revision}[ ,)§]", body) for body in (here, parent) if body)
+    return any(
+        re.search(rf"\b{revision}[ ,)§]", body) for body in (here, parent) if body
+    )
 
 
 def uncorroborated(ledger: dict[str, dict]) -> list[tuple[str, str, str]]:
@@ -162,7 +174,9 @@ def uncorroborated(ledger: dict[str, dict]) -> list[tuple[str, str, str]]:
 def pointer(document: object, value: str) -> object:
     """Resolve one RFC 6901 JSON Pointer, raising a useful lookup error."""
     if not isinstance(value, str) or not value.startswith("/"):
-        raise ValueError("pointer must be a nonempty RFC 6901 string beginning with `/`")
+        raise ValueError(
+            "pointer must be a nonempty RFC 6901 string beginning with `/`"
+        )
     current = document
     for raw in value[1:].split("/"):
         token = raw.replace("~1", "/").replace("~0", "~")
@@ -185,9 +199,17 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
         declared = tomllib.loads(REGISTRY_TARGETS.read_text()).get("target", {})
     except (OSError, tomllib.TOMLDecodeError) as exc:
         return [f"{REGISTRY_TARGETS.name}: {exc}"]
-    expected = {key for key, entry in ledger.items() if entry.get("disposition") == "registry"}
-    defects = [f"{key}: registry disposition has no exact target" for key in sorted(expected - set(declared))]
-    defects += [f"{key}: target names no registry disposition" for key in sorted(set(declared) - expected)]
+    expected = {
+        key for key, entry in ledger.items() if entry.get("disposition") == "registry"
+    }
+    defects = [
+        f"{key}: registry disposition has no exact target"
+        for key in sorted(expected - set(declared))
+    ]
+    defects += [
+        f"{key}: target names no registry disposition"
+        for key in sorted(set(declared) - expected)
+    ]
     defects += [
         f"{key}: registry disposition retains legacy `where`; use registry-targets.toml"
         for key in sorted(expected)
@@ -205,11 +227,15 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
                 defects.append(f"{key}: target {location!r} is not a table")
                 continue
             if set(location) - {"path", "pointer", "equals"}:
-                defects.append(f"{key}: target has unknown fields {sorted(set(location) - {'path', 'pointer', 'equals'})}")
+                defects.append(
+                    f"{key}: target has unknown fields {sorted(set(location) - {'path', 'pointer', 'equals'})}"
+                )
             path, at = location.get("path"), location.get("pointer")
             pair = (path, at) if isinstance(path, str) and isinstance(at, str) else None
             if pair is None:
-                defects.append(f"{key}: target {location!r} needs string `path` and `pointer`")
+                defects.append(
+                    f"{key}: target {location!r} needs string `path` and `pointer`"
+                )
                 continue
             if pair in seen:
                 defects.append(f"{key}: repeats {path}#{at}")
@@ -231,9 +257,20 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
                     defects.append(
                         f"{key}: {path}#{at} is {resolved!r}, expected {location['equals']!r}"
                     )
-                elif any(token.isdigit() for token in at.split("/")[1:]) and "equals" not in location:
-                    defects.append(f"{key}: array target {path}#{at} needs an `equals` guard")
-            except (json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError) as exc:
+                elif (
+                    any(token.isdigit() for token in at.split("/")[1:])
+                    and "equals" not in location
+                ):
+                    defects.append(
+                        f"{key}: array target {path}#{at} needs an `equals` guard"
+                    )
+            except (
+                json.JSONDecodeError,
+                KeyError,
+                IndexError,
+                TypeError,
+                ValueError,
+            ) as exc:
                 defects.append(f"{key}: {path}#{at} does not resolve ({exc})")
     return defects
 
@@ -263,13 +300,17 @@ def corroboration_exception_defects(
         allowed[key] = row.get("reason", "")
     current = set(thin)
     for key in sorted(current - set(allowed)):
-        defects.append(f"{key[0]}: `{key[1]}` §{key[2]} lacks provenance and is not reviewed")
+        defects.append(
+            f"{key[0]}: `{key[1]}` §{key[2]} lacks provenance and is not reviewed"
+        )
     for key in sorted(set(allowed) - current):
         defects.append(f"{key[0]}: `{key[1]}` §{key[2]} exception is no longer needed")
     return defects, len(allowed)
 
 
-def unresolved(ledger: dict[str, dict]) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+def unresolved(
+    ledger: dict[str, dict],
+) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
     """Every `applied` target naming no section, and every one that is not a target at all."""
     dangling, unparsed = [], []
     for key, entry in sorted(ledger.items(), key=lambda kv: int(kv[0][1:].split()[0])):
@@ -282,7 +323,9 @@ def unresolved(ledger: dict[str, dict]) -> tuple[list[tuple[str, str]], list[tup
             if declared is None:
                 dangling.append((key, f"`{part}` — no part has that number"))
             elif section not in declared:
-                dangling.append((key, f"`{part}` §{section} — that part declares no such section"))
+                dangling.append(
+                    (key, f"`{part}` §{section} — that part declares no such section")
+                )
     return dangling, unparsed
 
 
@@ -296,7 +339,10 @@ def clauses() -> dict[str, str]:
     as such, which is a judgement someone recorded rather than a heuristic that dropped it.
     """
     found = {}
-    for path in sorted(REVISIONS.glob("R[0-9]*.md"), key=lambda p: int(re.match(r"R(\d+)", p.name).group(1))):
+    for path in sorted(
+        REVISIONS.glob("R[0-9]*.md"),
+        key=lambda p: int(re.match(r"R(\d+)", p.name).group(1)),
+    ):
         number = re.match(r"R(\d+)", path.name).group(1)
         text = path.read_text()
         if "**Accepted**" not in text[:400]:
@@ -306,27 +352,38 @@ def clauses() -> dict[str, str]:
         if declared := DECLARED.search(text[:2000]):
             titles = {
                 m.group(1): m.group(2).strip()
-                for m in re.finditer(r"^#{2,4} (\d+(?:\.\d+)*)\.?\s+(.+)$", text, re.MULTILINE)
+                for m in re.finditer(
+                    r"^#{2,4} (\d+(?:\.\d+)*)\.?\s+(.+)$", text, re.MULTILINE
+                )
             }
             named = DECLARED_SECTION.findall(declared.group(1))
             if not named:
-                raise SystemExit(f"{path.name}: `Decision clauses` enumerates no section")
+                raise SystemExit(
+                    f"{path.name}: `Decision clauses` enumerates no section"
+                )
             for section in named:
                 if section not in titles:
-                    raise SystemExit(f"{path.name}: `Decision clauses` names absent §{section}")
+                    raise SystemExit(
+                        f"{path.name}: `Decision clauses` names absent §{section}"
+                    )
                 found[f"R{number} §{section}"] = titles[section]
             continue
         # Every section from 2 onward, at either depth. Section 1 is Motivation by convention;
         # after that the numbering is not consistent -- R32 states its rules in §2, §3 and §4,
         # R30's order is §3.2, R21's codec floor is §3 -- so position cannot say what binds.
         # A subsection supersedes its parent: `### 2.1` is disposed, `## 2.` then is not.
-        matches = [m for m in re.finditer(r"^#{2,3} (\d+(?:\.[\d.]*\d)?)\.?\s+(.+)$", text, re.MULTILINE)
-                   if int(m.group(1).split(".")[0]) >= 2]
+        matches = [
+            m
+            for m in re.finditer(
+                r"^#{2,3} (\d+(?:\.[\d.]*\d)?)\.?\s+(.+)$", text, re.MULTILINE
+            )
+            if int(m.group(1).split(".")[0]) >= 2
+        ]
         parents = {m.group(1).split(".")[0] for m in matches if "." in m.group(1)}
         for index, match in enumerate(matches):
             section = match.group(1)
             end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-            body = text[match.end():end]
+            body = text[match.end() : end]
             # A parent is enumerated only for its own body, the text before its first
             # subsection. R32 §4 states the manifest's carry-forward there and then subdivides;
             # skipping every parent lost it.
@@ -363,17 +420,27 @@ def main() -> int:
     # The ratchet's high-water mark lives beside the data it describes, not as a number in
     # another file that someone has to remember to lower. Falling below it rewrites it, so
     # disposing a clause shows up as a diff and `verify.py`'s candidate-state comparison sees it.
-    baseline = tomllib.loads(LEDGER.read_text()).get("baseline", {}).get("undisposed", 0) if LEDGER.exists() else 0
+    baseline = (
+        tomllib.loads(LEDGER.read_text()).get("baseline", {}).get("undisposed", 0)
+        if LEDGER.exists()
+        else 0
+    )
     undisposed = {k: v for k, v in binding.items() if k not in ledger}
     # A disposition for a clause that no longer exists is as wrong as a missing one: the revision
     # was edited, or the clause was renumbered, and the ledger now vouches for nothing.
     stale = sorted(set(ledger) - set(binding))
-    bad = {k: d.get("disposition") for k, d in ledger.items()
-           if d.get("disposition") not in DISPOSITIONS}
+    bad = {
+        k: d.get("disposition")
+        for k, d in ledger.items()
+        if d.get("disposition") not in DISPOSITIONS
+    }
     # An `applied` entry naming no part says the clause was written down and not where, which is
     # the state the withdrawn `implementation` disposition made permanent for 23 clauses.
-    placeless = sorted(k for k, d in ledger.items()
-                       if d.get("disposition") == "applied" and not d.get("where"))
+    placeless = sorted(
+        k
+        for k, d in ledger.items()
+        if d.get("disposition") == "applied" and not d.get("where")
+    )
     dangling, unparsed = unresolved(ledger)
     registry_defects = registry_target_defects(ledger)
     # What the section itself says, as far as anything can check it: a part cites the revision
@@ -383,7 +450,9 @@ def main() -> int:
 
     counts: dict[str, int] = {}
     for entry in ledger.values():
-        counts[entry.get("disposition", "?")] = counts.get(entry.get("disposition", "?"), 0) + 1
+        counts[entry.get("disposition", "?")] = (
+            counts.get(entry.get("disposition", "?"), 0) + 1
+        )
     print(f"{len(binding)} decision clauses across the accepted revisions")
     for name in sorted(counts):
         print(f"  {counts[name]:>4}  {name}")
@@ -395,14 +464,22 @@ def main() -> int:
     # The rest are defects in what the ledger already claims, and there is nothing to read
     # instead of them.
     if not args.summary:
-        for key, title in sorted(undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])):
+        for key, title in sorted(
+            undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])
+        ):
             print(f"    UNDISPOSED  {key:<12} {title[:62]}")
         for key, part, section in thin:
-            print(f"    UNCORROBORATED {key:<12} `{part}` §{section} states no such provenance")
+            print(
+                f"    UNCORROBORATED {key:<12} `{part}` §{section} states no such provenance"
+            )
     for key in stale:
-        print(f"    STALE       {key:<12} the ledger disposes a clause no revision states")
+        print(
+            f"    STALE       {key:<12} the ledger disposes a clause no revision states"
+        )
     for key, value in sorted(bad.items()):
-        print(f"    BAD         {key:<12} disposition {value!r} is not one of {sorted(DISPOSITIONS)}")
+        print(
+            f"    BAD         {key:<12} disposition {value!r} is not one of {sorted(DISPOSITIONS)}"
+        )
     for key in placeless:
         print(f"    PLACELESS   {key:<12} applied, but `where` names no part")
     for key, target in dangling:
@@ -415,11 +492,21 @@ def main() -> int:
         print(f"    EXCEPTION   {defect}")
 
     over = max(0, len(undisposed) - baseline)
-    failures = (over + len(stale) + len(bad) + len(placeless) + len(dangling) + len(unparsed)
-                + len(registry_defects) + len(exception_defects))
+    failures = (
+        over
+        + len(stale)
+        + len(bad)
+        + len(placeless)
+        + len(dangling)
+        + len(unparsed)
+        + len(registry_defects)
+        + len(exception_defects)
+    )
     if len(undisposed) < baseline:
         text = LEDGER.read_text()
-        text = re.sub(r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text)
+        text = re.sub(
+            r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text
+        )
         print(f"ratchet lowered: undisposed {baseline} -> {len(undisposed)}")
         LEDGER.write_text(text)
         print("commit applied.toml")

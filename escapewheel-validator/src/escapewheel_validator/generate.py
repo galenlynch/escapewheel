@@ -151,20 +151,18 @@ def _discriminator(
     if (positions := column.get("positions_in")) is not None:
         legal = {
             kind: sorted(
-                c["name"] for c in (specs or {}).get(kind, {}).get("columns", [])
-                if c.get("role") == "structural_index"
+                c["name"] for c in (specs or {}).get(kind, {}).get("columns", []) if c.get("role") == "structural_index"
             )
             for kind in sorted(kinds)
         }
         branches = " OR ".join(
             f"({col} = '{kind}' AND {quote(positions)} NOT IN ({', '.join(repr(c) for c in cols)}))"
-            for kind, cols in legal.items() if cols
+            for kind, cols in legal.items()
+            if cols
         )
         unpositioned = [kind for kind, cols in legal.items() if not cols]
         if unpositioned:
-            branches = " OR ".join(
-                filter(None, [branches, f"{col} IN ({', '.join(repr(k) for k in unpositioned)})"])
-            )
+            branches = " OR ".join(filter(None, [branches, f"{col} IN ({', '.join(repr(k) for k in unpositioned)})"]))
         if branches:
             checks.append(
                 Check(

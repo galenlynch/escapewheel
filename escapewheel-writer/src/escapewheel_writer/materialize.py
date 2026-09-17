@@ -73,6 +73,7 @@ def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) 
     if carry is not None and units.size and units[0] == carry[0] and ticks[0] == carry[1]:
         raise Collided(f"unit {int(units[0])} has two spikes on reference tick {int(ticks[0])}")
 
+
 BATCH_ROWS = 1 << 17
 
 #: Bucket width in seconds of the reference clock. The dial trades scattered-unit access
@@ -197,8 +198,7 @@ class _Buckets:
     concatenate the files in bucket order, which is a second pass and no comparisons.
     """
 
-    def __init__(self, root: Path, out: pa.Schema, budget: int = 0,
-                 spec: Mapping[str, Any] | None = None) -> None:
+    def __init__(self, root: Path, out: pa.Schema, budget: int = 0, spec: Mapping[str, Any] | None = None) -> None:
         from .encoding import encodings
 
         self._root = root
@@ -353,8 +353,7 @@ def spike_events(
     registry = packet.registry
     if registry is None:
         raise NotAligned("the packet embeds no registry, so the derived table has no declared types")
-    out = arrow_schema(registry["tables"]["analysis.spike_events"],
-                       {*columns, "clock_id", "time_bucket_tick"})
+    out = arrow_schema(registry["tables"]["analysis.spike_events"], {*columns, "clock_id", "time_bucket_tick"})
 
     root = Path(scratch) if scratch else Path(tempfile.mkdtemp(prefix=".materialize-", dir=packet.root.parent))
     buckets = _Buckets(root, out, _bytes(memory_budget), registry["tables"][RESOURCE])
@@ -368,9 +367,7 @@ def spike_events(
                     f"a spike names unit {int(units.max())}, which `core.units` does not declare, "
                     f"so its tick reaches no clock (R96 §3.3)"
                 )
-            timed = pa.record_batch(
-                {"t_tick": batch.column("t_tick"), "clock_id": pa.array(on_clock[units])}
-            )
+            timed = pa.record_batch({"t_tick": batch.column("t_tick"), "clock_id": pa.array(on_clock[units])})
             parent, keep = mapped(timed, reference, by_clock, bound)
             # Part 06 §4: counted whether or not any are dropped. A recorded zero is the
             # evidence the bound was sufficient; silence is what let a reader and this

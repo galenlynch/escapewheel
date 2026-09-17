@@ -142,8 +142,7 @@ def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
     path = packet_root / "schemas" / "logical_schemas.json"
     registry = json.loads(path.read_text())
     registry["tables"]["core.trials"]["columns"].append(
-        {"name": "metadata", "type": "json_string", "presence": "optional", "role": "data",
-         "description": "metadata"}
+        {"name": "metadata", "type": "json_string", "presence": "optional", "role": "data", "description": "metadata"}
     )
     path.write_text(json.dumps(registry))
     report = validate(open_packet(packet_root))
@@ -157,8 +156,7 @@ def test_a_filled_metadata_column_is_not_reported(packet_root):
     path = packet_root / "schemas" / "logical_schemas.json"
     registry = json.loads(path.read_text())
     registry["tables"]["core.trials"]["columns"].append(
-        {"name": "metadata", "type": "json_string", "presence": "optional", "role": "data",
-         "description": "metadata"}
+        {"name": "metadata", "type": "json_string", "presence": "optional", "role": "data", "description": "metadata"}
     )
     path.write_text(json.dumps(registry))
     trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
@@ -173,12 +171,18 @@ def test_a_by_position_discriminator_gets_no_reverse_check(packet_root):
     registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
     trials = registry["tables"]["core.trials"]
     trials["columns"].append(
-        {"name": "axis_of", "type": "string", "presence": "nullable", "role": "discriminator",
-         "resolves": "required", "positions_in": "axis_column", "description": "d"}
+        {
+            "name": "axis_of",
+            "type": "string",
+            "presence": "nullable",
+            "role": "discriminator",
+            "resolves": "required",
+            "positions_in": "axis_column",
+            "description": "d",
+        }
     )
     trials["columns"].append(
-        {"name": "axis_column", "type": "string", "presence": "nullable", "role": "data",
-         "description": "d"}
+        {"name": "axis_column", "type": "string", "presence": "nullable", "role": "data", "description": "d"}
     )
     ids = {c.id for c in generate(registry, kinds={"core.units": None})}
     assert "core.trials.axis_of.is_a_resource_id" in ids
@@ -191,17 +195,25 @@ def test_the_position_column_is_checked_against_the_registrys_roles(packet_root)
     registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
     trials = registry["tables"]["core.trials"]
     trials["columns"] += [
-        {"name": "axis_of", "type": "string", "presence": "nullable", "role": "discriminator",
-         "resolves": "required", "positions_in": "axis_column", "description": "d"},
-        {"name": "axis_column", "type": "string", "presence": "nullable", "role": "data",
-         "description": "d"},
+        {
+            "name": "axis_of",
+            "type": "string",
+            "presence": "nullable",
+            "role": "discriminator",
+            "resolves": "required",
+            "positions_in": "axis_column",
+            "description": "d",
+        },
+        {"name": "axis_column", "type": "string", "presence": "nullable", "role": "data", "description": "d"},
     ]
     registry["tables"]["core.units"]["columns"].append(
-        {"name": "seat_index", "type": "int64", "presence": "nullable",
-         "role": "structural_index", "description": "d"}
+        {"name": "seat_index", "type": "int64", "presence": "nullable", "role": "structural_index", "description": "d"}
     )
-    check = next(c for c in generate(registry, kinds={"core.units": None})
-                 if c.id == "core.trials.axis_of.position_column_indexes")
+    check = next(
+        c
+        for c in generate(registry, kinds={"core.units": None})
+        if c.id == "core.trials.axis_of.position_column_indexes"
+    )
     assert "'seat_index'" in check.sql and "core.units" in check.sql
 
 
@@ -840,7 +852,7 @@ def test_a_digest_that_disagrees_is_an_error(packet_root):
 
 
 def test_the_summary_names_what_it_compared(packet_root):
-    """"Resolved and checked" said nothing about which claims were actually tested."""
+    """ "Resolved and checked" said nothing about which claims were actually tested."""
     report = validate(open_packet(_external(packet_root)), external=True)
     message = next(f for f in report.findings if f.check == "external.verified").message
     assert "1 codecs" in message and "1 size_bytes" in message
@@ -901,21 +913,41 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
     def stamped(uri, **kwargs):
         found = listing(uri, **kwargs)
         return Listing(
-            tuple(Member(m.key, m.size_bytes, StoreDigest("md5", f"{index:032x}")) for index, m in enumerate(found.members)),
+            tuple(
+                Member(m.key, m.size_bytes, StoreDigest("md5", f"{index:032x}"))
+                for index, m in enumerate(found.members)
+            ),
             found.size_bytes,
         )
 
     root = _with_members(_external(packet_root))
     monkeypatch.setattr(module, "listing", stamped)
-    passing = validate(open_packet(_with_members(root, mutate=lambda e: [
-        m.update(store_digest={"algorithm": "md5", "value": f"{i:032x}"}) for i, m in enumerate(e["members"])
-    ])), external=True, store_digests=True)
+    passing = validate(
+        open_packet(
+            _with_members(
+                root,
+                mutate=lambda e: [
+                    m.update(store_digest={"algorithm": "md5", "value": f"{i:032x}"})
+                    for i, m in enumerate(e["members"])
+                ],
+            )
+        ),
+        external=True,
+        store_digests=True,
+    )
     assert passing.passed
     assert "1 store_digest" in next(f for f in passing.findings if f.check == "external.verified").message
 
-    changed = validate(open_packet(_with_members(root, mutate=lambda e: [
-        m.update(store_digest={"algorithm": "md5", "value": "f" * 32}) for m in e["members"]
-    ])), external=True, store_digests=True)
+    changed = validate(
+        open_packet(
+            _with_members(
+                root,
+                mutate=lambda e: [m.update(store_digest={"algorithm": "md5", "value": "f" * 32}) for m in e["members"]],
+            )
+        ),
+        external=True,
+        store_digests=True,
+    )
     assert not changed.passed
     assert "external.store_digest" in {f.check for f in changed.findings}
 
@@ -1055,14 +1087,36 @@ def _extension(root, *, tables=None, mutate=None):
         "tables": {
             "task.trials": {
                 "columns": [
-                    {"name": "session_id", "type": "string", "presence": "required", "role": "identifier", "identity": "assigned"},
-                    {"name": "trial_id", "type": "string", "presence": "required", "role": "identifier", "identity": "assigned"},
-                    {"name": "choice", "type": "string", "presence": "nullable", "role": "data",
-                     "enum": ["left", "right"]},
+                    {
+                        "name": "session_id",
+                        "type": "string",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                    },
+                    {
+                        "name": "trial_id",
+                        "type": "string",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                    },
+                    {
+                        "name": "choice",
+                        "type": "string",
+                        "presence": "nullable",
+                        "role": "data",
+                        "enum": ["left", "right"],
+                    },
                 ],
                 "primary_key": ["session_id", "trial_id"],
-                "references": [{"columns": ["session_id", "trial_id"], "resource": "core.trials",
-                                "resource_columns": ["session_id", "trial_id"]}],
+                "references": [
+                    {
+                        "columns": ["session_id", "trial_id"],
+                        "resource": "core.trials",
+                        "resource_columns": ["session_id", "trial_id"],
+                    }
+                ],
                 "rules": [],
             }
         },
@@ -1082,11 +1136,19 @@ def _extension(root, *, tables=None, mutate=None):
 
     manifest = json.loads((root / "packet.json").read_text())
     manifest["extensions"] = {"task": {"version": "0.1.0", "registry": "extensions/task.json"}}
-    manifest["resources"].append({
-        "resource_id": "task.trials", "layer": "extension", "extension_id": "task", "kind": "table",
-        "schema_id": "task.trials.v0.1", "physical_profile": "parquet",
-        "uri": "tables/task/trials.parquet", "canonical": True, "validation_state": "passed",
-    })
+    manifest["resources"].append(
+        {
+            "resource_id": "task.trials",
+            "layer": "extension",
+            "extension_id": "task",
+            "kind": "table",
+            "schema_id": "task.trials.v0.1",
+            "physical_profile": "parquet",
+            "uri": "tables/task/trials.parquet",
+            "canonical": True,
+            "validation_state": "passed",
+        }
+    )
     (root / "packet.json").write_text(json.dumps(manifest))
     return root
 

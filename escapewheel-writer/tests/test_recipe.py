@@ -87,9 +87,7 @@ def test_a_shipped_adapter_needs_no_declaration_and_a_registered_one_does(tmp_pa
     problems = [p.message for p in Recipe.load(registered).check(registry) if "neither delivers" in p.message]
     assert problems and "vr_sites" in problems[0]
 
-    opted = write(
-        tmp_path, '\n[[source]]\nkind = "vr_sites"\nroot = "."\nowns = []\nin_process = true\n', "opt.toml"
-    )
+    opted = write(tmp_path, '\n[[source]]\nkind = "vr_sites"\nroot = "."\nowns = []\nin_process = true\n', "opt.toml")
     assert not [p for p in Recipe.load(opted).check(registry) if "neither delivers" in p.message]
 
     delivered = write(
@@ -104,9 +102,7 @@ def test_a_shipped_adapter_needs_no_declaration_and_a_registered_one_does(tmp_pa
 def test_an_in_process_source_does_not_carry_the_flag_into_the_adapter(tmp_path):
     """`in_process` is the build's business, so it must not reach the adapter as an option: every
     other key of a source entry is passed through as a keyword argument."""
-    recipe = Recipe.load(
-        write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "."\nowns = []\nin_process = true\n')
-    )
+    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "."\nowns = []\nin_process = true\n'))
     assert "in_process" not in recipe.sources[0].options
 
 
@@ -292,10 +288,15 @@ def test_what_the_recipe_itself_supplies_is_not_noted(tmp_path):
 
 def test_rows_another_source_owns_are_noted_without_a_preference(tmp_path):
     """Part 05 §3.4. Two sources holding disjoint parts of one resource; `owns` keeps one silently."""
-    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
-                                        'owns = ["core.units"]\n'
-                                        '\n[[source]]\nkind = "sync"\nroot = "y"\n'
-                                        'owns = ["core.clock_observation_intervals"]\n'))
+    recipe = Recipe.load(
+        write(
+            tmp_path,
+            '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
+            'owns = ["core.units"]\n'
+            '\n[[source]]\nkind = "sync"\nroot = "y"\n'
+            'owns = ["core.clock_observation_intervals"]\n',
+        )
+    )
     source = Noted()
     _note_unclaimed(recipe.sources[0], source, {"core.clock_observation_intervals": 12})
     assert any("core.clock_observation_intervals" in n for n in source.notes)
@@ -308,10 +309,15 @@ def test_a_preference_is_what_makes_a_discard_silent(tmp_path):
     checked first and returns -- so the silence came from a dead entry rather than from a
     preference. `core.probes` is the preference that arbitrates.
     """
-    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
-                                        'owns = ["core.units"]\n'
-                                        '\n[[source]]\nkind = "nwb"\nroot = "y"\n'
-                                        'owns = ["core.probes"]\n'))
+    recipe = Recipe.load(
+        write(
+            tmp_path,
+            '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
+            'owns = ["core.units"]\n'
+            '\n[[source]]\nkind = "nwb"\nroot = "y"\n'
+            'owns = ["core.probes"]\n',
+        )
+    )
     source = Noted()
     _note_unclaimed(recipe.sources[0], source, {"core.probes": 12})
     assert source.notes == []
@@ -350,10 +356,15 @@ class _Registry:
 
 def _contest(tmp_path):
     """A recipe where the NWB claims `core.probes` and the sorter also produces it."""
-    return Recipe.load(write(tmp_path, '\n[[source]]\nkind = "nwb"\nroot = "n"\n'
-                                       'owns = ["core.probes"]\n'
-                                       '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
-                                       'owns = ["core.units"]\n'))
+    return Recipe.load(
+        write(
+            tmp_path,
+            '\n[[source]]\nkind = "nwb"\nroot = "n"\n'
+            'owns = ["core.probes"]\n'
+            '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
+            'owns = ["core.units"]\n',
+        )
+    )
 
 
 def test_a_preference_names_a_resource_more_than_one_source_produces(tmp_path):
@@ -550,15 +561,22 @@ def test_an_encoding_declaration_needs_a_choice_and_a_reason(tmp_path):
     The reason is what makes the entry re-judgeable: an encoding is a fact about one packet's
     values, so a bare choice cannot be checked against the next session's data.
     """
-    recipe = Recipe.load(write(tmp_path, """
+    recipe = Recipe.load(
+        write(
+            tmp_path,
+            """
 [encoding]
 "aind_unit_qc.metrics.num_spikes_used" = { encoding = "delta", reason = "climbs with the spike count; 1.7x" }
 "aind_unit_qc.metrics.presence_ratio" = { encoding = "sideways", reason = "no such thing" }
 "aind_unit_qc.metrics.silhouette" = { encoding = "plain", reason = "" }
-"""))
-    tables = {"aind_unit_qc.metrics": {"columns": [{"name": "num_spikes_used"},
-                                                   {"name": "presence_ratio"},
-                                                   {"name": "silhouette"}]}}
+""",
+        )
+    )
+    tables = {
+        "aind_unit_qc.metrics": {
+            "columns": [{"name": "num_spikes_used"}, {"name": "presence_ratio"}, {"name": "silhouette"}]
+        }
+    }
     found = recipe.encoding_problems(tables)
     assert any("sideways" in e for e in found)
     assert any("silhouette" in e and "no reason" in e for e in found)
@@ -567,10 +585,15 @@ def test_an_encoding_declaration_needs_a_choice_and_a_reason(tmp_path):
 
 def test_an_encoding_declaration_reaches_the_writer(tmp_path):
     """`resource.column` splits at the last dot, a resource ID being dotted itself."""
-    recipe = Recipe.load(write(tmp_path, """
+    recipe = Recipe.load(
+        write(
+            tmp_path,
+            """
 [encoding]
 "aind_unit_qc.metrics.num_spikes_used" = { encoding = "delta", reason = "1.7x" }
-"""))
+""",
+        )
+    )
     assert _encoding_exceptions(recipe)["delta"] == {"aind_unit_qc.metrics": ("num_spikes_used",)}
 
 

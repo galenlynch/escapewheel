@@ -50,9 +50,7 @@ BATCH_ROWS = 1_000_000
 RETRY = 0.01
 
 #: One protocol's reading half: what arrived per resource, and what was wrong with the run.
-Reader = Callable[
-    [str, Sequence[str], bytes, Mapping[str, Any], Sequence[str]], tuple[dict[str, Any], list[str]]
-]
+Reader = Callable[[str, Sequence[str], bytes, Mapping[str, Any], Sequence[str]], tuple[dict[str, Any], list[str]]]
 
 
 def as_table(rows: Sequence[Mapping[str, Any]]) -> pa.Table:
@@ -69,9 +67,7 @@ def as_table(rows: Sequence[Mapping[str, Any]]) -> pa.Table:
     writer would have written, which is what makes the two routes produce one byte string.
     """
     columns = list(dict.fromkeys(name for row in rows for name in row))
-    return pa.Table.from_pylist(
-        [{c: _flat(row.get(c)) for c in columns} for row in rows]
-    )
+    return pa.Table.from_pylist([{c: _flat(row.get(c)) for c in columns} for row in rows])
 
 
 def _flat(value: Any) -> Any:
@@ -456,9 +452,7 @@ class Delivered:
 
     def batches(self) -> dict[str, Iterator[pa.RecordBatch]]:
         """Return every resource too large to hold, as the stream it arrived as."""
-        return {
-            resource: _batches(table) for resource, table in self.tables.items() if not self.held(resource)
-        }
+        return {resource: _batches(table) for resource, table in self.tables.items() if not self.held(resource)}
 
 
 def _attribute(field: str) -> str:
@@ -676,6 +670,7 @@ def _drain(handle: Any, into: list[str]) -> threading.Thread:
     A pipe holds tens of kilobytes, so reading one to completion after the other deadlocks on any
     adapter whose diagnosis outruns that buffer (Part 05 §3.7).
     """
+
     def run() -> None:
         into.append(handle.read().decode(errors="replace"))
 
@@ -788,7 +783,7 @@ def _read_flight(
         except fl.FlightError as exc:
             # A failing adapter writes nothing to standard error here, because the diagnosis
             # travels on the connection it was asked over (Part 05 §4.4).
-            failures.append(f"{exc}; detail: {getattr(exc, 'extra_info', b'') !r}")
+            failures.append(f"{exc}; detail: {getattr(exc, 'extra_info', b'')!r}")
         client.close()
     # A build that started a process owns it, and an adapter may not rely on running code after
     # its last response (Part 03 §11.6).

@@ -13,6 +13,7 @@ the structure cannot imply.
 Merging them here keeps ``logical_schemas.json`` wholly generated, so it can be rebuilt
 without losing hand-written work. Do not edit it directly.
 """
+
 import json
 from pathlib import Path
 
@@ -24,22 +25,33 @@ OUT = HERE / "logical_schemas.json"
 #: Where each hand-written schema is vendored. A wheel cannot read a file from another
 #: distribution, so each carries a copy -- which makes the copy an output of this build.
 VENDORED = {
-    "registry.schema.json": HERE.parent / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
-    "manifest.schema.json": HERE.parent / "escapewheel-reader/src/escapewheel_reader/schemas/manifest.schema.json",
-    "sources.schema.json": HERE.parent / "escapewheel-reader/src/escapewheel_reader/schemas/sources.schema.json",
+    "registry.schema.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+    "manifest.schema.json": HERE.parent
+    / "escapewheel-reader/src/escapewheel_reader/schemas/manifest.schema.json",
+    "sources.schema.json": HERE.parent
+    / "escapewheel-reader/src/escapewheel_reader/schemas/sources.schema.json",
     # A *build* reads an adapter's declaration (Part 03 §11.5), so this one vendors into the
     # writer where the other three go to whichever package reads them.
-    "adapter.schema.json": HERE.parent / "escapewheel-writer/src/escapewheel_writer/schemas/adapter.schema.json",
-    "resources.schema.json": HERE.parent / "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json",
+    "adapter.schema.json": HERE.parent
+    / "escapewheel-writer/src/escapewheel_writer/schemas/adapter.schema.json",
+    "resources.schema.json": HERE.parent
+    / "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json",
 }
 RULES = HERE / "rules.json"
 
 # 02's type spellings -> R2 §4 vocabulary. Nested spellings are removed by R3, not mapped.
 TYPES = {
-    "string": "string", "int32": "int32", "int64": "int64", "float32": "float32",
-    "float64": "float64", "bool": "bool", "timestamp": "timestamp", "date": "date",
-    "date or timestamp": "date",                      # R4 §3.6
-    "struct/map/json_string": "json_string",          # Part 03 §5.5
+    "string": "string",
+    "int32": "int32",
+    "int64": "int64",
+    "float32": "float32",
+    "float64": "float64",
+    "bool": "bool",
+    "timestamp": "timestamp",
+    "date": "date",
+    "date or timestamp": "date",  # R4 §3.6
+    "struct/map/json_string": "json_string",  # Part 03 §5.5
 }
 
 
@@ -53,7 +65,7 @@ def presence(required: str, typ: str) -> str:
         return "required"
     if typ == "json_string":
         return "optional"
-    return "nullable"                                  # 02: prefer present-nullable
+    return "nullable"  # 02: prefer present-nullable
 
 
 class _Since(list):
@@ -84,10 +96,76 @@ SINCE = _Since([None])
 #: Revisions applied above that stamp no column, so nothing records them but this list: a rule,
 #: a key, a sort order, a withdrawal, or a decision about the format rather than about a table.
 #: R42 is withdrawn and so is not here.
-UNSTAMPED = (1, 2, 4, 7, 10, 12, 14, 15, 17, 21, 22, 24, 26, 29, 30, 31, 32, 34, 35, 36, 37, 40,
-             43, 46, 47, 48, 51, 52, 55, 57, 58, 60, 61, 62, 63, 64, 69, 71, 72, 74, 75, 76, 77, 78, 79,
-             80, 82, 84, 86, 87, 90, 92, 93, 94, 98, 106, 108, 109, 110, 111, 112, 113, 114, 115,
-             116, 117, 118, 119)
+UNSTAMPED = (
+    1,
+    2,
+    4,
+    7,
+    10,
+    12,
+    14,
+    15,
+    17,
+    21,
+    22,
+    24,
+    26,
+    29,
+    30,
+    31,
+    32,
+    34,
+    35,
+    36,
+    37,
+    40,
+    43,
+    46,
+    47,
+    48,
+    51,
+    52,
+    55,
+    57,
+    58,
+    60,
+    61,
+    62,
+    63,
+    64,
+    69,
+    71,
+    72,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    82,
+    84,
+    86,
+    87,
+    90,
+    92,
+    93,
+    94,
+    98,
+    106,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+)
 
 
 #: Every column's role (R48 §2.1), keyed by column name. **Required**: a name absent here is a
@@ -109,75 +187,211 @@ TRANSIENT = ("local_electrode_index", "local_channel_index", "local_unit_index")
 #: so that reviving one would not revive a wrong classification with it.
 WITHDRAWN = {
     # R9 §2: the entity/activity/edge provenance graph.
-    "activity_id": "identifier", "entity_id": "identifier", "source_entity_id": "identifier",
-    "target_entity_id": "identifier", "resource_id": "identifier",
-    "entity_type": "data", "relationship_type": "data",
+    "activity_id": "identifier",
+    "entity_id": "identifier",
+    "source_entity_id": "identifier",
+    "target_entity_id": "identifier",
+    "resource_id": "identifier",
+    "entity_type": "data",
+    "relationship_type": "data",
     # R5 §4: core.unit_spike_chunks, withdrawn with its table.
-    "chunk_index": "sequence_position", "t_min_tick": "coordinate", "t_max_tick": "coordinate",
+    "chunk_index": "sequence_position",
+    "t_min_tick": "coordinate",
+    "t_max_tick": "coordinate",
     # R3 §3.3: the array declares its own dtype.
     "dtype": "data",
     # R59 §2.1: an atlas annotation states a fact about a position, so it moves to the coordinate.
     "brain_region": "data",
 }
 
-ROLES: dict[str, str] = (dict.fromkeys(TRANSIENT, "data") | WITHDRAWN
-                         | {"band": "data", "device_kind": "discriminator",
-                            "atlas": "data", "atlas_version": "data",
-                            "axis_name": "data", "axis_direction": "data",
-                            "axis_value": "data"})
+ROLES: dict[str, str] = (
+    dict.fromkeys(TRANSIENT, "data")
+    | WITHDRAWN
+    | {
+        "band": "data",
+        "device_kind": "discriminator",
+        "atlas": "data",
+        "atlas_version": "data",
+        "axis_name": "data",
+        "axis_direction": "data",
+        "axis_value": "data",
+    }
+)
 for _role, _names in {
     "identifier": (
-        "array_asset_id", "calibration_id", "clock_id", "condition_id", "coordinate_array_asset_id", "curation_id",
-        "default_electrode_id", "device_id", "electrode_id", "event_id", "event_stream_id",
-        "input_array_asset_id", "media_asset_id", "parent_clock_id", "parent_curation_id", "probe_id",
-        "processing_run_id", "reference_clock_id", "region_id", "session_id", "sorting_run_id",
+        "array_asset_id",
+        "calibration_id",
+        "clock_id",
+        "condition_id",
+        "coordinate_array_asset_id",
+        "curation_id",
+        "default_electrode_id",
+        "device_id",
+        "electrode_id",
+        "event_id",
+        "event_stream_id",
+        "input_array_asset_id",
+        "media_asset_id",
+        "parent_clock_id",
+        "parent_curation_id",
+        "probe_id",
+        "processing_run_id",
+        "reference_clock_id",
+        "region_id",
+        "session_id",
+        "sorting_run_id",
         "source_file_id",
-        "interval_id", "parent_device_id", "source_session_id", "stimulus_id", "stream_id", "subject_id", "supersedes_run_id", "trial_id",
+        "interval_id",
+        "parent_device_id",
+        "source_session_id",
+        "stimulus_id",
+        "stream_id",
+        "subject_id",
+        "supersedes_run_id",
+        "trial_id",
         "unit_id",
     ),
     "coordinate": (
-        "first_spike_tick", "last_spike_tick", "origin_tick", "parent_tick", "start_tick", "stop_tick",
-        "t_tick", "t_zero_tick", "time_bucket_tick",
+        "first_spike_tick",
+        "last_spike_tick",
+        "origin_tick",
+        "parent_tick",
+        "start_tick",
+        "stop_tick",
+        "t_tick",
+        "t_zero_tick",
+        "time_bucket_tick",
     ),
     "structural_index": (
-        "axis_index", "channel_index", "frame_index", "point_index",
+        "axis_index",
+        "channel_index",
+        "frame_index",
+        "point_index",
     ),
-    "sequence_position": (
-        "anchor_index",
-    ),
+    "sequence_position": ("anchor_index",),
     # Part 02 §8.3. A column a consumer resolves to a table, which `data` said nothing about -- so
     # nothing checked that `scope_kind` held a resource ID at all.
     "discriminator": (
-        "detail_kind", "interval_kind", "scope_kind",
+        "detail_kind",
+        "interval_kind",
+        "scope_kind",
     ),
     "data": (
-        "activity_type", "amplitude", "amplitude_unit", "calibrated_at", "calibration_name",
-        "calibration_type", "channel_label", "choice",
-        "chosen_at", "code_uri", "confidence", "conversion", "coordinate_frame",
-        "coordinate_basis", "coordinate_position_column", "coordinate_resource", "coordinate_unit",
-        "created_at", "description", "region_label",
-        "curation_tool", "curation_tool_version", "curator", "date_of_birth", "dimension_name", "dropped",
-        "ended_at", "event_type", "experimenter", "firing_rate_hz", "firmware_version", "format",
-        "genotype", "hardware_version", "impedance_ohm", "input_unit", "input_value",
-        "alignment_bound", "anchor_interval_span", "shift_seconds",
-        "withheld_first_anchor", "withheld_last_anchor",
-        "insertion_name", "institution", "inter_sample_shift", "is_primary", "kind", "label",
-        "local_channel_label", "local_electrode_label", "local_unit_label", "manufacturer", "metadata",
-        "model", "modified_at", "n_spikes", "name", "normalized_label", "notes", "offset", "origin",
-        "origin_value", "output_unit", "output_value", "parameters", "parent_port", "payload",
-        "probe_type", "pts", "pts_rate_den",
-        "pts_rate_num", "quality_label",
-        "quality_label_source", "reason", "rewarded", "sample_rate_hz", "scope",
-        "semantic_type", "serial_number", "session_description", "session_end_time", "session_start_time",
-        "sex", "sha256", "size_bytes", "software_name", "software_version", "sorter_name", "sorter_version",
-        "source", "species", "started_at", "status", "step_tick_den", "step_tick_num", "step_value",
-        "strain", "tag", "target_region", "task_name", "tick_rate_den", "tick_rate_hz", "tick_rate_num",
-        "tick_zero_utc", "transform_offset", "transform_slope", "transform_to_parent", "unit", "uri",
-        "x_um", "y_um", "z_um",
+        "activity_type",
+        "amplitude",
+        "amplitude_unit",
+        "calibrated_at",
+        "calibration_name",
+        "calibration_type",
+        "channel_label",
+        "choice",
+        "chosen_at",
+        "code_uri",
+        "confidence",
+        "conversion",
+        "coordinate_frame",
+        "coordinate_basis",
+        "coordinate_position_column",
+        "coordinate_resource",
+        "coordinate_unit",
+        "created_at",
+        "description",
+        "region_label",
+        "curation_tool",
+        "curation_tool_version",
+        "curator",
+        "date_of_birth",
+        "dimension_name",
+        "dropped",
+        "ended_at",
+        "event_type",
+        "experimenter",
+        "firing_rate_hz",
+        "firmware_version",
+        "format",
+        "genotype",
+        "hardware_version",
+        "impedance_ohm",
+        "input_unit",
+        "input_value",
+        "alignment_bound",
+        "anchor_interval_span",
+        "shift_seconds",
+        "withheld_first_anchor",
+        "withheld_last_anchor",
+        "insertion_name",
+        "institution",
+        "inter_sample_shift",
+        "is_primary",
+        "kind",
+        "label",
+        "local_channel_label",
+        "local_electrode_label",
+        "local_unit_label",
+        "manufacturer",
+        "metadata",
+        "model",
+        "modified_at",
+        "n_spikes",
+        "name",
+        "normalized_label",
+        "notes",
+        "offset",
+        "origin",
+        "origin_value",
+        "output_unit",
+        "output_value",
+        "parameters",
+        "parent_port",
+        "payload",
+        "probe_type",
+        "pts",
+        "pts_rate_den",
+        "pts_rate_num",
+        "quality_label",
+        "quality_label_source",
+        "reason",
+        "rewarded",
+        "sample_rate_hz",
+        "scope",
+        "semantic_type",
+        "serial_number",
+        "session_description",
+        "session_end_time",
+        "session_start_time",
+        "sex",
+        "sha256",
+        "size_bytes",
+        "software_name",
+        "software_version",
+        "sorter_name",
+        "sorter_version",
+        "source",
+        "species",
+        "started_at",
+        "status",
+        "step_tick_den",
+        "step_tick_num",
+        "step_value",
+        "strain",
+        "tag",
+        "target_region",
+        "task_name",
+        "tick_rate_den",
+        "tick_rate_hz",
+        "tick_rate_num",
+        "tick_zero_utc",
+        "transform_offset",
+        "transform_slope",
+        "transform_to_parent",
+        "unit",
+        "uri",
+        "x_um",
+        "y_um",
+        "z_um",
     ),
 }.items():
     ROLES.update(dict.fromkeys(_names, _role))
-
 
 
 #: R53 §2.3. Whether an identifier is the source's own value or a number this format chose.
@@ -185,15 +399,15 @@ for _role, _names in {
 #: composed strings, so what decides this is whether the value survives the write.
 IDENTITY: dict[str, str] = {
     # Carried -- the source's own, so two independent builds agree without being told to.
-    "interval_id": "carried",         # R54 §2.2: each kind keeps its source's own numbering
-    "trial_id": "carried",            # NWB intervals/trials/id, int64, already 0..n
-    "unit_id": "assigned",            # R81 §2.1: the packet numbers its units; the sorter's
-                                      # label stays in local_unit_label, which R53 §2.3 requires
+    "interval_id": "carried",  # R54 §2.2: each kind keeps its source's own numbering
+    "trial_id": "carried",  # NWB intervals/trials/id, int64, already 0..n
+    "unit_id": "assigned",  # R81 §2.1: the packet numbers its units; the sorter's
+    # label stays in local_unit_label, which R53 §2.3 requires
     # electrode_id looked carried and is not: `_electrode_ids` composes (group, channel)
     # because no NWB column is unique on its own -- electrode_name repeats across the shanks of
     # a quad-base probe, and channel_name is per-probe.
     "electrode_id": "assigned",
-    "region_id": "carried",           # the atlas's structure number, which coordinate_frame names
+    "region_id": "carried",  # the atlas's structure number, which coordinate_frame names
     # Declared until R81 §2.7 drops the column: it exists earlier in this build.
     "default_electrode_id": "assigned",
     # Assigned -- this format chose the number, and something must record what it stands for.
@@ -224,8 +438,11 @@ IDENTITY: dict[str, str] = {
     "supersedes_run_id": "assigned",
     # Withdrawn columns still pass through `col` on their way to being struck, so they need a
     # value; none reaches the built registry.
-    "activity_id": "assigned", "entity_id": "assigned", "source_entity_id": "assigned",
-    "target_entity_id": "assigned", "resource_id": "assigned",
+    "activity_id": "assigned",
+    "entity_id": "assigned",
+    "source_entity_id": "assigned",
+    "target_entity_id": "assigned",
+    "resource_id": "assigned",
 }
 
 
@@ -254,7 +471,10 @@ DISCRIMINATOR: dict[str, dict[str, str]] = {
     # is uninterpretable. Part 02 §8.3's third shape, which `positions_in` is what declares -- naming
     # the column whose value is the position column in the named resource, as `discriminates`
     # names the column whose value is a key.
-    "coordinate_resource": {"resolves": "required", "positions_in": "coordinate_position_column"},
+    "coordinate_resource": {
+        "resolves": "required",
+        "positions_in": "coordinate_position_column",
+    },
 }
 
 
@@ -304,23 +524,82 @@ VOCABULARY: dict[str, str] = {}
 for _vocab, _names in {
     "closed": ("normalized_label", "quality_label", "sex", "status"),
     "open": (
-        "activity_type", "atlas", "atlas_version", "axis_direction", "axis_name", "band", "amplitude_unit", "calibration_type", "coordinate_basis",
-        "coordinate_frame", "coordinate_unit", "event_type", "format", "genotype", "input_unit",
-        "kind", "label", "manufacturer", "origin", "output_unit", "parent_port", "probe_type",
-        "quality_label_source", "region_label", "semantic_type", "source", "species", "strain",
-        "target_region", "unit",
+        "activity_type",
+        "atlas",
+        "atlas_version",
+        "axis_direction",
+        "axis_name",
+        "band",
+        "amplitude_unit",
+        "calibration_type",
+        "coordinate_basis",
+        "coordinate_frame",
+        "coordinate_unit",
+        "event_type",
+        "format",
+        "genotype",
+        "input_unit",
+        "kind",
+        "label",
+        "manufacturer",
+        "origin",
+        "output_unit",
+        "parent_port",
+        "probe_type",
+        "quality_label_source",
+        "region_label",
+        "semantic_type",
+        "source",
+        "species",
+        "strain",
+        "target_region",
+        "unit",
     ),
     "free": (
-        "array_asset_name", "calibration_name", "channel_label", "clock_name", "code_uri",
-        "coordinate_position_column", "curation_name", "curation_tool", "curation_tool_version",
-        "curator", "description", "device_name", "dimension_name", "electrode_name",
-        "event_stream_name", "experimenter", "firmware_version", "hardware_version",
-        "insertion_name", "institution", "local_channel_label", "local_electrode_label",
-        "local_unit_label", "media_asset_name", "model", "notes", "probe_name",
-        "processing_run_name", "reason", "scope", "serial_number", "session_description",
-        "session_name", "sha256", "software_name", "software_version", "sorter_name",
-        "sorter_version", "sorting_run_name", "source_file_name", "subject_name", "task_name",
-        "unit_name", "uri",
+        "array_asset_name",
+        "calibration_name",
+        "channel_label",
+        "clock_name",
+        "code_uri",
+        "coordinate_position_column",
+        "curation_name",
+        "curation_tool",
+        "curation_tool_version",
+        "curator",
+        "description",
+        "device_name",
+        "dimension_name",
+        "electrode_name",
+        "event_stream_name",
+        "experimenter",
+        "firmware_version",
+        "hardware_version",
+        "insertion_name",
+        "institution",
+        "local_channel_label",
+        "local_electrode_label",
+        "local_unit_label",
+        "media_asset_name",
+        "model",
+        "notes",
+        "probe_name",
+        "processing_run_name",
+        "reason",
+        "scope",
+        "serial_number",
+        "session_description",
+        "session_name",
+        "sha256",
+        "software_name",
+        "software_version",
+        "sorter_name",
+        "sorter_version",
+        "sorting_run_name",
+        "source_file_name",
+        "subject_name",
+        "task_name",
+        "unit_name",
+        "uri",
     ),
 }.items():
     VOCABULARY |= dict.fromkeys(_names, _vocab)
@@ -334,13 +613,24 @@ UCUM = {"name": "UCUM", "uri": "https://ucum.org/ucum.html"}
 #: derives one from the other. R53 §2.3.1's shape one level over -- the identity a document
 #: resolves, and the name a person reads.
 AUTHORITY: dict[str, tuple[dict[str, str], ...]] = {
-    "species": ({"name": "NCBI Taxonomy", "uri": "https://www.ncbi.nlm.nih.gov/taxonomy"},),
-    "strain": ({"name": "MGI", "uri": "https://www.informatics.jax.org/"},
-               {"name": "RGD", "uri": "https://rgd.mcw.edu/"}),
-    "sex": ({"name": "HL7 FHIR administrative gender",
-             "uri": "https://hl7.org/fhir/valueset-administrative-gender.html"},),
-    "unit": (UCUM,), "coordinate_unit": (UCUM,), "input_unit": (UCUM,),
-    "output_unit": (UCUM,), "amplitude_unit": (UCUM,),
+    "species": (
+        {"name": "NCBI Taxonomy", "uri": "https://www.ncbi.nlm.nih.gov/taxonomy"},
+    ),
+    "strain": (
+        {"name": "MGI", "uri": "https://www.informatics.jax.org/"},
+        {"name": "RGD", "uri": "https://rgd.mcw.edu/"},
+    ),
+    "sex": (
+        {
+            "name": "HL7 FHIR administrative gender",
+            "uri": "https://hl7.org/fhir/valueset-administrative-gender.html",
+        },
+    ),
+    "unit": (UCUM,),
+    "coordinate_unit": (UCUM,),
+    "input_unit": (UCUM,),
+    "output_unit": (UCUM,),
+    "amplitude_unit": (UCUM,),
 }
 
 
@@ -348,69 +638,114 @@ AUTHORITY: dict[str, tuple[dict[str, str], ...]] = {
 #: nomenclature where one fixes the spelling. What these replaced restated the column's own name
 #: ("Species.", "Manufacturer."), gave one example ("e.g. mp4."), or said "etc." of a set Part 02 §9.3
 #: closed -- none of which tells a writer whether to write `Mus musculus` or `mouse`.
-_SEMANTIC = ("What quantity the asset holds. Open (Part 02 §9.3): a value this standard does not define "
-             "is a label and carries no contract, the meaning living in the device rather than in "
-             "the format (Part 01 §3.17).")
-_KIND = ("Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the "
-         "meanings Part 02 §9.3 declares. Open, so an unrecognised value is conforming -- but a value "
-         "outside the set MUST NOT be used for data the set describes (Part 02 §9.3).")
-_FRAME = ("The space these coordinates are in, and the atlas where that space is one (R59 §2.2). "
-          "Open. Which way the axes point is stated nowhere.")
-_MANUF = ("The manufacturer's own name for itself, as the source states it. Open, and compared "
-          "exactly, so two spellings are two manufacturers.")
+_SEMANTIC = (
+    "What quantity the asset holds. Open (Part 02 §9.3): a value this standard does not define "
+    "is a label and carries no contract, the meaning living in the device rather than in "
+    "the format (Part 01 §3.17)."
+)
+_KIND = (
+    "Which kind of signal the array holds: `raw`, `ap`, `lfp` or `waveform`, with the "
+    "meanings Part 02 §9.3 declares. Open, so an unrecognised value is conforming -- but a value "
+    "outside the set MUST NOT be used for data the set describes (Part 02 §9.3)."
+)
+_FRAME = (
+    "The space these coordinates are in, and the atlas where that space is one (R59 §2.2). "
+    "Open. Which way the axes point is stated nowhere."
+)
+_MANUF = (
+    "The manufacturer's own name for itself, as the source states it. Open, and compared "
+    "exactly, so two spellings are two manufacturers."
+)
 DESCRIPTIONS: dict[tuple[str, str], str] = {
     ("core.array_assets", "semantic_type"): _SEMANTIC,
     ("analysis.array_assets", "semantic_type"): _SEMANTIC,
     ("core.media_assets", "semantic_type"): _SEMANTIC,
     ("core.array_assets", "kind"): _KIND,
     ("analysis.array_assets", "kind"): _KIND,
-    ("core.array_assets", "unit"): "The physical unit of the array's values, as a UCUM code.",
-    ("analysis.array_assets", "unit"): "The physical unit of the array's values, as a UCUM code.",
-    ("core.array_channels", "unit"): "The physical unit of the converted value, as a UCUM code.",
-    ("core.array_dimensions", "coordinate_unit"):
-        "The physical unit of this axis's coordinate values, as a UCUM code.",
-    ("analysis.array_dimensions", "coordinate_unit"):
-        "The physical unit of this axis's coordinate values, as a UCUM code.",
-    ("core.calibrations", "input_unit"):
-        "The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration "
-        "because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit "
-        "can sit on the value column (R89 §2.3).",
-    ("core.calibrations", "output_unit"):
-        "The unit of `core.calibration_points.output_value`, as a UCUM code.",
-    ("core.clocks", "origin"):
-        "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is "
-        "sample 0, and a writer MUST NOT re-base a source's index (Part 01 §2.2). Open.",
+    (
+        "core.array_assets",
+        "unit",
+    ): "The physical unit of the array's values, as a UCUM code.",
+    (
+        "analysis.array_assets",
+        "unit",
+    ): "The physical unit of the array's values, as a UCUM code.",
+    (
+        "core.array_channels",
+        "unit",
+    ): "The physical unit of the converted value, as a UCUM code.",
+    (
+        "core.array_dimensions",
+        "coordinate_unit",
+    ): "The physical unit of this axis's coordinate values, as a UCUM code.",
+    (
+        "analysis.array_dimensions",
+        "coordinate_unit",
+    ): "The physical unit of this axis's coordinate values, as a UCUM code.",
+    (
+        "core.calibrations",
+        "input_unit",
+    ): "The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration "
+    "because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit "
+    "can sit on the value column (R89 §2.3).",
+    (
+        "core.calibrations",
+        "output_unit",
+    ): "The unit of `core.calibration_points.output_value`, as a UCUM code.",
+    (
+        "core.clocks",
+        "origin",
+    ): "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is "
+    "sample 0, and a writer MUST NOT re-base a source's index (Part 01 §2.2). Open.",
     ("core.devices", "manufacturer"): _MANUF,
     ("core.probes", "manufacturer"): _MANUF,
     ("core.electrode_coordinates", "coordinate_frame"): _FRAME,
     ("core.unit_coordinates", "coordinate_frame"): _FRAME,
-    ("core.media_assets", "format"):
-        "The container format, as the file extension names it: `mp4`, `avi`. Open.",
-    ("core.source_files", "format"):
-        "The file's format in the producer's own terms, which this specification does not "
-        "constrain. Open.",
-    ("core.probes", "probe_type"):
-        "The probe's model, as the manufacturer names it: `Neuropixels 1.0`. Open.",
-    ("core.probes", "target_region"):
-        "The structure the probe was aimed at, as an atlas acronym where the source gives one. "
-        "Open, and not resolvable: no column here names the atlas, which R59 §2.2 does only "
-        "beside a coordinate.",
-    ("core.subjects", "species"):
-        "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells "
-        "it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- "
-        "Part 01 §3.4 admits a preparation, and a phantom or a simulation has no species.",
-    ("core.subjects", "strain"):
-        "The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain "
-        "letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks "
-        "such as `Long-Evans`.",
-    ("core.subjects", "genotype"):
-        "The genotype as the source states it, in MGI allele nomenclature where it uses one.",
-    ("core.processing_runs", "activity_type"):
-        "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, "
-        "`materialization`. Open (Part 02 §9.3), so a pipeline names its own.",
-    ("core.processing_runs", "status"):
-        "Whether the run completed: `succeeded`, `failed` or `partial`, with the meanings Part 02 §9.3 "
-        "declares. Closed -- a validator rejects any other value.",
+    (
+        "core.media_assets",
+        "format",
+    ): "The container format, as the file extension names it: `mp4`, `avi`. Open.",
+    (
+        "core.source_files",
+        "format",
+    ): "The file's format in the producer's own terms, which this specification does not "
+    "constrain. Open.",
+    (
+        "core.probes",
+        "probe_type",
+    ): "The probe's model, as the manufacturer names it: `Neuropixels 1.0`. Open.",
+    (
+        "core.probes",
+        "target_region",
+    ): "The structure the probe was aimed at, as an atlas acronym where the source gives one. "
+    "Open, and not resolvable: no column here names the atlas, which R59 §2.2 does only "
+    "beside a coordinate.",
+    (
+        "core.subjects",
+        "species",
+    ): "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells "
+    "it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- "
+    "Part 01 §3.4 admits a preparation, and a phantom or a simulation has no species.",
+    (
+        "core.subjects",
+        "strain",
+    ): "The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain "
+    "letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks "
+    "such as `Long-Evans`.",
+    (
+        "core.subjects",
+        "genotype",
+    ): "The genotype as the source states it, in MGI allele nomenclature where it uses one.",
+    (
+        "core.processing_runs",
+        "activity_type",
+    ): "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, "
+    "`materialization`. Open (Part 02 §9.3), so a pipeline names its own.",
+    (
+        "core.processing_runs",
+        "status",
+    ): "Whether the run completed: `succeeded`, `failed` or `partial`, with the meanings Part 02 §9.3 "
+    "declares. Closed -- a validator rejects any other value.",
 }
 
 
@@ -436,18 +771,25 @@ def role_of(name: str) -> str:
             "The choice is data, identifier, coordinate, structural_index or sequence_position."
         ) from None
 
+
 #: R56. Where a coordinate's clock comes from, and where a value's unit does, for the columns
 #: convention does not settle. A coordinate beside a `clock_id` needs no entry -- Part 02 §8.4 makes
 #: that the default -- so these are exactly the cases that were prose.
 CONTEXT: dict[tuple[str, str], dict[str, str]] = {
     # Two coordinates on two clocks in one table, distinguished only by a description until now.
-    ("core.clock_anchors", "parent_tick"): {"clock_from": "core.clocks.parent_clock_id"},
+    ("core.clock_anchors", "parent_tick"): {
+        "clock_from": "core.clocks.parent_clock_id"
+    },
     # The clock is named, and not `clock_id` (Part 01 §2.1).
     ("core.sessions", "t_zero_tick"): {"clock_from": "reference_clock_id"},
     # R38 §3 gave the sorting run a clock precisely so a unit's ticks have one.
     # The stream's clock, reached through the stream (R25 §2).
-    ("core.event_stream_observation_intervals", "start_tick"): {"clock_from": "core.event_streams.clock_id"},
-    ("core.event_stream_observation_intervals", "stop_tick"): {"clock_from": "core.event_streams.clock_id"},
+    ("core.event_stream_observation_intervals", "start_tick"): {
+        "clock_from": "core.event_streams.clock_id"
+    },
+    ("core.event_stream_observation_intervals", "stop_tick"): {
+        "clock_from": "core.event_streams.clock_id"
+    },
     # R11 §2: the unit is a property of the sorting context, not of the spike.
     # R19 §2: an offset is in the converted value's unit, which the asset carries. `conversion`
     # gets no entry: it is a ratio of two units and so is in neither of them.
@@ -462,7 +804,13 @@ def col(name, typ, pres, desc, since=None, determined_by=None):
         # R53 §2.1. Declared at one point rather than at 110 call sites, so a new identifier
         # cannot be added as a string by forgetting.
         typ = "int64" if typ == "int64" else "int32"
-    entry = {"name": name, "type": typ, "presence": pres, "role": role, "description": desc}
+    entry = {
+        "name": name,
+        "type": typ,
+        "presence": pres,
+        "role": role,
+        "description": desc,
+    }
     if role == "identifier":
         entry["identity"] = identity_of(name)
     if role == "discriminator":
@@ -476,7 +824,9 @@ def col(name, typ, pres, desc, since=None, determined_by=None):
     return entry
 
 
-def expand(template: str, resource: str, call: dict, key: list[str]) -> list[dict[str, str]]:
+def expand(
+    template: str, resource: str, call: dict, key: list[str]
+) -> list[dict[str, str]]:
     """Expand a rules.json template invocation into concrete Tier 2 rules (R24 §3).
 
     Templates stay a build-time device: the registry a packet embeds carries plain SQL, so no
@@ -504,9 +854,14 @@ def expand(template: str, resource: str, call: dict, key: list[str]) -> list[dic
     name = resource.replace(".", "_")
     start, stop = call["start"], call["stop"]
     report = ", ".join(key)
-    rules = [{"id": f"{resource}.interval_valid", "level": "error",
-              "message": f"{stop} precedes {start}",
-              "sql": f"SELECT {report}, {start}, {stop} FROM {name} WHERE {stop} < {start}"}]
+    rules = [
+        {
+            "id": f"{resource}.interval_valid",
+            "level": "error",
+            "message": f"{stop} precedes {start}",
+            "sql": f"SELECT {report}, {start}, {stop} FROM {name} WHERE {stop} < {start}",
+        }
+    ]
 
     subject = call.get("partition_of")
     if subject is None:
@@ -518,15 +873,29 @@ def expand(template: str, resource: str, call: dict, key: list[str]) -> list[dic
     index, op = call.get("index"), call["overlap_op"]
     by = ", ".join(subject)
     if index is not None:
-        rules.append({"id": f"{resource}.index_contiguous", "level": "error",
-                      "message": f"{index} is not contiguous from 0",
-                      "sql": (f"SELECT {by}, COUNT(*) AS n FROM {name} GROUP BY {by} "
-                              f"HAVING MAX({index}) <> COUNT(*) - 1 OR MIN({index}) <> 0")})
-    rules.append({"id": f"{resource}.non_overlapping", "level": "error",
-                  "message": call["overlap_message"],
-                  "sql": (f"SELECT {report}, {start}, {stop} FROM (SELECT *, LAG({stop}) OVER "
-                          f"(PARTITION BY {by} ORDER BY {index or start}) AS prev_stop FROM {name}) "
-                          f"WHERE prev_stop IS NOT NULL AND {start} {op} prev_stop")})
+        rules.append(
+            {
+                "id": f"{resource}.index_contiguous",
+                "level": "error",
+                "message": f"{index} is not contiguous from 0",
+                "sql": (
+                    f"SELECT {by}, COUNT(*) AS n FROM {name} GROUP BY {by} "
+                    f"HAVING MAX({index}) <> COUNT(*) - 1 OR MIN({index}) <> 0"
+                ),
+            }
+        )
+    rules.append(
+        {
+            "id": f"{resource}.non_overlapping",
+            "level": "error",
+            "message": call["overlap_message"],
+            "sql": (
+                f"SELECT {report}, {start}, {stop} FROM (SELECT *, LAG({stop}) OVER "
+                f"(PARTITION BY {by} ORDER BY {index or start}) AS prev_stop FROM {name}) "
+                f"WHERE prev_stop IS NOT NULL AND {start} {op} prev_stop"
+            ),
+        }
+    )
     return rules
 
 
@@ -540,23 +909,38 @@ def build() -> dict:
         for c in t["columns"]:
             typ = TYPES.get(c["type"])
             if typ is None:
-                continue                               # nested; removed or replaced below
-            columns.append(col(c["name"], typ, presence(c["required"], typ), c["description"]))
+                continue  # nested; removed or replaced below
+            columns.append(
+                col(c["name"], typ, presence(c["required"], typ), c["description"])
+            )
         tables[name] = {
             "columns": columns,
             "primary_key": t["primary_key"],
-            "references": [{"columns": r["columns"], "resource": r["resource"],
-                            "resource_columns": r["resource_columns"] or r["columns"]}
-                           for r in t["references"]],
+            "references": [
+                {
+                    "columns": r["columns"],
+                    "resource": r["resource"],
+                    "resource_columns": r["resource_columns"] or r["columns"],
+                }
+                for r in t["references"]
+            ],
             "rules": [],
         }
 
-    def T(n): return tables[n]
-    def drop_col(t, n): T(t)["columns"] = [c for c in T(t)["columns"] if c["name"] != n]
+    def T(n):
+        return tables[n]
+
+    def drop_col(t, n):
+        T(t)["columns"] = [c for c in T(t)["columns"] if c["name"] != n]
+
     def add_col(t, c, after=None):
         cols = T(t)["columns"]
-        i = next((k for k, x in enumerate(cols) if x["name"] == after), len(cols) - 1) + 1
+        i = (
+            next((k for k, x in enumerate(cols) if x["name"] == after), len(cols) - 1)
+            + 1
+        )
         cols.insert(i, c)
+
     def rename(t, old, new):
         for c in T(t)["columns"]:
             if c["name"] == old:
@@ -564,7 +948,9 @@ def build() -> dict:
                 # The role follows the name (R48 §2.1): a rename that changes what a column is
                 # must change its role, and one that does not is a no-op here.
                 c["role"] = role_of(new)
-                if SINCE[0]: c["since"] = SINCE[0]
+                if SINCE[0]:
+                    c["since"] = SINCE[0]
+
     def amend(t, name, **changes):
         """Change a column in place, recording the revision that did it (R29 §2).
 
@@ -576,7 +962,8 @@ def build() -> dict:
         for c in T(t)["columns"]:
             if c["name"] == name:
                 c.update(changes)
-                if SINCE[0]: c["since"] = SINCE[0]
+                if SINCE[0]:
+                    c["since"] = SINCE[0]
                 return
         raise SystemExit(f"{t} has no column {name} to amend")
 
@@ -588,120 +975,250 @@ def build() -> dict:
     # ---- R3 §3.1-3.3 : repeated values become child tables ------------------------------
     SINCE[0] = "R3 §3.1-3.3"
     tables["core.session_experimenters"] = {
-        "columns": [col("session_id", "string", "required", "Session ID."),
-                    col("experimenter", "string", "required", "One experimenter.")],
+        "columns": [
+            col("session_id", "string", "required", "Session ID."),
+            col("experimenter", "string", "required", "One experimenter."),
+        ],
         "primary_key": ["session_id", "experimenter"],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]}], "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            }
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
     tables["core.trial_tags"] = {
-        "columns": [col("session_id", "string", "required", "Session ID."),
-                    col("trial_id", "string", "required", "Trial ID."),
-                    col("tag", "string", "required", "Tag value.")],
+        "columns": [
+            col("session_id", "string", "required", "Session ID."),
+            col("trial_id", "string", "required", "Trial ID."),
+            col("tag", "string", "required", "Tag value."),
+        ],
         "primary_key": ["session_id", "trial_id", "tag"],
-        "references": [{"columns": ["session_id", "trial_id"], "resource": "core.trials",
-                        "resource_columns": ["session_id", "trial_id"]}], "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["session_id", "trial_id"],
+                "resource": "core.trials",
+                "resource_columns": ["session_id", "trial_id"],
+            }
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
     tables["core.array_dimensions"] = {
-        "columns": [col("array_asset_id", "string", "required", "Array asset ID."),
-                    col("axis_index", "int64", "required",
-                        "0-based axis position in stored order (Part 03 §6.2)."),
-                    col("dimension_name", "string", "required", "Axis name.")],
+        "columns": [
+            col("array_asset_id", "string", "required", "Array asset ID."),
+            col(
+                "axis_index",
+                "int64",
+                "required",
+                "0-based axis position in stored order (Part 03 §6.2).",
+            ),
+            col("dimension_name", "string", "required", "Axis name."),
+        ],
         "primary_key": ["array_asset_id", "axis_index"],
-        "references": [{"columns": ["array_asset_id"], "resource": "core.array_assets",
-                        "resource_columns": ["array_asset_id"]}], "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["array_asset_id"],
+                "resource": "core.array_assets",
+                "resource_columns": ["array_asset_id"],
+            }
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # ---- R3 §3.4 : typed clock transform ------------------------------------------------
     SINCE[0] = "R3 §3.4"
-    add_col("core.clocks", col("transform_slope", "float64", "nullable",
-            "Parent ticks per this clock's tick, as measured."), after="parent_clock_id")
-    add_col("core.clocks", col("transform_offset", "float64", "nullable",
-            "Parent-clock tick at this clock's tick 0."), after="transform_slope")
+    add_col(
+        "core.clocks",
+        col(
+            "transform_slope",
+            "float64",
+            "nullable",
+            "Parent ticks per this clock's tick, as measured.",
+        ),
+        after="parent_clock_id",
+    )
+    add_col(
+        "core.clocks",
+        col(
+            "transform_offset",
+            "float64",
+            "nullable",
+            "Parent-clock tick at this clock's tick 0.",
+        ),
+        after="transform_slope",
+    )
 
     # ---- R6 §2 : wall-clock binding -------------------------------------------------------
     SINCE[0] = "R6 §2"
-    add_col("core.clocks", col("tick_zero_utc", "timestamp", "nullable",
-            "Wall-clock instant of tick 0 on this clock."), after="origin")
+    add_col(
+        "core.clocks",
+        col(
+            "tick_zero_utc",
+            "timestamp",
+            "nullable",
+            "Wall-clock instant of tick 0 on this clock.",
+        ),
+        after="origin",
+    )
 
     # ---- R3 §6.1 : bind array_channels to an axis ---------------------------------------
     SINCE[0] = "R3 §6.1"
-    add_col("core.array_channels", col("axis_index", "int64", "required",
-            "Axis that channel_index indexes, in stored order."), after="array_asset_id")
+    add_col(
+        "core.array_channels",
+        col(
+            "axis_index",
+            "int64",
+            "required",
+            "Axis that channel_index indexes, in stored order.",
+        ),
+        after="array_asset_id",
+    )
     T("core.array_channels")["references"].append(
-        {"columns": ["array_asset_id", "axis_index"], "resource": "core.array_dimensions",
-         "resource_columns": ["array_asset_id", "axis_index"]})
+        {
+            "columns": ["array_asset_id", "axis_index"],
+            "resource": "core.array_dimensions",
+            "resource_columns": ["array_asset_id", "axis_index"],
+        }
+    )
 
     # ---- R5 : flat spikes ----------------------------------------------------------------
     SINCE[0] = "R5"
-    del tables["core.unit_spike_chunks"]                                        # §3
-    drop_col("core.spike_events", "trial_id")                                   # §2.1
-    T("core.spike_events")["primary_key"] = [                                   # §2
-        "session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick"]
+    del tables["core.unit_spike_chunks"]  # §3
+    drop_col("core.spike_events", "trial_id")  # §2.1
+    T("core.spike_events")["primary_key"] = [  # §2
+        "session_id",
+        "unit_id",
+        "sorting_run_id",
+        "curation_id",
+        "t_tick",
+    ]
     T("core.spike_events")["references"] = [
-        {"columns": ["session_id"], "resource": "core.sessions",
-         "resource_columns": ["session_id"]},
-        {"columns": ["clock_id"], "resource": "core.clocks",
-         "resource_columns": ["clock_id"]},
-        {"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
-         "resource": "core.units",
-         "resource_columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"]}]
-    prev = "firing_rate_hz"                                                        # §4
-    for n, d in [("n_spikes", "Total spikes for this unit in this context."),
-                 ("first_spike_tick", "Lowest t_tick for this unit."),
-                 ("last_spike_tick", "Highest t_tick for this unit.")]:
+        {
+            "columns": ["session_id"],
+            "resource": "core.sessions",
+            "resource_columns": ["session_id"],
+        },
+        {
+            "columns": ["clock_id"],
+            "resource": "core.clocks",
+            "resource_columns": ["clock_id"],
+        },
+        {
+            "columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+            "resource": "core.units",
+            "resource_columns": [
+                "session_id",
+                "unit_id",
+                "sorting_run_id",
+                "curation_id",
+            ],
+        },
+    ]
+    prev = "firing_rate_hz"  # §4
+    for n, d in [
+        ("n_spikes", "Total spikes for this unit in this context."),
+        ("first_spike_tick", "Lowest t_tick for this unit."),
+        ("last_spike_tick", "Highest t_tick for this unit."),
+    ]:
         add_col("core.units", col(n, "int64", "nullable", d), after=prev)
         prev = n
-    for t, old in [("core.electrodes", "local_electrode_index"),                   # §5
-                   ("core.electrodes", "local_channel_index"),
-                   ("core.units", "local_unit_index")]:
+    for t, old in [
+        ("core.electrodes", "local_electrode_index"),  # §5
+        ("core.electrodes", "local_channel_index"),
+        ("core.units", "local_unit_index"),
+    ]:
         rename(t, old, old.replace("_index", "_label"))
 
     # ---- R8 §2 : source labels are strings ------------------------------------------------
     SINCE[0] = "R8 §2"
-    for t, n in [("core.electrodes", "local_electrode_label"),
-                 ("core.electrodes", "local_channel_label"),
-                 ("core.units", "local_unit_label")]:
-        amend(t, n, type="string",
-              description="Opaque source label; undefined base, not an offset.")
+    for t, n in [
+        ("core.electrodes", "local_electrode_label"),
+        ("core.electrodes", "local_channel_label"),
+        ("core.units", "local_unit_label"),
+    ]:
+        amend(
+            t,
+            n,
+            type="string",
+            description="Opaque source label; undefined base, not an offset.",
+        )
 
     # ---- R8 §3-4 : vocabularies -----------------------------------------------------------
     SINCE[0] = "R8 §3-4"
     amend("core.processing_runs", "status", enum=["succeeded", "failed", "partial"])
-    for t, n in [("core.array_assets", "kind"), ("core.array_assets", "semantic_type"),
-                 ("core.media_assets", "semantic_type"),
-                 ("core.processing_runs", "activity_type")]:
+    for t, n in [
+        ("core.array_assets", "kind"),
+        ("core.array_assets", "semantic_type"),
+        ("core.media_assets", "semantic_type"),
+        ("core.processing_runs", "activity_type"),
+    ]:
         amend(t, n, vocabulary="open")
 
     # ---- R11 §6 : trial_id conflates authored fact with derived join ------------------------
     SINCE[0] = "R11 §6"
     drop_col("core.events", "trial_id")
-    T("core.events")["references"] = [r for r in T("core.events")["references"]
-                                      if "trial_id" not in r["columns"]]
+    T("core.events")["references"] = [
+        r for r in T("core.events")["references"] if "trial_id" not in r["columns"]
+    ]
 
     # ---- R11 §2 : amplitude units live on the sorting run -----------------------------------
     SINCE[0] = "R11 §2"
-    add_col("core.sorting_runs", col("amplitude_unit", "string", "nullable",
-            "Unit of core.spike_events.amplitude for this run, e.g. uV, adc."),
-            after="sorter_version")
+    add_col(
+        "core.sorting_runs",
+        col(
+            "amplitude_unit",
+            "string",
+            "nullable",
+            "Unit of core.spike_events.amplitude for this run, e.g. uV, adc.",
+        ),
+        after="sorter_version",
+    )
     amend("core.sorting_runs", "amplitude_unit", vocabulary="open")
 
     # ---- R11 §3-4 : declared-open vocabularies ------------------------------------------------
     SINCE[0] = "R11 §3-4"
-    amend("core.units", "quality_label", enum=["sua", "mua", "noise"])          # R11 §3
+    amend("core.units", "quality_label", enum=["sua", "mua", "noise"])  # R11 §3
     amend("core.events", "event_type", vocabulary="open")
 
     # ---- R9 : provenance simplification ----------------------------------------------------
     SINCE[0] = "R9"
-    for n in ("core.provenance_entities", "core.provenance_activities",
-              "core.provenance_edges"):
+    for n in (
+        "core.provenance_entities",
+        "core.provenance_activities",
+        "core.provenance_edges",
+    ):
         del tables[n]
     tables["core.processing_run_inputs"] = {
-        "columns": [col("processing_run_id", "string", "required", "The run."),
-                    col("source_file_id", "string", "required",
-                        "A source file the run consumed.")],
+        "columns": [
+            col("processing_run_id", "string", "required", "The run."),
+            col(
+                "source_file_id",
+                "string",
+                "required",
+                "A source file the run consumed.",
+            ),
+        ],
         "primary_key": ["processing_run_id", "source_file_id"],
-        "references": [{"columns": ["processing_run_id"], "resource": "core.processing_runs",
-                        "resource_columns": ["processing_run_id"]},
-                       {"columns": ["source_file_id"], "resource": "core.source_files",
-                        "resource_columns": ["source_file_id"]}], "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["processing_run_id"],
+                "resource": "core.processing_runs",
+                "resource_columns": ["processing_run_id"],
+            },
+            {
+                "columns": ["source_file_id"],
+                "resource": "core.source_files",
+                "resource_columns": ["source_file_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # Part 03 §5.3's ordering rule is Part 03 §5.3's, and R93 §3.3 removed the `sort` field it was
     # declared through: a table's stored order is its primary key's unless Part 03 §5.4 names
@@ -710,32 +1227,57 @@ def build() -> dict:
     # ---- R18 §2 : units drift in and out of a recording -----------------------------------------
     SINCE[0] = "R18 §2"
     tables["core.unit_observation_intervals"] = {
-        "columns": [col("session_id", "string", "required", "Session ID."),
-                    col("unit_id", "string", "required", "Unit ID."),
-                    col("sorting_run_id", "string", "required", "Sorting run ID."),
-                    col("curation_id", "string", "required", "Curation ID."),
-                    col("start_tick", "int64", "required", "First tick, inclusive."),
-                    col("stop_tick", "int64", "required", "Last tick, inclusive."),
-                    col("clock_id", "string", "required", "Clock for the interval bounds.")],
+        "columns": [
+            col("session_id", "string", "required", "Session ID."),
+            col("unit_id", "string", "required", "Unit ID."),
+            col("sorting_run_id", "string", "required", "Sorting run ID."),
+            col("curation_id", "string", "required", "Curation ID."),
+            col("start_tick", "int64", "required", "First tick, inclusive."),
+            col("stop_tick", "int64", "required", "Last tick, inclusive."),
+            col("clock_id", "string", "required", "Clock for the interval bounds."),
+        ],
         # R47 §2.2: `start_tick` keys it. Two rows of one partition cannot share a start while
         # interval_valid and non_overlapping hold, so uniqueness is by construction.
-        "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "start_tick"],
-        "references": [{"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
-                        "resource": "core.units",
-                        "resource_columns": ["session_id", "unit_id", "sorting_run_id",
-                                             "curation_id"]},
-                       {"columns": ["clock_id"], "resource": "core.clocks",
-                        "resource_columns": ["clock_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "primary_key": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id",
+            "start_tick",
+        ],
+        "references": [
+            {
+                "columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                "resource": "core.units",
+                "resource_columns": [
+                    "session_id",
+                    "unit_id",
+                    "sorting_run_id",
+                    "curation_id",
+                ],
+            },
+            {
+                "columns": ["clock_id"],
+                "resource": "core.clocks",
+                "resource_columns": ["clock_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # ---- R19 §2 : scaling and sample timing are per channel --------------------------------------
     SINCE[0] = "R19 §2"
     for name, typ, desc in [
-            ("conversion", "float64", "Multiply stored values by this before offset."),
-            ("offset", "float64", "Add after conversion."),
-            ("unit", "string", "Physical unit of the converted value."),
-            ("inter_sample_shift", "float64",
-             "Acquisition time offset within one sample period, in sample periods.")]:
+        ("conversion", "float64", "Multiply stored values by this before offset."),
+        ("offset", "float64", "Add after conversion."),
+        ("unit", "string", "Physical unit of the converted value."),
+        (
+            "inter_sample_shift",
+            "float64",
+            "Acquisition time offset within one sample period, in sample periods.",
+        ),
+    ]:
         entry = col(name, typ, "nullable", desc)
         if name == "offset":
             # Part 02 §8.4: an offset is in the converted value's unit, which this table carries
@@ -748,32 +1290,76 @@ def build() -> dict:
     for c in ("x_um", "y_um", "z_um", "coordinate_frame"):
         drop_col("core.electrodes", c)
     tables["core.electrode_coordinates"] = {
-        "columns": [col("electrode_id", "string", "required", "Electrode ID."),
-                    dict(col("coordinate_frame", "string", "required",
-                             "The frame these coordinates are in."), vocabulary="open"),
-                    dict(col("coordinate_basis", "string", "required",
-                             "What the coordinate asserts: `planned` where the probe was meant to "
-                             "go, `measured` where it was, `nominal` where it is by construction "
-                             "and nothing aimed or observed it (Part 01 §3.8). A consumer that does "
-                             "not recognise a basis MUST NOT treat it as measured (Part 01 §3.8).",
-                             since="R58 §2.1"), vocabulary="open"),
-                    col("region_id", "int32", "nullable",
-                        "The atlas structure this position falls in, numbered by the atlas that "
-                        "`coordinate_frame` names.", since="R59 §2.1"),
-                    dict(col("region_label", "string", "nullable",
-                             "That structure's short name, so a consumer without the atlas can "
-                             "read the annotation.", since="R59 §2.1"), vocabulary="open"),
-                    col("processing_run_id", "int32", "nullable",
-                        "The run that produced this coordinate.", since="R58 §2.3"),
-                    col("x_um", "float64", "nullable", "X in micrometres, in that frame."),
-                    col("y_um", "float64", "nullable", "Y in micrometres."),
-                    col("z_um", "float64", "nullable", "Z in micrometres.")],
+        "columns": [
+            col("electrode_id", "string", "required", "Electrode ID."),
+            dict(
+                col(
+                    "coordinate_frame",
+                    "string",
+                    "required",
+                    "The frame these coordinates are in.",
+                ),
+                vocabulary="open",
+            ),
+            dict(
+                col(
+                    "coordinate_basis",
+                    "string",
+                    "required",
+                    "What the coordinate asserts: `planned` where the probe was meant to "
+                    "go, `measured` where it was, `nominal` where it is by construction "
+                    "and nothing aimed or observed it (Part 01 §3.8). A consumer that does "
+                    "not recognise a basis MUST NOT treat it as measured (Part 01 §3.8).",
+                    since="R58 §2.1",
+                ),
+                vocabulary="open",
+            ),
+            col(
+                "region_id",
+                "int32",
+                "nullable",
+                "The atlas structure this position falls in, numbered by the atlas that "
+                "`coordinate_frame` names.",
+                since="R59 §2.1",
+            ),
+            dict(
+                col(
+                    "region_label",
+                    "string",
+                    "nullable",
+                    "That structure's short name, so a consumer without the atlas can "
+                    "read the annotation.",
+                    since="R59 §2.1",
+                ),
+                vocabulary="open",
+            ),
+            col(
+                "processing_run_id",
+                "int32",
+                "nullable",
+                "The run that produced this coordinate.",
+                since="R58 §2.3",
+            ),
+            col("x_um", "float64", "nullable", "X in micrometres, in that frame."),
+            col("y_um", "float64", "nullable", "Y in micrometres."),
+            col("z_um", "float64", "nullable", "Z in micrometres."),
+        ],
         "primary_key": ["electrode_id", "coordinate_frame", "coordinate_basis"],
-        "references": [{"columns": ["electrode_id"], "resource": "core.electrodes",
-                        "resource_columns": ["electrode_id"]},
-                       {"columns": ["processing_run_id"], "resource": "core.processing_runs",
-                        "resource_columns": ["processing_run_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["electrode_id"],
+                "resource": "core.electrodes",
+                "resource_columns": ["electrode_id"],
+            },
+            {
+                "columns": ["processing_run_id"],
+                "resource": "core.processing_runs",
+                "resource_columns": ["processing_run_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # ---- R59 §2.1 : the atlas annotation belongs to the position, not the electrode ------------
     SINCE[0] = "R59 §2.1"
@@ -782,35 +1368,56 @@ def build() -> dict:
     # ---- R20 §2 : four coordinate forms per axis -------------------------------------------------
     SINCE[0] = "R20 §2"
     for name, typ, desc in [
-            ("clock_id", "string", "Clock the ticks are counted on (regular tick axis)."),
-            ("origin_tick", "int64", "Tick at position 0."),
-            ("step_tick_num", "int64", "Ticks advanced per position (numerator)."),
-            ("origin_value", "float64", "Value at position 0 (regular numeric axis)."),
-            ("step_value", "float64", "Increment per position."),
-            ("coordinate_unit", "string", "Unit of the numeric coordinate values."),
-            ("coordinate_array_asset_id", "string",
-             "A 1-D array holding one value per position (irregular axis)."),
-            ("coordinate_resource", "string",
-             "Resource whose rows are this axis's positions (labelled axis)."),
-            ("coordinate_position_column", "string",
-             "Which column of that resource holds the 0-based position.")]:
+        ("clock_id", "string", "Clock the ticks are counted on (regular tick axis)."),
+        ("origin_tick", "int64", "Tick at position 0."),
+        ("step_tick_num", "int64", "Ticks advanced per position (numerator)."),
+        ("origin_value", "float64", "Value at position 0 (regular numeric axis)."),
+        ("step_value", "float64", "Increment per position."),
+        ("coordinate_unit", "string", "Unit of the numeric coordinate values."),
+        (
+            "coordinate_array_asset_id",
+            "string",
+            "A 1-D array holding one value per position (irregular axis).",
+        ),
+        (
+            "coordinate_resource",
+            "string",
+            "Resource whose rows are this axis's positions (labelled axis).",
+        ),
+        (
+            "coordinate_position_column",
+            "string",
+            "Which column of that resource holds the 0-based position.",
+        ),
+    ]:
         entry = col(name, typ, "nullable", desc)
         if name in ("origin_value", "step_value"):
             # Part 02 §8.4: both are in the axis's own unit, which this table carries per axis.
             entry["unit_from"] = "coordinate_unit"
         add_col("core.array_dimensions", entry, after="dimension_name")
     T("core.array_dimensions")["references"].append(
-        {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]})
+        {
+            "columns": ["clock_id"],
+            "resource": "core.clocks",
+            "resource_columns": ["clock_id"],
+        }
+    )
 
     # ---- R33 §2 : an axis step may be rational -----------------------------------------------
     # `step_tick_num` is the numerator. Absent denominator means 1, so every row written
     # under R20 keeps its meaning. A 30 ms PSTH bin is 937.5 ticks at 31,250 Hz and 29.97 fps
     # is 1042.708..., neither of which an integer step can say.
     SINCE[0] = "R33 §2"
-    add_col("core.array_dimensions",
-            col("step_tick_den", "int64", "nullable",
-                "Denominator of the step, in ticks. Absent means 1."),
-            after="step_tick_num")
+    add_col(
+        "core.array_dimensions",
+        col(
+            "step_tick_den",
+            "int64",
+            "nullable",
+            "Denominator of the step, in ticks. Absent means 1.",
+        ),
+        after="step_tick_num",
+    )
 
     # ---- R38 §2 : observation belongs to the clock ----------------------------------------------
     # A unit was observable while its probe was running; a sensor was watched while its
@@ -821,142 +1428,312 @@ def build() -> dict:
     # the conversion Part 01 §2.2 could not write.
     SINCE[0] = "R38 §2.1"
     tables["core.clock_observation_intervals"] = {
-        "columns": [col("session_id", "string", "required", "Session ID."),
-                    col("clock_id", "string", "required", "The clock that was observing."),
-                    col("start_tick", "int64", "required",
-                        "First tick observed, on `clock_id` itself."),
-                    col("stop_tick", "int64", "required",
-                        "Last tick observed, on `clock_id` itself.")],
+        "columns": [
+            col("session_id", "string", "required", "Session ID."),
+            col("clock_id", "string", "required", "The clock that was observing."),
+            col(
+                "start_tick",
+                "int64",
+                "required",
+                "First tick observed, on `clock_id` itself.",
+            ),
+            col(
+                "stop_tick",
+                "int64",
+                "required",
+                "Last tick observed, on `clock_id` itself.",
+            ),
+        ],
         "primary_key": ["session_id", "clock_id", "start_tick"],  # R47 §2.2
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]},
-                       {"columns": ["clock_id"], "resource": "core.clocks",
-                        "resource_columns": ["clock_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            },
+            {
+                "columns": ["clock_id"],
+                "resource": "core.clocks",
+                "resource_columns": ["clock_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # A unit finds its clock through its sorting run. Without this the only route is the string
     # convention `{sorting_run_id}.samples`, which the adapters agree on and no rule can see.
     SINCE[0] = "R38 §2.2"
-    add_col("core.sorting_runs",
-            col("clock_id", "string", "required",
-                "Clock the run's spike ticks are counted on."),
-            after="probe_id")
+    add_col(
+        "core.sorting_runs",
+        col(
+            "clock_id",
+            "string",
+            "required",
+            "Clock the run's spike ticks are counted on.",
+        ),
+        after="probe_id",
+    )
     T("core.sorting_runs").setdefault("references", []).append(
-        {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]})
+        {
+            "columns": ["clock_id"],
+            "resource": "core.clocks",
+            "resource_columns": ["clock_id"],
+        }
+    )
 
     # ---- R39 §2.2 : the session's time origin ---------------------------------------------------
     # The earliest observation start, on the reference clock. Declared rather than recomputed by
     # every reader: it survives amendment unchanged, and a reader need not know which resources
     # carry windows. Optional, because a packet declaring no observation declares no origin.
     SINCE[0] = "R39 §2.2"
-    add_col("core.sessions",
-            col("t_zero_tick", "int64", "nullable",
-                "Earliest observed tick, on `reference_clock_id`; the origin seconds count from."),
-            after="session_end_time")
+    add_col(
+        "core.sessions",
+        col(
+            "t_zero_tick",
+            "int64",
+            "nullable",
+            "Earliest observed tick, on `reference_clock_id`; the origin seconds count from.",
+        ),
+        after="session_end_time",
+    )
 
     # ---- R16 §2-3 : unit quality is many labels, attributed ------------------------------------
     SINCE[0] = "R16 §2-3"
     tables["core.unit_quality_labels"] = {
-        "columns": [col("session_id", "string", "required", "Session ID."),
-                    col("unit_id", "string", "required", "Unit ID."),
-                    col("sorting_run_id", "string", "required", "Sorting run ID."),
-                    col("curation_id", "string", "required", "Curation ID."),
-                    dict(col("source", "string", "required",
-                             "What produced the label, e.g. kilosort, decoder, bombcell."),
-                         vocabulary="open"),
-                    dict(col("label", "string", "required",
-                             "The source's own label, verbatim."),
-                         vocabulary="open"),
-                    dict(col("normalized_label", "string", "nullable",
-                             "Declared projection onto the closed set. Null where the "
-                             "source's label does not project."),
-                         enum=["sua", "mua", "noise"]),
-                    col("confidence", "float64", "nullable",
-                        "The source's confidence, where it reports one.")],
-        "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "source"],
-        "references": [{"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
-                        "resource": "core.units",
-                        "resource_columns": ["session_id", "unit_id", "sorting_run_id",
-                                             "curation_id"]}],
-        "rules": [], "since": SINCE[0]}
-    add_col("core.units", dict(col("quality_label_source", "string", "nullable",
-            "Which core.unit_quality_labels source the designated label came from."),
-            vocabulary="open"), after="quality_label")
+        "columns": [
+            col("session_id", "string", "required", "Session ID."),
+            col("unit_id", "string", "required", "Unit ID."),
+            col("sorting_run_id", "string", "required", "Sorting run ID."),
+            col("curation_id", "string", "required", "Curation ID."),
+            dict(
+                col(
+                    "source",
+                    "string",
+                    "required",
+                    "What produced the label, e.g. kilosort, decoder, bombcell.",
+                ),
+                vocabulary="open",
+            ),
+            dict(
+                col("label", "string", "required", "The source's own label, verbatim."),
+                vocabulary="open",
+            ),
+            dict(
+                col(
+                    "normalized_label",
+                    "string",
+                    "nullable",
+                    "Declared projection onto the closed set. Null where the "
+                    "source's label does not project.",
+                ),
+                enum=["sua", "mua", "noise"],
+            ),
+            col(
+                "confidence",
+                "float64",
+                "nullable",
+                "The source's confidence, where it reports one.",
+            ),
+        ],
+        "primary_key": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id",
+            "source",
+        ],
+        "references": [
+            {
+                "columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                "resource": "core.units",
+                "resource_columns": [
+                    "session_id",
+                    "unit_id",
+                    "sorting_run_id",
+                    "curation_id",
+                ],
+            }
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
+    add_col(
+        "core.units",
+        dict(
+            col(
+                "quality_label_source",
+                "string",
+                "nullable",
+                "Which core.unit_quality_labels source the designated label came from.",
+            ),
+            vocabulary="open",
+        ),
+        after="quality_label",
+    )
 
     # ---- R23 §2-3 : events get the context table every other core stream has -----------------
     SINCE[0] = "R23 §2-3"
     tables["core.event_streams"] = {
-        "columns": [col("event_stream_id", "string", "required", "Stable ID."),
-                    col("session_id", "string", "required", "Session ID."),
-                    col("name", "string", "required",
-                        "Human-readable name, e.g. left_lick_sensor."),
-                    col("device_id", "string", "nullable",
-                        "The device that produced it, where one is identified."),
-                    col("clock_id", "string", "required",
-                        "The clock its events are timed on."),
-                    col("processing_run_id", "string", "nullable",
-                        "The run that produced it. Null means it came off the device as "
-                        "recorded. A narrow exception to R9 §4: the manifest records "
-                        "outputs per resource and cannot distinguish streams within one "
-                        "table.")],
+        "columns": [
+            col("event_stream_id", "string", "required", "Stable ID."),
+            col("session_id", "string", "required", "Session ID."),
+            col(
+                "name",
+                "string",
+                "required",
+                "Human-readable name, e.g. left_lick_sensor.",
+            ),
+            col(
+                "device_id",
+                "string",
+                "nullable",
+                "The device that produced it, where one is identified.",
+            ),
+            col("clock_id", "string", "required", "The clock its events are timed on."),
+            col(
+                "processing_run_id",
+                "string",
+                "nullable",
+                "The run that produced it. Null means it came off the device as "
+                "recorded. A narrow exception to R9 §4: the manifest records "
+                "outputs per resource and cannot distinguish streams within one "
+                "table.",
+            ),
+        ],
         "primary_key": ["event_stream_id"],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]},
-                       {"columns": ["device_id"], "resource": "core.devices",
-                        "resource_columns": ["device_id"]},
-                       {"columns": ["clock_id"], "resource": "core.clocks",
-                        "resource_columns": ["clock_id"]},
-                       {"columns": ["processing_run_id"], "resource": "core.processing_runs",
-                        "resource_columns": ["processing_run_id"]}],
-        "rules": [], "since": SINCE[0]}
-    add_col("core.events", col("stream_id", "string", "required",
-                               "The stream this event belongs to."), after="event_id")
+        "references": [
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            },
+            {
+                "columns": ["device_id"],
+                "resource": "core.devices",
+                "resource_columns": ["device_id"],
+            },
+            {
+                "columns": ["clock_id"],
+                "resource": "core.clocks",
+                "resource_columns": ["clock_id"],
+            },
+            {
+                "columns": ["processing_run_id"],
+                "resource": "core.processing_runs",
+                "resource_columns": ["processing_run_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
+    add_col(
+        "core.events",
+        col("stream_id", "string", "required", "The stream this event belongs to."),
+        after="event_id",
+    )
     T("core.events")["references"].append(
-        {"columns": ["stream_id"], "resource": "core.event_streams",
-         "resource_columns": ["event_stream_id"]})
+        {
+            "columns": ["stream_id"],
+            "resource": "core.event_streams",
+            "resource_columns": ["event_stream_id"],
+        }
+    )
 
     # ---- R25 §2 : streams drop out too; absence of an event is ambiguous without this -------
     SINCE[0] = "R25 §2"
     tables["core.event_stream_observation_intervals"] = {
-        "columns": [col("event_stream_id", "string", "required", "The stream being observed."),
-                    col("start_tick", "int64", "required",
-                        "First observed tick, on the stream's clock."),
-                    col("stop_tick", "int64", "required",
-                        "Last observed tick, on the stream's clock.")],
+        "columns": [
+            col("event_stream_id", "string", "required", "The stream being observed."),
+            col(
+                "start_tick",
+                "int64",
+                "required",
+                "First observed tick, on the stream's clock.",
+            ),
+            col(
+                "stop_tick",
+                "int64",
+                "required",
+                "Last observed tick, on the stream's clock.",
+            ),
+        ],
         "primary_key": ["event_stream_id", "start_tick"],  # R47 §2.2
         # No clock_id: core.event_streams declares one, and an interval is meaningless without
         # joining to its stream anyway, so repeating it buys nothing (R25 2.1).
-        "references": [{"columns": ["event_stream_id"], "resource": "core.event_streams",
-                        "resource_columns": ["event_stream_id"]}],
-        "rules": [], "since": SINCE[0]}
-    add_col("core.sessions", col("session_end_time", "timestamp", "nullable",
-            "When the session ended, UTC. Metadata, not derived from the tables (R25 5)."),
-            after="session_start_time")
+        "references": [
+            {
+                "columns": ["event_stream_id"],
+                "resource": "core.event_streams",
+                "resource_columns": ["event_stream_id"],
+            }
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
+    add_col(
+        "core.sessions",
+        col(
+            "session_end_time",
+            "timestamp",
+            "nullable",
+            "When the session ended, UTC. Metadata, not derived from the tables (R25 5).",
+        ),
+        after="session_start_time",
+    )
 
     # ---- R27 §2 : "synchronized" has to name a clock ------------------------------------------
     SINCE[0] = "R27 §2"
     # A reader's default is to return times on one clock. A session with two unparented clocks
     # has two roots and nothing chooses between them, so the session says which.
-    add_col("core.sessions", col("reference_clock_id", "string", "nullable",
-            "The clock this session's times are reported on by default (R27 2)."),
-            after="session_end_time")
+    add_col(
+        "core.sessions",
+        col(
+            "reference_clock_id",
+            "string",
+            "nullable",
+            "The clock this session's times are reported on by default (R27 2).",
+        ),
+        after="session_end_time",
+    )
     T("core.sessions")["references"].append(
-        {"columns": ["reference_clock_id"], "resource": "core.clocks",
-         "resource_columns": ["clock_id"]})
+        {
+            "columns": ["reference_clock_id"],
+            "resource": "core.clocks",
+            "resource_columns": ["clock_id"],
+        }
+    )
 
     # ---- R13 §3 : anchor-point clock alignment ------------------------------------------------
     SINCE[0] = "R13 §3"
     tables["core.clock_anchors"] = {
-        "columns": [col("clock_id", "string", "required", "The clock being aligned."),
-                    col("anchor_index", "int64", "required",
-                        "0-based position in this clock's anchor sequence."),
-                    col("t_tick", "int64", "required", "Tick on clock_id."),
-                    col("parent_tick", "int64", "required",
-                        "The corresponding tick on parent_clock_id.")],
+        "columns": [
+            col("clock_id", "string", "required", "The clock being aligned."),
+            col(
+                "anchor_index",
+                "int64",
+                "required",
+                "0-based position in this clock's anchor sequence.",
+            ),
+            col("t_tick", "int64", "required", "Tick on clock_id."),
+            col(
+                "parent_tick",
+                "int64",
+                "required",
+                "The corresponding tick on parent_clock_id.",
+            ),
+        ],
         "primary_key": ["clock_id", "anchor_index"],
-        "references": [{"columns": ["clock_id"], "resource": "core.clocks",
-                        "resource_columns": ["clock_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["clock_id"],
+                "resource": "core.clocks",
+                "resource_columns": ["clock_id"],
+            }
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # ---- R28 §2-4 : a unit sits on many electrodes, and somewhere -----------------------------
     SINCE[0] = "R28 §2-4"
@@ -964,58 +1741,125 @@ def build() -> dict:
     # is. NWB relates the two through three index spaces in one row; naming the electrode is
     # the alternative Part 03 §5.5's physical floor already implies.
     unit_key = ["session_id", "unit_id", "sorting_run_id", "curation_id"]
-    unit_ref = {"columns": unit_key, "resource": "core.units", "resource_columns": unit_key}
+    unit_ref = {
+        "columns": unit_key,
+        "resource": "core.units",
+        "resource_columns": unit_key,
+    }
     tables["core.unit_electrodes"] = {
-        "columns": [col("session_id", "string", "required", "Session ID."),
-                    col("unit_id", "string", "required", "Unit ID."),
-                    col("sorting_run_id", "string", "required", "Sorting run ID."),
-                    col("curation_id", "string", "required", "Curation ID."),
-                    col("electrode_id", "string", "required",
-                        "An electrode this unit was detected on."),
-                    col("channel_index", "int64", "nullable",
-                        "0-based position in the unit's channel list, where a dense array axis "
-                        "is indexed by it (R20 §2). Not an identifier; nothing joins on it."),
-                    col("is_primary", "bool", "nullable",
-                        "Whether this is the unit's peak electrode.")],
+        "columns": [
+            col("session_id", "string", "required", "Session ID."),
+            col("unit_id", "string", "required", "Unit ID."),
+            col("sorting_run_id", "string", "required", "Sorting run ID."),
+            col("curation_id", "string", "required", "Curation ID."),
+            col(
+                "electrode_id",
+                "string",
+                "required",
+                "An electrode this unit was detected on.",
+            ),
+            col(
+                "channel_index",
+                "int64",
+                "nullable",
+                "0-based position in the unit's channel list, where a dense array axis "
+                "is indexed by it (R20 §2). Not an identifier; nothing joins on it.",
+            ),
+            col(
+                "is_primary",
+                "bool",
+                "nullable",
+                "Whether this is the unit's peak electrode.",
+            ),
+        ],
         "primary_key": [*unit_key, "electrode_id"],
-        "references": [unit_ref,
-                       {"columns": ["electrode_id"], "resource": "core.electrodes",
-                        "resource_columns": ["electrode_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            unit_ref,
+            {
+                "columns": ["electrode_id"],
+                "resource": "core.electrodes",
+                "resource_columns": ["electrode_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
     tables["core.unit_coordinates"] = {
-        "columns": [col("session_id", "string", "required", "Session ID."),
-                    col("unit_id", "string", "required", "Unit ID."),
-                    col("sorting_run_id", "string", "required", "Sorting run ID."),
-                    col("curation_id", "string", "required", "Curation ID."),
-                    col("coordinate_frame", "string", "required",
-                        "The frame these coordinates are in. Open, as R19 §3 left it."),
-                    dict(col("coordinate_basis", "string", "required",
-                             "What the coordinate asserts: `planned` where the probe was meant to "
-                             "go, `measured` where it was, `nominal` where it is by construction "
-                             "and nothing aimed or observed it (Part 01 §3.8). A consumer that does "
-                             "not recognise a basis MUST NOT treat it as measured (Part 01 §3.8).",
-                             since="R58 §2.1"), vocabulary="open"),
-                    col("region_id", "int32", "nullable",
-                        "The atlas structure this position falls in, numbered by the atlas that "
-                        "`coordinate_frame` names.", since="R59 §2.1"),
-                    dict(col("region_label", "string", "nullable",
-                             "That structure's short name, so a consumer without the atlas can "
-                             "read the annotation.", since="R59 §2.1"), vocabulary="open"),
-                    col("processing_run_id", "int32", "nullable",
-                        "The run that produced this coordinate.", since="R58 §2.3"),
-                    col("x_um", "float64", "nullable", "X in micrometres, in that frame."),
-                    col("y_um", "float64", "nullable", "Y in micrometres."),
-                    col("z_um", "float64", "nullable", "Z in micrometres.")],
+        "columns": [
+            col("session_id", "string", "required", "Session ID."),
+            col("unit_id", "string", "required", "Unit ID."),
+            col("sorting_run_id", "string", "required", "Sorting run ID."),
+            col("curation_id", "string", "required", "Curation ID."),
+            col(
+                "coordinate_frame",
+                "string",
+                "required",
+                "The frame these coordinates are in. Open, as R19 §3 left it.",
+            ),
+            dict(
+                col(
+                    "coordinate_basis",
+                    "string",
+                    "required",
+                    "What the coordinate asserts: `planned` where the probe was meant to "
+                    "go, `measured` where it was, `nominal` where it is by construction "
+                    "and nothing aimed or observed it (Part 01 §3.8). A consumer that does "
+                    "not recognise a basis MUST NOT treat it as measured (Part 01 §3.8).",
+                    since="R58 §2.1",
+                ),
+                vocabulary="open",
+            ),
+            col(
+                "region_id",
+                "int32",
+                "nullable",
+                "The atlas structure this position falls in, numbered by the atlas that "
+                "`coordinate_frame` names.",
+                since="R59 §2.1",
+            ),
+            dict(
+                col(
+                    "region_label",
+                    "string",
+                    "nullable",
+                    "That structure's short name, so a consumer without the atlas can "
+                    "read the annotation.",
+                    since="R59 §2.1",
+                ),
+                vocabulary="open",
+            ),
+            col(
+                "processing_run_id",
+                "int32",
+                "nullable",
+                "The run that produced this coordinate.",
+                since="R58 §2.3",
+            ),
+            col("x_um", "float64", "nullable", "X in micrometres, in that frame."),
+            col("y_um", "float64", "nullable", "Y in micrometres."),
+            col("z_um", "float64", "nullable", "Z in micrometres."),
+        ],
         "primary_key": [*unit_key, "coordinate_frame", "coordinate_basis"],
-        "references": [unit_ref,
-                       {"columns": ["processing_run_id"], "resource": "core.processing_runs",
-                        "resource_columns": ["processing_run_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            unit_ref,
+            {
+                "columns": ["processing_run_id"],
+                "resource": "core.processing_runs",
+                "resource_columns": ["processing_run_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
     # The one link between a dense array's channels and the electrodes they came from, which
     # until now nothing validated.
     T("core.array_channels")["references"].append(
-        {"columns": ["electrode_id"], "resource": "core.electrodes",
-         "resource_columns": ["electrode_id"]})
+        {
+            "columns": ["electrode_id"],
+            "resource": "core.electrodes",
+            "resource_columns": ["electrode_id"],
+        }
+    )
 
     # ---- R66 §2.1 : a device declares what version it was -----------------------------------------
     # A serial number identifies the object; its firmware determines what the object does. Strings
@@ -1023,10 +1867,18 @@ def build() -> dict:
     # session, and two manufacturers' schemes share no precedence a consumer could rely on.
     SINCE[0] = "R66 §2.1"
     for name, description in (
-        ("hardware_version", "The instrument's hardware revision, verbatim as its source stated it."),
-        ("firmware_version", "The firmware the instrument was running, verbatim as its source stated it."),
+        (
+            "hardware_version",
+            "The instrument's hardware revision, verbatim as its source stated it.",
+        ),
+        (
+            "firmware_version",
+            "The firmware the instrument was running, verbatim as its source stated it.",
+        ),
     ):
-        add_col("core.devices", col(name, "string", "nullable", description), after="model")
+        add_col(
+            "core.devices", col(name, "string", "nullable", description), after="model"
+        )
 
     # ---- R65 §2.1 : an array names the instrument that made it -----------------------------------
     # core.probes has named its device since 02; an array asset was the only acquired thing in core
@@ -1035,24 +1887,42 @@ def build() -> dict:
     # analysis copy gains it too -- its reference stays pointing at core.devices, which is right:
     # there is no analysis.devices and Part 09 §2 lets a layer reference core's tables.
     SINCE[0] = "R65 §2.1"
-    add_col("core.array_assets",
-            col("device_id", "int32", "nullable", "The device that produced this array."),
-            after="clock_id")
+    add_col(
+        "core.array_assets",
+        col("device_id", "int32", "nullable", "The device that produced this array."),
+        after="clock_id",
+    )
     T("core.array_assets")["references"].append(
-        {"columns": ["device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
+        {
+            "columns": ["device_id"],
+            "resource": "core.devices",
+            "resource_columns": ["device_id"],
+        }
+    )
 
     # ---- R67 §2.1 : a device names what it was attached to ---------------------------------------
     # R66 made each element of an acquisition chain a device and left them unable to say they
     # were connected. Self-referencing (R46 §2), nullable because a chain has a root and because
     # a source that does not state the attachment must not be made to invent one.
     SINCE[0] = "R67 §2.1"
-    add_col("core.devices",
-            col("parent_device_id", "int32", "nullable",
-                "The device this one was attached to -- a probe's headstage, a headstage's "
-                "connect board. Null at the root of a chain, or where no source states it."),
-            after="serial_number")
+    add_col(
+        "core.devices",
+        col(
+            "parent_device_id",
+            "int32",
+            "nullable",
+            "The device this one was attached to -- a probe's headstage, a headstage's "
+            "connect board. Null at the root of a chain, or where no source states it.",
+        ),
+        after="serial_number",
+    )
     T("core.devices")["references"].append(
-        {"columns": ["parent_device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
+        {
+            "columns": ["parent_device_id"],
+            "resource": "core.devices",
+            "resource_columns": ["device_id"],
+        }
+    )
 
     # ---- R70 §2.1 : an asset declares the rate its timestamps count at ---------------------------
     # R68 §2.4 left the time base to the container, which is reachable only while the referenced
@@ -1061,10 +1931,20 @@ def build() -> dict:
     SINCE[0] = "R70 §2.1"
     # Reversed, because each inserts directly after `format` and the numerator reads first.
     for name, description in (
-        ("pts_rate_den", "Presentation timestamps per second in this asset's container: denominator."),
-        ("pts_rate_num", "Presentation timestamps per second in this asset's container: numerator."),
+        (
+            "pts_rate_den",
+            "Presentation timestamps per second in this asset's container: denominator.",
+        ),
+        (
+            "pts_rate_num",
+            "Presentation timestamps per second in this asset's container: numerator.",
+        ),
     ):
-        add_col("core.media_assets", col(name, "int64", "nullable", description), after="format")
+        add_col(
+            "core.media_assets",
+            col(name, "int64", "nullable", description),
+            after="format",
+        )
 
     # ---- R68 §2.1 : a presentation timestamp is an integer ---------------------------------------
     # 02's float64 named two quantities a container offers -- its own integer timestamp and that
@@ -1072,18 +1952,25 @@ def build() -> dict:
     # the recorded reading, and it is the only type DELTA_BINARY_PACKED is defined for, which on a
     # frame timeline is 6.3x the best a float can reach.
     SINCE[0] = "R68 §2.1"
-    amend("core.media_frames", "pts", type="int64",
-          description="Container presentation timestamp, verbatim in the container's own time base.")
+    amend(
+        "core.media_frames",
+        "pts",
+        type="int64",
+        description="Container presentation timestamp, verbatim in the container's own time base.",
+    )
 
     # ---- R20 §5 : analysis arrays are described by analysis tables -------------------------------
     SINCE[0] = "R20 §5"
     import copy
+
     for core_name in ("core.array_assets", "core.array_dimensions"):
         mirror = copy.deepcopy(T(core_name))
         mirror["references"] = [
             dict(r, resource=r["resource"].replace("core.array_", "analysis.array_"))
-            if r["resource"].startswith("core.array_") else r
-            for r in mirror["references"]]
+            if r["resource"].startswith("core.array_")
+            else r
+            for r in mirror["references"]
+        ]
         mirror["rules"] = []
         # The mirror and its columns exist in this namespace because of Part 00 §3, whatever put
         # them in core. Carrying the original's provenance would send a reader to a revision
@@ -1100,32 +1987,67 @@ def build() -> dict:
     # time meaningful and core does not have one.
     SINCE[0] = None
     tables["analysis.spike_events"] = {
-        "columns": [col("session_id", "string", "required", "Session ID."),
-                    col("unit_id", "string", "required", "Unit ID."),
-                    col("sorting_run_id", "string", "required", "Sorting run ID."),
-                    col("curation_id", "string", "required", "Curation ID."),
-                    col("t_tick", "int64", "required",
-                        "Spike tick on clock_id, mapped through core.clock_anchors."),
-                    col("clock_id", "string", "required",
-                        "The clock these ticks are on, normally the session's reference.",
-                        determined_by=["session_id"]),
-                    col("time_bucket_tick", "int64", "required",
-                        "First tick of the bucket this spike falls in, on clock_id.",
-                        since="R30 §3.1", determined_by=["t_tick"])],
-        "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick"],
-        "references": [{"columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
-                        "resource": "core.units",
-                        "resource_columns": ["session_id", "unit_id", "sorting_run_id",
-                                             "curation_id"]},
-                       {"columns": ["clock_id"], "resource": "core.clocks",
-                        "resource_columns": ["clock_id"]}],
-        "rules": []}
+        "columns": [
+            col("session_id", "string", "required", "Session ID."),
+            col("unit_id", "string", "required", "Unit ID."),
+            col("sorting_run_id", "string", "required", "Sorting run ID."),
+            col("curation_id", "string", "required", "Curation ID."),
+            col(
+                "t_tick",
+                "int64",
+                "required",
+                "Spike tick on clock_id, mapped through core.clock_anchors.",
+            ),
+            col(
+                "clock_id",
+                "string",
+                "required",
+                "The clock these ticks are on, normally the session's reference.",
+                determined_by=["session_id"],
+            ),
+            col(
+                "time_bucket_tick",
+                "int64",
+                "required",
+                "First tick of the bucket this spike falls in, on clock_id.",
+                since="R30 §3.1",
+                determined_by=["t_tick"],
+            ),
+        ],
+        "primary_key": [
+            "session_id",
+            "unit_id",
+            "sorting_run_id",
+            "curation_id",
+            "t_tick",
+        ],
+        "references": [
+            {
+                "columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                "resource": "core.units",
+                "resource_columns": [
+                    "session_id",
+                    "unit_id",
+                    "sorting_run_id",
+                    "curation_id",
+                ],
+            },
+            {
+                "columns": ["clock_id"],
+                "resource": "core.clocks",
+                "resource_columns": ["clock_id"],
+            },
+        ],
+        "rules": [],
+    }
 
     # ---- R7 : every table declares a key ---------------------------------------------------
     SINCE[0] = "R7"
-    for n, k in [("core.media_assets", ["media_asset_id"]),
-                 ("core.processing_runs", ["processing_run_id"]),
-                 ("core.source_files", ["source_file_id"])]:
+    for n, k in [
+        ("core.media_assets", ["media_asset_id"]),
+        ("core.processing_runs", ["processing_run_id"]),
+        ("core.source_files", ["source_file_id"]),
+    ]:
         T(n)["primary_key"] = k
 
     # ---- R41 : which derived thing is current ----------------------------------------------
@@ -1138,50 +2060,100 @@ def build() -> dict:
     # are reachable without the core registry knowing its tables. That needs the graph wired
     # up first: only `core.event_streams` referenced `core.processing_runs` (R23).
     SINCE[0] = "R41 §2.1"
-    for name, after in (("core.sorting_runs", "sorter_version"),
-                        ("core.curation_versions", "curation_tool_version")):
-        add_col(name, col("processing_run_id", "string", "nullable",
-                          "The run that produced this record, where provenance is recorded."),
-                after=after)
+    for name, after in (
+        ("core.sorting_runs", "sorter_version"),
+        ("core.curation_versions", "curation_tool_version"),
+    ):
+        add_col(
+            name,
+            col(
+                "processing_run_id",
+                "string",
+                "nullable",
+                "The run that produced this record, where provenance is recorded.",
+            ),
+            after=after,
+        )
         T(name).setdefault("references", []).append(
-            {"columns": ["processing_run_id"], "resource": "core.processing_runs",
-             "resource_columns": ["processing_run_id"]})
+            {
+                "columns": ["processing_run_id"],
+                "resource": "core.processing_runs",
+                "resource_columns": ["processing_run_id"],
+            }
+        )
 
     # Lineage, generalising `parent_curation_id` to every activity. A claim about intent, not
     # about correctness: the superseded run keeps its rows, which is the point of keeping both.
     SINCE[0] = "R41 §2.2"
-    add_col("core.processing_runs",
-            col("supersedes_run_id", "string", "nullable", "The run this one replaces, if any."),
-            after="activity_type")
+    add_col(
+        "core.processing_runs",
+        col(
+            "supersedes_run_id",
+            "string",
+            "nullable",
+            "The run this one replaces, if any.",
+        ),
+        after="activity_type",
+    )
     T("core.processing_runs").setdefault("references", []).append(
-        {"columns": ["supersedes_run_id"], "resource": "core.processing_runs",
-         "resource_columns": ["processing_run_id"]})
+        {
+            "columns": ["supersedes_run_id"],
+            "resource": "core.processing_runs",
+            "resource_columns": ["processing_run_id"],
+        }
+    )
 
     # The choice itself. Separate from the run log because that log should never be revised
     # while a preference changes whenever someone changes their mind -- objects and refs.
     SINCE[0] = "R41 §2.3"
     tables["core.preferred_runs"] = {
-        "columns": [col("session_id", "string", "required", "Session ID."),
-                    col("activity_type", "string", "required",
-                        "Which kind of output this preference is about. Open, as Part 02 §9.3 leaves it."),
-                    col("scope_kind", "string", "required", "The resource whose primary key "
-                        "`scope` holds, as a dotted resource ID (R49 §2.2). Open.", since="R49 §2.1"),
-                    col("scope", "string", "required",
-                        "What it applies to -- a probe_id, an array_asset_id, a camera -- or the "
-                        "session_id itself where the preference is session-wide."),
-                    col("processing_run_id", "string", "required", "The preferred run."),
-                    col("chosen_at", "timestamp", "nullable", "When the choice was made."),
-                    col("reason", "string", "nullable", "Why, in one line.")],
+        "columns": [
+            col("session_id", "string", "required", "Session ID."),
+            col(
+                "activity_type",
+                "string",
+                "required",
+                "Which kind of output this preference is about. Open, as Part 02 §9.3 leaves it.",
+            ),
+            col(
+                "scope_kind",
+                "string",
+                "required",
+                "The resource whose primary key "
+                "`scope` holds, as a dotted resource ID (R49 §2.2). Open.",
+                since="R49 §2.1",
+            ),
+            col(
+                "scope",
+                "string",
+                "required",
+                "What it applies to -- a probe_id, an array_asset_id, a camera -- or the "
+                "session_id itself where the preference is session-wide.",
+            ),
+            col("processing_run_id", "string", "required", "The preferred run."),
+            col("chosen_at", "timestamp", "nullable", "When the choice was made."),
+            col("reason", "string", "nullable", "Why, in one line."),
+        ],
         # `scope` is required rather than nullable because R7 wants a real key, and a nullable
         # key column makes uniqueness ill-defined.
         # R49 §2.3: the pair is the address. Without the kind, a probe and a device sharing an
         # identifier would collide on one preference row.
         "primary_key": ["session_id", "activity_type", "scope_kind", "scope"],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]},
-                       {"columns": ["processing_run_id"], "resource": "core.processing_runs",
-                        "resource_columns": ["processing_run_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            },
+            {
+                "columns": ["processing_run_id"],
+                "resource": "core.processing_runs",
+                "resource_columns": ["processing_run_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # What the run is about, so `core.preferred_runs` has something to join to. Without it the
     # ambiguity rule groups by activity while the preference is keyed by activity and scope, and
@@ -1189,30 +2161,50 @@ def build() -> dict:
     # Nullable because provenance is SHOULD (Part 01 §2.4); a run that omits it is undeterminable
     # rather than unique.
     SINCE[0] = "R44 §2.1"
-    add_col("core.processing_runs",
-            col("scope", "string", "nullable",
-                "What this run is about -- a probe_id, an array_asset_id, a camera -- or the "
-                "session_id itself where the run is session-wide. Open, as activity_type is."),
-            after="activity_type")
+    add_col(
+        "core.processing_runs",
+        col(
+            "scope",
+            "string",
+            "nullable",
+            "What this run is about -- a probe_id, an array_asset_id, a camera -- or the "
+            "session_id itself where the run is session-wide. Open, as activity_type is.",
+        ),
+        after="activity_type",
+    )
 
     # Part 02 described these only as "Trial start tick" / "Trial stop tick", so a consumer
     # counting events in a trial had to choose `<` or `<=` and the packet did not say which.
     # No overlap rule is added: R25 §7's reasoning stands, since trials need not partition a
     # session and in some paradigms may nest by design.
     SINCE[0] = "R45 §2.4"
-    amend("core.trials", "start_tick", description="First tick of the trial, inclusive, on `clock_id`.")
-    amend("core.trials", "stop_tick", description="Last tick of the trial, inclusive, on `clock_id`.")
+    amend(
+        "core.trials",
+        "start_tick",
+        description="First tick of the trial, inclusive, on `clock_id`.",
+    )
+    amend(
+        "core.trials",
+        "stop_tick",
+        description="Last tick of the trial, inclusive, on `clock_id`.",
+    )
 
     # R49 §2.1-2.2: the kind is a dotted resource ID, so a consumer resolves generically --
     # read the kind, take that resource's primary key from the registry, resolve. That is what
     # lets an R17 extension scope to its own tables without the core registry knowing them.
     SINCE[0] = "R49 §2.1"
-    add_col("core.processing_runs",
-            col("scope_kind", "string", "nullable",
-                "The resource whose primary key `scope` holds, as a dotted resource ID -- "
-                "`core.probes`, `core.array_assets`. Open (Part 02 §9.3); a value naming no declared "
-                "resource means the scope is not a packet resource. Set with `scope` or not at all."),
-            after="scope")
+    add_col(
+        "core.processing_runs",
+        col(
+            "scope_kind",
+            "string",
+            "nullable",
+            "The resource whose primary key `scope` holds, as a dotted resource ID -- "
+            "`core.probes`, `core.array_assets`. Open (Part 02 §9.3); a value naming no declared "
+            "resource means the scope is not a packet resource. Set with `scope` or not at all.",
+        ),
+        after="scope",
+    )
 
     # ---- R50 : three columns are renamed -----------------------------------------------------
     # channel_ordinal -> channel_index: R28 chose `ordinal` to say "not an identifier"; R48's role
@@ -1221,11 +2213,17 @@ def build() -> dict:
     # `_id` convention. step_ticks -> step_tick_num: agrees with step_tick_den and tick_rate_num,
     # and cannot be misread as a coordinate the way a `_ticks` plural can.
     SINCE[0] = "R50 §2"
-    amend("core.unit_electrodes", "channel_index",
-          description="0-based position of this electrode in the unit's channel list, where a "
-                      "dense array axis is indexed by it (R20 §2). Nothing joins on it.")
-    amend("core.processing_runs", "supersedes_run_id",
-          description="The run this one replaces, if any.")
+    amend(
+        "core.unit_electrodes",
+        "channel_index",
+        description="0-based position of this electrode in the unit's channel list, where a "
+        "dense array axis is indexed by it (R20 §2). Nothing joins on it.",
+    )
+    amend(
+        "core.processing_runs",
+        "supersedes_run_id",
+        description="The run this one replaces, if any.",
+    )
 
     # ---- R46 : the references the registry never declared -----------------------------------
     # Tier 1 generates an anti-join per declared reference, so an undeclared one is a check that
@@ -1235,33 +2233,59 @@ def build() -> dict:
     # table must not reference an analysis resource (06).
     SINCE[0] = "R46 §2.1"
     for child, column, parent, parent_column in [
-            ("core.sorting_runs", "session_id", "core.sessions", "session_id"),
-            ("core.sorting_runs", "probe_id", "core.probes", "probe_id"),
-            ("core.sorting_runs", "input_array_asset_id", "core.array_assets", "array_asset_id"),
-            ("core.curation_versions", "session_id", "core.sessions", "session_id"),
-            ("core.curation_versions", "sorting_run_id", "core.sorting_runs", "sorting_run_id"),
-            ("core.curation_versions", "parent_curation_id", "core.curation_versions", "curation_id"),
-            ("core.processing_runs", "session_id", "core.sessions", "session_id"),
-            ("core.devices", "session_id", "core.sessions", "session_id"),
-            ("core.array_assets", "session_id", "core.sessions", "session_id"),
-            ("core.array_assets", "clock_id", "core.clocks", "clock_id"),
-            ("core.array_dimensions", "coordinate_array_asset_id", "core.array_assets", "array_asset_id"),
-            ("core.media_assets", "session_id", "core.sessions", "session_id"),
-            ("core.media_assets", "clock_id", "core.clocks", "clock_id"),
-            ("core.media_frames", "clock_id", "core.clocks", "clock_id"),
-            # Missed by R46's own sweep: a frame names the asset it belongs to and nothing checked
-            # that the asset exists. Found by R53's ownership derivation, which reported this table
-            # as *owning* media_asset_id -- which only a dimension table should.
-            ("core.media_frames", "media_asset_id", "core.media_assets", "media_asset_id"),
-            ("analysis.array_assets", "session_id", "core.sessions", "session_id"),
-            ("analysis.array_assets", "clock_id", "core.clocks", "clock_id"),
-            # Transitively implied by the composite reference into core.units, so the anti-join
-            # will never fire -- but Part 02 §8.4 resolves a unit through a reference the table
-            # *declares*, and core.spike_events.amplitude is in the unit its sorting run names
-            # (R11 §2). Declaring it is what makes that hop available.
-            ("core.spike_events", "sorting_run_id", "core.sorting_runs", "sorting_run_id")]:
+        ("core.sorting_runs", "session_id", "core.sessions", "session_id"),
+        ("core.sorting_runs", "probe_id", "core.probes", "probe_id"),
+        (
+            "core.sorting_runs",
+            "input_array_asset_id",
+            "core.array_assets",
+            "array_asset_id",
+        ),
+        ("core.curation_versions", "session_id", "core.sessions", "session_id"),
+        (
+            "core.curation_versions",
+            "sorting_run_id",
+            "core.sorting_runs",
+            "sorting_run_id",
+        ),
+        (
+            "core.curation_versions",
+            "parent_curation_id",
+            "core.curation_versions",
+            "curation_id",
+        ),
+        ("core.processing_runs", "session_id", "core.sessions", "session_id"),
+        ("core.devices", "session_id", "core.sessions", "session_id"),
+        ("core.array_assets", "session_id", "core.sessions", "session_id"),
+        ("core.array_assets", "clock_id", "core.clocks", "clock_id"),
+        (
+            "core.array_dimensions",
+            "coordinate_array_asset_id",
+            "core.array_assets",
+            "array_asset_id",
+        ),
+        ("core.media_assets", "session_id", "core.sessions", "session_id"),
+        ("core.media_assets", "clock_id", "core.clocks", "clock_id"),
+        ("core.media_frames", "clock_id", "core.clocks", "clock_id"),
+        # Missed by R46's own sweep: a frame names the asset it belongs to and nothing checked
+        # that the asset exists. Found by R53's ownership derivation, which reported this table
+        # as *owning* media_asset_id -- which only a dimension table should.
+        ("core.media_frames", "media_asset_id", "core.media_assets", "media_asset_id"),
+        ("analysis.array_assets", "session_id", "core.sessions", "session_id"),
+        ("analysis.array_assets", "clock_id", "core.clocks", "clock_id"),
+        # Transitively implied by the composite reference into core.units, so the anti-join
+        # will never fire -- but Part 02 §8.4 resolves a unit through a reference the table
+        # *declares*, and core.spike_events.amplitude is in the unit its sorting run names
+        # (R11 §2). Declaring it is what makes that hop available.
+        ("core.spike_events", "sorting_run_id", "core.sorting_runs", "sorting_run_id"),
+    ]:
         T(child).setdefault("references", []).append(
-            {"columns": [column], "resource": parent, "resource_columns": [parent_column]})
+            {
+                "columns": [column],
+                "resource": parent,
+                "resource_columns": [parent_column],
+            }
+        )
 
     # ---- R53 §2.3.1 : an assigned identifier's owner carries its name --------------------
     SINCE[0] = "R53 §2.3.1"
@@ -1277,18 +2301,26 @@ def build() -> dict:
             # does -- and nothing references it. R48 §2.1's role is about what a consumer may do
             # with the column here, and what it may do with a name is read it.
             ROLES[f"{base}_name"] = "data"
-            entry = col(f"{base}_name", "string", "nullable",
-                        f"What `{column['name']}` stands for: the identifier a source or an earlier "
-                        f"packet used for this {base.replace('_', ' ')}. The only bridge between two "
-                        "packets that numbered it differently (Part 05 §8).")
+            entry = col(
+                f"{base}_name",
+                "string",
+                "nullable",
+                f"What `{column['name']}` stands for: the identifier a source or an earlier "
+                f"packet used for this {base.replace('_', ' ')}. The only bridge between two "
+                "packets that numbered it differently (Part 05 §8).",
+            )
             spec["columns"].insert(spec["columns"].index(column) + 1, entry)
 
     # ---- R56 : a column declares its unit and its clock ---------------------------------
     SINCE[0] = "R56 §2"
     for (resource, column_name), context in CONTEXT.items():
-        column = next((c for c in tables[resource]["columns"] if c["name"] == column_name), None)
+        column = next(
+            (c for c in tables[resource]["columns"] if c["name"] == column_name), None
+        )
         if column is None:
-            raise SystemExit(f"R56 declares context for {resource}.{column_name}, which does not exist")
+            raise SystemExit(
+                f"R56 declares context for {resource}.{column_name}, which does not exist"
+            )
         column.update(context)
 
     # ---- R54 §2 : a trial is one kind of interval ---------------------------------------------
@@ -1299,10 +2331,17 @@ def build() -> dict:
     # inferred and R46's generated anti-join enforces it.
     SINCE[0] = "R54 §2.1"
     rename("core.trials", "trial_id", "interval_id")
-    add_col("core.trials", col("interval_kind", "string", "required",
-                               "The resource that specialises this interval, as a dotted resource "
-                               "ID. Open (Part 02 §9.3); resolved as Part 02 §8.3's shared key."),
-            after="session_id")
+    add_col(
+        "core.trials",
+        col(
+            "interval_kind",
+            "string",
+            "required",
+            "The resource that specialises this interval, as a dotted resource "
+            "ID. Open (Part 02 §9.3); resolved as Part 02 §8.3's shared key.",
+        ),
+        after="session_id",
+    )
     # R54 §2.3: a task's shape is not the format's. `dynamic_foraging.trials` already carries
     # `choice` and `rewarded` with a closed vocabulary core cannot declare -- `none` is not a
     # choice -- and condition_id/stimulus_id were assigned identifiers nothing ever populated.
@@ -1328,25 +2367,41 @@ def build() -> dict:
     # column is null in every row of every packet because the adapter that knows the extremum
     # does not own this table.
     drop_col("core.units", "default_electrode_id")
-    T("core.units")["references"] = [r for r in T("core.units")["references"]
-                                     if r["columns"] != ["default_electrode_id"]]
+    T("core.units")["references"] = [
+        r
+        for r in T("core.units")["references"]
+        if r["columns"] != ["default_electrode_id"]
+    ]
     # R81 §2.3: every table keyed on a unit narrows to the one column, and so does its reference.
     narrowed = {"columns": one, "resource": "core.units", "resource_columns": one}
-    for name in ("core.spike_events", "analysis.spike_events", "core.unit_electrodes",
-                 "core.unit_coordinates", "core.unit_quality_labels",
-                 "core.unit_observation_intervals"):
+    for name in (
+        "core.spike_events",
+        "analysis.spike_events",
+        "core.unit_electrodes",
+        "core.unit_coordinates",
+        "core.unit_quality_labels",
+        "core.unit_observation_intervals",
+    ):
         table = T(name)
-        table["references"] = [narrowed if r["resource"] == "core.units" else r
-                               for r in table["references"]]
-        table["primary_key"] = [c for c in table["primary_key"]
-                                if c not in ("sorting_run_id", "curation_id")]
+        table["references"] = [
+            narrowed if r["resource"] == "core.units" else r
+            for r in table["references"]
+        ]
+        table["primary_key"] = [
+            c
+            for c in table["primary_key"]
+            if c not in ("sorting_run_id", "curation_id")
+        ]
         for struck in ("sorting_run_id", "curation_id"):
             if any(c["name"] == struck for c in table["columns"]):
                 drop_col(name, struck)
         # A reference on a struck column has nothing to join from. `core.units` still names the
         # run and the curation, so the fact is one hop away rather than gone.
-        table["references"] = [r for r in table["references"]
-                               if not set(r["columns"]) & {"sorting_run_id", "curation_id"}]
+        table["references"] = [
+            r
+            for r in table["references"]
+            if not set(r["columns"]) & {"sorting_run_id", "curation_id"}
+        ]
     # R81 §2.4: Part 03 §5.3's override named two columns that no longer exist. Numbering by
     # (run, curation, label) makes ascending unit_id run-major, so the clustering is unchanged
     # and the key, the sort and the uniqueness check finally agree -- R47 §2's outcome.
@@ -1366,19 +2421,39 @@ def build() -> dict:
     # for 5,071 of 6,781 units read the other way. The list it counts was in the analyzer and in
     # no file, so nothing in the packet could resolve it.
     tables["core.sorting_run_channels"] = {
-        "columns": [col("session_id", "int32", "required", "Session ID."),
-                    col("sorting_run_id", "int32", "required",
-                        "The run whose channel list this row belongs to."),
-                    col("channel_index", "int64", "required",
-                        "0-based position in the run's own channel order, which is what a source's "
-                        "channel index counts (R83 §1.1). int64 as every structural index is."),
-                    col("electrode_id", "int32", "required", "The contact at that position.")],
+        "columns": [
+            col("session_id", "int32", "required", "Session ID."),
+            col(
+                "sorting_run_id",
+                "int32",
+                "required",
+                "The run whose channel list this row belongs to.",
+            ),
+            col(
+                "channel_index",
+                "int64",
+                "required",
+                "0-based position in the run's own channel order, which is what a source's "
+                "channel index counts (R83 §1.1). int64 as every structural index is.",
+            ),
+            col("electrode_id", "int32", "required", "The contact at that position."),
+        ],
         "primary_key": ["session_id", "sorting_run_id", "channel_index"],
-        "references": [{"columns": ["sorting_run_id"], "resource": "core.sorting_runs",
-                        "resource_columns": ["sorting_run_id"]},
-                       {"columns": ["electrode_id"], "resource": "core.electrodes",
-                        "resource_columns": ["electrode_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["sorting_run_id"],
+                "resource": "core.sorting_runs",
+                "resource_columns": ["sorting_run_id"],
+            },
+            {
+                "columns": ["electrode_id"],
+                "resource": "core.electrodes",
+                "resource_columns": ["electrode_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # ---- R85 §2.1 : a device declares the port it attached to -----------------------------------
     # R67 §2.1 gave the chain its reference and stopped at which device; which *port of it* was
@@ -1389,12 +2464,18 @@ def build() -> dict:
     # port, a card to a slot. Nullable, since a writer knowing the parent and not the port must
     # leave it unstated rather than invent one (R66 §1.4).
     SINCE[0] = "R85 §2.1"
-    add_col("core.devices",
-            col("parent_port", "string", "nullable",
-                "Which port, dock or slot of `parent_device_id` this device attached to. Null "
-                "where the attachment is stated and its coordinate is not. Establishes nothing "
-                "about identity: two rows may share a parent and a port (Part 01 §3.5)."),
-            after="parent_device_id")
+    add_col(
+        "core.devices",
+        col(
+            "parent_port",
+            "string",
+            "nullable",
+            "Which port, dock or slot of `parent_device_id` this device attached to. Null "
+            "where the attachment is stated and its coordinate is not. Establishes nothing "
+            "about identity: two rows may share a parent and a port (Part 01 §3.5).",
+        ),
+        after="parent_device_id",
+    )
 
     SINCE[0] = "R88 §2.1"
     # A table reaching `core.sessions` through its declared references is session-scoped (R86
@@ -1405,23 +2486,37 @@ def build() -> dict:
     # validated. `core.devices` and `core.processing_runs` were nullable for a question Part 00 §2.4
     # now answers, and neither is null in any packet built.
     SESSION_COLUMN = (
-        "analysis.array_dimensions", "core.array_channels", "core.array_dimensions",
-        "core.clock_anchors", "core.electrode_coordinates",
-        "core.event_stream_observation_intervals", "core.media_frames",
+        "analysis.array_dimensions",
+        "core.array_channels",
+        "core.array_dimensions",
+        "core.clock_anchors",
+        "core.electrode_coordinates",
+        "core.event_stream_observation_intervals",
+        "core.media_frames",
         "core.processing_run_inputs",
     )
     SESSION_REFERENCE = (
-        "analysis.spike_events", "core.sorting_run_channels", "core.unit_coordinates",
-        "core.unit_electrodes", "core.unit_observation_intervals", "core.unit_quality_labels",
+        "analysis.spike_events",
+        "core.sorting_run_channels",
+        "core.unit_coordinates",
+        "core.unit_electrodes",
+        "core.unit_observation_intervals",
+        "core.unit_quality_labels",
     )
     for resource in SESSION_COLUMN:
         # First, as the sixteen tables already doing this have it. Part 02 §7.1: a writer fills it
         # from the parent it is exactly one hop from, so the column costs no new read.
-        T(resource)["columns"].insert(0, col("session_id", "int32", "required", "Session ID."))
+        T(resource)["columns"].insert(
+            0, col("session_id", "int32", "required", "Session ID.")
+        )
     for resource in (*SESSION_COLUMN, *SESSION_REFERENCE):
         T(resource)["references"].append(
-            {"columns": ["session_id"], "resource": "core.sessions",
-             "resource_columns": ["session_id"]})
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            }
+        )
     SINCE[0] = "R88 §2.1"
     for resource in ("core.devices", "core.processing_runs"):
         # Part 02 hedged these as "if session-scoped", written before anything could compute scope.
@@ -1439,68 +2534,148 @@ def build() -> dict:
         "columns": [
             col("calibration_id", "int32", "required", "Stable calibration ID."),
             col("session_id", "int32", "required", "Session ID."),
-            col("calibration_name", "string", "required",
+            col(
+                "calibration_name",
+                "string",
+                "required",
                 "What `calibration_id` stands for: the identifier a source or an earlier packet "
                 "used for this calibration. Required, and composed by the writer where the source "
-                "names none, since Part 02 §8.2 makes two calibrations sharing a name one row."),
-            col("calibration_type", "string", "required",
+                "names none, since Part 02 §8.2 makes two calibrations sharing a name one row.",
+            ),
+            col(
+                "calibration_type",
+                "string",
+                "required",
                 "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Open "
                 "(Part 02 §9.3). Named `_type` rather than `_kind` because a `_kind` column is a "
-                "discriminator (Part 02 §8.3), and this holds a value that resolves to no table."),
-            col("calibrated_at", "timestamp", "nullable",
+                "discriminator (Part 02 §8.3), and this holds a value that resolves to no table.",
+            ),
+            col(
+                "calibrated_at",
+                "timestamp",
+                "nullable",
                 "When the calibration was measured, which is not when it was in force: R89 §1.2 "
                 "measures 133 and 302 days between them. Null where the source states none, since "
-                "what a source did not say is not invented (Part 01 §3.5)."),
-            col("description", "string", "nullable", "What the source said the calibration was."),
-            col("input_unit", "string", "nullable",
+                "what a source did not say is not invented (Part 01 §3.5).",
+            ),
+            col(
+                "description",
+                "string",
+                "nullable",
+                "What the source said the calibration was.",
+            ),
+            col(
+                "input_unit",
+                "string",
+                "nullable",
                 "The unit of measure of `core.calibration_points.input_value`. On the calibration "
                 "because it varies per calibration -- seconds for water, volts for opto -- so no "
-                "literal unit can sit on the value column (R89 §2.3)."),
-            col("output_unit", "string", "nullable",
-                "The unit of measure of `core.calibration_points.output_value`."),
-            col("array_asset_id", "int32", "nullable",
+                "literal unit can sit on the value column (R89 §2.3).",
+            ),
+            col(
+                "output_unit",
+                "string",
+                "nullable",
+                "The unit of measure of `core.calibration_points.output_value`.",
+            ),
+            col(
+                "array_asset_id",
+                "int32",
+                "nullable",
                 "The array holding this calibration where its content is one rather than a curve: "
-                "a manipulator transform, a camera's intrinsics (R89 §2.4)."),
-            col("detail_kind", "string", "nullable",
+                "a manipulator transform, a camera's intrinsics (R89 §2.4).",
+            ),
+            col(
+                "detail_kind",
+                "string",
+                "nullable",
                 "A table carrying a calibration shape core does not define, as a dotted resource "
                 "ID. Open, and `resolves: optional`, so a kind the packet cannot resolve records "
-                "that the content is elsewhere rather than that the row is wrong (Part 02 §12.3)."),
+                "that the content is elsewhere rather than that the row is wrong (Part 02 §12.3).",
+            ),
         ],
         "primary_key": ["calibration_id"],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]},
-                       {"columns": ["array_asset_id"], "resource": "core.array_assets",
-                        "resource_columns": ["array_asset_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            },
+            {
+                "columns": ["array_asset_id"],
+                "resource": "core.array_assets",
+                "resource_columns": ["array_asset_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # R89 §2.2: the devices a calibration covers are a repeated value, so a child table and not a
     # column (Part 02 §6). One `device_id` on the calibration would record six calibrations of the
     # rig's manipulators where it performed one -- R67 §3's defect with its multiplicity reversed.
     SINCE[0] = "R89 §2.2"
     tables["core.calibration_devices"] = {
-        "columns": [col("session_id", "int32", "required", "Session ID."),
-                    col("calibration_id", "int32", "required",
-                        "The calibration this row names a device for."),
-                    col("device_id", "int32", "required", "A device the calibration covers.")],
+        "columns": [
+            col("session_id", "int32", "required", "Session ID."),
+            col(
+                "calibration_id",
+                "int32",
+                "required",
+                "The calibration this row names a device for.",
+            ),
+            col("device_id", "int32", "required", "A device the calibration covers."),
+        ],
         "primary_key": ["calibration_id", "device_id"],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]},
-                       {"columns": ["calibration_id"], "resource": "core.calibrations",
-                        "resource_columns": ["calibration_id"]},
-                       {"columns": ["device_id"], "resource": "core.devices",
-                        "resource_columns": ["device_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            },
+            {
+                "columns": ["calibration_id"],
+                "resource": "core.calibrations",
+                "resource_columns": ["calibration_id"],
+            },
+            {
+                "columns": ["device_id"],
+                "resource": "core.devices",
+                "resource_columns": ["device_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # R89 §2.3: the measured curve, where `rig.json` holds two parallel JSON lists Part 02 §6 forbids.
     SINCE[0] = "R89 §2.3"
-    _points = [col("session_id", "int32", "required", "Session ID."),
-               col("calibration_id", "int32", "required", "The calibration this point belongs to."),
-               col("point_index", "int64", "required",
-                   "0-based position in the curve's own order. The key is not `input_value` even "
-                   "though the inputs are distinct: an equality join on a float64 is not safe, "
-                   "which is why R47 could strike `interval_index` and this stays."),
-               col("input_value", "float64", "required", "The setting the point was measured at."),
-               col("output_value", "float64", "required", "What the instrument then delivered.")]
+    _points = [
+        col("session_id", "int32", "required", "Session ID."),
+        col(
+            "calibration_id",
+            "int32",
+            "required",
+            "The calibration this point belongs to.",
+        ),
+        col(
+            "point_index",
+            "int64",
+            "required",
+            "0-based position in the curve's own order. The key is not `input_value` even "
+            "though the inputs are distinct: an equality join on a float64 is not safe, "
+            "which is why R47 could strike `interval_index` and this stays.",
+        ),
+        col(
+            "input_value",
+            "float64",
+            "required",
+            "The setting the point was measured at.",
+        ),
+        col(
+            "output_value", "float64", "required", "What the instrument then delivered."
+        ),
+    ]
     # Declared here rather than in CONTEXT, which is consumed above -- these columns do not exist
     # when that block runs. Part 02 §8.4's one-hop `resource.column` form, resolved through the
     # reference to `core.calibrations` below, and its first use for a unit rather than a clock.
@@ -1509,11 +2684,21 @@ def build() -> dict:
     tables["core.calibration_points"] = {
         "columns": _points,
         "primary_key": ["calibration_id", "point_index"],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]},
-                       {"columns": ["calibration_id"], "resource": "core.calibrations",
-                        "resource_columns": ["calibration_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            },
+            {
+                "columns": ["calibration_id"],
+                "resource": "core.calibrations",
+                "resource_columns": ["calibration_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # ---- R91 §3 : an event is an occurrence on a stream ---------------------------------------
     # Three of `core.events`' columns were the stream's. `clock_id` differed from its stream's on
@@ -1522,32 +2707,47 @@ def build() -> dict:
     # R53 §2.3.1 to explain a surrogate nothing references. The surrogate and its name cost 41,164
     # of the table's 56,115 compressed bytes.
     SINCE[0] = "R91 §3.1"
-    add_col("core.event_streams",
-            col("event_type", "string", "required",
-                "What kind of event this stream emits. Open (Part 02 §9.3); a stream emits one kind, so a "
-                "source emitting several on one channel is written as several streams."),
-            after="name")
-    add_col("core.event_streams",
-            col("detail_kind", "string", "nullable",
-                "A table specialising this stream's events, as a dotted resource ID. Open, and "
-                "`resolves: optional`, so a kind the packet cannot resolve records that the detail "
-                "is elsewhere (Part 02 §8.3). Resolved against `core.events`' key by Part 02 §8.3's shared "
-                "key, through the reference `discriminates_via` names."),
-            after="event_type")
+    add_col(
+        "core.event_streams",
+        col(
+            "event_type",
+            "string",
+            "required",
+            "What kind of event this stream emits. Open (Part 02 §9.3); a stream emits one kind, so a "
+            "source emitting several on one channel is written as several streams.",
+        ),
+        after="name",
+    )
+    add_col(
+        "core.event_streams",
+        col(
+            "detail_kind",
+            "string",
+            "nullable",
+            "A table specialising this stream's events, as a dotted resource ID. Open, and "
+            "`resolves: optional`, so a kind the packet cannot resolve records that the detail "
+            "is elsewhere (Part 02 §8.3). Resolved against `core.events`' key by Part 02 §8.3's shared "
+            "key, through the reference `discriminates_via` names.",
+        ),
+        after="event_type",
+    )
     # Part 02 §8.3: the discriminator sits a reference away from the rows it specialises, so it names
     # the referencing column. Set after `col`, which classifies from the name alone.
-    next(c for c in T("core.event_streams")["columns"]
-         if c["name"] == "detail_kind")["discriminates_via"] = "core.events.stream_id"
+    next(c for c in T("core.event_streams")["columns"] if c["name"] == "detail_kind")[
+        "discriminates_via"
+    ] = "core.events.stream_id"
 
     SINCE[0] = "R91 §3.2"
     for _struck in ("event_id", "event_name", "event_type", "clock_id"):
         drop_col("core.events", _struck)
-    T("core.events")["references"] = [r for r in T("core.events")["references"]
-                                      if r["resource"] != "core.clocks"]
+    T("core.events")["references"] = [
+        r for r in T("core.events")["references"] if r["resource"] != "core.clocks"
+    ]
     T("core.events")["primary_key"] = ["session_id", "stream_id", "t_tick"]
     # Part 02 §8.4's one-hop form: with no `clock_id` on the row, §2.2's default no longer applies.
-    next(c for c in T("core.events")["columns"]
-         if c["name"] == "t_tick")["clock_from"] = "core.event_streams.clock_id"
+    next(c for c in T("core.events")["columns"] if c["name"] == "t_tick")[
+        "clock_from"
+    ] = "core.event_streams.clock_id"
 
     # ---- R95 §3.1 : one name column per table -------------------------------------------------
     # R53 §2.3.1 generates a `<base>_name` for every assigned identifier in a key, and seven tables
@@ -1560,10 +2760,18 @@ def build() -> dict:
         declared = next((c for c in spec["columns"] if c["name"] == "name"), None)
         if declared is None:
             continue
-        generated = next((c for c in spec["columns"]
-                          if c["name"].endswith("_name") and c.get("since") == "R53 §2.3.1"), None)
+        generated = next(
+            (
+                c
+                for c in spec["columns"]
+                if c["name"].endswith("_name") and c.get("since") == "R53 §2.3.1"
+            ),
+            None,
+        )
         if generated is None:
-            raise SystemExit(f"Part 02 §8.2: {resource} declares `name` and no generated name to merge it into")
+            raise SystemExit(
+                f"Part 02 §8.2: {resource} declares `name` and no generated name to merge it into"
+            )
         generated["presence"] = declared["presence"]
         generated["since"] = SINCE[0]
         spec["columns"].remove(declared)
@@ -1574,25 +2782,47 @@ def build() -> dict:
     # each resolves in the one hop the format allows.
     SINCE[0] = "R96 §3.1"
     drop_col("core.sorting_runs", "amplitude_unit")
-    add_col("core.units", col("amplitude_unit", "string", "nullable",
-                              "Unit of measure of `core.spike_events.amplitude` for this unit's "
-                              "spikes -- microvolts, or ADC counts. Open (R11 §2)."),
-            after="quality_label")
+    add_col(
+        "core.units",
+        col(
+            "amplitude_unit",
+            "string",
+            "nullable",
+            "Unit of measure of `core.spike_events.amplitude` for this unit's "
+            "spikes -- microvolts, or ADC counts. Open (R11 §2).",
+        ),
+        after="quality_label",
+    )
     amend("core.units", "amplitude_unit", vocabulary="open")
 
     SINCE[0] = "R96 §3.2"
     drop_col("core.sorting_runs", "clock_id")
-    T("core.sorting_runs")["references"] = [r for r in T("core.sorting_runs")["references"]
-                                            if r["resource"] != "core.clocks"]
+    T("core.sorting_runs")["references"] = [
+        r
+        for r in T("core.sorting_runs")["references"]
+        if r["resource"] != "core.clocks"
+    ]
     # After the ticks it interprets rather than beside `amplitude_unit`, which is only where the
     # clause above happened to leave off: a `clock_id` outside the primary key sits next to the
     # coordinates that resolve against it (Part 02 §8.4), as it does on `core.intervals`,
     # `core.media_frames` and both `array_dimensions`.
-    add_col("core.units", col("clock_id", "int32", "required",
-                              "The clock every tick of this unit is counted on."),
-            after="last_spike_tick")
-    T("core.units")["references"].append({"columns": ["clock_id"], "resource": "core.clocks",
-                                          "resource_columns": ["clock_id"]})
+    add_col(
+        "core.units",
+        col(
+            "clock_id",
+            "int32",
+            "required",
+            "The clock every tick of this unit is counted on.",
+        ),
+        after="last_spike_tick",
+    )
+    T("core.units")["references"].append(
+        {
+            "columns": ["clock_id"],
+            "resource": "core.clocks",
+            "resource_columns": ["clock_id"],
+        }
+    )
 
     # §3.3: one hop each, through the reference `core.spike_events` already declares on `unit_id`.
     SINCE[0] = "R96 §3.3"
@@ -1602,13 +2832,21 @@ def build() -> dict:
     # §3.4: with the hop resolving, the copies say nothing the reference does not.
     SINCE[0] = "R96 §3.4"
     drop_col("core.spike_events", "clock_id")
-    T("core.spike_events")["references"] = [r for r in T("core.spike_events")["references"]
-                                            if r["resource"] != "core.clocks"]
+    T("core.spike_events")["references"] = [
+        r
+        for r in T("core.spike_events")["references"]
+        if r["resource"] != "core.clocks"
+    ]
     drop_col("core.unit_observation_intervals", "clock_id")
     T("core.unit_observation_intervals")["references"] = [
-        r for r in T("core.unit_observation_intervals")["references"] if r["resource"] != "core.clocks"]
+        r
+        for r in T("core.unit_observation_intervals")["references"]
+        if r["resource"] != "core.clocks"
+    ]
     for _bound in ("start_tick", "stop_tick"):
-        amend("core.unit_observation_intervals", _bound, clock_from="core.units.clock_id")
+        amend(
+            "core.unit_observation_intervals", _bound, clock_from="core.units.clock_id"
+        )
 
     # ---- R97 §3 : the free-form metadata column -----------------------------------------------
     # Where the primary key decides the column, it is generated rather than declared (Part 02 §8.6). A
@@ -1624,8 +2862,10 @@ def build() -> dict:
     #
     # Runs after every key change above, since the key is what it reads.
     SINCE[0] = "R97 §3.1"
-    METADATA = ("What the source stated about this row that the standard does not model, carried "
-                "in the source's own vocabulary and read by no rule.")
+    METADATA = (
+        "What the source stated about this row that the standard does not model, carried "
+        "in the source's own vocabulary and read by no rule."
+    )
     # Three judgements withdrawn: no adapter writes these and no consumer asks (R97 §5).
     for _resource in ("core.spike_events", "core.media_frames", "core.array_channels"):
         drop_col(_resource, "metadata")
@@ -1658,18 +2898,26 @@ def build() -> dict:
     # carry one and every one is right.
     SINCE[0] = "R100 §2.1"
     for _table in ("core.array_dimensions", "analysis.array_dimensions"):
-        amend(_table, "coordinate_resource", role="discriminator",
-              description="The table whose rows are this axis's positions, as a dotted resource "
-                          "ID. The column of it holding the 0-based position is "
-                          "`coordinate_position_column` (R20 §2.4).",
-              **discriminator_of("coordinate_resource"))
+        amend(
+            _table,
+            "coordinate_resource",
+            role="discriminator",
+            description="The table whose rows are this axis's positions, as a dotted resource "
+            "ID. The column of it holding the 0-based position is "
+            "`coordinate_position_column` (R20 §2.4).",
+            **discriminator_of("coordinate_resource"),
+        )
 
     # §2.4: `core.array_dimensions` declares this reference and its analysis copy did not, so the
     # two tables disagreed about one column and Tier 1 generated no anti-join for the second.
     SINCE[0] = "R100 §2.4"
     T("analysis.array_dimensions")["references"].append(
-        {"columns": ["coordinate_array_asset_id"], "resource": "analysis.array_assets",
-         "resource_columns": ["array_asset_id"]})
+        {
+            "columns": ["coordinate_array_asset_id"],
+            "resource": "analysis.array_assets",
+            "resource_columns": ["array_asset_id"],
+        }
+    )
 
     # ---- R99 §3 : a packet records its clock alignment in columns ----------------------------
     # Three facts a consumer needs to place a tick were content of `core.processing_runs.parameters`,
@@ -1677,38 +2925,78 @@ def build() -> dict:
     # clocks. Part 02 §5.2 forbids that shape as a column and Part 01 §3.9 already converted
     # `core.clocks.transform_to_parent` out of it, so they become columns and a table.
     SINCE[0] = "R99 §3.1"
-    add_col("core.sessions", col("alignment_bound", "float64", "nullable",
-                                 "How far past its anchors the writer mapped, in median anchor "
-                                 "intervals (Part 01 §3.9). Null means the default of one."))
+    add_col(
+        "core.sessions",
+        col(
+            "alignment_bound",
+            "float64",
+            "nullable",
+            "How far past its anchors the writer mapped, in median anchor "
+            "intervals (Part 01 §3.9). Null means the default of one.",
+        ),
+    )
     amend("core.sessions", "alignment_bound", unit="{median_anchor_interval}")
 
     SINCE[0] = "R99 §3.2"
     for _end in ("first", "last"):
-        add_col("core.clocks", col(f"withheld_{_end}_anchor", "bool", "nullable",
-                                   f"Whether Part 02 §12.6's terminal-anchor test withheld this clock's "
-                                   f"{_end} anchor. Null means the test did not run."))
+        add_col(
+            "core.clocks",
+            col(
+                f"withheld_{_end}_anchor",
+                "bool",
+                "nullable",
+                f"Whether Part 02 §12.6's terminal-anchor test withheld this clock's "
+                f"{_end} anchor. Null means the test did not run.",
+            ),
+        )
 
     SINCE[0] = "R99 §3.3"
     tables["core.clock_phase_steps"] = {
-        "columns": [col("session_id", "int32", "required", "Session."),
-                    col("clock_id", "int32", "required", "The clock whose alignment stepped."),
-                    col("t_tick", "int64", "required", "Where the step is, on `clock_id`."),
-                    col("parent_tick", "int64", "required",
-                        "The same instant on the parent clock."),
-                    col("shift_seconds", "float64", "required",
-                        "How far the parent's phase moved. Signed."),
-                    col("anchor_interval_span", "int32", "required",
-                        "How many consecutive anchor intervals the step spans.")],
+        "columns": [
+            col("session_id", "int32", "required", "Session."),
+            col("clock_id", "int32", "required", "The clock whose alignment stepped."),
+            col("t_tick", "int64", "required", "Where the step is, on `clock_id`."),
+            col(
+                "parent_tick",
+                "int64",
+                "required",
+                "The same instant on the parent clock.",
+            ),
+            col(
+                "shift_seconds",
+                "float64",
+                "required",
+                "How far the parent's phase moved. Signed.",
+            ),
+            col(
+                "anchor_interval_span",
+                "int32",
+                "required",
+                "How many consecutive anchor intervals the step spans.",
+            ),
+        ],
         "primary_key": ["session_id", "clock_id", "t_tick"],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]},
-                       {"columns": ["clock_id"], "resource": "core.clocks",
-                        "resource_columns": ["clock_id"]}],
+        "references": [
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            },
+            {
+                "columns": ["clock_id"],
+                "resource": "core.clocks",
+                "resource_columns": ["clock_id"],
+            },
+        ],
         "rules": [],
     }
     # Part 02 §8.4's one-hop form, declared here rather than in CONTEXT, which is consumed before a
     # block this late runs. `core.clock_anchors.parent_tick` carries the same pair of clocks.
-    amend("core.clock_phase_steps", "parent_tick", clock_from="core.clocks.parent_clock_id")
+    amend(
+        "core.clock_phase_steps",
+        "parent_tick",
+        clock_from="core.clocks.parent_clock_id",
+    )
     amend("core.clock_phase_steps", "shift_seconds", unit="s")
     amend("core.clock_phase_steps", "anchor_interval_span", unit="{anchor_interval}")
 
@@ -1724,10 +3012,14 @@ def build() -> dict:
     # null -- three of the four are HL7 FHIR's `AdministrativeGender`, whose `unknown` this set
     # carries as null. `hermaphrodite` names a determinate sex: C. elegans has no females.
     SINCE[0] = "R101 §3.9"
-    amend("core.subjects", "sex",
-          enum=["male", "female", "hermaphrodite", "other"], vocabulary="closed",
-          description="The subject's sex. Null where the source states none, states it unknown, "
-                      "or describes a preparation that has none.")
+    amend(
+        "core.subjects",
+        "sex",
+        enum=["male", "female", "hermaphrodite", "other"],
+        vocabulary="closed",
+        description="The subject's sex. Null where the source states none, states it unknown, "
+        "or describes a preparation that has none.",
+    )
 
     # §3.8: Part 02 §9.3 reserved four kinds with declared meanings and the registry never received them.
     SINCE[0] = "R101 §3.8"
@@ -1748,22 +3040,46 @@ def build() -> dict:
     # error was unenforceable for arrays.
     SINCE[0] = "R102 §3.1"
     for _t in ("core.array_assets", "analysis.array_assets"):
-        add_col(_t, col("processing_run_id", "int32", "nullable",
-                        "The run that produced this array. Null means it was acquired rather than "
-                        "computed, which is the reading R23 §2 gives a stream."),
-                after="device_id")
+        add_col(
+            _t,
+            col(
+                "processing_run_id",
+                "int32",
+                "nullable",
+                "The run that produced this array. Null means it was acquired rather than "
+                "computed, which is the reading R23 §2 gives a stream.",
+            ),
+            after="device_id",
+        )
         T(_t)["references"].append(
-            {"columns": ["processing_run_id"], "resource": "core.processing_runs",
-             "resource_columns": ["processing_run_id"]})
+            {
+                "columns": ["processing_run_id"],
+                "resource": "core.processing_runs",
+                "resource_columns": ["processing_run_id"],
+            }
+        )
 
     # §3.2: R65 §2.1 gave the array tables a device and skipped this one, so nothing separated a
     # behaviour video from a miniscope movie -- both being `mp4` written by a camera.
     SINCE[0] = "R102 §3.2"
-    add_col("core.media_assets", col("device_id", "int32", "nullable",
+    add_col(
+        "core.media_assets",
+        col(
+            "device_id",
+            "int32",
+            "nullable",
             "The device that recorded this asset. A writer names it where its source states one, "
-            "and MUST NOT infer it from a file name (Part 01 §3.5)."), after="format")
+            "and MUST NOT infer it from a file name (Part 01 §3.5).",
+        ),
+        after="format",
+    )
     T("core.media_assets")["references"].append(
-        {"columns": ["device_id"], "resource": "core.devices", "resource_columns": ["device_id"]})
+        {
+            "columns": ["device_id"],
+            "resource": "core.devices",
+            "resource_columns": ["device_id"],
+        }
+    )
 
     # ---- R103 §3 : an array's band and the quantity it holds -----------------------------------
     # Two required open strings described what an array holds and nothing read either. `kind` is
@@ -1774,21 +3090,29 @@ def build() -> dict:
     SINCE[0] = "R103 §3.1"
     for _t in ("core.array_assets", "analysis.array_assets"):
         rename(_t, "kind", "band")
-        amend(_t, "band", presence="nullable",
-              reserved_values=["wideband", "ap", "lfp"],
-              description="Which band of a sampled signal this array holds: `wideband` unfiltered, "
-                          "`ap` the action-potential band, `lfp` the local field potential band, "
-                          "with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet "
-                          "does not record. Open, and null where the signal was not split.")
+        amend(
+            _t,
+            "band",
+            presence="nullable",
+            reserved_values=["wideband", "ap", "lfp"],
+            description="Which band of a sampled signal this array holds: `wideband` unfiltered, "
+            "`ap` the action-potential band, `lfp` the local field potential band, "
+            "with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet "
+            "does not record. Open, and null where the signal was not split.",
+        )
 
     SINCE[0] = "R103 §3.4"
     for _t in ("core.array_assets", "analysis.array_assets", "core.media_assets"):
-        amend(_t, "semantic_type", presence="nullable",
-              description="What quantity the asset holds, where the row's declared facts do not "
-                          "already say. Null is the ordinary case: a writer MUST NOT fill it where "
-                          "the device, the unit, the channel map or the dimensions carry the "
-                          "answer. Open (Part 02 §9.3): an unrecognised value is a label carrying no "
-                          "contract (Part 01 §3.17).")
+        amend(
+            _t,
+            "semantic_type",
+            presence="nullable",
+            description="What quantity the asset holds, where the row's declared facts do not "
+            "already say. Null is the ordinary case: a writer MUST NOT fill it where "
+            "the device, the unit, the channel map or the dimensions carry the "
+            "answer. Open (Part 02 §9.3): an unrecognised value is a label carrying no "
+            "contract (Part 01 §3.17).",
+        )
 
     # ---- R104 §3 : a device declares what kind of thing it is ----------------------------------
     # `core.devices` is one flat table for a probe, a headstage, a basestation, a sniff detector
@@ -1796,12 +3120,19 @@ def build() -> dict:
     # kind and per-kind detail tables sharing its key; devices are the one table with no
     # discriminator and no other table keyed on their id.
     SINCE[0] = "R104 §3.1"
-    add_col("core.devices", col("device_kind", "string", "nullable",
+    add_col(
+        "core.devices",
+        col(
+            "device_kind",
+            "string",
+            "nullable",
             "The table carrying this device's kind-specific facts, as a dotted resource ID. Its "
             "primary key begins `device_id`, so resolution is Part 02 §8.3's shared-key join. Core "
             "declares no such table (Part 02 §8.3); an extension does, and a value naming a resource "
-            "the packet does not carry is a fact rather than a defect (Part 02 §8.3)."),
-            after="parent_port")
+            "the packet does not carry is a fact rather than a defect (Part 02 §8.3).",
+        ),
+        after="parent_port",
+    )
 
     # ---- R105 §3 : a coordinate is a value on a declared axis -----------------------------------
     # R19 §3 named the axis columns `x_um`, `y_um`, `z_um` and left their meaning to "the frame's
@@ -1809,90 +3140,199 @@ def build() -> dict:
     # 8,448 of 27,557 coordinate rows carry a null `z_um`, a contact on a shank being two numbers.
     SINCE[0] = "R105 §3.1"
     tables["core.coordinate_frames"] = {
-        "columns": [col("session_id", "int32", "required", "Session."),
-                    col("coordinate_frame", "string", "required",
-                        "The session's own name for this space."),
-                    col("atlas", "string", "nullable",
-                        "The published atlas this space is, where it is one. Null where no source "
-                        "names it; a writer MUST NOT read one out of the frame's name."),
-                    col("atlas_version", "string", "nullable",
-                        "That atlas's version, spelled as the atlas spells it -- `CCFv3`. Two "
-                        "packets naming one atlas at different versions are in different spaces."),
-                    col("description", "string", "nullable",
-                        "What the frame is, for a reader without the atlas.")],
+        "columns": [
+            col("session_id", "int32", "required", "Session."),
+            col(
+                "coordinate_frame",
+                "string",
+                "required",
+                "The session's own name for this space.",
+            ),
+            col(
+                "atlas",
+                "string",
+                "nullable",
+                "The published atlas this space is, where it is one. Null where no source "
+                "names it; a writer MUST NOT read one out of the frame's name.",
+            ),
+            col(
+                "atlas_version",
+                "string",
+                "nullable",
+                "That atlas's version, spelled as the atlas spells it -- `CCFv3`. Two "
+                "packets naming one atlas at different versions are in different spaces.",
+            ),
+            col(
+                "description",
+                "string",
+                "nullable",
+                "What the frame is, for a reader without the atlas.",
+            ),
+        ],
         "primary_key": ["session_id", "coordinate_frame"],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            }
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     SINCE[0] = "R105 §3.2"
     tables["core.coordinate_frame_axes"] = {
-        "columns": [col("session_id", "int32", "required", "Session."),
-                    col("coordinate_frame", "string", "required", "The frame these axes belong to."),
-                    col("axis_index", "int64", "required", "Which axis, 0-based (Part 02 §8.1.1)."),
-                    col("axis_name", "string", "required",
-                        "Whatever the source called the field these values came from, verbatim "
-                        "(Part 02 §9.3). A writer MUST NOT normalise it or replace it with what the "
-                        "quantity is conventionally taken to be."),
-                    col("axis_direction", "string", "nullable",
-                        "Which way the values increase -- `right`, `anterior`, `superior`. Null "
-                        "where the source does not state it, which no inference may fill (R105 "
-                        "§3.4)."),
-                    col("unit", "string", "nullable",
-                        "The axis's unit, as a UCUM code (Part 02 §8.4).")],
+        "columns": [
+            col("session_id", "int32", "required", "Session."),
+            col(
+                "coordinate_frame",
+                "string",
+                "required",
+                "The frame these axes belong to.",
+            ),
+            col(
+                "axis_index",
+                "int64",
+                "required",
+                "Which axis, 0-based (Part 02 §8.1.1).",
+            ),
+            col(
+                "axis_name",
+                "string",
+                "required",
+                "Whatever the source called the field these values came from, verbatim "
+                "(Part 02 §9.3). A writer MUST NOT normalise it or replace it with what the "
+                "quantity is conventionally taken to be.",
+            ),
+            col(
+                "axis_direction",
+                "string",
+                "nullable",
+                "Which way the values increase -- `right`, `anterior`, `superior`. Null "
+                "where the source does not state it, which no inference may fill (R105 "
+                "§3.4).",
+            ),
+            col(
+                "unit",
+                "string",
+                "nullable",
+                "The axis's unit, as a UCUM code (Part 02 §8.4).",
+            ),
+        ],
         "primary_key": ["session_id", "coordinate_frame", "axis_index"],
-        "references": [{"columns": ["session_id", "coordinate_frame"],
-                        "resource": "core.coordinate_frames",
-                        "resource_columns": ["session_id", "coordinate_frame"]},
-                       {"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]}],
-        "rules": [], "since": SINCE[0]}
+        "references": [
+            {
+                "columns": ["session_id", "coordinate_frame"],
+                "resource": "core.coordinate_frames",
+                "resource_columns": ["session_id", "coordinate_frame"],
+            },
+            {
+                "columns": ["session_id"],
+                "resource": "core.sessions",
+                "resource_columns": ["session_id"],
+            },
+        ],
+        "rules": [],
+        "since": SINCE[0],
+    }
 
     # §3.3: the values move to a child keyed by the parent's key plus the axis. The two parents
     # differ -- `core.electrode_coordinates` carries no `session_id` in its key and
     # `core.unit_coordinates` does -- so each child mirrors its own.
     SINCE[0] = "R105 §3.3"
     for _parent, _child, _own, _key in (
-            ("core.electrode_coordinates", "core.electrode_coordinate_values", "electrode_id",
-             ["electrode_id", "coordinate_frame", "coordinate_basis"]),
-            ("core.unit_coordinates", "core.unit_coordinate_values", "unit_id",
-             ["session_id", "unit_id", "coordinate_frame", "coordinate_basis"])):
+        (
+            "core.electrode_coordinates",
+            "core.electrode_coordinate_values",
+            "electrode_id",
+            ["electrode_id", "coordinate_frame", "coordinate_basis"],
+        ),
+        (
+            "core.unit_coordinates",
+            "core.unit_coordinate_values",
+            "unit_id",
+            ["session_id", "unit_id", "coordinate_frame", "coordinate_basis"],
+        ),
+    ):
         tables[_child] = {
-            "columns": [col("session_id", "int32", "required", "Session."),
-                        col(_own, "int32", "required", "The thing positioned."),
-                        col("coordinate_frame", "string", "required",
-                            "The frame, naming a `core.coordinate_frames` row of this session; "
-                            "with `coordinate_basis` it completes the parent's key."),
-                        col("coordinate_basis", "string", "required",
-                            "What the coordinate asserts (Part 01 §3.8)."),
-                        col("axis_index", "int64", "required",
-                            "Which of the frame's axes this value is on."),
-                        col("axis_value", "float64", "required", "The value, in the axis's unit.")],
+            "columns": [
+                col("session_id", "int32", "required", "Session."),
+                col(_own, "int32", "required", "The thing positioned."),
+                col(
+                    "coordinate_frame",
+                    "string",
+                    "required",
+                    "The frame, naming a `core.coordinate_frames` row of this session; "
+                    "with `coordinate_basis` it completes the parent's key.",
+                ),
+                col(
+                    "coordinate_basis",
+                    "string",
+                    "required",
+                    "What the coordinate asserts (Part 01 §3.8).",
+                ),
+                col(
+                    "axis_index",
+                    "int64",
+                    "required",
+                    "Which of the frame's axes this value is on.",
+                ),
+                col(
+                    "axis_value",
+                    "float64",
+                    "required",
+                    "The value, in the axis's unit.",
+                ),
+            ],
             "primary_key": _key + ["axis_index"],
-            "references": [{"columns": _key, "resource": _parent, "resource_columns": _key},
-                           {"columns": ["session_id", "coordinate_frame", "axis_index"],
-                            "resource": "core.coordinate_frame_axes",
-                            "resource_columns": ["session_id", "coordinate_frame", "axis_index"]},
-                           {"columns": ["session_id"], "resource": "core.sessions",
-                            "resource_columns": ["session_id"]}],
-            "rules": [], "since": SINCE[0]}
+            "references": [
+                {"columns": _key, "resource": _parent, "resource_columns": _key},
+                {
+                    "columns": ["session_id", "coordinate_frame", "axis_index"],
+                    "resource": "core.coordinate_frame_axes",
+                    "resource_columns": [
+                        "session_id",
+                        "coordinate_frame",
+                        "axis_index",
+                    ],
+                },
+                {
+                    "columns": ["session_id"],
+                    "resource": "core.sessions",
+                    "resource_columns": ["session_id"],
+                },
+            ],
+            "rules": [],
+            "since": SINCE[0],
+        }
         amend(_child, "axis_value", unit_from="core.coordinate_frame_axes.unit")
         for _axis in ("x_um", "y_um", "z_um"):
             drop_col(_parent, _axis)
         T(_parent)["references"].append(
-            {"columns": ["session_id", "coordinate_frame"], "resource": "core.coordinate_frames",
-             "resource_columns": ["session_id", "coordinate_frame"]})
+            {
+                "columns": ["session_id", "coordinate_frame"],
+                "resource": "core.coordinate_frames",
+                "resource_columns": ["session_id", "coordinate_frame"],
+            }
+        )
         # R101 §3.5 wrote this description when the frame was a bare string carrying the atlas and
         # no statement of its axes. Both halves move to `core.coordinate_frames`.
-        amend(_parent, "coordinate_frame",
-              description="The space these coordinates are in, naming a `core.coordinate_frames` "
-                          "row of this session, which declares that space's axes and the "
-                          "published atlas it is. Open.")
+        amend(
+            _parent,
+            "coordinate_frame",
+            description="The space these coordinates are in, naming a `core.coordinate_frames` "
+            "row of this session, which declares that space's axes and the "
+            "published atlas it is. Open.",
+        )
 
-    amend("core.probes", "target_region",
-          description="The structure the probe was aimed at, as an atlas acronym where the source "
-                      "gives one. Open, and not resolvable: no column here names the atlas, which "
-                      "only a coordinate frame does (Part 01 §3.24).")
+    amend(
+        "core.probes",
+        "target_region",
+        description="The structure the probe was aimed at, as an atlas acronym where the source "
+        "gives one. Open, and not resolvable: no column here names the atlas, which "
+        "only a coordinate frame does (Part 01 §3.24).",
+    )
 
     # ---- R101 §3.1 and §3.6, run after every block so a later table's columns are classified too ----
     for _spec in tables.values():
@@ -1914,30 +3354,40 @@ def build() -> dict:
     SINCE[0] = "R107 §3.1"
 
     # A trailing claim and nothing else, so stripping it is exact.
-    for _resource, _name in (("core.clocks", "origin"),
-                             ("core.electrode_coordinates", "coordinate_frame"),
-                             ("core.media_assets", "format"),
-                             ("core.preferred_runs", "scope_kind"),
-                             ("core.probes", "probe_type"),
-                             ("core.source_files", "format"),
-                             ("core.unit_coordinates", "coordinate_frame")):
-        _was = next(c for c in T(_resource)["columns"] if c["name"] == _name)["description"]
+    for _resource, _name in (
+        ("core.clocks", "origin"),
+        ("core.electrode_coordinates", "coordinate_frame"),
+        ("core.media_assets", "format"),
+        ("core.preferred_runs", "scope_kind"),
+        ("core.probes", "probe_type"),
+        ("core.source_files", "format"),
+        ("core.unit_coordinates", "coordinate_frame"),
+    ):
+        _was = next(c for c in T(_resource)["columns"] if c["name"] == _name)[
+            "description"
+        ]
         if not _was.endswith(" Open."):
-            raise SystemExit(f"{_resource}.{_name} no longer ends in a bare claim: {_was!r}")
+            raise SystemExit(
+                f"{_resource}.{_name} no longer ends in a bare claim: {_was!r}"
+            )
         amend(_resource, _name, description=_was[: -len(" Open.")])
 
     _SEMANTIC_107 = (
         "What quantity the asset holds, where the row's declared facts do not already say. Null is "
         "the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map "
         "or the dimensions carry the answer. An unrecognised value is a label carrying no contract "
-        "(Part 01 §3.17).")
+        "(Part 01 §3.17)."
+    )
     _BAND_107 = (
         "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the "
         "action-potential band, `lfp` the local field potential band, with Part 02 §9.3's meanings. A "
         "conventional shorthand for a filter the packet does not record. Null where the signal was "
-        "not split.")
-    _MANUF_107 = ("The manufacturer's own name for itself, as the source states it, compared "
-                  "exactly, so two spellings are two manufacturers.")
+        "not split."
+    )
+    _MANUF_107 = (
+        "The manufacturer's own name for itself, as the source states it, compared "
+        "exactly, so two spellings are two manufacturers."
+    )
     for (_resource, _name), _text in {
         ("analysis.array_assets", "semantic_type"): _SEMANTIC_107,
         ("core.array_assets", "semantic_type"): _SEMANTIC_107,
@@ -1948,50 +3398,74 @@ def build() -> dict:
         ("core.array_assets", "band"): _BAND_107,
         ("core.devices", "manufacturer"): _MANUF_107,
         ("core.probes", "manufacturer"): _MANUF_107,
-        ("core.calibrations", "calibration_type"):
-            "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named "
-            "`_type` rather than `_kind` because a `_kind` column is a discriminator (Part 02 §8.3), "
-            "and this holds a value that resolves to no table.",
-        ("core.calibrations", "detail_kind"):
-            "A table carrying a calibration shape core does not define, as a dotted resource ID. A "
-            "kind the packet cannot resolve records that the content is elsewhere rather than that "
-            "the row is wrong (Part 02 §12.3).",
-        ("core.event_streams", "detail_kind"):
-            "A table specialising this stream's events, as a dotted resource ID. A kind the packet "
-            "cannot resolve records that the detail is elsewhere (Part 02 §8.3). Resolved against "
-            "`core.events`' key by Part 02 §8.3's shared key, through the reference `discriminates_via` "
-            "names.",
-        ("core.event_streams", "event_type"):
-            "What kind of event this stream emits. A stream emits one kind, so a source emitting "
-            "several on one channel is written as several streams.",
-        ("core.intervals", "interval_kind"):
-            "The resource that specialises this interval, as a dotted resource ID, resolved as "
-            "Part 02 §8.3's shared key.",
-        ("core.preferred_runs", "activity_type"):
-            "Which kind of output this preference is about, in the vocabulary "
-            "`core.processing_runs.activity_type` uses (Part 02 §9.3).",
-        ("core.probes", "target_region"):
-            "The structure the probe was aimed at, as an atlas acronym where the source gives one. "
-            "Not resolvable: no column here names the atlas, which only a coordinate frame does "
-            "(Part 01 §3.24).",
-        ("core.processing_runs", "activity_type"):
-            "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, "
-            "`materialization`. A pipeline names its own.",
-        ("core.processing_runs", "scope"):
-            "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id "
-            "itself where the run is session-wide. Read only with the `scope_kind` beside it, which "
-            "names the table the value keys into (R49 §2.2).",
-        ("core.processing_runs", "scope_kind"):
-            "The resource whose primary key `scope` holds, as a dotted resource ID -- "
-            "`core.probes`, `core.array_assets`. A value naming no declared resource means the "
-            "scope is not a packet resource. Set with `scope` or not at all.",
+        (
+            "core.calibrations",
+            "calibration_type",
+        ): "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named "
+        "`_type` rather than `_kind` because a `_kind` column is a discriminator (Part 02 §8.3), "
+        "and this holds a value that resolves to no table.",
+        (
+            "core.calibrations",
+            "detail_kind",
+        ): "A table carrying a calibration shape core does not define, as a dotted resource ID. A "
+        "kind the packet cannot resolve records that the content is elsewhere rather than that "
+        "the row is wrong (Part 02 §12.3).",
+        (
+            "core.event_streams",
+            "detail_kind",
+        ): "A table specialising this stream's events, as a dotted resource ID. A kind the packet "
+        "cannot resolve records that the detail is elsewhere (Part 02 §8.3). Resolved against "
+        "`core.events`' key by Part 02 §8.3's shared key, through the reference `discriminates_via` "
+        "names.",
+        (
+            "core.event_streams",
+            "event_type",
+        ): "What kind of event this stream emits. A stream emits one kind, so a source emitting "
+        "several on one channel is written as several streams.",
+        (
+            "core.intervals",
+            "interval_kind",
+        ): "The resource that specialises this interval, as a dotted resource ID, resolved as "
+        "Part 02 §8.3's shared key.",
+        (
+            "core.preferred_runs",
+            "activity_type",
+        ): "Which kind of output this preference is about, in the vocabulary "
+        "`core.processing_runs.activity_type` uses (Part 02 §9.3).",
+        (
+            "core.probes",
+            "target_region",
+        ): "The structure the probe was aimed at, as an atlas acronym where the source gives one. "
+        "Not resolvable: no column here names the atlas, which only a coordinate frame does "
+        "(Part 01 §3.24).",
+        (
+            "core.processing_runs",
+            "activity_type",
+        ): "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, "
+        "`materialization`. A pipeline names its own.",
+        (
+            "core.processing_runs",
+            "scope",
+        ): "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id "
+        "itself where the run is session-wide. Read only with the `scope_kind` beside it, which "
+        "names the table the value keys into (R49 §2.2).",
+        (
+            "core.processing_runs",
+            "scope_kind",
+        ): "The resource whose primary key `scope` holds, as a dotted resource ID -- "
+        "`core.probes`, `core.array_assets`. A value naming no declared resource means the "
+        "scope is not a packet resource. Set with `scope` or not at all.",
         # The three values leave with the claim: unlike `band` above, this listed them and cited
         # their meanings elsewhere, so the list restated the `enum` and added nothing.
-        ("core.processing_runs", "status"):
-            "Whether the run completed, with the meanings Part 02 §9.3 declares.",
-        ("core.units", "amplitude_unit"):
-            "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- "
-            "microvolts, or ADC counts.",
+        (
+            "core.processing_runs",
+            "status",
+        ): "Whether the run completed, with the meanings Part 02 §9.3 declares.",
+        (
+            "core.units",
+            "amplitude_unit",
+        ): "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- "
+        "microvolts, or ADC counts.",
     }.items():
         amend(_resource, _name, description=_text)
 
@@ -2027,12 +3501,16 @@ def build() -> dict:
     hand_written: dict[str, list[dict]] = authored["rules"]
     unknown = sorted(set(hand_written) - set(tables))
     if unknown:
-        raise SystemExit(f"rules.json names tables the registry does not define: {', '.join(unknown)}")
+        raise SystemExit(
+            f"rules.json names tables the registry does not define: {', '.join(unknown)}"
+        )
     for resource, table_rules in hand_written.items():
         expanded: list[dict[str, str]] = []
         for rule in table_rules:
             if template := rule.get("use"):
-                expanded.extend(expand(template, resource, rule, T(resource)["primary_key"]))
+                expanded.extend(
+                    expand(template, resource, rule, T(resource)["primary_key"])
+                )
             else:
                 expanded.append(rule)
         T(resource)["rules"] = expanded
@@ -2048,26 +3526,34 @@ def build() -> dict:
     # than on a schedule.
     # Part 02 §9.2: first, so what governs the document is visible without reading it. Read from
     # the meta-schema rather than repeated, since a copy is what goes stale.
-    return {"$schema": json.loads((HERE / "registry.schema.json").read_text())["$id"],
-            "registry_version": "0.1.0",
-            "semantic_standard_version": "escapewheel-semantic-v0.1",
-            "logical_standard_version": "escapewheel-logical-v0.1",
-            # Every revision whose decisions are applied above, so the registry says what it
-            # was derived from rather than leaving it to the block comments. The union of what
-            # the blocks stamped and what only this file records, so adding a column-touching
-            # revision cannot leave the list behind.
-            "derived_from": {"specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-                             "revisions": sorted({*SINCE.applied, *(f"R{n}" for n in UNSTAMPED)},
-                                                 key=lambda r: int(r[1:]))},
-            "tables": dict(sorted(tables.items()))}
+    return {
+        "$schema": json.loads((HERE / "registry.schema.json").read_text())["$id"],
+        "registry_version": "0.1.0",
+        "semantic_standard_version": "escapewheel-semantic-v0.1",
+        "logical_standard_version": "escapewheel-logical-v0.1",
+        # Every revision whose decisions are applied above, so the registry says what it
+        # was derived from rather than leaving it to the block comments. The union of what
+        # the blocks stamped and what only this file records, so adding a column-touching
+        # revision cannot leave the list behind.
+        "derived_from": {
+            "specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
+            "revisions": sorted(
+                {*SINCE.applied, *(f"R{n}" for n in UNSTAMPED)},
+                key=lambda r: int(r[1:]),
+            ),
+        },
+        "tables": dict(sorted(tables.items())),
+    }
 
 
 if __name__ == "__main__":
     reg = build()
     OUT.write_text(json.dumps(reg, indent=2) + "\n")
-    print(f"wrote {OUT.name}: {len(reg['tables'])} tables, "
-          f"{sum(len(t['columns']) for t in reg['tables'].values())} columns, "
-          f"{sum(len(t['rules']) for t in reg['tables'].values())} rules merged from {RULES.name}")
+    print(
+        f"wrote {OUT.name}: {len(reg['tables'])} tables, "
+        f"{sum(len(t['columns']) for t in reg['tables'].values())} columns, "
+        f"{sum(len(t['rules']) for t in reg['tables'].values())} rules merged from {RULES.name}"
+    )
 
     # Rendered here rather than by hand, so the readable form cannot drift from the content.
     # The README's counts go the same way: it claimed 33 tables and 51 rules against a registry

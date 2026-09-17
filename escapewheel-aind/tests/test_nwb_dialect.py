@@ -160,9 +160,7 @@ def test_trial_timing_columns_become_events(source):
     a moment on a clock, and a query should find it without knowing the task's shape."""
     kinds = {s["event_type"] for s in source.event_streams()}
     assert {"go_cue", "reward_outcome"} <= kinds
-    emitting = {
-        s["event_stream_id"] for s in source.event_streams() if s["event_type"] in {"go_cue", "reward_outcome"}
-    }
+    emitting = {s["event_stream_id"] for s in source.event_streams() if s["event_type"] in {"go_cue", "reward_outcome"}}
     assert emitting <= {e["stream_id"] for e in source.events()}
 
 
@@ -192,9 +190,7 @@ def test_a_trial_that_never_reached_the_moment_emits_no_event(tmp_path, harp):
 
 def test_a_mapped_task_column_is_not_repeated_in_metadata(nwb, harp):
     """It is in core.events now, so carrying it again would be the duplication Part 02 §6 bans."""
-    carrying = AindNWBSource(
-        nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND, trial_metadata=True
-    )
+    carrying = AindNWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND, trial_metadata=True)
     metadata = carrying.intervals()[0].get("metadata") or {}
     assert "goCue_start_time" not in metadata
     assert "animal_response" not in metadata

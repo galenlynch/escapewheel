@@ -34,9 +34,12 @@ apparent fix is to author these at `info` and have the validator suppress `info`
 That breaks the one `info` finding that exists:
 
 ```python
-report.add("info", "external.unverified",
-           f"{len(external)} external resource(s) not resolved; their codecs, sha256 and "
-           "size_bytes are unverified claims")
+report.add(
+    "info",
+    "external.unverified",
+    f"{len(external)} external resource(s) not resolved; their codecs, sha256 and "
+    "size_bytes are unverified claims",
+)
 ```
 
 R15 §4 emits it so an unverified claim is **reported rather than silently unchecked** — the

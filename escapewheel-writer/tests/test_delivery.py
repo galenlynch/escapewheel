@@ -137,12 +137,7 @@ def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected,
 
 def test_a_sound_declaration_is_refused_for_nothing(registry):
     sound = declaration.of(ADAPTERS["nwb"], "nwb", "stream-v0.1")
-    assert (
-        declaration.refusals(
-            sound, tables=registry["tables"], options={"zone", "interval_kind"}, terms=TERMS
-        )
-        == []
-    )
+    assert declaration.refusals(sound, tables=registry["tables"], options={"zone", "interval_kind"}, terms=TERMS) == []
 
 
 # -- what crosses -------------------------------------------------------------------------
@@ -402,8 +397,12 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
 
     write_zarr(
         delivered / "waveform_mean.zarr",
-        StagedArray(values=np.arange(24, dtype="int16").reshape(2, 3, 4), array_asset_id="waveform_mean",
-                    chunks=(1, 3, 4), shard=(2, 3, 4)),
+        StagedArray(
+            values=np.arange(24, dtype="int16").reshape(2, 3, 4),
+            array_asset_id="waveform_mean",
+            chunks=(1, 3, 4),
+            shard=(2, 3, 4),
+        ),
     )
     writer = PacketWriter(registry, packet_id="s001", session="s001")
     writer.add("core.subjects", [{"subject_id": "m001", "species": "Mus musculus", "sex": "male"}])
@@ -411,21 +410,37 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
         "core.sessions",
         [{"session_id": "s001", "subject_id": "m001", "session_start_time": "2026-01-01T00:00:00Z"}],
     )
-    writer.add("core.array_assets", [{
-        "session_id": "s001", "array_asset_id": "waveform_mean", "array_asset_name": "waveform_mean",
-        "uri": "arrays/core/waveform_mean.zarr", "format": "zarr_v3",
-    }])
-    writer.add("core.array_dimensions", [
-        {"session_id": "s001", "array_asset_id": "waveform_mean", "axis_index": axis, "dimension_name": name}
-        for axis, name in enumerate(("unit", "channel", "sample"))
-    ])
-    writer.add_array("core.waveform_mean", StagedArray(
-        values=None, array_asset_id="waveform_mean", written=delivered / "waveform_mean.zarr"))
+    writer.add(
+        "core.array_assets",
+        [
+            {
+                "session_id": "s001",
+                "array_asset_id": "waveform_mean",
+                "array_asset_name": "waveform_mean",
+                "uri": "arrays/core/waveform_mean.zarr",
+                "format": "zarr_v3",
+            }
+        ],
+    )
+    writer.add(
+        "core.array_dimensions",
+        [
+            {"session_id": "s001", "array_asset_id": "waveform_mean", "axis_index": axis, "dimension_name": name}
+            for axis, name in enumerate(("unit", "channel", "sample"))
+        ],
+    )
+    writer.add_array(
+        "core.waveform_mean",
+        StagedArray(values=None, array_asset_id="waveform_mean", written=delivered / "waveform_mean.zarr"),
+    )
     report = writer.commit(tmp_path / "packet")
     assert report.errors == 0
 
-    entry = next(r for r in json.loads((tmp_path / "packet/packet.json").read_text())["resources"]
-                 if r["resource_id"] == "core.waveform_mean")
+    entry = next(
+        r
+        for r in json.loads((tmp_path / "packet/packet.json").read_text())["resources"]
+        if r["resource_id"] == "core.waveform_mean"
+    )
     assert entry["physical_profile"] == "zarr_v3"
     assert entry["codecs"] == ["sharding_indexed", "blosc"], "read off the array, descending the shard"
     assert entry["size_bytes"] > 0 and entry["sha256"]
@@ -583,8 +598,7 @@ def test_a_term_larger_than_an_argument_crosses(tmp_path, supplied):
 
     script = tmp_path / "count.py"
     script.write_text(
-        "import json, sys\n"
-        "open(sys.argv[1], 'w').write(str(len(json.loads(sys.stdin.buffer.read())['units'])))\n"
+        "import json, sys\nopen(sys.argv[1], 'w').write(str(len(json.loads(sys.stdin.buffer.read())['units'])))\n"
     )
     counted = tmp_path / "counted"
     got = delivery.fetch(
@@ -616,16 +630,24 @@ class Referencing:
     def external_arrays(self):
         from escapewheel_writer.writer import ExternalArray
 
-        return {"core.46101.lfp": ExternalArray(
-            array_asset_id="46101.lfp", uri="s3://bucket/ElectricalSeries46101-LFP/data",
-            physical_profile="zarr_v2", codecs=("blosc",), size_bytes=582991872)}
+        return {
+            "core.46101.lfp": ExternalArray(
+                array_asset_id="46101.lfp",
+                uri="s3://bucket/ElectricalSeries46101-LFP/data",
+                physical_profile="zarr_v2",
+                codecs=("blosc",),
+                size_bytes=582991872,
+            )
+        }
 
     def external_media(self):
         from escapewheel_writer.writer import ExternalMedia
 
-        return {"core.bottom_camera": ExternalMedia(
-            media_asset_id="bottom_camera", uri="s3://bucket/bottom_camera.mp4", format="mp4",
-            size_bytes=2884901888)}
+        return {
+            "core.bottom_camera": ExternalMedia(
+                media_asset_id="bottom_camera", uri="s3://bucket/bottom_camera.mp4", format="mp4", size_bytes=2884901888
+            )
+        }
 
 
 @pytest.mark.parametrize("protocol", ["stream-v0.1", "files-v0.1"])
@@ -650,7 +672,10 @@ def test_what_a_source_references_crosses_with_its_rows(protocol, tmp_path):
     assert delivery.RESOURCES not in got.tables, "the document is not one of the resources asked for"
     (array,) = got.external_arrays().values()
     assert (array.uri, array.physical_profile, array.codecs) == (
-        "s3://bucket/ElectricalSeries46101-LFP/data", "zarr_v2", ("blosc",)), "a codec list is a tuple again"
+        "s3://bucket/ElectricalSeries46101-LFP/data",
+        "zarr_v2",
+        ("blosc",),
+    ), "a codec list is a tuple again"
     (media,) = got.external_media().values()
     assert (media.uri, media.format, media.size_bytes) == ("s3://bucket/bottom_camera.mp4", "mp4", 2884901888)
 

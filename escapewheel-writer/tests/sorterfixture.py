@@ -65,8 +65,17 @@ N_SAMPLES = (100,)
 CHANNEL_IDS = ("CH0", "CH1", "CH3", "CH4")
 
 
-def stream(root: Path, name: str, *, spikes, unit_ids=UNIT_IDS, analyzer=True, return_in_uv=True,
-           n_samples=N_SAMPLES, channel_ids=CHANNEL_IDS):
+def stream(
+    root: Path,
+    name: str,
+    *,
+    spikes,
+    unit_ids=UNIT_IDS,
+    analyzer=True,
+    return_in_uv=True,
+    n_samples=N_SAMPLES,
+    channel_ids=CHANNEL_IDS,
+):
     """Write one curated stream, and optionally its SortingAnalyzer.
 
     Parameters

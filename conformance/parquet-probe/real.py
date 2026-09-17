@@ -14,8 +14,12 @@ import time
 
 import pyarrow.parquet as pq
 
-SOURCE = sys.argv[1] if len(sys.argv) > 1 else (
-    "/mnt/Data/escapewheel/packets/ecephys_837772_2026-06-27_experiment1/tables/core/spike_events.parquet"
+SOURCE = (
+    sys.argv[1]
+    if len(sys.argv) > 1
+    else (
+        "/mnt/Data/escapewheel/packets/ecephys_837772_2026-06-27_experiment1/tables/core/spike_events.parquet"
+    )
 )
 ROWS = 20_000_000
 STRINGS = ["session_id", "unit_id", "sorting_run_id", "curation_id", "clock_id"]
@@ -34,7 +38,10 @@ CONFIGS = {
     },
     "delta t_tick, split amplitude": {
         "use_dictionary": STRINGS,
-        "column_encoding": {"t_tick": "DELTA_BINARY_PACKED", "amplitude": "BYTE_STREAM_SPLIT"},
+        "column_encoding": {
+            "t_tick": "DELTA_BINARY_PACKED",
+            "amplitude": "BYTE_STREAM_SPLIT",
+        },
     },
     "delta t_tick, plain amplitude": {
         "use_dictionary": STRINGS,
@@ -65,11 +72,15 @@ def main() -> None:
     import pyarrow as pa
 
     slice_ = pa.Table.from_batches(batches)
-    units = sorted({u for u in slice_.column("unit_id").slice(0, 200_000).to_pylist()})[:24]
+    units = sorted({u for u in slice_.column("unit_id").slice(0, 200_000).to_pylist()})[
+        :24
+    ]
     print(f"{slice_.num_rows:,d} rows from {os.path.basename(SOURCE)}")
     print(f"probing with {len(units)} units, as a region's would be\n")
-    print(f"{'configuration':32s} {'MB':>8s} {'vs':>6s} {'t_tick':>8s} {'amp':>7s} "
-          f"{'write':>7s} {'scan':>7s} {'filter':>7s}")
+    print(
+        f"{'configuration':32s} {'MB':>8s} {'vs':>6s} {'t_tick':>8s} {'amp':>7s} "
+        f"{'write':>7s} {'scan':>7s} {'filter':>7s}"
+    )
 
     baseline = None
     for name, kw in CONFIGS.items():
@@ -81,9 +92,14 @@ def main() -> None:
         size = os.path.getsize(path)
         baseline = baseline or size
         meta = pq.ParquetFile(path).metadata
-        names = [meta.row_group(0).column(i).path_in_schema for i in range(meta.num_columns)]
+        names = [
+            meta.row_group(0).column(i).path_in_schema for i in range(meta.num_columns)
+        ]
         per = {
-            n: sum(meta.row_group(g).column(i).total_compressed_size for g in range(meta.num_row_groups))
+            n: sum(
+                meta.row_group(g).column(i).total_compressed_size
+                for g in range(meta.num_row_groups)
+            )
             for i, n in enumerate(names)
         }
 
@@ -95,12 +111,16 @@ def main() -> None:
         import pyarrow.compute as pc
 
         start = time.perf_counter()
-        ds.dataset(path).to_table(filter=pc.field("unit_id").isin(units), columns=["unit_id", "t_tick"])
+        ds.dataset(path).to_table(
+            filter=pc.field("unit_id").isin(units), columns=["unit_id", "t_tick"]
+        )
         filt = time.perf_counter() - start
 
-        print(f"{name:32s} {size/1e6:>8.1f} {size/baseline*100:>5.0f}% "
-              f"{per['t_tick']/1e6:>8.1f} {per.get('amplitude', 0)/1e6:>7.1f} "
-              f"{wrote:>6.1f}s {scan:>6.2f}s {filt:>6.2f}s")
+        print(
+            f"{name:32s} {size / 1e6:>8.1f} {size / baseline * 100:>5.0f}% "
+            f"{per['t_tick'] / 1e6:>8.1f} {per.get('amplitude', 0) / 1e6:>7.1f} "
+            f"{wrote:>6.1f}s {scan:>6.2f}s {filt:>6.2f}s"
+        )
         os.remove(path)
 
 

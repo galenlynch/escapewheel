@@ -329,16 +329,19 @@ def rig(asset, calibrations):
 
 def modules(*names, transform=TRANSFORM, date=CALIBRATED):
     """One stream whose modules all cite one calibration, as six of them do in `ecephys_776259`."""
-    return [{
-        "stream_start_time": EPHYS_START,
-        "stream_end_time": EPHYS_STOP,
-        "ephys_modules": [{"assembly_name": n, "coordinate_transform": transform,
-                           "calibration_date": date} for n in names],
-    }]
+    return [
+        {
+            "stream_start_time": EPHYS_START,
+            "stream_end_time": EPHYS_STOP,
+            "ephys_modules": [
+                {"assembly_name": n, "coordinate_transform": transform, "calibration_date": date} for n in names
+            ],
+        }
+    ]
 
 
 def test_a_water_calibration_becomes_a_row_with_both_units(asset):
-    row, = rig(asset, [WATER]).calibrations()
+    (row,) = rig(asset, [WATER]).calibrations()
     assert row["calibration_name"] == "Lick spout Left"
     assert (row["input_unit"], row["output_unit"]) == ("s", "ul")
     # Open (Part 02 §9.3): the type is what the source called the quantity it measured.
@@ -365,7 +368,7 @@ def test_six_modules_citing_one_file_are_one_calibration(tmp_path):
     """R89 §1.4. A `device_id` on the calibration would record six where the rig performed one."""
     asset = build(tmp_path, streams=modules("46100", "46122", "50209", "46113", "45883", "46116"))
     source = _session(asset)
-    row, = source.calibrations()
+    (row,) = source.calibrations()
     assert row["calibration_type"] == "manipulator_transform"
     assert row["calibrated_at"] == datetime(2025, 4, 9, 10, tzinfo=UTC)
     covered = source.calibration_devices()
@@ -376,7 +379,7 @@ def test_six_modules_citing_one_file_are_one_calibration(tmp_path):
 def test_an_array_calibration_records_that_its_content_is_elsewhere(tmp_path):
     """Part 02 §12.3: this adapter does not read the `.npy`, so the row is unrecorded, not absent."""
     source = _session(build(tmp_path, streams=modules("46100")))
-    row, = source.calibrations()
+    (row,) = source.calibrations()
     assert (row["array_asset_id"], row["detail_kind"], row["metadata"]) == (None, None, None)
     assert source.calibration_points() == []
 
@@ -410,5 +413,9 @@ def test_the_calibration_resources_are_staged_when_present(tmp_path):
     assert len(got["core.calibrations"]) == 2
     assert len(got["core.calibration_points"]) == 3
     assert len(got["core.calibration_devices"]) == 2
-    assert source.offers() == {"core.subjects": 0, "core.calibrations": 2,
-                               "core.calibration_points": 3, "core.calibration_devices": 2}
+    assert source.offers() == {
+        "core.subjects": 0,
+        "core.calibrations": 2,
+        "core.calibration_points": 3,
+        "core.calibration_devices": 2,
+    }

@@ -51,7 +51,9 @@ must then be inflated to reach anything inside it. zarr-python applies a default
 when `compressors` is not given, so writing
 
 ```python
-zarr.create_array(..., serializer=ShardingCodec(chunk_shape=inner, codecs=[BytesCodec(), ZstdCodec()]))
+zarr.create_array(
+    ..., serializer=ShardingCodec(chunk_shape=inner, codecs=[BytesCodec(), ZstdCodec()])
+)
 ```
 
 silently produces that -- and measured on 6,781 unit waveforms it costs **188 ms against

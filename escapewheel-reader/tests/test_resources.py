@@ -102,7 +102,6 @@ def handle_strings(table):
     return [n for n in table.schema.names if str(table.schema.field(n).type).startswith(("string", "dictionary"))]
 
 
-
 # -- Part 04 §5.1: external arrays, which in production live on an object store -----------------
 
 

@@ -53,9 +53,7 @@ def _with_channels(tmp_path, packet_root, name, *, runs, channels):
         )
     )
     if channels:
-        rows = [(run, index, electrode)
-                for run, kept in channels.items()
-                for index, electrode in enumerate(kept)]
+        rows = [(run, index, electrode) for run, kept in channels.items() for index, electrode in enumerate(kept)]
         manifest["resources"].append(
             _resource(
                 "core.sorting_run_channels",
@@ -80,9 +78,7 @@ def _with_channels(tmp_path, packet_root, name, *, runs, channels):
 @pytest.fixture
 def declaring(tmp_path, packet_root):
     """One run that kept three of the probe's four contacts."""
-    return _with_channels(
-        tmp_path, packet_root, "declaring", runs=[SORTING_RUN], channels={SORTING_RUN: KEPT}
-    )
+    return _with_channels(tmp_path, packet_root, "declaring", runs=[SORTING_RUN], channels={SORTING_RUN: KEPT})
 
 
 @pytest.fixture
@@ -137,7 +133,10 @@ def test_a_declared_run_is_not_reported_as_a_gap(declaring):
 def test_one_run_declaring_leaves_the_other_reported(tmp_path, packet_root):
     """A packet may know one run's channels and not another's; the answer is per run."""
     packet = _with_channels(
-        tmp_path, packet_root, "mixed", runs=[SORTING_RUN, SORTING_RUN + 1],
+        tmp_path,
+        packet_root,
+        "mixed",
+        runs=[SORTING_RUN, SORTING_RUN + 1],
         channels={SORTING_RUN: KEPT},
     )
     assert runs_without_channels(packet) == (ChannelsUndeclared(SORTING_RUN + 1, SESSION),)
@@ -163,9 +162,7 @@ def test_a_gap_in_the_indices_is_refused(tmp_path, packet_root):
     `index_contiguous` refuses this at error level, and this reader validates nothing, so the
     check is repeated here rather than assumed.
     """
-    packet = _with_channels(
-        tmp_path, packet_root, "gapped", runs=[SORTING_RUN], channels={SORTING_RUN: KEPT}
-    )
+    packet = _with_channels(tmp_path, packet_root, "gapped", runs=[SORTING_RUN], channels={SORTING_RUN: KEPT})
     root = packet.root
     manifest = json.loads((root / "packet.json").read_text())
     i32, i64 = pa.int32(), pa.int64()
@@ -197,7 +194,10 @@ def test_asking_for_one_run_does_not_return_another(tmp_path, packet_root):
     """Two runs on one probe may keep different channels, so the narrowing has to hold."""
     other = SORTING_RUN + 1
     packet = _with_channels(
-        tmp_path, packet_root, "two", runs=[SORTING_RUN, other],
+        tmp_path,
+        packet_root,
+        "two",
+        runs=[SORTING_RUN, other],
         channels={SORTING_RUN: KEPT, other: CONTACTS},
     )
     assert kept_channels(packet, sorting_run_id=other) == {other: CONTACTS}
@@ -207,9 +207,7 @@ def test_asking_for_one_run_does_not_return_another(tmp_path, packet_root):
 
 def test_a_table_missing_a_required_column_is_refused(tmp_path, packet_root):
     """Reading it as a run that declared nothing is the silent wrong answer, so it raises."""
-    packet = _with_channels(
-        tmp_path, packet_root, "narrow", runs=[SORTING_RUN], channels={SORTING_RUN: KEPT}
-    )
+    packet = _with_channels(tmp_path, packet_root, "narrow", runs=[SORTING_RUN], channels={SORTING_RUN: KEPT})
     root = packet.root
     i32 = pa.int32()
     _write(

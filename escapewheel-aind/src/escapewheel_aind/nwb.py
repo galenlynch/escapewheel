@@ -78,8 +78,16 @@ class AindNWBSource(NWBSource):
     #: columns: naming them is what keeps them out of `core.intervals.metadata` rather than swept
     #: in as unmapped, since they belong to the task's own extension.
     TRIAL_MAPPED: ClassVar[frozenset[str]] = frozenset(
-        {"start_time", "stop_time", "animal_response", "rewarded_historyL", "rewarded_historyR",
-         "goCue_start_time", "reward_outcome_time", "delay_start_time"}
+        {
+            "start_time",
+            "stop_time",
+            "animal_response",
+            "rewarded_historyL",
+            "rewarded_historyR",
+            "goCue_start_time",
+            "reward_outcome_time",
+            "delay_start_time",
+        }
     )
 
     #: Part 02 §8.6: R59 §2 promoted `ccf_id` and `ccf_acronym` to columns of

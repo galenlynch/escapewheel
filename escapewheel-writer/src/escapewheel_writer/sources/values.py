@@ -14,10 +14,14 @@ from typing import Any
 #: source writes `M`/`F`/`U`/`O`. `U` is unknown, which becomes null rather than `other`: recording
 #: it as `other` asserts a sex the source never claimed, where a null column says it did not say.
 SEX = {
-    "m": "male", "male": "male",
-    "f": "female", "female": "female",
-    "h": "hermaphrodite", "hermaphrodite": "hermaphrodite",
-    "o": "other", "other": "other",
+    "m": "male",
+    "male": "male",
+    "f": "female",
+    "female": "female",
+    "h": "hermaphrodite",
+    "hermaphrodite": "hermaphrodite",
+    "o": "other",
+    "other": "other",
 }
 
 

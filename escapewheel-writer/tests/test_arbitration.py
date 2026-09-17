@@ -73,12 +73,15 @@ def test_every_kind_the_scaffolder_offers_can_be_opened_alone():
     from escapewheel_writer.scripts import cli
 
     source = Path(cli.__file__).read_text()
-    opener = next(n for n in ast.walk(ast.parse(source))
-                  if isinstance(n, ast.FunctionDef) and n.name == "_open")
-    opens = {n.comparators[0].value for n in ast.walk(opener)
-             if isinstance(n, ast.Compare)
-             and isinstance(n.comparators[0], ast.Constant)
-             and isinstance(n.left, ast.Name) and n.left.id == "kind"}
+    opener = next(n for n in ast.walk(ast.parse(source)) if isinstance(n, ast.FunctionDef) and n.name == "_open")
+    opens = {
+        n.comparators[0].value
+        for n in ast.walk(opener)
+        if isinstance(n, ast.Compare)
+        and isinstance(n.comparators[0], ast.Constant)
+        and isinstance(n.left, ast.Name)
+        and n.left.id == "kind"
+    }
     assert set(KINDS) == opens, f"KINDS is {sorted(KINDS)}, _open takes {sorted(opens)}"
 
 
@@ -98,15 +101,18 @@ def test_the_build_dispatches_on_no_kind():
 
     source = Path(session.__file__).read_text()
     checked = {"_build_source", "_composed", "_add_records"}
-    functions = [n for n in ast.walk(ast.parse(source))
-                 if isinstance(n, ast.FunctionDef) and n.name in checked]
+    functions = [n for n in ast.walk(ast.parse(source)) if isinstance(n, ast.FunctionDef) and n.name in checked]
     assert {n.name for n in functions} == checked
     for function in functions:
-        dispatched = {n.comparators[0].value for n in ast.walk(function)
-                      if isinstance(n, ast.Compare)
-                      and isinstance(n.comparators[0], ast.Constant)
-                      and isinstance(n.comparators[0].value, str)
-                      and isinstance(n.left, ast.Attribute) and n.left.attr == "kind"}
+        dispatched = {
+            n.comparators[0].value
+            for n in ast.walk(function)
+            if isinstance(n, ast.Compare)
+            and isinstance(n.comparators[0], ast.Constant)
+            and isinstance(n.comparators[0].value, str)
+            and isinstance(n.left, ast.Attribute)
+            and n.left.attr == "kind"
+        }
         assert dispatched == set(), f"{function.name} branches on {sorted(dispatched)}"
 
 
@@ -115,8 +121,11 @@ def test_a_recipe_supplied_resource_is_declared(resource):
     """The recipe supplies it, so it must be a resource the registry defines."""
     import json
 
-    registry = json.loads(Path("../registry/logical_schemas.json").resolve().read_text()) \
-        if Path("../registry/logical_schemas.json").exists() else None
+    registry = (
+        json.loads(Path("../registry/logical_schemas.json").resolve().read_text())
+        if Path("../registry/logical_schemas.json").exists()
+        else None
+    )
     if registry is None:
         pytest.skip("registry not reachable from this working directory")
     assert resource in registry["tables"]
@@ -165,8 +174,10 @@ def test_a_name_records_what_its_identifier_stands_for():
                     continue
                 if (path.name, name) in NAME_EXCEPTIONS:
                     continue
-                found.append(f"{path.name}:{keys[name].lineno} {name} = {ast.unparse(keys[name])} "
-                             f"where {identity} = {ast.unparse(keys[identity])}")
+                found.append(
+                    f"{path.name}:{keys[name].lineno} {name} = {ast.unparse(keys[name])} "
+                    f"where {identity} = {ast.unparse(keys[identity])}"
+                )
     assert found == [], "a name column holds something other than what its identifier stands for:\n" + "\n".join(found)
 
 

@@ -92,9 +92,7 @@ class TablesSource:
         if isinstance(command, str):
             # Part 05 §3.7 forbids deriving a list by splitting a string: a parse is a quoting
             # convention the recipe never declared, and POSIX rules eat a backslash on every host.
-            raise SourceDefect(
-                f"command must be an argument list, not {command!r}; write it as a TOML array"
-            )
+            raise SourceDefect(f"command must be an argument list, not {command!r}; write it as a TOML array")
         self.command = list(command) if command is not None else None
         self.batch_rows = batch_rows
         self.notes: list[str] = []

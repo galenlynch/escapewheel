@@ -11,9 +11,7 @@ def manifest(tmp_path, *ids, name="packet"):
     """Write a minimal manifest declaring these resources and return its root."""
     root = tmp_path / name
     root.mkdir()
-    (root / "packet.json").write_text(
-        json.dumps({"packet_id": "p", "resources": [{"resource_id": r} for r in ids]})
-    )
+    (root / "packet.json").write_text(json.dumps({"packet_id": "p", "resources": [{"resource_id": r} for r in ids]}))
     return root
 
 

@@ -57,8 +57,12 @@ def cited_by(part: str, section: str) -> list[str]:
 
 def current() -> dict[str, dict[str, str]]:
     """Each part's section numbers, mapped to the heading each one carries."""
-    return {path.name[:2]: {number: title.strip() for number, title in HEADING.findall(path.read_text())}
-            for path in sorted(HERE.glob("[0-9][0-9]_*.md"))}
+    return {
+        path.name[:2]: {
+            number: title.strip() for number, title in HEADING.findall(path.read_text())
+        }
+        for path in sorted(HERE.glob("[0-9][0-9]_*.md"))
+    }
 
 
 def recorded() -> dict[str, dict[str, str]]:
@@ -75,11 +79,16 @@ def render(parts: dict[str, dict[str, str]]) -> str:
     out = [PREAMBLE]
     for part in sorted(parts):
         out.append(f'\n["{part}"]\n')
-        out += [f'"{number}" = {json.dumps(title)}\n' for number, title in parts[part].items()]
+        out += [
+            f'"{number}" = {json.dumps(title)}\n'
+            for number, title in parts[part].items()
+        ]
     return "".join(out)
 
 
-def drift(was: dict[str, dict[str, str]], now: dict[str, dict[str, str]]) -> tuple[list, list, list]:
+def drift(
+    was: dict[str, dict[str, str]], now: dict[str, dict[str, str]]
+) -> tuple[list, list, list]:
     """Each section whose heading changed, each one added, and each one no longer declared."""
     changed, added, gone = [], [], []
     for part in sorted(set(was) | set(now)):
@@ -89,7 +98,11 @@ def drift(was: dict[str, dict[str, str]], now: dict[str, dict[str, str]]) -> tup
                 added.append((part, number, title))
             elif before[number] != title:
                 changed.append((part, number, before[number], title))
-        gone += [(part, number, title) for number, title in before.items() if number not in after]
+        gone += [
+            (part, number, title)
+            for number, title in before.items()
+            if number not in after
+        ]
     return changed, added, gone
 
 
@@ -106,7 +119,9 @@ def main() -> int:
     # that is gone breaks its citations, which `check_citations.py` reports as unresolved, and one
     # that is new can have none.
     for part, number, before, after in changed:
-        print(f"  CHANGED  `{part}` §{number}\n             was  {before}\n             now  {after}")
+        print(
+            f"  CHANGED  `{part}` §{number}\n             was  {before}\n             now  {after}"
+        )
         for site in cited_by(part, number):
             print(f"             {site}")
     for part, number, title in gone:

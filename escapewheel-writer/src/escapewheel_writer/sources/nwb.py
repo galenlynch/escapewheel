@@ -66,7 +66,6 @@ from .zarr_compat import UnsupportedEncoding
 ABSENT = {"", "None", "none", "nan", "NaN"}
 
 
-
 def _one(values: NDArray[Any]) -> str | None:
     """Take the single value of a scalar NWB array, as text, or None if it is absent."""
     if values.size == 0:
@@ -286,7 +285,12 @@ class NWBSource(Compensates):
     #: unset (Part 03 §11.2). `interval_kind` is the one no declaration could carry until there
     #: was a list for it: it defaults to no intervals, which is right for a session holding none.
     ACCEPTS: ClassVar[tuple[str, ...]] = (
-        "prefix", "trial_metadata", "signals", "interval_kind", "emit_clock", "attachments",
+        "prefix",
+        "trial_metadata",
+        "signals",
+        "interval_kind",
+        "emit_clock",
+        "attachments",
     )
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
@@ -694,9 +698,7 @@ class NWBSource(Compensates):
         found = []
         for index, electrode_id in enumerate(self._electrode_ids(columns)):
             for frame, axes in self.FRAME_AXES.items():
-                values = tuple(
-                    _clean(columns[axis][index]) if axis in columns else None for axis in axes
-                )
+                values = tuple(_clean(columns[axis][index]) if axis in columns else None for axis in axes)
                 if all(value is None for value in values):
                     continue
                 found.append(
@@ -748,9 +750,7 @@ class NWBSource(Compensates):
             *self._table("general/extracellular_ephys/electrodes"),
             *self._table("units"),
         }
-        return [
-            frame for frame, axes in self.FRAME_AXES.items() if any(axis in named for axis in axes)
-        ]
+        return [frame for frame, axes in self.FRAME_AXES.items() if any(axis in named for axis in axes)]
 
     def coordinate_frames(self) -> list[dict[str, Any]]:
         """`core.coordinate_frames`, one row per frame this file populates (Part 01 §3.24).
@@ -815,9 +815,7 @@ class NWBSource(Compensates):
             return []
         found = []
         for index, identity in paired:
-            values = tuple(
-                _clean(columns[axis][index]) if axis in columns else None for axis in self.UNIT_AXES
-            )
+            values = tuple(_clean(columns[axis][index]) if axis in columns else None for axis in self.UNIT_AXES)
             if all(value is None for value in values):
                 continue
             found.append(

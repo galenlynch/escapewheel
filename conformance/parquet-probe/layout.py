@@ -37,13 +37,23 @@ def _columns(f: pq.ParquetFile) -> dict[str, dict[str, object]]:
             column = group.column(c)
             entry = found.setdefault(
                 column.path_in_schema,
-                {"compressed": 0, "uncompressed": 0, "encodings": set(), "dictionary": 0},
+                {
+                    "compressed": 0,
+                    "uncompressed": 0,
+                    "encodings": set(),
+                    "dictionary": 0,
+                },
             )
             entry["compressed"] += column.total_compressed_size
             entry["uncompressed"] += column.total_uncompressed_size
             entry["encodings"].update(column.encodings or ())
-            if column.dictionary_page_offset is not None and column.data_page_offset is not None:
-                entry["dictionary"] += max(column.data_page_offset - column.dictionary_page_offset, 0)
+            if (
+                column.dictionary_page_offset is not None
+                and column.data_page_offset is not None
+            ):
+                entry["dictionary"] += max(
+                    column.data_page_offset - column.dictionary_page_offset, 0
+                )
     return found
 
 
@@ -52,18 +62,30 @@ def _columns(f: pq.ParquetFile) -> dict[str, dict[str, object]]:
 ENOUGH_ROWS = 10_000
 
 
-def _flags(name: str, entry: dict[str, object], rows: int, groups: list[int]) -> list[str]:
+def _flags(
+    name: str, entry: dict[str, object], rows: int, groups: list[int]
+) -> list[str]:
     said = []
     compressed = int(entry["compressed"])
-    if rows >= ENOUGH_ROWS and compressed and int(entry["dictionary"]) > compressed * 0.5:
+    if (
+        rows >= ENOUGH_ROWS
+        and compressed
+        and int(entry["dictionary"]) > compressed * 0.5
+    ):
         # R68 §1.3's shape: the values are distinct enough that the dictionary is as big as the
         # data it indexes, which is what a column declaring nothing else gets by default.
-        said.append(f"dict is {int(entry['dictionary']) / compressed:.0%} of {compressed / 1e6:.2f}M")
+        said.append(
+            f"dict is {int(entry['dictionary']) / compressed:.0%} of {compressed / 1e6:.2f}M"
+        )
     encodings = {str(e) for e in entry["encodings"]}
     # A tick ascends within its partition, which is what DELTA_BINARY_PACKED is for (Part 01 §3.18).
     # An `_index` does not -- `axis_index` cycles 0,1,2 per coordinate and `channel_index` per run --
     # so delta would encode a sawtooth and RLE is the right answer there.
-    if name.endswith("_tick") and rows >= ENOUGH_ROWS and not any("DELTA" in e for e in encodings):
+    if (
+        name.endswith("_tick")
+        and rows >= ENOUGH_ROWS
+        and not any("DELTA" in e for e in encodings)
+    ):
         said.append("no delta on an ascending integer")
     if groups and max(groups) < SMALL_GROUP and rows > SMALL_GROUP:
         said.append(f"row groups of {max(groups):,}")
@@ -81,7 +103,9 @@ def report(root: Path, top: int) -> int:
     for path in files:
         f = pq.ParquetFile(path)
         rows, size = f.metadata.num_rows, path.stat().st_size
-        groups = [f.metadata.row_group(g).num_rows for g in range(f.metadata.num_row_groups)]
+        groups = [
+            f.metadata.row_group(g).num_rows for g in range(f.metadata.num_row_groups)
+        ]
         name = str(path.relative_to(root))
         print(f"{name:44s} {rows:12,d} {len(groups):7d} {size / 1e6:9.2f}M")
         columns = _columns(f)
@@ -90,7 +114,9 @@ def report(root: Path, top: int) -> int:
             compressed = int(entry["compressed"])
             share = compressed / size * 100 if size else 0
             bits = compressed * 8 / rows if rows else 0
-            encodings = ",".join(sorted(str(e).replace("Encoding.", "") for e in entry["encodings"]))
+            encodings = ",".join(
+                sorted(str(e).replace("Encoding.", "") for e in entry["encodings"])
+            )
             print(f"    {column:38s} {share:5.1f}% {bits:7.2f} bits/row  {encodings}")
             for flag in _flags(column, entry, rows, groups):
                 flagged.append(f"{name}.{column}: {flag}")

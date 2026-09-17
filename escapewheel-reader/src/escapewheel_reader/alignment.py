@@ -62,8 +62,7 @@ def _connect(packet: Any, connection: duckdb.DuckDBPyConnection | None) -> duckd
     Named rather than left to the default, which registers nothing: over an object store each
     registration is a round trip, and an alignment touches three of a packet's twenty-eight.
     """
-    con: duckdb.DuckDBPyConnection = packet.duckdb(
-        connection=connection, tables=(SPIKES, EVENTS, STREAMS))
+    con: duckdb.DuckDBPyConnection = packet.duckdb(connection=connection, tables=(SPIKES, EVENTS, STREAMS))
     return con
 
 
@@ -107,8 +106,10 @@ def _events(event_type: str, session_id: str | None) -> str:
     where = f"m.event_type = {_literal(event_type)}"
     if session_id is not None:
         where += f" AND e.session_id = {_literal(session_id)}"
-    return (f"(SELECT e.t_tick FROM {sql_name(EVENTS)} e "
-            f"JOIN {sql_name(STREAMS)} m ON e.stream_id = m.event_stream_id WHERE {where})")
+    return (
+        f"(SELECT e.t_tick FROM {sql_name(EVENTS)} e "
+        f"JOIN {sql_name(STREAMS)} m ON e.stream_id = m.event_stream_id WHERE {where})"
+    )
 
 
 def windows_disjoint(packet: Any, event_type: str, half_window: int, *, session_id: str | None = None) -> bool:
@@ -283,6 +284,12 @@ def assigned_spikes(
 
 
 __all__ = [
-    "ASSIGNMENTS", "EVENTS", "SPIKES", "STREAMS",
-    "ClockMismatch", "aligned_spikes", "assigned_spikes", "windows_disjoint",
+    "ASSIGNMENTS",
+    "EVENTS",
+    "SPIKES",
+    "STREAMS",
+    "ClockMismatch",
+    "aligned_spikes",
+    "assigned_spikes",
+    "windows_disjoint",
 ]

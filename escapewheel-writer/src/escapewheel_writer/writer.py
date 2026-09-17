@@ -91,9 +91,13 @@ PROFILE = "escapewheel-portable-v0.1"
 #: Columns that store better as deltas than as anything pyarrow chooses by itself, beyond the
 #: `_tick` rule below, because measurement says so and their names do not. `anchor_index`
 #: ascends over thousands of anchors per clock; `n_spikes` is a large count with no repeats.
-def _options(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
-             extra: Mapping[str, Any] | None = None,
-             sample: pa.Table | pa.RecordBatch | None = None) -> dict[str, Any]:
+def _options(
+    resource_id: str,
+    spec: Mapping[str, Any],
+    out: pa.Schema,
+    extra: Mapping[str, Any] | None = None,
+    sample: pa.Table | pa.RecordBatch | None = None,
+) -> dict[str, Any]:
     """Parquet settings for one resource.
 
     **No page index.** `ColumnIndex` and `OffsetIndex` would give per-page bounds and byte
@@ -186,9 +190,14 @@ def _as_held(out: pa.Schema, held: pa.Schema) -> pa.Schema:
     return pa.schema(fields)
 
 
-def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], path: Path,
-                  resource_id: str, extra: Mapping[str, Any] | None = None,
-                  report: list[str] | None = None) -> int:
+def _write_stream(
+    spec: Mapping[str, Any],
+    batches: Iterable[pa.RecordBatch],
+    path: Path,
+    resource_id: str,
+    extra: Mapping[str, Any] | None = None,
+    report: list[str] | None = None,
+) -> int:
     """Write batches to Parquet one row group at a time, casting each to the registry schema.
 
     The first batch fixes the schema, exactly as the first record does on the records path:
@@ -241,9 +250,7 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
                     said.append(f"{undeclared} is declared by no registry this build loaded")
                 if late := [n for n in unexpected if n in declared]:
                     said.append(f"{late} is optional and absent from the first batch")
-                raise ValueError(
-                    f"{resource_id}: {'; '.join(said)}; the column would be dropped silently"
-                )
+                raise ValueError(f"{resource_id}: {'; '.join(said)}; the column would be dropped silently")
             columns = [
                 batch.column(name) if name in batch.schema.names else pa.nulls(batch.num_rows, field.type)
                 for name, field in zip(out.names, out, strict=True)
@@ -256,12 +263,19 @@ def _write_stream(spec: Mapping[str, Any], batches: Iterable[pa.RecordBatch], pa
                 options = _options(resource_id, spec, out, extra, held)
                 writer = pq.ParquetWriter(path, out, **options)
                 if report is not None:
-                    report.extend(inefficient(resource_id, pa.Table.from_batches([held]),
-                                              options.get("column_encoding", {}) and
-                                              list(options["column_encoding"]) or [],
-                                              [n for n in out.names
-                                               if n not in options.get("use_dictionary", out.names)
-                                               and n not in options.get("column_encoding", {})]))
+                    report.extend(
+                        inefficient(
+                            resource_id,
+                            pa.Table.from_batches([held]),
+                            options.get("column_encoding", {}) and list(options["column_encoding"]) or [],
+                            [
+                                n
+                                for n in out.names
+                                if n not in options.get("use_dictionary", out.names)
+                                and n not in options.get("column_encoding", {})
+                            ],
+                        )
+                    )
             assert writer is not None
             # `row_group_size` is load-bearing, not decoration: left to pyarrow it defaults to
             # 2**20 rows and silently cuts a larger batch into several row groups, which would
@@ -571,9 +585,7 @@ class PacketWriter:
             )
         self._tables.setdefault(resource_id, []).extend(self._with_session(resource_id, records))
 
-    def _with_session(
-        self, resource_id: str, records: Sequence[Mapping[str, Any]]
-    ) -> Sequence[Mapping[str, Any]]:
+    def _with_session(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> Sequence[Mapping[str, Any]]:
         """Fill `session_id` on a session-scoped table's rows that omit it (Part 02 §7.1).
 
         Filled centrally rather than in each of the eight adapters, because the value is the
@@ -698,9 +710,7 @@ class PacketWriter:
             raise ValueError(f"{resource_id} already has batches; concatenate before adding")
         spec = self.spec(resource_id)
         assert spec is not None
-        self._batches[resource_id] = (
-            number_batch(spec, self._session_batch(spec, b), self.keys) for b in batches
-        )
+        self._batches[resource_id] = (number_batch(spec, self._session_batch(spec, b), self.keys) for b in batches)
 
     def after_staging(self, report: Callable[[Callable[[str], None]], None]) -> None:
         """Register something to be reported once the packet has been written.
@@ -957,8 +967,12 @@ class PacketWriter:
             if resource_id in self._batches:
                 try:
                     self.rows_written[resource_id] = _write_stream(
-                        spec, self._batches[resource_id], path, resource_id,
-                        self._encoding_exceptions, self._encoding_notes,
+                        spec,
+                        self._batches[resource_id],
+                        path,
+                        resource_id,
+                        self._encoding_exceptions,
+                        self._encoding_notes,
                     )
                 except OrderViolation as exc:
                     # Naming the table, because the streaming path writes through untouched and
@@ -984,10 +998,14 @@ class PacketWriter:
                 pq.write_table(table, path, **options)
                 delta = list(options.get("column_encoding", {}))
                 kept = set(options.get("use_dictionary", table.schema.names))
-                self._encoding_notes.extend(inefficient(
-                    resource_id, table, delta,
-                    [n for n in table.schema.names if n not in kept and n not in delta],
-                ))
+                self._encoding_notes.extend(
+                    inefficient(
+                        resource_id,
+                        table,
+                        delta,
+                        [n for n in table.schema.names if n not in kept and n not in delta],
+                    )
+                )
             extension_id = self.extension_of(resource_id)
             entry = {
                 "resource_id": resource_id,

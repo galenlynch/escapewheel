@@ -137,7 +137,12 @@ class WaveformSource:
     #: unset (Part 03 §11.2). `store` is absent because it is a handle, which a recipe cannot
     #: carry and a declaration may not name.
     ACCEPTS: ClassVar[tuple[str, ...]] = (
-        "array_asset_id", "sd", "sd_asset_id", "compressed_per_chunk", "prefix", "experiment",
+        "array_asset_id",
+        "sd",
+        "sd_asset_id",
+        "compressed_per_chunk",
+        "prefix",
+        "experiment",
     )
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
@@ -299,8 +304,7 @@ class WaveformSource:
         channels = self._channels(stream)
         if len(labels) != array.shape[0] or mask.shape[0] != array.shape[0]:
             raise SourceDefect(
-                f"{stream.key}: {len(labels)} unit ids and {mask.shape[0]} mask rows "
-                f"against {array.shape[0]} templates"
+                f"{stream.key}: {len(labels)} unit ids and {mask.shape[0]} mask rows against {array.shape[0]} templates"
             )
 
         total = int(array.shape[0])

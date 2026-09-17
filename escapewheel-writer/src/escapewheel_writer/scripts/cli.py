@@ -385,8 +385,10 @@ def _extension_check(args: argparse.Namespace) -> int:
         print(f"{'FAIL' if not finding.passed else 'ok  '}  {finding}")
     tables = len(document.get("tables", {}))
     if broken:
-        print(f"\n{args.document}: {len(broken)} of {len(findings)} invariant(s) broken "
-              f"over {tables} table(s)", file=sys.stderr)
+        print(
+            f"\n{args.document}: {len(broken)} of {len(findings)} invariant(s) broken over {tables} table(s)",
+            file=sys.stderr,
+        )
         return 1
     print(f"\n{args.document}: sound — {len(findings)} invariant(s) over {tables} table(s)")
     return 0

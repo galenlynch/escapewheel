@@ -43,16 +43,23 @@ REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
 #: whole line. Every entry is checked to still match something, so a site that goes away takes
 #: its exemption with it rather than leaving a permanent excuse behind.
 EXEMPT: tuple[tuple[str, str, str], ...] = (
-    ("registry/build.py", r'SINCE\[0\] = "',
-     "the stamp that becomes a column's `since`, whose value names a revision by design (Part 02 §9.4)"),
-    ("registry/build.py", r'since="',
-     "the same stamp, written inline on a column"),
-    ("registry/", r"^\s*# ----",
-     "a block marker saying which revision's block follows; both files are organised by revision"),
-    ("escapewheel_poc_docs_v0.2/ledger.py", r".",
-     "the ledger keys on revision clauses, which is what makes it the map Part 00 §10.1 resolves through"),
-    ("revisions/", r".",
-     "a revision citing another revision (Part 00 §10.2)"),
+    (
+        "registry/build.py",
+        r'SINCE\[0\] = "',
+        "the stamp that becomes a column's `since`, whose value names a revision by design (Part 02 §9.4)",
+    ),
+    ("registry/build.py", r'since="', "the same stamp, written inline on a column"),
+    (
+        "registry/",
+        r"^\s*# ----",
+        "a block marker saying which revision's block follows; both files are organised by revision",
+    ),
+    (
+        "escapewheel_poc_docs_v0.2/ledger.py",
+        r".",
+        "the ledger keys on revision clauses, which is what makes it the map Part 00 §10.1 resolves through",
+    ),
+    ("revisions/", r".", "a revision citing another revision (Part 00 §10.2)"),
 )
 
 
@@ -60,38 +67,86 @@ EXEMPT: tuple[tuple[str, str, str], ...] = (
 #: measurement, or what a revision did to the format on its way to the present. Keyed by file and
 #: clause rather than by line, since a line number moves and this pairing does not.
 REASONING: tuple[tuple[str, str, str], ...] = (
-    ("escapewheel-reader/src/escapewheel_reader/packet.py", "R86 §2.4",
-     "the measurement that a scalar projection beats a join, not the rule it justified"),
-    ("escapewheel-writer/src/escapewheel_writer/recipe.py", "R108 §3.4",
-     "which preference was struck and why, which no part records"),
-    ("escapewheel-writer/src/escapewheel_writer/sources/nwb.py", "R87 §2.8",
-     "what the adapter did before the clause landed"),
-    ("escapewheel-writer/src/escapewheel_writer/sources/sync.py", "R37 §3.1",
-     "the neighbour count a local rate was measured over"),
-    ("escapewheel-writer/src/escapewheel_writer/sources/sync.py", "R37 §3.2",
-     "the revision's own terminal-anchor test, which is the measurement rather than the rule"),
-    ("escapewheel-writer/tests/test_arbitration.py", "R108 §3.4",
-     "the count that class held before and after the entry was struck"),
-    ("escapewheel-writer/tests/test_writer.py", "R108 §3.4",
-     "the same, at the site the struck entry used to reach"),
-    ("registry/build.py", "R67 §2.1",
-     "what that revision gave the device chain, and where it stopped"),
-    ("registry/build.py", "R65 §2.1",
-     "what that revision gave the array tables, and what it skipped"),
-    ("registry/build.py", "R81 §2.4",
-     "which columns the old override named, which is why the current one has five"),
-    ("escapewheel-reader/src/escapewheel_reader/ordering.py", "R81 §2.4",
-     "what narrowed the override, beside the citation of the override itself"),
-    ("escapewheel-aind/src/escapewheel_aind/nwb.py", "R59 §2",
-     "which of the four atlas fields that revision promoted to columns, and which it left"),
-    ("escapewheel-aind/tests/nwbfixture.py", "R59 §2",
-     "the same, at the fixture that supplies all four"),
-    ("escapewheel-aind/tests/test_nwb_dialect.py", "R59 §2",
-     "the same, at the test that asserts which two leave the bag"),
-    ("fixtures/corpus.py", "R82 §2",
-     "that the two rules changed level, which is why no advisory pass is needed here"),
-    ("registry/build.py", "R54 §2",
-     "what that revision gave `core.intervals`, and what had nowhere to go before it"),
+    (
+        "escapewheel-reader/src/escapewheel_reader/packet.py",
+        "R86 §2.4",
+        "the measurement that a scalar projection beats a join, not the rule it justified",
+    ),
+    (
+        "escapewheel-writer/src/escapewheel_writer/recipe.py",
+        "R108 §3.4",
+        "which preference was struck and why, which no part records",
+    ),
+    (
+        "escapewheel-writer/src/escapewheel_writer/sources/nwb.py",
+        "R87 §2.8",
+        "what the adapter did before the clause landed",
+    ),
+    (
+        "escapewheel-writer/src/escapewheel_writer/sources/sync.py",
+        "R37 §3.1",
+        "the neighbour count a local rate was measured over",
+    ),
+    (
+        "escapewheel-writer/src/escapewheel_writer/sources/sync.py",
+        "R37 §3.2",
+        "the revision's own terminal-anchor test, which is the measurement rather than the rule",
+    ),
+    (
+        "escapewheel-writer/tests/test_arbitration.py",
+        "R108 §3.4",
+        "the count that class held before and after the entry was struck",
+    ),
+    (
+        "escapewheel-writer/tests/test_writer.py",
+        "R108 §3.4",
+        "the same, at the site the struck entry used to reach",
+    ),
+    (
+        "registry/build.py",
+        "R67 §2.1",
+        "what that revision gave the device chain, and where it stopped",
+    ),
+    (
+        "registry/build.py",
+        "R65 §2.1",
+        "what that revision gave the array tables, and what it skipped",
+    ),
+    (
+        "registry/build.py",
+        "R81 §2.4",
+        "which columns the old override named, which is why the current one has five",
+    ),
+    (
+        "escapewheel-reader/src/escapewheel_reader/ordering.py",
+        "R81 §2.4",
+        "what narrowed the override, beside the citation of the override itself",
+    ),
+    (
+        "escapewheel-aind/src/escapewheel_aind/nwb.py",
+        "R59 §2",
+        "which of the four atlas fields that revision promoted to columns, and which it left",
+    ),
+    (
+        "escapewheel-aind/tests/nwbfixture.py",
+        "R59 §2",
+        "the same, at the fixture that supplies all four",
+    ),
+    (
+        "escapewheel-aind/tests/test_nwb_dialect.py",
+        "R59 §2",
+        "the same, at the test that asserts which two leave the bag",
+    ),
+    (
+        "fixtures/corpus.py",
+        "R82 §2",
+        "that the two rules changed level, which is why no advisory pass is needed here",
+    ),
+    (
+        "registry/build.py",
+        "R54 §2",
+        "what that revision gave `core.intervals`, and what had nowhere to go before it",
+    ),
 )
 
 
@@ -142,8 +197,12 @@ def ledger() -> dict[str, list[str]]:
 def tracked() -> list[str]:
     """Every working-tree Python file, relative to the repository root."""
     listed = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.py"], cwd=ROOT,
-                            capture_output=True, text=True, check=True).stdout.split()
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.py"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
     return [name for name in listed if (ROOT / name).is_file()]
 
 
@@ -158,12 +217,16 @@ def exemption(name: str, line: str, key: str) -> str | None:
     return None
 
 
-def findings() -> tuple[list[tuple[str, int, str, str, str]], dict[tuple[str, str], int]]:
+def findings() -> tuple[
+    list[tuple[str, int, str, str, str]], dict[tuple[str, str], int]
+]:
     """Every citation that should name a part, and how often each exemption fired."""
     parts, used = ledger(), {(p, q): 0 for p, q, _ in EXEMPT + REASONING}
     out = []
     for name in tracked():
-        for number, line in enumerate((ROOT / name).read_text(errors="replace").splitlines(), 1):
+        for number, line in enumerate(
+            (ROOT / name).read_text(errors="replace").splitlines(), 1
+        ):
             for match in REVISION.finditer(line):
                 key = f"R{match.group(1)} §{match.group(2)}"
                 if key not in parts:
@@ -182,7 +245,11 @@ def findings() -> tuple[list[tuple[str, int, str, str, str]], dict[tuple[str, st
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
-    ap.add_argument("--exempt", action="store_true", help="the exemptions and whether each is needed")
+    ap.add_argument(
+        "--exempt",
+        action="store_true",
+        help="the exemptions and whether each is needed",
+    )
     ap.add_argument("--quiet", action="store_true", help="counts only")
     args = ap.parse_args()
 
@@ -194,15 +261,23 @@ def main() -> int:
             mark = "     " if count else "STALE"
             print(f"  {mark} {prefix} · {pattern} — {count} site(s)\n        {reason}")
         stale = sum(1 for e in EXEMPT + REASONING if not used[e[0], e[1]])
-        print(f"\n{len(EXEMPT) + len(REASONING)} exemption(s), {stale} matching nothing")
+        print(
+            f"\n{len(EXEMPT) + len(REASONING)} exemption(s), {stale} matching nothing"
+        )
         return 1 if stale else 0
 
     if not args.quiet:
-        for name, number, key, targets in sorted({(n, ln, k, tuple(t)) for n, ln, k, t, _ in found}):
-            arrow = targets[0] if len(targets) == 1 else " or ".join(targets) + "  (choose)"
+        for name, number, key, targets in sorted(
+            {(n, ln, k, tuple(t)) for n, ln, k, t, _ in found}
+        ):
+            arrow = (
+                targets[0] if len(targets) == 1 else " or ".join(targets) + "  (choose)"
+            )
             print(f"  {name}:{number}  {key} → {arrow}")
     by_file = len({name for name, *_ in found})
-    print(f"{len(found)} citation(s) of a requirement name a revision, across {by_file} file(s)")
+    print(
+        f"{len(found)} citation(s) of a requirement name a revision, across {by_file} file(s)"
+    )
     return 1 if found else 0
 
 

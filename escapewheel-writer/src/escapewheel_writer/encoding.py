@@ -114,19 +114,28 @@ def leading_identifier(spec: Mapping[str, Any], keys: list[str]) -> str | None:
 
 def _encodable(kind: pa.DataType) -> bool:
     """Whether the rules choose an encoding for this type at all; anything else keeps pyarrow's."""
-    return (pa.types.is_integer(kind) or pa.types.is_floating(kind) or pa.types.is_string(kind)
-            or pa.types.is_large_string(kind) or pa.types.is_timestamp(kind) or pa.types.is_date(kind))
+    return (
+        pa.types.is_integer(kind)
+        or pa.types.is_floating(kind)
+        or pa.types.is_string(kind)
+        or pa.types.is_large_string(kind)
+        or pa.types.is_timestamp(kind)
+        or pa.types.is_date(kind)
+    )
 
 
 def declared_order(name: str, column: Mapping[str, Any], leading: str | None) -> bool:
     """Whether a column's declarations mark an integer likely to climb, if only within the groups above it."""
     role = column.get("role")
-    return (name.endswith("_tick") or name == leading or role in ("structural_index", "sequence_position")
-            or (role == "identifier" and column.get("identity") == "assigned"))
+    return (
+        name.endswith("_tick")
+        or name == leading
+        or role in ("structural_index", "sequence_position")
+        or (role == "identifier" and column.get("identity") == "assigned")
+    )
 
 
-def choose(field: pa.Field[Any], column: Mapping[str, Any], leading: str | None,
-           counts: Counts | None) -> str | None:
+def choose(field: pa.Field[Any], column: Mapping[str, Any], leading: str | None, counts: Counts | None) -> str | None:
     """Return the encoding one column takes: `"delta"`, `"plain"`, or None for a dictionary.
 
     Part 03 §5.5's four rules, over what the writer holds when it chooses, the first that applies
@@ -172,9 +181,13 @@ def choose(field: pa.Field[Any], column: Mapping[str, Any], leading: str | None,
     return None if counts.rows >= REPEATS * counts.distinct else "plain"
 
 
-def encodings(resource_id: str, spec: Mapping[str, Any], out: pa.Schema,
-              extra: Mapping[str, Mapping[str, tuple[str, ...]]] | None = None,
-              sample: pa.Table | pa.RecordBatch | None = None) -> tuple[list[str], list[str]]:
+def encodings(
+    resource_id: str,
+    spec: Mapping[str, Any],
+    out: pa.Schema,
+    extra: Mapping[str, Mapping[str, tuple[str, ...]]] | None = None,
+    sample: pa.Table | pa.RecordBatch | None = None,
+) -> tuple[list[str], list[str]]:
     """Which columns take `DELTA_BINARY_PACKED` and which take no dictionary. Returns `(delta, plain)`.
 
     A declared exception decides first, then `choose` over the counts of `sample`, which is the
@@ -262,13 +275,20 @@ def inefficient(resource_id: str, sample: pa.Table, delta: list[str], plain: lis
         # A string or a wall-clock value is judged between the two encodings the rules choose from.
         # The delta string encodings are smaller on a sorted name and refused by hyparquet and
         # fastparquet, so measuring against them would report a choice made on purpose.
-        other = (pa.types.is_string(held) or pa.types.is_large_string(held)
-                 or pa.types.is_timestamp(held) or pa.types.is_date(held))
+        other = (
+            pa.types.is_string(held)
+            or pa.types.is_large_string(held)
+            or pa.types.is_timestamp(held)
+            or pa.types.is_date(held)
+        )
         if not (integer or floating or other):
             continue
         chosen = "delta" if field.name in delta else "plain" if field.name in plain else "dict"
-        got = {how: n for how in (("dict", "delta", "plain") if integer else ("dict", "plain"))
-               if (n := _cost(head, field.name, how)) is not None}
+        got = {
+            how: n
+            for how in (("dict", "delta", "plain") if integer else ("dict", "plain"))
+            if (n := _cost(head, field.name, how)) is not None
+        }
         if not got or chosen not in got:
             continue
         best = min(got, key=got.__getitem__)

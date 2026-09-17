@@ -56,8 +56,22 @@ EXTENSION = {
 
 
 TRIALS = [
-    {"session_id": "s001", "interval_kind": "task.trials", "interval_id": 0, "clock_id": "harp_s001", "start_tick": 0, "stop_tick": 99},
-    {"session_id": "s001", "interval_kind": "task.trials", "interval_id": 1, "clock_id": "harp_s001", "start_tick": 200, "stop_tick": 299},
+    {
+        "session_id": "s001",
+        "interval_kind": "task.trials",
+        "interval_id": 0,
+        "clock_id": "harp_s001",
+        "start_tick": 0,
+        "stop_tick": 99,
+    },
+    {
+        "session_id": "s001",
+        "interval_kind": "task.trials",
+        "interval_id": 1,
+        "clock_id": "harp_s001",
+        "start_tick": 200,
+        "stop_tick": 299,
+    },
 ]
 
 
@@ -67,7 +81,16 @@ def _commit(root, registry, minimal, *, choice="left"):
         writer.add(resource_id, records)
     writer.add("core.intervals", TRIALS)
     writer.add(
-        "task.trials", [{"session_id": t["session_id"], "interval_kind": "task.trials", "trial_id": t["interval_id"], "choice": choice} for t in TRIALS]
+        "task.trials",
+        [
+            {
+                "session_id": t["session_id"],
+                "interval_kind": "task.trials",
+                "trial_id": t["interval_id"],
+                "choice": choice,
+            }
+            for t in TRIALS
+        ],
     )
     return writer.commit(root)
 
@@ -482,6 +505,7 @@ def test_a_command_that_does_not_produce_what_it_claimed_says_so(tmp_path):
     )
     with pytest.raises(SourceDefect, match="no file at the declared path after running"):
         source.offers()
+
 
 def test_a_command_given_as_a_string_is_refused(tmp_path):
     r"""Part 05 §3.7: splitting one applies a quoting convention the recipe never declared, and

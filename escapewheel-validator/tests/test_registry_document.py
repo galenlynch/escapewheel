@@ -37,8 +37,14 @@ def _document(**tables):
 
 def _column(name, **overrides):
     """A column declaring everything Part 02 §6 requires, so a test varies one thing."""
-    column = {"name": name, "type": "int32", "presence": "required", "role": "identifier",
-              "identity": "assigned", "description": "A demonstration column."}
+    column = {
+        "name": name,
+        "type": "int32",
+        "presence": "required",
+        "role": "identifier",
+        "identity": "assigned",
+        "description": "A demonstration column.",
+    }
     column.update(overrides)
     if column["role"] != "identifier":
         column.pop("identity", None)
@@ -76,20 +82,29 @@ def test_every_invariant_reports_whether_it_held():
 
 def test_a_reference_to_a_table_no_registry_holds_is_found():
     """Part 09 §2 makes the direction one-way: an extension reaches core's tables and its own."""
-    document = _document(**{"demo.rows": {
-        "columns": [_column("demo_id"), _column("ghost_id")],
-        "references": [{"columns": ["ghost_id"], "resource": "demo.absent", "resource_columns": ["x"]}],
-    }})
+    document = _document(
+        **{
+            "demo.rows": {
+                "columns": [_column("demo_id"), _column("ghost_id")],
+                "references": [{"columns": ["ghost_id"], "resource": "demo.absent", "resource_columns": ["x"]}],
+            }
+        }
+    )
     assert "reference targets exist" in _broken(check_extension(document, CORE))
 
 
 def test_a_reference_across_types_is_found():
     """Part 02 §7. A join between an int32 and a string returns nothing and reports nothing."""
-    document = _document(**{"demo.rows": {
-        "columns": [_column("demo_id"), _column("session_id", type="string")],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]}],
-    }})
+    document = _document(
+        **{
+            "demo.rows": {
+                "columns": [_column("demo_id"), _column("session_id", type="string")],
+                "references": [
+                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
+                ],
+            }
+        }
+    )
     assert "a reference relates columns of the same type" in _broken(check_extension(document, CORE))
 
 
@@ -113,18 +128,28 @@ def test_a_table_declaring_no_primary_key_is_found():
 
 def test_a_sound_document_breaks_nothing():
     """The shape an author is aiming at, so the test says what one looks like."""
-    document = _document(**{"demo.rows": {
-        "primary_key": ["session_id", "demo_id"],
-        "columns": [
-            _column("session_id", description="The session these rows belong to."),
-            _column("demo_id", identity="carried", description="The source's own number for a row."),
-            # Part 02 §8.6: a table keyed by an identifier of its own carries somewhere for the
-            # facts core does not model, or an author has nowhere to put them but a new column.
-            _column("metadata", type="json_string", presence="optional", role="data",
-                    description="Source facts this table does not model."),
-        ],
-        "references": [{"columns": ["session_id"], "resource": "core.sessions",
-                        "resource_columns": ["session_id"]}],
-    }})
+    document = _document(
+        **{
+            "demo.rows": {
+                "primary_key": ["session_id", "demo_id"],
+                "columns": [
+                    _column("session_id", description="The session these rows belong to."),
+                    _column("demo_id", identity="carried", description="The source's own number for a row."),
+                    # Part 02 §8.6: a table keyed by an identifier of its own carries somewhere for the
+                    # facts core does not model, or an author has nowhere to put them but a new column.
+                    _column(
+                        "metadata",
+                        type="json_string",
+                        presence="optional",
+                        role="data",
+                        description="Source facts this table does not model.",
+                    ),
+                ],
+                "references": [
+                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
+                ],
+            }
+        }
+    )
     findings = check_extension(document, CORE)
     assert _broken(findings) == set(), [str(f) for f in findings if not f.passed]

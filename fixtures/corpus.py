@@ -23,12 +23,18 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "null_required": ("error", "core.event_streams.event_type.not_null"),
     "bad_vocabulary": ("error", "core.units.quality_label.in_vocabulary"),
     "bad_interval": ("error", "core.intervals.interval_valid"),
-    "unspecialised_interval": ("error", "core.intervals.interval_kind.dynamic_foraging_trials_is_specialised"),
+    "unspecialised_interval": (
+        "error",
+        "core.intervals.interval_kind.dynamic_foraging_trials_is_specialised",
+    ),
     "stale_summary": ("error", "core.units.spike_summary_consistent"),
     "missing_amplitude_unit": ("error", "core.units.amplitude_unit_declared"),
     "half_transform": ("error", "core.clocks.transform_pair_complete"),
     "unsorted_spikes": ("error", "core.spike_events.physical_order"),
-    "inconsistent_projection": ("error", "core.unit_quality_labels.projection_is_consistent"),
+    "inconsistent_projection": (
+        "error",
+        "core.unit_quality_labels.projection_is_consistent",
+    ),
     "spike_outside_window": ("warning", "core.spike_events.within_observation"),
     "orphan_manifest_session": ("error", "core.sessions.manifest_sessions_match"),
     "bad_type": ("error", "schema.column_type"),
@@ -44,9 +50,11 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "undeclared_currency": ("error", "core.processing_runs.undeclared_currency"),
     "unscoped_runs": ("error", "core.processing_runs.scope_undeclared"),
     "clock_without_window": ("error", "core.clocks.observation_declared"),
-    "frame_without_axes": ("error",
-                           "core.electrode_coordinate_values."
-                           "session_id_coordinate_frame_axis_index_resolves"),
+    "frame_without_axes": (
+        "error",
+        "core.electrode_coordinate_values."
+        "session_id_coordinate_frame_axis_index_resolves",
+    ),
 }
 
 #: Packets whose expected finding is advisory (Part 02 §10.2). Advisory rules are off by default --
@@ -61,7 +69,9 @@ def main() -> int:
     print(f"{'packet':26s} {'expected':9s} {'result':22s} findings")
     print("-" * 80)
     for name, expect in EXPECTED.items():
-        report = validate(open_packet(HERE / "packets" / name), advisory=name in ADVISORY)
+        report = validate(
+            open_packet(HERE / "packets" / name), advisory=name in ADVISORY
+        )
         if expect is None:
             ok = report.passed and report.warnings == 0
             verdict = "clean" if ok else "UNEXPECTED FINDINGS"

@@ -43,14 +43,19 @@ def render() -> str:
 def main() -> int:
     """Write the rendering, or check that it is current."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true", help="fail if the rendering is stale")
+    parser.add_argument(
+        "--check", action="store_true", help="fail if the rendering is stale"
+    )
     args = parser.parse_args()
 
     rendered = render()
     if args.check:
         current = OUT.read_text() if OUT.is_file() else ""
         if current != rendered:
-            print(f"{OUT.name} is stale; run `python {Path(__file__).name}`", file=sys.stderr)
+            print(
+                f"{OUT.name} is stale; run `python {Path(__file__).name}`",
+                file=sys.stderr,
+            )
             return 1
         print(f"{OUT.name} is current")
         return 0
