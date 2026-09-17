@@ -1,347 +1,442 @@
-# Contributing specification revisions
+# Contributing specification changes
 
-This guide defines the file-based process for proposing, drafting, accepting, and incorporating a
-change to the Escapewheel specification. The repository-wide
-[authority model](../README.md#authority) applies throughout.
+This guide defines the file-based process for proposing, appraising, accepting, incorporating, and
+verifying a change to the Escapewheel specification. The repository-wide
+[authority model](../README.md#authority) applies throughout. The shared
+[specification style guide](../escapewheel_poc_docs_v0.2/CONTRIBUTING.md) governs prose; this guide
+governs the change lifecycle.
 
-## Scope of this process
+## 1. Scope
 
-This is a specification-change process, not a general repository-change process. Use it when a
-change would alter what a conforming packet or actor is permitted or required to do, how a
-normative statement is interpreted, or the packet contract expressed by an incorporated registry
-or schema. Changes to specification authority, identities, required resources, validation
-outcomes, and other conformance rules are in scope.
+Use this process when a change would alter any of the following:
 
-Use the ordinary repository workflow instead for:
+- what a conforming packet, writer, reader, validator, or consumer is permitted or required to do;
+- the meaning of a normative statement;
+- which artifact owns a normative fact or how conflicts are resolved;
+- the exact contract carried by an incorporated registry, rule set, or JSON Schema; or
+- the composition or identity of a specification release.
 
-- root and package README improvements that do not change the specification;
-- agent instructions, contribution guidance, and other developer documentation;
-- implementation changes that bring code into conformance with an unambiguous existing rule;
-- tests, continuous integration, refactoring, and maintenance that do not change the contract;
-- meaning-preserving specification edits such as spelling, formatting, repaired links, and
-  regenerated facts or renderings.
+Use the ordinary repository workflow for developer documentation, agent instructions,
+implementation work that follows an unambiguous existing rule, tests and refactoring that do not
+change the contract, and meaning-preserving editorial fixes or regeneration.
 
-The specification README is governed by the same boundary. Navigation, publication status, and a
-clear reference to an existing authority are editorial. Changing which artifacts bind, how a
-conflict is resolved, or what constitutes a specification release is a specification change and
-uses this process.
+When classification is uncertain, ask whether two implementations could behave differently after
+the change while both conforming before it. If so, use this process.
 
-When classification is uncertain, ask whether two conforming implementations could behave
-differently after the change while both following the text. If so, treat it as a specification
-change. A proposal is still optional when the user has already settled the problem, scope, and
-direction, as described below.
+## 2. Artifacts and gates
 
-## Authority and lifecycle
+The lifecycle has three authored artifacts and three separate gates:
 
-The process has three deliberately different artifacts:
-
-| stage | location | purpose | authority |
+| artifact | location | purpose | authority |
 |---|---|---|---|
-| **Proposal** | `proposals/<slug>.md` | Establish the problem, evidence, constraints, alternatives, and questions worth deciding. | None. It contains no normative language and may be abandoned or substantially changed. |
-| **Revision draft** | `drafts/<slug>.md` | State one candidate decision precisely enough to appraise and implement. | None. It has no revision number and does not change the specification. |
-| **Accepted revision** | `R<N>-<slug>.md` | Preserve the approved decision, evidence, cost, and provenance of the corresponding spec change. | Historical decision record. The change binds through its incorporation into the generated v0.2 specification, which remains the normative source. |
+| proposal | `proposals/<slug>.md` | Establish the problem, ownership, evidence, alternatives, impact, and questions. | None |
+| revision draft | `drafts/<slug>.md` | State one candidate decision and its incorporation and evidence plan. | None |
+| accepted revision | `R<N>-<slug>.md` | Preserve the approved decision, evidence, consequences, and provenance. | Historical decision record |
 
-Use the templates in `templates/`. Start with a proposal unless the user has already supplied a
-settled problem, scope, and intended direction. Promotion is not a rename: carry forward the facts
-that survived review, resolve or record the open questions appropriate to the next stage, and remove
-stage-specific discussion. Delete the superseded proposal or draft once promoted; Git retains it.
+The gates are:
 
-Acceptance and incorporation are one reviewable change. Only the user authorizes acceptance. Until
-the accepted text and its implementation have been incorporated into the generated v0.2 parts and
-all checks pass, the existing generated specification continues to state what holds.
+1. **Proposal promotion:** the problem, scope, ownership, and direction are settled well enough to
+   write candidate normative text.
+2. **Acceptance authorization:** the user approves the exact appraised draft and authorizes its
+   incorporation.
+3. **Incorporation closure:** every normative owner, generated projection, conformance artifact,
+   affected implementation, and document agrees, and verification passes.
 
-## Writing a revision
-
-Follow the shared specification style in
-`../escapewheel_poc_docs_v0.2/CONTRIBUTING.md`. A revision adds one genre-specific constraint: it
-is a decision record rather than the current statement of the standard. Its reader needs to recover
-what was wrong, what decision was approved, why the obvious alternative failed, and what the change
-cost.
-
-Read the current generated parts, relevant registry declarations, and the proposal before drafting.
-Describe the current rule accurately before replacing it. If the proposal still contains unresolved
-questions that would change the normative clauses, it is not ready to become a draft.
-
-### Title and outline
-
-Use a literal, declarative title that states the candidate rule. Do not use an imperative, aphorism,
-or metaphor. Avoid using a defined Escapewheel term loosely in the title.
-
-Number the sections. Use the template's stable subjects—Scope, Background, Decision, Consequence,
-and optional sections only where they carry content. A subsection heading either names the thing it
-defines or states the finding the section establishes. It must make sense in the outline without its
-body, and each section should carry one subject.
-
-### Normative boundary
-
-State which sections are normative near the top. Background, evidence, alternatives, and
-measurements are informative. Decision clauses use the requirement form defined by the shared style
-guide. Do not hide an obligation in Background, Consequence, a note, or an example.
-
-The draft names every part and section it amends. State the replacement rule rather than describing
-an editing operation. The accepted revision records that decision, while the incorporated v0.2 part
-becomes the authoritative current rule.
-
-### Evidence and consequences
-
-A revision retains the evidence on which its decision depends: what was measured, how, over what
-population, with which relevant versions, and the result. Distinguish measurements from inferences.
-Summarize a rejected alternative with the concrete reason it fails; do not build a case against an
-unnamed opponent.
-
-State compatibility effects, migration or rebuild work, implementation surfaces, and conformance
-fixtures that must change. If a writer obligation depends on source data, identify the source field
-or explicitly record that no source currently supplies it.
-
-`What this does not change` is optional. A denial belongs there only when a specific statement in
-the decision invites the inference being denied, the decision has not already answered it, and the
-denial is consistent with every normative clause. Delete the section when it has no such content.
-Delete an empty `Open` section rather than writing “None”.
-
-### Citations
-
-Place a citation beside the claim it supports. Cite the current part for a current rule and an
-accepted revision for provenance or rationale not carried by the part. A draft may cite accepted
-revisions, but an accepted revision never cites a proposal or draft. No proposal, draft, revision,
-or part cites an instruction or contribution guide.
-
-## A proposal and a draft carry no number
-
-`revisions/proposals/` holds questions that have not yet become candidate normative text. A
-proposal uses no BCP 14 keywords to prescribe behavior, does not claim consensus, and is never
-cited from the specification or an accepted revision. When its problem, scope, and intended
-direction are settled, write a draft from the draft template and delete the proposal in the same
+These gates are not synonyms. Promotion does not accept a rule. Acceptance does not make a
+partially edited working tree authoritative. The generated v0.2 material at the last complete
+commit remains authoritative until acceptance and incorporation are committed as one reviewable
 change.
 
-`revisions/drafts/` holds work that is not accepted, named by slug and with a status line of
-`Draft`. The `R<N>` space is history: accepted and withdrawn only.
+Only the user authorizes acceptance. A proposal or draft carries no `R<N>`.
 
-An `R<N>` is permanent once accepted — `applied.toml` keys on it, `build.py` stamps it into every
-column's `since`, `derived_from` lists it, and the compiled spec cites it — so numbering at
-drafting time would force the application order to match the drafting order. Drafts are reordered
-by editing `revisions/drafts/README.md`, which carries the intended order and why each draft sits
-where it does. A draft cites another by its file name in backticks, since it has no number to cite.
+## 3. Phase A — establish the baseline
 
-## Checks before acceptance
+Every proposal and draft records a full `Based on` commit hash. Before evaluating it:
 
-Run these against the document before the status line moves. Each has caught a real defect, and
-the ones a tool can settle are cheaper than the ones only a reader can.
+1. Read the root authority model, the relevant generated v0.2 parts, and the machine-readable
+   artifacts those parts incorporate.
+2. Record `git rev-parse HEAD`, not an abbreviated or remembered revision.
+3. Run `uv run --project escapewheel-writer python verify.py --quick` to establish that the
+   generators, registries, corpus, citations, and current candidate state agree. A known
+   environment failure is recorded explicitly; it is not silently treated as a pass.
+4. Inventory open proposals and drafts. If another change touches the same owner, establish their
+   order before relying on counts, keys, section text, or test results.
+5. Preserve unrelated working-tree changes. The baseline hash identifies committed authority;
+   the appraisal notes any additional working state on which its evidence depends.
 
-- **Re-measure every number against the current registry and the current packets.** A revision
-  remains a draft while the registry moves under it. R86 was drafted saying 32 of 34 tables were
-  session-scoped and R83 added one before it was accepted; its name-collision count was measured
-  before `core.events` carried names, and missed the largest collision of all. R89's §4 arithmetic
-  was measured before R88 and was wrong by 18 columns and 14 references.
-- **Run `check.py`'s `NAMING` against every column the revision declares.** The conventions are
-  data — lift `NAMING`, `RESERVED` and `INTEGERS` out of `registry/check.py` and apply them to the
-  proposed names, types and roles rather than reading them. R89 declared `calibration_kind` for an
-  open vocabulary of values, which would have failed the build: a `_kind` column is a discriminator
-  (R55 §2.1), and an open vocabulary takes `_type`, as `event_type` and `activity_type` do.
-- **Every column declares a type, a presence and a role.** R48 §2.2 gives a role no default, so a
-  column named in prose but not declared is a build error rather than a guess. R89 gave one table a
-  full declaration and two others as tuples, leaving eight columns without a type.
-- **Every citation resolves to the section that says it.**
-  `uv run --project escapewheel-writer python revisions/check_citations.py` does this and
-  `verify.py` runs it, so a broken `R<n> §<x>` or a part citation in a draft fails
-  the build. It cannot check that the cited section *says* what the citing sentence claims, which
-  is still a read: R89 §2.3 cited R56 §2.2 for the one-hop `resource.column` form, which R56 §2.3
-  defines and §2.2 does not. Open the cited section.
+Recheck the baseline when another revision is incorporated. Counts and measurements are rerun
+against the new state rather than copied forward.
 
-  **A citation landing on a boilerplate section is the commonest form of this.** `R83 §3` was cited
-  four times — twice in R105, once in R103, once in a draft — for a writer's ban on inferring a
-  channel list and a consumer's duty to report one unresolvable. R83 §3 is `What this does not
-  change`; the two rules are §2.2 and §2.3. The checker passed all four, because §3 exists. Neither
-  a keyword comparison nor a heading blacklist is worth building: the first flags **77** citations
-  across the accepted revisions, most of them sound, and the second flags six of which half are
-  arguable. What catches it is reading the heading you are about to cite and asking whether that
-  section, and not its neighbour, states the thing.
-- **No section contradicts another.** R89 §1.2 argued a calibration is reported as in force
-  *rather than as having happened*, and §2.5 then said a row records that it happened. Read the
-  Decision against the Motivation it rests on, and read §3's bullets against the Decision.
-- **Name the other Proposed revisions that touch the same counts, and say which order.** R89 and
-  R95 both change the column count and R95's rule adds a column to one of R89's tables, so
-  whichever lands second is describing a registry that already has the other. Whatever is measured
-  against today is re-measured at the second acceptance.
-- **A claim about rows coexisting is a claim about the primary key.** Anything the text says can
-  exist together, be distinguished, or be chosen between — write the key out and check it admits
-  them. R49 §1 found a colliding key this way and R55 §2.3.1 a reference targeting a non-unique
-  set; R58 §2.3 asserted two registrations coexist under a key that admits one, and that survived
-  acceptance.
-- **A writer obligation nothing can satisfy.** For every **MUST** or **SHOULD** that binds a writer,
-  name the source field it reads, or record that no source states it. This is R66 §1.3's discipline
-  turned on the obligation rather than on the column: a field a producer never fills is not
-  evidence anyone needs it, and an obligation no source can meet is a clause that will be recorded
-  as blocked rather than implemented. R102 §3 bound three and implementation found all three
-  blocked — `waveform_mean` spans twelve sortings so no single run produced it, emitting a camera
-  device needs `core.devices` in an adapter's `PRODUCES` and in every recipe, and no source links a
-  video file to a camera except by its name, which R102 §3.2 itself forbids.
-- **A claim whose population is defined by the quantity it measures.** "None of the 80 columns is
-  more than 15% off the best encoding" was measured over columns reaching 2 kB *after* the rules
-  had shrunk them, so every column a rule fixed had left the set that justified it — and three
-  columns over the threshold went unseen. Three claims of the form "none more than X" failed this
-  way in one session, each sound in its own terms and each measured with a filter that excluded
-  part of what it claimed to cover. Ask what defines the population, and whether the change being
-  measured moves anything in or out of it; where it does, state the population against the state
-  *before* the change and say so.
+## 4. Phase B — evaluate a proposal
 
-- **A measurement stated twice.** Adding a section to one that already carries a number leaves the
-  number in both. State it where the rule it supports lives.
-- **"What this does not change" listing the unassumed.** Most denials belong in the **body**, where
-  the clause they qualify is; this section is for the ones that fit nowhere else, which is why it
-  is the commonest place a revision pads. A bullet earns its place by passing three tests, and it
-  must pass all three.
+A proposal is exploratory and non-normative. Use the proposal template and evaluate it in this
+order.
 
-  **Does the body already answer it?** R102's "no manifest field changes" was invited by its §2.1
-  and already answered by the last sentence of its §3.1, so the bullet said a second time what the
-  Decision had settled. A settled question belongs where it was settled; a composition note about
-  another revision and an implementation note both belong in Consequence. A bullet running to a
-  paragraph is usually one of those three.
+### 4.1 Reproduce the problem
 
-  **Does anything invite it?** Name the sentence in the Motivation or the Decision that invites the
-  inference, and say what a reader would conclude from it. Where nothing does, the bullet denies
-  what nobody was going to think: R102's "no table is added and no column is removed" denied what
-  its own `Amends` line and its Consequence had each already stated outright.
+State the current behavior from the authoritative part, registry, schema, or rule that owns it.
+Give a reproducible packet, declaration, query, measurement, or contradiction. Distinguish a fact
+observed in the baseline from an inference about its cause.
 
-  **Is it true?** The first two tests ask whether a denial is wanted, never whether the document
-  supports it. Read each bullet against the Decision's clauses and not only against the Motivation
-  that invited it — R106 said "no core column changes" while its §3.1 laid down a rule binding
-  every column in the registry, and the bullet was struck at acceptance. Such a bullet looks sound in isolation, so the
-  check starts from the rule and asks which denials it falsifies, not from the bullet.
+### 4.2 Classify ownership and abstraction
 
-  Measured over the accepted revisions: **299 bullets across 75**, a mean of 4, and the recent ones
-  run 7 to 9. Of R102's three, one survived.
+Identify:
 
-## After the user accepts
+- whether the issue is semantic, logical, physical, catalog, validation/import, publication, or
+  implementation-only;
+- the artifact that currently owns each affected fact;
+- the numbered part and subject where a prose rule belongs;
+- whether core, an extension, analysis, or an adapter-specific source path is affected; and
+- whether the apparent conflict is a normative disagreement, stale generated view, stale
+  implementation, or misplaced duplicate statement.
 
-**The sequence tests the revision as much as it applies it, and a step that fails is a result.**
-Where one turns up something the document did not anticipate — an obligation no source can satisfy,
-a count that moved under it, a clause that fits no section — stop and report it rather than
-finishing around it. A correction that leaves the deliverable intact belongs in the document
-mid-sequence, since step 1 already edits it and nothing is fixed until step 8 commits; a correction
-that changes **what the revision delivers** is a different revision from the one that was accepted,
-and goes back to the user with what was found.
+Do not propose a precedence rule where one artifact is simply stale. A fact gets one owner; other
+representations are checked projections.
 
-R102 is the case to remember. All three of its writer obligations turned out blocked, and rewriting
-its Consequence to record that took "the adapter names the run and the cameras land" to "the
-registry change is the whole of what lands now" — the same rules, a different cost, and the user
-had accepted the first.
+### 4.3 Inventory every surface
 
-Only the user moves a revision to Accepted. What follows is one sequence, in this order, and
-`uv run --project escapewheel-writer python verify.py` from the monorepo root is what says it is
-complete. `../CONTRIBUTING.md` §4 is the machinery each step
-touches.
+The proposal's impact sketch marks each of these affected, unchanged with a reason, or unknown:
 
-1. **The draft is numbered and moved.** It takes the next free `R<N>`, moves from
-   `revisions/drafts/` to `revisions/R<N>-<slug>.md`, and its status line becomes
-   `**Accepted** <YYYY-MM-DD>`. Every citation of it — in other drafts and in this one's own text —
-   becomes `R<N> §<x>`; `grep` the slug to find them. Until the file is numbered and accepted,
-   `ledger.py` skips it and `check.py` refuses the `derived_from` entry a build block creates.
-   Reorder `revisions/drafts/README.md` if accepting this one changed what should come next.
+- semantic prose;
+- logical prose, registry meta-schema, registry declarations, and declarative rules;
+- physical profiles;
+- packet catalog and other incorporated JSON Schemas;
+- validation and import;
+- extension registries;
+- reader, writer, validator, adapters, and code generation;
+- existing packets and migration or regeneration;
+- conformance fixtures and implementation tests; and
+- generated publications and developer documentation.
 
-   **Where it supersedes a clause, repoint every citation of the superseded clause too**, in every
-   other draft and in the compiled spec — not only in the documents the supersession was written
-   against. A citation into a superseded section names a statement that is no longer the one of
-   record, and nothing checks it: `ledger.py` sees that the clause has a disposition, and a
-   citation sweep sees a section that still exists. `declaring-and-resolving-a-discriminator`
-   restated R55 §2 and left **nine** citations of R55 §2.1, §2.2, §2.3, §2.3.2, §2.4 and §2.6
-   across two other drafts, each of them pointing at prose the restatement had replaced. Grep the
-   superseded section numbers, not just the slug.
-2. **`registry/build.py`.** Register every new column name in `ROLES`, every new identifier in
-   `IDENTITY`, and every new discriminator in `DISCRIMINATOR` — each refuses an unclassified name
-   with a `SystemExit` naming the choice. Then add the block, stamped `SINCE[0] = "R<N> §<x>"`,
-   after the last revision's block and before the Tier 2 merge. `derived_from` follows from the
-   stamp; a revision that changes no column goes in `UNSTAMPED` instead.
-3. **`registry/rules.json`** for each Tier 2 rule, whose query returns offending rows (R2 §7.3).
-4. **`conformance/spec-sweep/tables.py`** for a table added or withdrawn, or `check.py` fails
-   against the R9 §2 ledger.
-4a. **`registry/extensions/*.json`.** An extension is a registry document in the same format
-   (R17 §2), so a rule about what a table declares binds one as much as it binds core — and the
-   four here drift, because nothing regenerates them. Check every extension against the rule the
-   revision states, not only against the rule it changes: R88 §2.1 required a session-scoped table
-   to declare its reference and the three `aind_unit_qc` tables carried `session_id` validated by
-   nothing for two revisions. A meta-schema change is the case that fails loudly, since
-   `registry.schema.json` sets `additionalProperties: false`; a missing reference or a forgotten
-   role fails quietly, which is why this is a step rather than something `verify.py` catches.
-5. **The v0.2 parts the revision amends**, which is what `Amends` named. Placing a clause is two
-   questions, and both have a stated answer.
+An unknown is acceptable in a proposal, but it remains a promotion blocker when its answer could
+change the decision.
 
-   **Which part** is R93 §4's test, which settles it without appeal to judgement: a clause is
-   Part 03's where it would change if the profile changed, Part 07's where it would change if the
-   reference implementation changed, Part 10's where it is a number rather than a rule and neither of
-   those claims it, and Part 02's where none of them does. An ordering rule changes under Iceberg, so
-   it is Part 03's; a tick being `int64` is true under any profile, so it is Part 02's. Part 00 §9's table
-   says what each part binds, and a clause about what a concept *means* rather than how it is
-   computed is Part 01's.
+### 4.4 Scan overlap and dependencies
 
-   **Which section** is by subject, never by what is last. `headings.toml` is the map — every
-   section number of every part with the subject it carries — so read that part's entry and put
-   the clause in the section whose subject it is, as a new subsection at the end of *that* section
-   where none of the existing ones fits. A subsection appended inside a section renumbers nothing.
-   Where a clause genuinely fits no section, add a section at the **end of the part**, which
-   renumbers nothing either, rather than filing it under a heading that does not describe it.
+Read every open proposal and draft touching the same owner. Search accepted revisions for the rule's
+provenance. For known part sections, list reverse citations with:
 
-   A new concept is the exception, with a rule of its own: append it to Part 01 §3 as the next
-   number, because that section is a flat list of concepts and inserting one renumbers the
-   concepts every later part cites. That rule is about Part 01 §3 and no other section.
+```bash
+uv run --project escapewheel-writer python revisions/impact.py \
+  --section 02:7.1 --section 05:8
+```
 
-   Appending to whichever section comes last is what the subject rule prevents, and it had already
-   happened three times before anyone stated it: R81, R83 and R89 each added to Part 02 §12, so a
-   section then titled "Ordering" came to hold unit identity, channel indices and calibration,
-   with 40 of its 44 lines about none of them. R93 §3.1 repaired it by sending ordering to Part 03,
-   which is why that section is now "Rules for particular resources" and carries seven subsections
-   a later clause can be placed among.
-5a. **`uv run --project escapewheel-writer python revisions/impact.py`** once the parts are edited,
-   before moving on. It maps each
-   changed line to the section it falls in and lists every file citing that section, which is the
-   only way to find them: `check_citations.py` asks whether a citation resolves, and a citation
-   into a rewritten section resolves perfectly. It searches **every tracked file**, which is what
-   makes this the step that keeps the developer documentation current: naming four `src`
-   directories left 234 citations across 38 files unreachable — instruction files, root documents,
-   and tests — and a sweep later found those documents describing a specification
-   of R1–R36 over 33 tables. R110 rewrote Part 03 §5.5, which **16 files cite,
-   three of them the writer's own source**, and one of those still named `R68 §3` — the
-   miscitation R110's appraisal had just struck from the revision — for two more commits.
-6. **`escapewheel_poc_docs_v0.2/applied.toml`**, one entry per clause. `ledger.py` demands a
-   disposition for every §2 subsection and for any other section carrying a MUST or a SHOULD, and
-   fails equally on an entry naming a clause that no longer exists. An `applied` entry's `where` is
-   a list of `{ part = "02", section = "7.1" }` targets, each taking an optional `note` saying which
-   piece of the clause landed there, and every one is resolved against that part's own headings, so
-   a section that does not exist fails. A section that exists but does not cite the revision is a
-   ratchet rather than a failure: cite the revision beside the clause as the parts do and the count
-   falls; point at a section that says something else and it rises, which is refused.
-6a. **`uv run --project escapewheel-writer python escapewheel_poc_docs_v0.2/headings.py`** where a
-   heading changed. It prints every
-   file citing that section and rewrites `headings.toml`; committing that file is the record the
-   citations were read. Adding or renumbering a section needs the same run, which is what makes a
-   rewritten heading visible at all -- `check_citations.py` resolves a number and cannot see that
-   the section behind it is now about something else.
-7. **`uv run --project escapewheel-writer python escapewheel_poc_docs_v0.2/combine.py`** for the
-   single-file rendering.
-8. **`uv run --project escapewheel-writer python verify.py`.** Every stage but the three clean-tree
-   ones must pass before committing;
-   those compare against the committed state and so clear only on the commit itself.
+Record whether the work depends on, supersedes, conflicts with, or should be split from another
+change. Re-measure after any dependency lands.
 
-A part's column tables are **generated**: mark the resource with
-`<!-- columns: core.foo -->` / `<!-- /columns -->` and run
-`uv run --project escapewheel-writer python escapewheel_poc_docs_v0.2/columns.py`. Never retype a
-column list. Part 06 §4's kept
-`sorting_run_id` and `curation_id` for four revisions after R81 §2.3 removed them, and nothing
-could see it: the ledger records where a clause landed, not whether the prose still agrees.
+### 4.5 Compare alternatives and compatibility
 
-Three traps, each of which cost time here:
+Compare the current design and each credible alternative at the abstraction level it changes.
+State packet compatibility, migration or regeneration, release-version impact, and the burden on
+independent implementations. Prefer the smallest decision that leaves one coherent contract.
 
-- **`CONTEXT` and the R53 §2.3.1 name block are consumed before a late block runs**, so a table
-  added at the end declares its own `unit_from` inline and its own `*_name` column. A `CONTEXT`
-  entry for a table that does not yet exist raises.
-- **`check.py` skips rule execution without DuckDB**, and a rule referencing a missing column
-  passes silently. Run it as `uv run --with duckdb python check.py` from `registry/`, or let
-  `verify.py` do it.
-- **A generated file edited by hand is overwritten**, `logical_schemas.json` above all. Everything
-  in `registry/` except `build.py`, `rules.json`, `check.py` and the two hand-written schemas is
-  output.
+### 4.6 Probe feasibility
 
-## Length
+Before promoting a writer obligation, identify the source data that can satisfy it or state that no
+source currently can. Before asserting that rows coexist or are distinguishable, write out the
+primary and foreign keys. Before assigning a fact to JSON Schema, a registry, or a declared rule,
+confirm that the chosen form can express it without hiding semantics in annotations or code.
 
-R50 is 857 words and renames three columns, each with its reason. R45 is 1,633 for a contradiction
-written in two places. Past about 1,500, check that the extra words carry a measurement or a rule
-rather than a case made twice.
+A small implementation probe is appropriate when feasibility is uncertain. It does not change the
+contract and does not substitute for normative text.
+
+### 4.7 Define the conformance evidence
+
+Name the positive and negative cases that would distinguish the proposed rule from the current
+one. Identify what the validator can decide, what remains a writer or reader obligation, and what
+requires an implementation test or measurement rather than a packet fixture.
+
+### 4.8 Choose a disposition
+
+The result is one of:
+
+- abandon the proposal because the current contract already answers it;
+- revise it because the problem or evidence is incomplete;
+- split it because independent decisions or unresolved compatibility questions were combined; or
+- promote it because every item in the template's promotion criteria is satisfied and the user
+  agrees to drafting.
+
+Run the open-stage and citation checks before promotion:
+
+```bash
+uv run --project escapewheel-writer python revisions/stages.py
+uv run --project escapewheel-writer python revisions/check_citations.py
+```
+
+Promotion carries the surviving facts into a draft and deletes the proposal in the same change.
+Git retains the superseded discussion.
+
+## 5. Phase C — write and appraise a revision draft
+
+A draft states one candidate decision. It uses the draft template, keeps the proposal's baseline or
+records a newer one, and enumerates every normative subsection in `Decision clauses`. That exact
+list is what `ledger.py` will require someone to place after acceptance; normative force is not
+inferred from keywords.
+
+When Decision has subsections, its preamble introduces them and carries no independent rule; list
+every subsection under §3. When the decision is not subdivided, list §3 itself. This makes the
+clause set mechanically complete rather than dependent on keyword inference.
+
+The draft's impact inventory is part of the design, not an implementation afterthought. Each row
+states the required change or why the surface is unchanged, and names the evidence expected after
+incorporation.
+
+### 5.1 Normative writing
+
+- State which sections are normative and informative.
+- Put every obligation in Decision and bind a named actor or an artifact.
+- State the replacement rule, not an editing instruction.
+- Introduce terms before relying on them and use one term for one concept.
+- Name every amended part and section.
+- For a registry declaration, give every affected type, presence, role, identity, vocabulary, key,
+  reference, and rule field.
+- Keep deferred questions only when either answer leaves the Decision unchanged. Otherwise the
+  draft is not ready.
+
+### 5.2 Evidence and consequences
+
+Record how each number was measured, over which population, and against which baseline. Check that
+the proposed change does not move items into or out of the population used to justify it. State
+compatibility, migration, rebuild, implementation, and release consequences.
+
+`What this does not change` is optional. A denial belongs there only when the Decision invites the
+contrary inference, the body has not already answered it, and the denial is consistent with every
+Decision clause.
+
+### 5.3 Citation discipline
+
+Cite the current part for a current rule and an accepted revision only for rationale or provenance
+the part does not carry. A draft may cite an accepted revision. An accepted revision never cites a
+proposal or draft. No specification-change artifact cites an instruction or contribution guide.
+
+## 6. Draft pre-acceptance gates
+
+Appraise a draft in the following order. A later gate does not excuse an earlier failure.
+
+### 6.1 Freshness gate
+
+- The `Based on` commit exists and remains the relevant baseline.
+- Every measurement and count has been rerun.
+- Overlapping proposals and drafts are named and ordered.
+- The draft still describes the current authoritative rule accurately.
+
+### 6.2 Decision gate
+
+- Scope, Decision, Consequence, and deferred work agree with one another.
+- Every `Decision clauses` entry exists under §3 and every normative subsection is listed.
+- Each rule is placed at the abstraction level and in the part that owns its subject.
+- No duplicate statement creates a second owner.
+- Each actor can tell exactly what it owes and each conformance claim is decidable at the stated
+  boundary.
+
+### 6.3 Structural gate
+
+Where the draft changes declarations:
+
+- every column has type, presence, role, and any required identity or vocabulary fields;
+- primary keys admit every row the prose says can coexist;
+- foreign keys target a unique compatible key and both sides agree in type and role;
+- extension registries obey the same applicable registry invariants as core;
+- naming and integer conventions are applied to the proposed declarations; and
+- a declared validation rule names only data guaranteed present when it executes.
+
+### 6.4 Feasibility gate
+
+- Every writer obligation identifies a source field or explicitly records the current absence of
+  one.
+- Reader and validator obligations are implementable from information the packet exposes.
+- Required algorithms define inputs, outputs, failure behavior, and numerical boundaries.
+- A feasibility probe has been run where the draft relies on a library, storage property, or
+  performance claim not already established.
+
+### 6.5 Compatibility and migration gate
+
+- Packet-shape, behavior, and interpretation compatibility are treated separately.
+- Required regeneration, migration, or version changes are explicit.
+- Existing extensions and adapters are considered, not only core and the reference writer.
+- Rejected alternatives are rejected for a concrete cost or failure.
+
+### 6.6 Traceability and evidence gate
+
+- The impact inventory has no empty cell.
+- Each Decision clause has a planned authoritative landing or a justified registry, superseded, or
+  rationale disposition.
+- Superseded clauses and their downstream citations are listed for repointing.
+- Positive and negative conformance cases are named.
+- Implementation changes and tests are named by package or surface; an existing test suite is not
+  assumed to cover a new rule merely because it passes.
+
+### 6.7 Mechanical gate
+
+Run:
+
+```bash
+uv run --project escapewheel-writer python revisions/stages.py
+uv run --project escapewheel-writer python revisions/check_citations.py
+uv run --project escapewheel-writer python revisions/repoint.py --quiet
+uv run --project escapewheel-writer python verify.py --quick
+```
+
+Then read every citation, not merely whether it resolves. A resolved section can still say the
+wrong thing.
+
+Record the appraisal date, baseline, word count, dependency order, and material finding in
+`drafts/README.md`. Present the user with the exact draft, compatibility effects, deferred work,
+impact inventory, and check results. Only then request acceptance authorization.
+
+## 7. Phase D — authorize acceptance and freeze the decision
+
+After explicit user authorization:
+
+1. Assign the next free `R<N>` and move the draft to `R<N>-<slug>.md`.
+2. Set `Status` to `Accepted` with the date. Preserve `Based on`, `Decision clauses`, the completed
+   impact inventory, and the approved normative text.
+3. Replace citations of the draft slug with its revision number and update the draft order.
+4. Do not commit yet. Acceptance and incorporation remain one atomic reviewable change.
+
+An incorporation finding may correct prose or consequences without changing the approved decision.
+If it changes a Decision clause, compatibility effect, required implementation surface, or claimed
+feasibility, return the file to Draft and obtain renewed approval. A numbered uncommitted candidate
+is not published history; do not preserve a materially changed decision merely because a number was
+temporarily assigned.
+
+## 8. Phase E — incorporate the normative contract
+
+Work from owners to projections.
+
+### 8.1 Record clause destinations
+
+Add one `applied.toml` entry for every enumerated Decision clause. `ledger.py` recognizes:
+
+- `applied`: the rule is stated in one or more numbered part sections;
+- `registry`: the exact declaration or predicate is carried by the incorporated registry;
+- `superseded`: a later accepted revision replaced the clause; and
+- `rationale`: the clause makes no current normative decision.
+
+Use structured part and section targets for `applied`. For new registry entries, name the narrowest
+resource, column, reference, or rule location available rather than the registry as a whole. The
+ledger proves that every clause has a destination; it does not prove the destination says the right
+thing, so the incorporation review still reads both.
+
+### 8.2 Update each authoritative owner
+
+Apply the decision to every affected owner identified in the impact inventory:
+
+- numbered prose for meaning, processing semantics, actor obligations, and conformance;
+- registry build sources and rule sources for exact logical declarations;
+- registry or packet meta-schemas for exact document structure;
+- extension registries for extension declarations; and
+- physical-profile or packet-catalog parts for profile-specific storage and catalog behavior.
+
+State each fact once. Where another artifact needs it, generate or mechanically compare the
+projection.
+
+Place prose by subject. A profile-dependent rule belongs in the physical profile; a
+profile-independent logical declaration belongs in Part 02; a concept meaning belongs in Part 01.
+Append new sections or subsections so existing citations retain their numbers.
+
+### 8.3 Sweep changed sections
+
+After editing parts, run:
+
+```bash
+uv run --project escapewheel-writer python revisions/impact.py
+```
+
+Read every listed citer and update stale assumptions. Repoint citations of superseded revision
+clauses. If a heading changes or a section is added, run `headings.py` and review its citer list.
+
+## 9. Phase F — regenerate projections and add conformance evidence
+
+Follow the generation order in the root [contribution guide](../CONTRIBUTING.md#4-bootstrapping-in-order).
+In particular:
+
+1. Generate the registry, rendered tables, vendored schemas, marked fact regions, column tables,
+   and combined specification from their sources.
+2. Add positive and negative conformance fixtures for every newly decidable rule.
+3. Add expected findings to the corpus rather than relying on an unasserted validator run.
+4. Verify extension registries under every new invariant that applies to registry documents.
+5. Inspect generated diffs. A generator producing an unexpected change is a finding, not noise.
+
+Generated files are never edited directly.
+
+## 10. Phase G — align implementations and human documentation
+
+Update each implementation surface named by the accepted impact inventory:
+
+- writer and adapters for production obligations and source feasibility;
+- validator for generated and non-SQL checks;
+- reader for resolution and interpretation obligations;
+- extension tooling and packaged registries; and
+- reference APIs, examples, and developer documentation.
+
+Tests cite the owning part where the connection would otherwise be unclear. Implementation code
+does not become authority by implementing the rule. A passing pre-existing suite is evidence only
+for behavior it asserts; add a test or record why a requirement is not executable.
+
+Run the affected package suites before the monorepo verifier so a failure is localized.
+
+## 11. Phase H — close drift and publish atomically
+
+Run the focused checks, then the complete verifier:
+
+```bash
+uv run --project escapewheel-writer python revisions/check_citations.py
+uv run --project escapewheel-writer python revisions/repoint.py --quiet
+uv run --project escapewheel-writer python revisions/repoint.py --exempt
+uv run --project escapewheel-writer python escapewheel_poc_docs_v0.2/ledger.py
+uv run --project escapewheel-writer python escapewheel_poc_docs_v0.2/headings.py --check
+uv run --project escapewheel-writer python verify.py
+```
+
+`verify.py` snapshots the intentional candidate diffs before generation. It fails if a generator
+changes that candidate, which catches stale or hand-edited output while allowing a correct
+pre-commit change to pass. Inspect any generated change and rerun. It prints a stage before entering
+it and applies a per-stage timeout; use `--stage-timeout 0` only when an intentionally long stage
+has another monitor.
+
+Commit the accepted revision, normative owners, ledger, generated projections, conformance
+evidence, implementation, and documentation together. A partial commit can make the repository
+internally inconsistent even when the next commit repairs it.
+
+## 12. What each mechanical artifact establishes
+
+| artifact or check | establishes | does not establish |
+|---|---|---|
+| `stages.py` | Open documents have the required status, baseline, sections, and explicit draft clause list. | The proposal is wise or the draft is semantically coherent. |
+| `check_citations.py` | Citations resolve and use the required spelling. | The target supports the claim. |
+| `repoint.py` | Implementation requirement citations name current parts rather than historical decisions. | Every requirement has an implementation or test. |
+| `impact.py` | Files citing a changed section are discoverable. | Uncited consumers or duplicated facts agree. |
+| `applied.toml` and `ledger.py` | Every accepted Decision clause has a recorded normative disposition. | A broad registry disposition identifies the exact declaration, or the destination is semantically faithful. |
+| `headings.py` | Section numbering and changed heading subjects were deliberately reviewed. | The body belongs under that heading. |
+| `columns.py` | Embedded column tables reproduce the registry. | Non-tabular prose agrees with the registry. |
+| registry checks | Registry documents are structurally self-consistent and declared SQL is executable. | An adapter can produce every required fact or prose gives the declaration the same meaning. |
+| conformance corpus | Known positive and negative packets produce their expected findings. | Every normative clause has a fixture. |
+| package tests | Asserted reference-implementation behavior remains true. | The reference implementation defines conformance. |
+| `verify.py` | The above tools run in order and generation preserves the candidate state. | Human ownership, placement, compatibility, and citation-meaning review occurred. |
+
+The gaps in the third column are review responsibilities. Do not describe a checker as proving more
+than it observes.
+
+## 13. Failure handling
+
+A failed gate is a result. Stop advancing the lifecycle, record what it showed, and return to the
+earliest affected phase:
+
+- a mistaken problem statement returns to the proposal;
+- a changed decision, compatibility cost, or feasibility claim returns to draft appraisal and user
+  authorization;
+- a missing projection, fixture, implementation, or document remains in incorporation;
+- a stale generated artifact is regenerated and reviewed; and
+- an environment-specific test failure is isolated and reported with the exact command and stack,
+  never relabeled as a pass.
+
+Do not weaken a check, raise a ledger ratchet, or add an exception solely to make a candidate pass.
+An exception records why the general rule does not apply and is checked to remain necessary.
+
+## 14. Length and focus
+
+A revision is a decision record, not a transcript. Retain the evidence on which the decision
+depends, the material rejected alternative, the normative decision, and the actual cost. Split a
+draft when independent decisions can be accepted separately. Do not split two decisions when each
+would leave an unusable or contradictory contract without the other.

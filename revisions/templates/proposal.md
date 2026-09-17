@@ -4,6 +4,7 @@
 |---|---|
 | **Status** | **Proposal** |
 | **Opened** | YYYY-MM-DD |
+| **Based on** | <full commit hash used for the observations and counts> |
 | **Affects** | <concepts and current specification locations, if known> |
 
 ## 1. Problem
@@ -38,8 +39,12 @@ decision. Remove this section if no questions remain. -->
 
 ## 7. Promotion criteria
 
-- [ ] The problem is demonstrated against the current generated v0.2 specification.
-- [ ] The affected abstraction layer and likely specification locations are identified.
-- [ ] Material alternatives and compatibility costs have been considered.
-- [ ] The intended direction is clear enough to express as testable normative clauses.
+- [ ] The baseline commit is recorded and the problem is demonstrated against its generated v0.2 specification.
+- [ ] The current owner of each affected fact and the affected abstraction level are identified.
+- [ ] Every impact-sketch surface is marked affected, unchanged with a reason, or unknown.
+- [ ] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
+- [ ] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
+- [ ] The evidence needed to distinguish conforming from non-conforming behavior is identified.
+- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The user has agreed that the work should advance to a revision draft.

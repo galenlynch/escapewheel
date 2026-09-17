@@ -25,6 +25,10 @@ A clause with no entry is **undisposed**, and this script exits non-zero listing
 revision therefore adds failures until someone says where each of its clauses went, which is the
 property neither audit had.
 
+New revisions enumerate their normative clauses in the `Decision clauses` metadata field. That is
+the exact set this ledger reads. Older revisions predate the field and retain the historical
+heading-and-keyword inference used to compile their existing entries.
+
 An `applied` entry's `where` is a list of `{ part, section }` targets, each with an optional `note`
 saying which piece of the clause landed there. Every one is resolved against that part's own
 headings, so a clause cannot be recorded as placed in a section that does not exist -- the defect
@@ -64,6 +68,8 @@ DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
 #: The same, keeping the depth, so a section's own text can be cut from its subsections'.
 NUMBERED = re.compile(r"^(#{1,4}) (\d+(?:\.\d+)*)\.?(?:\s|$)")
+DECLARED = re.compile(r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
+DECLARED_SECTION = re.compile(r"§(\d+(?:\.\d+)*)")
 
 
 def targets(where: object) -> tuple[list[tuple[str, str]], list[str]]:
@@ -177,6 +183,21 @@ def clauses() -> dict[str, str]:
         text = path.read_text()
         if "**Accepted**" not in text[:400]:
             continue
+        # Current revisions state the exact normative set. This avoids inferring force from a
+        # keyword: a declarative "becomes" binds without one, while Background can quote one.
+        if declared := DECLARED.search(text[:2000]):
+            titles = {
+                m.group(1): m.group(2).strip()
+                for m in re.finditer(r"^#{2,4} (\d+(?:\.\d+)*)\.?\s+(.+)$", text, re.MULTILINE)
+            }
+            named = DECLARED_SECTION.findall(declared.group(1))
+            if not named:
+                raise SystemExit(f"{path.name}: `Decision clauses` enumerates no section")
+            for section in named:
+                if section not in titles:
+                    raise SystemExit(f"{path.name}: `Decision clauses` names absent §{section}")
+                found[f"R{number} §{section}"] = titles[section]
+            continue
         # Every section from 2 onward, at either depth. Section 1 is Motivation by convention;
         # after that the numbering is not consistent -- R32 states its rules in §2, §3 and §4,
         # R30's order is §3.2, R21's codec floor is §3 -- so position cannot say what binds.
@@ -223,7 +244,7 @@ def main() -> int:
     binding, ledger = clauses(), recorded()
     # The ratchet's high-water mark lives beside the data it describes, not as a number in
     # another file that someone has to remember to lower. Falling below it rewrites it, so
-    # disposing a clause shows up as a diff and `verify.py`'s clean-tree stage sees it.
+    # disposing a clause shows up as a diff and `verify.py`'s candidate-state comparison sees it.
     baseline = tomllib.loads(LEDGER.read_text()).get("baseline", {}).get("undisposed", 0) if LEDGER.exists() else 0
     undisposed = {k: v for k, v in binding.items() if k not in ledger}
     # A disposition for a clause that no longer exists is as wrong as a missing one: the revision

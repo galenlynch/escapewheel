@@ -7,17 +7,18 @@ this citation resolve — and cannot see that a resolved citation now points at 
 
     python revisions/impact.py              # what the working tree changes, and who cites it
     python revisions/impact.py HEAD~3       # the same for a commit range
+    python revisions/impact.py --section 02:7.1 --section 05:8
 
-Reports each changed section with every file that cites it. It says nothing about whether a citer
+Reports each changed section with every working-tree file that cites it. It says nothing about whether a citer
 is stale, which needs reading: what it removes is having to find them first.
 """
 
 from __future__ import annotations
 
+import argparse
 import functools
 import re
 import subprocess
-import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -51,7 +52,7 @@ def sections(path: Path) -> list[tuple[int, str, str]]:
 def touched(ref: str | None) -> dict[str, set[str]]:
     """Which section of which part each changed line falls in."""
     args = ["git", "diff", "--unified=0"] + ([ref] if ref else []) + ["--", "escapewheel_poc_docs_v0.2"]
-    diff = subprocess.run(args, cwd=ROOT, capture_output=True, text=True).stdout
+    diff = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, check=False).stdout
     changed: dict[str, set[str]] = defaultdict(set)
     part = None
     for line in diff.splitlines():
@@ -76,8 +77,10 @@ def index() -> dict[tuple[str, str], tuple[str, ...]]:
     One pass over the tree, not one per section: a commit changing 51 sections walked it 51 times.
     """
     found: dict[tuple[str, str], list[str]] = defaultdict(list)
-    listed = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True,
-                            check=True).stdout.split()
+    listed = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+        cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.split()
     for name in listed:
         # The combined rendering is generated from the parts, so a citation inside it is one of
         # theirs counted twice.
@@ -102,10 +105,28 @@ def citers(part: str, section: str) -> list[str]:
 
 
 def main() -> int:
-    ref = sys.argv[1] if len(sys.argv) > 1 else None
-    changed = touched(ref)
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("ref", nargs="?", help="Git revision or range to compare with the working tree")
+    parser.add_argument(
+        "--section", action="append", default=[], metavar="PART:SECTION",
+        help="also report one explicit section, for example 02:7.1",
+    )
+    args = parser.parse_args()
+    changed = touched(args.ref)
+    for value in args.section:
+        match = re.fullmatch(r"(\d\d):(\d+(?:\.\d+)*)", value)
+        if match is None:
+            parser.error(f"--section expects PART:SECTION, got {value!r}")
+        part, section = match.groups()
+        files = sorted(PARTS.glob(f"{part}_*.md"))
+        if not files:
+            parser.error(f"--section names absent Part {part}")
+        declared = {number for _, number, _ in sections(files[0])}
+        if section not in declared:
+            parser.error(f"--section names absent Part {part} §{section}")
+        changed[part].add(section)
     if not changed:
-        print("no part changed" + (f" since {ref}" if ref else " in the working tree"))
+        print("no part changed" + (f" since {args.ref}" if args.ref else " in the working tree"))
         return 0
     total = 0
     for part in sorted(changed):

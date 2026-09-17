@@ -1,4 +1,4 @@
-"""Run every generator and every check in the monorepo, and fail on the first thing that is off.
+"""Run every generator and every check in the monorepo.
 
 The chain is reproducible — `registry/build.py` writes
 `logical_schemas.json`, `tables.md` and the registry README; `fixtures/build.py` writes the
@@ -7,19 +7,23 @@ claim rather than a property, and three artifacts drifted for many revisions wit
 noticing: the corpus stopped building at R54, the prototype's registry left R2's format at R48,
 and the registry README's counts were wrong in five places at once.
 
-The load-bearing stage is **regenerate, then demand a clean tree**. Every generated file is
-committed, so re-running the generators must change nothing; a diff means what is committed is
-not what the code produces, which is the failure the other checks cannot see.
+The load-bearing stage is **regenerate, then demand an unchanged candidate tree**. The candidate
+may already contain intentional generated changes, so the verifier snapshots their content before
+generation and compares it afterward. A change during verification means the candidate was stale
+or a generated file had been edited by hand. Comparing to ``HEAD`` instead would make this command
+incapable of passing before the very commit it is meant to check.
 
 Usage:
 
-    python verify.py            # every stage, ~25 s
+    python verify.py            # every stage; package suites dominate the runtime
     python verify.py --quick    # skip the test suites, which dominate the runtime
+    python verify.py --stage-timeout 60  # bound each individual stage
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import subprocess
 import sys
@@ -36,6 +40,8 @@ TOOLS = ROOT / "escapewheel-writer"
 STAGES: list[tuple[str, Path, list[str]]] = [
     ("registry: generate", ROOT / "registry", [sys.executable, "build.py"]),
     ("root: the documents' counts are current", ROOT, [sys.executable, "facts.py"]),
+    ("revisions: open stages are structurally complete", ROOT,
+     [sys.executable, "revisions/stages.py"]),
     ("registry: structural checks", ROOT / "registry",
      ["uv", "run", "--project", str(TOOLS), "python", "check.py"]),
     ("citations: every one resolves, and no part number repeats", ROOT / "revisions",
@@ -82,7 +88,7 @@ GENERATED = ("registry", "prototype", "fixtures", "escapewheel_poc_docs_v0.2",
              "STATUS.md", "TODO.md", "CONTRIBUTING.md")
 
 
-def run(cwd: Path, argv: list[str]) -> tuple[bool, str]:
+def run(cwd: Path, argv: list[str], timeout: float | None) -> tuple[bool, str]:
     """Run one stage, returning whether it passed and its last line of output.
 
     `TMPDIR` is dropped. The project points scratch at `/mnt/Data` to keep large temporary files
@@ -91,50 +97,104 @@ def run(cwd: Path, argv: list[str]) -> tuple[bool, str]:
     the suites fail for it.
     """
     env = {k: v for k, v in os.environ.items() if k != "TMPDIR"}
-    done = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False, env=env)
+    try:
+        done = subprocess.run(
+            argv, cwd=cwd, capture_output=True, text=True, check=False, env=env, timeout=timeout
+        )
+    except subprocess.TimeoutExpired as exc:
+        output = exc.stdout or exc.stderr or ""
+        if isinstance(output, bytes):
+            output = output.decode(errors="replace")
+        tail = output.strip().splitlines()
+        detail = f"; last output: {tail[-1][:80]}" if tail else ""
+        return False, f"timed out after {timeout:g}s{detail}"
     tail = (done.stdout or done.stderr).strip().splitlines()
     return done.returncode == 0, tail[-1] if tail else ""
 
 
-def clean(where: str) -> list[str]:
-    """Return the paths git reports as changed under `where`, which after generation must be none.
+def candidate_state(where: str) -> dict[str, tuple[int, str]]:
+    """Return the content state of every Git-visible change under ``where``.
 
-    Scoped by pathspec rather than by directory: this is one repository, so running `git status`
-    from a subdirectory would report the whole tree and every unrelated edit with it.
+    Only paths already different from ``HEAD`` need hashing. A generator changing a formerly clean
+    path adds it to the set; changing an intentional candidate diff changes its hash; and restoring
+    a dirty path removes it. Untracked, non-ignored files are included so a newly generated artifact
+    cannot escape merely because it has not been added yet.
     """
-    done = subprocess.run(["git", "status", "--porcelain", "--", where], cwd=ROOT,
-                          capture_output=True, text=True, check=False)
-    return [line for line in done.stdout.splitlines() if line.strip()]
+    changed = subprocess.run(
+        ["git", "diff", "--no-renames", "--name-only", "-z", "HEAD", "--", where],
+        cwd=ROOT, capture_output=True, check=True
+    ).stdout.split(b"\0")
+    untracked = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard", "-z", "--", where],
+        cwd=ROOT, capture_output=True, check=True
+    ).stdout.split(b"\0")
+    paths = sorted({name.decode() for name in changed + untracked if name})
+    state = {}
+    for name in paths:
+        path = ROOT / name
+        if path.is_symlink():
+            payload = os.readlink(path).encode()
+            mode = path.lstat().st_mode
+        elif path.is_file():
+            with path.open("rb") as stream:
+                payload = hashlib.file_digest(stream, "sha256").digest()
+            mode = path.stat().st_mode
+        else:
+            payload = b"<deleted>"
+            mode = 0
+        state[name] = (mode & 0o777, hashlib.sha256(payload).hexdigest())
+    return state
+
+
+def state_changes(
+    before: dict[str, tuple[int, str]], after: dict[str, tuple[int, str]]
+) -> list[str]:
+    """Return paths whose candidate state changed between two snapshots."""
+    return sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
 
 
 def main() -> int:
     """Run every stage in order, reporting each, and return non-zero on any failure."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--quick", action="store_true", help="skip the test suites")
+    parser.add_argument(
+        "--stage-timeout", type=float, default=300,
+        help="maximum seconds for one stage; 0 disables the timeout (default: 300)",
+    )
     args = parser.parse_args()
+    if args.stage_timeout < 0:
+        parser.error("--stage-timeout cannot be negative")
+    timeout = args.stage_timeout or None
 
     stages = list(STAGES)
     if not args.quick:
         stages += [(f"{p}: tests", ROOT / p, ["uv", "run", "pytest", "-q"]) for p in SUITES]
 
+    baseline = {where: candidate_state(where) for where in GENERATED}
     failed = []
     for name, cwd, argv in stages:
+        print(f"run  {name}", flush=True)
         clock = time.perf_counter()
-        passed, tail = run(cwd, argv)
-        print(f"{'ok  ' if passed else 'FAIL'} {name:46s} {time.perf_counter() - clock:5.1f}s  {tail[:60]}")
+        passed, tail = run(cwd, argv, timeout)
+        print(
+            f"{'ok  ' if passed else 'FAIL'} {name:46s} "
+            f"{time.perf_counter() - clock:5.1f}s  {tail[:80]}",
+            flush=True,
+        )
         if not passed:
             failed.append(name)
 
-    # The one thing no stage above can report: whether what is committed is what the code
-    # produces. Every generator has just run, so any diff is drift.
+    # The one thing no stage above can report: whether generation changed the candidate. Comparing
+    # snapshots admits intentional pre-commit diffs while still catching stale or hand-edited output.
     for where in GENERATED:
-        if dirty := clean(where):
-            failed.append(f"{where}: generated output differs from what is committed")
-            print(f"FAIL {where}: regenerating changed {len(dirty)} tracked file(s)")
-            for line in dirty[:10]:
-                print(f"       {line}")
+        changed = state_changes(baseline[where], candidate_state(where))
+        if changed:
+            failed.append(f"{where}: generation changed the candidate state")
+            print(f"FAIL {where}: generation changed {len(changed)} candidate path(s)")
+            for name in changed[:10]:
+                print(f"       {name}")
         else:
-            print(f"ok   {where}: regenerating changed nothing")
+            print(f"ok   {where}: generation preserved the candidate state")
 
     print()
     if failed:

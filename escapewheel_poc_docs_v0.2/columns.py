@@ -13,7 +13,8 @@ A part marks a table it wants rendered:
     <!-- /columns -->
 
 and this script fills the space between. The output is committed like every other generated
-artifact, so a part stays readable on its own and `verify.py`'s clean-tree stage catches drift.
+artifact, so a part stays readable on its own and `verify.py`'s candidate-state comparison catches
+drift.
 
     python columns.py            # rewrite the parts
     python columns.py --check    # fail where a rendering is stale
@@ -73,7 +74,7 @@ def main() -> int:
     if stale:
         print("stale column tables: " + ", ".join(stale) + " — run `python columns.py`")
         return 1
-    print(f"column tables current" if args.check else f"rewrote {written} part(s)")
+    print("column tables current" if args.check else f"rewrote {written} part(s)")
     return 0
 
 

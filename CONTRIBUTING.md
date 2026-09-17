@@ -51,18 +51,22 @@ embeds the registry and a reviewer should see it change; they are not files to e
 The registry regenerates from the frozen Part 02 plus accepted build blocks and rules: delete
 `logical_schemas.json` and `tables.md`, run `uv run --project ../escapewheel-writer python build.py`
 from `registry/`, and both come back byte-identical. `verify.py` asserts exactly
-that on every run — regenerate, then demand a clean git tree — which is the check that catches a
-committed artifact drifting from the code that produces it.
+that on every run — snapshot the intentional candidate, regenerate, then demand that generation
+preserved the snapshot. This catches an artifact drifting from its source while allowing the
+pre-commit change that intentionally updates both to pass.
 
 ## 3. The one command
 
 ```bash
 uv run --project escapewheel-writer python verify.py
 uv run --project escapewheel-writer python verify.py --quick  # skip the test suites
+uv run --project escapewheel-writer python verify.py --stage-timeout 60
 ```
 
 Run it before committing anything that touches the registry, a rule, a fixture, or a generator.
-CI runs the same command.
+It prints each stage before entering it; every stage is bounded to 300 seconds by default, and
+`--stage-timeout 0` disables that bound for an intentionally long monitored run. CI runs the same
+command.
 
 ## 3.1 Working with large packets
 
@@ -151,8 +155,8 @@ text remains authoritative.
 
 ## 6. Four traps, each of which has actually happened
 
-**Editing `logical_schemas.json`.** The next `build.py` overwrites it. `verify.py`'s clean-tree
-stage catches this, which is why that stage exists.
+**Editing `logical_schemas.json`.** The next `build.py` overwrites it. `verify.py`'s candidate-state
+comparison catches that overwrite, which is why the comparison exists.
 
 **A stale vendored schema.** `registry.schema.json` and `manifest.schema.json` are copied into two
 other packages because a wheel cannot read a file from another distribution. A stale copy has broken
@@ -194,13 +198,17 @@ there are is counted from both sources, by `facts.py` parsing them:
 
 | check | catches |
 |---|---|
+| `revisions/stages.py` | an open proposal or draft with no baseline, missing stage sections, template residue, or no exact draft clause list |
+| `revisions/check_citations.py` and `revisions/repoint.py` | a citation that does not resolve, or implementation source that names a historical decision where the current part owns the rule |
+| `revisions/impact.py` | working-tree files citing a changed or explicitly queried specification section |
 | `registry/check.py` | a registry that contradicts itself, a rule naming a removed column, a stale vendored copy, a naming convention broken without a declared reason |
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
 | `escapewheel_poc_docs_v0.2/ledger.py` | an accepted clause with nowhere recorded that it went |
+| `escapewheel_poc_docs_v0.2/columns.py --check` | a column table in a part that no longer reproduces the registry |
 | `combine.py --check` | a single-file spec rendering that no longer matches its parts |
 | `facts.py` | a count in a root document that no longer matches what it counts |
-| `verify.py`'s clean-tree stage | a committed artifact that is not what the code produces |
-| the three test suites | everything else |
+| `verify.py`'s candidate-state comparison | a stale or hand-edited artifact changed by regeneration |
+| the four package test suites | asserted reference-implementation behavior outside the checks above |
 
 ## 8. Reading the result
 

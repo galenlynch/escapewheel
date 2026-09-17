@@ -13,6 +13,11 @@ The accepted-revision template is a final-shape checklist, not a separate author
 accepted file should be the reviewed draft with its status and filename changed while the same
 change incorporates it into the generated v0.2 specification.
 
+Every open artifact records the full baseline commit. A draft and accepted revision also enumerate
+their exact normative subsections in `Decision clauses`; the ledger reads that list rather than
+inferring force from keywords. Preserve the completed impact inventory and evidence record through
+acceptance.
+
 All three stages follow the shared specification style in
 `../../escapewheel_poc_docs_v0.2/CONTRIBUTING.md`; revision-specific guidance is in
 `../CONTRIBUTING.md`.

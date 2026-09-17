@@ -24,13 +24,13 @@ reference whose antecedent is the previous clause ("R86 ... its §1.1"), which r
 resolves to nothing mechanically. Worth seeing, since the same shape is how a reference to another
 document's §7.3 gets read as this document's §7.
 
-Every other tracked document and source file is checked too, not only the revisions. The parts are
+Every other working-tree document and source file is checked too, not only the revisions. The parts are
 among them: they carry **428 citations** of each other and of the revisions that set their rules,
 which were read for numbering alone until this included them, and one named a section of a
 revision that has never had one. A broken part citation there is an error, as in a draft, because
 the parts are the statement of record.
 
-Every tracked Python file is checked too, not only the revisions. Part 00 §10.1 sends a comment to the
+Every working-tree Python file is checked too, not only the revisions. Part 00 §10.1 sends a comment to the
 part that states its rule, so a citation in the source is load-bearing in the same way -- and until
 this scanned them, five were broken: four naming section 56 of Part 00 and section 92 of Part 01,
 both v0.1 *line* numbers carried into section form, and one naming a section R70 never had. None
@@ -189,7 +189,7 @@ SKIPPED = ("nwb_lake_poc_docs/",)
 
 
 def elsewhere() -> list[Path]:
-    """Every other tracked document and source file a citation has to resolve in.
+    """Every other working-tree document and source file a citation has to resolve in.
 
     A citation is load-bearing wherever it is written. Reading the revisions and the Python alone
     left the developer documentation unchecked, and seven citations in it resolved to nothing --
@@ -197,7 +197,7 @@ def elsewhere() -> list[Path]:
     section of Part 09 that part has never carried. Spelled in prose rather than as citations,
     since this file is one of the files it reads.
     """
-    listed = subprocess.run(["git", "ls-files"], cwd=HERE.parent,
+    listed = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard"], cwd=HERE.parent,
                             capture_output=True, text=True, check=True).stdout.split()
     found = []
     for name in listed:
@@ -207,7 +207,7 @@ def elsewhere() -> list[Path]:
         if path.suffix not in {".py", ".md"} or not path.is_file():
             continue
         # The revisions and the drafts are read in their own pass.
-        if name.startswith(("revisions/R", "revisions/drafts/")):
+        if name.startswith(("revisions/R", "revisions/drafts/", "revisions/proposals/")):
             continue
         found.append(path)
     return found
@@ -219,6 +219,7 @@ def main() -> int:
     args = ap.parse_args()
 
     paths = sorted(HERE.glob("R*.md"), key=lambda p: int(NUMBER.match(p.name).group(1)))
+    paths += sorted((HERE / "proposals").glob("*.md"))
     paths += sorted((HERE / "drafts").glob("*.md"))
     # An editor's lock file is a symlink to a target that never existed -- Emacs writes
     # `.#name.md -> user@host:pid`. Following one raises, so a full `verify.py` would fail for as
@@ -274,7 +275,7 @@ def main() -> int:
             broken += 1
 
     tail = f", {historical} citing the frozen v0.1 numbering" if historical else ""
-    print(f"{len(paths)} revisions and {len(code)} other tracked files, "
+    print(f"{len(paths)} revision documents and {len(code)} other working-tree files, "
           f"{broken} unresolved citation(s){tail}")
     return 1 if broken else 0
 

@@ -3,9 +3,11 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
+| **Based on** | <full commit hash against which evidence and counts were appraised> |
 | **Amends** | <part names and section numbers, with a short description of each change> |
 | **Depends on** | <accepted revision clauses or “None”> |
 | **Profile** | <all or a profile identifier> |
+| **Decision clauses** | <every subsection under §3, or §3 when Decision has no subsections> |
 
 <State which numbered sections are normative and which are informative.>
 
@@ -37,7 +39,28 @@ Delete this section if it adds nothing. -->
 <!-- State compatibility effects, migration or rebuild costs, affected implementation surfaces,
 and the conformance evidence that must change. -->
 
-## 6. Open
+Use this inventory so an affected surface cannot disappear between appraisal and incorporation.
+Write “unchanged” with a reason rather than leaving a cell empty.
+
+| surface | required change or reason unchanged | evidence after incorporation |
+|---|---|---|
+| semantic prose | | |
+| logical prose and registry | | |
+| physical profiles | | |
+| packet catalog and JSON Schemas | | |
+| validation and import | | |
+| extensions | | |
+| reader, writer, validator, adapters | | |
+| conformance fixtures and tests | | |
+| generated publications and developer documentation | | |
+
+## 6. Conformance and implementation evidence
+
+<!-- Name the positive and negative cases that distinguish the candidate rule from the current
+rule. Identify the implementation tests or probes that establish feasibility. A test that merely
+repeats the draft is not evidence that the owning specification artifacts agree. -->
+
+## 7. Open
 
 <!-- Optional. Record deliberately deferred questions that do not prevent this decision. Delete
 this section rather than writing “None”. -->

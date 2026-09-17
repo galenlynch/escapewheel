@@ -140,8 +140,9 @@ def ledger() -> dict[str, list[str]]:
 
 
 def tracked() -> list[str]:
-    """Every tracked Python file, relative to the repository root."""
-    listed = subprocess.run(["git", "ls-files", "*.py"], cwd=ROOT,
+    """Every working-tree Python file, relative to the repository root."""
+    listed = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.py"], cwd=ROOT,
                             capture_output=True, text=True, check=True).stdout.split()
     return [name for name in listed if (ROOT / name).is_file()]
 
