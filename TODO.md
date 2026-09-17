@@ -211,6 +211,40 @@ for a registered kind, so `_delivery_problems` refuses it unless the recipe sets
 `[source.delivery]` command (Part 05 §3.9). The refusal names the kind and says what to add, and no
 recipe is tracked in this repository, so nothing broke — but a real AIND recipe needs the line.
 
+**The three real recipes now deliver every registered kind out of process**, 2026-09-17. Each names
+`aind_nwb` where it named `nwb`, and each of its `session`, `aind_nwb` and `video` entries carries a
+`[source.delivery]` block: a `declaration` written by `escapewheel declare` into the packet's own
+`declarations/`, and a `command` naming the environment `escapewheel-aind` is installed in. The
+protocol is `stream-v0.1`, left to the document rather than restated in the recipe, since the
+adapter is what knows it. Checked from the **writer's** venv, where `discovered()` is empty and
+`aind_nwb` cannot be imported at all — so what settles ownership before a build launches anything is
+the document, which is the boundary doing its work rather than being stepped around. All three
+report **0 errors**, and `session.order` puts `aind_nwb` ahead of `session` in each.
+
+**A kind is matched by name, so renaming one is a cross-package edit.** `session.order` raises on a
+`CONSUMES` entry the recipe does not declare, and `escapewheel_aind.SessionSource` declared `nwb` —
+which the rename made unsatisfiable, loudly and in every recipe at once. It now declares `aind_nwb`,
+pairing the adapter with the NWB reader it ships beside. The cost is that this `session` can no
+longer be ordered against the base `nwb` adapter; no recipe wants that pairing, since a recipe
+reaching for AIND's session metadata is reading an AIND NWB.
+
+**`df-packet` was four resources short and nothing had said so.** It owned `core.electrode_coordinates`
+and `core.unit_coordinates` without `core.coordinate_frames`, `core.coordinate_frame_axes`,
+`core.electrode_coordinate_values` or `core.unit_coordinate_values`, so two declared references
+resolved to a table no source owned. R63 §2 is exactly this: an omission contradicts nothing, so the
+recipe passed every test the tool applied until the reference check ran. The four are added; its
+NWB carries `ccf_ap`, `ccf_dv`, `ccf_ml` and `brain_region_id` on its electrodes, so they are real
+rows rather than an empty claim.
+
+**`PREFERRED`'s one entry now arbitrates nothing.** `{"core.probes": "nwb"}` names a kind no real
+recipe carries any more, and `_resolve_ownership` guards with `preferred in kinds`, so it is skipped
+rather than wrong. It cannot simply move: `preferences()` keeps the built-in and warns when a
+registered entry redefines a resource, so `escapewheel_aind` cannot claim `core.probes` for
+`aind_nwb` even though it is the kind that should win it. Two writer tests still exercise the entry
+against the built-in `nwb` kind and pass. This is the staleness R108 §3.4 found by hand and
+`test_every_encoding_exception_names_a_column_that_exists` guards for encodings — a preference naming
+a kind nothing registers wants the same check.
+
 **The inventory is done**, 2026-09-16, and it is
 [`inventory/nwb-adapter-base-and-dialect.md`](inventory/nwb-adapter-base-and-dialect.md): every read
 classified against the schema the file itself caches, `specifications/core/2.9.0`. Base NWB defines
@@ -378,6 +412,12 @@ build says so rather than leaving the packet quietly poorer.
 `core.sessions.session_end_time` by 17 minutes in the trial run. Conforming and not silent: a build
 notes each one as `went unchecked; session states none`, twice per fact. Name a report path in any
 recipe that delivers `session` or `nwb`.
+
+Done for the three real recipes, 2026-09-17: `session` and `aind_nwb` each name
+`reports/<kind>.json`, and `video` names none because its `STATES` is empty and `REPORT_AS_FILE`
+would carry nothing. The comparison is visible in the check's output — six warnings per recipe
+reading `subject.subject_id is declared and aind_nwb, session states it; the build compares them`,
+which is R87 §2 reaching a delivered source for the first time.
 
 **Parked: what a nullable identifier's null means.** Nothing obliges an adapter to report a value it
 could not fill — Part 09 §5.8's report is a MAY — so a consumer cannot tell
