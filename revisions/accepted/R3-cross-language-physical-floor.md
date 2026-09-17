@@ -422,7 +422,7 @@ This amends Part 04's required top-level manifest fields.
 
 ### 7.3 Evidence
 
-Produced by [`conformance/zarr-probe/`](../conformance/zarr-probe/); re-run it against
+Produced by [`conformance/zarr-probe/`](../../conformance/zarr-probe/); re-run it against
 newer library versions before trusting this section. Recorded run: zarr-python 3.3.0,
 numcodecs 0.16.5, Zarr.jl 0.10.2, Julia 1.12.0.
 

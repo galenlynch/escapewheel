@@ -43,7 +43,7 @@ One repository since 2026-09-04; the `Repo` column is gone with the split that n
 |---|---|
 | `escapewheel_poc_docs_v0.2/` | Authoritative README and numbered parts, plus their generated convenience rendering. |
 | `nwb_lake_poc_docs/` | Frozen starting point. Not edited. |
-| `revisions/` | Proposals, drafts, and accepted decision records; see `revisions/CONTRIBUTING.md`. |
+| `revisions/` | Specification-change lifecycle and records; start at `revisions/README.md`. |
 | `conformance/` | Probe suites producing the evidence revisions cite. |
 | `prototype/registry-codegen/` | R2's chain working end to end, 3 tables. |
 | `fixtures/` | Phase 0 packets and the conformance corpus. |

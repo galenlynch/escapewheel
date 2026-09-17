@@ -7,7 +7,7 @@ predate the current process.
 |---|---|
 | `proposal.md` | `../proposals/<slug>.md` |
 | `draft.md` | `../drafts/<slug>.md` |
-| `accepted-revision.md` | `../R<N>-<slug>.md`, only during user-authorized acceptance and incorporation |
+| `accepted-revision.md` | `../accepted/R<N>-<slug>.md`, only during explicitly authorized acceptance and incorporation |
 | `change-evidence.json` | `../evidence/R<N>.json`, created with the accepted revision |
 
 The accepted-revision template is a final-shape checklist, not a separate authoring pass. An

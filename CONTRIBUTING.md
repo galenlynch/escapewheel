@@ -21,7 +21,7 @@ which files a person writes, the rest is a straight line.
 | `escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md` | generated convenience rendering; never edited directly |
 | `revisions/proposals/*.md` | active problem statements and alternatives; non-authoritative |
 | `revisions/drafts/*.md` | candidate normative changes; non-authoritative and unnumbered |
-| `revisions/R<N>-*.md` | accepted decision records explaining changes incorporated into v0.2 |
+| `revisions/accepted/R<N>-*.md` | accepted decision records explaining changes incorporated into v0.2 |
 | `registry/build.py` | one block per revision, applying it to the parsed Part 02 |
 | `registry/rules.json` | Tier 2 rules — the checks structure cannot imply |
 | `registry/registry.schema.json` | the meta-schema a registry document validates against |
@@ -152,9 +152,9 @@ the revision that mandates them, so a column's type traces to the argument that 
 `registry/tables.md` answers both what a table is and why. A block with no revision breaks that
 chain silently.
 
-Only the user authorizes moving a draft to an accepted revision. Acceptance and incorporation into
-the generated v0.2 specification are one reviewable change; until it is complete, the existing v0.2
-text remains authoritative.
+Moving a draft to an accepted revision requires explicit authorization. Acceptance and
+incorporation into the generated v0.2 specification are one reviewable change; until it is
+complete, the existing v0.2 text remains authoritative.
 
 ## 6. Four traps, each of which has actually happened
 

@@ -40,7 +40,7 @@ check("table set matches R9 §2 ledger", expected ^ set(T))
 # The inverse, and the one that was actually missing: a revision may be accepted, implemented,
 # and left out of the list. R54, R65 and R66 all were, for several revisions each, because the
 # list was hand-maintained and only the stamped direction was checked.
-_accepted = {f"R{re.match(r'R(\d+)', q.name).group(1)}" for q in (HERE.parent / "revisions").glob("R*.md")
+_accepted = {f"R{re.match(r'R(\d+)', q.name).group(1)}" for q in (HERE.parent / "revisions/accepted").glob("R[0-9]*.md")
              if "**Accepted**" in q.read_text()[:400]}
 _listed = set(REG.get("derived_from", {}).get("revisions", []))
 check("every accepted revision is declared in derived_from",

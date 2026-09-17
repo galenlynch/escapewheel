@@ -31,14 +31,13 @@ The lifecycle has three authored artifacts and three separate gates:
 |---|---|---|---|
 | proposal | `proposals/<slug>.md` | Establish the problem, ownership, evidence, alternatives, impact, and questions. | None |
 | revision draft | `drafts/<slug>.md` | State one candidate decision and its incorporation and evidence plan. | None |
-| accepted revision | `R<N>-<slug>.md` | Preserve the approved decision, evidence, consequences, and provenance. | Historical decision record |
+| accepted revision | `accepted/R<N>-<slug>.md` | Preserve the approved decision, evidence, consequences, and provenance. | Historical decision record |
 
 The gates are:
 
 1. **Proposal promotion:** the problem, scope, ownership, and direction are settled well enough to
    write candidate normative text.
-2. **Acceptance authorization:** the user approves the exact appraised draft and authorizes its
-   incorporation.
+2. **Acceptance authorization:** the exact appraised draft is approved for incorporation.
 3. **Incorporation closure:** every normative owner, generated projection, conformance artifact,
    affected implementation, and document agrees, and verification passes.
 
@@ -47,7 +46,7 @@ partially edited working tree authoritative. The generated v0.2 material at the 
 commit remains authoritative until acceptance and incorporation are committed as one reviewable
 change.
 
-Only the user authorizes acceptance. A proposal or draft carries no `R<N>`.
+Acceptance requires explicit authorization. A proposal or draft carries no `R<N>`.
 
 ## 3. Phase A — establish the baseline
 
@@ -281,14 +280,14 @@ Then read every citation, not merely whether it resolves. A resolved section can
 wrong thing.
 
 Record the appraisal date, baseline, word count, dependency order, and material finding in
-`drafts/README.md`. Present the user with the exact draft, compatibility effects, deferred work,
+`drafts/README.md`. Present reviewers with the exact draft, compatibility effects, deferred work,
 impact inventory, and check results. Only then request acceptance authorization.
 
 ## 7. Phase D — authorize acceptance and freeze the decision
 
-After explicit user authorization:
+After explicit acceptance authorization:
 
-1. Assign the next free `R<N>` and move the draft to `R<N>-<slug>.md`.
+1. Assign the next free `R<N>` and move the draft to `accepted/R<N>-<slug>.md`.
 2. Set `Status` to `Accepted` with the date. Preserve `Based on`, `Decision clauses`, the completed
    impact inventory, and the approved normative text.
 3. Copy `templates/change-evidence.json` to `evidence/R<N>.json`. Give every Decision clause a

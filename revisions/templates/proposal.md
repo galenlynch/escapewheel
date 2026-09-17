@@ -47,4 +47,4 @@ decision. Remove this section if no questions remain. -->
 - [ ] The evidence needed to distinguish conforming from non-conforming behavior is identified.
 - [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [ ] The user has agreed that the work should advance to a revision draft.
+- [ ] The proposal has explicit approval to advance to a revision draft.

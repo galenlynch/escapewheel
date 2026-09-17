@@ -4,8 +4,8 @@ A draft is candidate normative text for a problem whose scope and intended direc
 been settled. Exploratory work belongs in `../proposals/`; start a draft from
 `../templates/draft.md`.
 
-A draft has no number. It gets one only when the user accepts it for incorporation, taken from the
-end of the accepted range, so the numbered space reads in the order revisions were **applied**
+A draft has no number. It gets one only after acceptance is authorized, taken from the end of the
+accepted range, so the numbered space reads in the order revisions were **applied**
 rather than the order they were written. Nothing outside this directory may cite a draft by number,
 because it has none, and a draft does not change the authoritative generated v0.2 specification.
 

@@ -20,6 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 HERE = ROOT / "revisions"
+ACCEPTED = HERE / "accepted"
 MANIFESTS = HERE / "evidence"
 DECLARED = re.compile(
     r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE
@@ -267,7 +268,7 @@ def collected(project: str) -> tuple[set[str], str | None]:
 def accepted() -> dict[str, tuple[Path, set[str]]]:
     """Return accepted revisions using explicit Decision clauses."""
     found = {}
-    for path in HERE.glob("R*.md"):
+    for path in ACCEPTED.glob("R[0-9]*.md"):
         match = REVISION.match(path.name)
         declared = DECLARED.search(path.read_text()[:2000])
         if match and declared:

@@ -1,7 +1,7 @@
 # Parquet spike-table probe
 
 Produces the Parquet evidence cited in
-[R3 §7.3](../../revisions/R3-cross-language-physical-floor.md).
+[R3 §7.3](../../revisions/accepted/R3-cross-language-physical-floor.md).
 
 | script | question |
 |---|---|

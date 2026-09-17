@@ -1,7 +1,7 @@
 # Schema registry
 
 `logical_schemas.json` is the registry content: the machine-readable statement of what a
-conforming table is, in the format [R2](../revisions/R2-schema-registry-format.md) defines.
+conforming table is, in the format [R2](../revisions/accepted/R2-schema-registry-format.md) defines.
 It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 <!-- BEGIN generated: counts -->

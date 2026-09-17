@@ -131,7 +131,7 @@ def facts() -> dict[str, str]:
     discriminators = sum(1 for c in columns if c.get("role") == "discriminator")
 
     accepted, withdrawn, proposed = set(), set(), set()
-    for path in (ROOT / "revisions").glob("R*.md"):
+    for path in (ROOT / "revisions/accepted").glob("R[0-9]*.md"):
         number = int(re.match(r"R(\d+)", path.name).group(1))
         head = path.read_text()[:400]
         (accepted if "**Accepted**" in head else withdrawn if "withdrawn" in head.lower() else proposed).add(number)

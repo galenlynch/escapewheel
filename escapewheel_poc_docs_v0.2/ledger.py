@@ -65,7 +65,7 @@ import tomllib
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-REVISIONS = HERE.parent / "revisions"
+REVISIONS = HERE.parent / "revisions/accepted"
 LEDGER = HERE / "applied.toml"
 REGISTRY_TARGETS = HERE / "registry-targets.toml"
 CORROBORATION_EXCEPTIONS = HERE / "corroboration-exceptions.toml"
@@ -296,7 +296,7 @@ def clauses() -> dict[str, str]:
     as such, which is a judgement someone recorded rather than a heuristic that dropped it.
     """
     found = {}
-    for path in sorted(REVISIONS.glob("R*.md"), key=lambda p: int(re.match(r"R(\d+)", p.name).group(1))):
+    for path in sorted(REVISIONS.glob("R[0-9]*.md"), key=lambda p: int(re.match(r"R(\d+)", p.name).group(1))):
         number = re.match(r"R(\d+)", path.name).group(1)
         text = path.read_text()
         if "**Accepted**" not in text[:400]:

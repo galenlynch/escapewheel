@@ -1,6 +1,6 @@
 # Phase 0 fixtures
 
-A conforming single-session packet per [R1 §6](../revisions/R1-single-session-primary.md),
+A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
 and twenty-five variants each violating exactly one rule. Together they are the conformance
 corpus: expected findings recorded as data, so any implementation can be checked against
 the same evidence rather than against a prose description of what should happen.

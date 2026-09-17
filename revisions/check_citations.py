@@ -9,7 +9,7 @@ six references to a draft's §5 left pointing at Consequence after it was restru
 
 Three forms are resolved:
 
-    R92 §2.2        against revisions/R92-*.md
+    R92 §2.2        against revisions/accepted/R92-*.md
     Part 03 §5.4       against escapewheel_poc_docs_v0.2/03_*.md
     §3.1            against the citing document itself
 
@@ -63,6 +63,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+ACCEPTED = HERE / "accepted"
 PARTS = HERE.parent / "escapewheel_poc_docs_v0.2"
 
 #: `## 3.` and `### 3.1 ` alike; the trailing dot is optional and the numbering may nest.
@@ -119,7 +120,7 @@ def numbering(text: str) -> tuple[list[str], list[tuple[str, str]]]:
 
 def document(number: str) -> Path | None:
     """The accepted revision with this number, if one exists."""
-    found = sorted(HERE.glob(f"R{number}-*.md"))
+    found = sorted(ACCEPTED.glob(f"R{number}-*.md"))
     return found[0] if found else None
 
 
@@ -207,7 +208,7 @@ def elsewhere() -> list[Path]:
         if path.suffix not in {".py", ".md"} or not path.is_file():
             continue
         # The revisions and the drafts are read in their own pass.
-        if name.startswith(("revisions/R", "revisions/drafts/", "revisions/proposals/")):
+        if name.startswith(("revisions/accepted/", "revisions/drafts/", "revisions/proposals/")):
             continue
         found.append(path)
     return found
@@ -218,7 +219,7 @@ def main() -> int:
     ap.add_argument("--quiet", action="store_true", help="errors only")
     args = ap.parse_args()
 
-    paths = sorted(HERE.glob("R*.md"), key=lambda p: int(NUMBER.match(p.name).group(1)))
+    paths = sorted(ACCEPTED.glob("R[0-9]*.md"), key=lambda p: int(NUMBER.match(p.name).group(1)))
     paths += sorted((HERE / "proposals").glob("*.md"))
     paths += sorted((HERE / "drafts").glob("*.md"))
     # An editor's lock file is a symlink to a target that never existed -- Emacs writes

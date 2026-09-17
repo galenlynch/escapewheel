@@ -1,6 +1,6 @@
 # Registry codegen prototype
 
-Demonstrates the chain [R2](../../revisions/R2-schema-registry-format.md) specifies:
+Demonstrates the chain [R2](../../revisions/accepted/R2-schema-registry-format.md) specifies:
 a registry document is data, a generator turns it into SQL, and that SQL is the validator.
 
 ```
