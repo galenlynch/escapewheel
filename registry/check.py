@@ -29,7 +29,7 @@ def check(label, bad, fmt=str):
 
 
 ledger = subprocess.run([sys.executable, str(HERE.parent / "conformance/spec-sweep/tables.py")],
-                        capture_output=True, text=True).stdout
+                        capture_output=True, text=True, check=False).stdout
 # Namespaces beyond core exist from Part 00 §3; match any <namespace>.<table> line.
 expected = {l.strip() for l in ledger.splitlines()
             if re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", l.strip())}
@@ -60,7 +60,10 @@ check("a since names a revision",
 # is held to exactly what an extension is held to, which is only true while there is one
 # implementation of them.
 sys.path.insert(0, str(HERE))
-from escapewheel_validator.registry_document import declarations, structural  # noqa: E402
+from escapewheel_validator.registry_document import (
+    declarations,
+    structural,
+)
 
 
 def _structural(tables, universe, prefix="", *, is_core=False):
@@ -103,7 +106,7 @@ check("every rules.json table exists in the registry", sorted(set(RULES) - set(T
 # Template invocations carry no id until build.py expands them (R24 §3). Expand through the
 # same function rather than a second copy, so this cannot drift from what the build does.
 sys.path.insert(0, str(HERE))
-from build import expand  # noqa: E402
+from build import expand
 
 authored_rules = []
 for resource, rs in RULES.items():
@@ -335,9 +338,11 @@ for _r, _t in ALL.items():
             if _field in _c and not _is:
                 _disc.append(f"{_r}.{_c['name']}: {_field} on a {_c.get('role')}, not a discriminator")
         # A paired value lives in the named table's key space, so it is an identifier here too.
-        if (_paired := _c.get("discriminates")) is not None:
-            if _paired not in _names:
-                _disc.append(f"{_r}.{_c['name']}: discriminates {_paired}, which is not a column here")
+        if (
+            (_paired := _c.get("discriminates")) is not None
+            and _paired not in _names
+        ):
+            _disc.append(f"{_r}.{_c['name']}: discriminates {_paired}, which is not a column here")
 check("a discriminator declares what it resolves to", sorted(_disc))
 
 # Part 02 §8.3. Three resolution shapes and only one was declared: `discriminates` separates a paired
@@ -454,7 +459,7 @@ check("a declared unit or clock source resolves", sorted(bad_context))
 # means the build was not run. Checked here because this is what one runs after touching the
 # registry, and because a stale copy has three times been reported as a hundred findings about
 # the data rather than one about the copy.
-from build import VENDORED  # noqa: E402 - after the ledger, so a broken build fails first
+from build import VENDORED
 
 stale = []
 for _schema, _consumer in VENDORED.items():
@@ -468,7 +473,7 @@ check("every vendored schema matches its source", stale)
 
 # The same argument one level up: a count restated in prose goes stale, and this one did --
 # 33 tables against 34, 51 rules against 61, and two rules revisions had removed.
-import render  # noqa: E402 - after the ledger, so a broken build fails first
+import render
 
 _readme = (HERE / "README.md").read_text()
 check("README's generated regions are current",
@@ -545,7 +550,7 @@ try:
         for r in t_["rules"]:
             try:
                 con.sql(r["sql"]).fetchall()
-            except Exception as e:
+            except duckdb.Error as e:
                 broken.append((r["id"], str(e).splitlines()[0][:70]))
     check("every Tier 2 rule is executable SQL", broken)
     print(f"      {sum(len(t_['rules']) for t_ in ALL.values())} rules executed against "
