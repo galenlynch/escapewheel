@@ -512,7 +512,8 @@ def fetch(
         Where a report is expected. Removed before the run, so last week's findings are not
         reported as this run's (Part 09 §5.8).
     workspace : Path
-        A directory to put a delivery and a socket in, under the packet's staging area.
+        A directory to put a delivery and a socket in, beside the packet; a successful commit
+        removes it.
 
     Returns
     -------

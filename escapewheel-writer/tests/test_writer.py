@@ -85,6 +85,30 @@ def test_a_failing_packet_is_not_committed(tmp_path, registry, minimal):
     assert any(f.check == "core.clocks.session_id_resolves" for f in caught.value.report.findings)
 
 
+def _workspace(tmp_path):
+    """A delivery workspace holding what a `files-v0.1` source hands over."""
+    workspace = tmp_path / "s001.deliveries"
+    (workspace / "tables" / "delivery").mkdir(parents=True)
+    (workspace / "tables" / "delivery" / "core.probes.parquet").write_bytes(b"")
+    return workspace
+
+
+def test_the_delivery_workspace_is_gone_after_a_successful_commit(tmp_path, registry, minimal):
+    """Nothing in a committed packet points into it, so leaving it behind only accumulates."""
+    workspace = _workspace(tmp_path)
+    _write(tmp_path / "s001", registry, minimal, workspace=workspace)
+    assert not workspace.exists()
+
+
+def test_a_refused_commit_keeps_the_delivery_workspace(tmp_path, registry, minimal):
+    """Kept with staging: what a source delivered is evidence of why the packet failed."""
+    broken = {**minimal, "core.clocks": [{**minimal["core.clocks"][0], "session_id": "s999"}]}
+    workspace = _workspace(tmp_path)
+    with pytest.raises(CommitRefused):
+        _write(tmp_path / "s001", registry, broken, workspace=workspace)
+    assert (workspace / "tables" / "delivery" / "core.probes.parquet").exists()
+
+
 def test_tables_are_written_in_the_registry_order(tmp_path, registry, minimal):
     """Part 03 §5.3: sorted by the primary key, whatever order the adapter emitted."""
     out_of_order = [{"subject_id": s, "species": "Mus musculus", "sex": "male"} for s in ("m004", "m002", "m003")]

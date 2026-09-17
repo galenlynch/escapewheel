@@ -803,6 +803,7 @@ def build(
         # An extension reaches the writer across a file or a subprocess, so what it says about its
         # own columns arrives as recipe data rather than as a Python object it hands over.
         encoding_exceptions=_encoding_exceptions(recipe),
+        workspace=context.workspace,
     )
 
     # Part 05 §3.1: the recipe supplies `core.subjects` only where no source owns it, so a packet

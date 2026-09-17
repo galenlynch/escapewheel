@@ -450,7 +450,12 @@ class PacketWriter:
         extensions: Sequence[Mapping[str, Any]] = (),
         session: str | None = None,
         encoding_exceptions: Mapping[str, Mapping[str, tuple[str, ...]]] | None = None,
+        workspace: str | Path | None = None,
     ) -> None:
+        #: Where delivered sources handed over their files and arrays, beside the packet rather than
+        #: in it. Removed once a commit promotes, since every array has moved into the packet by then
+        #: and every delivery has been read; kept on a refusal, with staging, as evidence of why.
+        self._workspace = Path(workspace) if workspace is not None else None
         #: Encoding exceptions an extension supplies for its own tables, keyed list-name to
         #: resource to columns (`encoding.encodings`). Core names no extension table, so this is
         #: how one says what its measurements do without core being edited to know it exists.
@@ -1154,7 +1159,8 @@ class PacketWriter:
         ValueError
             If no `core.sessions` records were added.
         CommitRefused
-            If validation found errors. Nothing is committed and staging is left in place.
+            If validation found errors. Nothing is committed, and staging and the delivery
+            workspace are left in place.
         """
         root = Path(root)
         if (root / MANIFEST).exists():
@@ -1245,6 +1251,8 @@ class PacketWriter:
         candidate.write_text(json.dumps(self._manifest(entries, report), indent=2) + "\n")
         os.replace(candidate, root / MANIFEST)
         shutil.rmtree(staging)
+        if self._workspace is not None and self._workspace.exists():
+            shutil.rmtree(self._workspace)
         say(f"promoted in {time.perf_counter() - clock:.1f} s")
         return report
 
