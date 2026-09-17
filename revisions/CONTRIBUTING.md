@@ -4,6 +4,33 @@ This guide defines the file-based process for proposing, drafting, accepting, an
 change to the Escapewheel specification. The repository-wide
 [authority model](../README.md#authority) applies throughout.
 
+## Scope of this process
+
+This is a specification-change process, not a general repository-change process. Use it when a
+change would alter what a conforming packet or actor is permitted or required to do, how a
+normative statement is interpreted, or the packet contract expressed by an incorporated registry
+or schema. Changes to specification authority, identities, required resources, validation
+outcomes, and other conformance rules are in scope.
+
+Use the ordinary repository workflow instead for:
+
+- root and package README improvements that do not change the specification;
+- agent instructions, contribution guidance, and other developer documentation;
+- implementation changes that bring code into conformance with an unambiguous existing rule;
+- tests, continuous integration, refactoring, and maintenance that do not change the contract;
+- meaning-preserving specification edits such as spelling, formatting, repaired links, and
+  regenerated facts or renderings.
+
+The specification README is governed by the same boundary. Navigation, publication status, and a
+clear reference to an existing authority are editorial. Changing which artifacts bind, how a
+conflict is resolved, or what constitutes a specification release is a specification change and
+uses this process.
+
+When classification is uncertain, ask whether two conforming implementations could behave
+differently after the change while both following the text. If so, treat it as a specification
+change. A proposal is still optional when the user has already settled the problem, scope, and
+direction, as described below.
+
 ## Authority and lifecycle
 
 The process has three deliberately different artifacts:
