@@ -66,7 +66,10 @@ uv run --project escapewheel-writer python verify.py --stage-timeout 60
 Run it before committing anything that touches the registry, a rule, a fixture, or a generator.
 It prints each stage before entering it; every stage is bounded to 300 seconds by default, and
 `--stage-timeout 0` disables that bound for an intentionally long monitored run. CI runs the same
-command.
+command. CI first runs `ci/runtime_capabilities.py`, which proves its runner can wake the
+asynchronous thread bridge used by Zarr, round-trip a Zarr v3 array, and bind the Unix-domain socket
+used by Arrow Flight. A runner lacking those facilities is unsuitable for the full suite and fails
+before a package test can hang or be mistaken for an implementation defect.
 
 ## 3.1 Working with large packets
 
@@ -178,8 +181,10 @@ should be.
 dropped during compilation of the v0.2 prose — `R53 §2.4`'s `int64` escape, `R21`'s codec floor,
 `R36 §2.2`'s prefix digest reversed into "undefined". A citation sweep cannot see these, because
 the revision is cited for its *other* clauses. `escapewheel_poc_docs_v0.2/ledger.py` is what
-sees them: `applied.toml` records where each clause went, and the count of undisposed ones may
-fall and must not rise.
+sees them: `applied.toml` records where each clause went, `registry-targets.toml` resolves exact
+JSON locations, and `corroboration-exceptions.toml` enumerates every reviewed legacy target that
+lacks inline provenance. The undisposed-clause backlog may fall and must not rise; a count cannot
+mask a new provenance exception.
 
 <!-- BEGIN facts: clauses -->
 `ledger.py` enumerates 612 Decision clauses across the accepted revisions.
@@ -199,11 +204,13 @@ there are is counted from both sources, by `facts.py` parsing them:
 | check | catches |
 |---|---|
 | `revisions/stages.py` | an open proposal or draft with no baseline, missing stage sections, template residue, or no exact draft clause list |
+| `revisions/test_evidence.py` | regressions in owner, corpus, verifier-stage, and complete-manifest validation |
+| `revisions/evidence.py` | an accepted current-format clause with no owner, projection, conformance evidence, implementation disposition, or documentation disposition |
 | `revisions/check_citations.py` and `revisions/repoint.py` | a citation that does not resolve, or implementation source that names a historical decision where the current part owns the rule |
 | `revisions/impact.py` | working-tree files citing a changed or explicitly queried specification section |
 | `registry/check.py` | a registry that contradicts itself, a rule naming a removed column, a stale vendored copy, a naming convention broken without a declared reason |
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
-| `escapewheel_poc_docs_v0.2/ledger.py` | an accepted clause with nowhere recorded that it went |
+| `escapewheel_poc_docs_v0.2/ledger.py` | an accepted clause with no disposition, an unresolved registry JSON Pointer, or provenance absent outside the exact reviewed exception set |
 | `escapewheel_poc_docs_v0.2/columns.py --check` | a column table in a part that no longer reproduces the registry |
 | `combine.py --check` | a single-file spec rendering that no longer matches its parts |
 | `facts.py` | a count in a root document that no longer matches what it counts |
@@ -212,9 +219,10 @@ there are is counted from both sources, by `facts.py` parsing them:
 
 ## 8. Reading the result
 
-No count in this repository should be typed by hand. `registry/README.md`'s are filled by
-`render.py`, the root documents' by `facts.py`, and the clause ledger's high-water mark lowers
-itself. If you find yourself editing a number, check whether something can compute it instead:
+No derived count in this repository should be typed by hand. `registry/README.md`'s are filled by
+`render.py`, the root documents' by `facts.py`, and the clause ledger's undisposed high-water mark
+lowers itself. Provenance exceptions are exact identities, not a count. If you find yourself
+editing a number, check whether something can compute it instead:
 every number that was hand-maintained here went stale, several of them twice in one day.
 
 `registry/tables.md` is the readable registry: every table, every column, its type, presence,

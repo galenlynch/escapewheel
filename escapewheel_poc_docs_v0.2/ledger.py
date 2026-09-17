@@ -9,7 +9,7 @@ The fix is a ledger rather than another audit. Every clause of every accepted re
 carries RFC 2119 force appears in `applied.toml` with one of four dispositions:
 
     applied         stated in the compiled spec; `where` lists the parts and sections
-    registry        delegated to registry/logical_schemas.json or rules.json
+    registry        delegated to one or more exact JSON declarations in registry-targets.toml
     superseded      a later revision replaced it; `by` names which
     rationale       decided nothing, so there is nothing to place
 
@@ -23,7 +23,9 @@ catch and which that disposition hid. `applied` now requires a `where`.
 
 A clause with no entry is **undisposed**, and this script exits non-zero listing them. Adding a
 revision therefore adds failures until someone says where each of its clauses went, which is the
-property neither audit had.
+property neither audit had. A `registry` disposition also has one or more path-plus-JSON-Pointer
+locations in `registry-targets.toml`. Every path and pointer is resolved, so naming a registry file
+without naming the declaration it carries is not a disposition.
 
 New revisions enumerate their normative clauses in the `Decision clauses` metadata field. That is
 the exact set this ledger reads. Older revisions predate the field and retain the historical
@@ -35,15 +37,17 @@ headings, so a clause cannot be recorded as placed in a section that does not ex
 one step along from no `where` at all, and the one that let R111 §3.5 name two sections of Part 01
 that part has never carried.
 
-The other dispositions leave `where` free text or absent, because nothing resolves it: a `registry`
-entry names the artifact that carries the clause, and `superseded` names its replacement in `by`.
+The other dispositions omit `where`. A `registry` entry's machine location comes only from
+`registry-targets.toml`; `superseded` names its replacement in `by`.
 
 A section that exists is not a section that says the right thing, and `05` §8 held four clauses
 belonging to §11 while resolving perfectly. So each `applied` target is also checked against what
 the part states there: a part cites the revision that set each rule it carries (`00` §10.2), so a
 target whose section names its revision is the part confirming the claim. It corroborates rather
-than proves -- a later revision resetting the same rule replaces the citation -- so the count is a
-ratchet beside the undisposed one, free to fall and refused when it rises.
+than proves -- a later revision resetting the same rule replaces the citation. The reviewed legacy
+cases for which that corroboration is absent are enumerated exactly in
+`corroboration-exceptions.toml`. A new exception or an exception that is no longer needed fails;
+one cannot hide behind an unchanged count.
 
     python ledger.py            # report
     python ledger.py --summary  # counts only
@@ -53,14 +57,18 @@ from __future__ import annotations
 
 import argparse
 import functools
+import json
 import re
 from pathlib import Path
 
 import tomllib
 
 HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent
 REVISIONS = HERE.parent / "revisions"
 LEDGER = HERE / "applied.toml"
+REGISTRY_TARGETS = HERE / "registry-targets.toml"
+CORROBORATION_EXCEPTIONS = HERE / "corroboration-exceptions.toml"
 
 DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 
@@ -138,7 +146,7 @@ def corroborated(revision: str, part: str, section: str) -> bool:
     return any(re.search(rf"\b{revision}[ ,)§]", body) for body in (here, parent) if body)
 
 
-def uncorroborated(ledger: dict[str, dict]) -> list[tuple[str, str]]:
+def uncorroborated(ledger: dict[str, dict]) -> list[tuple[str, str, str]]:
     """Every `applied` target whose section does not cite the revision that claims to have landed there."""
     out = []
     for key, entry in sorted(ledger.items(), key=lambda kv: int(kv[0][1:].split()[0])):
@@ -147,8 +155,118 @@ def uncorroborated(ledger: dict[str, dict]) -> list[tuple[str, str]]:
         revision = key.split()[0]
         for part, section in targets(entry.get("where", []))[0]:
             if not corroborated(revision, part, section):
-                out.append((key, f"`{part}` §{section}"))
+                out.append((key, part, section))
     return out
+
+
+def pointer(document: object, value: str) -> object:
+    """Resolve one RFC 6901 JSON Pointer, raising a useful lookup error."""
+    if not isinstance(value, str) or not value.startswith("/"):
+        raise ValueError("pointer must be a nonempty RFC 6901 string beginning with `/`")
+    current = document
+    for raw in value[1:].split("/"):
+        token = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(current, dict):
+            if token not in current:
+                raise KeyError(token)
+            current = current[token]
+        elif isinstance(current, list):
+            if not token.isdigit() or int(token) >= len(current):
+                raise IndexError(token)
+            current = current[int(token)]
+        else:
+            raise TypeError(f"{token!r} follows a scalar")
+    return current
+
+
+def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
+    """Return missing, stale, malformed, or unresolved registry target declarations."""
+    try:
+        declared = tomllib.loads(REGISTRY_TARGETS.read_text()).get("target", {})
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        return [f"{REGISTRY_TARGETS.name}: {exc}"]
+    expected = {key for key, entry in ledger.items() if entry.get("disposition") == "registry"}
+    defects = [f"{key}: registry disposition has no exact target" for key in sorted(expected - set(declared))]
+    defects += [f"{key}: target names no registry disposition" for key in sorted(set(declared) - expected)]
+    defects += [
+        f"{key}: registry disposition retains legacy `where`; use registry-targets.toml"
+        for key in sorted(expected)
+        if "where" in ledger[key]
+    ]
+    loaded: dict[Path, object] = {}
+    for key in sorted(expected & set(declared)):
+        locations = declared[key].get("locations")
+        if not isinstance(locations, list) or not locations:
+            defects.append(f"{key}: `locations` is not a nonempty list")
+            continue
+        seen: set[tuple[str, str]] = set()
+        for location in locations:
+            if not isinstance(location, dict):
+                defects.append(f"{key}: target {location!r} is not a table")
+                continue
+            if set(location) - {"path", "pointer", "equals"}:
+                defects.append(f"{key}: target has unknown fields {sorted(set(location) - {'path', 'pointer', 'equals'})}")
+            path, at = location.get("path"), location.get("pointer")
+            pair = (path, at) if isinstance(path, str) and isinstance(at, str) else None
+            if pair is None:
+                defects.append(f"{key}: target {location!r} needs string `path` and `pointer`")
+                continue
+            if pair in seen:
+                defects.append(f"{key}: repeats {path}#{at}")
+                continue
+            seen.add(pair)
+            artifact = (ROOT / path).resolve()
+            try:
+                artifact.relative_to((ROOT / "registry").resolve())
+            except ValueError:
+                defects.append(f"{key}: {path!r} is outside registry/")
+                continue
+            if artifact.suffix != ".json" or not artifact.is_file():
+                defects.append(f"{key}: {path!r} is not an existing JSON artifact")
+                continue
+            try:
+                document = loaded.setdefault(artifact, json.loads(artifact.read_text()))
+                resolved = pointer(document, at)
+                if "equals" in location and resolved != location["equals"]:
+                    defects.append(
+                        f"{key}: {path}#{at} is {resolved!r}, expected {location['equals']!r}"
+                    )
+                elif any(token.isdigit() for token in at.split("/")[1:]) and "equals" not in location:
+                    defects.append(f"{key}: array target {path}#{at} needs an `equals` guard")
+            except (json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError) as exc:
+                defects.append(f"{key}: {path}#{at} does not resolve ({exc})")
+    return defects
+
+
+def corroboration_exception_defects(
+    thin: list[tuple[str, str, str]],
+) -> tuple[list[str], int]:
+    """Compare absent provenance with the exact reviewed exception set."""
+    try:
+        rows = tomllib.loads(CORROBORATION_EXCEPTIONS.read_text()).get("exception", [])
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        return [f"{CORROBORATION_EXCEPTIONS.name}: {exc}"], 0
+    allowed: dict[tuple[str, str, str], str] = {}
+    defects = []
+    for row in rows:
+        if not isinstance(row, dict):
+            defects.append(f"exception {row!r} is not a table")
+            continue
+        key = (row.get("clause"), row.get("part"), row.get("section"))
+        if not all(isinstance(piece, str) and piece for piece in key):
+            defects.append(f"exception {row!r} needs clause, part, and section")
+            continue
+        if not isinstance(row.get("reason"), str) or not row["reason"].strip():
+            defects.append(f"{key}: exception has no review reason")
+        if key in allowed:
+            defects.append(f"{key}: exception is repeated")
+        allowed[key] = row.get("reason", "")
+    current = set(thin)
+    for key in sorted(current - set(allowed)):
+        defects.append(f"{key[0]}: `{key[1]}` §{key[2]} lacks provenance and is not reviewed")
+    for key in sorted(set(allowed) - current):
+        defects.append(f"{key[0]}: `{key[1]}` §{key[2]} exception is no longer needed")
+    return defects, len(allowed)
 
 
 def unresolved(ledger: dict[str, dict]) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
@@ -257,10 +375,11 @@ def main() -> int:
     placeless = sorted(k for k, d in ledger.items()
                        if d.get("disposition") == "applied" and not d.get("where"))
     dangling, unparsed = unresolved(ledger)
+    registry_defects = registry_target_defects(ledger)
     # What the section itself says, as far as anything can check it: a part cites the revision
     # that set each rule it states, so a target citing it is the part confirming the claim.
     thin = uncorroborated(ledger)
-    mark = tomllib.loads(LEDGER.read_text()).get("baseline", {}).get("uncorroborated", 0)
+    exception_defects, exception_count = corroboration_exception_defects(thin)
 
     counts: dict[str, int] = {}
     for entry in ledger.values():
@@ -270,6 +389,7 @@ def main() -> int:
         print(f"  {counts[name]:>4}  {name}")
     print(f"  {len(undisposed):>4}  undisposed")
     print(f"  {len(thin):>4}  applied, in a section that does not cite the revision")
+    print(f"  {exception_count:>4}  exact reviewed corroboration exceptions")
 
     # Undisposed clauses are a backlog and can run to hundreds, so `--summary` holds them back.
     # The rest are defects in what the ledger already claims, and there is nothing to read
@@ -277,8 +397,8 @@ def main() -> int:
     if not args.summary:
         for key, title in sorted(undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])):
             print(f"    UNDISPOSED  {key:<12} {title[:62]}")
-        for key, target in thin:
-            print(f"    UNCORROBORATED {key:<12} {target} states no such provenance")
+        for key, part, section in thin:
+            print(f"    UNCORROBORATED {key:<12} `{part}` §{section} states no such provenance")
     for key in stale:
         print(f"    STALE       {key:<12} the ledger disposes a clause no revision states")
     for key, value in sorted(bad.items()):
@@ -289,17 +409,18 @@ def main() -> int:
         print(f"    DANGLING    {key:<12} {target}")
     for key, piece in unparsed:
         print(f"    MALFORMED   {key:<12} `where` holds {piece}")
+    for defect in registry_defects:
+        print(f"    REGISTRY    {defect}")
+    for defect in exception_defects:
+        print(f"    EXCEPTION   {defect}")
 
     over = max(0, len(undisposed) - baseline)
-    thinner = max(0, len(thin) - mark)
-    failures = over + thinner + len(stale) + len(bad) + len(placeless) + len(dangling) + len(unparsed)
-    lowered = {"undisposed": (baseline, len(undisposed)), "uncorroborated": (mark, len(thin))}
-    if any(now < was for was, now in lowered.values()):
+    failures = (over + len(stale) + len(bad) + len(placeless) + len(dangling) + len(unparsed)
+                + len(registry_defects) + len(exception_defects))
+    if len(undisposed) < baseline:
         text = LEDGER.read_text()
-        for field, (was, now) in lowered.items():
-            text = re.sub(rf"(?m)^{field} = \d+$", f"{field} = {min(was, now)}", text)
-            if now < was:
-                print(f"ratchet lowered: {field} {was} -> {now}")
+        text = re.sub(r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text)
+        print(f"ratchet lowered: undisposed {baseline} -> {len(undisposed)}")
         LEDGER.write_text(text)
         print("commit applied.toml")
         return 0
@@ -307,9 +428,6 @@ def main() -> int:
         print(f"\nok — {len(undisposed)} undisposed, at the recorded high-water mark")
     elif over:
         print(f"\n{over} clause(s) need a disposition; the mark is {baseline}")
-    elif thinner:
-        print(f"\n{thinner} applied target(s) land where the part does not cite the revision; "
-              f"the mark is {mark}")
     else:
         print(f"\n{failures} disposition(s) vouch for something that is not there")
     return 1 if failures else 0

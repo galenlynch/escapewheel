@@ -291,8 +291,10 @@ After explicit user authorization:
 1. Assign the next free `R<N>` and move the draft to `R<N>-<slug>.md`.
 2. Set `Status` to `Accepted` with the date. Preserve `Based on`, `Decision clauses`, the completed
    impact inventory, and the approved normative text.
-3. Replace citations of the draft slug with its revision number and update the draft order.
-4. Do not commit yet. Acceptance and incorporation remain one atomic reviewable change.
+3. Copy `templates/change-evidence.json` to `evidence/R<N>.json`. Give every Decision clause a
+   record; the destinations and evidence are completed as incorporation proceeds.
+4. Replace citations of the draft slug with its revision number and update the draft order.
+5. Do not commit yet. Acceptance and incorporation remain one atomic reviewable change.
 
 An incorporation finding may correct prose or consequences without changing the approved decision.
 If it changes a Decision clause, compatibility effect, required implementation surface, or claimed
@@ -313,10 +315,14 @@ Add one `applied.toml` entry for every enumerated Decision clause. `ledger.py` r
 - `superseded`: a later accepted revision replaced the clause; and
 - `rationale`: the clause makes no current normative decision.
 
-Use structured part and section targets for `applied`. For new registry entries, name the narrowest
-resource, column, reference, or rule location available rather than the registry as a whole. The
-ledger proves that every clause has a destination; it does not prove the destination says the right
-thing, so the incorporation review still reads both.
+Use structured part and section targets for `applied`. For a `registry` disposition, add the
+repository-relative JSON artifact path and narrowest RFC 6901 JSON Pointer to
+`escapewheel_poc_docs_v0.2/registry-targets.toml`. Use multiple targets where the clause changes
+multiple declarations. A pointer to a containing table or collection is appropriate only when the
+clause governs the whole declaration or records a removal that has no child to point at. The ledger
+resolves every pointer and requires an equality guard when the path traverses an array, so a reorder
+cannot silently retarget it. It does not prove the declaration is semantically faithful, so the
+incorporation review still reads both.
 
 ### 8.2 Update each authoritative owner
 
@@ -356,7 +362,10 @@ In particular:
 2. Add positive and negative conformance fixtures for every newly decidable rule.
 3. Add expected findings to the corpus rather than relying on an unasserted validator run.
 4. Verify extension registries under every new invariant that applies to registry documents.
-5. Inspect generated diffs. A generator producing an unexpected change is a finding, not noise.
+5. Complete `evidence/R<N>.json`: map every clause to its owners, projections, conformance
+   evidence, implementations, and documentation. Use an explicit unchanged or not-applicable
+   reason instead of an empty list.
+6. Inspect generated diffs. A generator producing an unexpected change is a finding, not noise.
 
 Generated files are never edited directly.
 
@@ -382,6 +391,7 @@ Run the focused checks, then the complete verifier:
 
 ```bash
 uv run --project escapewheel-writer python revisions/check_citations.py
+uv run --project escapewheel-writer python revisions/evidence.py
 uv run --project escapewheel-writer python revisions/repoint.py --quiet
 uv run --project escapewheel-writer python revisions/repoint.py --exempt
 uv run --project escapewheel-writer python escapewheel_poc_docs_v0.2/ledger.py
@@ -404,10 +414,12 @@ internally inconsistent even when the next commit repairs it.
 | artifact or check | establishes | does not establish |
 |---|---|---|
 | `stages.py` | Open documents have the required status, baseline, sections, and explicit draft clause list. | The proposal is wise or the draft is semantically coherent. |
+| `test_evidence.py` | The evidence checker continues to resolve prose and JSON owners, corpus findings, verifier stages, and complete manifests. | Any particular revision supplied adequate evidence. |
 | `check_citations.py` | Citations resolve and use the required spelling. | The target supports the claim. |
 | `repoint.py` | Implementation requirement citations name current parts rather than historical decisions. | Every requirement has an implementation or test. |
 | `impact.py` | Files citing a changed section are discoverable. | Uncited consumers or duplicated facts agree. |
-| `applied.toml` and `ledger.py` | Every accepted Decision clause has a recorded normative disposition. | A broad registry disposition identifies the exact declaration, or the destination is semantically faithful. |
+| `applied.toml`, `registry-targets.toml`, and `ledger.py` | Every accepted Decision clause has a disposition; every registry disposition resolves to exact JSON locations; missing provenance matches an exact reviewed exception. | The destination is semantically faithful. |
+| `evidence/R<N>.json` and `evidence.py` | Every current-format accepted clause maps to owners and downstream surfaces; paths and pointers resolve; named fixtures and pytest nodes are collected. | Evidence becomes authority, or the named test proves more than it asserts. |
 | `headings.py` | Section numbering and changed heading subjects were deliberately reviewed. | The body belongs under that heading. |
 | `columns.py` | Embedded column tables reproduce the registry. | Non-tabular prose agrees with the registry. |
 | registry checks | Registry documents are structurally self-consistent and declared SQL is executable. | An adapter can produce every required fact or prose gives the declaration the same meaning. |

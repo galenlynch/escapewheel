@@ -43,6 +43,9 @@ how agreement was checked.
 <!-- Record the fixtures, checks, probes, and implementation tests that were actually incorporated.
 If these differ materially from the approved plan, return to review. -->
 
+Record their exact paths and identifiers, clause by clause, in `evidence/R<N>.json` using
+`templates/change-evidence.json`.
+
 ## 7. Open
 
 <!-- Optional. Keep only deliberately deferred questions. -->

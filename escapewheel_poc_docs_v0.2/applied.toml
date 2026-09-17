@@ -1,22 +1,13 @@
 # The most undisposed clauses ever allowed. Lowered automatically; never raised by hand.
 [baseline]
 undisposed = 0
-# Applied targets the part does not corroborate by citing the revision. Same rule: may shrink.
-#
-# Not a backlog to clear. 41 of these are R111 §3.5's actor sweep, which rewrote sentences in 41
-# sections and stamped none, because a revision that changes who a clause binds leaves no rule to
-# credit. Most of the rest are a section stating a rule an earlier revision set and crediting the
-# later one that reset it -- Part 03 §6.4 carries R3 §7.2's codec floor and credits R21 §3, which
-# made it per-version. What the number catches is a target that is simply wrong, which is how
-# eight were found: four clauses filed at Part 05 §8, which is Stage 7: Materialize.
-uncorroborated = 77
 
 # Where each accepted normative clause went. Generated once, maintained by hand.
+# Exact JSON locations for `registry` entries live in registry-targets.toml.
 # `python ledger.py` fails while any binding clause has no entry here.
 
 [clause."R5 §2.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R6 §2"]
@@ -26,17 +17,14 @@ note = "restored 2026-09-04; was dropped"
 
 [clause."R19 §2.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R20 §2.3"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R20 §2.4"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R29 §2.1"]
@@ -46,7 +34,6 @@ note = "MAY raised to SHOULD and the table half restored"
 
 [clause."R33 §2.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R36 §2.2"]
@@ -73,7 +60,6 @@ note = "also 01 §3.9 and 02 §12.6, where a clock records the anchors it withhe
 
 [clause."R44 §2.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R45 §2.1"]
@@ -87,32 +73,26 @@ note = "restored 2026-09-04 with R6"
 
 [clause."R46 §2.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R46 §2.3"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R48 §2.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R48 §2.2"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R48 §2.5"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R49 §2.2"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R52 §2.1"]
@@ -126,12 +106,10 @@ where = [{ part = "03", section = "10" }]
 
 [clause."R53 §2.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R53 §2.3.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R53 §2.4"]
@@ -150,17 +128,14 @@ where = [{ part = "01", section = "3.8" }]
 
 [clause."R59 §2.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R59 §2.2"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R60 §2.1"]
 disposition = "registry"
-where = "registry/logical_schemas.json"
 note = "a column, key or reference the registry declares"
 
 [clause."R61 §2.2"]
@@ -218,7 +193,6 @@ where = [{ part = "01", section = "3.18" }]
 
 [clause."R69 §2.3"]
 disposition = "registry"
-where = "registry/rules.json"
 note = "core.media_frames.pts_increasing_in_frame_index"
 
 [clause."R70 §2.1"]
@@ -966,7 +940,6 @@ disposition = "rationale"
 
 [clause."R24 §3.1"]
 disposition = "registry"
-where = "registry/rules.json"
 note = "the interval template, invoked by a rule and expanded by build.py"
 
 [clause."R24 §5"]
@@ -993,7 +966,6 @@ note = "the key becomes the partition plus start_tick"
 
 [clause."R47 §2.3"]
 disposition = "registry"
-where = "registry/rules.json"
 note = "the interval template's index argument, optional since this clause"
 
 [clause."R47 §2.4"]
@@ -1405,7 +1377,6 @@ note = "open questions"
 
 [clause."R81 §2.1"]
 disposition = "registry"
-where = "core.units.unit_id identity assigned; primary_key ['unit_id']"
 note = "also stated in 02_core_logical_schemas.md §12.1"
 
 [clause."R81 §2.2"]
@@ -1414,7 +1385,7 @@ where = [{ part = "02", section = "12.1" }]
 
 [clause."R81 §2.3"]
 disposition = "registry"
-where = "the six unit-keyed tables and their references narrowed to ['unit_id']"
+note = "the six unit-keyed tables and their references narrowed to ['unit_id']"
 
 [clause."R81 §2.4"]
 disposition = "applied"
@@ -1434,16 +1405,14 @@ note = "how multiplicity is expressed once the key is one column; states no new 
 
 [clause."R81 §2.7"]
 disposition = "registry"
-where = "core.units.default_electrode_id struck with its rule core.units.default_electrode_is_declared"
+note = "core.units.default_electrode_id struck with its rule core.units.default_electrode_is_declared"
 
 [clause."R82 §2.1"]
 disposition = "registry"
-where = "core.processing_runs.undeclared_currency, advisory removed and level error"
 note = "also stated in 05_validation_and_import.md §11"
 
 [clause."R82 §2.2"]
 disposition = "registry"
-where = "core.processing_runs.scope_undeclared, advisory removed and level error"
 note = "also stated in 05_validation_and_import.md §11"
 
 [clause."R82 §2.3"]
@@ -1456,7 +1425,6 @@ where = [{ part = "05", section = "12" }]
 
 [clause."R83 §2.1"]
 disposition = "registry"
-where = "core.sorting_run_channels, with contact_listed_once and index_contiguous"
 note = "also listed in 02_core_logical_schemas.md §11.5"
 
 [clause."R83 §2.2"]
@@ -1469,7 +1437,6 @@ where = [{ part = "02", section = "12.2" }]
 
 [clause."R83 §2.4"]
 disposition = "registry"
-where = "core.unit_electrodes.electrode_is_a_run_channel"
 note = "also stated in 02_core_logical_schemas.md §12.2"
 
 [clause."R83 §3"]
@@ -1515,7 +1482,6 @@ note = "what the rename leaves alone; its MUST and SHOULD say the standard's cla
 
 [clause."R85 §2.1"]
 disposition = "registry"
-where = "core.devices.parent_port"
 note = "also stated in 01_semantic_standard.md §3.5; the openephys and nwb adapters fill it"
 
 [clause."R85 §2.2"]
@@ -1601,21 +1567,18 @@ where = [{ part = "02", section = "12.3" }]
 
 [clause."R89 §2.1"]
 disposition = "registry"
-where = "core.calibrations, with unit_pair_complete and points_declare_units"
 note = "also stated in 02_core_logical_schemas.md §12.3 and 01_semantic_standard.md §3.23"
 
 [clause."R89 §2.2"]
 disposition = "registry"
-where = "core.calibration_devices"
 note = "the SHOULD on a writer recording the devices it names is in 02_core_logical_schemas.md §12.3"
 
 [clause."R89 §2.3"]
 disposition = "registry"
-where = "core.calibration_points, whose value columns declare unit_from onto core.calibrations"
+note = "core.calibration_points, whose value columns declare unit_from onto core.calibrations"
 
 [clause."R89 §2.4"]
 disposition = "registry"
-where = "core.calibrations.array_asset_id, referencing core.array_assets"
 note = "also stated in 02_core_logical_schemas.md §12.3"
 
 [clause."R89 §2.5"]
@@ -1625,7 +1588,6 @@ note = "the consumer MUST read an empty calibration as unrecorded; also 01_seman
 
 [clause."R89 §2.6"]
 disposition = "registry"
-where = "core.calibrations.metadata, absent from both child tables"
 note = "also stated in 02_core_logical_schemas.md §12.3"
 
 [clause."R90 §2.1"]
@@ -1700,12 +1662,10 @@ note = "why a typed mark column in core would guess at cardinality and type; inf
 
 [clause."R91 §3.1"]
 disposition = "registry"
-where = "core.event_streams.event_type and core.event_streams.detail_kind"
 note = "also stated in 01_semantic_standard.md §3.12"
 
 [clause."R91 §3.2"]
 disposition = "registry"
-where = "core.events' key, and its four struck columns"
 note = "also stated in 01_semantic_standard.md §3.11; the override rows go from 02 §12 and 03 §5.4"
 
 [clause."R91 §3.3"]
@@ -1715,7 +1675,7 @@ note = "core adds no mark column; a stream names the table declaring its marks"
 
 [clause."R91 §3.4"]
 disposition = "registry"
-where = "core.event_streams.detail_kind, discriminates_via core.events.stream_id"
+note = "core.event_streams.detail_kind, discriminates_via core.events.stream_id"
 
 [clause."R91 §4"]
 disposition = "rationale"
@@ -1765,7 +1725,6 @@ note = "what a profile is, what a second one must satisfy, and that no Part 01 o
 
 [clause."R93 §3.3"]
 disposition = "registry"
-where = "the sort field, removed from registry.schema.json, logical_schemas.json and the four extensions"
 note = "03 §5.4 is an override's only statement; escapewheel_reader.ordering holds the machine copy the writer and validator both read"
 
 [clause."R93 §3.4"]
@@ -1845,21 +1804,19 @@ note = "the rule spelling the join the schema could not declare"
 
 [clause."R96 §3.1"]
 disposition = "registry"
-where = "core.units.amplitude_unit, struck from core.sorting_runs"
 note = "also stated in 02_core_logical_schemas.md §12.1"
 
 [clause."R96 §3.2"]
 disposition = "registry"
-where = "core.units.clock_id and its reference to core.clocks, struck from core.sorting_runs"
 note = "also stated in 02_core_logical_schemas.md §12.1; the CONTEXT entries for first_spike_tick and last_spike_tick go with it"
 
 [clause."R96 §3.3"]
 disposition = "registry"
-where = "core.spike_events.t_tick clock_from and amplitude unit_from, both core.units.*"
+note = "core.spike_events.t_tick clock_from and amplitude unit_from, both core.units.*"
 
 [clause."R96 §3.4"]
 disposition = "registry"
-where = "clock_id struck from core.spike_events and core.unit_observation_intervals"
+note = "clock_id struck from core.spike_events and core.unit_observation_intervals"
 
 [clause."R96 §5"]
 disposition = "rationale"
@@ -1936,17 +1893,14 @@ note = "alignment_bound absent from both, withheld_anchors on 12 and 10 clocks, 
 
 [clause."R99 §3.1"]
 disposition = "registry"
-where = "core.sessions.alignment_bound and core.sessions.alignment_bound_at_least_default"
 note = "also stated in 02_core_logical_schemas.md §12.6"
 
 [clause."R99 §3.2"]
 disposition = "registry"
-where = "core.clocks.withheld_first_anchor, withheld_last_anchor and core.clocks.withheld_needs_anchors"
 note = "the nullable bool is what carries R40 §2.3's untested-versus-kept distinction; also 02 §12.6"
 
 [clause."R99 §3.3"]
 disposition = "registry"
-where = "core.clock_phase_steps and core.clock_phase_steps.step_needs_parent"
 note = "parent_tick declares clock_from inline, CONTEXT being consumed before a block this late runs; also 02 §12.6"
 
 [clause."R99 §3.4"]
@@ -1956,12 +1910,10 @@ note = "parameters keeps the evidence and none of the three facts; 02 §5.2 now 
 
 [clause."R100 §2.1"]
 disposition = "registry"
-where = "coordinate_resource on core.array_dimensions and analysis.array_dimensions"
 note = "role discriminator, resolves required; the name keeps its two declared NAMING exceptions, _kind reading as a category"
 
 [clause."R100 §2.2"]
 disposition = "registry"
-where = "coordinate_pair_complete on both tables, and the generated position_column_indexes"
 note = "the position check is generatable because positions_in names the column and the registry supplies each kind's structural_index columns as literals"
 
 [clause."R100 §2.3"]
@@ -1971,7 +1923,6 @@ note = "positions_in in registry.schema.json and build.py's DISCRIMINATOR; check
 
 [clause."R100 §2.4"]
 disposition = "registry"
-where = "analysis.array_dimensions.coordinate_array_asset_id -> analysis.array_assets"
 note = "the reference core.array_dimensions already declared; 96 references become 97"
 
 [clause."R101 §2.1"]
@@ -2011,7 +1962,6 @@ note = "check.py refuses a discriminator declaring a vocabulary; R55 §2.1 fixes
 
 [clause."R101 §3.5"]
 disposition = "registry"
-where = "26 descriptions in build.py's DESCRIPTIONS"
 note = "25 open columns stating no form, plus core.processing_runs.status whose prose said etc. of a closed set; check.py requires a description on an open column"
 
 [clause."R101 §3.6"]
@@ -2024,12 +1974,10 @@ note = "authority in registry.schema.json and build.py's AUTHORITY, on species, 
 
 [clause."R101 §3.7"]
 disposition = "registry"
-where = "build.py's R11 block"
 note = "the reserved_values argument is removed from the amend of core.events.event_type, a column R91 §3.2 struck; R11 §4's six stay in R11 as examples"
 
 [clause."R101 §3.8"]
 disposition = "registry"
-where = "core.array_assets.kind and analysis.array_assets.kind"
 note = "raw, ap, lfp, waveform with R8 §4's meanings; coordinate_frame's three deferred, their meanings being the frames' own and no packet stating them"
 
 [clause."R101 §3.9"]
@@ -2104,7 +2052,6 @@ note = "band is nullable; a consumer must not infer one from semantic_type, the 
 
 [clause."R103 §3.3"]
 disposition = "registry"
-where = "band's reserved_values on both array tables"
 note = "waveform struck, the set going from four values to three with raw respelled wideband; §3.1's rename of kind to band carries the column, with role data and vocabulary open declared in build.py's ROLES and VOCABULARY because neither has a default"
 
 [clause."R103 §3.4"]
@@ -2214,7 +2161,6 @@ note = "a writer that can decode MUST store the decoded value; one that cannot s
 
 [clause."R106 §3.2"]
 disposition = "registry"
-where = "dynamic_foraging.trials.animal_response"
 note = "int32 becomes string with vocabulary closed over left/right/no_response, staying nullable and role data; closed on R8 §3's test since a two-spout task admits no fourth outcome, so a packet embedding this extension runs 5 closed-vocabulary checks where it ran 4 while the generated core count stays at 4, and a null is not a no_response. No adapter here writes the table -- a TablesSource reads a Parquet file each session's extract.py produces -- so the type change is what refuses a packet whose codes were never decoded"
 
 [clause."R107 §2.1"]
@@ -2254,7 +2200,6 @@ note = "one MUST NOT replaces R101 §3.5's second and third sentences and R48 §
 
 [clause."R107 §3.2"]
 disposition = "registry"
-where = "the five discriminator descriptions"
 note = "core.intervals.interval_kind, both scope_kinds and both detail_kinds stop calling their values open; R55 §2.1 fixes them to the declared resource IDs, so none of the three words is true of them, and R100 §2.1's two and R104 §3.1's one already had this form"
 
 [clause."R107 §3.3"]

@@ -1,9 +1,9 @@
 name: verify
 
-# Every generated file in this repository is committed, so `verify.py`'s last stage regenerates
-# them and demands a clean tree. Three artifacts drifted for many revisions before anything ran
-# that check: the conformance corpus stopped building, the prototype's registry left R2's format,
-# and the registry README's counts went wrong in five places.
+# Every generated file in this repository is committed, so `verify.py` regenerates them and
+# demands that generation preserve the candidate state. Three artifacts drifted for many revisions
+# before anything ran that check: the conformance corpus stopped building, the prototype's registry
+# left R2's format, and the registry README's counts went wrong in five places.
 on:
   push:
     branches: [main]
@@ -12,6 +12,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -22,5 +23,7 @@ jobs:
           for package in escapewheel-reader escapewheel-validator escapewheel-writer escapewheel-aind; do
             uv sync --all-extras --project "$package"
           done
+      - name: Exercise required thread, Zarr, and Flight facilities
+        run: uv run --project escapewheel-writer python ci/runtime_capabilities.py
       - name: Every generator and every check
-        run: python verify.py
+        run: uv run --project escapewheel-writer python verify.py

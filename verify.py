@@ -42,6 +42,10 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     ("root: the documents' counts are current", ROOT, [sys.executable, "facts.py"]),
     ("revisions: open stages are structurally complete", ROOT,
      [sys.executable, "revisions/stages.py"]),
+    ("revisions: process tooling tests", ROOT,
+     [sys.executable, "-m", "unittest", "revisions.test_evidence"]),
+    ("revisions: accepted evidence manifests resolve", ROOT,
+     [sys.executable, "revisions/evidence.py"]),
     ("registry: structural checks", ROOT / "registry",
      ["uv", "run", "--project", str(TOOLS), "python", "check.py"]),
     ("citations: every one resolves, and no part number repeats", ROOT / "revisions",
@@ -52,9 +56,8 @@ STAGES: list[tuple[str, Path, list[str]]] = [
      [sys.executable, "repoint.py", "--quiet"]),
     ("citations: every exemption is still needed", ROOT / "revisions",
      [sys.executable, "repoint.py", "--exempt"]),
-    # A ratchet: the backlog of undisposed clauses may shrink and must not grow. Adding a
-    # revision fails this until someone records where each of its clauses went, which is the
-    # property two independent audits of the compiled spec found missing.
+    # A ratchet for undisposed clauses, exact JSON Pointers for registry dispositions, and an
+    # exact allowlist for historical prose targets whose current section lacks provenance.
     ("spec: every revision clause has a disposition", ROOT / "escapewheel_poc_docs_v0.2",
      [sys.executable, "ledger.py", "--summary"]),
     # The other half of what a citation needs. `check_citations.py` resolves a number and this

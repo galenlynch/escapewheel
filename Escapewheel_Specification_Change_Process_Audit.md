@@ -27,10 +27,31 @@ That organization left four important gaps:
 
 The revised workflow now separates baseline establishment, proposal evaluation, draft appraisal,
 acceptance authorization, normative incorporation, regeneration and conformance, implementation
-alignment, and atomic closure. The remaining high-value work is to make ledger destinations more
-precise and to add mechanical coverage between new Decision clauses and their conformance evidence.
+alignment, and atomic closure. At the audited baseline, the remaining high-value work was to make
+ledger destinations more precise and to add mechanical coverage between new Decision clauses and
+their conformance evidence.
 
 No change in this audit alters the packet contract or the normative v0.2 rules.
+
+### Follow-up implementation status
+
+The follow-up candidate based on checkpoint
+`a9edb7c3b8885fbbdb7699927c4c9270ecf783f4` implements the four process improvements identified
+after this audit:
+
+1. `registry-targets.toml` gives every registry disposition one or more checked artifact paths and
+   RFC 6901 JSON Pointers. `ledger.py` rejects a missing, stale, malformed, or unresolved target and
+   rejects the former free-text `where` field on a registry disposition.
+2. `corroboration-exceptions.toml` replaces the numeric uncorroborated-target ratchet with the exact
+   77 reviewed clause/part/section triples. A new missing-provenance site and a no-longer-needed
+   exception both fail.
+3. `revisions/evidence.py` and `revisions/evidence/R<N>.json` map each current-format accepted
+   Decision clause to authoritative owners, generated projections, collected conformance evidence,
+   implementation paths, and documentation paths or explicit unchanged reasons.
+4. CI runs `ci/runtime_capabilities.py` before full verification, proving that its runner can wake
+   the asynchronous thread bridge, round-trip Zarr v3, and bind the Arrow Flight Unix-domain
+   socket. A runner missing one of these facilities fails in a bounded probe rather than hanging a
+   package suite.
 
 ## 1. Verifier diagnosis
 

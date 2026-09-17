@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "revision": "R<N>",
+  "based_on": "<full commit hash against which the draft was appraised>",
+  "clauses": {
+    "R<N> §3.1": {
+      "owners": [
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/tables/<resource>"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/<file>.py::<test_name>"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/<affected-path>"
+        ]
+      },
+      "documentation": {
+        "unchanged": "<why no human-facing document outside the specification changes>"
+      }
+    }
+  }
+}
