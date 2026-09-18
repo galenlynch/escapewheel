@@ -369,16 +369,16 @@ and citation reading establish semantic placement.
 ## 7. Pre-acceptance blockers
 
 This section records the current appraisal state; it is informative and adds no Decision clause.
-The draft remains blocked while the controlled-reorganization work is again a proposal. Its first
+The draft remains blocked while the controlled-reorganization draft is unaccepted. Its first
 acceptance appraisal found that repository-maintenance procedure and historical-revision mechanics
 had been assigned to normative Part 00, and that the ledger's reverse-citation check made current
-authoritative owners depend on their change records. The revised proposal assigns maintenance to
+authoritative owners depend on their change records. The process draft assigns maintenance to
 `revisions/CONTRIBUTING.md`, moves one-way ledger traceability under `revisions/`, and leaves the
 completed historical audit as non-gating evidence. It also splits removal of historical and
 misplaced maintenance material from authoritative artifacts into a dependent proposal because
 registry provenance and `since` have separate compatibility effects and Part 00 §§10.1–10.4 need
-clause-level dispositions. Neither proposal is yet a dependency this draft can carry into accepted
-history.
+clause-level dispositions. Neither prerequisite is yet an accepted dependency this draft can carry
+into accepted history.
 
 After that prerequisite lands, the following work occurs in order:
 

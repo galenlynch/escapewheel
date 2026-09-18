@@ -290,7 +290,7 @@ P1 authority framework
 | ID | Work item | Status | Artifact | Depends on |
 |---|---|---|---|---|
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
-| P0.1 | Controlled reorganization of specification parts | **Proposal** — revised after promotion appraisal; re-appraisal pending | [current proposal](allow-controlled-specification-reorganization.md) | P0 |
+| P0.1 | Controlled reorganization of specification parts | **Draft** — promoted 2026-09-18; pre-acceptance appraisal pending | [current draft](../drafts/allow-controlled-specification-reorganization.md) | P0 |
 | P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Not started** | anticipated proposal; slug to be assigned | P0.1 |
 | P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.1 and P0.2 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | P0.1, P0.2 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
@@ -416,10 +416,11 @@ remain outside the migration.
 after acceptance authorization. P0.1 therefore requires the structural draft to identify affected
 headings, commit their metadata-only bootstrap, refresh and finally appraise the draft against that
 commit, commit the exact draft, and only then request acceptance. P1 §7 already records this order.
-The exact previously promoted proposal remains preserved at
-`1891ac253d194fd187fcfe3bb69385506d2c6629`; promotion did not accept or incorporate the process
-decision. The work returned to Proposal on 2026-09-18, resolved its process owner and ledger model,
-and now awaits a new promotion appraisal, a committed exact state, and explicit authorization.
+The restored and re-appraised proposal is preserved at
+`07439b738b55264bffd2c6ffbf3cc41390acc024`. Promotion on 2026-09-18 carried its process owner,
+decision-domain migration, one-way ledger model, structural controls, and P0.2 boundary into the
+current draft. Promotion did not accept or incorporate the process decision; the draft now awaits
+its complete pre-acceptance appraisal.
 
 ### P0.2 — Remove historical and misplaced maintenance material from authoritative artifacts
 
