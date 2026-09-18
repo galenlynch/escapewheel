@@ -19,9 +19,11 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-Nothing is open. A draft added here takes a row naming its word count, when it was appraised, and
-why it sits where it does: dependencies run downward, so a draft may depend on the ones above it
-and on nothing below.
+Dependencies run downward, so a draft may depend on the ones above it and on nothing below.
+
+| order | draft | words | appraisal | placement |
+|---:|---|---:|---|---|
+| 1 | [`define-specification-artifacts-and-normative-ownership`](define-specification-artifacts-and-normative-ownership.md) | 3,492 | Draft appraisal pending; proposal promotion appraised and authorized 2026-09-17 | Depends only on accepted R93 and R111–R113; establishes the framework needed by every later reconciliation proposal. |
 
 The last to leave was `an-adapter-declares-the-options-it-accepts`, accepted as **R119** on
 2026-09-15 at 2,172 words: an adapter declares in `accepts` the options it can run without, where

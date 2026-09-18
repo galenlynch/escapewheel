@@ -20,8 +20,8 @@ v0.2 material remains authoritative while this roadmap is being worked.
 The principal inputs are the
 [project sanity check](../../Escapewheel_Project_Sanity_Check_2026-09-17.md), the
 [change-process audit](../../Escapewheel_Specification_Change_Process_Audit.md), the root
-[TODO](../../TODO.md), and the research in the current
-[authority proposal](define-specification-artifacts-and-normative-ownership.md). The project review
+[TODO](../../TODO.md), and the research carried into the current
+[authority draft](../drafts/define-specification-artifacts-and-normative-ownership.md). The project review
 was performed at commit `32f9e06884b483818c7156f80ea81f7e3a6ce002`. Subsequent commits through
 the review baseline changed documentation, revision workflow, lint findings, and formatting rather
 than resolving the packet-contract findings mapped below.
@@ -167,22 +167,21 @@ This direction follows established patterns rather than a repository-specific pr
 | [Zarr v3 core specification](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html) | normative status is explicit and informative material is marked |
 | [OCI descriptors](https://github.com/opencontainers/image-spec/blob/main/descriptor.md) | media type, size, and digest identify an addressed artifact without a self-digest cycle |
 
-## 3. Appraisal of the current authority proposal
+## 3. Promotion history of the authority work
 
-**Original disposition: revise before promotion. Current state: promotion authorized on
-2026-09-17; checkpointed for the stage transition.**
+**Original disposition: revise before promotion. Current state: promoted to Draft on 2026-09-17;
+draft appraisal pending.**
 The original proposal contained sound research and a useful target model, but combined the first
 enabling decision with the final publication step. Its scope was narrowed on 2026-09-17, and the
 first promotion appraisal's ownership, terminology, impact, and evidence findings were
 incorporated. A second appraisal assigned the normative bibliography to Part 00, separated the
 placement-defect inventory from both the specification and this roadmap, and clarified that a
 release manifest records numbered-part status only as a checked projection. The user then
-authorized promotion; this proposal-stage commit preserves the exact source artifact before its
-removal.
+authorized promotion.
 
-### 3.1 What remains in the first proposal
+### 3.1 What the promoted draft retains
 
-The revised proposal retains the framework needed by every later proposal:
+The promoted draft retains the framework needed by every later proposal:
 
 - the generated v0.2 material is the current authority during development;
 - Part 00 owns the specification framework and explicit abstraction model;
@@ -196,7 +195,7 @@ The revised proposal retains the framework needed by every later proposal:
 This scope can establish the vocabulary by which later proposals identify their owners without
 claiming that today's unresolved registries and schemas already form a final release.
 
-### 3.2 What remains outside the first proposal
+### 3.2 What remains outside the first revision
 
 The narrowing left the following work in later entries in this roadmap:
 
@@ -211,7 +210,7 @@ The narrowing left the following work in later entries in this roadmap:
 - incorporation of the remaining packet, resource, source, and adapter schemas; and
 - final semantic, logical, profile, registry, schema, and rule-language identifiers.
 
-### 3.3 Material findings that require the revision
+### 3.3 Material findings that narrowed the proposal
 
 1. The proposal incorrectly says there is no committed `RELEASE.json`. One is tracked, but it is a
    stale output of the current prototype: it records commit
@@ -239,9 +238,8 @@ The narrowing left the following work in later entries in this roadmap:
    disagreements.
 
 The promotion appraisals rechecked the narrowed impact inventory, dependency order, evidence plan,
-and resolved questions. The exact authorized proposal is checkpointed in this commit; the separate
-promotion change will carry its surviving facts into a draft without accepting or incorporating
-the revision.
+and resolved questions. The resulting draft now enters the separate pre-acceptance appraisal in
+the specification-change process; promotion did not accept or incorporate it.
 
 ## 4. Proposal dependency order and status
 
@@ -279,7 +277,7 @@ P1 authority framework
 | ID | Work item | Status | Artifact | Depends on |
 |---|---|---|---|---|
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
-| P1 | Specification authority, abstraction levels, and normative ownership | **Proposal** — promotion authorized; checkpointed for transition | [current proposal](define-specification-artifacts-and-normative-ownership.md) | P0 |
+| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — promoted 2026-09-17; pre-acceptance appraisal pending | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | P0 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P4 | Registry-document semantics and uniform conformance | **Not started** | anticipated proposal; slug to be assigned | P3 |
@@ -301,8 +299,8 @@ following sequence tractable; they do not decide any packet contract.
 
 ### P1 — Authority framework
 
-The proposal makes Part 00 capable of locating later decisions without publishing the final
-release bundle prematurely. It states the relationship between semantic, logical, and physical
+The draft makes Part 00 capable of locating later decisions without publishing the final release
+bundle prematurely. It states the relationship between semantic, logical, and physical
 abstraction levels and the separate packet content classes, and it incorporates no
 machine-readable artifact whose semantics or current contents remain under dispute.
 

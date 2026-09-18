@@ -14,7 +14,7 @@ that text nor decides the replacement rule.
 
 The initial entries come from the
 [project sanity check](../Escapewheel_Project_Sanity_Check_2026-09-17.md) and the appraisal of the
-[authority proposal](proposals/define-specification-artifacts-and-normative-ownership.md). A
+[authority draft](drafts/define-specification-artifacts-and-normative-ownership.md). A
 candidate destination identifies where appraisal should begin, not an accepted ownership decision.
 
 ## Maintaining the inventory
