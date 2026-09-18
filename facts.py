@@ -175,7 +175,9 @@ def facts() -> dict[str, str]:
     # Proposals and drafts carry no number; the numbered space reads in application order.
     # `revisions/drafts/README.md` holds the order of drafts awaiting acceptance.
     proposals = [
-        p for p in (ROOT / "revisions/proposals").glob("*.md") if p.name != "README.md"
+        p
+        for p in (ROOT / "revisions/proposals").glob("*.md")
+        if p.name not in {"README.md", "ROADMAP.md"}
     ]
     drafts = [
         p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"

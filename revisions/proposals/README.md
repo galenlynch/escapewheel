@@ -11,7 +11,13 @@ A proposal:
 - is never cited by the generated specification or an accepted revision; and
 - changes no implementation contract.
 
-When its problem, scope, and intended direction are settled and promotion is approved, carry the
-useful content into a draft based on `../templates/draft.md` and delete the proposal in the same
-change. Git retains the superseded discussion. If the proposal is abandoned, delete it with a
-commit message that records why.
+When its problem, scope, and intended direction are settled, commit the exact completed proposal
+before requesting or performing promotion. After promotion is approved, carry the useful content
+into a draft based on `../templates/draft.md` and delete the proposal in the promotion change. The
+parent commit then retains the exact superseded discussion. If the proposal is abandoned, first
+commit any untracked findings worth preserving, then delete it with a commit message that records
+why.
+
+`ROADMAP.md` is the non-authoritative coordination record for the v0.2 reconciliation sequence.
+It tracks dependencies among anticipated proposals but is not itself a proposal or revision-stage
+artifact.

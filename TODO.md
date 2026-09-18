@@ -45,7 +45,45 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. No template scaffolds an extension project
+## 1. Packet resource classification needs its own proposal
+
+**Not started; follow the normative-ownership proposal.** Part 00 uses *layer* for the content
+classification `core`, extensions, `analysis`, and the deferred `nwb` projection. Part 04 requires
+every resource entry to carry `layer` without defining its values, while
+`registry/manifest.schema.json` permits `core`, `analysis`, `extension`, and `docs`. The reader,
+writer, validator, and fixtures all consume the field, so this is a packet-contract disagreement,
+not an editorial rename.
+
+The proposal should decide whether resource classification is declared or derived. The cleaner
+starting point is to remove `layer` and derive the class from the `resource_id` namespace together
+with the packet's declared extension registries; there is no released compatibility obligation
+requiring the redundant field to survive. Audit `canonical` in the same proposal: Part 04 says it
+is required, the manifest schema does not require it, and its value may also be derivable from the
+resource class. The resulting revision would update Part 00, Part 04, the incorporated manifest
+schema if applicable, reader/writer/validator behavior, APIs, fixtures, and packet regeneration.
+
+## 2. Other normative-ownership follow-ups are deliberately split
+
+These do not belong in the first authority revision. Each has its own decision boundary and can
+land after the specification release and ownership model identifies its proper owner.
+
+- **Identify packet registries precisely.** A separate proposal should decide how a packet names
+  the released core registry and each extension registry by stable identifier, version, and
+  digest; when an embedded copy is required; what a validator compares; and whether existing
+  packets are regenerated. This is a packet-catalog change, not part of defining a specification
+  release manifest.
+- **Replace registry replay with direct declarative authoring.** Choose one reviewed registry
+  document or deterministically assembled fragments, retain each declaration's `since`
+  provenance, and prove that the migration preserves the released registry bytes or a defined
+  canonical form. This is ordinary repository maintenance if the published contract is unchanged;
+  any change to the published form returns through the revision process.
+- **Audit the remaining JSON Schemas before incorporating them.** Compare
+  `registry/manifest.schema.json`, `resources.schema.json`, `sources.schema.json`, and
+  `adapter.schema.json` with their owning prose, examples, and fixtures. Incorporate each only
+  after conflicts are resolved; file location or successful validation alone does not make a
+  schema normative.
+
+## 3. No template scaffolds an extension project
 
 **Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
 it: the four here were written by hand, and `registry/extensions/README.md` covers *what to model* —
@@ -90,7 +128,7 @@ commands, and that freedom is what R109 §3.1 exists to protect. Print for a per
 put anything a build should parse in the report file. Do not restate what the build already
 derives: rows per table come from the Parquet footer at Part 05 Stage 1.
 
-## 2. The adapter boundary reaches nine of the ten adapters
+## 4. The adapter boundary reaches nine of the ten adapters
 
 R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
 source; every piece of it was built by 2026-09-14 — a declaration, a document, a command, three
@@ -427,7 +465,7 @@ than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** 
 packets, so there is no instance to write a rule against. Worth a revision when something produces
 one.
 
-## 3. No code quality audit has run
+## 5. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
@@ -443,7 +481,7 @@ a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncon
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
 
-## 4. `registry_version` is held at `0.1.0`
+## 6. `registry_version` is held at `0.1.0`
 
 Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
 packets claiming one version with incompatible schemas is what the field exists to prevent, and it
@@ -451,19 +489,19 @@ is preventing nothing. Free to settle while nobody outside holds a packet, and f
 the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
 three at 0.2.0.
 
-## 5. The repository directory is still `nwb-lake/`
+## 7. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
 working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
 doing in one order or the other, not at once.
 
-## 6. Staging both packets to scratch needs a token
+## 8. Staging both packets to scratch needs a token
 
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 7. Parked: R42's write case survives its withdrawal
+## 9. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -481,7 +519,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 8. Smaller open items
+## 10. Smaller open items
 
 - **Trial-in-block containment has no consumer.** The measurement below concluded that a trial
   needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries `start_tick`

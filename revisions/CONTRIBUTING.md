@@ -162,8 +162,18 @@ uv run --project escapewheel-writer python revisions/stages.py
 uv run --project escapewheel-writer python revisions/check_citations.py
 ```
 
-Promotion carries the surviving facts into a draft and deletes the proposal in the same change.
-Git retains the superseded discussion.
+Before promotion, the exact proposal being promoted must exist in the current commit. Check both
+that the path is tracked and that its bytes agree with `HEAD`:
+
+```bash
+git ls-files --error-unmatch revisions/proposals/<slug>.md
+git diff --quiet HEAD -- revisions/proposals/<slug>.md
+```
+
+If either command fails, commit the completed proposal and its appraisal or coordination updates
+before changing its stage. Promotion authorization is not permission to discard an uncommitted
+proposal state. The promotion change then carries the surviving facts into a draft and deletes the
+proposal. Its parent commit preserves the exact proposal that reviewers authorized for promotion.
 
 ## 5. Phase C — write and appraise a revision draft
 
@@ -281,7 +291,16 @@ wrong thing.
 
 Record the appraisal date, baseline, word count, dependency order, and material finding in
 `drafts/README.md`. Present reviewers with the exact draft, compatibility effects, deferred work,
-impact inventory, and check results. Only then request acceptance authorization.
+impact inventory, and check results. Before requesting acceptance authorization, commit that exact
+appraised draft and confirm that both commands below succeed:
+
+```bash
+git ls-files --error-unmatch revisions/drafts/<slug>.md
+git diff --quiet HEAD -- revisions/drafts/<slug>.md
+```
+
+Only then request acceptance authorization. The acceptance-and-incorporation change may remove the
+draft because its parent commit preserves the exact candidate the user reviewed.
 
 ## 7. Phase D — authorize acceptance and freeze the decision
 

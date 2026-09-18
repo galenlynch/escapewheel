@@ -23,6 +23,7 @@ BCP14 = re.compile(
     r"\b(?:MUST|MUST NOT|SHOULD|SHOULD NOT|MAY|REQUIRED|SHALL|OPTIONAL)\b"
 )
 SHA = re.compile(r"[0-9a-f]{40}")
+NON_STAGE_DOCUMENTS = {"README.md", "ROADMAP.md"}
 
 PROPOSAL_HEADINGS = {
     "1": "Problem",
@@ -139,7 +140,9 @@ def draft(path: Path) -> list[str]:
 def main() -> int:
     """Check every open stage document and report all defects."""
     proposals = sorted(
-        p for p in (HERE / "proposals").glob("*.md") if p.name != "README.md"
+        p
+        for p in (HERE / "proposals").glob("*.md")
+        if p.name not in NON_STAGE_DOCUMENTS
     )
     drafts = sorted(p for p in (HERE / "drafts").glob("*.md") if p.name != "README.md")
     failures = 0
