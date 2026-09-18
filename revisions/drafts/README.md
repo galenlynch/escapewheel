@@ -23,7 +23,7 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | [`define-specification-artifacts-and-normative-ownership`](define-specification-artifacts-and-normative-ownership.md) | 3,987 | Revise before acceptance (re-appraised against P0.1 on 2026-09-18): §7 records the exact process, structural, traceability, actor-binding, and evidence blockers | After the [controlled-reorganization proposal](../proposals/allow-controlled-specification-reorganization.md) is accepted and incorporated, identify affected headings, commit their metadata-only anchor bootstrap, refresh this draft to that baseline, add the accepted process revision as a dependency, complete the exact crosswalk and landing plan, then re-appraise. |
+| 1 | [`define-specification-artifacts-and-normative-ownership`](define-specification-artifacts-and-normative-ownership.md) | 4,053 | Revise before acceptance; the controlled-reorganization proposal now assigns process ownership and one-way ledger traceability, but is not yet promoted or incorporated | After the [controlled-reorganization proposal](../proposals/allow-controlled-specification-reorganization.md) and its dependent authoritative-source maintenance and history cleanup are accepted and incorporated, revise this draft's dependencies, exact structural landing, traceability plan, and appraisal baseline. |
 
 The last to leave was `an-adapter-declares-the-options-it-accepts`, accepted as **R119** on
 2026-09-15 at 2,172 words: an adapter declares in `accepts` the options it can run without, where

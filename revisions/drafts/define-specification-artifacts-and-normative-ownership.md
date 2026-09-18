@@ -369,42 +369,51 @@ and citation reading establish semantic placement.
 ## 7. Pre-acceptance blockers
 
 This section records the current appraisal state; it is informative and adds no Decision clause.
-The draft remains blocked until the controlled-reorganization process change is accepted and
-incorporated into Part 00 with its anchor, heading, citation, impact, ledger, evidence, and
-historical-reference tooling. The proposal itself is not a dependency that this draft can carry
-into accepted history. Once that process has an accepted revision number, this draft records that
-revision in `Depends on` and cites its Part 00 rule.
+The draft remains blocked while the controlled-reorganization work is again a proposal. Its first
+acceptance appraisal found that repository-maintenance procedure and historical-revision mechanics
+had been assigned to normative Part 00, and that the ledger's reverse-citation check made current
+authoritative owners depend on their change records. The revised proposal assigns maintenance to
+`revisions/CONTRIBUTING.md`, moves one-way ledger traceability under `revisions/`, and leaves the
+completed historical audit as non-gating evidence. It also splits removal of historical and
+misplaced maintenance material from authoritative artifacts into a dependent proposal because
+registry provenance and `since` have separate compatibility effects and Part 00 §§10.1–10.4 need
+clause-level dispositions. Neither proposal is yet a dependency this draft can carry into accepted
+history.
 
 After that prerequisite lands, the following work occurs in order:
 
 1. **Define the exact structural landing.** Revise `Amends` and the consequence inventory with the
    resulting Part 00 outline. Give every existing Part 00 section and every current README
    paragraph an old location, disposition, new location, semantic effect, and governing Decision
-   clause. Include the newly appended controlled-reorganization section itself, preserving its
-   rule wherever the new Part 00 places stable citation and editing conventions. Name the exact
-   receiving sections in Parts 02, 03, 04, 05, and 09 rather than only their subjects.
+   clause. Apply the accepted boundary between packet-specification content and repository
+   maintenance instead of relocating process mechanics within Part 00. Name the exact receiving
+   sections in Parts 02, 03, 04, 05, and 09 rather than only their subjects.
 2. **Identify and bootstrap affected headings.** Enumerate every existing numbered section that is
    a source or destination of relocated prose or whose heading, level, number, or order will
    change. Give each such heading a canonical anchor in a separate metadata-only commit before the
    structural incorporation. The bootstrap changes no heading text, numbering, order, prose,
    normativity, or meaning. The structural change gives every new destination an anchor and records
-   an alias only where it has an honest primary successor.
+   an alias only where the crosswalk declares one primary successor under the accepted process
+   rule.
 3. **Refresh the draft after the bootstrap.** Replace `Based on` with the full commit hash that
-   contains both the accepted process rule and the required anchor bootstrap. Add the accepted
-   process revision to `Depends on`, rerun every count and impact query, re-inventory overlapping
-   work, and update stale evidence. The earlier count of 32 citations into affected Part 00
-   sections is historical promotion evidence, not the acceptance population.
+   contains the accepted process rule, completed authoritative-source maintenance and history
+   cleanup, and required anchor bootstrap. Add both accepted prerequisite revisions to `Depends on`,
+   rerun every count and impact query, re-inventory overlapping work, and update stale evidence. The
+   earlier count of 32
+   citations into affected Part 00 sections is historical promotion evidence, not the acceptance
+   population.
 4. **Complete current traceability.** List and read every affected live citation and update it to
    the destination's current number and anchor. Convert every affected `applied.toml` and revision
-   evidence target to its anchor form, update the heading record and any corroboration exception,
-   and regenerate the combined specification and human-facing authority summaries. Accepted
-   historical revisions remain unchanged and are checked in their incorporation commits.
+   evidence target to its anchor form, update the heading record, and regenerate the combined
+   specification and human-facing authority summaries. Current authoritative owners do not cite
+   accepted revisions merely to corroborate the ledger. Any retained historical-citation audit is
+   process evidence over immutable revision records, not specification content.
 5. **Make the framework obligations decidable.** Bind specification-maintenance and publication
    obligations to a named actor or a testable artifact property. Name the framework check and its
    positive and negative tests for Part 00 ownership and status, local status projections, README
    informativity, normative-reference placement, and combined-rendering reproducibility. Keep that
-   checker distinct from the controlled-reorganization process checks on anchors and historical
-   citations.
+   checker distinct from the controlled-reorganization process checks on anchors and revision
+   history.
 6. **Repeat the complete pre-acceptance appraisal.** Re-run the freshness, decision, feasibility,
    compatibility, traceability, evidence, citation, repointing, and repository gates against the
    post-bootstrap baseline. Commit that exact appraised draft before requesting acceptance

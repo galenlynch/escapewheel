@@ -17,6 +17,10 @@ Each contract change below still needs its own reproduced problem, appraisal, pr
 draft, acceptance authorization, incorporation evidence, and verification. The current generated
 v0.2 material remains authoritative while this roadmap is being worked.
 
+Labels such as P0.1, P0.2, and P1 are coordination identifiers for work items in this roadmap. They
+are not section numbers in a proposal or draft, and they are not the permanent `R<N>` numbers
+assigned to accepted revisions.
+
 The principal inputs are the
 [project sanity check](../../Escapewheel_Project_Sanity_Check_2026-09-17.md), the
 [change-process audit](../../Escapewheel_Specification_Change_Process_Audit.md), the root
@@ -241,7 +245,7 @@ The promotion appraisals rechecked the narrowed impact inventory, dependency ord
 and resolved questions. The first pre-acceptance appraisal then found that exact relocation and
 citer dispositions, maintainer binding, and the structural landing still needed revision. The
 append-only rule in Part 00 §10.3 would force the new framework and relocated README material to the
-ends of their parts, so the separate controlled-reorganization proposal is now a prerequisite.
+ends of their parts, so the separate controlled-reorganization process change is now a prerequisite.
 Promotion did not accept or incorporate the authority decision.
 
 ## 4. Proposal dependency order and status
@@ -254,6 +258,9 @@ P0 process foundation (complete)
  |
  v
 P0.1 controlled reorganization
+ |
+ v
+P0.2 remove historical and misplaced maintenance material from authoritative artifacts
  |
  v
 P1 authority framework
@@ -283,8 +290,9 @@ P1 authority framework
 | ID | Work item | Status | Artifact | Depends on |
 |---|---|---|---|---|
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
-| P0.1 | Controlled reorganization of specification parts | **Proposal** — promotion-ready; commit and authorization pending | [current proposal](allow-controlled-specification-reorganization.md) | P0 |
-| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.1 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | P0.1 |
+| P0.1 | Controlled reorganization of specification parts | **Proposal** — revised after promotion appraisal; re-appraisal pending | [current proposal](allow-controlled-specification-reorganization.md) | P0 |
+| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Not started** | anticipated proposal; slug to be assigned | P0.1 |
+| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.1 and P0.2 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | P0.1, P0.2 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P4 | Registry-document semantics and uniform conformance | **Not started** | anticipated proposal; slug to be assigned | P3 |
@@ -308,23 +316,44 @@ following sequence tractable; they do not decide any packet contract.
 
 Part 00 §10.3 makes append-only numbering unconditional. That is the safe default for an ordinary
 amendment, but it would put P1's organizing framework after the material it organizes and would
-force relocated README rules to the ends of their subject-owning parts. The revised proposal
-preserves append-only placement as the default while allowing a reviewed structural exception for
-the unpublished working specification. Git commits preserve historical references, explicit stable
-anchors preserve section identity while numbers move, and P0.1 forbids in-place reorganization
-once the owning publication rule declares an edition immutable. P0.1 does not define artifact
-authority, release membership, or publication identity.
+force relocated README rules to the ends of their subject-owning parts. The proposal retains the
+stable-anchor, human-crosswalk, metadata-bootstrap, and immutable-edition research while reopening
+which artifact owns the procedure. Its acceptance appraisal found that placing repository
+maintenance and historical-revision mechanics in normative Part 00 crosses the packet-contract
+boundary. It also found that the ledger currently reverses the intended dependency by requiring a
+current specification section to cite its historical revision. P0.1 resolves those questions by
+placing process in `revisions/CONTRIBUTING.md`, moving ledger traceability under `revisions/`, and
+splitting authoritative-source cleanup into P0.2, without taking P1's ownership of artifact roles,
+release membership, or publication identity.
+
+P0.1 also extends the lifecycle narrowly to material decisions about its own gates, process
+authority, structural-editing permissions, ledger dispositions, and evidence semantics. Such a
+revision declares the process decision domain and lands its clauses in exact anchored process
+owners; it does not make those clauses packet requirements. Meaning-preserving documentation and
+implementation maintenance remain ordinary repository work. The same `R<N>` sequence records
+incorporation order for specification and process decisions. Existing accepted records default to
+the specification decision domain without being edited. P0.1 declares the process domain, current
+open artifacts gain an explicit domain during incorporation, and later artifacts must declare one.
+For a process draft, `Profile` is `not applicable` and `Amends` names exact path-plus-anchor process
+owners.
 
 **Exit evidence:** the accepted process distinguishes routine amendment from structural
-reorganization; the accepted revision contains a complete human-readable crosswalk; stable anchors,
-current destinations, live citations, ledger targets, and evidence owners resolve; historical
-references are mechanically checked in their incorporation commits; any pre-v0.2 exceptions form
-an exact non-growing compatibility baseline; editions declared immutable elsewhere cannot be
-reorganized in place; and the exception is itself applied under the pre-existing append-only rule
-before P1 uses it. Before the structural draft's final appraisal and acceptance request, a checked,
-separately committed metadata-only bootstrap assigns anchors to every affected existing source and
-destination without changing prose, structure, normativity, or meaning; the draft refreshes its
-baseline to that commit, and new destinations receive anchors in the structural incorporation.
+reorganization and requires a complete human-readable crosswalk; stable anchors, current
+destinations, live citations, ledger targets, and evidence owners resolve; maintenance rules live
+outside packet-conformance prose; and the ledger maps accepted clauses to standalone current
+owners without requiring those owners to cite history back. The completed historical-revision
+audit remains non-gating evidence and is not part of current normative interpretation. Editions
+declared immutable elsewhere cannot be reorganized in place.
+Before a structural draft's final appraisal and acceptance request, a checked, separately committed
+metadata-only bootstrap assigns anchors to every affected existing source and destination without
+changing prose, structure, normativity, or meaning; the draft refreshes its baseline to that
+commit, and new destinations receive anchors in the structural incorporation.
+
+The baseline reverse-impact query reports 30 citations into Part 00 §§10.1–10.4. P0.1 repoints the
+22 process-tool citations and two live-roadmap citations to the contribution guide. P0.2
+dispositions the one current Part 07 citation. Three R113 citations and the two citations carried
+into P0.1's eventual accepted record remain unchanged as history. Incorporation re-measures these
+populations.
 
 **Revised after promotion appraisal:** the earlier machine-readable paragraph selectors, content
 hashes, relocation chains, and separate relocation artifact were rejected as a disproportionate
@@ -336,19 +365,47 @@ state.
 **Re-appraisal resolution:** retain that simplified model. The revised proposal expressly permits a
 strictly metadata-only anchor bootstrap after P0.1 lands; confines P0.1 to edit and reference
 mechanics while P1 owns authority, artifact, release, and publication semantics; and requires
-historical citations to be checked against the commit where their revision became accepted. The
-R112 history demonstrates that its acceptance commit and then-valid Part 00 §10.3 are recoverable
-through Git. Pre-v0.2 references are audited individually, with only genuinely unrecoverable cases
-retained in an exact compatibility baseline that later revisions cannot expand.
+historical citations to be checked against the appraised pre-change and incorporated post-change
+contexts. The R112 history demonstrates that its acceptance commit and newly incorporated Part 00
+§10.3 are recoverable through Git. Pre-v0.2 references are audited individually.
+
+**Acceptance-appraisal revision:** resolving only at incorporation was rejected because R93 removes
+the former Part 02 section its decision discusses. The 38 historical references divide into 18
+frozen-v0.1 headings, seven R93 references that resolve pre-change, and 13 frozen Part 06 line
+locators. Because the early revision records and specification sources began in parallel histories,
+the draft adds exact legacy source contexts as well as the non-growing line-locator inventory. It
+leaves crosswalk completeness to human review, requires every extant affected section to carry a
+canonical anchor, and gives §§3.1–3.8 exact planned destinations in a new Part 00 section 11.
+Production enforcement remains in atomic incorporation; disposable feasibility probes precede
+acceptance.
+
+**Returned to proposal after acceptance appraisal:** the complete citation audit found 419 Part
+citations in accepted records rather than only the 38 that fail against today's tree, but that
+measurement exposed a more important direction error. Historical citations run from revision
+records to the specification state they discuss; they do not justify the 478 revision references
+in the authored specification Markdown or the ledger check that requires those backlinks. The
+proposal now treats accepted-revision resolution as an archival-process question, reopens the
+owner of maintenance procedure, and requires one-way revision-to-ledger-to-current-owner
+traceability. It also reopens whether registry `since` and other authoritative-source provenance
+should be removed or expressed as specification-edition identity.
+
+**Ownership resolution:** `revisions/CONTRIBUTING.md` owns structural-editing procedure; no process
+section is added to Part 00. The ledger and its maps move under `revisions/`, accept exact
+part-or-path plus stable-anchor prose destinations, and stop requiring current owners to cite their
+revision back. The completed historical audit remains non-gating evidence. Removing the existing
+historical references and misplaced maintenance text is split into P0.2 because Part 00 needs a
+clause-level disposition and revision-valued `since` and registry build provenance change the
+registry meta-schema and generated registry rather than process alone.
 
 **Authority-draft-focused re-appraisal:** the process permits every kind of edit P1 requires, but
 P1 cannot land unchanged. After P0.1 is incorporated, P1 identifies its exact affected sections;
 a separately committed metadata-only change bootstraps their existing source and destination
 headings; and P1 refreshes its baseline to that commit. It then depends on the accepted P0.1
-revision, accounts for P0.1's appended Part 00 section, replaces its subject-level README
-disposition with an exact paragraph crosswalk, names its resulting Part 00 outline, assigns anchors
-and aliases to new destinations, converts affected ledger and evidence targets, and reruns
-appraisal.
+revision, applies the resulting boundary between maintenance policy and specification content,
+replaces its subject-level README disposition with an exact paragraph crosswalk, names its
+resulting Part 00 outline, assigns anchors and aliases to new destinations, converts affected
+ledger and evidence targets, and reruns appraisal. The earlier assumption that P0.1 contributes an
+appended Part 00 process section is rejected.
 
 **Resolved anchor coverage:** every structurally affected source and destination receives an
 anchor. Existing affected headings are anchored in a separately committed metadata-only bootstrap
@@ -359,8 +416,31 @@ remain outside the migration.
 after acceptance authorization. P0.1 therefore requires the structural draft to identify affected
 headings, commit their metadata-only bootstrap, refresh and finally appraise the draft against that
 commit, commit the exact draft, and only then request acceptance. P1 §7 already records this order.
-No substantive promotion blocker remains; the exact proposal state must be committed and promotion
-still requires explicit authorization.
+The exact previously promoted proposal remains preserved at
+`1891ac253d194fd187fcfe3bb69385506d2c6629`; promotion did not accept or incorporate the process
+decision. The work returned to Proposal on 2026-09-18, resolved its process owner and ledger model,
+and now awaits a new promotion appraisal, a committed exact state, and explicit authorization.
+
+### P0.2 — Remove historical and misplaced maintenance material from authoritative artifacts
+
+Apply the strict one-way model after P0.1 supplies the structural process. Remove revision
+citations from the specification README and numbered parts, incorporated registry and schema
+descriptions, validation-rule messages, and extension registry sources. Remove the registry-build
+`derived_from` object, which is change provenance rather than packet meaning. Appraise
+revision-valued `since` separately: remove it unless a demonstrated compatibility use justifies an
+edition-valued replacement. Do not confuse this registry-build provenance with the packet
+catalog's `derived_from`, which names source resources and remains part of the packet contract.
+
+Account separately for every statement in Part 00 §§10.1–10.4. Remove repository-maintenance and
+citation-presentation rules after their current process owners exist in
+`revisions/CONTRIBUTING.md`; remove revision provenance; and preserve any current-contract ownership
+semantics until P1 assigns their final location. P0.2 must not delete a still-needed authority rule
+merely because it shares a section with maintenance or historical text.
+
+**Exit evidence:** authoritative prose and incorporated machine-readable artifacts contain no
+references to revision records; the ledger and evidence manifests preserve change provenance;
+registry generation is internally consistent; and the compatibility effect on embedded registries
+and existing packets is explicit. P1 begins only after this cleanup lands.
 
 ### P1 — Authority framework
 
@@ -371,7 +451,7 @@ machine-readable artifact whose semantics or current contents remain under dispu
 P1, not P0.1, owns candidate authority, artifact roles and membership, release identity, and
 publication terminology.
 
-Its first pre-acceptance appraisal remains open. After P0.1 lands, revise P1 with an exact
+Its first pre-acceptance appraisal remains open. After P0.1 and P0.2 land, revise P1 with an exact
 human-readable old-location-to-new-location crosswalk, a paragraph-level disposition of the
 specification README, stable anchors for reorganized sections, all affected citation and tooling
 surfaces, and explicit binding for specification-maintenance obligations; then rerun the appraisal

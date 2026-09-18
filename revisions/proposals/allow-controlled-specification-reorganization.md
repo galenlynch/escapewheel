@@ -4,8 +4,9 @@
 |---|---|
 | **Status** | **Proposal** |
 | **Opened** | 2026-09-17 |
-| **Based on** | `15cf4e16cae5e197db55af6598d32bceeb0c5ed6` |
-| **Affects** | Part 00 §10.3; R112 §3.4; stable section anchors; current and historical citation rules; incorporation, heading, impact, ledger, and evidence procedures; the authority draft's landing plan |
+| **Based on** | `1891ac253d194fd187fcfe3bb69385506d2c6629` |
+| **Decision domain** | process |
+| **Affects** | Revision-lifecycle and process authority; structural-editing procedure; stable section anchors; incorporation, heading, impact, ledger, and evidence procedures; the provisional release manifest's ledger path; coordination with the dependent authoritative-source cleanup and the authority draft |
 
 ## 1. Problem
 
@@ -34,6 +35,22 @@ A silent exception is not acceptable. It would leave Part 00, the lifecycle guid
 describing a rule the project no longer follows. The process needs a narrow, auditable exception
 before the authority draft can rely on it.
 
+The first acceptance appraisal exposed a more basic ownership problem. The proposal had assumed
+that specification-maintenance rules belonged in normative Part 00 and that a specification
+section should cite the revision that produced it so the ledger could corroborate the placement.
+That makes the current contract depend backward on its change records. The intended direction is
+the reverse: an accepted revision and the ledger point to the current authoritative owner, while
+the specification and incorporated machine-readable artifacts remain readable without the
+revision archive. The proposal has returned from Draft so that the location of maintenance policy,
+the ledger's evidence model, and the disposition of revision provenance can be settled before any
+candidate rule is written.
+
+The revised direction also exposes a lifecycle gap. The current guide and directory descriptions
+define accepted revisions as changes incorporated into the generated specification, while this
+proposal deliberately places its current rules in the revision contribution guide. The process
+must distinguish process authority from packet-specification authority without allowing material
+changes to its own gates or evidence semantics to pass as ordinary documentation maintenance.
+
 ## 2. Evidence
 
 ### 2.1 Current rule and baseline
@@ -45,15 +62,15 @@ their numbers.
 
 The quick repository verifier passed all 24 stages at the baseline. It reported 262 recorded
 sections across 11 parts, no repeated part numbers, no unresolved live citations, no undisposed
-revision clauses, and one open draft. The first invocation could not write the environment's
-default `uv` cache; rerunning the same command with `UV_CACHE_DIR=/tmp/uv-cache` passed. This is an
-environment constraint, not a baseline defect.
+revision clauses, this proposal, and one open draft. The first invocation could not write the
+environment's default `uv` cache; rerunning the same command with `UV_CACHE_DIR=/tmp/uv-cache`
+passed. This is an environment constraint, not a baseline defect.
 
-Before this proposal was added, the stage inventory contained no proposal and one draft:
-`define-specification-artifacts-and-normative-ownership`. There is no configured Git remote, and
-the project has no known external consumers whose section links require a compatibility period.
-The process should nevertheless establish a release-safe model rather than depend on that
-temporary fact.
+The other open lifecycle artifact is the draft
+`define-specification-artifacts-and-normative-ownership`. There is no configured Git remote, and the
+project has no known external consumers whose section links require a compatibility period. The
+process should nevertheless establish a release-safe model rather than depend on that temporary
+fact.
 
 ### 2.2 The authority draft is a concrete counterexample
 
@@ -75,9 +92,10 @@ intended to establish. The draft remains non-authoritative and can wait on this 
 ### 2.3 The repository already has most of the required controls
 
 Every current proposal and draft records a full `Based on` commit. Git retains every accepted
-revision and the incorporation commit in which its references were valid. The citation checker
-already distinguishes live sources from accepted historical revisions: a missing current target
-fails, while an old accepted reference is reported as history rather than silently rewritten.
+revision and the specification-source histories needed to inspect it, including the early parallel
+histories measured in §2.8. The citation checker already distinguishes live sources from accepted
+historical revisions: a missing current target fails, while an old accepted reference is reported
+as history rather than silently rewritten.
 
 `escapewheel_poc_docs_v0.2/headings.py` records each current section number and heading. It reports
 a changed or removed heading and lists known citers. `revisions/impact.py` provides the reverse
@@ -113,44 +131,41 @@ full requirements-object system would provide that machinery, but it would make 
 source and its change history into another data model. Escapewheel needs data-driven packet
 contracts; it does not need a requirements database to reorganize an unpublished draft.
 
-### 2.5 References have three different time contexts
+### 2.5 References have different time contexts
 
 A reference in the current specification, implementation, test, or developer documentation is
 live and needs to resolve against the current working specification. A structural incorporation
 updates every such reference it affects.
 
-An accepted revision is historical. Its incorporation commit is the first commit in its file
-history, following renames, whose metadata records `Status` as `Accepted`; if the file was already
-accepted when first introduced, that introduction commit is the incorporation commit. The citation
-checker resolves its references against the specification sources present in that commit rather
-than merely exempting them from current resolution. For current-format revisions, `Based on`
-separately records the pre-change state against which the draft was appraised. Historical files are
-not edited merely to name the current organization.
+An accepted revision is historical. Git can recover the commit where its status first became
+Accepted, following later renames, while a current-format revision's `Based on` field separately
+identifies its appraised pre-change state. Early revision records and specification sources began
+in parallel histories, so some citations need an explicitly selected historical source tree.
+Historical files are not edited merely to name the current organization.
 
-Some early revisions predate the v0.2 source layout and current citation form. Incorporation of
-this process change includes an audit that either resolves each such citation against the source
-tree present in its incorporation commit or records it in an exact, reviewed legacy-exception
-inventory. That inventory is a compatibility baseline, not a general exemption: later revisions
-cannot add entries, and existing entries are removed when they become mechanically recoverable.
-No citation passes merely because it appears in an accepted file.
+The promoted draft treated complete commit-relative resolution as a required process invariant.
+The later appraisal established that it is mechanically feasible but not necessary to maintain the
+current contract. Section 2.8 records the full measured population retained as review evidence. A
+historical citation does not authorize a current specification section to cite the revision back.
 
 When the publication rules established by their owning revision declare a specification edition
 immutable, its files, numbers, anchors, and links remain available as that edition. A later
 reorganization does not alter those bytes.
 
-### 2.6 The authority draft can use the exception, but cannot land unchanged
+### 2.6 Earlier appraisal showed the authority draft needs the mechanism
 
 The focused 2026-09-18 re-appraisal compared this proposal with every decision and consequence in
 `define-specification-artifacts-and-normative-ownership`. The proposed process supplies a mechanism
-for each structural consequence:
+for each structural consequence. That mechanical conclusion survives; the later appraisal in
+§2.7 rejects the presumed Part 00 owner and reverse-provenance model.
 
 | authority-draft consequence | mechanism supplied here | work the authority draft still owes |
 |---|---|---|
 | Put the specification framework before details that depend on it, and separate abstraction level from packet content class. | A reviewed structural revision may move, split, merge, replace, or retire sections despite the append-only default. | Refresh its baseline after this process is incorporated, declare the accepted process revision as a dependency, and give the exact resulting Part 00 outline. |
 | Make the specification README informational and distribute its binding statements to Parts 00, 02, 03, 04, 05, and 09. | The required crosswalk expressly includes unnumbered README statements and permits relocation into subject-owning parts. | Replace its subject-level README table with a paragraph-level old-location, disposition, destination, semantic-effect, and decision-clause crosswalk. |
 | Replace local-header precedence with one owner and checked status projections. | A semantic change can accompany relocation when it is tied to an enumerated Decision clause and all affected projections and checks change atomically. | Name the exact Part 00 destination, every local-header update, and the positive and negative framework-checker cases. |
-| Centralize the normative bibliography and repoint subject-owning parts. | Live citations and generated renderings are swept in the same structural incorporation; historical revisions remain in their incorporation context. | List each current citation or reference whose meaning or target changes and preserve the new process section if Part 00 is reorganized. |
-| Preserve traceability while section numbers move. | Canonical anchors, crosswalk history, commit-relative historical citations, and anchor-aware ledger and evidence targets separate current identity from historical numbering. | Bootstrap anchors for every affected existing source and destination, assign anchors and aliases to new destinations, convert affected `applied.toml` and evidence targets, and record each authority Decision clause's final owner. |
+| Centralize the normative bibliography and repoint subject-owning parts. | Live citations and generated renderings are swept in the same structural incorporation; historical revisions remain unchanged in Git. | List each current citation or reference whose meaning or target changes and remove misplaced maintenance prose rather than preserving a new process section in Part 00. |
+| Preserve traceability while section numbers move. | Canonical anchors, crosswalk history, and anchor-aware ledger and evidence targets separate current identity from historical records. | Bootstrap anchors for every affected existing source and destination, assign anchors and aliases to new destinations, convert affected `applied.toml` and evidence targets, and record each authority Decision clause's final owner. |
 | Add a framework checker while leaving packet behavior unchanged. | Process-tool changes and specification changes can be incorporated atomically without changing packet schemas, registries, fixtures, or runtime behavior. | Add its separate ownership/status/README/bibliography checker after the anchor, citation, heading, impact, ledger, and evidence support from this process exists. |
 
 The authority draft therefore cannot use this exception from its current
@@ -158,23 +173,140 @@ The authority draft therefore cannot use this exception from its current
 incorporated, the authority draft first identifies its exact affected section set. A separate
 metadata-only commit then bootstraps anchors for every affected existing source and destination,
 and the draft re-establishes freshness against that post-bootstrap commit. Its crosswalk must
-include the appended Part 00 process section introduced here if that section is moved, renumbered,
-split, or merged. This is a required revision and re-appraisal of the authority draft, not a defect
-in the dependency order.
+apply the resulting boundary between maintenance policy and specification content. This is a
+required revision and re-appraisal of the authority draft, not a defect in the dependency order.
+
+### 2.7 The current ledger reverses the intended dependency
+
+The ledger's useful invariant is one-way: every binding accepted clause has an exact disposition
+and, where it remains current, an exact prose or registry owner. `applied.toml` supplies that map.
+The current checker adds a reverse condition: an applied specification section normally has to
+name the revision whose clause the ledger maps there. `corroboration-exceptions.toml` enumerates
+legacy locations that lack that backlink.
+
+This reverse condition is neither authority nor strong evidence of semantic fidelity. A section
+can name a revision while misstating its rule, and the ledger checker describes the citation as
+corroboration rather than proof. It also prevents the current contract from standing alone. At the
+baseline, the authored Markdown under `escapewheel_poc_docs_v0.2`, excluding the combined
+rendering, contains 478 `R<N>` occurrences across the README and ten parts. Registry source
+descriptions and validation messages contain further revision references, and the registry's
+`since` fields identify revisions rather than specification editions.
+
+The cleaner dependency is:
+
+```text
+accepted revision clause -> ledger disposition -> current specification or registry owner
+```
+
+Evidence manifests may continue from that clause to implementations, tests, and documentation.
+No reverse edge from a current authoritative owner to its historical change record is needed.
+
+### 2.8 Historical citation checking is archival, not specification authority
+
+The demoted draft's acceptance appraisal scanned every Part citation in every record whose current
+metadata says Accepted. It found 419 occurrences across 117 records: 394 resolve to numbered
+headings in automatically derived or already proposed historical contexts, 13 are the previously
+identified Part 06 line locators, and 12 in R2, R16, R54, R55, R65, R68, and R70 need additional
+exact source contexts. The early records can be resolved against the frozen v0.1 source at
+`52a587e9d72472ab0595e861fd8450f620249f47`; R65, R68, and R70 can be resolved against the compiled
+v0.2 source at `4ce6f09cce0d2c8c1f1cb75815f833f0fbbb9cee`.
+
+Those references run from historical revisions to the specification state they discussed. The
+audit is useful evidence that the archive can be interpreted, but it does not justify references in
+the opposite direction and is not an input to current normative interpretation. It remains a
+recorded review rather than becoming a repository gate or a rule of packet conformance.
+
+### 2.9 Process decisions and the provisional release bundle need explicit treatment
+
+The current lifecycle applies the ordinary repository workflow to developer documentation and
+describes an accepted revision as a decision incorporated into the generated v0.2 specification.
+That wording does not account for a material decision whose current owner is the lifecycle guide
+itself. Treating this proposal as an ordinary documentation edit would avoid the wording conflict
+only by bypassing the appraisal, exact-state, acceptance, ledger, and evidence controls whose
+semantics it changes.
+
+The current release assembly also includes
+`escapewheel_poc_docs_v0.2/applied.toml` in its `provenance` category. Moving that ledger beside the
+revision records therefore requires an update to `release.py` and `RELEASE.json`. Updating the path
+does not decide whether provenance belongs in a future specification release; it preserves the
+current provisional membership until the authority and publication work makes that decision.
+
+### 2.10 Citations into the current Part 00 process material divide by lifecycle
+
+The reverse-impact query for Part 00 §§10.1–10.4 reports 30 citations at the appraisal baseline.
+Twenty-two are in the process tools `check_citations.py`, `repoint.py`, `impact.py`, `verify.py`, and
+the ledger that this change moves. Two are in the live roadmap. One is in current Part 07 prose.
+Three are in accepted R113, and two are baseline evidence in this proposal that will become part of
+its historical record if the decision is accepted.
+
+Those populations need different treatment. This process change repoints the 22 process-tool
+references and the two live-roadmap references to the new process owner. The dependent
+authoritative-source cleanup dispositions the current Part 07 statement together with Part 00
+§§10.1–10.4. R113 and the accepted form of this decision remain unchanged as historical records of
+the specification state they discussed. Re-measurement at incorporation accounts for any change in
+the population rather than treating these counts as permanent exceptions.
 
 ## 3. Desired outcome and constraints
 
-This proposal governs only whether and how specification text and citations may be reorganized. It
+This proposal explores whether and how specification text and citations may be reorganized. It
 does not define specification authority, artifact roles or membership, release identity, or
-publication terminology. P1 remains the sole owner of those candidate decisions. This proposal can
-condition editing behavior on an edition later declared immutable by the owning publication rule;
-it does not declare such an edition itself.
+publication terminology. The authority-and-normative-ownership draft, called P1 in the roadmap,
+remains the owner of those candidate decisions. The present proposal can condition editing behavior
+on an edition later declared immutable by the owning publication rule; it does not declare such an
+edition itself. The roadmap labels P0.1, P0.2, and P1 are coordination identifiers, not sections of
+this proposal and not accepted-revision numbers.
+
+The current specification, registry, and schemas should stand alone as the current contract. Their
+meaning should not require access to an accepted revision, and their source should not carry
+revision citations merely to corroborate the ledger. Change provenance belongs in the accepted
+revision, `applied.toml`, and the evidence manifest. If a registry field needs an introduction
+version for compatibility, that value should identify a specification edition rather than a
+revision record. The dependent cleanup appraises whether such a field is needed before choosing an
+edition-valued replacement.
+
+Specification-maintenance rules live at the layer they bind. Crosswalks, bootstrap commits,
+acceptance sequencing, and ledger procedures bind repository maintainers rather than packet
+producers or consumers, so `revisions/CONTRIBUTING.md` owns them. A separate maintenance-policy
+artifact would add an authority class the project does not need. Stable anchors remain metadata in
+the published Markdown, while the rules for assigning and checking them belong to the contribution
+guide and publication tooling. The earlier plan to place the complete process in a new normative
+Part 00 section is rejected.
+
+The lifecycle should recognize two decision domains without making either historical revision
+record independently normative:
+
+- A **specification** decision changes the packet contract or an artifact that owns part of that
+  contract. Its current owner remains a numbered part, incorporated registry or schema, or another
+  artifact assigned that role by the authority model.
+- A **process** decision changes the material rules by which specification changes are proposed,
+  appraised, accepted, incorporated, or evidenced. Its current owner is an exact anchored section
+  of `revisions/CONTRIBUTING.md` or a process artifact that guide expressly recognizes.
+
+Proposals, drafts, accepted records, the ledger, and evidence manifests use the same lifecycle and
+one `R<N>` incorporation sequence for both domains. New and open artifacts declare `Decision
+domain` as `specification` or `process`, and the stage, ledger, and evidence tools validate the
+destinations appropriate to it. The P0.1 draft declares `process`. When this decision is
+incorporated, every other open artifact, including the P1 draft, is migrated to an explicit
+`specification` value. Existing accepted revisions without the field are defined as
+`specification` decisions and remain byte-for-byte unchanged; tools apply that legacy default only
+to accepted records that predate this process decision. Every proposal or draft created or promoted
+after incorporation must declare the field, and its accepted form preserves the value.
+
+For a process draft, `Profile` is `not applicable`, and `Amends` names the exact repository path and
+stable anchor of each process owner rather than a numbered specification part. Templates and
+`stages.py` enforce those forms prospectively. An accepted record preserves the decision and
+provenance; authority arises from the current incorporated owner, not from the record. A change that
+materially alters lifecycle gates, process authority, structural-editing permission, ledger
+dispositions, or evidence semantics uses this lifecycle. Meaning-preserving edits to contribution
+prose, examples, and implementation details remain ordinary repository maintenance. The lifecycle
+guide, stage templates, directory READMEs, and evidence terminology are updated together when this
+decision is incorporated.
 
 The append-only policy remains the default for an ordinary amendment to the working specification.
 An accepted structural revision may make a reviewed exception when reorganization produces a
 materially clearer owner, dependency order, or document structure.
 
-The exception should have these properties:
+The process guide owns the exception, and the mechanism should have these properties:
 
 1. The revision identifies itself as a structural reorganization, records the exact baseline
    commit, and explains why append-only placement would impair the specification.
@@ -216,28 +348,40 @@ The exception should have these properties:
    target is the stable anchor. Citation checks verify the displayed number against the anchor's
    current heading. Source-code comments may retain the textual form and are updated during the
    ordinary impact sweep.
-7. `applied.toml` and evidence manifests may identify a prose owner by stable anchor instead of
-   section number. The ledger and evidence checkers resolve that anchor to its current section
-   before applying their existing destination and corroboration checks. A structural revision
-   converts every affected machine target to its anchor; untouched legacy section targets need not
-   be migrated merely to adopt this process.
+7. The ledger, `applied.toml`, and registry-target map move from the specification directory to
+   `revisions/`. A prose destination may use `part` and a stable `anchor` for a specification part,
+   or an exact repository `path` and stable `anchor` for another recognized current owner such as
+   `revisions/CONTRIBUTING.md`. The ledger and evidence checkers resolve that anchor before applying
+   destination checks. They check completeness and existence, not semantic fidelity, and do not
+   require the owner to cite its revision back. The reverse-corroboration check and
+   `corroboration-exceptions.toml` are removed. A structural revision converts every affected
+   machine target to anchor form; untouched numeric section targets need not be migrated merely to
+   adopt this process.
 8. The heading record associates each canonical anchor with its current part, number, and title.
    Duplicate or malformed anchors fail verification. Disappearance or reassignment appears as
    heading drift with the anchor's known citers and remains a failure until it is reviewed and the
    heading record is updated in the structural incorporation. The impact tool can report the
    anchor's current numbered section and its live citers.
-9. Every affected live citation, ledger target, evidence owner, corroboration exception, generated
-   rendering, and human document is updated in the same incorporation change. Accepted historical
-   revisions remain unchanged, and their citations are mechanically checked against their
-   incorporation commits subject only to the exact legacy baseline described in §2.5.
+9. Every affected live citation, ledger target, evidence owner, generated rendering, and human
+   document is updated in the same incorporation change. Accepted historical revisions remain
+   unchanged. The completed historical-citation audit remains review evidence, not a permanent
+   conformance or incorporation gate. Current proposals and drafts continue to have their citations
+   checked against the live specification and their recorded baseline is re-established before
+   appraisal; Git preserves the contexts of accepted records without a compatibility inventory or
+   backlink from the current specification.
 10. Once an owning publication rule declares an edition immutable, this process does not permit its
     bytes to be reorganized in place. A later working specification may preserve stable anchors and
     aliases, but a version-specific historical reference continues to target the earlier edition.
 
-The process revision itself can be incorporated under the existing rule by appending a narrow
-exception after Part 00 §10.4. That appended section can carry the first canonical anchor without
-moving any existing section. Only a later revision, beginning with the authority revision, uses the
-exception to reorganize existing material.
+The root authority model describes the numbered parts as the behavioral specification, while
+`revisions/CONTRIBUTING.md` already says that it governs the change lifecycle. This process change
+therefore lands in the contribution guide and its tools; it does not need Part 00 to authorize it.
+Part 00 §10 mixes repository-maintenance, citation-presentation, revision-provenance, and
+current-owner statements, but it is not the owner of repository governance. The dependent cleanup
+accounts for each statement in §§10.1–10.4: it removes process-owned rules after their current
+owners exist in the contribution guide, removes historical provenance from authoritative sources,
+and preserves any current-contract ownership semantics until the authority draft places them
+finally. That cleanup is not a reason to reproduce the process in another specification section.
 
 After the process revision is committed, adding canonical anchors to existing numbered headings is
 an expressly permitted metadata-only maintenance change. A structural draft first identifies every
@@ -256,6 +400,17 @@ No packet bytes, registry declarations, schema identities, profile behavior, or 
 conformance change merely because this process changes. A structural revision still uses the
 ordinary proposal, draft, acceptance, incorporation, and evidence gates for every semantic change
 it contains.
+
+The authoritative-source cleanup, called P0.2 in the roadmap, is split from this process decision.
+It gives every statement in Part 00 §§10.1–10.4 an explicit disposition; removes process rules and
+revision citations from the numbered parts and incorporated registry, schema, and rule sources;
+removes the registry-provenance `derived_from` object; and either removes revision-valued `since` or
+replaces it only if a separate appraisal establishes a genuine specification-edition compatibility
+need. It does not remove a still-needed current-contract ownership rule merely because historical
+provenance appears in the same section. The split is necessary because changing the registry
+meta-schema and regenerated registry can affect embedded registries and existing packets, while
+relocating process ownership cannot. That cleanup depends on this structural process and precedes
+the authority revision.
 
 ## 4. Options and tradeoffs
 
@@ -298,41 +453,82 @@ were accepted. Permanent forwarding sections would preserve numbers but leave a 
 skeleton in the normative parts. Historical interpretation belongs to the historical commit;
 stable aliases are sufficient where a current link has an honest successor.
 
+### 4.6 Put the complete maintenance procedure in normative Part 00
+
+This was the promoted draft's direction. It gives the structural exception an authoritative home
+and makes the generated specification carry every rule needed to edit itself. It also mixes packet
+conformance with repository governance, places historical-revision mechanics in the current data
+contract, and encourages the specification to retain backward references to its change records.
+The acceptance appraisal found that cost larger than the apparent simplicity.
+
+### 4.7 Let the revision process own maintenance and keep provenance one-way
+
+Under this option, the revision contribution guide and its tools own structural crosswalks,
+bootstrap ordering, historical audits, and acceptance mechanics. The ledger maps accepted clauses
+to current owners but no longer asks those owners to cite the revision back. This process decision
+makes no Part 00 change. The dependent authoritative-source cleanup removes process and provenance
+material from Part 00 while preserving any current-contract statement needed until the authority
+draft supplies its final owner.
+
+This is the selected direction. It matches the existing boundary in which the root authority model
+defines the behavioral artifacts and the revision contribution guide governs their change
+lifecycle. The ledger moves beside the records it indexes and replaces weak backlink corroboration
+with exact current destinations and incorporation evidence.
+
+### 4.8 Publish a separate specification-maintenance policy
+
+A dedicated policy could be more durable and discoverable than contribution instructions while
+remaining outside the packet specification. It would, however, introduce another authority class
+before P1 has defined artifact roles and release membership. Unless the process needs distribution
+independent of this repository, the revision contribution guide is the smaller starting point.
+This option is rejected.
+
+### 4.9 Remove every historical reference in this process change
+
+Combining the cleanup with the structural-process decision would reach the desired standalone
+contract in one incorporation. It would also combine repository governance with removal of 478
+Markdown occurrences, hundreds of registry provenance values, a registry meta-schema change, and
+the compatibility question raised by embedded registries. Those are independently appraisable
+effects. The cleanup is therefore split into a dependent proposal that lands before P1.
+
 ## 5. Impact sketch
 
 | surface | expected effect |
 |---|---|
-| semantic prose | Part 00 gains an appended exception to Part 00 §10.3's default and defines structural-edit, anchor, and citation-time mechanics. P1 remains the owner of authority, artifact-role, candidate, release, and publication terminology. No scientific concept changes. |
-| logical prose and registry | No logical resource, declaration, registry source, or generated registry changes. |
+| semantic prose | No packet-behavior rule changes. Part 00 §§10.1–10.4 are recorded for clause-level disposition by the dependent authoritative-source cleanup; this process does not edit Part 00 or append a replacement specification section. |
+| logical prose and registry | No logical declaration or registry source changes in this process. Revision citations, registry-provenance `derived_from`, and revision-valued `since` move to the dependent cleanup because their removal changes the registry meta-schema and generated registry. |
 | physical profiles | No storage requirement or profile identifier changes. |
 | packet catalog and schemas | No packet field, JSON Schema, or catalog behavior changes. |
-| validation and import | Packet validation and import are unchanged. Specification-process verification gains anchor checks. |
+| validation and import | Packet validation and import are unchanged. Repository-process verification gains structural-change and anchor checks. |
 | extensions | Extension registries and extension behavior are unchanged. |
 | reader, writer, validator, adapters, and code generation | Runtime behavior is unchanged. Source comments that cite renumbered sections are updated during structural incorporation. |
 | existing packets and migration | No packet migration or regeneration is needed. |
-| revision ledger and evidence manifests | `ledger.py` and `evidence.py` accept anchor-based prose targets and resolve them to current sections. Affected targets are converted during reorganization; the full set of 375 current applied targets is not subject to an immediate global migration. |
-| citation, heading, and impact tooling | `check_citations.py` checks canonical anchors, aliases, uniqueness, and linked citation display; identifies each accepted revision's incorporation commit by its status transition while following renames; and resolves historical citations against the source tree in that commit. Any genuinely unrecoverable pre-v0.2 references are limited to an exact, reviewed, non-growing legacy baseline. `headings.py` records anchor-to-part/number/title assignments; `impact.py` accepts an anchor and reports its current section and live citers. |
-| process-tool tests | Positive cases cover a separately committed metadata-only bootstrap for every affected existing source and destination, a structural draft whose refreshed baseline names that commit before final appraisal and acceptance, anchors assigned to new destinations, preserved anchors through renumbering, honest aliases, anchor-based ledger and evidence targets, an accepted-status transition found through a rename, and a historical reference valid at its incorporation commit. Negative cases cover an acceptance request based before the required bootstrap, a structural incorporation with an unanchored affected source or destination, a bootstrap that changes prose or structure, duplicate or missing anchors, anchor reassignment, a stale displayed number, an unresolved live target, a historical citation that was never valid, growth of the legacy baseline, and a missing affected ledger destination. |
-| generated publications and developer documentation | The combined specification preserves source anchors and is checked for global uniqueness. The lifecycle guide explains structural appraisal, current versus historical references, anchor handling, and the editing consequence of an edition being declared immutable elsewhere. |
-| current authority draft | It remains blocked from acceptance. After this process change lands, its landing plan can reorganize by subject, assign stable anchors, and provide a human-readable section and README-statement crosswalk. |
+| conformance fixtures and packet implementation tests | Unchanged because this process decision changes no packet shape, behavior, or interpretation. Process-tool tests change as described below. |
+| revision ledger and evidence manifests | The ledger files move under `revisions/`; prose destinations accept exact part-or-path plus anchor targets; reverse corroboration and its exceptions are removed. Evidence manifests remain clause-to-owner and clause-to-evidence maps. |
+| citation, heading, and impact tooling | P0.1 repoints the measured 22 process-tool citations and two live-roadmap citations from Part 00 to the new process owner. P0.2 dispositions the current Part 07 citation; accepted R113 and the eventual accepted P0.1 record remain historical. Live specification citations, stable anchors, aliases, uniqueness, and displayed-number agreement remain affected. The completed legacy audit is retained as proposal evidence rather than implemented as a permanent gate. |
+| process-tool tests | Structural bootstrap, anchor, crosswalk, impact, and candidate-state cases remain required. New cases prove that a process-owned clause resolves to `revisions/CONTRIBUTING.md`, a current owner needs no revision backlink, and every accepted clause still has an exact disposition. |
+| generated publications and developer documentation | The lifecycle guide owns structural appraisal, anchors, and bootstrap ordering. Its scope, artifact definitions, templates, and directory READMEs distinguish specification and process decisions. Publication tooling preserves source anchors and checks global uniqueness once a structural revision introduces them; no new process prose is generated into the specification. |
+| provisional release assembly | `release.py` and `RELEASE.json` update the ledger path from `escapewheel_poc_docs_v0.2/applied.toml` to `revisions/applied.toml` while preserving its existing `provenance` category. P1 remains responsible for eventual release membership. |
+| dependent authoritative-source cleanup | A separate proposal gives Part 00 §§10.1–10.4 clause-level dispositions, removes process and revision-provenance material from authoritative Markdown and incorporated JSON, preserves any current-contract ownership semantics pending P1, removes registry build provenance, and appraises `since` removal and embedded-registry compatibility. It depends on this process and blocks P1. |
+| current authority draft | It remains blocked from acceptance. After this process and the dependent authoritative-source cleanup land, its landing plan can reorganize by subject, assign stable anchors, and provide a human-readable section and README-statement crosswalk. |
 | release compatibility | The current working specification has no known external consumer or remote. When the owning publication rule declares an edition immutable, later work does not modify it in place and preserves honest anchors and aliases where useful. |
 
-## 6. Open questions
+## 6. Resolved questions
 
 The 2026-09-17 promotion appraisal exposed five questions in the earlier relocation-database
 design. The revised direction resolves those questions as follows:
 
 1. Unnumbered prose has no machine selector. The authority revision's reviewed crosswalk identifies
    README statements in human-readable terms, and Git preserves their exact baseline bytes.
-2. Section locations need no temporal relocation identity or chain. Historical references resolve
-   in their incorporation commit; current subject identity uses a stable anchor; an edition
-   declared immutable by the owning publication rule does not change.
+2. Section locations need no temporal relocation identity or chain. Current subject identity uses
+   a stable anchor, Git preserves historical states, and an edition declared immutable by the
+   owning publication rule does not change.
 3. The crosswalk and ledger no longer compete. The crosswalk records historical movement, while
    `applied.toml` and evidence manifests identify current owners, using anchors for affected prose
    targets.
 4. Live references are checked against the current working specification. Accepted revisions are
-   historical and interpreted in the commit that incorporated them. A version-specific reference
-   continues to name the edition it originally targeted.
+   immutable historical records rather than inputs to current interpretation. A version-specific
+   reference continues to name the edition it originally targeted.
 5. There is no new relocation artifact or checker. Stable anchors live in the numbered source,
    crosswalks live in accepted revisions, and the existing heading, citation, impact, ledger, and
    evidence tools gain the focused checks described above.
@@ -345,10 +541,9 @@ The 2026-09-18 re-appraisal found three narrower questions. All are resolved:
 2. P0.1 owns only editing and citation mechanics. P1 remains the sole owner of candidate authority,
    artifact roles and membership, release identity, and publication terminology. P0.1 recognizes
    the editing consequence of a future immutable-edition declaration without defining it.
-3. Historical citations are mechanically checked in their incorporation commits. The checker
-   identifies the accepted-status transition while following renames and rejects a citation that
-   was never valid. Incorporation audits pre-v0.2 references; any genuinely unrecoverable cases are
-   an exact reviewed compatibility baseline that cannot grow.
+3. The historical-citation probe and its complete follow-up audit remain appraisal evidence rather
+   than production machinery. Current citation and freshness checks govern open artifacts, and no
+   legacy compatibility inventory is introduced.
 
 Those three questions remain resolved.
 
@@ -364,10 +559,59 @@ process uses the order already recorded by the authority draft's §7: identify t
 commit the metadata-only bootstrap, refresh the draft baseline, perform the final pre-acceptance
 appraisal, commit that exact draft, and only then request acceptance.
 
-No substantive promotion blocker remains. This process will enable every structural consequence
-of the authority draft, but it will not make the current draft acceptance-ready by itself; §2.6
-lists the draft changes and post-P0.1 re-appraisal still required. Promotion still waits for the
-exact appraised proposal state to be committed and for explicit authorization to draft.
+The 2026-09-18 acceptance appraisal reopened the proposal after finding an abstraction-layer
+defect. The resulting questions are now resolved:
+
+1. `revisions/CONTRIBUTING.md` owns structural-editing procedure. No separate maintenance-policy
+   artifact is introduced.
+2. The root authority model already limits the numbered parts to the behavioral specification and
+   the revision guide already governs the change lifecycle. This process lands in that guide and
+   its tools without seeking authorization from Part 00. The dependent cleanup removes Part 00
+   §10 rather than appending another process section.
+3. Exact ledger destinations, the atomic incorporation diff, evidence manifests, and later
+   supersession records replace reverse-citation corroboration. The ledger verifies completeness
+   and resolution and leaves semantic fidelity to appraisal; its corroboration exceptions are
+   removed.
+4. Historical revision references are excluded from every authoritative source, including
+   specification prose, registry and schema descriptions, rule messages, registry build
+   provenance, and revision-valued `since`. Because the registry changes have separate
+   compatibility effects, a dependent proposal performs that cleanup and appraises whether any
+   edition-valued replacement is justified.
+5. The 419-citation audit is retained as evidence about the existing archive, not implemented as a
+   permanent gate. Current open artifacts remain subject to live citation and freshness checks;
+   Git preserves accepted history.
+6. Anchor assignment, alias handling, bootstrap ordering, current-link verification, and combined
+   rendering checks are maintenance and publication procedure. The anchors themselves remain
+   stable metadata in the published Markdown; none of these rules becomes packet-conformance prose.
+
+The subsequent promotion appraisal found four bounded omissions. They are now resolved:
+
+1. Material lifecycle and process-authority changes use the same appraised revision lifecycle as
+   specification decisions, declare the process decision domain, and land in exact process owners.
+   Accepted records remain historical, and ordinary documentation maintenance remains ordinary.
+2. This process decision makes no Part 00 or registry-source change. The dependent cleanup gives
+   §§10.1–10.4 clause-level dispositions, removes maintenance and historical material, and preserves
+   needed current-contract semantics pending the authority draft.
+3. Moving the ledger updates its path in the provisional release assembly without deciding future
+   release membership.
+4. Packet conformance fixtures and packet implementation tests are explicitly unchanged; focused
+   process-tool tests provide the new executable evidence.
+
+The focused re-appraisal found two remaining migration questions. They are now resolved:
+
+1. `Decision domain` classifies lifecycle handling without defining P1's specification authority
+   model. Legacy accepted revisions default to `specification` without being edited; current open
+   artifacts are migrated at incorporation; and future open and accepted artifacts declare the
+   field. Process drafts use `Profile: not applicable` and exact path-plus-anchor `Amends` targets.
+2. The 30 citations into Part 00 §§10.1–10.4 are partitioned by lifecycle. P0.1 repoints 22
+   process-tool and two roadmap citations, P0.2 dispositions the one current numbered-part citation,
+   and five citations carried by accepted history remain unchanged. Incorporation re-measures the
+   population.
+
+The earlier anchor, crosswalk, bootstrap, and immutable-edition research therefore survives with a
+different owner. The revised proposal requires a new promotion appraisal. Promotion would then
+still require the exact proposal and coordination state to be committed and explicit authorization
+to draft.
 
 ## 7. Promotion criteria
 
