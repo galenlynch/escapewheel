@@ -23,7 +23,7 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | [`define-specification-artifacts-and-normative-ownership`](define-specification-artifacts-and-normative-ownership.md) | 3,492 | Draft appraisal pending; proposal promotion appraised and authorized 2026-09-17 | Depends only on accepted R93 and R111–R113; establishes the framework needed by every later reconciliation proposal. |
+| 1 | [`define-specification-artifacts-and-normative-ownership`](define-specification-artifacts-and-normative-ownership.md) | 3,987 | Revise before acceptance (re-appraised against P0.1 on 2026-09-18): §7 records the exact process, structural, traceability, actor-binding, and evidence blockers | After the [controlled-reorganization proposal](../proposals/allow-controlled-specification-reorganization.md) is accepted and incorporated, identify affected headings, commit their metadata-only anchor bootstrap, refresh this draft to that baseline, add the accepted process revision as a dependency, complete the exact crosswalk and landing plan, then re-appraise. |
 
 The last to leave was `an-adapter-declares-the-options-it-accepts`, accepted as **R119** on
 2026-09-15 at 2,172 words: an adapter declares in `accepts` the options it can run without, where

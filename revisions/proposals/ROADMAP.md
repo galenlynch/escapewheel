@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative coordination record |
-| **Updated** | 2026-09-17 |
+| **Updated** | 2026-09-18 |
 | **Review baseline** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
 | **Objective** | Reconcile the data-driven contract, then publish one internally consistent and immutable v0.2 specification release |
 
@@ -170,7 +170,7 @@ This direction follows established patterns rather than a repository-specific pr
 ## 3. Promotion history of the authority work
 
 **Original disposition: revise before promotion. Current state: promoted to Draft on 2026-09-17;
-draft appraisal pending.**
+first pre-acceptance appraisal requires revision and a process prerequisite.**
 The original proposal contained sound research and a useful target model, but combined the first
 enabling decision with the final publication step. Its scope was narrowed on 2026-09-17, and the
 first promotion appraisal's ownership, terminology, impact, and evidence findings were
@@ -238,8 +238,11 @@ The narrowing left the following work in later entries in this roadmap:
    disagreements.
 
 The promotion appraisals rechecked the narrowed impact inventory, dependency order, evidence plan,
-and resolved questions. The resulting draft now enters the separate pre-acceptance appraisal in
-the specification-change process; promotion did not accept or incorporate it.
+and resolved questions. The first pre-acceptance appraisal then found that exact relocation and
+citer dispositions, maintainer binding, and the structural landing still needed revision. The
+append-only rule in Part 00 §10.3 would force the new framework and relocated README material to the
+ends of their parts, so the separate controlled-reorganization proposal is now a prerequisite.
+Promotion did not accept or incorporate the authority decision.
 
 ## 4. Proposal dependency order and status
 
@@ -248,6 +251,9 @@ same family to wait when their owners and evidence are independent.
 
 ```text
 P0 process foundation (complete)
+ |
+ v
+P0.1 controlled reorganization
  |
  v
 P1 authority framework
@@ -277,7 +283,8 @@ P1 authority framework
 | ID | Work item | Status | Artifact | Depends on |
 |---|---|---|---|---|
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
-| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — promoted 2026-09-17; pre-acceptance appraisal pending | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | P0 |
+| P0.1 | Controlled reorganization of specification parts | **Proposal** — promotion-ready; commit and authorization pending | [current proposal](allow-controlled-specification-reorganization.md) | P0 |
+| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.1 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | P0.1 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P4 | Registry-document semantics and uniform conformance | **Not started** | anticipated proposal; slug to be assigned | P3 |
@@ -297,12 +304,78 @@ corroboration exceptions, per-revision evidence manifests, runtime capability pr
 structure checks, and candidate-state regeneration checks are implemented. These controls make the
 following sequence tractable; they do not decide any packet contract.
 
+### P0.1 — Controlled specification reorganization
+
+Part 00 §10.3 makes append-only numbering unconditional. That is the safe default for an ordinary
+amendment, but it would put P1's organizing framework after the material it organizes and would
+force relocated README rules to the ends of their subject-owning parts. The revised proposal
+preserves append-only placement as the default while allowing a reviewed structural exception for
+the unpublished working specification. Git commits preserve historical references, explicit stable
+anchors preserve section identity while numbers move, and P0.1 forbids in-place reorganization
+once the owning publication rule declares an edition immutable. P0.1 does not define artifact
+authority, release membership, or publication identity.
+
+**Exit evidence:** the accepted process distinguishes routine amendment from structural
+reorganization; the accepted revision contains a complete human-readable crosswalk; stable anchors,
+current destinations, live citations, ledger targets, and evidence owners resolve; historical
+references are mechanically checked in their incorporation commits; any pre-v0.2 exceptions form
+an exact non-growing compatibility baseline; editions declared immutable elsewhere cannot be
+reorganized in place; and the exception is itself applied under the pre-existing append-only rule
+before P1 uses it. Before the structural draft's final appraisal and acceptance request, a checked,
+separately committed metadata-only bootstrap assigns anchors to every affected existing source and
+destination without changing prose, structure, normativity, or meaning; the draft refreshes its
+baseline to that commit, and new destinations receive anchors in the structural incorporation.
+
+**Revised after promotion appraisal:** the earlier machine-readable paragraph selectors, content
+hashes, relocation chains, and separate relocation artifact were rejected as a disproportionate
+requirements-management system. The replacement combines the RFC-style immutable-edition model,
+W3C-style version history, and explicit section anchors with aliases. Existing tools are extended
+to check the current working specification; the accepted revision and Git history preserve the old
+state.
+
+**Re-appraisal resolution:** retain that simplified model. The revised proposal expressly permits a
+strictly metadata-only anchor bootstrap after P0.1 lands; confines P0.1 to edit and reference
+mechanics while P1 owns authority, artifact, release, and publication semantics; and requires
+historical citations to be checked against the commit where their revision became accepted. The
+R112 history demonstrates that its acceptance commit and then-valid Part 00 §10.3 are recoverable
+through Git. Pre-v0.2 references are audited individually, with only genuinely unrecoverable cases
+retained in an exact compatibility baseline that later revisions cannot expand.
+
+**Authority-draft-focused re-appraisal:** the process permits every kind of edit P1 requires, but
+P1 cannot land unchanged. After P0.1 is incorporated, P1 identifies its exact affected sections;
+a separately committed metadata-only change bootstraps their existing source and destination
+headings; and P1 refreshes its baseline to that commit. It then depends on the accepted P0.1
+revision, accounts for P0.1's appended Part 00 section, replaces its subject-level README
+disposition with an exact paragraph crosswalk, names its resulting Part 00 outline, assigns anchors
+and aliases to new destinations, converts affected ledger and evidence targets, and reruns
+appraisal.
+
+**Resolved anchor coverage:** every structurally affected source and destination receives an
+anchor. Existing affected headings are anchored in a separately committed metadata-only bootstrap
+before structural incorporation; new headings receive anchors when created. Untouched sections
+remain outside the migration.
+
+**Resolved lifecycle sequencing:** the existing acceptance sequence forbids an intervening commit
+after acceptance authorization. P0.1 therefore requires the structural draft to identify affected
+headings, commit their metadata-only bootstrap, refresh and finally appraise the draft against that
+commit, commit the exact draft, and only then request acceptance. P1 §7 already records this order.
+No substantive promotion blocker remains; the exact proposal state must be committed and promotion
+still requires explicit authorization.
+
 ### P1 — Authority framework
 
 The draft makes Part 00 capable of locating later decisions without publishing the final release
 bundle prematurely. It states the relationship between semantic, logical, and physical
 abstraction levels and the separate packet content classes, and it incorporates no
 machine-readable artifact whose semantics or current contents remain under dispute.
+P1, not P0.1, owns candidate authority, artifact roles and membership, release identity, and
+publication terminology.
+
+Its first pre-acceptance appraisal remains open. After P0.1 lands, revise P1 with an exact
+human-readable old-location-to-new-location crosswalk, a paragraph-level disposition of the
+specification README, stable anchors for reorganized sections, all affected citation and tooling
+surfaces, and explicit binding for specification-maintenance obligations; then rerun the appraisal
+from its freshness gate.
 
 **Exit evidence:** Part 00 and the informational README boundary are unambiguous; every numbered
 part has a stated subject and dependency direction; candidate disagreements are classified as
@@ -322,8 +395,8 @@ inventory.
 
 Broader moves that merely preserve meaning can use the ordinary documentation workflow after their
 owner is clear. Any move that changes what a conforming implementation can do remains a separate
-proposal. Preserve stable citations with forwarding text or clause identifiers before large
-reorganization.
+proposal. Any large reorganization uses P0.1's relocation and citation controls; forwarding text
+remains available when a published anchor needs a compatibility period.
 
 **Review coverage:** S0, S1, S8, S9, I3, I10, and the unit-identity portion of I9.
 

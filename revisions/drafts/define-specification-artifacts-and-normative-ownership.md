@@ -9,7 +9,7 @@
 | **Profile** | all |
 | **Decision clauses** | §3.1, §3.2, §3.3, §3.4, §3.5, §3.6, §3.7, §3.8, §3.9 |
 
-Section 3 is normative. Sections 1–2 and 4–7 are informative.
+Section 3 is normative. Sections 1–2 and 4–8 are informative.
 
 Normative keywords follow BCP 14.
 
@@ -366,7 +366,54 @@ revision ledger, the heading check, the combined-specification check, and the co
 verifier. Their passing establishes structural and generated agreement; the relocation inventory
 and citation reading establish semantic placement.
 
-## 7. Deferred work
+## 7. Pre-acceptance blockers
+
+This section records the current appraisal state; it is informative and adds no Decision clause.
+The draft remains blocked until the controlled-reorganization process change is accepted and
+incorporated into Part 00 with its anchor, heading, citation, impact, ledger, evidence, and
+historical-reference tooling. The proposal itself is not a dependency that this draft can carry
+into accepted history. Once that process has an accepted revision number, this draft records that
+revision in `Depends on` and cites its Part 00 rule.
+
+After that prerequisite lands, the following work occurs in order:
+
+1. **Define the exact structural landing.** Revise `Amends` and the consequence inventory with the
+   resulting Part 00 outline. Give every existing Part 00 section and every current README
+   paragraph an old location, disposition, new location, semantic effect, and governing Decision
+   clause. Include the newly appended controlled-reorganization section itself, preserving its
+   rule wherever the new Part 00 places stable citation and editing conventions. Name the exact
+   receiving sections in Parts 02, 03, 04, 05, and 09 rather than only their subjects.
+2. **Identify and bootstrap affected headings.** Enumerate every existing numbered section that is
+   a source or destination of relocated prose or whose heading, level, number, or order will
+   change. Give each such heading a canonical anchor in a separate metadata-only commit before the
+   structural incorporation. The bootstrap changes no heading text, numbering, order, prose,
+   normativity, or meaning. The structural change gives every new destination an anchor and records
+   an alias only where it has an honest primary successor.
+3. **Refresh the draft after the bootstrap.** Replace `Based on` with the full commit hash that
+   contains both the accepted process rule and the required anchor bootstrap. Add the accepted
+   process revision to `Depends on`, rerun every count and impact query, re-inventory overlapping
+   work, and update stale evidence. The earlier count of 32 citations into affected Part 00
+   sections is historical promotion evidence, not the acceptance population.
+4. **Complete current traceability.** List and read every affected live citation and update it to
+   the destination's current number and anchor. Convert every affected `applied.toml` and revision
+   evidence target to its anchor form, update the heading record and any corroboration exception,
+   and regenerate the combined specification and human-facing authority summaries. Accepted
+   historical revisions remain unchanged and are checked in their incorporation commits.
+5. **Make the framework obligations decidable.** Bind specification-maintenance and publication
+   obligations to a named actor or a testable artifact property. Name the framework check and its
+   positive and negative tests for Part 00 ownership and status, local status projections, README
+   informativity, normative-reference placement, and combined-rendering reproducibility. Keep that
+   checker distinct from the controlled-reorganization process checks on anchors and historical
+   citations.
+6. **Repeat the complete pre-acceptance appraisal.** Re-run the freshness, decision, feasibility,
+   compatibility, traceability, evidence, citation, repointing, and repository gates against the
+   post-bootstrap baseline. Commit that exact appraised draft before requesting acceptance
+   authorization.
+
+These are blockers to accepting and incorporating this draft, not additional normative decisions.
+They preserve §3 while making its consequences exact and reviewable.
+
+## 8. Deferred work
 
 The following questions do not change §3 and remain separate proposals or maintenance work:
 
