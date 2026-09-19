@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative coordination record |
-| **Updated** | 2026-09-18 |
+| **Updated** | 2026-09-19 |
 | **Review baseline** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
 | **Objective** | Reconcile the data-driven contract, then publish one internally consistent and immutable v0.2 specification release |
 
@@ -292,7 +292,7 @@ P1 authority framework
 |---|---|---|---|---|
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
 | P0.1 | Controlled reorganization of specification parts | **Complete** | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) | P0 |
-| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Not started** | anticipated proposal; slug to be assigned | P0.1 |
+| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Proposal** — promotion appraisal passed and explicit promotion authorized; checkpointed before stage transition | [current proposal](remove-historical-and-misplaced-maintenance-material.md) | R120 |
 | P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.2 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | R120, P0.2 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
@@ -434,24 +434,34 @@ draft. Its complete pre-acceptance appraisal then passed, and the exact candidat
 
 ### P0.2 — Remove historical and misplaced maintenance material from authoritative artifacts
 
+The [active proposal](remove-historical-and-misplaced-maintenance-material.md) carries the measured
+inventory, compatibility analysis, alternatives, and resolved direction for this work.
+
 Apply the strict one-way model now that R120 supplies the structural process. Remove revision
 citations from the specification README and numbered parts, incorporated registry and schema
 descriptions, validation-rule messages, and extension registry sources. Remove the registry-build
-`derived_from` object, which is change provenance rather than packet meaning. Appraise
-revision-valued `since` separately: remove it unless a demonstrated compatibility use justifies an
-edition-valued replacement. Do not confuse this registry-build provenance with the packet
-catalog's `derived_from`, which names source resources and remains part of the packet contract.
+`derived_from` object, which is change provenance rather than packet meaning, and remove
+revision-valued `since` without replacement because no compatibility behavior consumes it. Give
+the cleaned meta-schema a new `0.2.0` identity, advance the core registry to `0.2.0`, and regenerate
+development packets. Replace the generator's one history-valued name-column selector with the
+equivalent assigned-primary-key derivation. Do not confuse this registry-build provenance with the
+packet catalog's `derived_from`, which names source resources and remains part of the packet
+contract.
 
 Account separately for every statement in Part 00 §§10.1–10.4. Remove repository-maintenance and
 citation-presentation rules after their current process owners exist in
-`revisions/CONTRIBUTING.md`; remove revision provenance; and preserve any current-contract ownership
-semantics until P1 assigns their final location. P0.2 must not delete a still-needed authority rule
-merely because it shares a section with maintenance or historical text.
+`revisions/CONTRIBUTING.md`; and remove revision provenance. Part 00 §9 and Part 02 §1 already carry
+the current-contract ownership meaning that remains before P1, so §§10.1–10.4 need no temporary
+normative replacement. Remove the specification README's revision-status projection and the stale
+provisional `RELEASE.json`; move its useful digest experiment to non-writing prototype tooling. P1
+still owns candidate and released authority classification, while P11 owns future release-manifest
+and publication-tooling design.
 
 **Exit evidence:** authoritative prose and incorporated machine-readable artifacts contain no
 references to revision records; the ledger and evidence manifests preserve change provenance;
-registry generation is internally consistent; and the compatibility effect on embedded registries
-and existing packets is explicit. P1 begins only after this cleanup lands.
+registry generation is internally consistent under the new meta-schema identity; development
+packets are regenerated against core registry `0.2.0`; and no provisional release snapshot claims
+current publication state. P1 begins only after this cleanup lands.
 
 ### P1 — Authority framework
 
@@ -462,11 +472,12 @@ machine-readable artifact whose semantics or current contents remain under dispu
 P1, not P0.1, owns candidate authority, artifact roles and membership, release identity, and
 publication terminology.
 
-Its first pre-acceptance appraisal remains open. After P0.1 and P0.2 land, revise P1 with an exact
-human-readable old-location-to-new-location crosswalk, a paragraph-level disposition of the
-specification README, stable anchors for reorganized sections, all affected citation and tooling
-surfaces, and explicit binding for specification-maintenance obligations; then rerun the appraisal
-from its freshness gate.
+P1 is rebased on R120's incorporation commit. Its pre-acceptance appraisal remains open and P0.2
+remains a gating predecessor rather than an accepted dependency. After P0.2 lands, revise P1 with
+an exact human-readable old-location-to-new-location crosswalk, a statement-level disposition of
+the specification README, stable anchors for reorganized sections, all affected citation and
+tooling surfaces, and explicit binding for specification-candidate and publication obligations;
+then rerun the appraisal from its freshness gate.
 
 **Exit evidence:** Part 00 and the informational README boundary are unambiguous; every numbered
 part has a stated subject and dependency direction; candidate disagreements are classified as
@@ -609,10 +620,11 @@ TODO.
 Only after P1–P10 close should a publication proposal decide the exact release-manifest schema,
 initial membership, member-role assignments, checked status projections, external root-digest
 model, and release tooling. It must not redefine the numbered-part statuses owned by Part 00.
-Reconcile the tracked prototype `RELEASE.json` rather than assuming it is absent. Replace or revise
-`release.py` so verification cannot select membership implicitly, add it to the repository
-verifier, and give publication failures their own tests rather than treating them as malformed
-packets.
+Use the deleted prototype snapshot's Git history and the surviving non-writing bundle probe as
+design evidence rather than assuming either is a release. Replace or revise that prototype so
+verification cannot select membership implicitly, add the resulting publication checks to the
+repository verifier, and give publication failures their own tests rather than treating them as
+malformed packets.
 
 Positive evidence should cover complete membership, roles, status projections, sizes, digests,
 incorporated schemas, registries, and generated views. Negative evidence should cover missing,

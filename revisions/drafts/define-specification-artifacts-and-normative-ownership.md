@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
+| **Based on** | `b4695ca087376fd85e998743f81401164b2a15c5` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 00 §§1–3 and §§9–10 (specification framework, authority, abstractions, part ownership and status, references); Part 02 §§1 and 9 (registry and compatibility statements relocated from the specification README); Part 03 §1 (profile identity); Part 04 §§3–4 (recorded standard identifiers); Part 05 §§1 and 10 (conformance summary); Part 09 §§1 and 5–6 (extension independence); specification README §§1–7 (informational entry point) |
-| **Depends on** | R93 §3.2 and §3.6 (part subjects, profile boundary, and current status precedence); R111 §§3.1–3.3 (actors and requirement subjects); R112 §3.1 and §3.4 (current requirements live in parts); R113 §3.1 (part citation spelling); R120 §§3.3–3.7 (structural change, anchors, citations, and current-owner traceability); P0.2 authoritative-source maintenance and history cleanup |
+| **Amends** | Part 00 §§1–3 and §9 (specification framework, authority, abstractions, part ownership and status, references); Part 02 §§1 and 9 (registry and compatibility statements relocated from the specification README); Part 03 §1 (profile identity); Part 04 §§3–4 (recorded standard identifiers); Part 05 §§1 and 10 (conformance summary); Part 09 §§1 and 5–6 (extension independence); specification README §§1–7 (informational entry point) |
+| **Depends on** | R93 §3.2 and §3.6 (part subjects, profile boundary, and current status precedence); R111 §§3.1–3.3 (actors and requirement subjects); R112 §3.1 (current requirements live in parts); R120 §§3.1 and 3.3–3.7 (process authority, structural change, anchors, citations, and current-owner traceability) |
 | **Profile** | all |
 | **Decision clauses** | §3.1, §3.2, §3.3, §3.4, §3.5, §3.6, §3.7, §3.8, §3.9 |
 
@@ -27,6 +27,11 @@ This revision assigns authority by concern, makes Part 00 the specification fram
 abstraction level from packet content class, assigns every numbered part a subject and status, and
 makes the specification README informational. It also distinguishes an authoritative working
 candidate from an immutable release.
+
+This is a structural reorganization under R120. An ordinary append-only amendment would place the
+authority framework after the rules it classifies, leave the README acting as a preamble, and leave
+duplicate owners in place. Those results would impair the framework's dependency order and the
+reader's ability to locate a rule, so the controlled structural form is required.
 
 This revision changes the organization and interpretation of the specification, not the packet
 contract. It does not select among the known disagreements about unit identity, resource
@@ -88,15 +93,17 @@ later publication decision freezes exact members and bytes.
 
 ### 2.4 Existing decisions and impact
 
-R93 §3.6 makes Part 00 list each part but gives a conflicting local header precedence. R111
-§§3.1–3.2 defines the actors Part 00 already carries. R112 §3.1 and §3.4 places current
-requirements in parts and preserves their section identifiers, and R113 §3.1 standardizes part
-citations. This revision retains the actor and citation decisions and supersedes only R93 §3.6's
-local-header precedence sentence.
+R93 §3.6 makes Part 00 list each part but gives a conflicting local-header precedence. R111
+§§3.1–3.2 defines the actors Part 00 already carries, and R112 §3.1 places current requirements in
+their owning parts. R120 now assigns repository-change procedure and citation presentation to
+`revisions/CONTRIBUTING.md`; this revision therefore does not relocate those process rules into
+Part 00. It supersedes only R93 §3.6's local-header precedence sentence.
 
-At promotion, there were no other open proposals or drafts. The reverse-citation query over Part
-00 §§1, 2, 2.1–2.3, 2.8, 3, 9, and 10 found 32 citations across nine sections. Incorporation has to
-remeasure and read those citations, not merely establish that they resolve.
+At the R120 rebase, this draft is the only open lifecycle artifact. The impact query over Part 00
+§§1, 2, 2.1–2.3, 2.8, 3, 9, and 10 reports 33 citations across the nine queried sections: 21 occur
+in immutable accepted records and 12 are live, including four within this draft. The accepted
+records remain historical; incorporation has to remeasure, read, and where necessary repoint the
+live population after the anchor bootstrap.
 
 There are no published remote, external consumers, or released packets. No packet bytes or
 implementation behavior change here, so packet migration is not required. The organizational
@@ -175,7 +182,7 @@ Part 00 **MUST** own:
 - abstraction levels and their dependency direction;
 - packet content classes as a separate classification;
 - the subject owned by every numbered part; and
-- stable citation and publication conventions.
+- specification-candidate and release states and any conformance-relevant publication semantics.
 
 Part 00 **MUST NOT** become the owner of exact keys, columns, registry counts, profile encodings,
 performance measurements, implementation plans, or detailed lifecycle algorithms merely because
@@ -325,6 +332,7 @@ generation, citation review, and framework checks, not packet migration.
 | extensions | Part 09 receives unique extension-independence, namespace, and behavior statements or links to existing detailed clauses. Extension registries do not change. | Extension registry checks remain unchanged; no declaration bytes change. |
 | reader, writer, validator, adapters | No runtime behavior changes. A new specification-framework check is repository tooling rather than packet validation. | Existing package tests pass; the evidence manifest records each implementation surface as unchanged with this reason. |
 | conformance fixtures and tests | Packet fixtures remain unchanged because the packet contract does not change. Add positive and negative tests for the framework checker. | Tests cover every numbered part, mixed status, README normativity, normative-reference placement, and combined-rendering reproducibility. |
+| revision process and tooling | R120 already owns structural sequencing, stable anchors, citation presentation, ledger destinations, and evidence-owner forms. This revision uses those rules and does not restate or amend them in Part 00. | The process, stage, citation, repointing, heading, ledger, and evidence checks pass against the incorporation. |
 | generated publications and developer documentation | The README becomes informational; the combined specification is regenerated; root authority and contribution guidance point to Part 00. The placement-defect inventory remains non-authoritative. | Generated output is stable on a second run; every current README paragraph has a recorded disposition; authority summaries link to the same owner. |
 
 The non-authoritative `revisions/PLACEMENT-DEFECTS.md` inventory remains the observation-level audit
@@ -371,53 +379,54 @@ and citation reading establish semantic placement.
 ## 7. Pre-acceptance blockers
 
 This section records the current appraisal state; it is informative and adds no Decision clause.
-The draft remains blocked until the P0.2 authoritative-source maintenance and history cleanup is
-accepted and incorporated. R120 now supplies the structural-reorganization process. Its first
-acceptance appraisal found that repository-maintenance procedure and historical-revision mechanics
-had been assigned to normative Part 00, and that the ledger's reverse-citation check made current
-authoritative owners depend on their change records. The process draft assigns maintenance to
-`revisions/CONTRIBUTING.md`, moves one-way ledger traceability under `revisions/`, and leaves the
-completed historical audit as non-gating evidence. It also splits removal of historical and
-misplaced maintenance material from authoritative artifacts into a dependent proposal because
-registry provenance and `since` have separate compatibility effects and Part 00 §§10.1–10.4 need
-clause-level dispositions. Neither prerequisite is yet an accepted dependency this draft can carry
-into accepted history.
+This draft is rebased on R120's accepted and incorporated process model. R120 assigns maintenance
+to `revisions/CONTRIBUTING.md`, places one-way ledger traceability under `revisions/`, treats the
+completed historical audit as non-gating evidence, and supplies the controlled structural sequence
+this draft must use. Accordingly, this draft no longer treats Part 00 §10 as its process target or
+claims that a current owner must cite the revision that produced it.
+
+The draft remains blocked until P0.2, the authoritative-source maintenance and history cleanup, is
+accepted and incorporated. P0.2 has no accepted revision number, so it is a gating predecessor and
+not yet a valid `Depends on` entry. It has separate compatibility work for registry provenance and
+`since`, and it must give Part 00 §§10.1–10.4 clause-level dispositions. Those edits can change the
+source paragraphs and headings that this structural revision must account for. The present
+`Amends` field is therefore the affected-subject inventory at the R120 baseline, not the final
+crosswalk, and no anchor bootstrap is claimed complete.
 
 After that prerequisite lands, the following work occurs in order:
 
-1. **Define the exact structural landing.** Revise `Amends` and the consequence inventory with the
-   resulting Part 00 outline. Give every existing Part 00 section and every current README
-   paragraph an old location, disposition, new location, semantic effect, and governing Decision
-   clause. Apply the accepted boundary between packet-specification content and repository
-   maintenance instead of relocating process mechanics within Part 00. Name the exact receiving
-   sections in Parts 02, 03, 04, 05, and 09 rather than only their subjects.
-2. **Identify and bootstrap affected headings.** Enumerate every existing numbered section that is
+1. **Rebase on the cleanup.** Add P0.2's assigned revision and applicable clauses to `Depends on`,
+   replace `Based on` with its incorporation commit, rerun every count and impact query, and
+   re-inventory overlapping work.
+2. **Define the exact structural landing and crosswalk.** Revise `Amends` and the consequence
+   inventory with the resulting Part 00 outline. Give every moved, split, merged, replaced,
+   duplicated, or retired numbered section and every README statement whose normative ownership
+   changes an old location, disposition, new location, semantic effect, and governing Decision
+   clause. Apply the boundary between packet-specification content and repository maintenance
+   instead of relocating process mechanics within Part 00. Name each receiving section in Parts
+   02, 03, 04, 05, and 09 rather than only its subject.
+3. **Identify and bootstrap affected headings.** Enumerate every existing numbered section that is
    a source or destination of relocated prose or whose heading, level, number, or order will
    change. Give each such heading a canonical anchor in a separate metadata-only commit before the
    structural incorporation. The bootstrap changes no heading text, numbering, order, prose,
    normativity, or meaning. The structural change gives every new destination an anchor and records
    an alias only where the crosswalk declares one primary successor under the accepted process
    rule.
-3. **Refresh the draft after the bootstrap.** Replace `Based on` with the full commit hash that
-   contains the accepted process rule, completed authoritative-source maintenance and history
-   cleanup, and required anchor bootstrap. Add both accepted prerequisite revisions to `Depends on`,
-   rerun every count and impact query, re-inventory overlapping work, and update stale evidence. The
-   earlier count of 32
-   citations into affected Part 00 sections is historical promotion evidence, not the acceptance
-   population.
-4. **Complete current traceability.** List and read every affected live citation and update it to
+4. **Refresh the draft after the bootstrap.** Replace `Based on` with the full anchor-bootstrap
+   commit hash, rerun every affected measurement and citation inventory, and update stale evidence.
+   The 33 citations measured at this rebase are not the acceptance population.
+5. **Complete current traceability.** List and read every affected live citation and update it to
    the destination's current number and anchor. Convert every affected `applied.toml` and revision
    evidence target to its anchor form, update the heading record, and regenerate the combined
    specification and human-facing authority summaries. Current authoritative owners do not cite
    accepted revisions merely to corroborate the ledger. Any retained historical-citation audit is
    process evidence over immutable revision records, not specification content.
-5. **Make the framework obligations decidable.** Bind specification-maintenance and publication
-   obligations to a named actor or a testable artifact property. Name the framework check and its
+6. **Make the framework obligations decidable.** Bind each specification-candidate and publication
+   obligation to a named actor or a testable artifact property. Name the framework check and its
    positive and negative tests for Part 00 ownership and status, local status projections, README
    informativity, normative-reference placement, and combined-rendering reproducibility. Keep that
-   checker distinct from R120's process checks on anchors and revision
-   history.
-6. **Repeat the complete pre-acceptance appraisal.** Re-run the freshness, decision, feasibility,
+   checker distinct from R120's process checks on anchors and revision history.
+7. **Repeat the complete pre-acceptance appraisal.** Re-run the freshness, decision, feasibility,
    compatibility, traceability, evidence, citation, repointing, and repository gates against the
    post-bootstrap baseline. Commit that exact appraised draft before requesting acceptance
    authorization.
