@@ -2,7 +2,7 @@
 [baseline]
 undisposed = 0
 
-# Where each accepted normative clause went. Generated once, maintained by hand.
+# Where each accepted Decision clause went. Generated once, maintained by hand.
 # Exact JSON locations for `registry` entries live in registry-targets.toml.
 # `python ledger.py` fails while any binding clause has no entry here.
 
@@ -2752,3 +2752,43 @@ note = "a build MUST NOT supply an option the adapter names in neither list, inc
 disposition = "applied"
 where = [{ part = "03", section = "11.5" }, { part = "05", section = "3.4" }, { part = "05", section = "3.5" }]
 note = "the declaration document carries accepts beside needs, a build MUST read a document without it as an adapter accepting no option, and MUST refuse one whose accepts names a term, names an option its needs also names, or is not an array of names; an adapter declares five facts rather than four"
+
+[clause."R120 §3.1"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-decision-domains" }]
+note = "decision domains and the revision process as the current owner of repository-change procedure"
+
+[clause."R120 §3.2"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-decision-domains" }]
+note = "prospective domain and change-form metadata, process metadata, and exact legacy defaults"
+
+[clause."R120 §3.3"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-structural-reorganization" }]
+note = "ordinary append-only amendments and reviewed structural revisions with a crosswalk"
+
+[clause."R120 §3.4"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-stable-section-anchors" }]
+note = "canonical stable anchors and honest aliases for structurally affected sections"
+
+[clause."R120 §3.5"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-structural-reorganization-sequence" }]
+note = "metadata-only anchor bootstrap, refreshed appraisal, and atomic structural incorporation"
+
+[clause."R120 §3.6"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-citation-context" }]
+note = "current-owner citations and immutable historical accepted records"
+
+[clause."R120 §3.7"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-current-owner-ledger" }]
+note = "one-way ledger destinations, anchored Markdown evidence owners, and current-owner resolution"
+
+[clause."R120 §3.8"]
+disposition = "applied"
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-process-incorporation-boundary" }]
+note = "process incorporation boundary and provisional moved-ledger release selector"

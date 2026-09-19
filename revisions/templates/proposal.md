@@ -5,6 +5,7 @@
 | **Status** | **Proposal** |
 | **Opened** | YYYY-MM-DD |
 | **Based on** | <full commit hash used for the observations and counts> |
+| **Decision domain** | <specification or process> |
 | **Affects** | <concepts and current specification locations, if known> |
 
 ## 1. Problem
@@ -30,7 +31,8 @@ effects, and which abstraction layer each option would change. A tentative prefe
 
 <!-- Identify likely effects on the semantic standard, logical resources, physical profiles,
 packet catalog, import/validation process, reference APIs, registries, extensions, adapters,
-existing packets, conformance fixtures, and documentation. Mark unknowns explicitly. -->
+existing packets, conformance fixtures, revision-process tooling, and documentation. Mark unknowns
+explicitly. -->
 
 ## 6. Open questions
 

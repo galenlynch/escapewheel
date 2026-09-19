@@ -18,6 +18,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    from revisions.process_rules import canonical_anchors
+except ModuleNotFoundError:  # Direct execution from revisions/.
+    from process_rules import canonical_anchors
+
 ROOT = Path(__file__).resolve().parent.parent
 HERE = ROOT / "revisions"
 ACCEPTED = HERE / "accepted"
@@ -28,7 +33,6 @@ DECLARED = re.compile(
 CLAUSE = re.compile(r"§(\d+(?:\.\d+)*)")
 REVISION = re.compile(r"R(\d+)")
 SHA = re.compile(r"[0-9a-f]{40}")
-HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?\s", re.MULTILINE)
 SURFACES = ("projections", "implementations", "documentation")
 
 
@@ -74,14 +78,14 @@ def owner_defects(owner: object) -> list[str]:
         return [defect]
     assert path is not None
     if path.suffix == ".md":
-        section = owner.get("section")
-        if not isinstance(section, str) or section not in HEADING.findall(
+        anchor = owner.get("anchor")
+        if not isinstance(anchor, str) or anchor not in canonical_anchors(
             path.read_text()
         ):
-            return [f"{owner.get('path')} has no declared §{section}"]
-        if set(owner) != {"path", "section"}:
+            return [f"{owner.get('path')} has no canonical #{anchor}"]
+        if set(owner) != {"path", "anchor"}:
             return [
-                f"Markdown owner has fields other than path and section: {sorted(owner)}"
+                f"Markdown owner has fields other than path and anchor: {sorted(owner)}"
             ]
         return []
     if path.suffix == ".json":

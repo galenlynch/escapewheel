@@ -6,8 +6,8 @@
     "R<N> §3.1": {
       "owners": [
         {
-          "path": "registry/logical_schemas.json",
-          "pointer": "/tables/<resource>"
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-<current-owner>"
         }
       ],
       "projections": {

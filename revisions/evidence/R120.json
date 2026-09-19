@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "revision": "R120",
+  "based_on": "f7064ee0b76aca46429338ce147cfa5d5f44d973",
+  "clauses": {
+    "R120 §3.1": {
+      "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-decision-domains"}],
+      "projections": {"unchanged": "The process owner is authored directly and has no generated normative projection."},
+      "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "decision_domain_legacy_cutoff"}]},
+      "implementations": {"paths": ["revisions/stages.py", "revisions/ledger.py", "registry/check.py"]},
+      "documentation": {"paths": ["revisions/README.md", "revisions/accepted/README.md"]}
+    },
+    "R120 §3.2": {
+      "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-decision-domains"}],
+      "projections": {"unchanged": "Lifecycle metadata is checked in authored artifacts rather than generated into the specification."},
+      "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "change_form_required_prospectively"}]},
+      "implementations": {"paths": ["revisions/stages.py"]},
+      "documentation": {"paths": ["revisions/templates/proposal.md", "revisions/templates/draft.md", "revisions/templates/accepted-revision.md"]}
+    },
+    "R120 §3.3": {
+      "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-structural-reorganization"}],
+      "projections": {"unchanged": "Structural crosswalks remain human-readable revision content, not generated specification content."},
+      "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "decision_domain_required_prospectively"}]},
+      "implementations": {"paths": ["revisions/stages.py", "revisions/test_process.py"]},
+      "documentation": {"paths": ["revisions/templates/draft.md", "revisions/templates/accepted-revision.md"]}
+    },
+    "R120 §3.4": {
+      "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-stable-section-anchors"}],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/headings.toml", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "canonical_anchor_shape_and_identity"}]},
+      "implementations": {"paths": ["escapewheel_poc_docs_v0.2/headings.py", "escapewheel_poc_docs_v0.2/combine.py", "revisions/impact.py"]},
+      "documentation": {"paths": ["revisions/evidence/README.md"]}
+    },
+    "R120 §3.5": {
+      "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-structural-reorganization-sequence"}],
+      "projections": {"unchanged": "Bootstrap and sequencing are repository procedures with no generated normative projection."},
+      "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "anchor_bootstrap_is_metadata_only"}]},
+      "implementations": {"paths": ["revisions/test_process.py", "verify.py"]},
+      "documentation": {"paths": ["revisions/drafts/README.md", "revisions/proposals/ROADMAP.md"]}
+    },
+    "R120 §3.6": {
+      "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-citation-context"}],
+      "projections": {"unchanged": "Citation checks operate on authored sources and accepted history remains immutable."},
+      "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "linked_part_number_matches_anchor"}]},
+      "implementations": {"paths": ["revisions/check_citations.py", "revisions/repoint.py", "revisions/impact.py"]},
+      "documentation": {"paths": ["revisions/README.md", "revisions/accepted/README.md"]}
+    },
+    "R120 §3.7": {
+      "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-current-owner-ledger"}],
+      "projections": {"paths": ["revisions/applied.toml", "revisions/registry-targets.toml"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "ledger_process_owner_resolves"}]},
+      "implementations": {"paths": ["revisions/ledger.py", "revisions/evidence.py", "facts.py"]},
+      "documentation": {"paths": ["revisions/evidence/README.md", "revisions/templates/change-evidence.json"]}
+    },
+    "R120 §3.8": {
+      "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-process-incorporation-boundary"}],
+      "projections": {"unchanged": "The tracked provisional RELEASE.json is intentionally unchanged by this incorporation."},
+      "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "release_generator_selects_moved_ledger"}]},
+      "implementations": {"paths": ["release.py", "verify.py"]},
+      "documentation": {"paths": ["CONTRIBUTING.md", "Escapewheel_Specification_Change_Process_Audit.md"]}
+    }
+  }
+}

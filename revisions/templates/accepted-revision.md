@@ -4,9 +4,11 @@
 |---|---|
 | **Status** | **Accepted** YYYY-MM-DD |
 | **Based on** | <full commit hash against which the draft was appraised> |
-| **Amends** | <part names and section numbers, with a short description of each change> |
+| **Decision domain** | <specification or process> |
+| **Change form** | <ordinary or structural; process changes are ordinary> |
+| **Amends** | <specification parts/artifacts; a process draft uses exact repository-relative Markdown path#anchor targets> |
 | **Depends on** | <accepted revision clauses or “None”> |
-| **Profile** | <all or a profile identifier> |
+| **Profile** | <all, a profile identifier, or “not applicable” for process> |
 | **Decision clauses** | <every subsection under §3, or §3 when Decision has no subsections> |
 
 <State which numbered sections are normative and which are informative.>

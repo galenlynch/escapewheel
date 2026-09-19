@@ -14,12 +14,12 @@ from revisions import evidence
 class EvidenceTests(unittest.TestCase):
     """Exercise every evidence kind and a complete no-code clause manifest."""
 
-    def test_owner_targets_resolve_by_section_and_pointer(self) -> None:
+    def test_owner_targets_resolve_by_anchor_and_pointer(self) -> None:
         self.assertEqual(
             evidence.owner_defects(
                 {
-                    "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
-                    "section": "1",
+                    "path": "revisions/CONTRIBUTING.md",
+                    "anchor": "ew-decision-domains",
                 }
             ),
             [],
@@ -75,8 +75,8 @@ class EvidenceTests(unittest.TestCase):
                 clause: {
                     "owners": [
                         {
-                            "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
-                            "section": "1",
+                            "path": "revisions/CONTRIBUTING.md",
+                            "anchor": "ew-decision-domains",
                         }
                     ],
                     "projections": {

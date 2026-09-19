@@ -38,7 +38,7 @@ PARTS: dict[str, tuple[str, ...]] = {
         )
     ),
     "conformance": ("fixtures/build.py", "fixtures/corpus.py"),
-    "provenance": ("escapewheel_poc_docs_v0.2/applied.toml",),
+    "provenance": ("revisions/applied.toml",),
 }
 
 

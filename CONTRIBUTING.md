@@ -21,7 +21,7 @@ which files a person writes, the rest is a straight line.
 | `escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md` | generated convenience rendering; never edited directly |
 | `revisions/proposals/*.md` | active problem statements and alternatives; non-authoritative |
 | `revisions/drafts/*.md` | candidate normative changes; non-authoritative and unnumbered |
-| `revisions/accepted/R<N>-*.md` | accepted decision records explaining changes incorporated into v0.2 |
+| `revisions/accepted/R<N>-*.md` | accepted decision records explaining changes incorporated into the specification or revision process |
 | `registry/build.py` | one block per revision, applying it to the parsed Part 02 |
 | `registry/rules.json` | Tier 2 rules — the checks structure cannot imply |
 | `registry/registry.schema.json` | the meta-schema a registry document validates against |
@@ -153,8 +153,9 @@ the revision that mandates them, so a column's type traces to the argument that 
 chain silently.
 
 Moving a draft to an accepted revision requires explicit authorization. Acceptance and
-incorporation into the generated v0.2 specification are one reviewable change; until it is
-complete, the existing v0.2 text remains authoritative.
+incorporation into the applicable current owner are one reviewable change; until it is complete,
+the existing v0.2 text and revision-process guide remain authoritative for their respective
+subjects.
 
 ## 6. Four traps, each of which has actually happened
 
@@ -170,9 +171,10 @@ them, so the class is closed; do not edit a vendored copy.
 **A ledger going stale.** Four lists track the registry and cannot be fully derived from it:
 `derived_from` in `build.py`, the R9 §2 table ledger in `conformance/spec-sweep/tables.py`, the
 `NAMING_EXCEPTIONS` in `check.py`, and `applied.toml`'s dispositions. Every one now fails a check
-rather than drifting: `derived_from` is verified in **both** directions (each accepted revision
-appears, and nothing appears that is not accepted — the missing direction is what let R54, R65 and
-R66 be applied and left out for several revisions each), each naming exception is checked to still
+rather than drifting: `derived_from` is verified in **both** directions (each accepted
+specification-domain revision appears, and nothing appears that is not an accepted specification
+decision — the missing direction is what let R54, R65 and R66 be applied and left out for several
+revisions each), each naming exception is checked to still
 break a convention, and the clause ledger is checked for entries naming clauses that no longer
 exist. What stays a human judgement is *which* disposition a clause gets, which is the part that
 should be.
@@ -180,14 +182,13 @@ should be.
 **A revision clause that never reaches the spec.** Two independent audits found normative clauses
 dropped during compilation of the v0.2 prose — `R53 §2.4`'s `int64` escape, `R21`'s codec floor,
 `R36 §2.2`'s prefix digest reversed into "undefined". A citation sweep cannot see these, because
-the revision is cited for its *other* clauses. `escapewheel_poc_docs_v0.2/ledger.py` is what
-sees them: `applied.toml` records where each clause went, `registry-targets.toml` resolves exact
-JSON locations, and `corroboration-exceptions.toml` enumerates every reviewed legacy target that
-lacks inline provenance. The undisposed-clause backlog may fall and must not rise; a count cannot
-mask a new provenance exception.
+the revision is cited for its *other* clauses. `revisions/ledger.py` is what sees them:
+`revisions/applied.toml` records each clause's disposition and exact current owner, while
+`revisions/registry-targets.toml` resolves exact JSON locations. The undisposed-clause backlog may
+fall and must not rise. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 612 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 620 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for
@@ -203,14 +204,14 @@ there are is counted from both sources, by `facts.py` parsing them:
 
 | check | catches |
 |---|---|
-| `revisions/stages.py` | an open proposal or draft with no baseline, missing stage sections, template residue, or no exact draft clause list |
+| `revisions/stages.py` | an open or prospective accepted artifact with invalid lifecycle metadata, missing stage sections, template residue, or no exact draft clause list |
 | `revisions/test_evidence.py` | regressions in owner, corpus, verifier-stage, and complete-manifest validation |
 | `revisions/evidence.py` | an accepted current-format clause with no owner, projection, conformance evidence, implementation disposition, or documentation disposition |
 | `revisions/check_citations.py` and `revisions/repoint.py` | a citation that does not resolve, or implementation source that names a historical decision where the current part owns the rule |
-| `revisions/impact.py` | working-tree files citing a changed or explicitly queried specification section |
+| `revisions/impact.py` | working-tree files citing a changed or explicitly queried specification section or stable anchor |
 | `registry/check.py` | a registry that contradicts itself, a rule naming a removed column, a stale vendored copy, a naming convention broken without a declared reason |
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
-| `escapewheel_poc_docs_v0.2/ledger.py` | an accepted clause with no disposition, an unresolved registry JSON Pointer, or provenance absent outside the exact reviewed exception set |
+| `revisions/ledger.py` | an accepted clause with no disposition or an unresolved current-owner or registry target |
 | `escapewheel_poc_docs_v0.2/columns.py --check` | a column table in a part that no longer reproduces the registry |
 | `combine.py --check` | a single-file spec rendering that no longer matches its parts |
 | `facts.py` | a count in a root document that no longer matches what it counts |

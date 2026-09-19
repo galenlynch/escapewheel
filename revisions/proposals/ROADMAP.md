@@ -244,7 +244,8 @@ The narrowing left the following work in later entries in this roadmap:
 The promotion appraisals rechecked the narrowed impact inventory, dependency order, evidence plan,
 and resolved questions. The first pre-acceptance appraisal then found that exact relocation and
 citer dispositions, maintainer binding, and the structural landing still needed revision. The
-append-only rule in Part 00 §10.3 would force the new framework and relocated README material to the
+ordinary-change rule in the [revision process](../CONTRIBUTING.md#ew-structural-reorganization)
+would force the new framework and relocated README material to the
 ends of their parts, so the separate controlled-reorganization process change is now a prerequisite.
 Promotion did not accept or incorporate the authority decision.
 
@@ -290,9 +291,9 @@ P1 authority framework
 | ID | Work item | Status | Artifact | Depends on |
 |---|---|---|---|---|
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
-| P0.1 | Controlled reorganization of specification parts | **Draft** — acceptance appraisal complete; exact-state commit pending | [current draft](../drafts/allow-controlled-specification-reorganization.md) | P0 |
+| P0.1 | Controlled reorganization of specification parts | **Complete** | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) | P0 |
 | P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Not started** | anticipated proposal; slug to be assigned | P0.1 |
-| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.1 and P0.2 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | P0.1, P0.2 |
+| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.2 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | R120, P0.2 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P4 | Registry-document semantics and uniform conformance | **Not started** | anticipated proposal; slug to be assigned | P3 |
@@ -314,25 +315,26 @@ following sequence tractable; they do not decide any packet contract.
 
 ### P0.1 — Controlled specification reorganization
 
-Part 00 §10.3 makes append-only numbering unconditional. That is the safe default for an ordinary
+The [revision process](../CONTRIBUTING.md#ew-structural-reorganization) makes append-only numbering
+the safe default for an ordinary
 amendment, but it would put P1's organizing framework after the material it organizes and would
 force relocated README rules to the ends of their subject-owning parts. The proposal retains the
 stable-anchor, human-crosswalk, metadata-bootstrap, and immutable-edition research while reopening
 which artifact owns the procedure. Its acceptance appraisal found that placing repository
 maintenance and historical-revision mechanics in normative Part 00 crosses the packet-contract
 boundary. It also found that the ledger currently reverses the intended dependency by requiring a
-current specification section to cite its historical revision. P0.1 resolves those questions by
+current specification section to cite its historical revision. R120 resolves those questions by
 placing process in `revisions/CONTRIBUTING.md`, moving ledger traceability under `revisions/`, and
 splitting authoritative-source cleanup into P0.2, without taking P1's ownership of artifact roles,
 release membership, or publication identity.
 
-P0.1 also extends the lifecycle narrowly to material decisions about its own gates, process
+R120 also extends the lifecycle narrowly to material decisions about its own gates, process
 authority, structural-editing permissions, ledger dispositions, and evidence semantics. Such a
 revision declares the process decision domain and lands its clauses in exact anchored process
 owners; it does not make those clauses packet requirements. Meaning-preserving documentation and
 implementation maintenance remain ordinary repository work. The same `R<N>` sequence records
 incorporation order for specification and process decisions. Existing accepted records default to
-the specification decision domain without being edited. P0.1 declares the process domain, current
+the specification decision domain without being edited. R120 declares the process domain, current
 open artifacts gain an explicit domain during incorporation, and later artifacts must declare one.
 For a process draft, `Profile` is `not applicable`, `Change form` is `ordinary`, and `Amends` names
 exact path-plus-anchor process owners. A specification draft declares an `ordinary` or `structural`
@@ -352,9 +354,9 @@ baseline, and new destinations receive anchors in the structural incorporation. 
 needed, the human-readable crosswalk records that fact.
 
 The final appraisal baseline's reverse-impact query reports 29 citations into Part 00
-§§10.1–10.4. P0.1 repoints the 22 process-tool citations and two live-roadmap citations to the
+§§10.1–10.4. R120 repoints the 22 process-tool citations and two live-roadmap citations to the
 contribution guide. P0.2 dispositions the one current Part 07 citation. Three R113 citations and
-the one citation carried into P0.1's eventual accepted record remain unchanged as history.
+the one citation carried into R120 remain unchanged as history.
 Incorporation re-measures these populations.
 
 **Revised after promotion appraisal:** the earlier machine-readable paragraph selectors, content
@@ -400,7 +402,7 @@ clause-level disposition and revision-valued `since` and registry build provenan
 registry meta-schema and generated registry rather than process alone.
 
 **Authority-draft-focused re-appraisal:** the process permits every kind of edit P1 requires, but
-P1 cannot land unchanged. After P0.1 is incorporated, P1 identifies its exact affected sections;
+P1 cannot land unchanged. With R120 incorporated, P1 identifies its exact affected sections;
 a separately committed metadata-only change bootstraps their existing source and destination
 headings; and P1 refreshes its baseline to that commit. It then depends on the accepted P0.1
 revision, applies the resulting boundary between maintenance policy and specification content,
@@ -424,12 +426,15 @@ records this order.
 The restored and re-appraised proposal is preserved at
 `07439b738b55264bffd2c6ffbf3cc41390acc024`. Promotion on 2026-09-18 carried its process owner,
 decision-domain migration, one-way ledger model, structural controls, and P0.2 boundary into the
-current draft. Promotion did not accept or incorporate the process decision; the draft now awaits
-its complete pre-acceptance appraisal.
+draft. Its complete pre-acceptance appraisal then passed, and the exact candidate was committed as
+`166f09d130a6892794a61e752266dc8f8d7635a5` before acceptance.
+
+**Completed as R120 on 2026-09-18.** Its accepted record and incorporation evidence are
+[preserved together](../accepted/R120-allow-controlled-specification-reorganization.md).
 
 ### P0.2 — Remove historical and misplaced maintenance material from authoritative artifacts
 
-Apply the strict one-way model after P0.1 supplies the structural process. Remove revision
+Apply the strict one-way model now that R120 supplies the structural process. Remove revision
 citations from the specification README and numbered parts, incorporated registry and schema
 descriptions, validation-rule messages, and extension registry sources. Remove the registry-build
 `derived_from` object, which is change provenance rather than packet meaning. Appraise

@@ -1,6 +1,7 @@
 """A citation of a requirement names the part that states it, not the revision that introduced it.
 
-Part 00 §10.1 binds every citation of a requirement in an implementation's source. `check_citations.py`
+`revisions/CONTRIBUTING.md#ew-citation-context` binds every current requirement citation in an
+implementation's source. `check_citations.py`
 answers whether a citation resolves; this answers whether it points at the right kind of document,
 which no other tool can see -- a citation of a revision clause that landed in a part resolves
 perfectly and still sends a reader to the change record.
@@ -10,11 +11,12 @@ and sections that state it, so the replacement is mechanical: `R88 §2.1` become
 
 Only a clause disposed `applied` is reported. A clause the registry carries is read from the
 registry, one disposed `rationale` decided nothing and so states no requirement, and a Motivation
-or an Open section is the reasoning itself -- Part 00 §10.2 sends a reader to the revision for all
-three, so they are not citations Part 00 §10.1 binds.
+or an Open section is the reasoning itself, so the current-owner rule does not bind those
+citations.
 
 What is not mechanical is whether a citation of an `applied` clause is of the **requirement** or of
-the **reasoning** behind it, and Part 00 §10.2 permits the second. So a citation that stays carries a reason in `EXEMPT`, keyed by the
+the **reasoning** behind it, which the current citation-context rule permits. So a citation that
+stays carries a reason in `EXEMPT`, keyed by the
 shape or the site rather than left to be rediscovered -- `registry/check.py`'s discipline for
 `NAMING_EXCEPTIONS`, whose entries are checked to still be needed so the list cannot go stale.
 
@@ -34,7 +36,7 @@ from pathlib import Path
 import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
-LEDGER = ROOT / "escapewheel_poc_docs_v0.2" / "applied.toml"
+LEDGER = ROOT / "revisions" / "applied.toml"
 
 #: `R92 §2.2`. The same spelling `check_citations.py` resolves.
 REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
@@ -55,15 +57,16 @@ EXEMPT: tuple[tuple[str, str, str], ...] = (
         "a block marker saying which revision's block follows; both files are organised by revision",
     ),
     (
-        "escapewheel_poc_docs_v0.2/ledger.py",
+        "revisions/ledger.py",
         r".",
-        "the ledger keys on revision clauses, which is what makes it the map Part 00 §10.1 resolves through",
+        "the ledger keys on revision clauses, as `revisions/CONTRIBUTING.md#ew-current-owner-ledger` defines",
     ),
-    ("revisions/", r".", "a revision citing another revision (Part 00 §10.2)"),
+    ("revisions/", r".", "a revision citing another revision as historical context"),
 )
 
 
-#: Individual citations of the **reasoning** a part does not carry, which Part 00 §10.2 permits: a
+#: Individual citations of the **reasoning** a current owner does not carry, which
+#: `revisions/CONTRIBUTING.md#ew-citation-context` permits: a
 #: measurement, or what a revision did to the format on its way to the present. Keyed by file and
 #: clause rather than by line, since a line number moves and this pairing does not.
 REASONING: tuple[tuple[str, str, str], ...] = (
@@ -151,8 +154,12 @@ REASONING: tuple[tuple[str, str, str], ...] = (
 
 
 def cited(entry: dict) -> list[str]:
-    """Each target of an `applied` entry, spelled as Part 00 §10.4 requires: Part 02 §7.1."""
-    return [f"Part {t['part']} §{t['section']}" for t in entry.get("where", [])]
+    """Each numeric part target of an applied entry, in current citation form."""
+    return [
+        f"Part {target['part']} §{target['section']}"
+        for target in entry.get("where", [])
+        if "part" in target and "section" in target
+    ]
 
 
 def rollup(clauses: dict[str, dict]) -> dict[str, list[str]]:

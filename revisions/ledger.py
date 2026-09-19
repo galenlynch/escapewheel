@@ -1,56 +1,15 @@
-"""Every accepted normative clause has a disposition, or the compilation fails.
+"""Require one exact disposition and a resolvable current owner for every accepted clause.
 
-Two independent audits of this specification found dropped clauses, and found different ones:
-`R53 §2.4`'s escape to `int64` vanished, `R21`'s codec floor vanished, `R36 §2.2`'s prefix digest
-was reversed into "undefined", `R52`'s SHOULD became a MUST. Each was invisible because the
-revision is cited elsewhere in the spec, so a citation sweep sees it and a reader does not.
+`applied.toml` is a one-way map from an accepted Decision clause through its disposition to the
+current owner. An `applied` target may identify an untouched numbered section, an anchored numbered
+section, or an anchored process section. A current owner need not cite the accepted revision back;
+target existence is mechanically checkable, while semantic fidelity remains a review judgment.
 
-The fix is a ledger rather than another audit. Every clause of every accepted revision that
-carries RFC 2119 force appears in `applied.toml` with one of four dispositions:
+Registry dispositions resolve through exact JSON locations in `registry-targets.toml`. Older
+revisions retain their historical clause inference; current revisions enumerate `Decision clauses`.
 
-    applied         stated in the compiled spec; `where` lists the parts and sections
-    registry        delegated to one or more exact JSON declarations in registry-targets.toml
-    superseded      a later revision replaced it; `by` names which
-    rationale       decided nothing, so there is nothing to place
-
-A clause binding a writer, reader, validator or consumer is `applied` like any other: an actor
-is bound by the spec's prose, so naming one does not excuse a clause from appearing in a part.
-There was a fifth disposition, `implementation`, which said a clause "binds a writer, reader or
-validator rather than the prose" and so let 23 of them be counted as disposed while living
-nowhere in the durable document. 21 were in a part or the registry all along and the ledger had
-simply never recorded where; 2 had reached no part, which is the class this script exists to
-catch and which that disposition hid. `applied` now requires a `where`.
-
-A clause with no entry is **undisposed**, and this script exits non-zero listing them. Adding a
-revision therefore adds failures until someone says where each of its clauses went, which is the
-property neither audit had. A `registry` disposition also has one or more path-plus-JSON-Pointer
-locations in `registry-targets.toml`. Every path and pointer is resolved, so naming a registry file
-without naming the declaration it carries is not a disposition.
-
-New revisions enumerate their normative clauses in the `Decision clauses` metadata field. That is
-the exact set this ledger reads. Older revisions predate the field and retain the historical
-heading-and-keyword inference used to compile their existing entries.
-
-An `applied` entry's `where` is a list of `{ part, section }` targets, each with an optional `note`
-saying which piece of the clause landed there. Every one is resolved against that part's own
-headings, so a clause cannot be recorded as placed in a section that does not exist -- the defect
-one step along from no `where` at all, and the one that let R111 §3.5 name two sections of Part 01
-that part has never carried.
-
-The other dispositions omit `where`. A `registry` entry's machine location comes only from
-`registry-targets.toml`; `superseded` names its replacement in `by`.
-
-A section that exists is not a section that says the right thing, and `05` §8 held four clauses
-belonging to §11 while resolving perfectly. So each `applied` target is also checked against what
-the part states there: a part cites the revision that set each rule it carries (`00` §10.2), so a
-target whose section names its revision is the part confirming the claim. It corroborates rather
-than proves -- a later revision resetting the same rule replaces the citation. The reviewed legacy
-cases for which that corroboration is absent are enumerated exactly in
-`corroboration-exceptions.toml`. A new exception or an exception that is no longer needed fails;
-one cannot hide behind an unchanged count.
-
-    python ledger.py            # report
-    python ledger.py --summary  # counts only
+    python revisions/ledger.py            # report
+    python revisions/ledger.py --summary  # counts only
 """
 
 from __future__ import annotations
@@ -63,112 +22,59 @@ from pathlib import Path
 
 import tomllib
 
+try:
+    from revisions.process_rules import canonical_anchors
+except ModuleNotFoundError:  # Direct execution from revisions/.
+    from process_rules import canonical_anchors
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-REVISIONS = HERE.parent / "revisions/accepted"
+PARTS = ROOT / "escapewheel_poc_docs_v0.2"
+REVISIONS = HERE / "accepted"
 LEDGER = HERE / "applied.toml"
 REGISTRY_TARGETS = HERE / "registry-targets.toml"
-CORROBORATION_EXCEPTIONS = HERE / "corroboration-exceptions.toml"
 
 DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 
 #: `## 3.` and `### 3.1 ` alike, which is every section a part declares.
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
-#: The same, keeping the depth, so a section's own text can be cut from its subsections'.
-NUMBERED = re.compile(r"^(#{1,4}) (\d+(?:\.\d+)*)\.?(?:\s|$)")
 DECLARED = re.compile(
     r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE
 )
 DECLARED_SECTION = re.compile(r"§(\d+(?:\.\d+)*)")
 
 
-def targets(where: object) -> tuple[list[tuple[str, str]], list[str]]:
-    """Each (part, section) an `applied` entry's `where` names, and every target that is malformed.
-
-    A target is a table of `part` and `section`, with an optional `note` saying which piece of the
-    clause landed there. The field was prose until the shape was pinned, and the cost was that
-    every consumer parsed it differently and partially -- a field naming two parts read as naming
-    none, and a pattern scanning one for two adjacent digits read `05 §10 §12` as part 05 and then
-    part **10**, inventing a target in the same pass as it lost a real one.
-    """
+def targets(where: object) -> tuple[list[dict[str, str]], list[str]]:
+    """Return well-formed applied targets and descriptions of malformed targets."""
     if not isinstance(where, list):
         return [], [f"{where!r}, which is not a list of targets"]
-    found, malformed = [], []
+    found: list[dict[str, str]] = []
+    malformed = []
     for target in where:
-        if (
-            isinstance(target, dict)
-            and isinstance(target.get("part"), str)
-            and isinstance(target.get("section"), str)
-        ):
-            found.append((target["part"], target["section"]))
-        else:
-            malformed.append(f"{target!r}, which is not a `part` and a `section`")
+        if not isinstance(target, dict):
+            malformed.append(f"{target!r}, which is not a target table")
+            continue
+        keys = set(target) - {"note"}
+        if keys not in ({"part", "section"}, {"part", "anchor"}, {"path", "anchor"}):
+            malformed.append(f"{target!r}, which has no recognized exact target shape")
+            continue
+        if not all(isinstance(target.get(key), str) and target[key] for key in keys):
+            malformed.append(
+                f"{target!r}, whose target fields are not nonempty strings"
+            )
+            continue
+        if "note" in target and not isinstance(target["note"], str):
+            malformed.append(f"{target!r}, whose optional note is not a string")
+            continue
+        found.append(target)
     return found, malformed
 
 
 @functools.cache
 def sections(part: str) -> frozenset[str] | None:
     """Every section number a part declares, or None where no part carries that number."""
-    found = sorted(HERE.glob(f"{part}_*.md"))
+    found = sorted(PARTS.glob(f"{part}_*.md"))
     return frozenset(HEADING.findall(found[0].read_text())) if found else None
-
-
-@functools.cache
-def bodies(part: str) -> dict[str, str]:
-    """Each section of a part, mapped to its own text and its subsections'.
-
-    A section runs to the next heading at its depth or shallower, so `§9` carries `§9.1` and
-    `§9.2` while `§9.2` carries neither its parent's preamble nor its siblings.
-    """
-    found = sorted(HERE.glob(f"{part}_*.md"))
-    if not found:
-        return {}
-    lines = found[0].read_text().splitlines()
-    marks = [
-        (n, m.group(2)) for n, line in enumerate(lines) if (m := NUMBERED.match(line))
-    ]
-    out = {}
-    for index, (start, number) in enumerate(marks):
-        depth = number.count(".")
-        end = next(
-            (s for s, other in marks[index + 1 :] if other.count(".") <= depth),
-            len(lines),
-        )
-        out[number] = "\n".join(lines[start:end])
-    return out
-
-
-def corroborated(revision: str, part: str, section: str) -> bool:
-    """Whether the part confirms the ledger's claim by citing the revision where it says.
-
-    A part cites the revision that set each rule it states, which `00` §10.2 permits as
-    provenance and R112 §2.2 makes the reason citing a part loses nothing. So the ledger's claim
-    that a clause landed somewhere is checkable against the section itself: `05` §8 named three
-    R75 clauses and cites R75 nowhere, because those clauses are §11's.
-
-    A parent counts for a subsection, since a rule stated once in a section's preamble covers the
-    subsections that qualify it, and a later revision resetting the same rule replaces the
-    citation -- which is why this corroborates rather than proves.
-    """
-    text = bodies(part)
-    here = text.get(section, "")
-    parent = text.get(section.rsplit(".", 1)[0], "") if "." in section else ""
-    return any(
-        re.search(rf"\b{revision}[ ,)§]", body) for body in (here, parent) if body
-    )
-
-
-def uncorroborated(ledger: dict[str, dict]) -> list[tuple[str, str, str]]:
-    """Every `applied` target whose section does not cite the revision that claims to have landed there."""
-    out = []
-    for key, entry in sorted(ledger.items(), key=lambda kv: int(kv[0][1:].split()[0])):
-        if entry.get("disposition") != "applied":
-            continue
-        revision = key.split()[0]
-        for part, section in targets(entry.get("where", []))[0]:
-            if not corroborated(revision, part, section):
-                out.append((key, part, section))
-    return out
 
 
 def pointer(document: object, value: str) -> object:
@@ -275,57 +181,74 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
     return defects
 
 
-def corroboration_exception_defects(
-    thin: list[tuple[str, str, str]],
-) -> tuple[list[str], int]:
-    """Compare absent provenance with the exact reviewed exception set."""
-    try:
-        rows = tomllib.loads(CORROBORATION_EXCEPTIONS.read_text()).get("exception", [])
-    except (OSError, tomllib.TOMLDecodeError) as exc:
-        return [f"{CORROBORATION_EXCEPTIONS.name}: {exc}"], 0
-    allowed: dict[tuple[str, str, str], str] = {}
-    defects = []
-    for row in rows:
-        if not isinstance(row, dict):
-            defects.append(f"exception {row!r} is not a table")
-            continue
-        key = (row.get("clause"), row.get("part"), row.get("section"))
-        if not all(isinstance(piece, str) and piece for piece in key):
-            defects.append(f"exception {row!r} needs clause, part, and section")
-            continue
-        if not isinstance(row.get("reason"), str) or not row["reason"].strip():
-            defects.append(f"{key}: exception has no review reason")
-        if key in allowed:
-            defects.append(f"{key}: exception is repeated")
-        allowed[key] = row.get("reason", "")
-    current = set(thin)
-    for key in sorted(current - set(allowed)):
-        defects.append(
-            f"{key[0]}: `{key[1]}` §{key[2]} lacks provenance and is not reviewed"
-        )
-    for key in sorted(set(allowed) - current):
-        defects.append(f"{key[0]}: `{key[1]}` §{key[2]} exception is no longer needed")
-    return defects, len(allowed)
-
-
 def unresolved(
     ledger: dict[str, dict],
 ) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
-    """Every `applied` target naming no section, and every one that is not a target at all."""
+    """Return every unresolved applied destination and every malformed target."""
     dangling, unparsed = [], []
     for key, entry in sorted(ledger.items(), key=lambda kv: int(kv[0][1:].split()[0])):
         if entry.get("disposition") != "applied":
             continue
         found, loose = targets(entry.get("where", []))
         unparsed += [(key, piece) for piece in loose]
-        for part, section in found:
-            declared = sections(part)
-            if declared is None:
-                dangling.append((key, f"`{part}` — no part has that number"))
-            elif section not in declared:
+        revision = int(key[1:].split()[0])
+        revision_path = next(REVISIONS.glob(f"R{revision}-*.md"), None)
+        domain = "specification"
+        if revision_path is not None and revision >= 120:
+            match = re.search(
+                r"^\|\s*\*\*Decision domain\*\*\s*\|\s*(.*?)\s*\|$",
+                revision_path.read_text()[:2000],
+                re.MULTILINE,
+            )
+            domain = match.group(1) if match else ""
+        for target in found:
+            if domain == "process" and "path" not in target:
                 dangling.append(
-                    (key, f"`{part}` §{section} — that part declares no such section")
+                    (key, "process clause does not use a path-plus-anchor owner")
                 )
+                continue
+            if "section" in target:
+                part, section = target["part"], target["section"]
+                declared = sections(part)
+                if declared is None:
+                    dangling.append((key, f"`{part}` — no part has that number"))
+                elif section not in declared:
+                    dangling.append(
+                        (
+                            key,
+                            f"`{part}` §{section} — that part declares no such section",
+                        )
+                    )
+            elif "part" in target:
+                part = target["part"]
+                files = sorted(PARTS.glob(f"{part}_*.md"))
+                if not files:
+                    dangling.append((key, f"`{part}` — no part has that number"))
+                elif target["anchor"] not in canonical_anchors(files[0].read_text()):
+                    dangling.append(
+                        (key, f"`{part}` has no canonical #{target['anchor']}")
+                    )
+            else:
+                path = (ROOT / target["path"]).resolve()
+                try:
+                    path.relative_to(ROOT)
+                except ValueError:
+                    dangling.append((key, f"{target['path']!r} escapes the repository"))
+                    continue
+                if domain != "process":
+                    dangling.append(
+                        (key, "path-plus-anchor target is reserved for process clauses")
+                    )
+                elif path != HERE / "CONTRIBUTING.md":
+                    dangling.append(
+                        (key, f"{target['path']!r} is not a recognized process owner")
+                    )
+                elif not path.is_file() or target["anchor"] not in canonical_anchors(
+                    path.read_text()
+                ):
+                    dangling.append(
+                        (key, f"{target['path']} has no canonical #{target['anchor']}")
+                    )
     return dangling, unparsed
 
 
@@ -443,11 +366,6 @@ def main() -> int:
     )
     dangling, unparsed = unresolved(ledger)
     registry_defects = registry_target_defects(ledger)
-    # What the section itself says, as far as anything can check it: a part cites the revision
-    # that set each rule it states, so a target citing it is the part confirming the claim.
-    thin = uncorroborated(ledger)
-    exception_defects, exception_count = corroboration_exception_defects(thin)
-
     counts: dict[str, int] = {}
     for entry in ledger.values():
         counts[entry.get("disposition", "?")] = (
@@ -457,8 +375,6 @@ def main() -> int:
     for name in sorted(counts):
         print(f"  {counts[name]:>4}  {name}")
     print(f"  {len(undisposed):>4}  undisposed")
-    print(f"  {len(thin):>4}  applied, in a section that does not cite the revision")
-    print(f"  {exception_count:>4}  exact reviewed corroboration exceptions")
 
     # Undisposed clauses are a backlog and can run to hundreds, so `--summary` holds them back.
     # The rest are defects in what the ledger already claims, and there is nothing to read
@@ -468,10 +384,6 @@ def main() -> int:
             undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])
         ):
             print(f"    UNDISPOSED  {key:<12} {title[:62]}")
-        for key, part, section in thin:
-            print(
-                f"    UNCORROBORATED {key:<12} `{part}` §{section} states no such provenance"
-            )
     for key in stale:
         print(
             f"    STALE       {key:<12} the ledger disposes a clause no revision states"
@@ -488,9 +400,6 @@ def main() -> int:
         print(f"    MALFORMED   {key:<12} `where` holds {piece}")
     for defect in registry_defects:
         print(f"    REGISTRY    {defect}")
-    for defect in exception_defects:
-        print(f"    EXCEPTION   {defect}")
-
     over = max(0, len(undisposed) - baseline)
     failures = (
         over
@@ -500,7 +409,6 @@ def main() -> int:
         + len(dangling)
         + len(unparsed)
         + len(registry_defects)
-        + len(exception_defects)
     )
     if len(undisposed) < baseline:
         text = LEDGER.read_text()

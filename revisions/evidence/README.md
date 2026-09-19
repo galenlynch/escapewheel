@@ -3,7 +3,7 @@
 Each accepted revision that declares `Decision clauses` has one `R<N>.json` here. The manifest is
 the mechanical closure record connecting each clause to:
 
-- its authoritative Markdown section or JSON declaration;
+- its authoritative anchored Markdown section or JSON declaration;
 - generated projections that must remain synchronized;
 - an exact conformance fixture, pytest node ID, or named mechanical check;
 - affected implementation paths, or a reason implementations are unchanged; and
@@ -16,9 +16,9 @@ not list a generated rendering or implementation as a second owner of the same f
 
 Copy `../templates/change-evidence.json`, name it for the accepted revision, and replace every
 placeholder. `../evidence.py` rejects missing and extra clauses, missing paths, unresolved JSON
-Pointers or Markdown sections, corpus findings not collected by `fixtures/corpus.py`, pytest node
+Pointers or canonical Markdown anchors, corpus findings not collected by `fixtures/corpus.py`, pytest node
 IDs not collected by the named package, and check identifiers absent from the named `verify.py`
 stage.
 
-Historical revisions without explicit `Decision clauses` remain covered by `applied.toml`; they
+Historical revisions without explicit `Decision clauses` remain covered by `../applied.toml`; they
 predate this manifest format and are not silently assigned evidence they never recorded.

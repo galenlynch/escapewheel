@@ -23,8 +23,14 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | [`allow-controlled-specification-reorganization`](allow-controlled-specification-reorganization.md) | 4,204 | Ready for acceptance; the third appraisal corrected document-relative Markdown-link resolution while preserving canonical owner identity; exact-state commit pending | Process-domain prerequisite for the authoritative-source cleanup and authority draft; it has no accepted-revision dependency. |
-| 2 | [`define-specification-artifacts-and-normative-ownership`](define-specification-artifacts-and-normative-ownership.md) | 4,052 | Revise before acceptance; the controlled-reorganization draft now assigns process ownership and one-way ledger traceability, but is not yet accepted or incorporated | After the [controlled-reorganization draft](allow-controlled-specification-reorganization.md) and its dependent authoritative-source maintenance and history cleanup are accepted and incorporated, revise this draft's dependencies, exact structural landing, traceability plan, and appraisal baseline. |
+| 1 | [`define-specification-artifacts-and-normative-ownership`](define-specification-artifacts-and-normative-ownership.md) | 4,085 | Revise before acceptance; R120 now assigns process ownership, structural reorganization, and one-way ledger traceability, but P0.2 has not disposed the historical and misplaced maintenance material | After P0.2 is accepted and incorporated, revise this draft's exact structural landing, traceability plan, appraisal baseline, and complete crosswalk. |
+
+The last to leave was `allow-controlled-specification-reorganization`, accepted as **R120** on
+2026-09-18 at 4,227 words. It makes this guide the owner of material revision procedure, establishes
+process and specification decision domains, permits controlled structural reorganization through a
+crosswalk and stable anchors, and changes the clause ledger to one-way current-owner traceability.
+It changes no packet requirement or numbered-part body; P0.2 retains the separate cleanup of
+historical and misplaced maintenance material.
 
 The last to leave was `an-adapter-declares-the-options-it-accepts`, accepted as **R119** on
 2026-09-15 at 2,172 words: an adapter declares in `accepts` the options it can run without, where

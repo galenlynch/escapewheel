@@ -1,4 +1,4 @@
-# Exact current-state locations for clauses whose disposition is `registry` in applied.toml.
+# Exact current-owner locations for clauses whose disposition is `registry` in applied.toml.
 # Paths are repository-relative; pointers are RFC 6901 JSON Pointers. A table-level pointer is
 # intentional when the clause governs a whole declaration or records the removal of a child.
 # A pointer traversing an array carries `equals`, so reordering cannot silently retarget it.

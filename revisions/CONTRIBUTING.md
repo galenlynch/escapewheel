@@ -14,7 +14,9 @@ Use this process when a change would alter any of the following:
 - the meaning of a normative statement;
 - which artifact owns a normative fact or how conflicts are resolved;
 - the exact contract carried by an incorporated registry, rule set, or JSON Schema; or
-- the composition or identity of a specification release.
+- the composition or identity of a specification release; or
+- a lifecycle gate, process authority, structural-editing permission, ledger disposition, or
+  evidence meaning defined by this guide.
 
 Use the ordinary repository workflow for developer documentation, agent instructions,
 implementation work that follows an unambiguous existing rule, tests and refactoring that do not
@@ -23,7 +25,29 @@ change the contract, and meaning-preserving editorial fixes or regeneration.
 When classification is uncertain, ask whether two implementations could behave differently after
 the change while both conforming before it. If so, use this process.
 
-## 2. Artifacts and gates
+<a id="ew-decision-domains" data-spec-anchor="canonical"></a>
+
+## 2. Decision domains, artifacts, and gates
+
+Every lifecycle artifact declares one `Decision domain`:
+
+- `specification` changes the packet contract or an artifact that owns part of it; and
+- `process` changes this lifecycle, its authority, structural-editing permission, ledger
+  semantics, or evidence meaning.
+
+Both domains use this lifecycle and the same `R<N>` incorporation sequence. A process decision's
+current owner is this guide; acceptance makes its revision a historical record, not a second
+owner. Part 00 §§10.1–10.4 are not a second owner of repository-change procedure while the
+dependent authoritative-source cleanup disposes them.
+
+Proposals, drafts, and accepted revisions declare `Decision domain`. Drafts and accepted revisions
+also declare `Change form: ordinary` or `Change form: structural`; a proposal does not. A
+process-domain draft uses `Profile: not applicable`, `Change form: ordinary`, and one or more exact
+repository-relative Markdown `path#anchor` values in `Amends`. A specification-domain artifact
+uses the existing profile and part-or-artifact forms. Accepted revisions below R120 that lack a
+domain are interpreted as `specification`, need no change form, and remain unedited; withdrawn
+records have no inferred domain. Every open artifact and every artifact created or promoted from
+R120 onward declares its applicable fields.
 
 The lifecycle has three authored artifacts and three separate gates:
 
@@ -104,7 +128,8 @@ The proposal's impact sketch marks each of these affected, unchanged with a reas
 - extension registries;
 - reader, writer, validator, adapters, and code generation;
 - existing packets and migration or regeneration;
-- conformance fixtures and implementation tests; and
+- conformance fixtures and implementation tests;
+- revision lifecycle, ledger, evidence, and process tooling; and
 - generated publications and developer documentation.
 
 An unknown is acceptable in a proposal, but it remains a promotion blocker when its answer could
@@ -212,11 +237,39 @@ compatibility, migration, rebuild, implementation, and release consequences.
 contrary inference, the body has not already answered it, and the denial is consistent with every
 Decision clause.
 
-### 5.3 Citation discipline
+<a id="ew-citation-context" data-spec-anchor="canonical"></a>
 
-Cite the current part for a current rule and an accepted revision only for rationale or provenance
-the part does not carry. A draft may cite an accepted revision. An accepted revision never cites a
-proposal or draft. No specification-change artifact cites an instruction or contribution guide.
+### 5.3 Citation context
+
+Cite the current owner for a current rule and an accepted revision only for rationale or
+provenance the owner does not carry. A numbered-part citation displays `Part NN §x.y`; once its
+target has a stable anchor, a link targets that anchor and its displayed number must agree with the
+anchor's current heading. A current process document links to this guide using a document-relative
+Markdown `path#anchor`; a source comment or docstring uses the canonical repository-relative
+target, such as `revisions/CONTRIBUTING.md#ew-citation-context`, in backticks.
+
+A draft may cite an accepted revision. An accepted revision never cites a proposal or draft.
+Committed accepted revisions are immutable historical records and need not resolve against the
+current working specification. Interpret a historical citation from its recorded baseline or
+another exact reviewed source tree; do not make that resolution a current conformance gate or
+require a current owner to cite the revision back.
+
+<a id="ew-structural-reorganization" data-spec-anchor="canonical"></a>
+
+### 5.4 Ordinary amendments and structural revisions
+
+An ordinary specification-domain draft appends a new section at the end of its part or a new
+subsection at the end of its containing section. A specification-domain draft may instead declare
+`Change form: structural` when moving, splitting, merging, replacing, or retiring material
+materially improves ownership, dependency order, or document structure. Its Scope explains why
+append-only placement would impair the specification.
+
+A structural draft contains a human-readable crosswalk for every affected numbered section and
+every unnumbered README statement whose normative ownership changes. Each row gives the old
+location, disposition, new location, semantic effect, and any Decision clause that changes
+meaning. Relocation alone never authorizes a semantic change: every changed rule appears in an
+enumerated Decision clause. The crosswalk is reviewed history, not a normative owner or a
+machine-readable paragraph inventory.
 
 ## 6. Draft pre-acceptance gates
 
@@ -302,6 +355,23 @@ git diff --quiet HEAD -- revisions/drafts/<slug>.md
 Only then request acceptance authorization. The acceptance-and-incorporation change may remove the
 draft because its parent commit preserves the exact candidate the user reviewed.
 
+<a id="ew-structural-reorganization-sequence" data-spec-anchor="canonical"></a>
+
+### 6.8 Structural-reorganization sequence
+
+Before the final appraisal of a structural draft, identify every affected existing source and
+destination that lacks a canonical anchor. If any lacks one, make a separate metadata-only anchor
+bootstrap commit and use that commit as the draft's `Based on`. The bootstrap may insert only one
+valid canonical anchor immediately before each identified heading; it may not change heading text
+or level, numbering or order, body prose, normativity, meaning, or aliases. A process check compares
+that commit with its parent. When no bootstrap is needed, say so in the crosswalk.
+
+After the bootstrap, refresh measurements, impact queries, and citation inventories; complete the
+final appraisal; commit the exact draft; and request acceptance. Give a new section its anchor when
+it is created. Incorporation updates every affected live citation, ledger target, evidence owner,
+heading record, generated rendering, and human document atomically. An alias changes only through
+reviewed structural work.
+
 ## 7. Phase D — authorize acceptance and freeze the decision
 
 After explicit acceptance authorization:
@@ -324,6 +394,8 @@ temporarily assigned.
 
 Work from owners to projections.
 
+<a id="ew-current-owner-ledger" data-spec-anchor="canonical"></a>
+
 ### 8.1 Record clause destinations
 
 Add one `applied.toml` entry for every enumerated Decision clause. `ledger.py` recognizes:
@@ -333,9 +405,21 @@ Add one `applied.toml` entry for every enumerated Decision clause. `ledger.py` r
 - `superseded`: a later accepted revision replaced the clause; and
 - `rationale`: the clause makes no current normative decision.
 
-Use structured part and section targets for `applied`. For a `registry` disposition, add the
+The ledger lives at `revisions/applied.toml`. An `applied` destination has exactly one of these
+forms, with `note` as its only optional additional field:
+
+```toml
+{ part = "02", section = "7.1" }
+{ part = "02", anchor = "ew-session-scope" }
+{ path = "revisions/CONTRIBUTING.md", anchor = "ew-decision-domains" }
+```
+
+`part` and `path` are mutually exclusive, as are `section` and `anchor`. A new process destination
+uses `path` plus `anchor` and resolves to a process owner in this guide. A structurally affected
+specification destination migrates to `part` plus `anchor`; untouched numeric targets may remain.
+For a `registry` disposition, add the
 repository-relative JSON artifact path and narrowest RFC 6901 JSON Pointer to
-`escapewheel_poc_docs_v0.2/registry-targets.toml`. Use multiple targets where the clause changes
+`revisions/registry-targets.toml`. Use multiple targets where the clause changes
 multiple declarations. A pointer to a containing table or collection is appropriate only when the
 clause governs the whole declaration or records a removal that has no child to point at. The ledger
 resolves every pointer and requires an equality guard when the path traverses an array, so a reorder
@@ -357,7 +441,7 @@ projection.
 
 Place prose by subject. A profile-dependent rule belongs in the physical profile; a
 profile-independent logical declaration belongs in Part 02; a concept meaning belongs in Part 01.
-Append new sections or subsections so existing citations retain their numbers.
+Apply the ordinary or structural rule in §5.4 when adding or reorganizing sections.
 
 ### 8.3 Sweep changed sections
 
@@ -369,6 +453,36 @@ uv run --project escapewheel-writer python revisions/impact.py
 
 Read every listed citer and update stale assumptions. Repoint citations of superseded revision
 clauses. If a heading changes or a section is added, run `headings.py` and review its citer list.
+
+<a id="ew-stable-section-anchors" data-spec-anchor="canonical"></a>
+
+### 8.4 Stable section anchors
+
+Every numbered section structurally affected as a source or destination has one canonical stable
+anchor immediately before its heading:
+
+```html
+<a id="ew-content-classes" data-spec-anchor="canonical"></a>
+```
+
+An affected section is one whose prose, heading, level, number, or order changes, or which is
+added, split, merged, replaced, or retired. Untouched sections may remain unanchored. Anchor IDs
+use lowercase ASCII letters, digits, and hyphens. Canonical and alias IDs are unique in the
+combined specification; process anchors are unique in this document. A moved subject preserves
+its canonical ID even if its wording becomes less descriptive.
+
+A replaced or split section may put a former ID beside one honest primary successor as an alias:
+
+```html
+<a id="ew-layer-model" data-spec-anchor="alias"></a>
+```
+
+Do not give a retired subject a misleading alias. `headings.toml` retains its numeric records and
+adds a partial index for explicitly anchored numbered sections, recording the canonical ID's part,
+section, title, and aliases. Process anchors resolve directly and do not enter that index. The
+heading checker rejects malformed, duplicate, missing, or unreviewedly reassigned anchors; human
+review decides crosswalk completeness and whether an alias names an honest successor. The impact
+tool accepts an anchor and reports its current heading and live citers.
 
 ## 9. Phase F — regenerate projections and add conformance evidence
 
@@ -385,7 +499,8 @@ In particular:
    reason instead of an empty list.
 6. Inspect generated diffs. A generator producing an unexpected change is a finding, not noise.
 
-Generated files are never edited directly.
+Markdown owners use exact `path` plus `anchor`; JSON owners use exact `path` plus RFC 6901
+`pointer`. Generated files are never edited directly.
 
 ## 10. Phase G — align implementations and human documentation
 
@@ -403,7 +518,20 @@ for behavior it asserts; add a test or record why a requirement is not executabl
 
 Run the affected package suites before the monorepo verifier so a failure is localized.
 
+<a id="ew-process-incorporation-boundary" data-spec-anchor="canonical"></a>
+
 ## 11. Phase H — close drift and publish atomically
+
+A process-domain revision incorporates into this guide and its process tools, templates, ledger,
+evidence, and human documentation; it does not generate process prose into a numbered part. A
+process incorporation changes no packet-contract owner unless its Decision explicitly contains a
+separately appraised specification-domain change.
+
+The ledger, registry-target map, and checker live under `revisions/`. The ledger proves one-way
+traceability from accepted clause to disposition to an existing current owner. It does not require
+the owner to cite its revision back and does not claim semantic fidelity merely because a target
+exists. The provisional release generator selects `revisions/applied.toml`; changing the tracked
+release snapshot remains an explicit publication action.
 
 Run the focused checks, then the complete verifier:
 
@@ -412,7 +540,7 @@ uv run --project escapewheel-writer python revisions/check_citations.py
 uv run --project escapewheel-writer python revisions/evidence.py
 uv run --project escapewheel-writer python revisions/repoint.py --quiet
 uv run --project escapewheel-writer python revisions/repoint.py --exempt
-uv run --project escapewheel-writer python escapewheel_poc_docs_v0.2/ledger.py
+uv run --project escapewheel-writer python revisions/ledger.py
 uv run --project escapewheel-writer python escapewheel_poc_docs_v0.2/headings.py --check
 uv run --project escapewheel-writer python verify.py
 ```
@@ -436,7 +564,7 @@ internally inconsistent even when the next commit repairs it.
 | `check_citations.py` | Citations resolve and use the required spelling. | The target supports the claim. |
 | `repoint.py` | Implementation requirement citations name current parts rather than historical decisions. | Every requirement has an implementation or test. |
 | `impact.py` | Files citing a changed section are discoverable. | Uncited consumers or duplicated facts agree. |
-| `applied.toml`, `registry-targets.toml`, and `ledger.py` | Every accepted Decision clause has a disposition; every registry disposition resolves to exact JSON locations; missing provenance matches an exact reviewed exception. | The destination is semantically faithful. |
+| `revisions/applied.toml`, `registry-targets.toml`, and `ledger.py` | Every accepted Decision clause has a disposition and every named current owner or registry target resolves. | Semantic fidelity, or any need for the current owner to cite the revision back. |
 | `evidence/R<N>.json` and `evidence.py` | Every current-format accepted clause maps to owners and downstream surfaces; paths and pointers resolve; named fixtures and pytest nodes are collected. | Evidence becomes authority, or the named test proves more than it asserts. |
 | `headings.py` | Section numbering and changed heading subjects were deliberately reviewed. | The body belongs under that heading. |
 | `columns.py` | Embedded column tables reproduce the registry. | Non-tabular prose agrees with the registry. |

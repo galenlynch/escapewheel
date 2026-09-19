@@ -4,8 +4,10 @@
 |---|---|
 | **Status** | **Draft** |
 | **Based on** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
+| **Decision domain** | specification |
+| **Change form** | structural |
 | **Amends** | Part 00 §§1–3 and §§9–10 (specification framework, authority, abstractions, part ownership and status, references); Part 02 §§1 and 9 (registry and compatibility statements relocated from the specification README); Part 03 §1 (profile identity); Part 04 §§3–4 (recorded standard identifiers); Part 05 §§1 and 10 (conformance summary); Part 09 §§1 and 5–6 (extension independence); specification README §§1–7 (informational entry point) |
-| **Depends on** | R93 §3.2 and §3.6 (part subjects, profile boundary, and current status precedence); R111 §§3.1–3.3 (actors and requirement subjects); R112 §3.1 and §3.4 (current requirements live in parts and part numbering is append-only); R113 §3.1 (part citation spelling) |
+| **Depends on** | R93 §3.2 and §3.6 (part subjects, profile boundary, and current status precedence); R111 §§3.1–3.3 (actors and requirement subjects); R112 §3.1 and §3.4 (current requirements live in parts); R113 §3.1 (part citation spelling); R120 §§3.3–3.7 (structural change, anchors, citations, and current-owner traceability); P0.2 authoritative-source maintenance and history cleanup |
 | **Profile** | all |
 | **Decision clauses** | §3.1, §3.2, §3.3, §3.4, §3.5, §3.6, §3.7, §3.8, §3.9 |
 
@@ -369,7 +371,8 @@ and citation reading establish semantic placement.
 ## 7. Pre-acceptance blockers
 
 This section records the current appraisal state; it is informative and adds no Decision clause.
-The draft remains blocked while the controlled-reorganization draft is unaccepted. Its first
+The draft remains blocked until the P0.2 authoritative-source maintenance and history cleanup is
+accepted and incorporated. R120 now supplies the structural-reorganization process. Its first
 acceptance appraisal found that repository-maintenance procedure and historical-revision mechanics
 had been assigned to normative Part 00, and that the ledger's reverse-citation check made current
 authoritative owners depend on their change records. The process draft assigns maintenance to
@@ -412,7 +415,7 @@ After that prerequisite lands, the following work occurs in order:
    obligations to a named actor or a testable artifact property. Name the framework check and its
    positive and negative tests for Part 00 ownership and status, local status projections, README
    informativity, normative-reference placement, and combined-rendering reproducibility. Keep that
-   checker distinct from the controlled-reorganization process checks on anchors and revision
+   checker distinct from R120's process checks on anchors and revision
    history.
 6. **Repeat the complete pre-acceptance appraisal.** Re-run the freshness, decision, feasibility,
    compatibility, traceability, evidence, citation, repointing, and repository gates against the

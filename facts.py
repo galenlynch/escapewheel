@@ -105,7 +105,7 @@ def _clause_count() -> int:
     Imported rather than recounted: what counts as a clause is `ledger.py`'s judgement, and a
     second implementation here would be a second answer.
     """
-    sys.path.insert(0, str(ROOT / "escapewheel_poc_docs_v0.2"))
+    sys.path.insert(0, str(ROOT / "revisions"))
     import ledger
 
     return len(ledger.clauses())

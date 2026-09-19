@@ -35,6 +35,12 @@ No change in this audit alters the packet contract or the normative v0.2 rules.
 
 ### Follow-up implementation status
 
+R120 subsequently replaced reverse corroboration with one-way traceability from each accepted
+clause to an exact current owner. The ledger and its registry-target map now live under
+`revisions/`; stable anchored Markdown owners replace numeric evidence-owner sections; and current
+owners no longer carry revision backlinks merely to satisfy the ledger. The numbered specification
+parts and packet contract were unchanged by that process decision.
+
 The follow-up candidate based on checkpoint
 `a9edb7c3b8885fbbdb7699927c4c9270ecf783f4` implements the four process improvements identified
 after this audit:
@@ -42,9 +48,9 @@ after this audit:
 1. `registry-targets.toml` gives every registry disposition one or more checked artifact paths and
    RFC 6901 JSON Pointers. `ledger.py` rejects a missing, stale, malformed, or unresolved target and
    rejects the former free-text `where` field on a registry disposition.
-2. `corroboration-exceptions.toml` replaces the numeric uncorroborated-target ratchet with the exact
-   77 reviewed clause/part/section triples. A new missing-provenance site and a no-longer-needed
-   exception both fail.
+2. The then-current `corroboration-exceptions.toml` replaced the numeric uncorroborated-target
+   ratchet with exact reviewed triples. R120 later removed that transitional reverse condition and
+   the exception file.
 3. `revisions/evidence.py` and `revisions/evidence/R<N>.json` map each current-format accepted
    Decision clause to authoritative owners, generated projections, collected conformance evidence,
    implementation paths, and documentation paths or explicit unchanged reasons.

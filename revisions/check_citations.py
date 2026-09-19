@@ -30,8 +30,8 @@ which were read for numbering alone until this included them, and one named a se
 revision that has never had one. A broken part citation there is an error, as in a draft, because
 the parts are the statement of record.
 
-Every working-tree Python file is checked too, not only the revisions. Part 00 §10.1 sends a comment to the
-part that states its rule, so a citation in the source is load-bearing in the same way -- and until
+Every working-tree Python file is checked too, not only the revisions. The current citation rule
+sends a comment to the owner that states its rule, so a citation in source is load-bearing -- and until
 this scanned them, five were broken: four naming section 56 of Part 00 and section 92 of Part 01,
 both v0.1 *line* numbers carried into section form, and one naming a section R70 never had. None
 resolved and nothing reported them. A part citation that does not resolve in a tracked file is an
@@ -40,15 +40,15 @@ error, as in a draft: the source is live.
 Those are spelled out in prose rather than written as citations, because this file is one of the
 files it reads.
 
-A part named by its number alone is an error in a part, a revision or a draft, which Part 00 §10.4
-requires and no other check can see: both spellings resolve to the same section. A source file is
+A part named by its number alone is an error in a part, a revision or a draft, as
+`revisions/CONTRIBUTING.md#ew-citation-context` requires and no other check can see: both spellings resolve to the same section. A source file is
 read for whether its citations resolve and never for how they are spelled, since a specification
 does not impose a comment style on code it does not own.
 
-The parts are also checked for the numbering Part 00 §10.3 requires. `headings` returns a set, which is
+The parts are also checked for ascending, unique numbering. `headings` returns a set, which is
 what hid Part 05 carrying two sections numbered 11 through five accepted revisions -- a duplicate
 vanishes into a set and the citation still resolves. Two sections with one number fail the build and
-sections that do not ascend are reported, which is the MUST and the SHOULD of Part 00 §10.3.
+sections that do not ascend are reported.
 
     python check_citations.py            # report
     python check_citations.py --quiet    # errors only
@@ -61,6 +61,11 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+try:
+    from revisions.process_rules import canonical_anchors
+except ModuleNotFoundError:  # Direct execution from revisions/.
+    from process_rules import canonical_anchors
 
 HERE = Path(__file__).resolve().parent
 ACCEPTED = HERE / "accepted"
@@ -79,12 +84,17 @@ REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
 PART = re.compile(r"(?:`(\d\d)`|Part (\d\d)) §(\d+(?:\.\d+)*)")
 #: Any §, so the ones the two above did not claim can be treated as local.
 ANY = re.compile(r"§(\d+(?:\.\d+)*)")
-#: A part named by its number alone, which Part 00 §10.4 forbids in a part or a revision. Every
+#: A part named by its number alone, which the current citation-context rule forbids in prose. Every
 #: backticked two-digit string in those documents is a part, so nothing yet needs excusing.
 NUMBERED = re.compile(r"`(\d\d)`")
+MARKDOWN_ANCHOR = re.compile(r"\[[^\]]+\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
+SOURCE_ANCHOR = re.compile(r"`([^`#]+\.md)#(ew-[a-z0-9-]+)`")
+LINKED_PART = re.compile(
+    r"\[Part (\d\d) §(\d+(?:\.\d+)*)\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)"
+)
 
 #: Sites where a backticked two-digit number is not a part, or is a specimen of the spelling
-#: `00` §10.4 replaced, each with why. Matched as a substring of the line, and checked to still
+#: the former bare-part spelling replaced, each with why. Matched as a substring of the line, and checked to still
 #: match something, so an entry cannot outlive the text it excuses.
 NOT_A_PART: tuple[tuple[str, str, str], ...] = (
     (
@@ -120,7 +130,7 @@ def numbering(text: str) -> tuple[list[str], list[tuple[str, str]]]:
     """A part's repeated section numbers, and each adjacent pair that fails to ascend.
 
     Compared as tuples of integers, so `1.10` follows `1.9` and a nested section follows its
-    parent. Every repeat is also a non-ascending pair; both are returned because Part 00 §10.3 makes
+    parent. Every repeat is also a non-ascending pair; both are returned because the process makes
     the first an error and the second a report.
     """
     found = HEADING.findall(text)
@@ -149,7 +159,7 @@ def part(number: str) -> Path | None:
 def numbered(path: Path, text: str) -> tuple[list[str], set[str]]:
     """Each part this document names by its number alone, and which exemptions that used.
 
-    Part 00 §10.4 binds a part and a revision and nothing else, so an implementation's source is read
+    The current citation rule binds a part and a revision and nothing else, so source is read
     for whether its citations resolve and never for how they are spelled.
     """
     found, used = [], set()
@@ -172,6 +182,66 @@ def numbered(path: Path, text: str) -> tuple[list[str], set[str]]:
             f"`{number.group(1)}` on line {line} — a part is named as Part {number.group(1)}"
         )
     return found, used
+
+
+def anchor_heading(text: str, anchor: str) -> str | None:
+    """Return the numbered heading immediately following a canonical anchor."""
+    pending = False
+    fenced = False
+    for line in text.splitlines():
+        if line.startswith("```"):
+            fenced = not fenced
+            pending = False
+            continue
+        if fenced:
+            continue
+        if anchor in canonical_anchors(line):
+            pending = True
+            continue
+        if pending and line.strip():
+            match = HEADING.match(line)
+            return match.group(1) if match else None
+    return None
+
+
+def anchored(path: Path, text: str) -> list[str]:
+    """Return unresolved stable-anchor links and linked part-number disagreements."""
+    errors = []
+    root = HERE.parent
+    resolved: dict[tuple[str, str], Path] = {}
+    for match in MARKDOWN_ANCHOR.finditer(text):
+        relative, anchor = match.groups()
+        target = (path.parent / relative).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError:
+            errors.append(f"anchor link {relative}#{anchor} escapes the repository")
+            continue
+        if not target.is_file() or anchor not in canonical_anchors(target.read_text()):
+            errors.append(f"anchor link {relative}#{anchor} does not resolve")
+        else:
+            resolved[relative, anchor] = target
+    if path.suffix == ".py":
+        for relative, anchor in SOURCE_ANCHOR.findall(text):
+            target = (root / relative).resolve()
+            if not target.is_file() or anchor not in canonical_anchors(
+                target.read_text()
+            ):
+                errors.append(f"source anchor {relative}#{anchor} does not resolve")
+    for part_number, section, relative, anchor in LINKED_PART.findall(text):
+        target = resolved.get((relative, anchor))
+        if target is None:
+            continue
+        anchor_section = anchor_heading(target.read_text(), anchor)
+        if (
+            target.parent != PARTS
+            or target.name[:2] != part_number
+            or anchor_section != section
+        ):
+            errors.append(
+                f"linked Part {part_number} §{section} disagrees with #{anchor}'s current heading"
+            )
+    return errors
 
 
 def check(path: Path) -> tuple[list[str], list[str], list[str]]:
@@ -213,6 +283,10 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
             loose.append(
                 f"§{match.group(1)} — unprefixed, and this document has no such section"
             )
+    # An accepted record is immutable history. Its current-owner links are interpreted from its
+    # baseline rather than made a gate on the working tree.
+    if path.parent != ACCEPTED:
+        errors += anchored(path, text)
     return errors, parts, sorted(set(loose))
 
 
@@ -272,7 +346,7 @@ def main() -> int:
     broken, historical = 0, 0
     excused: set[str] = set()
 
-    # Part 00 §10.3's numbering, checked before any citation: a duplicate number makes a citation
+    # Unique ascending numbering is checked before any citation: a duplicate number makes a citation
     # ambiguous rather than unresolvable, so nothing downstream can see it.
     for target in sorted(PARTS.glob("[0-9][0-9]_*.md")):
         repeated, descending = numbering(target.read_text())
@@ -295,7 +369,7 @@ def main() -> int:
             or path.parent == PARTS
         )
         errors, parts, loose = check(path)
-        # Part 00 §10.4 binds a part and a revision; a source file is read only for resolution.
+        # The current citation rule binds prose spelling; a source file is read only for resolution.
         if path.suffix == ".md":
             spelled, fired = numbered(path, path.read_text())
             errors += spelled

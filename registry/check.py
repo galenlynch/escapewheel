@@ -51,18 +51,24 @@ check("table set matches R9 §2 ledger", expected ^ set(T))
 # The inverse, and the one that was actually missing: a revision may be accepted, implemented,
 # and left out of the list. R54, R65 and R66 all were, for several revisions each, because the
 # list was hand-maintained and only the stamped direction was checked.
-_accepted = {
-    f"R{re.match(r'R(\d+)', q.name).group(1)}"
-    for q in (HERE.parent / "revisions/accepted").glob("R[0-9]*.md")
-    if "**Accepted**" in q.read_text()[:400]
-}
+_accepted = set()
+for _revision in (HERE.parent / "revisions/accepted").glob("R[0-9]*.md"):
+    _head = _revision.read_text()[:2000]
+    _number = int(re.match(r"R(\d+)", _revision.name).group(1))
+    _domain = re.search(
+        r"^\| \*\*Decision domain\*\* \| (.*?) \|$", _head, re.MULTILINE
+    )
+    if "**Accepted**" in _head and (
+        _number < 120 or (_domain is not None and _domain.group(1) == "specification")
+    ):
+        _accepted.add(f"R{_number}")
 _listed = set(REG.get("derived_from", {}).get("revisions", []))
 check(
-    "every accepted revision is declared in derived_from",
+    "every accepted specification revision is declared in derived_from",
     sorted(_accepted - _listed, key=lambda r: int(r[1:])),
 )
 check(
-    "derived_from declares no revision that is not accepted",
+    "derived_from declares no revision that is not an accepted specification decision",
     sorted(_listed - _accepted, key=lambda r: int(r[1:])),
 )
 check(

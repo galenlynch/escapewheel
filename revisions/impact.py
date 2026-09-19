@@ -8,6 +8,7 @@ this citation resolve — and cannot see that a resolved citation now points at 
     python revisions/impact.py              # what the working tree changes, and who cites it
     python revisions/impact.py HEAD~3       # the same for a commit range
     python revisions/impact.py --section 02:7.1 --section 05:8
+    python revisions/impact.py --anchor ew-session-scope
 
 Reports each changed section with every working-tree file that cites it. It says nothing about whether a citer
 is stale, which needs reading: what it removes is having to find them first.
@@ -28,9 +29,13 @@ PARTS = ROOT / "escapewheel_poc_docs_v0.2"
 #: A heading that opens a numbered section, at any depth.
 HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
 
-#: `Part 03 §5.4`, which Part 00 §10.4 requires, and the bare `03` §5.4 it replaced: a citation
+#: `Part 03 §5.4`, as required by `revisions/CONTRIBUTING.md#ew-citation-context`, and the bare
+#: `03` §5.4 it replaced: a citation
 #: written before that clause still resolves, so both are read here.
 CITATION = re.compile(r"(?:`(\d\d)`|Part (\d\d))\s+§(\d+(?:\.\d+)*)")
+ANCHOR = re.compile(
+    r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="(canonical|alias)"></a>$'
+)
 
 #: Not searched. Everything else tracked is, because a citation is load-bearing wherever it is
 #: written: a test asserting `03` §5.5's rule and a contribution guide explaining it both go stale when
@@ -117,10 +122,65 @@ def citers(part: str, section: str) -> list[str]:
     return list(index().get((part, section), ()))
 
 
+def anchor_location(anchor: str) -> tuple[str, str, str] | None:
+    """Return the part, section, and title immediately following a canonical anchor."""
+    for path in sorted(PARTS.glob("[0-9][0-9]_*.md")):
+        pending: set[str] = set()
+        fenced = False
+        for line in path.read_text().splitlines():
+            if line.startswith("```"):
+                fenced = not fenced
+                pending.clear()
+                continue
+            if fenced:
+                continue
+            if match := ANCHOR.fullmatch(line):
+                if match.group(2) == "canonical":
+                    pending.add(match.group(1))
+                continue
+            if anchor in pending and (heading := HEADING.fullmatch(line)):
+                return path.name[:2], heading.group(1), heading.group(2).strip()
+            if line.strip():
+                pending.clear()
+    return None
+
+
+def anchor_citers(anchor: str) -> list[str]:
+    """Return live files and lines that refer to an anchor identifier."""
+    found = []
+    listed = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    for name in listed:
+        if (
+            name.startswith(("revisions/accepted/", *SKIPPED))
+            or "Implementation_Spec" in name
+        ):
+            continue
+        path = ROOT / name
+        if path.suffix not in {".py", ".md", ".json", ".toml"} or not path.is_file():
+            continue
+        for number, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+            if anchor in line and not ANCHOR.fullmatch(line):
+                found.append(f"{name}:{number}")
+    return found
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "ref", nargs="?", help="Git revision or range to compare with the working tree"
+    )
+    parser.add_argument(
+        "--anchor",
+        action="append",
+        default=[],
+        metavar="ID",
+        help="also report one canonical stable anchor",
     )
     parser.add_argument(
         "--section",
@@ -143,7 +203,17 @@ def main() -> int:
         if section not in declared:
             parser.error(f"--section names absent Part {part} §{section}")
         changed[part].add(section)
-    if not changed:
+    anchor_reports = []
+    for anchor in args.anchor:
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", anchor):
+            parser.error(
+                f"--anchor expects a lowercase hyphenated identifier, got {anchor!r}"
+            )
+        location = anchor_location(anchor)
+        if location is None:
+            parser.error(f"--anchor names no canonical numbered-part anchor: {anchor}")
+        anchor_reports.append((anchor, location, anchor_citers(anchor)))
+    if not changed and not anchor_reports:
         print(
             "no part changed"
             + (f" since {args.ref}" if args.ref else " in the working tree")
@@ -165,8 +235,16 @@ def main() -> int:
             head = f"`{part}` §{section}  {titles.get(section, '')}"
             print(f"\n{head}\n{'-' * len(head)}")
             print("  cited by nothing" if not who else "\n".join(f"  {w}" for w in who))
+    for anchor, (part, section, title), who in anchor_reports:
+        total += len(who)
+        head = f"#{anchor}  Part {part} §{section}  {title}"
+        print(f"\n{head}\n{'-' * len(head)}")
+        print(
+            "  cited by nothing" if not who else "\n".join(f"  {site}" for site in who)
+        )
     print(
-        f"\n{sum(len(v) for v in changed.values())} section(s) changed, {total} citation(s) to read"
+        f"\n{sum(len(v) for v in changed.values())} section(s) changed, "
+        f"{len(anchor_reports)} anchor(s) queried, {total} citation(s) to read"
     )
     return 0
 

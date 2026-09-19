@@ -51,6 +51,11 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         [sys.executable, "-m", "unittest", "revisions.test_evidence"],
     ),
     (
+        "revisions: process semantics tests",
+        ROOT,
+        [sys.executable, "revisions/test_process.py"],
+    ),
+    (
         "revisions: accepted evidence manifests resolve",
         ROOT,
         [sys.executable, "revisions/evidence.py"],
@@ -65,7 +70,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         ROOT / "revisions",
         [sys.executable, "check_citations.py", "--quiet"],
     ),
-    # The other half of Part 00 §10.1: a citation of a clause that landed in a part resolves
+    # The current-owner rule in `revisions/CONTRIBUTING.md#ew-citation-context`: a citation of a clause that landed in a part resolves
     # perfectly while still sending a reader to the change record, so nothing else can see it.
     (
         "citations: a requirement names its part",
@@ -77,11 +82,10 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         ROOT / "revisions",
         [sys.executable, "repoint.py", "--exempt"],
     ),
-    # A ratchet for undisposed clauses, exact JSON Pointers for registry dispositions, and an
-    # exact allowlist for historical prose targets whose current section lacks provenance.
+    # A ratchet for undisposed clauses and exact current-owner and JSON targets.
     (
         "spec: every revision clause has a disposition",
-        ROOT / "escapewheel_poc_docs_v0.2",
+        ROOT / "revisions",
         [sys.executable, "ledger.py", "--summary"],
     ),
     # The other half of what a citation needs. `check_citations.py` resolves a number and this

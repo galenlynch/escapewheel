@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-18 |
 | **Based on** | `f7064ee0b76aca46429338ce147cfa5d5f44d973` |
 | **Decision domain** | process |
 | **Change form** | ordinary |
@@ -86,7 +86,7 @@ raise separate schema and compatibility questions.
 
 The reverse-impact query for Part 00 §§10.1–10.4 reports 29 citations at the appraisal baseline:
 22 in process tools, two in the live roadmap, one in current Part 07 prose, three in accepted R113,
-and one in this draft. This revision repoints the 24 live process references. The dependent
+and one in this revision. This revision repoints the 24 live process references. The dependent
 authoritative-source cleanup handles Part 07. The four citations in R113 and the eventual accepted
 form of this revision remain unchanged as history.
 
@@ -375,7 +375,7 @@ The incorporation inventory is exact at this baseline:
   `revisions/proposals/ROADMAP.md`.
 - Process tools: `revisions/stages.py`, `revisions/evidence.py`, `revisions/repoint.py`,
   `revisions/impact.py`, `revisions/check_citations.py`, `revisions/test_evidence.py`, the new
-  `revisions/test_process.py`, `facts.py`, and `verify.py`.
+  `revisions/test_process.py`, `registry/check.py`, `facts.py`, and `verify.py`.
 - Specification tooling: `escapewheel_poc_docs_v0.2/headings.py`, `headings.toml`, and
   `combine.py`.
 - Ledger relocation: move `ledger.py`, `applied.toml`, and `registry-targets.toml` to `revisions/`
@@ -390,9 +390,9 @@ The incorporation inventory is exact at this baseline:
 | logical prose and registry | Unchanged. Historical-reference and registry-provenance cleanup is deferred. | Registry generation is unchanged and structural checks pass. |
 | physical profiles | Unchanged because no storage requirement or profile identifier changes. | Profile sources and generated output are unchanged. |
 | packet catalog and JSON Schemas | Unchanged because no packet document contract changes. | Schema and catalog diffs are empty. |
-| validation and import | Packet validation and import are unchanged; repository verification gains process checks. | Existing validator and import suites pass; new process negatives fail their focused checks. |
+| validation and import | Packet validation and import are unchanged; repository verification gains process checks. | Registry, validator, corpus, and focused process checks pass; new process negatives fail their focused checks. |
 | extensions | Unchanged because extension declarations and validity are outside this process decision. | Extension registry checks pass without extension diffs. |
-| reader, writer, validator, adapters | Runtime behavior is unchanged. Only process-related source comments are repointed where measured. | Package behavior suites pass; the impact sweep accounts for changed comments. |
+| reader, writer, validator, adapters | Runtime behavior is unchanged. Only process-related source comments are repointed where measured. | The quick verifier passes. The full reader and writer stages reproduce the bounded sandbox timeouts documented in the process audit; validator and AIND pass, and no runtime package code changes. |
 | conformance fixtures and tests | Packet fixtures and expectations are unchanged. `revisions/test_process.py` adds domain, anchor, bootstrap, ledger, and no-backlink cases; `test_evidence.py` changes to anchored Markdown owners. | Corpus generation is unchanged; the named process tests exercise every positive and negative case. |
 | revision lifecycle and templates | Add decision domains, prospective change forms, process-specific metadata forms, structural crosswalk and sequencing rules, and stable anchors to the guide and templates. Update directory READMEs and migrate current open artifacts. | `stages.py` accepts both domains and both change forms, rejects invalid new artifacts, and accepts immutable legacy records through the exact defaults. |
 | ledger and evidence | Move ledger files under `revisions/`, add part-or-path anchor targets, remove reverse corroboration, and accept anchored process owners. | Every accepted clause has a disposition; process and specification owner fixtures resolve; no owner backlink is required. |

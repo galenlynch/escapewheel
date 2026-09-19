@@ -13,6 +13,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    from revisions.process_rules import canonical_anchors
+except ModuleNotFoundError:  # Direct execution from revisions/.
+    from process_rules import canonical_anchors
+
 ROOT = Path(__file__).resolve().parent.parent
 HERE = ROOT / "revisions"
 
@@ -23,6 +28,8 @@ BCP14 = re.compile(
     r"\b(?:MUST|MUST NOT|SHOULD|SHOULD NOT|MAY|REQUIRED|SHALL|OPTIONAL)\b"
 )
 SHA = re.compile(r"[0-9a-f]{40}")
+ACCEPTED_STATUS = re.compile(r"\*\*Accepted\*\* \d{4}-\d{2}-\d{2}")
+PROCESS_AMENDS = re.compile(r"([^#;]+\.md)#([a-z0-9]+(?:-[a-z0-9]+)*)")
 NON_STAGE_DOCUMENTS = {"README.md", "ROADMAP.md"}
 
 PROPOSAL_HEADINGS = {
@@ -83,6 +90,55 @@ def common(path: Path, text: str, expected_status: str) -> list[str]:
     return errors
 
 
+def lifecycle_metadata(path: Path, text: str, *, proposal_stage: bool) -> list[str]:
+    """Validate prospective decision-domain, change-form, and process-target metadata."""
+    meta = fields(text)
+    domain = meta.get("Decision domain")
+    errors = []
+    if domain not in {"specification", "process"}:
+        errors.append(
+            f"`Decision domain` is {domain!r}, expected `specification` or `process`"
+        )
+        return errors
+    change = meta.get("Change form")
+    if proposal_stage:
+        if change is not None:
+            errors.append("a proposal selects no `Change form`")
+        return errors
+    if change not in {"ordinary", "structural"}:
+        errors.append(
+            f"`Change form` is {change!r}, expected `ordinary` or `structural`"
+        )
+    if domain == "process":
+        if change != "ordinary":
+            errors.append("a process artifact must use `Change form: ordinary`")
+        if meta.get("Profile") != "not applicable":
+            errors.append("a process artifact must use `Profile: not applicable`")
+        amendments = [value.strip(" `") for value in meta.get("Amends", "").split(";")]
+        for amendment in filter(None, amendments):
+            match = PROCESS_AMENDS.fullmatch(amendment)
+            if match is None:
+                errors.append(
+                    f"process `Amends` target is not an exact Markdown path#anchor: {amendment!r}"
+                )
+                continue
+            target = (ROOT / match.group(1)).resolve()
+            try:
+                target.relative_to(ROOT)
+            except ValueError:
+                errors.append(
+                    f"process `Amends` target escapes the repository: {amendment!r}"
+                )
+                continue
+            if not target.is_file() or match.group(2) not in canonical_anchors(
+                target.read_text()
+            ):
+                errors.append(
+                    f"process `Amends` target does not resolve: {amendment!r}"
+                )
+    return errors
+
+
 def headings(path: Path, text: str, required: dict[str, str]) -> list[str]:
     """Return missing or renamed required top-level sections."""
     found = dict(HEADING.findall(text))
@@ -96,7 +152,11 @@ def headings(path: Path, text: str, required: dict[str, str]) -> list[str]:
 def proposal(path: Path) -> list[str]:
     """Return structural defects in one proposal."""
     text = path.read_text()
-    errors = common(path, text, "Proposal") + headings(path, text, PROPOSAL_HEADINGS)
+    errors = (
+        common(path, text, "Proposal")
+        + lifecycle_metadata(path, text, proposal_stage=True)
+        + headings(path, text, PROPOSAL_HEADINGS)
+    )
     meta = fields(text)
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", meta.get("Opened", "")):
         errors.append(f"`Opened` is not an ISO date: {meta.get('Opened')!r}")
@@ -111,7 +171,11 @@ def proposal(path: Path) -> list[str]:
 def draft(path: Path) -> list[str]:
     """Return structural defects in one revision draft."""
     text = path.read_text()
-    errors = common(path, text, "Draft") + headings(path, text, DRAFT_HEADINGS)
+    errors = (
+        common(path, text, "Draft")
+        + lifecycle_metadata(path, text, proposal_stage=False)
+        + headings(path, text, DRAFT_HEADINGS)
+    )
     meta = fields(text)
     for name in ("Amends", "Depends on", "Profile", "Decision clauses"):
         if not meta.get(name):
@@ -137,6 +201,40 @@ def draft(path: Path) -> list[str]:
     return errors
 
 
+def accepted(path: Path) -> list[str]:
+    """Validate metadata introduced prospectively at R120 without rewriting older history."""
+    match = re.match(r"R(\d+)-", path.name)
+    if match is None or int(match.group(1)) < 120:
+        return []
+    text = path.read_text()
+    meta = fields(text)
+    errors = baseline(path, meta.get("Based on"))
+    if not ACCEPTED_STATUS.fullmatch(meta.get("Status", "")):
+        errors.append(
+            f"status is {meta.get('Status')!r}, expected accepted status and ISO date"
+        )
+    errors += lifecycle_metadata(path, text, proposal_stage=False)
+    for name in ("Amends", "Depends on", "Profile", "Decision clauses"):
+        if not meta.get(name):
+            errors.append(f"declares no `{name}` value")
+    declared = re.findall(r"§(\d+(?:\.\d+)*)", meta.get("Decision clauses", ""))
+    known = set(NUMBERED.findall(text))
+    expected = {section for section in known if section.startswith("3.")} or (
+        {"3"} if "3" in known else set()
+    )
+    if not declared:
+        errors.append("`Decision clauses` enumerates no section")
+    elif len(declared) != len(set(declared)):
+        errors.append("`Decision clauses` repeats a section")
+    if set(declared) != expected:
+        errors.append(
+            f"`Decision clauses` enumerates {sorted(set(declared))}, expected {sorted(expected)}"
+        )
+    if "<!--" in text:
+        errors.append("contains template instructions or another HTML comment")
+    return errors
+
+
 def main() -> int:
     """Check every open stage document and report all defects."""
     proposals = sorted(
@@ -145,10 +243,13 @@ def main() -> int:
         if p.name not in NON_STAGE_DOCUMENTS
     )
     drafts = sorted(p for p in (HERE / "drafts").glob("*.md") if p.name != "README.md")
+    accepted_paths = sorted((HERE / "accepted").glob("R[0-9]*.md"))
     failures = 0
-    for path, check in [(p, proposal) for p in proposals] + [
-        (p, draft) for p in drafts
-    ]:
+    for path, check in (
+        [(p, proposal) for p in proposals]
+        + [(p, draft) for p in drafts]
+        + [(p, accepted) for p in accepted_paths]
+    ):
         for error in check(path):
             print(f"  {path.relative_to(ROOT)}: {error}")
             failures += 1
@@ -156,7 +257,7 @@ def main() -> int:
         print(f"{failures} open-stage defect(s)")
         return 1
     print(
-        f"{len(proposals)} proposal(s) and {len(drafts)} draft(s) are structurally complete"
+        f"{len(proposals)} proposal(s), {len(drafts)} draft(s), and prospective accepted records are structurally complete"
     )
     return 0
 
