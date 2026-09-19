@@ -192,6 +192,7 @@ The first implementation is not a generic NWB backend. It is:
 
 An import succeeds only when validation succeeds (Part 05 §1).
 
+<a id="ew-numbered-part-ownership" data-spec-anchor="canonical"></a>
 ## 9. The parts, and what each one binds
 
 A reader learns what binds them here rather than by opening ten files and reading the third line of
@@ -218,8 +219,10 @@ sections and informative in the rest. The table is appended rather than inserted
 reason the sequence is not renumbered — 119 citations across the accepted revisions and the parts
 depend on part and section identifiers both.
 
+<a id="ew-specification-citations" data-spec-anchor="canonical"></a>
 ## 10. Citing this specification
 
+<a id="ew-current-requirement-citations" data-spec-anchor="canonical"></a>
 ### 10.1 A requirement is cited from the part that states it
 
 Where a part states a requirement, a citation of it — in an implementation's source, in a packet's documentation, or in a revision's Decision — MUST name that part and section, and MUST NOT name a revision in its place (R112 §3.1). The part's sentence is what binds (§9), and a revision naming the same rule records how the part came to say it.
@@ -228,18 +231,21 @@ Naming an actor does not exempt a clause. A requirement binding a writer, a read
 
 Two dispositions leave a requirement outside the parts. A clause the registry carries is cited from the registry, which is where a consumer reads it, and a clause that decided nothing states no requirement to cite. Where a clause is recorded as landing anywhere but a part, the revision is the statement of record.
 
+<a id="ew-revision-rationale-citations" data-spec-anchor="canonical"></a>
 ### 10.2 A revision is cited for what a part does not carry
 
 A revision MAY be cited for the reasoning a part does not hold: the measurement behind a rule, the alternative that was rejected and why, and the defect that prompted the change (R112 §3.3). A part states what holds; a revision states why, and a reader wanting the second is sent to the revision by name.
 
 Three uses name a revision and are sound: a registry column's `since`, whose value names the revision that set it (Part 02 §9.4); the ledger mapping each clause to where it landed, which is what §10.1 is resolved through; and a revision citing another revision. The exemption says which document to cite and not that the citation is accurate.
 
+<a id="ew-append-only-numbering" data-spec-anchor="canonical"></a>
 ### 10.3 A part is numbered by appending
 
 Whoever amends a part MUST add a section at the end of that part, and a subsection at the end of its section, neither of which renumbers anything already cited. They MUST NOT insert one between two that exist, and a part MUST NOT carry two sections with one number (R112 §3.4). Part 01 §3 is not an exception: that section is a flat list of concepts every later part cites by number, so a concept is appended as the next number.
 
 A tool that checks citations MUST refuse a part carrying two sections with one number, and SHOULD refuse one whose sections do not ascend (R112 §3.5). Both are decidable from the headings alone, with no citation in hand.
 
+<a id="ew-part-citation-form" data-spec-anchor="canonical"></a>
 ### 10.4 A part is cited as Part 02
 
 A citation of a part, in a part or in a revision, MUST write the word `Part` before the number, as `Part 02 §5.2`, and MUST NOT name the part by its number alone, with or without backticks (R113 §3.1). An implementation's source is not bound. §10.1 binds which document a citation names, because naming the wrong one sends a reader to prose that does not bind them; a spelling is presentation, and this specification does not impose one on code it does not own.

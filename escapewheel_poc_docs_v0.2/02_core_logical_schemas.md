@@ -2,6 +2,7 @@
 
 Normative.
 
+<a id="ew-core-logical-schema-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part defines how a logical schema is declared, what a declaration must contain, and which resources the core layer comprises.
@@ -281,10 +282,12 @@ No rule checks either half, and none is added. Nothing structural tells a code f
 
 ## 9. The registry
 
+<a id="ew-registry-document" data-spec-anchor="canonical"></a>
 ### 9.1 The schema is one document
 
 Table structure and validation rules are carried in one JSON document (R2 §2). It declares the semantic and logical standard versions, its own registry version, and its tables.
 
+<a id="ew-registry-self-description" data-spec-anchor="canonical"></a>
 ### 9.2 Self-description
 
 A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on (R2 §8). A packet whose embedded registry disagrees with its recorded version is invalid.
@@ -324,6 +327,7 @@ An `open` column MUST carry a description stating the form its values take (R101
 
 A column's declarations are rendered in `registry/tables.md` from the fields holding them (R107 §3.4) — the vocabulary, the closed set itself, the reserved values, the authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is, and it showed none of them, which is why 35 descriptions had come to say them in prose.
 
+<a id="ew-declaration-provenance" data-spec-anchor="canonical"></a>
 ### 9.4 Provenance of a declaration
 
 A table and a column SHOULD each carry `since`, naming the revision that introduced or last changed it (R77 §2.3). The registry stamps both: 19 tables and 213 columns carry one.
