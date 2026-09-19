@@ -23,7 +23,7 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | [`allow-controlled-specification-reorganization`](allow-controlled-specification-reorganization.md) | 3,185 | Not yet appraised after promotion | Process-domain prerequisite for the authoritative-source cleanup and authority draft; it has no accepted-revision dependency. |
+| 1 | [`allow-controlled-specification-reorganization`](allow-controlled-specification-reorganization.md) | 4,204 | Ready for acceptance; the third appraisal corrected document-relative Markdown-link resolution while preserving canonical owner identity; exact-state commit pending | Process-domain prerequisite for the authoritative-source cleanup and authority draft; it has no accepted-revision dependency. |
 | 2 | [`define-specification-artifacts-and-normative-ownership`](define-specification-artifacts-and-normative-ownership.md) | 4,052 | Revise before acceptance; the controlled-reorganization draft now assigns process ownership and one-way ledger traceability, but is not yet accepted or incorporated | After the [controlled-reorganization draft](allow-controlled-specification-reorganization.md) and its dependent authoritative-source maintenance and history cleanup are accepted and incorporated, revise this draft's dependencies, exact structural landing, traceability plan, and appraisal baseline. |
 
 The last to leave was `an-adapter-declares-the-options-it-accepts`, accepted as **R119** on

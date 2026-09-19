@@ -290,7 +290,7 @@ P1 authority framework
 | ID | Work item | Status | Artifact | Depends on |
 |---|---|---|---|---|
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
-| P0.1 | Controlled reorganization of specification parts | **Draft** — promoted 2026-09-18; pre-acceptance appraisal pending | [current draft](../drafts/allow-controlled-specification-reorganization.md) | P0 |
+| P0.1 | Controlled reorganization of specification parts | **Draft** — acceptance appraisal complete; exact-state commit pending | [current draft](../drafts/allow-controlled-specification-reorganization.md) | P0 |
 | P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Not started** | anticipated proposal; slug to be assigned | P0.1 |
 | P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.1 and P0.2 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | P0.1, P0.2 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
@@ -334,8 +334,9 @@ implementation maintenance remain ordinary repository work. The same `R<N>` sequ
 incorporation order for specification and process decisions. Existing accepted records default to
 the specification decision domain without being edited. P0.1 declares the process domain, current
 open artifacts gain an explicit domain during incorporation, and later artifacts must declare one.
-For a process draft, `Profile` is `not applicable` and `Amends` names exact path-plus-anchor process
-owners.
+For a process draft, `Profile` is `not applicable`, `Change form` is `ordinary`, and `Amends` names
+exact path-plus-anchor process owners. A specification draft declares an `ordinary` or `structural`
+change form; the latter is the explicit switch for the crosswalk and anchor-bootstrap procedure.
 
 **Exit evidence:** the accepted process distinguishes routine amendment from structural
 reorganization and requires a complete human-readable crosswalk; stable anchors, current
@@ -345,15 +346,16 @@ owners without requiring those owners to cite history back. The completed histor
 audit remains non-gating evidence and is not part of current normative interpretation. Editions
 declared immutable elsewhere cannot be reorganized in place.
 Before a structural draft's final appraisal and acceptance request, a checked, separately committed
-metadata-only bootstrap assigns anchors to every affected existing source and destination without
-changing prose, structure, normativity, or meaning; the draft refreshes its baseline to that
-commit, and new destinations receive anchors in the structural incorporation.
+metadata-only bootstrap assigns anchors wherever an affected existing source or destination lacks
+one, without changing prose, structure, normativity, or meaning; the draft names that commit as its
+baseline, and new destinations receive anchors in the structural incorporation. If no bootstrap is
+needed, the human-readable crosswalk records that fact.
 
-The baseline reverse-impact query reports 30 citations into Part 00 §§10.1–10.4. P0.1 repoints the
-22 process-tool citations and two live-roadmap citations to the contribution guide. P0.2
-dispositions the one current Part 07 citation. Three R113 citations and the two citations carried
-into P0.1's eventual accepted record remain unchanged as history. Incorporation re-measures these
-populations.
+The final appraisal baseline's reverse-impact query reports 29 citations into Part 00
+§§10.1–10.4. P0.1 repoints the 22 process-tool citations and two live-roadmap citations to the
+contribution guide. P0.2 dispositions the one current Part 07 citation. Three R113 citations and
+the one citation carried into P0.1's eventual accepted record remain unchanged as history.
+Incorporation re-measures these populations.
 
 **Revised after promotion appraisal:** the earlier machine-readable paragraph selectors, content
 hashes, relocation chains, and separate relocation artifact were rejected as a disproportionate
@@ -414,8 +416,11 @@ remain outside the migration.
 
 **Resolved lifecycle sequencing:** the existing acceptance sequence forbids an intervening commit
 after acceptance authorization. P0.1 therefore requires the structural draft to identify affected
-headings, commit their metadata-only bootstrap, refresh and finally appraise the draft against that
-commit, commit the exact draft, and only then request acceptance. P1 §7 already records this order.
+headings and declare `Change form: structural`; where anchors are missing, it commits their
+metadata-only bootstrap, names that commit as `Based on`, and finally appraises the draft against
+it. Where every affected heading is already anchored, its crosswalk records that no bootstrap was
+required. The exact appraised draft is committed before acceptance is requested. P1 §7 already
+records this order.
 The restored and re-appraised proposal is preserved at
 `07439b738b55264bffd2c6ffbf3cc41390acc024`. Promotion on 2026-09-18 carried its process owner,
 decision-domain migration, one-way ledger model, structural controls, and P0.2 boundary into the
