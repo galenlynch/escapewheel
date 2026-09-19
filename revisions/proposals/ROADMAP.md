@@ -292,7 +292,7 @@ P1 authority framework
 |---|---|---|---|---|
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
 | P0.1 | Controlled reorganization of specification parts | **Complete** | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) | P0 |
-| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Proposal** — promotion appraisal passed and explicit promotion authorized; checkpointed before stage transition | [current proposal](remove-historical-and-misplaced-maintenance-material.md) | R120 |
+| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Draft** — promoted from checkpoint `4baad5df16c74d6cea445f05594d57d45c74c7a2`; acceptance appraisal pending | [current draft](../drafts/remove-historical-and-misplaced-maintenance-material.md) | R120 |
 | P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.2 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | R120, P0.2 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
@@ -434,8 +434,10 @@ draft. Its complete pre-acceptance appraisal then passed, and the exact candidat
 
 ### P0.2 — Remove historical and misplaced maintenance material from authoritative artifacts
 
-The [active proposal](remove-historical-and-misplaced-maintenance-material.md) carries the measured
-inventory, compatibility analysis, alternatives, and resolved direction for this work.
+The [active draft](../drafts/remove-historical-and-misplaced-maintenance-material.md) carries the
+measured inventory, compatibility analysis, candidate Decision, structural crosswalk, and evidence
+plan for this work. Its appraised proposal is preserved at
+`4baad5df16c74d6cea445f05594d57d45c74c7a2`.
 
 Apply the strict one-way model now that R120 supplies the structural process. Remove revision
 citations from the specification README and numbered parts, incorporated registry and schema

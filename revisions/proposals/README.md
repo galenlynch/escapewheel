@@ -21,9 +21,3 @@ why.
 `ROADMAP.md` is the non-authoritative coordination record for the v0.2 reconciliation sequence.
 It tracks dependencies among anticipated proposals but is not itself a proposal or revision-stage
 artifact.
-
-## Active proposals
-
-- [`remove-historical-and-misplaced-maintenance-material`](remove-historical-and-misplaced-maintenance-material.md)
-  is P0.2 from the roadmap. It removes backward revision provenance and misplaced maintenance
-  rules from current specification owners before the authority draft resumes.
