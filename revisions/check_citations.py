@@ -294,6 +294,35 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
 #: never edited, and the rendering generated from the v0.2 parts.
 SKIPPED = ("nwb_lake_poc_docs/",)
 
+CURRENT_CONTRACT = (
+    PARTS / "README.md",
+    *sorted(PARTS.glob("[0-9][0-9]_*.md")),
+    HERE.parent / "registry/logical_schemas.json",
+    HERE.parent / "registry/registry.schema.json",
+    HERE.parent / "registry/manifest.schema.json",
+    HERE.parent / "registry/sources.schema.json",
+    HERE.parent / "registry/rules.json",
+    *sorted((HERE.parent / "registry/extensions").glob("*.json")),
+    PARTS / "Escapewheel_POC_v0.2_Implementation_Spec.md",
+    HERE.parent / "registry/tables.md",
+)
+
+
+def current_contract_history_refs() -> list[str]:
+    """Return revision-record references in current owners and generated projections."""
+    defects = []
+    for path in CURRENT_CONTRACT:
+        if not path.is_file():
+            defects.append(f"{path.relative_to(HERE.parent)} is absent")
+            continue
+        for line_number, line in enumerate(path.read_text().splitlines(), 1):
+            if re.search(r"\bR\d+\b", line):
+                defects.append(f"{path.relative_to(HERE.parent)}:{line_number}")
+    stale_html = HERE.parent / "registry/tables.html"
+    if stale_html.exists():
+        defects.append("registry/tables.html is present")
+    return defects
+
 
 def elsewhere() -> list[Path]:
     """Every other working-tree document and source file a citation has to resolve in.
@@ -345,6 +374,15 @@ def main() -> int:
     code = elsewhere()
     broken, historical = 0, 0
     excused: set[str] = set()
+
+    history_defects = current_contract_history_refs()
+    history_label = "current contract artifacts contain no revision references"
+    if history_defects:
+        for defect in history_defects[:20]:
+            print(f"  BROKEN  {history_label}: {defect}")
+        broken += len(history_defects)
+    elif not args.quiet:
+        print(f"  ok      {history_label}")
 
     # Unique ascending numbering is checked before any citation: a duplicate number makes a citation
     # ambiguous rather than unresolvable, so nothing downstream can see it.

@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R120 accepted. R42 and R73 withdrawn. 0 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R121 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -34,12 +34,10 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ### What stands between here and a production trial
 
-1. **Bump `registry_version` when the schema settles.** It is held at `0.1.0` by decision, not by
-   oversight: the field is for compatibility and follows semantic versioning, and R48, R53, R56
-   and R59 would each have forced a major increment. While the hold lasts, two packets declaring
-   `0.1.0` can carry incompatible schemas, so the embedded registry is the authority and
-   `registry_version` alone cannot decide compatibility (Part 02 §9.2). Lift the hold at release
-   and increment on the next breaking change.
+1. **Define the publication model.** The current registry and its meta-schema now identify the
+   cleaned development shape as `0.2.0` (Part 02 §9.2). The dependent authority work still needs
+   to define the released artifact set, publication state, and identifier discipline before a
+   production trial.
 
 ---
 
@@ -73,8 +71,8 @@ land after the specification release and ownership model identifies its proper o
   packets are regenerated. This is a packet-catalog change, not part of defining a specification
   release manifest.
 - **Replace registry replay with direct declarative authoring.** Choose one reviewed registry
-  document or deterministically assembled fragments, retain each declaration's `since`
-  provenance, and prove that the migration preserves the released registry bytes or a defined
+  document or deterministically assembled fragments, retain provenance in accepted history and
+  Git rather than the registry document, and prove that the migration preserves the released registry bytes or a defined
   canonical form. This is ordinary repository maintenance if the published contract is unchanged;
   any change to the published form returns through the revision process.
 - **Audit the remaining JSON Schemas before incorporating them.** Compare
@@ -480,14 +478,6 @@ each adapter's `PRODUCES`, would make every arbitration rule a query over it and
 a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncontested until R108
 §3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
 `rules.json` is that the queries are authored outside the code, which is not true here.
-
-## 6. `registry_version` is held at `0.1.0`
-
-Unchanged through R48, R53's string-to-int32 change, R56, R81, R83 and every revision since. Two
-packets claiming one version with incompatible schemas is what the field exists to prevent, and it
-is preventing nothing. Free to settle while nobody outside holds a packet, and free to batch into
-the rebuild. The four extension registries do bump: `dynamic_foraging` is at 0.3.0 and the other
-three at 0.2.0.
 
 ## 7. The repository directory is still `nwb-lake/`
 

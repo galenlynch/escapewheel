@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://escapewheel.org/schemas/sources/0.1.0",
   "title": "Escapewheel source resolution document",
-  "description": "Shape of sources.json, per R80 §2.2. Maps a source name declared by an external resource entry to where that body of data is, for one reader in one situation. It is not a packet resource: R14 §2.3's immutability does not reach it, which is what lets a location be corrected when a mirror moves.",
+  "description": "Shape of sources.json. Maps a source name declared by an external resource entry to where that body of data is, for one reader in one situation. It is not a packet resource, so packet immutability does not reach it; a location can be corrected when a mirror moves.",
   "type": "object",
   "required": [
     "sources_standard_version",
@@ -11,7 +11,7 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "This document's meta-schema, by $id. Identity rather than a fetch instruction: a reader MUST NOT dereference it and MUST NOT require it (R57 §2)."
+      "description": "This document's meta-schema, by $id. Identity rather than a fetch instruction: a reader MUST NOT dereference it and MUST NOT require it."
     },
     "sources_standard_version": {
       "type": "string",

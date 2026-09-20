@@ -142,7 +142,12 @@ def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     embedded = json.loads((root / "schemas" / "logical_schemas.json").read_text())
+    manifest = json.loads((root / "packet.json").read_text())
+    assert registry["registry_version"] == "0.2.0"
+    assert embedded["registry_version"] == "0.2.0"
     assert embedded["registry_version"] == registry["registry_version"]
+    assert manifest["registry_version"] == "0.2.0"
+    assert manifest["registry_version"] == registry["registry_version"]
     assert len(embedded["tables"]) == len(registry["tables"])
 
 

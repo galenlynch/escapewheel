@@ -7,7 +7,7 @@
       "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-decision-domains"}],
       "projections": {"unchanged": "The process owner is authored directly and has no generated normative projection."},
       "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "decision_domain_legacy_cutoff"}]},
-      "implementations": {"paths": ["revisions/stages.py", "revisions/ledger.py", "registry/check.py"]},
+      "implementations": {"paths": ["revisions/stages.py", "revisions/ledger.py"]},
       "documentation": {"paths": ["revisions/README.md", "revisions/accepted/README.md"]}
     },
     "R120 §3.2": {
@@ -54,9 +54,9 @@
     },
     "R120 §3.8": {
       "owners": [{"path": "revisions/CONTRIBUTING.md", "anchor": "ew-process-incorporation-boundary"}],
-      "projections": {"unchanged": "The tracked provisional RELEASE.json is intentionally unchanged by this incorporation."},
+      "projections": {"unchanged": "The provisional release snapshot described at acceptance was retired by R121; the remaining probe writes no release state."},
       "conformance": {"evidence": [{"kind": "check", "stage": "revisions: process semantics tests", "id": "release_generator_selects_moved_ledger"}]},
-      "implementations": {"paths": ["release.py", "verify.py"]},
+      "implementations": {"paths": ["prototype/release-bundle/probe.py", "verify.py"]},
       "documentation": {"paths": ["CONTRIBUTING.md", "Escapewheel_Specification_Change_Process_Audit.md"]}
     }
   }

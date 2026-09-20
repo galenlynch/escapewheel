@@ -1,5 +1,5 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.2.0",
   "registry_version": "0.2.0",
   "logical_standard_version": "0.1",
   "extension_id": "vr_foraging",
@@ -20,8 +20,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Always `vr_foraging.sites`. Carries `core.intervals.interval_kind` as part of R90 \u00a73.5's shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know (R90 \u00a73.3).",
-          "since": "R90 \u00a73.3",
+          "description": "Always `vr_foraging.sites`. Carries `core.intervals.interval_kind` as part of the shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know.",
           "vocabulary": "open"
         },
         {
@@ -38,8 +37,8 @@
           "presence": "required",
           "role": "data",
           "description": "What kind of site this is, in the task's own words (RewardSite, InterSite, ...).",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
+
         },
         {
           "name": "patch_label",
@@ -47,8 +46,8 @@
           "presence": "required",
           "role": "data",
           "description": "Patch type this site belongs to.",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
+
         },
         {
           "name": "start_position",

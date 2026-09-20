@@ -283,12 +283,6 @@ locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.u
 [target."R28 §2.1"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.units" }]
 
-[target."R29 §6"]
-locations = [
-  { path = "registry/registry.schema.json", pointer = "/$defs/table/properties/since" },
-  { path = "registry/registry.schema.json", pointer = "/$defs/column/properties/since" },
-]
-
 [target."R34 §2"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.unit_electrodes" }]
 

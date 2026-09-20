@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/registry/0.1.0",
+  "$id": "https://escapewheel.org/schemas/registry/0.2.0",
   "title": "Escapewheel schema registry",
-  "description": "Shape of logical_schemas.json, per R2 \u00a79. Validates the registry document; column semantics are values within it, not JSON Schema types (R2 \u00a710).",
+  "description": "Shape of logical_schemas.json. Validates the registry document; column semantics are values within it, not JSON Schema types.",
   "type": "object",
   "required": [
     "registry_version",
@@ -12,7 +12,7 @@
   "additionalProperties": false,
   "properties": {
     "$schema": {
-      "description": "The meta-schema this document conforms to (R57 \u00a72.1). Identity, not a fetch instruction -- a validator MUST NOT dereference it.",
+      "description": "The meta-schema this document conforms to. Identity, not a fetch instruction -- a validator MUST NOT dereference it.",
       "type": "string"
     },
     "registry_version": {
@@ -25,22 +25,6 @@
     "logical_standard_version": {
       "type": "string"
     },
-    "derived_from": {
-      "type": "object",
-      "description": "Optional record of how the registry was first produced.",
-      "properties": {
-        "specification": {
-          "type": "string"
-        },
-        "revisions": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^R\\d+$"
-          }
-        }
-      }
-    },
     "tables": {
       "type": "object",
       "minProperties": 1,
@@ -52,12 +36,12 @@
       }
     },
     "extension_id": {
-      "description": "Present on an extension registry; namespaces its tables (R17 \u00a72).",
+      "description": "Present on an extension registry; namespaces its tables.",
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*$"
     },
     "extends": {
-      "description": "The logical standard version this extension was written against (R17 \u00a75).",
+      "description": "The logical standard version this extension was written against.",
       "type": "string"
     }
   },
@@ -80,7 +64,7 @@
           }
         },
         "primary_key": {
-          "description": "Column names, or null for a table admitting duplicate rows (R7 \u00a72).",
+          "description": "Column names, or null for a table admitting duplicate rows.",
           "oneOf": [
             {
               "type": "array",
@@ -106,11 +90,6 @@
           "items": {
             "$ref": "#/$defs/rule"
           }
-        },
-        "since": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The revision that introduced or last changed this, e.g. 'R8 \u00a72' (R29 \u00a72). A citation for a reader, not a link a validator resolves; absent means it came from 02 unamended."
         }
       }
     },
@@ -129,7 +108,7 @@
           "pattern": "^[a-z][a-z0-9_]*$"
         },
         "type": {
-          "description": "R2 \u00a74's Arrow-compatible vocabulary. Nested types are forbidden by R3 \u00a72.1.",
+          "description": "The Arrow-compatible type vocabulary. Nested types are forbidden.",
           "enum": [
             "string",
             "int32",
@@ -143,7 +122,7 @@
           ]
         },
         "presence": {
-          "description": "R2 \u00a75. required: present, non-null. nullable: present, may be null. optional: may be absent.",
+          "description": "required: present, non-null. nullable: present, may be null. optional: may be absent.",
           "enum": [
             "required",
             "nullable",
@@ -151,7 +130,7 @@
           ]
         },
         "role": {
-          "description": "R48 \u00a72.1. What kind of thing the column holds, which decides what a consumer may do with it -- notably whether a 1-based client converts it at the boundary (R3 \u00a76). Closed: a consumer derives behaviour from it, so an unrecognised value would be unsafe. R55 \u00a72.1 adds `discriminator`: the column holds a dotted resource ID naming a table, which a consumer resolves to decide what the row means.",
+          "description": "What kind of thing the column holds, which decides what a consumer may do with it -- notably whether a 1-based client converts it at the boundary. Closed: a consumer derives behaviour from it, so an unrecognised value would be unsafe. A discriminator holds a dotted resource ID naming a table, which a consumer resolves to decide what the row means.",
           "enum": [
             "data",
             "identifier",
@@ -162,14 +141,14 @@
           ]
         },
         "resolves": {
-          "description": "R55 \u00a72.2. Required on a discriminator, and only there. `required`: a value naming no declared resource leaves the row uninterpretable. `optional`: it is a fact -- the thing is not a packet resource.",
+          "description": "Required on a discriminator, and only there. `required`: a value naming no declared resource leaves the row uninterpretable. `optional`: it is a fact -- the thing is not a packet resource.",
           "enum": [
             "required",
             "optional"
           ]
         },
         "discriminates": {
-          "description": "R55 \u00a72.3.2. On a paired-value discriminator, the column holding an identifier in the named table's key space. Absent where the discriminated row shares the named table's key.",
+          "description": "On a paired-value discriminator, the column holding an identifier in the named table's key space. Absent where the discriminated row shares the named table's key.",
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*$"
         },
@@ -186,7 +165,7 @@
           "uniqueItems": true
         },
         "vocabulary": {
-          "description": "Which vocabulary the values are drawn from (R101 \u00a73.1). closed: the column also declares `enum` and a validator MUST reject anything outside it. open: the values name kinds of thing, comparable between packets, and a validator MUST NOT reject an unrecognised one. free: not a vocabulary at all -- a name, a description, a URI, a digest. Required on every string column but a discriminator, whose value space R55 \u00a72.1 fixes.",
+          "description": "Which vocabulary the values are drawn from. closed: the column also declares `enum` and a validator MUST reject anything outside it. open: the values name kinds of thing, comparable between packets, and a validator MUST NOT reject an unrecognised one. free: not a vocabulary at all -- a name, a description, a URI, a digest. Required on every string column but a discriminator, whose value space is the declared resource identifiers.",
           "enum": [
             "closed",
             "open",
@@ -194,18 +173,13 @@
           ]
         },
         "reserved_values": {
-          "description": "Values with fixed meanings within an open vocabulary (R11 \u00a74). Not a closed set.",
+          "description": "Values with fixed meanings within an open vocabulary. Not a closed set.",
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string"
           },
           "uniqueItems": true
-        },
-        "since": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The revision that introduced or last changed this, e.g. 'R8 \u00a72' (R29 \u00a72). A citation for a reader, not a link a validator resolves; absent means it came from 02 unamended."
         },
         "determined_by": {
           "description": "Columns whose values determine this one, so that rows agreeing on them agree here. An empty list declares a constant. Used to decide whether a table's sort order puts duplicate primary keys next to each other: a sort column that is determined by key columns cannot separate two rows that share a key.",
@@ -216,39 +190,39 @@
           }
         },
         "identity": {
-          "description": "R53 \u00a72.3. Whether an identifier's value is the source's own (`carried`) or a number this format chose (`assigned`). Not derivable -- a source may supply an integer that the writer replaces -- and it decides whether the table owes a `*_name`. Required where role is identifier, meaningless otherwise.",
+          "description": "Whether an identifier's value is the source's own (`carried`) or a number this format chose (`assigned`). Not derivable -- a source may supply an integer that the writer replaces -- and it decides whether the table owes a `*_name`. Required where role is identifier, meaningless otherwise.",
           "enum": [
             "carried",
             "assigned"
           ]
         },
         "unit": {
-          "description": "R56 \u00a72.1. The unit this column's values are in, where it does not vary. Open, as `core.sorting_runs.amplitude_unit` already is (R11 \u00a72).",
+          "description": "The unit this column's values are in, where it does not vary. Open.",
           "type": "string",
           "minLength": 1
         },
         "unit_from": {
-          "description": "R56 \u00a72.1. The column carrying this column's unit, where it varies per row. Either a column of this table, or `resource.column` resolved through a reference this table declares -- one hop (R56 \u00a72.3).",
+          "description": "The column carrying this column's unit, where it varies per row. Either a column of this table, or `resource.column` resolved through a reference this table declares -- one hop.",
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)?$"
         },
         "clock_from": {
-          "description": "R56 \u00a72.2. The column holding the `clock_id` these ticks are on. Absent, the clock is the table's own `clock_id` where it has one. Coordinates only.",
+          "description": "The column holding the `clock_id` these ticks are on. Absent, the clock is the table's own `clock_id` where it has one. Coordinates only.",
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)?$"
         },
         "discriminates_via": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
-          "description": "Where a discriminator sits a reference away from the rows it specialises, the referencing column as `resource.column` (R90 \u00a73.2)."
+          "description": "Where a discriminator sits a reference away from the rows it specialises, the referencing column as `resource.column`."
         },
         "positions_in": {
-          "description": "R100 \u00a72.3. On a by-position discriminator, the column of this table whose value is the position column in the named resource. Absent on the other two shapes, and never beside `discriminates`.",
+          "description": "On a by-position discriminator, the column of this table whose value is the position column in the named resource. Absent on the other two shapes, and never beside `discriminates`.",
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*$"
         },
         "authority": {
-          "description": "The nomenclatures this column's values are spelled by (R101 \u00a73.6), each declaring the name a person reads and the URI a document resolves (R107 \u00a73.3). The URI is identity, not a fetch instruction: a validator MUST NOT dereference one (R14 \u00a72.3.2) and MUST NOT reject a value for being absent from it. An array because a column's values may be drawn from more than one registry.",
+          "description": "The nomenclatures this column's values are spelled by, each declaring the name a person reads and the URI a document resolves. The URI is identity, not a fetch instruction: a validator MUST NOT dereference one and MUST NOT reject a value for being absent from it. An array because a column's values may be drawn from more than one registry.",
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
@@ -402,12 +376,12 @@
           "type": "string"
         },
         "sql": {
-          "description": "Returns offending rows; empty is a pass (R2 \u00a77.3).",
+          "description": "Returns offending rows; empty is a pass.",
           "type": "string",
           "minLength": 1
         },
         "advisory": {
-          "description": "Off by default; runs only when the caller asks (R26 \u00a73). Never `error`, so enabling advisories cannot change whether a packet passed.",
+          "description": "Off by default; runs only when the caller asks. Never `error`, so enabling advisories cannot change whether a packet passed.",
           "type": "boolean",
           "default": false
         }

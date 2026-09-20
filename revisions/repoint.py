@@ -46,12 +46,6 @@ REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
 #: its exemption with it rather than leaving a permanent excuse behind.
 EXEMPT: tuple[tuple[str, str, str], ...] = (
     (
-        "registry/build.py",
-        r'SINCE\[0\] = "',
-        "the stamp that becomes a column's `since`, whose value names a revision by design (Part 02 §9.4)",
-    ),
-    ("registry/build.py", r'since="', "the same stamp, written inline on a column"),
-    (
         "registry/",
         r"^\s*# ----",
         "a block marker saying which revision's block follows; both files are organised by revision",

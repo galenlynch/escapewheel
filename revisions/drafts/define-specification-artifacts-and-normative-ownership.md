@@ -7,7 +7,7 @@
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 00 §§1–3 and §9 (specification framework, authority, abstractions, part ownership and status, references); Part 02 §§1 and 9 (registry and compatibility statements relocated from the specification README); Part 03 §1 (profile identity); Part 04 §§3–4 (recorded standard identifiers); Part 05 §§1 and 10 (conformance summary); Part 09 §§1 and 5–6 (extension independence); specification README §§1–7 (informational entry point) |
-| **Depends on** | R93 §3.2 and §3.6 (part subjects, profile boundary, and current status precedence); R111 §§3.1–3.3 (actors and requirement subjects); R112 §3.1 (current requirements live in parts); R120 §§3.1 and 3.3–3.7 (process authority, structural change, anchors, citations, and current-owner traceability) |
+| **Depends on** | R93 §3.2 and §3.6 (part subjects, profile boundary, and current status precedence); R111 §§3.1–3.3 (actors and requirement subjects); R112 §3.1 (current requirements live in parts); R120 §§3.1 and 3.3–3.7 (process authority, structural change, anchors, citations, and current-owner traceability); R121 §§3.1–3.2 (history-free registry shape and current registry identity) |
 | **Profile** | all |
 | **Decision clauses** | §3.1, §3.2, §3.3, §3.4, §3.5, §3.6, §3.7, §3.8, §3.9 |
 
@@ -382,16 +382,13 @@ This section records the current appraisal state; it is informative and adds no 
 This draft is rebased on R120's accepted and incorporated process model. R120 assigns maintenance
 to `revisions/CONTRIBUTING.md`, places one-way ledger traceability under `revisions/`, treats the
 completed historical audit as non-gating evidence, and supplies the controlled structural sequence
-this draft must use. Accordingly, this draft no longer treats Part 00 §10 as its process target or
-claims that a current owner must cite the revision that produced it.
+this draft must use. The retired Part 00 editing section is therefore no longer a process target,
+and a current owner need not cite the revision that produced it.
 
-The draft remains blocked until P0.2, the authoritative-source maintenance and history cleanup, is
-accepted and incorporated. P0.2 has no accepted revision number, so it is a gating predecessor and
-not yet a valid `Depends on` entry. It has separate compatibility work for registry provenance and
-`since`, and it must give Part 00 §§10.1–10.4 clause-level dispositions. Those edits can change the
-source paragraphs and headings that this structural revision must account for. The present
-`Amends` field is therefore the affected-subject inventory at the R120 baseline, not the final
-crosswalk, and no anchor bootstrap is claimed complete.
+R121 has accepted and incorporated the authoritative-source maintenance and history cleanup that
+previously blocked this draft. The draft is still based on its pre-R121 baseline and is not ready:
+its `Amends` field, crosswalk, impact inventory, evidence plan, and substantive Decision defects
+must be revised against the incorporated tree before another appraisal.
 
 After that prerequisite lands, the following work occurs in order:
 

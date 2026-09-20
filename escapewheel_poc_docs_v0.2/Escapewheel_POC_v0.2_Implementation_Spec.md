@@ -10,13 +10,8 @@ part number here as it does there.
 
 ## Status of this document
 
-This document set specifies the Escapewheel proof-of-principle data packet. It is v0.1 with every accepted revision applied:
-
-<!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R120 accepted. R42 and R73 withdrawn. 0 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
-<!-- END facts: revisions -->
-
-The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
+This document set specifies the Escapewheel v0.2 proof-of-principle data packet. The generated v0.2
+parts and the machine-readable artifacts they incorporate state the current contract.
 
 The specification is versioned independently of the identifiers a packet records. See §5.
 
@@ -63,19 +58,20 @@ A conforming packet MAY omit any resource this specification does not require. A
 
 ### 2.3 Conforming reader
 
-A conforming reader resolves a packet's resources through its catalog rather than through file layout, checks a resource's declared codecs before opening it, and fails naming what it lacks rather than silently returning partial data (R15 §2).
+A conforming reader resolves a packet's resources through its catalog rather than through file layout, checks a resource's declared codecs before opening it, and fails naming what it lacks rather than silently returning partial data.
 
 A reader MUST NOT require an extension schema in order to read core resources (Part 09).
 
 ### 2.4 Extension
 
-An extension is a registry document in the format of Part 02, in its own namespace (R17 §2). Core resources never reference an extension's. A validator MUST NOT require an extension's schema in order to validate core, and MUST NOT fail an import because optional extension metadata is absent.
+An extension is a registry document in the format of Part 02, in its own namespace. Core resources never reference an extension's. A validator MUST NOT require an extension's schema in order to validate core, and MUST NOT fail an import because optional extension metadata is absent.
 
 ## 3. Normative language
 
 The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY, and OPTIONAL are to be interpreted as described in RFC 2119.
 
-Requirements are stated in clauses numbered within each part. A citation of the form `03 §4.2` refers to clause 4.2 of Part 03. A citation of the form `(R53 §2)` refers to a revision document and is provenance, not a requirement.
+Requirements are stated in clauses numbered within each part. A citation such as `Part 03 §5.4`
+refers to clause 5.4 of Part 03.
 
 ## 4. Document organization
 
@@ -107,19 +103,19 @@ This document set is v0.2. The **identifier strings** a packet records are uncha
 | `profile_id` | `escapewheel-portable-v0.1` |
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` |
 | `logical_standard_version` | `escapewheel-logical-v0.1` |
-| `registry_version` | `0.1.0` |
+| `registry_version` | `0.2.0` |
 
-A packet built against v0.1's *schema* does **not** remain conforming. Several accepted revisions are breaking: R53 retyped every identifier from `string` to `int32`, R48 made a `role` required on every column with no default, and R54 replaced `core.trials` with `core.intervals` keyed by a discriminator. Those version strings identify the standard a packet was written against, not a guarantee that older physical shapes still validate — which is why §5.2 makes the embedded registry the authority.
+A packet built against an earlier schema does **not** remain conforming merely because the semantic,
+logical, and profile identifiers are unchanged. Those identifiers state which standards a packet
+uses; they do not guarantee that an older physical shape validates against the current registry.
 
-A packet remains conforming across v0.1 and v0.2 only where it was rebuilt against the current registry. Migration is regeneration (R53 §5): every packet is reproducible from its sources through the recipe recorded in `core.processing_runs.parameters`, so a conversion tool would be a second implementation of the writer that ran once.
+A packet remains conforming across v0.1 and v0.2 only where it was rebuilt against the current registry. Migration is regeneration: every packet is reproducible from its sources through the recipe recorded in `core.processing_runs.parameters`, so a conversion tool would be a second implementation of the writer that ran once.
 
 ### 5.2 Recording the registry version
 
-A packet MUST record the registry version it was written against, and SHOULD embed that registry so the packet is self-describing (R2 §8). A packet whose embedded registry disagrees with its recorded version is invalid.
-
-`registry_version` states **compatibility**, and follows semantic versioning: a removed, renamed or retyped column is a major change; an added nullable column is a minor one; a corrected description is a patch.
-
-It is **deliberately held at `0.1.0` while the schema iterates**, so amendments that would otherwise have incremented it — several of them major — have not. A consumer MUST therefore treat the embedded registry as authoritative and MUST NOT use `registry_version` alone to decide compatibility until the hold is lifted. Lifting it is a decision about the schema's stability, not a defect to be fixed.
+Part 02 §9.2 defines registry self-description and the exact current registry and meta-schema
+identities. Current development packets use core registry `0.2.0` and are regenerated rather than
+treated as compatible with the earlier development shape.
 
 ## 6. Normative references
 
@@ -172,7 +168,7 @@ A **physical profile** defines how logical resources are stored. Two are contemp
 
 Only the portable profile, `escapewheel-portable-v0.1`, is specified. It is Part 03, which is
 normative for a packet whose manifest declares its `profile_id` and binds no other packet, and is
-the only part whose rules may depend on a storage technology (R93 §3.2).
+the only part whose rules may depend on a storage technology.
 
 ### 2.4 Packet
 
@@ -180,13 +176,13 @@ A **packet** is one concrete dataset bundle under a declared profile. It may be 
 
 A packet contains a packet catalog, core tables, and any of: dense arrays, media, documents and sidecars, analysis materializations, and validation and provenance records.
 
-A packet is primarily single-session. Multi-session packets are a permitted extension, and a packet declares its sessions in the catalog (R1 §2).
+A packet is primarily single-session. Multi-session packets are a permitted extension, and a packet declares its sessions in the catalog.
 
-A packet is the unit of storage and a session is the unit of analysis, so a consumer holding several packets — or one packet holding several sessions — has to know which rows belong to which session. That is derivable rather than declared: a table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively (R86 §2.1). 33 of 35 tables are, the exceptions being `core.subjects` and `core.source_files`, which `core.sessions` references rather than the reverse. `registry/check.py` computes it, and every table carrying a `session_id` reaches the table while eight reach it without carrying the column, so the reference graph is the stricter test.
+A packet is the unit of storage and a session is the unit of analysis, so a consumer holding several packets — or one packet holding several sessions — has to know which rows belong to which session. That is derivable rather than declared: a table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively. 33 of 35 tables are, the exceptions being `core.subjects` and `core.source_files`, which `core.sessions` references rather than the reverse. `registry/check.py` computes it, and every table carrying a `session_id` reaches the table while eight reach it without carrying the column, so the reference graph is the stricter test.
 
-A reader presenting one or more packets MUST carry a session discriminator on every session-scoped table, and MUST NOT carry one on a table that is not (R86 §2.2). The discriminator is **the packet a row came from together with the row's `session_id`**: the reader opened the file and the identifier is unique within it, so the pair is unique by construction and nothing has to be assumed about the world. A reader MUST NOT derive it from a `*_name` — a name is a label, and 6 of 13 name columns hold a value appearing in both of two packets that share no session, no animal and no probe. It SHOULD carry `session_name` beside the discriminator, which promises nothing: whether two packets' matching labels denote one thing is a fact about the world, and an analyst asserting it does so knowingly.
+A reader presenting one or more packets MUST carry a session discriminator on every session-scoped table, and MUST NOT carry one on a table that is not. The discriminator is **the packet a row came from together with the row's `session_id`**: the reader opened the file and the identifier is unique within it, so the pair is unique by construction and nothing has to be assumed about the world. A reader MUST NOT derive it from a `*_name` — a name is a label, and 6 of 13 name columns hold a value appearing in both of two packets that share no session, no animal and no probe. It SHOULD carry `session_name` beside the discriminator, which promises nothing: whether two packets' matching labels denote one thing is a fact about the world, and an analyst asserting it does so knowingly.
 
-Session identity MUST NOT become part of a join key where the assigned identifier is already unique (R86 §2.3). Within one packet `unit_id` identifies a unit by itself, and widening the join to `(session_id, unit_id)` costs 2.93x over 286,896,563 spikes; across packets that identifier is genuinely ambiguous and the second column buys correctness.
+Session identity MUST NOT become part of a join key where the assigned identifier is already unique. Within one packet `unit_id` identifies a unit by itself, and widening the join to `(session_id, unit_id)` costs 2.93x over 286,896,563 spikes; across packets that identifier is genuinely ambiguous and the second column buys correctness.
 
 ### 2.5 Packet catalog
 
@@ -205,7 +201,7 @@ Resources and rows reference each other by stable identifier. An implementation 
 ### 2.8 Actors
 
 Four actors appear throughout this specification, and every requirement binds one of them or states
-a property of an artifact (R111 §3.1, §3.3).
+a property of an artifact.
 
 A **writer** produces a packet from sources. It stages, validates and commits, and it is the actor
 Part 05 binds throughout.
@@ -221,7 +217,7 @@ concludes, and it is the only actor that may be a person rather than a program.
 An actor is a part someone plays, not a distribution: one program is commonly all four. Naming them
 separately is what lets a clause say who owes an obligation.
 
-Three further terms resolve to those four (R111 §3.2). A **build** is one execution of a writer
+Three further terms resolve to those four. A **build** is one execution of a writer
 against one recipe, so a requirement on a build binds the writer performing it — which is what makes
 Part 05 §10 decidable, an obligation on a build or a writer being a writer obligation and one on a
 packet not. An **adapter** is the part of a writer that reads one source, and an obligation on an
@@ -230,7 +226,7 @@ the four, and is the right subject only where a requirement binds every actor al
 on HDF5 object references does.
 
 `importer` is another name for a writer, `client` and `binding` for a reader, and `caller` for a
-consumer (R111 §3.4). An accepted revision using one binds the actor it names.
+consumer. An accepted revision using one binds the actor it names.
 
 ## 3. Layer model
 
@@ -243,16 +239,16 @@ A packet is divided into layers by namespace prefix.
 | `analysis` | derived products, reproducible from the canonical resources | no |
 | `nwb` | deferred compatibility projection | no |
 
-A layer MAY reference a layer beneath it and MUST NOT reference one above (R20 §5.1). Core does not reference analysis, and neither references an extension — a discriminator names without referencing, which is why core is allowed that one (R90 §3.9).
+A layer MAY reference a layer beneath it and MUST NOT reference one above. Core does not reference analysis, and neither references an extension — a discriminator names without referencing, which is why core is allowed that one.
 
 A packet's **canonical** resources are its canonical core resources together with its canonical
-extension resources (R71 §2.1). Core is not the whole of what is canonical: R54 sends a task's own
+extension resources. Core is not the whole of what is canonical: Part 09 sends a task's own
 facts — which side the animal licked, whether it was rewarded — to a typed extension, and no
 computation over core recovers them. Core is what every packet has and what every consumer can
 read without an extension registry.
 
 A consumer MAY read core alone, and what it reads is complete for every core resource. It MUST NOT
-conclude it has read every canonical fact the packet holds (R71 §2.4); a discriminator resolving
+conclude it has read every canonical fact the packet holds; a discriminator resolving
 `required` is the case where the omission is guaranteed.
 
 Extension namespaces are additional to these and are specified in Part 09.
@@ -271,9 +267,9 @@ Core resources are normalized enough to avoid drift and no further. One row per 
 
 ### 4.2 Spike representation
 
-`core.spike_events`, one row per spike with primitive columns only, is the sole canonical spike representation (R5 §2). The ragged chunked representation of v0.1 is withdrawn, as is the catalog's `canonical_representations` block.
+`core.spike_events`, one row per spike with primitive columns only, is the sole canonical spike representation. The ragged chunked representation of v0.1 is withdrawn, as is the catalog's `canonical_representations` block.
 
-`core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that a validator checks against `core.spike_events` (R5 §4).
+`core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that a validator checks against `core.spike_events`.
 
 ### 4.3 Unit identity
 
@@ -289,9 +285,9 @@ Analysis resources are disposable. A writer MAY delete and recompute any of them
 
 ### 5.2 Materialization is justified by layout, not by arithmetic
 
-A derived product is materialized only where a query cannot answer the same question at acceptable cost. Measurement rather than expectation decides this, and four of v0.1's five proposed analysis resources are withdrawn on that basis (R43 §2).
+A derived product is materialized only where a query cannot answer the same question at acceptable cost. Measurement rather than expectation decides this, and four of v0.1's five proposed analysis resources are withdrawn on that basis.
 
-`analysis.spike_events` is retained: it is core's spikes on the reference clock, bucketed by time and sorted by unit within each bucket, so that a time filter and a unit filter both prune (R30 §2).
+`analysis.spike_events` is retained: it is core's spikes on the reference clock, bucketed by time and sorted by unit within each bucket, so that a time filter and a unit filter both prune.
 
 ## 6. Deferred NWB projection
 
@@ -307,7 +303,7 @@ The portable profile is a JSON manifest, Parquet tables, Zarr arrays, ordinary m
 
 ### 7.2 Referencing
 
-A packet need not own every byte it describes. Referencing is expected for large resources: a resource the packet does not own sets `external: true` with an absolute URI and declares its own codecs (R14 §2.3, R15 §2).
+A packet need not own every byte it describes. Referencing is expected for large resources: a resource the packet does not own sets `external: true` with an absolute URI and declares its own codecs.
 
 Externalizing a table costs more than externalizing an array, because a table's validation rules cannot run at all while it is unreachable.
 
@@ -315,9 +311,9 @@ Externalizing a table costs more than externalizing an array, because a table's 
 
 Iceberg is a later table-management profile, useful for table snapshots, schema and partition evolution, concurrent writers, catalog integration, and reproducible release tags. An implementation of this specification MUST NOT require it.
 
-A physical profile — Iceberg's or any other — MUST declare a `profile_id` that a packet's manifest names, MUST bind only the packets declaring it, and MUST say how each logical resource of Part 02 is stored. It MUST NOT require an amendment to Part 01 or Part 02; where one would be needed, the defect is in those parts rather than in the profile (R93 §3.2). No clause of Part 01 or Part 02 may depend on a clause of Part 03.
+A physical profile — Iceberg's or any other — MUST declare a `profile_id` that a packet's manifest names, MUST bind only the packets declaring it, and MUST say how each logical resource of Part 02 is stored. It MUST NOT require an amendment to Part 01 or Part 02; where one would be needed, the defect is in those parts rather than in the profile. No clause of Part 01 or Part 02 may depend on a clause of Part 03.
 
-`packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A writer MUST NOT increment `packet_version` for a rewrite of rows (R61 §4).
+`packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A writer MUST NOT increment `packet_version` for a rewrite of rows.
 
 ## 8. Implementation thesis
 
@@ -336,7 +332,7 @@ An import succeeds only when validation succeeds (Part 05 §1).
 
 A reader learns what binds them here rather than by opening ten files and reading the third line of
 each. Each part continues to state its own status at its head, and where the two disagree the
-part's statement governs (R93 §3.6).
+part's statement governs.
 
 | part | subject | status |
 |---|---|---|
@@ -358,39 +354,6 @@ sections and informative in the rest. The table is appended rather than inserted
 reason the sequence is not renumbered — 119 citations across the accepted revisions and the parts
 depend on part and section identifiers both.
 
-<a id="ew-specification-citations" data-spec-anchor="canonical"></a>
-## 10. Citing this specification
-
-<a id="ew-current-requirement-citations" data-spec-anchor="canonical"></a>
-### 10.1 A requirement is cited from the part that states it
-
-Where a part states a requirement, a citation of it — in an implementation's source, in a packet's documentation, or in a revision's Decision — MUST name that part and section, and MUST NOT name a revision in its place (R112 §3.1). The part's sentence is what binds (§9), and a revision naming the same rule records how the part came to say it.
-
-Naming an actor does not exempt a clause. A requirement binding a writer, a reader, a validator or a consumer (§2.8) is stated by the part that binds it, and is cited from that part like any other.
-
-Two dispositions leave a requirement outside the parts. A clause the registry carries is cited from the registry, which is where a consumer reads it, and a clause that decided nothing states no requirement to cite. Where a clause is recorded as landing anywhere but a part, the revision is the statement of record.
-
-<a id="ew-revision-rationale-citations" data-spec-anchor="canonical"></a>
-### 10.2 A revision is cited for what a part does not carry
-
-A revision MAY be cited for the reasoning a part does not hold: the measurement behind a rule, the alternative that was rejected and why, and the defect that prompted the change (R112 §3.3). A part states what holds; a revision states why, and a reader wanting the second is sent to the revision by name.
-
-Three uses name a revision and are sound: a registry column's `since`, whose value names the revision that set it (Part 02 §9.4); the ledger mapping each clause to where it landed, which is what §10.1 is resolved through; and a revision citing another revision. The exemption says which document to cite and not that the citation is accurate.
-
-<a id="ew-append-only-numbering" data-spec-anchor="canonical"></a>
-### 10.3 A part is numbered by appending
-
-Whoever amends a part MUST add a section at the end of that part, and a subsection at the end of its section, neither of which renumbers anything already cited. They MUST NOT insert one between two that exist, and a part MUST NOT carry two sections with one number (R112 §3.4). Part 01 §3 is not an exception: that section is a flat list of concepts every later part cites by number, so a concept is appended as the next number.
-
-A tool that checks citations MUST refuse a part carrying two sections with one number, and SHOULD refuse one whose sections do not ascend (R112 §3.5). Both are decidable from the headings alone, with no citation in hand.
-
-<a id="ew-part-citation-form" data-spec-anchor="canonical"></a>
-### 10.4 A part is cited as Part 02
-
-A citation of a part, in a part or in a revision, MUST write the word `Part` before the number, as `Part 02 §5.2`, and MUST NOT name the part by its number alone, with or without backticks (R113 §3.1). An implementation's source is not bound. §10.1 binds which document a citation names, because naming the wrong one sends a reader to prose that does not bind them; a spelling is presentation, and this specification does not impose one on code it does not own.
-
-A tool that checks citations MUST report a part named by its number alone, in a part, in a revision or in a draft, and MUST NOT report one elsewhere (R113 §3.2). Both spellings resolve to the same section, so no other check can see which was written. A two-digit number in backticks is not certainly a part, so the check MUST admit an exception carrying the reason it is not one, and MUST report an exception that matches nothing.
-
 <!-- END 00_architecture.md -->
 
 <!-- BEGIN 01_semantic_standard.md -->
@@ -411,9 +374,9 @@ Every semantic concept MUST be representable in the logical standard (Part 02). 
 
 Any object referenced by another object MUST have a stable identifier.
 
-An identifier is a signed 32-bit integer (R53 §2.1). Implementations MUST NOT encode semantic meaning in identifier values, and MUST NOT derive an identifier from a value's position in a file.
+An identifier is a signed 32-bit integer. Implementations MUST NOT encode semantic meaning in identifier values, and MUST NOT derive an identifier from a value's position in a file.
 
-Each identifier declares its **identity** (R53 §2.3):
+Each identifier declares its **identity**:
 
 | identity | definition |
 |---|---|
@@ -426,39 +389,39 @@ An assigned identifier's owning table MUST carry a `*_name` column holding the n
 
 Every event, interval, spike time, dense time axis, and media frame timing record MUST declare a time basis: an integer tick and a `clock_id`.
 
-Floating-point seconds MUST NOT be the canonical representation. Seconds MAY be derived, and are defined from the session's time origin (R39 §2.1). A consumer lacking that origin MUST refuse to derive seconds rather than assume one.
+Floating-point seconds MUST NOT be the canonical representation. Seconds MAY be derived, and are defined from the session's time origin. A consumer lacking that origin MUST refuse to derive seconds rather than assume one.
 
-Where a writer cannot map one of its clocks' observation starts onto the reference, it MUST NOT declare a time origin (R39 §2.4). An origin it could not compute shifts every second a consumer derives.
+Where a writer cannot map one of its clocks' observation starts onto the reference, it MUST NOT declare a time origin. An origin it could not compute shifts every second a consumer derives.
 
-A tick is a coordinate, not a label and not a quantity (R45 §3). A writer MUST NOT re-base a source's sample index: for a sample clock, tick 0 is sample 0.
+A tick is a coordinate, not a label and not a quantity. A writer MUST NOT re-base a source's sample index: for a sample clock, tick 0 is sample 0.
 
 ### 2.3 Observation
 
-A session's extent is stated as **wall-clock time**, not as a tick range (R25 §4). A hull over every clock's ticks would need those ticks converted to one clock, and alignment may be anchor-based — outside the first and last anchor the mapping is undefined, which is exactly where a hull reaches. A session therefore declares when it started and MAY declare when it ended, both as instants.
+A session's extent is stated as **wall-clock time**, not as a tick range. A hull over every clock's ticks would need those ticks converted to one clock, and alignment may be anchor-based — outside the first and last anchor the mapping is undefined, which is exactly where a hull reaches. A session therefore declares when it started and MAY declare when it ended, both as instants.
 
-A clock is observing during declared intervals, in that clock's own ticks (R38 §2). Anything timed by a clock inherits that clock's window and MAY refine it, but MUST NOT assert a window derived from its own timestamps.
+A clock is observing during declared intervals, in that clock's own ticks. Anything timed by a clock inherits that clock's window and MAY refine it, but MUST NOT assert a window derived from its own timestamps.
 
-An interval is **closed**: `start_tick` and `stop_tick` both name observed ticks, so an interval covers `stop - start + 1` ticks and a one-tick interval has `start == stop` (R45 §2).
+An interval is **closed**: `start_tick` and `stop_tick` both name observed ticks, so an interval covers `stop - start + 1` ticks and a one-tick interval has `start == stop`.
 
 ### 2.4 Provenance
 
 An imported core resource SHOULD be traceable to source data or source activities, and a derived analysis resource MUST declare lineage to the core resources it derives from.
 
-Provenance is a source-file record, a processing-run record, and a link between them (R9 §2). A packet carrying no provenance is conforming; where provenance is present it is validated.
+Provenance is a source-file record, a processing-run record, and a link between them. A packet carrying no provenance is conforming; where provenance is present it is validated.
 
 ### 2.5 Units of measure
 
 A measured quantity SHOULD declare its unit. A stored integer requiring conversion to physical units MUST declare the conversion.
 
-A unit is declared on the column, not left to the column's name (R56 §2).
+A unit is declared on the column, not left to the column's name.
 
 ### 2.6 Currency
 
-Where several derived results of the same kind and scope coexist, a consumer MUST NOT silently choose between them: it refuses, or reports the ambiguity (R44 §2.2). A preference is declared, keyed on the producing run (R41 §2.3), and a consumer selecting derived data for an activity SHOULD use the preferred run where one is declared for the matching scope (R41 §2.4) — a declared preference a consumer ignores is a preference for nobody.
+Where several derived results of the same kind and scope coexist, a consumer MUST NOT silently choose between them: it refuses, or reports the ambiguity. A preference is declared, keyed on the producing run, and a consumer selecting derived data for an activity SHOULD use the preferred run where one is declared for the matching scope — a declared preference a consumer ignores is a preference for nobody.
 
-A run declares the scope it is about (R44 §2.1). A run declaring none is **undeterminable**, which a consumer MUST report separately from ambiguous, and the state is contagious: where more than one run exists for an `activity_type` and **any** of them declares no scope, a consumer MUST NOT conclude the group is unambiguous (R44 §2.3). The unscoped run may or may not be about the same thing as the others, and nothing in the packet says which.
+A run declares the scope it is about. A run declaring none is **undeterminable**, which a consumer MUST report separately from ambiguous, and the state is contagious: where more than one run exists for an `activity_type` and **any** of them declares no scope, a consumer MUST NOT conclude the group is unambiguous. The unscoped run may or may not be about the same thing as the others, and nothing in the packet says which.
 
-Where a run supersedes another, the chain MUST be well-founded: a run MUST NOT supersede itself, directly or transitively (R41 §2.2).
+Where a run supersedes another, the chain MUST be well-founded: a run MUST NOT supersede itself, directly or transitively.
 
 ### 2.7 Extension
 
@@ -495,23 +458,23 @@ A physical instrument used during acquisition.
 
 - MUST have an identifier.
 - SHOULD declare manufacturer, model, and serial number where its source states them.
-- SHOULD declare the **hardware revision** and **firmware version** it was running (R66 §2.1).
-- SHOULD name the device it was **attached to**, where a source states it (R67 §2.1).
-- SHOULD declare **which port** of that device it occupied, where a source states it (R85 §2.1).
+- SHOULD declare the **hardware revision** and **firmware version** it was running.
+- SHOULD name the device it was **attached to**, where a source states it.
+- SHOULD declare **which port** of that device it occupied, where a source states it.
 
 A serial number identifies the object; its firmware determines what the object does. Two sessions can record the same make, model and serial and need interpreting differently, so a version is not an identifier's decoration but a separate fact.
 
-A consumer MAY walk from a probe to the hardware that acquired it, and MAY group probes by any element of the chain they share (R67 §2.4) — which is the question the chain exists to answer. It MUST NOT infer attachment from a device's name: a name is unconstrained by this standard, and the reference is the statement.
+A consumer MAY walk from a probe to the hardware that acquired it, and MAY group probes by any element of the chain they share — which is the question the chain exists to answer. It MUST NOT infer attachment from a device's name: a name is unconstrained by this standard, and the reference is the statement.
 
-Attachment names a device, and which place on that device a child occupied is a second fact. A device SHOULD declare the port, dock or slot of its parent it attached to, where a source states one (R85 §2.1). Where it declares none the coordinate is **unrecorded**, and a consumer MUST report it as such rather than parse it out of a name (R85 §2.2). Two devices sharing a parent and a port are not one device, and nothing declares that they are: the four bases of a quad-base probe occupy a single dock, so a port says where something was plugged in and not what it was (R85 §2.3).
+Attachment names a device, and which place on that device a child occupied is a second fact. A device SHOULD declare the port, dock or slot of its parent it attached to, where a source states one. Where it declares none the coordinate is **unrecorded**, and a consumer MUST report it as such rather than parse it out of a name. Two devices sharing a parent and a port are not one device, and nothing declares that they are: the four bases of a quad-base probe occupy a single dock, so a port says where something was plugged in and not what it was.
 
-A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT create a second device row for one instrument (R67 §2.2). Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor (R67 §2.3, §2.4).
+A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT create a second device row for one instrument. Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor.
 
 A writer records both versions **verbatim** as the source stated them, and MUST NOT normalise, pad, or parse them into components. Neither is ordered: a consumer MAY compare two version strings for equality and MUST NOT compare them for precedence, because different manufacturers' schemes share none.
 
 Where an element of an acquisition chain reports its own versions, it is its own device. A value the source gives as unknown is recorded as the source gave it, which is distinct from a source that said nothing.
 
-This standard names no kinds of device, so a writer MUST record every instrument its source declares — a camera on the same terms as a headstage — and identity is the serial the source states (R67 §2.2, R102 §3.3). What a device row does not carry is where an instrument was pointed: a camera's target is a fact about the instrument that `core.devices` has no column for, and it stays in `metadata` (R97 §3.3) until something has to read it.
+This standard names no kinds of device, so a writer MUST record every instrument its source declares — a camera on the same terms as a headstage — and identity is the serial the source states. What a device row does not carry is where an instrument was pointed: a camera's target is a fact about the instrument that `core.devices` has no column for, and it stays in `metadata` until something has to read it.
 
 ### 3.6 Probe
 
@@ -531,9 +494,9 @@ One recording contact.
 
 A position of an electrode or unit in a declared frame.
 
-- MUST name a frame the packet declares (§3.24, R105 §3.1).
-- MUST carry one value per axis that frame declares, each on the axis it sits on (R105 §3.3).
-- MUST declare the **basis** of its claim (R58 §2.1, R64 §2.1):
+- MUST name a frame the packet declares (§3.24).
+- MUST carry one value per axis that frame declares, each on the axis it sits on.
+- MUST declare the **basis** of its claim:
 
 | basis | meaning |
 |---|---|
@@ -541,61 +504,61 @@ A position of an electrode or unit in a declared frame.
 | `measured` | where it was, established after the fact by observation |
 | `nominal` | where it is by construction; nothing aimed at it and nothing observed it |
 
-The vocabulary is open. A consumer that does not recognise a basis MUST NOT treat the coordinate as `measured` (R58 §2.2).
+The vocabulary is open. A consumer that does not recognise a basis MUST NOT treat the coordinate as `measured`.
 
-A position is as many numbers as its frame has axes, so the values are one row per axis rather than a fixed three (R105 §3.3). Each value's unit is the axis's, and its meaning is what the axis says it holds.
+A position is as many numbers as its frame has axes, so the values are one row per axis rather than a fixed three. Each value's unit is the axis's, and its meaning is what the axis says it holds.
 
-A coordinate MAY carry an atlas annotation: the structure the position falls in, as an identifier and a label (R59 §2). An electrode is not in a region; a position is, so the annotation belongs to the coordinate rather than to the contact.
+A coordinate MAY carry an atlas annotation: the structure the position falls in, as an identifier and a label. An electrode is not in a region; a position is, so the annotation belongs to the coordinate rather than to the contact.
 
 Where the identifier is present the label SHOULD be too, so a consumer without the atlas can still read the annotation. A table MUST NOT carry a structure's full name or its ancestry path as columns: both are derivable from the identifier, and an ancestry path is a list, which Part 02 §5.2 forbids in a delimited string.
 
 A validator MUST NOT treat an absent annotation as a finding. Where a position falls outside any declared structure, or no registration covered it, the packet records a fact about the session.
 
-A coordinate SHOULD name the processing run that produced it where the writer knows it (R60 §2). That is provenance — which run produced the row that is there — and not a choice between rows.
+A coordinate SHOULD name the processing run that produced it where the writer knows it. That is provenance — which run produced the row that is there — and not a choice between rows.
 
 ### 3.9 Clock
 
 A monotonic counter with a declared rate and origin.
 
-- MUST declare a tick rate, as a rational where the rate is not an integer (R4 §4).
+- MUST declare a tick rate, as a rational where the rate is not an integer.
 - MAY declare a parent clock, and if so MUST be alignable to it.
-- MUST declare either a linear transform or anchor points, never both (R13 §2).
-- MAY bind its **tick 0 to a wall-clock instant** (R6 §2), which is the only route from a
+- MUST declare either a linear transform or anchor points, never both.
+- MAY bind its **tick 0 to a wall-clock instant**, which is the only route from a
   packet's ticks to real time; absent it, ticks relate to each other and to nothing else.
-- A counter that resets mid-session is two clocks (R27 §6), one per epoch, each with its own
+- A counter that resets mid-session is two clocks, one per epoch, each with its own
   identifier, origin and wall-clock binding. A packet MUST NOT represent a reset as a
   discontinuity within one clock: an anchor sequence requires both sides to increase, so there
   is no way to express it and no way to read it.
 
 A clock's tick-zero binding and a session's start time are **independent and MUST NOT be
-conflated** (R6 §4). One is a property of a counter, the other a fact about when work began.
+conflated**. One is a property of a counter, the other a fact about when work began.
 Where a wall-clock binding is derived rather than declared, the tick it is anchored on MUST lie
-in the same epoch as the instant it is paired with (R27 §6.2) — a binding computed across a reset
+in the same epoch as the instant it is paired with — a binding computed across a reset
 describes neither clock.
 
-An importer MUST examine a source in acquisition order and MUST NOT assume monotonicity (R27
-§6.1). A reset is visible only in the order the samples arrived; sorting first hides it.
+An importer MUST examine a source in acquisition order and MUST NOT assume monotonicity. A reset is
+visible only in the order the samples arrived; sorting first hides it.
 
 A tick's zero is where the clock's declared origin says it is — for a sample clock whose origin is
 sample 0 of a recording, tick 0 **is** that sample. A writer MUST NOT re-base a source's sample
-index and a consumer MUST NOT assume any base beyond what the origin declares (R45 §3); that
+index and a consumer MUST NOT assume any base beyond what the origin declares; that
 prohibition is what makes a tick exact.
 
-Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default (R37 §3, R40 §2). A profile or a recipe MAY state a different tolerance; a writer MUST record the value it used.
+Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default. A profile or a recipe MAY state a different tolerance; a writer MUST record the value it used.
 
 A writer reaching past one median anchor interval MUST measure its error and MUST record the median, p95, and maximum, so a consumer can judge the packet by a stricter rule than the writer applied.
 
-A consumer MUST **report** ticks it cannot map rather than omitting them (R27 §5.3), so a converted table has the same row count as its source with nulls where the mapping is undefined. A row that vanishes in conversion is indistinguishable from one that was never there. It MUST record how many rows it dropped for falling outside the bound **even when that count is zero** (R40 §2.3): silence is what lets a reader and a writer disagree about which rows exist.
+A consumer MUST **report** ticks it cannot map rather than omitting them, so a converted table has the same row count as its source with nulls where the mapping is undefined. A row that vanishes in conversion is indistinguishable from one that was never there. It MUST record how many rows it dropped for falling outside the bound **even when that count is zero**: silence is what lets a reader and a writer disagree about which rows exist.
 
 ### 3.10 Interval
 
-A bounded span of experimental time within a session (R54 §2.1).
+A bounded span of experimental time within a session.
 
 - MUST belong to one session.
 - MUST have start and stop ticks on a declared clock, closed per §2.3.
 - MUST declare its **kind**: the resource that specialises it.
 
-A trial is one kind of interval. Blocks, epochs, and stimulation periods are others. What an interval *means* — condition, stimulus, choice, outcome, stimulation parameters — is declared by the specialising resource and MUST NOT be added to the core interval (R54 §2.3, §2.4).
+A trial is one kind of interval. Blocks, epochs, and stimulation periods are others. What an interval *means* — condition, stimulus, choice, outcome, stimulation parameters — is declared by the specialising resource and MUST NOT be added to the core interval.
 
 ### 3.11 Event
 
@@ -607,21 +570,21 @@ observed on.
 - MAY carry a structured payload.
 
 An event carries no type and no clock of its own: both are properties of the stream, which emits
-one kind of event and declares one clock (R91 §3.2). An event does not reference an interval
-(R11 §5). Examples: stimulus onset, reward delivery, lick, threshold crossing, TTL edge,
+one kind of event and declares one clock. An event does not reference an interval. Examples:
+stimulus onset, reward delivery, lick, threshold crossing, TTL edge,
 synchronization pulse.
 
 ### 3.12 Event stream
 
 The context a class of events was observed in: what produced them, on what clock, what kind of
-event they are, and where anything further about them lives (R23 §2, R91 §3.1).
+event they are, and where anything further about them lives.
 
 - MUST declare an event type, from an open vocabulary, and the clock its events are timed on.
 - MAY name a device, a processing run, and a table specialising its events.
 
 A stream emits **one kind** of event, so a source emitting several on one channel is written as
 several streams. What a stream's events carry beyond a tick is that named table's to declare, not
-core's: how many marks an event has and of what type is a property of what produced it (R91 §3.3).
+core's: how many marks an event has and of what type is a property of what produced it.
 
 ### 3.13 Unit
 
@@ -635,19 +598,19 @@ A unit is not a neuron. It is what a sorting produced.
 
 ### 3.13.1 A rate needs a denominator
 
-A firing rate is a count over a duration, so the duration MUST be knowable. Where a unit declares observation intervals, the rate is its spike count over the total of those intervals; where it declares none, it is the count over the recording's extent (R18 §4). A packet SHOULD state which denominator it used, because the two differ for any unit that drifted out and back.
+A firing rate is a count over a duration, so the duration MUST be knowable. Where a unit declares observation intervals, the rate is its spike count over the total of those intervals; where it declares none, it is the count over the recording's extent. A packet SHOULD state which denominator it used, because the two differ for any unit that drifted out and back.
 
 ### 3.14 Spike event
 
-One detected action potential of one unit, at one tick on one clock. Spike events are the canonical spiking representation (R5 §2).
+One detected action potential of one unit, at one tick on one clock. Spike events are the canonical spiking representation.
 
 ### 3.15 Quality label
 
-An assessment of a unit by one scorer. A unit has many, not one (R16 §2).
+An assessment of a unit by one scorer. A unit has many, not one.
 
 - MUST name the source that assigned it.
 - MAY carry the source's own label verbatim, which is open.
-- MAY carry a normalized label from a closed vocabulary (R22 §2).
+- MAY carry a normalized label from a closed vocabulary.
 
 ### 3.16 ElectricalSeries
 
@@ -655,19 +618,19 @@ Sampled extracellular voltage over time and channels, represented as a dense arr
 
 ### 3.17 Array asset
 
-A dense array stored outside the table layer, with declared axes. An axis declares its coordinates; a regularly sampled axis declares them as an origin, a step, and a length rather than as stored values (R20 §2.1).
+A dense array stored outside the table layer, with declared axes. An axis declares its coordinates; a regularly sampled axis declares them as an origin, a step, and a length rather than as stored values.
 
 An array asset holds **any** sampled quantity, whatever instrument produced it. This standard names the concepts it defines — §3.16 is the one it defines for extracellular voltage — and it does not enumerate instruments. A packet names its own arrays, and an array names the device that made it (§3.5); a rig fitted with an instrument this standard has never heard of therefore needs no extension, no new concept, and no revision.
 
-`semantic_type` is open (R8 §4). A value this standard does not define is a label and carries no contract, which is the honest state of affairs for a quantity whose meaning lives in the device rather than in the format.
+`semantic_type` is open. A value this standard does not define is a label and carries no contract, which is the honest state of affairs for a quantity whose meaning lives in the device rather than in the format.
 
-It is also **nullable**, and null is the ordinary case: a writer MUST NOT fill it where the row's declared facts already say what the asset holds (R103 §3.4). Requiring it is what made it a duplicate — a column carrying no contract that every row must fill is one a writer invents a value for, and `ElectricalSeries` stood on 22 of 25 arrays where the unit, the channel map and the dimensions already said voltage per channel over time. What remains is what the facts cannot express: which statistic of a waveform an array holds, or what a video shows, neither of which any other column carries.
+It is also **nullable**, and null is the ordinary case: a writer MUST NOT fill it where the row's declared facts already say what the asset holds. Requiring it is what made it a duplicate — a column carrying no contract that every row must fill is one a writer invents a value for, and `ElectricalSeries` stood on 22 of 25 arrays where the unit, the channel map and the dimensions already said voltage per channel over time. What remains is what the facts cannot express: which statistic of a waveform an array holds, or what a video shows, neither of which any other column carries.
 
-Which **band** of a signal an array holds is a separate question, answered by a column of its own: `wideband`, `ap` and `lfp` are reserved with R8 §4's meanings, the vocabulary is open, and an array not split into bands declares none (R103 §3.1, §3.2). A band value is a conventional shorthand for a filter the packet does not record, so a consumer MUST NOT read it as a statement of the filter's corners, and MUST NOT infer a band from an asset's `semantic_type`, its device or its sampling rate — a signal can be decimated without being filtered and filtered without being decimated.
+Which **band** of a signal an array holds is a separate question, answered by a column of its own: `wideband`, `ap` and `lfp` are reserved for the corresponding signal bands, the vocabulary is open, and an array not split into bands declares none. A band value is a conventional shorthand for a filter the packet does not record, so a consumer MUST NOT read it as a statement of the filter's corners, and MUST NOT infer a band from an asset's `semantic_type`, its device or its sampling rate — a signal can be decimated without being filtered and filtered without being decimated.
 
-An array asset SHOULD name the device that produced it, where the writer knows which one did (R65 §2.1). A consumer MAY then resolve any array to its instrument without knowing what kind of array it is, and MUST NOT infer an instrument from an asset's `semantic_type`, its name, or its URI: those are labels, and the device is a reference.
+An array asset SHOULD name the device that produced it, where the writer knows which one did. A consumer MAY then resolve any array to its instrument without knowing what kind of array it is, and MUST NOT infer an instrument from an asset's `semantic_type`, its name, or its URI: those are labels, and the device is a reference.
 
-An array a processing run produced MUST name that run; an acquired array names none, which is the reading a stream has carried since R23 §2 (R102 §3.1). The manifest records a run per resource as well (R9 §4), and that entry keeps its meaning for resources that are not rows of a table — but it is not per row and no rule can join it, so currency, which R41 §2.1 keys on the producing run and R82 §2.1 makes an error to leave undeclared, is unreachable for an array without the column.
+An array a processing run produced MUST name that run; an acquired array names none. The manifest records a run per resource as well, and that entry keeps its meaning for resources that are not rows of a table — but it is not per row and no rule can join it, so currency is unreachable for an array without the column. A produced array without a declared run is an error.
 
 ### 3.18 Media asset
 
@@ -676,17 +639,17 @@ An image or video stored in an ordinary container, with frame timing carried in 
 - MUST have a stable media asset ID, a URI, and a format.
 - SHOULD carry a frame table where synchronization matters.
 
-A frame row is indexed by **presentation order**: row *n* describes the frame the asset presents nth, counting from 0 (R69 §2.1). A writer MUST NOT number frames in the order the container stores them, which differs wherever a codec reorders — a stream with bidirectional frames displaces one by several positions, and the resulting misattribution of time is monotonic and therefore invisible.
+A frame row is indexed by **presentation order**: row *n* describes the frame the asset presents nth, counting from 0. A writer MUST NOT number frames in the order the container stores them, which differs wherever a codec reorders — a stream with bidirectional frames displaces one by several positions, and the resulting misattribution of time is monotonic and therefore invisible.
 
-The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing gets no row and no reserved index (R69 §2.2); what went missing is recorded in the columns that carry timing, not as a gap in the numbering.
+The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing gets no row and no reserved index; what went missing is recorded in the columns that carry timing, not as a gap in the numbering.
 
-A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim (R68 §2.1, §2.2). A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets or use it to measure elapsed time (R68 §2.5); what it locates is the frame inside the file.
+A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim. A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets or use it to measure elapsed time; what it locates is the frame inside the file.
 
-A consumer MAY pass a presentation timestamp verbatim to a container library to seek the frame a row describes, which is the exact route and assumes nothing about ordering (R68 §2.5).
+A consumer MAY pass a presentation timestamp verbatim to a container library to seek the frame a row describes, which is the exact route and assumes nothing about ordering.
 
-The asset declares the **rate** those timestamps count at, as an exact rational (R70 §2.1) — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have.
+The asset declares the **rate** those timestamps count at, as an exact rational — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have.
 
-A media asset SHOULD name the device that recorded it, where its source states one (R102 §3.2), as an array asset does since R65 §2.1. Nothing else separates two assets of one format: a behaviour video and a movie from a head-mounted microscope are both `mp4` written by a camera, and `semantic_type`, the asset's name and its URI are labels rather than references. Where the source states no device the column is null, and a consumer MUST report the instrument as unrecorded rather than read one out of the asset's name.
+A media asset SHOULD name the device that recorded it where its source states one, as an array asset does. Nothing else separates two assets of one format: a behaviour video and a movie from a head-mounted microscope are both `mp4` written by a camera, and `semantic_type`, the asset's name and its URI are labels rather than references. Where the source states no device the column is null, and a consumer MUST report the instrument as unrecorded rather than read one out of the asset's name.
 
 ### 3.19 Source file
 
@@ -698,7 +661,7 @@ An activity that produced resources, declaring what it was, what it ran on, and 
 
 ### 3.21 Sorting run
 
-A processing run that produced units from a recording, declaring the clock its ticks are on (R38 §3).
+A processing run that produced units from a recording, declaring the clock its ticks are on.
 
 ### 3.22 Curation version
 
@@ -706,35 +669,35 @@ A named state of a sorting's unit set, optionally derived from a parent curation
 
 ### 3.23 Calibration
 
-What someone measured about an instrument so that its numbers can be interpreted: how many microlitres a valve delivers when held open for 30 ms, how much light a fibre emits at a given drive, where a manipulator's own coordinates sit in the rig, where a camera is mounted (R89).
+What someone measured about an instrument so that its numbers can be interpreted: how many microlitres a valve delivers when held open for 30 ms, how much light a fibre emits at a given drive, where a manipulator's own coordinates sit in the rig, where a camera is mounted.
 
 - MUST have an identifier, a name, and a declared type from an open vocabulary.
 - MUST name the session it was in force for.
 - SHOULD declare when it was measured, where the source states one.
 - MAY name the devices it covers, carry the points of its curve, or name the array holding it.
 
-A calibration is a standing property of an instrument rather than an activity of this packet, so a session reports it as **in force** rather than as having happened, and it is not a Processing run (R89 §1.2). Both packaged sessions cite water calibrations measured 133 and 302 days before the recording, one of them by two sessions six months apart.
+A calibration is a standing property of an instrument rather than an activity of this packet, so a session reports it as **in force** rather than as having happened, and it is not a Processing run. Both packaged sessions cite water calibrations measured 133 and 302 days before the recording, one of them by two sessions six months apart.
 
-One calibration covers many devices — six manipulator modules cite one file and one timestamp between them — so which devices it covers is recorded per device and not as a property of the calibration (R89 §2.2).
+One calibration covers many devices — six manipulator modules cite one file and one timestamp between them — so which devices it covers is recorded per device and not as a property of the calibration.
 
-A source states a calibration in at least four ways: as a curve, as an array, as a date and nothing else, and as an assertion that none was made (R89 §1.3). A calibration with no recorded content is still a calibration, and a consumer MUST read such a row as **unrecorded** rather than as absent (R89 §2.5). A source stating that no calibration was performed gets no row: the absence of a calibration is not a calibration.
+A source states a calibration in at least four ways: as a curve, as an array, as a date and nothing else, and as an assertion that none was made. A calibration with no recorded content is still a calibration, and a consumer MUST read such a row as **unrecorded** rather than as absent. A source stating that no calibration was performed gets no row: the absence of a calibration is not a calibration.
 
 ### 3.24 Coordinate frame
 
-The space a coordinate is a position in, together with its axes (R105 §3.1).
+The space a coordinate is a position in, together with its axes.
 
 - MUST have a name, which is the session's own name for that space.
-- MUST declare one row per axis it has, each carrying the source's own name for what that axis holds (R105 §3.2).
+- MUST declare one row per axis it has, each carrying the source's own name for what that axis holds.
 - MAY name the published atlas the space is, and the version of that atlas.
-- MAY declare which way an axis's values increase, and MUST leave that undeclared where the source does not state it (R105 §3.4).
+- MAY declare which way an axis's values increase, and MUST leave that undeclared where the source does not state it.
 
-A frame has as many axes as it has: two for a shank, five for a rendering space. Three was what the column names `x_um`, `y_um` and `z_um` claimed, and of the two packaged sessions' 27,557 coordinate rows, 8,448 are shank positions that leave the third empty (R105 §2.4).
+A frame has as many axes as it has: two for a shank, five for a rendering space. Three was what the column names `x_um`, `y_um` and `z_um` claimed, and of the two packaged sessions' 27,557 coordinate rows, 8,448 are shank positions that leave the third empty.
 
-An axis's name is the source's word for the field its values came from, carried verbatim — `ccf_ml` where the source's electrodes table has a column of that name (R105 §3.4). It records where the value came from and not what the quantity is conventionally taken to be, so a consumer needing to know which way an axis runs, where no direction is declared, MUST report the coordinate unusable for that purpose rather than assume a convention (R105 §3.5).
+An axis's name is the source's word for the field its values came from, carried verbatim — `ccf_ml` where the source's electrodes table has a column of that name. It records where the value came from and not what the quantity is conventionally taken to be, so a consumer needing to know which way an axis runs, where no direction is declared, MUST report the coordinate unusable for that purpose rather than assume a convention.
 
-Which published atlas a frame is, is a fact the frame declares rather than a spelling of its name: two packets both naming a frame `ccf` may be registered against CCFv3 and against a successor whose structure ids differ, and comparing names cannot tell them apart. A writer MUST NOT fill the atlas or its version from the name (R105 §3.1).
+Which published atlas a frame is, is a fact the frame declares rather than a spelling of its name: two packets both naming a frame `ccf` may be registered against CCFv3 and against a successor whose structure ids differ, and comparing names cannot tell them apart. A writer MUST NOT fill the atlas or its version from the name.
 
-A frame belongs to one session, because a name two sessions reuse may name different spaces — the reason `core.devices` is session-scoped (R85 §1.3).
+A frame belongs to one session, because a name two sessions reuse may name different spaces — the reason `core.devices` is session-scoped.
 
 <!-- END 01_semantic_standard.md -->
 
@@ -751,7 +714,10 @@ This part defines how a logical schema is declared, what a declaration must cont
 
 The column-level definitions themselves are not written here. They are data (§9), carried in a registry document that a packet embeds and that generates the checks of Part 05. This part is the rules the registry obeys; the registry is the schema.
 
-Two renderings of that registry accompany this specification and are **generated, never edited**: `registry/logical_schemas.json`, which is normative and is what a packet embeds, and `registry/tables.md`, a human-readable listing of every table and column with the revision that introduced each (§9.4). Where this part and a rendering disagree, this part states the rule and the rendering states the current content.
+Two renderings of that registry accompany this specification and are **generated, never edited**:
+`registry/logical_schemas.json`, which is normative and is what a packet embeds, and
+`registry/tables.md`, a human-readable listing of every table and column. Where this part and a
+rendering disagree, this part states the rule and the rendering states the current content.
 
 ## 2. Table resource requirements
 
@@ -759,13 +725,14 @@ Every table resource MUST declare:
 
 - a schema identifier;
 - an ordered list of columns, each conforming to §3;
-- a primary key, or `null` (R7 §2, R107 §3.5);
+- a primary key, or `null`;
 - its references to other tables (§7);
 - its Tier 2 validation rules, if any (§10.2).
 
 ## 3. Column declaration
 
-Every column MUST declare a name, a type, a presence, and a role. It MAY declare an identity, a vocabulary, a unit, a clock, and the revision that introduced it.
+Every column MUST declare a name, a type, a presence, and a role. It MAY declare an identity, a
+vocabulary, a unit, and a clock.
 
 | attribute | required | clause |
 |---|---|---|
@@ -779,9 +746,8 @@ Every column MUST declare a name, a type, a presence, and a role. It MAY declare
 | `unit`, `unit_from`, `clock_from` | where applicable | §8.4 |
 | `authority` | where one nomenclature covers the column | §9.3 |
 | `description` | for an open vocabulary | §9.3 |
-| `since` | recommended | §9.4 |
 
-A column's `description` MUST NOT restate what one of that column's own fields declares (R107 §3.1). `vocabulary`, `enum`, `reserved_values`, `authority` and `resolves` are read by a rule; a description is prose for a person, and prose repeating a field is a second statement of the same fact that nothing compares. What a description says is what no field can: the form the values take, what a reserved value means, and how two values compare. Naming a declared value is not restating one where the description says what that value means — `core.array_assets.band` names `wideband`, `ap` and `lfp` because it states what each is, and `core.processing_runs.status` named its three and cited their meanings elsewhere, so the list said nothing the `enum` did not.
+A column's `description` MUST NOT restate what one of that column's own fields declares. `vocabulary`, `enum`, `reserved_values`, `authority` and `resolves` are read by a rule; a description is prose for a person, and prose repeating a field is a second statement of the same fact that nothing compares. What a description says is what no field can: the form the values take, what a reserved value means, and how two values compare. Naming a declared value is not restating one where the description says what that value means — `core.array_assets.band` names `wideband`, `ap` and `lfp` because it states what each is, and `core.processing_runs.status` named its three and cited their meanings elsewhere, so the list said nothing the `enum` did not.
 
 `registry/check.py` enforces this for `vocabulary`, `resolves` and `enum`. An `authority`'s name in prose is indistinguishable from prose, so a description SHOULD NOT name a nomenclature the field identifies unless naming it is what makes the form legible: `core.subjects.strain` needs MGI named to say why `C57BL/6J`'s substrain letter matters, and the field beside it holds a URI a reader may not recognise.
 
@@ -797,9 +763,9 @@ Column names MUST be lowercase snake case.
 | `_uri`, or bare `uri` | a URI |
 | `_index` | a zero-based offset into a sequence |
 
-A name is a property of the registry rather than of any packet's rows, so naming is checked against the declaration and not by a validation rule (R48 §4). A naming exception MUST carry a reason.
+A name is a property of the registry rather than of any packet's rows, so naming is checked against the declaration and not by a validation rule. A naming exception MUST carry a reason.
 
-A source-provenance label — `local_electrode_label`, `local_channel_label`, `local_unit_label` — is a `string` carrying whatever base the producing software used, and a consumer MUST NOT use it as an offset into any packet resource (R5 §5, R8 §2).
+A source-provenance label — `local_electrode_label`, `local_channel_label`, `local_unit_label` — is a `string` carrying whatever base the producing software used, and a consumer MUST NOT use it as an offset into any packet resource.
 
 ## 5. Type system
 
@@ -813,7 +779,7 @@ string  int32  int64  float32  float64  bool  timestamp  date  json_string
 
 ### 5.2 No nested types
 
-A column's type MUST NOT be `list`, `struct`, or `map` (R3 §2.1). A repeated value becomes a child table; a semi-structured value becomes a `json_string` in an optional column.
+A column's type MUST NOT be `list`, `struct`, or `map`. A repeated value becomes a child table; a semi-structured value becomes a `json_string` in an optional column.
 
 This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps a native reader viable in a language without an embedded SQL engine.
 
@@ -821,13 +787,13 @@ A value that varies per row and is queried belongs in a typed column of a specia
 
 ### 5.3 Fixed representations
 
-A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. Where a conversion's result would fall outside the declared type, it MUST fail before the value is written, naming the column and the value (R76 §2.1). A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
+A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. Where a conversion's result would fall outside the declared type, it MUST fail before the value is written, naming the column and the value. A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
 
-Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC. Identifier columns MUST be `int32` (R53 §2.1), except where the number of distinct values may exceed `int32`, where the column MUST be `int64` (R53 §2.4). No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
+Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC. Identifier columns MUST be `int32`, except where the number of distinct values may exceed `int32`, where the column MUST be `int64`. No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
 
 ## 6. Presence
 
-A column is `required`, `nullable` or `optional` (R2 §5):
+A column is `required`, `nullable` or `optional`:
 
 | state | the column | its values |
 |---|---|---|
@@ -835,36 +801,36 @@ A column is `required`, `nullable` or `optional` (R2 §5):
 | `nullable` | MUST be present | MAY be null |
 | `optional` | MAY be absent | MAY be null where present |
 
-The third state is what R3 §2.1 confines a `json_string` to: a conforming reader must be able to
-satisfy every required column without a JSON parser, so a column holding JSON is never required.
+A conforming reader must be able to satisfy every required column without a JSON parser, so a
+column holding `json_string` is always optional.
 
-A present nullable column is preferred to an absent one, because a stable column set simplifies query code. A schema MUST NOT declare a column that duplicates what the data already declares: `core.array_assets` carries no dtype or shape, because the array declares them (R3 §3.0).
+A present nullable column is preferred to an absent one, because a stable column set simplifies query code. A schema MUST NOT declare a column that duplicates what the data already declares: `core.array_assets` carries no dtype or shape, because the array declares them.
 
 Duplication is permitted only where it buys otherwise-unavailable access. Axis names are carried in `core.array_dimensions` because a Zarr binding in another language cannot see them.
 
 ## 7. References
 
-A table declares each foreign key as a reference naming the target resource, this table's columns, and the target's columns. A reference MAY be composite, nullable, or self-referencing (R46 §2).
+A table declares each foreign key as a reference naming the target resource, this table's columns, and the target's columns. A reference MAY be composite, nullable, or self-referencing.
 
-A reference MUST relate columns of the same type, of the same role, and of the same identity where both are identifiers (R114 §3). A join is on values: two columns of different types resolve to each other not at all, and relating an assigned identifier to a carried one resolves to nothing.
+A reference MUST relate columns of the same type, of the same role, and of the same identity where both are identifiers. A join is on values: two columns of different types resolve to each other not at all, and relating an assigned identifier to a carried one resolves to nothing.
 
-Where §5.3 requires `int64` of an identifier whose distinct values may exceed `int32`, every column referencing it is `int64` too — the escape is taken on both sides or on neither, since a narrow column referencing a wide one truncates silently (R114 §3).
+Where §5.3 requires `int64` of an identifier whose distinct values may exceed `int32`, every column referencing it is `int64` too — the escape is taken on both sides or on neither, since a narrow column referencing a wide one truncates silently.
 
 ### 7.1 Session scope
 
-A table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively (R86 §2.1). That is a property of the registry, computable with no packet in hand.
+A table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively. That is a property of the registry, computable with no packet in hand.
 
-A session-scoped table MUST carry a `session_id` column — `int32`, required, role `identifier`, identity `assigned` — and MUST declare the reference `session_id` → `core.sessions.session_id` (R88 §2.1, §2.2). A table that does not reach `core.sessions` MUST NOT carry one; `core.subjects` and `core.source_files` are the two, which `core.sessions` references rather than the reverse.
+A session-scoped table MUST carry a `session_id` column — `int32`, required, role `identifier`, identity `assigned` — and MUST declare the reference `session_id` → `core.sessions.session_id`. A table that does not reach `core.sessions` MUST NOT carry one; `core.subjects` and `core.source_files` are the two, which `core.sessions` references rather than the reverse.
 
 Carrying the column without the reference is what the rule forbids: Tier 1 generates one anti-join per declared reference and nothing from a column's name, so an undeclared `session_id` is a foreign key no rule can see.
 
-A writer fills the column from the parent row it already read, or from the session it was constructed with, and MUST NOT infer it from a name: a file path and a packet directory both spell a session, and neither is a statement this specification constrains (R88 §2.3).
+A writer fills the column from the parent row it already read, or from the session it was constructed with, and MUST NOT infer it from a name: a file path and a packet directory both spell a session, and neither is a statement this specification constrains.
 
 ## 8. Column semantics
 
 ### 8.1 Role
 
-Every column MUST declare exactly one role, from a closed vocabulary with no default (R48 §2.1, R90 §3.1):
+Every column MUST declare exactly one role, from a closed vocabulary with no default:
 
 | role | meaning |
 |---|---|
@@ -875,41 +841,41 @@ Every column MUST declare exactly one role, from a closed vocabulary with no def
 | `sequence_position` | an ordinal within an ordered set |
 | `discriminator` | a value naming the resource another column resolves against |
 
-The role is what makes index-base conversion derivable from a packet rather than hard-coded in each one-based client (R3 §6). A `structural_index` converts at the client boundary; a `coordinate` does not.
+The role is what makes index-base conversion derivable from a packet rather than hard-coded in each one-based client. A `structural_index` converts at the client boundary; a `coordinate` does not.
 
 ### 8.1.1 Index base
 
-A **structural index** addresses a position in a stored resource and MUST be a **0-based offset**. A client converting to a 1-based language MUST convert at the boundary (R3 §6); the format picks one base and clients adapt, because an offset whose base changes per reader is not an offset.
+A **structural index** addresses a position in a stored resource and MUST be a **0-based offset**. A client converting to a 1-based language MUST convert at the boundary; the format picks one base and clients adapt, because an offset whose base changes per reader is not an offset.
 
 A **source label** is copied verbatim from acquisition or sorting software. Its base is whatever that software used, and a consumer MUST NOT use it as an offset into any packet resource.
 
-A **coordinate** is neither: copied verbatim like a source label, but used arithmetically, which a source label MUST NOT be (R45 §2.5). Its zero is where its clock's origin says it is.
+A **coordinate** is neither: copied verbatim like a source label, but used arithmetically, which a source label MUST NOT be. Its zero is where its clock's origin says it is.
 
 Because a reference relates columns of the same role (§7), converting every structural index at a boundary is join-preserving by construction.
 
 ### 8.2 Identity
 
-An `identifier` column MUST declare `carried` or `assigned` (R53 §2.3). A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing (R95 §3.1). Seven tables carried both a generated `*_name` and a `name` declared by Part 02, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
+An `identifier` column MUST declare `carried` or `assigned`. A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing. Seven tables carried both a generated `*_name` and a `name` declared by Part 02, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
 
 A `carried` identifier gets no name column, and a table MUST NOT declare one for it: the value is already the source's own, so a name beside it would be a second identity for one thing.
 
-An assigned identifier's `*_name` MUST be unique within its packet (R85 §2.2) — the 16 name columns in core and analysis that pair with one, not the 6 that name a kind of thing and are expected to repeat, such as `core.sorting_runs.sorter_name`. `registry/check.py` sorts them and requires the second kind to be declared. No rule can check it: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct one R67 §2.2 requires, where four streams naming one serial become one device. The obligation falls on whatever composes the name.
+An assigned identifier's `*_name` MUST be unique within its packet — the 16 name columns in core and analysis that pair with one, not the 6 that name a kind of thing and are expected to repeat, such as `core.sorting_runs.sorter_name`. `registry/check.py` sorts them and requires the second kind to be declared. No rule can check it: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct case where four streams naming one serial become one device. The obligation falls on whatever composes the name.
 
 ### 8.3 Discriminator
 
 A `discriminator` column MUST be a `string` holding a dotted resource identifier — a namespace and
 a table name, each lowercase snake_case — naming a table in the packet's registry or in one of its
-extensions (R90 §3.1).
+extensions.
 
 **Which column carries it.** A discriminator MAY be declared on the table whose rows it
 specialises, or on a table those rows reach through one declared reference. Where it is not on the
 specialised table it MUST declare `discriminates_via`, holding the referencing column as a dotted
-`resource.column`; one reference and no more (R90 §3.2).
+`resource.column`; one reference and no more.
 
 Where a column carries a discriminator's value as part of a shared key, it is **not** a discriminator and
 MUST NOT declare the role: it resolves nothing a consumer of that row does not already know. Such a
 column is `data`, and a reference relating it to the discriminator it copies is the one role
-mismatch a reference may carry (R90 §3.3).
+mismatch a reference may carry.
 
 **Whether it must resolve.** A discriminator MUST declare `resolves`, required and with no default:
 
@@ -919,13 +885,13 @@ mismatch a reference may carry (R90 §3.3).
 | `optional` | a fact: the packet does not hold that resource |
 
 Where a discriminator is paired with a value column, both are nullable and the two MUST agree — a
-row declares both or neither (R49 §2.4). A row declaring neither is **undeterminable**, which a
+row declares both or neither. A row declaring neither is **undeterminable**, which a
 consumer MUST report apart from a row whose value resolves to nothing: the fix for one is to record
 the missing half, and for the other to correct what it names.
 
 **How it resolves.** A reader SHOULD offer the resolution: read the kind, take that resource's key
 from the registry, join. A discriminator nothing reads is a free-form name with extra steps, which
-is the observed fate of the mechanism this one replaces. Three shapes exist (R90 §3.5):
+is the observed fate of the mechanism this one replaces. Three shapes exist:
 
 - **Shared key.** The discriminated row and the named resource share a key, so the join is on that
   key. A resource a shared-key discriminator may name MUST declare a reference back to the
@@ -944,7 +910,7 @@ is the observed fate of the mechanism this one replaces. Three shapes exist (R90
   located by a column that resource declares. Resolution is neither a key join nor a value-to-key
   join, so the joinability rules above do not apply, and a consumer MUST NOT read them as applying. The
   discriminator MUST declare `positions_in`, naming the column of its own table whose value is that
-  position column, and MUST NOT declare it beside `discriminates` (R100 §2.3). Without the
+  position column, and MUST NOT declare it beside `discriminates`. Without the
   declaration this shape and the shared key are indistinguishable, and the exclusion above binds a
   reader while a generator reads every discriminator without a paired value as shared-key.
 
@@ -953,60 +919,60 @@ forward anti-join against the resources the manifest declares, and a reverse che
 returning every row of the discriminating table whose key has no counterpart in the resource its
 discriminator names, both at **error**. The reverse check is generated over the kinds a packet's
 rows actually name, and applies to the shared-key shape alone. Where `resolves` is `optional`,
-neither is generated and an unresolvable value is reported as `info` (R90 §3.8).
+neither is generated and an unresolvable value is reported as `info`.
 
 A by-position discriminator gets a third instead of the reverse one: the column `positions_in`
 names MUST hold a column of the named resource whose role is `structural_index`, and the registry
-supplies each named resource's such columns as literals (R100 §2.2). A role is invisible to a
+supplies each named resource's such columns as literals. A role is invisible to a
 query and visible to whatever writes one.
 
 Every generated check MUST be built over **every resource the packet declares, extensions
-included**. Building them over core alone is the defect R55 was written for: an extension kind
-matched no branch and passed in silence, which is the one case the mechanism exists to cover.
+included**. Building them over core alone lets an extension kind match no branch and pass in
+silence, which is the one case the mechanism exists to cover.
 
 Core MAY name an extension's resource through a discriminator. It MUST NOT reference one: naming
 does not create a dependency, so core stays checkable alone, an absent target is a reportable fact,
-and no integrity constraint couples the versions (R90 §3.9).
+and no integrity constraint couples the versions.
 
-A row's kind-specific facts live in a table sharing that row's key, which is R54 §2's shape and
-R90 §3.5's shared-key join: the detail table's primary key MUST begin with the discriminated
-table's own identifier (R104 §3.1). `core.devices` names such a table through `device_kind`, and
+A row's kind-specific facts live in a table sharing that row's key: the detail table's primary key
+MUST begin with the discriminated
+table's own identifier. `core.devices` names such a table through `device_kind`, and
 core MUST NOT declare one — Part 01 §3.17 makes this standard name no instruments, so a camera's
-target or a thermistor's range belongs to an R17 §2 extension (R104 §3.2). A fact no detail table
-models stays in `metadata` (R97 §3.3), and what justifies promoting one out of it is a rule or a
+target or a thermistor's range belongs to an extension. A fact no detail table
+models stays in `metadata`, and what justifies promoting one out of it is a rule or a
 query that has to read it.
 
 ### 8.4 Unit and clock
 
-A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit_from` naming a column that carries it (R77 §2.2). A `coordinate` column MUST declare `clock_from` where the clock its ticks are on is not the one that row's `clock_id` names, and MUST declare it where the table has no `clock_id` at all (R77 §2.1). Measured across the registry, 6 of 20 coordinates declare one and the other 14 resolve to their own row's clock; none has neither.
+A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit_from` naming a column that carries it. A `coordinate` column MUST declare `clock_from` where the clock its ticks are on is not the one that row's `clock_id` names, and MUST declare it where the table has no `clock_id` at all. Measured across the registry, 6 of 20 coordinates declare one and the other 14 resolve to their own row's clock; none has neither.
 
 `clock_from` names a column of the same table or a one-hop `resource.column`. A consumer resolves it rather than guessing, because converting on the wrong clock fails silently.
 
-A validator decides all of it from the registry with no packet in hand (R56 §2.4): `unit` and `unit_from` are mutually exclusive, `clock_from` appears only on a `coordinate`, a same-table name is a column of that table, a `resource.column` name resolves through a reference the table declares and names a column of that resource, and a `clock_from` target is an `identifier` referencing `core.clocks`.
+A validator decides all of it from the registry with no packet in hand: `unit` and `unit_from` are mutually exclusive, `clock_from` appears only on a `coordinate`, a same-table name is a column of that table, a `resource.column` name resolves through a reference the table declares and names a column of that resource, and a `clock_from` target is an `identifier` referencing `core.clocks`.
 
-A column holding a physical unit MUST hold a UCUM code, and a column declaring one MUST declare a UCUM code — an annotation in curly braces is one, and is dimensionless, which is what a quantity normalised by something the packet measured is (R101 §3.6).
+A column holding a physical unit MUST hold a UCUM code, and a column declaring one MUST declare a UCUM code — an annotation in curly braces is one, and is dimensionless, which is what a quantity normalised by something the packet measured is.
 
-A consumer MAY label a quantity with its declared unit, and MUST NOT silently compare or combine two columns whose declared units differ (R56 §2.5). One vocabulary is what makes that rule run: `volts` and `V` differ while naming one unit, so without it the rule refuses a legitimate comparison exactly as readily as it catches a wrong one.
+A consumer MAY label a quantity with its declared unit, and MUST NOT silently compare or combine two columns whose declared units differ. One vocabulary is what makes that rule run: `volts` and `V` differ while naming one unit, so without it the rule refuses a legitimate comparison exactly as readily as it catches a wrong one.
 
 ### 8.5 Functional dependence
 
-A column MAY declare `determined_by`, naming the columns whose values fix its own: two rows agreeing on every column named agree on this one, and an empty list declares a constant (R92 §2.2). The declaration is structural, decidable from the registry with no packet in hand.
+A column MAY declare `determined_by`, naming the columns whose values fix its own: two rows agreeing on every column named agree on this one, and an empty list declares a constant. The declaration is structural, decidable from the registry with no packet in hand.
 
-It is a statement about values and holds under any profile. What a profile does with it is the profile's: Part 03 §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows (R92 §2.3), because a wrong one waives a check rather than failing one.
+It is a statement about values and holds under any profile. What a profile does with it is the profile's: Part 03 §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows, because a wrong one waives a check rather than failing one.
 
 ### 8.6 Free-form metadata
 
-A column named `metadata` is a `json_string` holding what a source stated about a row that this standard does not model, carried in the source's own vocabulary and read by no rule (R97 §3.4). Every declaration carries that description and no other.
+A column named `metadata` is a `json_string` holding what a source stated about a row that this standard does not model, carried in the source's own vocabulary and read by no rule. Every declaration carries that description and no other.
 
-A table's registry entry MUST declare `metadata` where its primary key includes an `identifier` column that is not part of a declared reference, MUST NOT declare one where every key column is part of a declared reference, and MAY declare one otherwise (R97 §3.1). An identifier of the table's own is what makes a row a thing rather than a statement about other things; a key made entirely of other tables' identifiers makes it a relationship, and nothing can be said about a relationship that is not a fact about one of its ends. Seventeen core tables fall in the first band and three in the second. Both bounds are decidable from the registry with no packet in hand, and `registry/check.py` enforces both against core and against every extension.
+A table's registry entry MUST declare `metadata` where its primary key includes an `identifier` column that is not part of a declared reference, MUST NOT declare one where every key column is part of a declared reference, and MAY declare one otherwise. An identifier of the table's own is what makes a row a thing rather than a statement about other things; a key made entirely of other tables' identifiers makes it a relationship, and nothing can be said about a relationship that is not a fact about one of its ends. Seventeen core tables fall in the first band and three in the second. Both bounds are decidable from the registry with no packet in hand, and `registry/check.py` enforces both against core and against every extension.
 
-A `metadata` column's presence MUST be `optional`, which is what makes R94 §3's prohibition sound: that check matches the bare column name, and so holds only while every column called `metadata` may be absent from the file.
+A `metadata` column's presence MUST be `optional`. The applicable check matches the bare column name and is sound only while every column called `metadata` may be absent from the file.
 
 A validator SHOULD report, at `info`, a declared `metadata` column that no row of the packet fills. Where the key neither requires the column nor forbids it, declaring one is a judgement, and this is the evidence against which it is revisited: `core.spike_events` carried the column on 286,896,563 rows that no adapter ever filled.
 
-A writer MAY fill `metadata` on every row of a table that declares it (R97 §3.2). Parquet reads the columns a query projects and no others, so the column costs a consumer who does not ask for it 1.9 kB of extra footer over 5,000,000 rows, and one who does 394.6 ms against 29.6 ms.
+A writer MAY fill `metadata` on every row of a table that declares it. Parquet reads the columns a query projects and no others, so the column costs a consumer who does not ask for it 1.9 kB of extra footer over 5,000,000 rows, and one who does 394.6 ms against 29.6 ms.
 
-A writer MUST NOT emit a `metadata` key holding a fact that a column of the logical schema holds, unless the duplication buys access that is otherwise unavailable, and MUST NOT emit one that contradicts such a column under any circumstance (R97 §3.3). The exception is R3 §3.0's, on the same terms, so the bag is exactly as strict as the schema around it; a contradiction takes no exception, since it buys nothing by definition. A fact required to interpret the data belongs in a column, never in a key.
+A writer MUST NOT emit a `metadata` key holding a fact that a column of the logical schema holds, unless the duplication buys access that is otherwise unavailable, and MUST NOT emit one that contradicts such a column under any circumstance. The same otherwise-unavailable-access exception applies throughout the schema, so the bag is exactly as strict as the schema around it; a contradiction takes no exception, since it buys nothing by definition. A fact required to interpret the data belongs in a column, never in a key.
 
 No rule checks either half and none is added. The content is schemaless by design, so a constraint on it is unenforceable in principle rather than merely in practice, and an adapter names a key in the source's vocabulary where core names a column in its own — across both packaged sessions, zero of the 20 distinct keys share a name with any column in the registry. The obligation binds the writer, which is the only party that knows what it put in the bag.
 
@@ -1014,11 +980,11 @@ A writer SHOULD put prose in a prose column where the table has one, and not in 
 
 ### 8.7 Coded values
 
-A writer that can decode a source's code MUST store the decoded value, declaring the vocabulary it decodes onto as §9.3 requires of any other (R106 §3.1). A code is a token standing for something the emitting system names elsewhere, and a packet holding one without the key leaves no rule, query or reader able to tell one value from another.
+A writer that can decode a source's code MUST store the decoded value, declaring the vocabulary it decodes onto as §9.3 requires of any other. A code is a token standing for something the emitting system names elsewhere, and a packet holding one without the key leaves no rule, query or reader able to tell one value from another.
 
 A writer that cannot decode one stores the code itself, verbatim, in a `string` column declaring an open vocabulary, whose description names where the key lives. An undecoded code is a label carrying no contract, and an open vocabulary is how this standard declares one (Part 01 §3.17); an integer column declares nothing of the sort, since §9.3 permits a vocabulary on no other type and a code stored as an integer is indistinguishable from a count.
 
-Recording the token rather than dropping it is R22 §3's rule for a scorer's label and §4's for a source-provenance label: a source's own token is a string, kept as the source emitted it, and a consumer MUST NOT use it as an offset.
+A source's own token is a string, kept as the source emitted it, and a consumer MUST NOT use it as an offset. This applies to a scorer's label and to a source-provenance label alike.
 
 No rule checks either half, and none is added. Nothing structural tells a code from a count, so the obligation binds the writer, which is the party that knows whether it had a key.
 
@@ -1027,24 +993,29 @@ No rule checks either half, and none is added. Nothing structural tells a code f
 <a id="ew-registry-document" data-spec-anchor="canonical"></a>
 ### 9.1 The schema is one document
 
-Table structure and validation rules are carried in one JSON document (R2 §2). It declares the semantic and logical standard versions, its own registry version, and its tables.
+Table structure and validation rules are carried in one JSON document. It declares the semantic and
+logical standard versions, its own registry version, and its tables. The document MUST NOT contain
+registry-build `derived_from` at its root or `since` on a table or column declaration. The root,
+table, and column objects are closed, so any such property makes the document invalid. This rule
+does not apply to the packet catalog's resource-lineage `derived_from`.
 
 <a id="ew-registry-self-description" data-spec-anchor="canonical"></a>
 ### 9.2 Self-description
 
-A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on (R2 §8). A packet whose embedded registry disagrees with its recorded version is invalid.
+A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on. A packet whose embedded registry disagrees with its recorded version is invalid.
 
-A registry document SHOULD carry a top-level `$schema` naming its meta-schema (R57 §2.1). A
-validator MUST NOT dereference it and MUST NOT require it.
+A core or extension registry document published with this specification MUST carry a top-level
+`$schema` equal to `https://escapewheel.org/schemas/registry/0.2.0`. The registry meta-schema MUST
+carry that exact value as its `$id`. The core registry's `registry_version` MUST be exactly `0.2.0`.
+A validator MUST NOT dereference `$schema`.
 
-Where `$schema` is present it MUST equal the `$id` of a meta-schema the consumer holds, or the
-document MUST be reported as governed by a schema this consumer does not have — an **`info`**
-finding, not an error (R57 §2.2). R17 §4 already says a core validator is not required to hold an
-extension's schema, and the same reasoning applies one level up.
+If `$schema` names no meta-schema the consumer holds, the document MUST be reported as governed by
+a schema this consumer does not have — an **`info`** finding, not an error. A core validator is not
+required to hold an extension's schema, and the same reasoning applies one level up.
 
 ### 9.3 Vocabularies
 
-Every `string` column declares a `vocabulary`, whatever its role, except a discriminator, whose value space R55 §2.1 fixes; a column of any other type declares none (R101 §3.1). There is no default, so an absent declaration is a defect rather than a claim of openness.
+Every `string` column declares a `vocabulary`, whatever its role, except a discriminator, whose value space §8.3 fixes; a column of any other type declares none. There is no default, so an absent declaration is a defect rather than a claim of openness.
 
 | value | what it says |
 |---|---|
@@ -1061,18 +1032,13 @@ Four columns are closed:
 | `core.unit_quality_labels.normalized_label` | `sua`, `mua`, `noise` |
 | `core.subjects.sex` | `male`, `female`, `hermaphrodite`, `other` |
 
-A scorer's own `label` is open, because aggregating over scorers is incompatible with one closed set (R22 §1).
+A scorer's own `label` is open, because aggregating over scorers is incompatible with one closed set.
 
-A value MAY be reserved only where it is read **whole**: where a consumer comparing two packets learns something from the value alone, without knowing what either packet was doing (R101 §3.4). Where an external nomenclature defines the values instead, the registry names it rather than copying it, which R3 §3.0 requires of any set the standard does not itself define. A validator SHOULD report a value outside a reserved set at `info`, and MUST NOT fail on one.
+A value MAY be reserved only where it is read **whole**: where a consumer comparing two packets learns something from the value alone, without knowing what either packet was doing. Where an external nomenclature defines the values instead, the registry names it rather than copying a set the standard does not itself define. A validator SHOULD report a value outside a reserved set at `info`, and MUST NOT fail on one.
 
-An `open` column MUST carry a description stating the form its values take (R101 §3.5). Where one nomenclature covers the column, the column MAY declare `authority` — an array whose entries each declare a `name`, which is what a person reads, and a `uri`, which is identity rather than a fetch instruction: a validator MUST NOT dereference one and MUST NOT reject a value for being absent from it (R101 §3.6, R107 §3.3). Both are required of an entry, because the name is a fact and not a substring: neither `informatics.jax.org` nor `rgd.mcw.edu` contains the name of the registry it serves. A writer MUST spell a value as the named nomenclature does.
+An `open` column MUST carry a description stating the form its values take. Where one nomenclature covers the column, the column MAY declare `authority` — an array whose entries each declare a `name`, which is what a person reads, and a `uri`, which is identity rather than a fetch instruction: a validator MUST NOT dereference one and MUST NOT reject a value for being absent from it. Both are required of an entry, because the name is a fact and not a substring: neither `informatics.jax.org` nor `rgd.mcw.edu` contains the name of the registry it serves. A writer MUST spell a value as the named nomenclature does.
 
-A column's declarations are rendered in `registry/tables.md` from the fields holding them (R107 §3.4) — the vocabulary, the closed set itself, the reserved values, the authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is, and it showed none of them, which is why 35 descriptions had come to say them in prose.
-
-<a id="ew-declaration-provenance" data-spec-anchor="canonical"></a>
-### 9.4 Provenance of a declaration
-
-A table and a column SHOULD each carry `since`, naming the revision that introduced or last changed it (R77 §2.3). The registry stamps both: 19 tables and 213 columns carry one.
+A column's declarations are rendered in `registry/tables.md` from the fields holding them — the vocabulary, the closed set itself, the reserved values, the authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is, and it showed none of them, which is why 35 descriptions had come to say them in prose.
 
 ## 10. Validation rules
 
@@ -1080,26 +1046,26 @@ A table and a column SHOULD each carry `since`, naming the revision that introdu
 
 A validator MUST generate, from the declaration alone: required-column non-null checks, foreign-key anti-joins, and closed-vocabulary membership. A nullable foreign key is guarded with a null test.
 
-A validator MUST establish that a table's primary key is unique, by query or by any means a physical profile defines as establishing it (R92 §2.1). That a key is unique holds under any profile and is this part's; how a validator may establish it depends on how rows are stored, and is the profile's.
+A validator MUST establish that a table's primary key is unique, by query or by any means a physical profile defines as establishing it. That a key is unique holds under any profile and is this part's; how a validator may establish it depends on how rows are stored, and is the profile's.
 
 ### 10.2 Tier 2: declared
 
-A rule the structure cannot imply is declared as SQL returning offending rows, or as a named template the registry build expands (R24 §2).
+A rule the structure cannot imply is declared as SQL returning offending rows, or as a named template the registry build expands.
 
-A rule's SQL MUST NOT reference a column whose presence is `optional` (R94 §3). A rule is executed against the file, and `optional` permits the column to be absent from it (§6), so a rule naming one does not miss a check — the query fails to parse, and the run meant to find defects reports an error of its own. A constraint that wants an optional column either makes it `nullable`, which declares it always present and sometimes empty, or moves to the shim of §10.3.
+A rule's SQL MUST NOT reference a column whose presence is `optional`. A rule is executed against the file, and `optional` permits the column to be absent from it (§6), so a rule naming one does not miss a check — the query fails to parse, and the run meant to find defects reports an error of its own. A constraint that wants an optional column either makes it `nullable`, which declares it always present and sometimes empty, or moves to the shim of §10.3.
 
 The execution contract is the whole protocol: **a check's query returns offending rows; empty is a pass, non-empty is a failure, and the returned rows are the finding.**
 
 A rule declares a level of `error`, `warning`, or `info`. A rule MAY be `advisory`, in which case
 it is off by default and MUST NOT be `error`, so that enabling it cannot change whether a packet
 previously passed. Stated as the guarantee it is: **running with advisory rules enabled MUST NOT
-change whether a packet passed** (R26 §4). A validator MUST expose the choice, and a report MUST state whether
+change whether a packet passed**. A validator MUST expose the choice, and a report MUST state whether
 advisory rules were run: two reports over one packet may legitimately differ, and one that does
 not say which mode produced it cannot be compared with the other.
 
 ### 10.3 What is not a rule
 
-A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums (R12 §4). A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
+A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums. A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
 
 ## 11. Core resource index
 
@@ -1201,94 +1167,93 @@ row, resolving a value, or reading an absence takes more than the generic rules 
 
 ### 12.1 Unit identity
 
-`unit_id` identifies a unit on its own (R81 §2.1). The packet assigns it, numbering units by
+`unit_id` identifies a unit on its own. The packet assigns it, numbering units by
 ascending `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces the same
-numbers (R81 §2.2); `core.units` records the run and the curation as ordinary columns, and
+numbers; `core.units` records the run and the curation as ordinary columns, and
 `local_unit_label` records what the sorter called it.
 
-A table keyed on a unit carries `unit_id` and not the run or the curation (R81 §2.3), and a
-consumer relating a unit to anything outside the packet uses `(sorting_run_id, local_unit_label)`
-(R81 §2.5).
+A table keyed on a unit carries `unit_id` and not the run or the curation, and a
+consumer relating a unit to anything outside the packet uses `(sorting_run_id, local_unit_label)`.
 
 `core.units` also declares what its spikes are counted on and measured in: `clock_id`, required,
-and `amplitude_unit`, nullable and open (R96 §3.1, §3.2). Both are facts of the sorting run, and a
+and `amplitude_unit`, nullable and open. Both are facts of the sorting run, and a
 spike cannot reach the run — §8.4 admits one hop and spike → unit → run is two — so they live on
 the table a spike references directly. `core.spike_events.t_tick` therefore declares
-`clock_from: core.units.clock_id` and `amplitude` declares `unit_from: core.units.amplitude_unit`
-(R96 §3.3), and neither `core.spike_events` nor `core.unit_observation_intervals` carries a
-`clock_id` of its own (R96 §3.4). The run still determines both values, since a unit names its run
+`clock_from: core.units.clock_id` and `amplitude` declares `unit_from: core.units.amplitude_unit`,
+and neither `core.spike_events` nor `core.unit_observation_intervals` carries a
+`clock_id` of its own. The run still determines both values, since a unit names its run
 in a reference it MUST carry.
 
 ### 12.2 Channel indices in a sorting run
 
 A sorting drops bad channels before it runs, so a channel index a source emits counts the channels
 it kept and not the probe's contacts. `core.sorting_run_channels` records that list in the run's
-own order (R83 §2.1).
+own order.
 
 A writer that can read it SHOULD emit the table, MUST NOT derive it from `core.unit_electrodes` or
-from a bad-channel list, and SHOULD emit nothing where it cannot read it (R83 §2.2).
+from a bad-channel list, and SHOULD emit nothing where it cannot read it.
 
 A consumer holding such an index MUST resolve it through that table and MUST NOT read it as a
 position in `core.electrodes`; where the run declares no channels the index is unresolvable, and
-the consumer MUST report that rather than resolve it against the contact list (R83 §2.3).
+the consumer MUST report that rather than resolve it against the contact list.
 
 Where a run declares its channels, every `core.unit_electrodes` row for one of its units MUST name
-an electrode among them (R83 §2.4).
+an electrode among them.
 
 ### 12.3 Calibration
 
 A calibration is a standing property of an instrument rather than an activity of this packet, so
 `core.calibrations` records the session it was **in force** for and, separately, when it was
-measured; a consumer MUST NOT read the two as one fact (R89 §2.1). A calibration in force for
-several sessions is recorded once per session, as R88 §2.4 requires of any row whose results reach
-more than one.
+measured; a consumer MUST NOT read the two as one fact. A calibration in force for
+several sessions is recorded once per session, as for any row whose results reach more than one
+session.
 
 The devices a calibration covers are a child table, since one calibration of the rig's manipulators
-is cited by six probes (R89 §2.2); a calibration covering a device the packet does not hold gets no
+is cited by six probes; a calibration covering a device the packet does not hold gets no
 row there, which is a fact rather than a defect, and a writer that records the calibration SHOULD
 record the devices it names.
 
 A paired series is carried as `core.calibration_points`, whose two value columns take their units
 of measure from the calibration, since the unit varies per calibration and so cannot be a literal
-on either column (R89 §2.3). Content that is an array rather than a curve names the array asset
-holding it (R89 §2.4).
+on either column. Content that is an array rather than a curve names the array asset
+holding it.
 
 Where a row has no points, no array asset and no detail kind, it records that the calibration was in force
 and that the packet holds nothing further, which a consumer MUST read as **unrecorded** rather than
-as absent (R89 §2.5). A source stating that no calibration was performed gets no row at all.
+as absent. A source stating that no calibration was performed gets no row at all.
 
 `core.calibrations` declares `metadata` and the two child tables MUST NOT, because its key holds an
-identifier of its own where theirs are keyed by other tables' identifiers (R89 §2.6).
+identifier of its own where theirs are keyed by other tables' identifiers.
 
 ### 12.4 A clock's rate
 
-A clock MUST NOT declare both `tick_rate_hz` and a rational rate (R95 §3.2); `core.clocks.tick_rate_declared` already requires at least one, so exactly one is present. The float is for a source that measured its rate rather than stating an exact one, and forcing a rational on it would make a writer invent a denominator — a rounding decision this specification does not make on a source's behalf (R66 §2.1).
+A clock MUST NOT declare both `tick_rate_hz` and a rational rate; `core.clocks.tick_rate_declared` already requires at least one, so exactly one is present. The float is for a source that measured its rate rather than stating an exact one, and forcing a rational on it would make a writer invent a denominator — a rounding decision this specification does not make on a source's behalf.
 
 ### 12.5 A clock's observation window
 
-A packet MUST declare at least one row of `core.clock_observation_intervals` for every clock any of its rows is timestamped on (R98 §3.1). More than one is permitted, for an acquisition paused and resumed (R38 §2.1). A clock that exists only as a parent declares none: R27 §3 requires the chain to be well founded, so such a clock is declared, and nothing is observed on it for R38 §2.3's inheritance to reach.
+A packet MUST declare at least one row of `core.clock_observation_intervals` for every clock any of its rows is timestamped on. More than one is permitted, for an acquisition paused and resumed. A clock that exists only as a parent declares none: the chain is required to be well founded, so such a clock is declared, and nothing is observed on it for an inherited interval to reach.
 
 `core.clocks.observation_declared` checks the part of that a query can see — a clock that has anchors, or that a session names as its `reference_clock_id`, and declares no interval. A clock aligned by `transform_slope` alone carries data and has no anchors, so the obligation reaches it and the rule does not; the obligation binds the writer, which knows what it timestamped.
 
 ### 12.6 A clock's alignment record
 
-Three facts about how a packet's clocks were aligned are columns, because a consumer needs them to place a tick and Part 02 §8.6's line puts such a fact in a column and never in a key (R99 §3).
+Three facts about how a packet's clocks were aligned are columns, because a consumer needs them to place a tick and Part 02 §8.6's line puts such a fact in a column and never in a key.
 
-`core.sessions.alignment_bound` holds how far past its anchors the writer mapped, in median anchor intervals. A writer establishing a bound wider than R27 §5.3's default MUST record it; a consumer reading a null MUST map at that default, which is a fact and not a defect. It is on the session because the bound is a property of the times the packet states, as `t_zero_tick` is (R39 §2.1), so one session declares one bound and no rule is needed to say which run wins. A value below one is refused.
+`core.sessions.alignment_bound` holds how far past its anchors the writer mapped, in median anchor intervals. A writer establishing a bound wider than the default of one median anchor interval MUST record it; a consumer reading a null MUST map at that default, which is a fact and not a defect. It is on the session because the bound is a property of the times the packet states, as `t_zero_tick` is, so one session declares one bound and no rule is needed to say which run wins. A value below one is refused.
 
-`core.clocks.withheld_first_anchor` and `withheld_last_anchor` record R37 §3.2's terminal-anchor test on that clock, and a writer running it MUST record both. Three states carry what R40 §2.3 asks for: null is a clock the test did not run on, false is a terminal it kept, true is one it withheld — so a silent zero and an untested clock differ structurally rather than by a rule nothing can observe. A clock with no anchors MUST NOT declare either.
+`core.clocks.withheld_first_anchor` and `withheld_last_anchor` record the terminal-anchor test on that clock, and a writer running it MUST record both. Three states distinguish the outcomes: null is a clock the test did not run on, false is a terminal it kept, true is one it withheld — so a silent zero and an untested clock differ structurally rather than by a rule nothing can observe. A clock with no anchors MUST NOT declare either.
 
-`core.clock_phase_steps` holds one row per step in a clock's alignment to its parent, a clock having possibly several (§5.2). A writer detecting a step MUST record it, and a step is reported and never corrected: R13's map is exact at every anchor, so it carries the step faithfully, and subtracting it would need to know whether the step also moved the devices timestamped on that parent, which the packet does not record. A clock whose `parent_clock_id` is null MUST NOT have rows here.
+`core.clock_phase_steps` holds one row per step in a clock's alignment to its parent, a clock having possibly several (§5.2). A writer detecting a step MUST record it, and a step is reported and never corrected: the map is exact at every anchor, so it carries the step faithfully, and subtracting it would need to know whether the step also moved the devices timestamped on that parent, which the packet does not record. A clock whose `parent_clock_id` is null MUST NOT have rows here.
 
-`core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record there what R40 §2.2 requires of a measurement — median, p95 and maximum error, with the distance and the tolerance it judged them against. A consumer needs the bound to place a tick and not the residual that justified it.
+`core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record the measurement's median, p95 and maximum error there, with the distance and the tolerance it judged them against. A consumer needs the bound to place a tick and not the residual that justified it.
 
 ### 12.7 A frame's axes
 
-A frame declares one row of `core.coordinate_frame_axes` per axis it has, and two axes of one frame MUST NOT carry the same `axis_name` (R105 §3.2), which `core.coordinate_frame_axes.axis_names_distinct` checks. An axis name is the source's own word for the field the values came from, so two axes sharing one means a writer put two quantities under one name and the packet cannot say which value is on which axis.
+A frame declares one row of `core.coordinate_frame_axes` per axis it has, and two axes of one frame MUST NOT carry the same `axis_name`, which `core.coordinate_frame_axes.axis_names_distinct` checks. An axis name is the source's own word for the field the values came from, so two axes sharing one means a writer put two quantities under one name and the packet cannot say which value is on which axis.
 
-A coordinate's values reference the axis rows of their own frame on `(session_id, coordinate_frame, axis_index)`, so a value on an axis the frame never declared is an orphan Tier 1 reports, and a frame's axis count cannot disagree with the shape of its coordinates (R105 §3.3).
+A coordinate's values reference the axis rows of their own frame on `(session_id, coordinate_frame, axis_index)`, so a value on an axis the frame never declared is an orphan Tier 1 reports, and a frame's axis count cannot disagree with the shape of its coordinates.
 
-A coordinate MAY carry values on fewer axes than its frame declares, where its source states none on the rest, and a consumer MUST NOT read an absent axis row as a zero: it is a position the source did not state on that axis (R105 §3.3). That is what a null in the struck `x_um`, `y_um` and `z_um` said, in the form the child table has.
+A coordinate MAY carry values on fewer axes than its frame declares, where its source states none on the rest, and a consumer MUST NOT read an absent axis row as a zero: it is a position the source did not state on that axis. That is what a null in the struck `x_um`, `y_um` and `z_um` said, in the form the child table has.
 
 `axis_value` declares `unit_from` of `core.coordinate_frame_axes.unit`, resolved one hop through that reference (§8.4): the unit is the axis's, so a frame stated in millimetres needs no second set of columns and no column name carries a unit.
 
@@ -1304,7 +1269,7 @@ Normative. Profile identifier: `escapewheel-portable-v0.1`.
 
 This part defines how the logical resources of Part 02 are stored in the portable profile. A packet under this profile MUST be readable without a server.
 
-This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology (R93 §3.2). Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's (R93 §3.4).
+This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology. Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's.
 
 ## 2. Required technologies
 
@@ -1351,7 +1316,7 @@ The catalog MUST record the actual layout. A reader MUST resolve resources throu
 
 ### 3.2 Files that MUST NOT be written
 
-`schemas/semantic_version.txt` is struck (R62 §2). It restated `semantic_standard_version`, which the catalog is required to carry, and so bought no otherwise-available access.
+`schemas/semantic_version.txt` is struck. It restated `semantic_standard_version`, which the catalog is required to carry, and so bought no otherwise-available access.
 
 ## 4. URI rules
 
@@ -1367,7 +1332,7 @@ A packet root MAY itself be an object-store prefix rather than a directory, in w
 
 A table MUST be a valid Parquet file. Compression SHOULD be Zstandard where available.
 
-A large table SHOULD use row groups sized for analytical scans. Part 10 carries the sizes measured for one (R93 §3.4).
+A large table SHOULD use row groups sized for analytical scans. Part 10 carries the sizes measured for one.
 
 An identifier column is `int32`, or `int64` where its range requires it (Part 02 §5.3) and MUST NOT be dictionary-encoded in a way that requires unification across row groups before it can be compared.
 
@@ -1379,17 +1344,17 @@ A partitioned table's row order across files is not defined by this profile. A s
 
 ### 5.3 Ordering
 
-A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where the registry declares no sort for a table, the order required is its primary key's (R10 §2). A validator MUST report a departure as an **error** (R92 §2.2).
+A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where the registry declares no sort for a table, the order required is its primary key's. A validator MUST report a departure as an **error**.
 
-Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means Part 02 §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (R12 §4, Part 02 §10.3).
+Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means Part 02 §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (Part 02 §10.3).
 
-The scan MUST verify each `determined_by` declaration it relies on: of two adjacent rows sharing a primary key, every sort column declared `determined_by` a subset of that key MUST hold the same value in both, and a validator MUST report a difference as an **error** (R92 §2.3). A wrong declaration otherwise waives a check rather than failing one. The comparison reaches a declaration that is false between two adjacent rows, which the scan reports as a duplicate key as well, the second finding saying which to repair; a declaration false enough to sort two duplicates apart is beyond a scan of neighbours.
+The scan MUST verify each `determined_by` declaration it relies on: of two adjacent rows sharing a primary key, every sort column declared `determined_by` a subset of that key MUST hold the same value in both, and a validator MUST report a difference as an **error**. A wrong declaration otherwise waives a check rather than failing one. The comparison reaches a declaration that is false between two adjacent rows, which the scan reports as a duplicate key as well, the second finding saying which to repair; a declaration false enough to sort two duplicates apart is beyond a scan of neighbours.
 
 Where the scan finds a departure, uniqueness MUST be settled by aggregate rather than by adjacency, since a duplicate anywhere but beside its twin is invisible to a scan of neighbours.
 
 A reader MUST NOT depend on stored order for correctness. Establishing the order is the validator's work, and a reader that assumed it would be trusting a property of the profile rather than of the logical standard.
 
-One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST` (R30 §3.2); Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: R91 §3.2 keys it on `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: R81 §2.4 makes its key `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
+One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST`; Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: its key is `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: its key is `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
 
 ### 5.4 The overriding orders
 
@@ -1397,50 +1362,50 @@ One table is stored in an order other than its primary key's, `analysis.spike_ev
 |---|---|
 | `analysis.spike_events` | `session_id, clock_id, time_bucket_tick, unit_id, t_tick` |
 
-A writer **MUST** emit `analysis.spike_events` in that order (R30 §3.2). It is the one resource whose layout is part of its reason for existing: bucketing by time and sorting by unit within each bucket leaves both columns with informative row-group statistics, so a unit filter and a time filter each prune.
+A writer **MUST** emit `analysis.spike_events` in that order. It is the one resource whose layout is part of its reason for existing: bucketing by time and sorting by unit within each bucket leaves both columns with informative row-group statistics, so a unit filter and a time filter each prune.
 
-A writer **SHOULD** start a new row group at each bucket boundary (R30 §3.3). A group cut at a fixed row count straddles boundaries and spans two buckets' worth of time. Row-group size and encoding are otherwise not normative: the right values follow from session length and unit count rather than from the schema.
+A writer **SHOULD** start a new row group at each bucket boundary. A group cut at a fixed row count straddles boundaries and spans two buckets' worth of time. Row-group size and encoding are otherwise not normative: the right values follow from session length and unit count rather than from the schema.
 
 ### 5.5 The Parquet floor
 
 A reader MUST support the compressions **uncompressed, Snappy, Gzip and Zstd**. A writer MUST use
-one of those four and SHOULD use Zstd (R3 §2). Dictionary, RLE and delta encodings MAY be used and
+one of those four and SHOULD use Zstd. Dictionary, RLE and delta encodings MAY be used and
 MUST be supported by readers.
 
 A writer SHOULD choose the encoding of each integer, float, string, timestamp and date column from
 the column's declarations and from four counts over the rows it holds when it chooses: the rows,
 nulls included; the distinct non-null values; the runs, a run being a maximal sequence of equal
-values once nulls are set aside; and, for an integer, whether its non-null values never decrease
-(R118 §3.1). Where a writer writes a table whole the rows are the table's; where it streams a table,
+values once nulls are set aside; and, for an integer, whether its non-null values never decrease.
+Where a writer writes a table whole the rows are the table's; where it streams a table,
 they are the row group it is about to write, or the first row group where the writer keeps one
 encoding for the whole file. The first of the four rules below that applies decides.
 
-1. A writer SHOULD write plain a column in which every row is null (R118 §3.2).
+1. A writer SHOULD write plain a column in which every row is null.
 2. A writer SHOULD dictionary-encode a column holding one distinct non-null value where it holds
    50,000 rows or more, and below that SHOULD encode it with `DELTA_BINARY_PACKED` where it is an
-   integer and plain otherwise (R118 §3.3). A dictionary page costs its bytes in every row group,
+   integer and plain otherwise. A dictionary page costs its bytes in every row group,
    and only a long row group repays them (Part 10 §2.8).
 3. An integer column is **ordered** where its name ends `_tick`; where it is the first column of its
    table's sort order other than `session_id` and its role is `identifier`; where its role is
    `structural_index` or `sequence_position` (Part 02 §8.1); where it is an `assigned` identifier
    (Part 02 §8.2); or where its non-null values never decrease. A writer SHOULD encode an ordered
    integer with `DELTA_BINARY_PACKED`, and SHOULD write it plain where it holds at least 50 rows for
-   each run (R118 §3.4). A declaration states no distribution, but it marks a column likely to climb
+   each run. A declaration states no distribution, but it marks a column likely to climb
    within groups, which no count over the whole column sees (Part 10 §2.9).
 4. A writer SHOULD dictionary-encode any other column, a float included, where it holds at least 50
-   rows for each distinct non-null value, and SHOULD write it plain otherwise (R118 §3.5). Repetition
+   rows for each distinct non-null value, and SHOULD write it plain otherwise. Repetition
    is what a dictionary indexes, and no declaration says how often a value repeats (Part 10 §2.10).
 
 None of the four is the property it stands in for, so a writer MUST be able to override each per
-column, and every override MUST record what it measured and on what (R110 §3.3). An exception
+column, and every override MUST record what it measured and on what. An exception
 recording nothing cannot be re-judged when the data changes. A writer SHOULD refuse an exception
 naming a column no table declares, which is decidable with no packet in hand.
 
 A writer SHOULD report, at `info`, a column whose encoding costs more than **1.5x** the smallest
-available to it, measured over a sample of the rows it wrote (R110 §3.5). It SHOULD measure a column
+available to it, measured over a sample of the rows it wrote. It SHOULD measure a column
 by its own compressed chunks rather than by a file carrying it, and SHOULD judge a string, timestamp
-or date column between a dictionary and plain, the two encodings the rules choose among for it
-(R118 §3.6). These rules are good guesses, and the report is how the author of a table learns that
+or date column between a dictionary and plain, the two encodings the rules choose among for it.
+These rules are good guesses, and the report is how the author of a table learns that
 theirs is one a guess misses. A report and not a refusal: every encoding above is permitted, so a
 packet is conforming whichever it uses.
 
@@ -1449,48 +1414,48 @@ precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE
 
 ### 5.6 One null
 
-Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null (R101 §3.10).
+Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null.
 
 NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches 30 of the registry's 330 columns and none of the rest, and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
 
-A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null. Where the reason for the absence matters, core records the fact that distinguishes it rather than encoding the reason in the value: R44 §2.3 gave a run a `scope` so an undeterminable one is distinguishable from an unambiguous one, and R22 §3 nulls `normalized_label` where a source's label has no honest projection.
+A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null. Where the reason for the absence matters, core records the fact that distinguishes it rather than encoding the reason in the value: a run's `scope` distinguishes an undeterminable scope from an unambiguous one, and `normalized_label` is null where a source's label has no honest projection.
 
 ## 6. Array storage
 
 ### 6.1 Version
 
-A packet-owned array MUST be Zarr v3 (R21 §3.1). A referenced array MAY be Zarr v2, because a packet does not control how an external producer wrote it.
+A packet-owned array MUST be Zarr v3. A referenced array MAY be Zarr v2, because a packet does not control how an external producer wrote it.
 
-An array MUST use a **regular chunk grid** (R3 §7.1): every chunk the same shape, the last along each axis permitted to be partial. An irregular grid is expressible in Zarr and is not readable by every binding.
+An array MUST use a **regular chunk grid**: every chunk the same shape, the last along each axis permitted to be partial. An irregular grid is expressible in Zarr and is not readable by every binding.
 
-Stated as the prohibition a validator can check: `physical_profile: "zarr_v2"` MUST NOT appear on a resource that is not `external: true` (R21 §3.2).
+Stated as the prohibition a validator can check: `physical_profile: "zarr_v2"` MUST NOT appear on a resource that is not `external: true`.
 
-Each array resource declares its own Zarr version in the catalog. A reader MUST check a resource's `physical_profile` together with its `codecs` before opening it, and MUST fail **for that resource**, naming whichever it lacks — the per-resource degradation R15 §2 requires applies to the version as much as to the codec, because a reader may support a codec in one Zarr version and not the other.
+Each array resource declares its own Zarr version in the catalog. A reader MUST check a resource's `physical_profile` together with its `codecs` before opening it, and MUST fail **for that resource**, naming whichever it lacks. Per-resource degradation applies to the version as much as to the codec, because a reader may support a codec in one Zarr version and not the other.
 
 ### 6.2 Axis order
 
-Array axes are stored order, slowest-varying first (R3 §5). An array's codec chain MUST NOT include `transpose`.
+Array axes are stored order, slowest-varying first. An array's codec chain MUST NOT include `transpose`.
 
 A column-major binding enumerates axes in reverse. The client adapts; the format does not.
 
 ### 6.3 Axis coordinates
 
-Every axis MUST declare its coordinates in `core.array_dimensions`, in one of the forms of R20 §2. A regularly sampled axis declares an origin tick, a step, and a length rather than storing per-sample values.
+Every axis MUST declare its coordinates in `core.array_dimensions`, in one of its declared coordinate forms. A regularly sampled axis declares an origin tick, a step, and a length rather than storing per-sample values.
 
-A step MAY be rational, declared as a numerator and denominator (R33 §2): a 30 ms bin at 31,250 Hz is 937.5 ticks.
+A step MAY be rational, declared as a numerator and denominator: a 30 ms bin at 31,250 Hz is 937.5 ticks.
 
 
-An axis MUST declare no more than one coordinate form: two descriptions of the same positions can disagree and nothing would say which governs (R20 §3).
+An axis MUST declare no more than one coordinate form: two descriptions of the same positions can disagree and nothing would say which governs.
 
-A rational step is a numerator and a denominator. `step_tick_den`, where present, MUST be positive, the numerator MUST be present wherever an origin is, and the pair SHOULD be in lowest terms so two packets describing the same axis describe it identically (R33 §2).
+A rational step is a numerator and a denominator. `step_tick_den`, where present, MUST be positive, the numerator MUST be present wherever an origin is, and the pair SHOULD be in lowest terms so two packets describing the same axis describe it identically.
 
-Where an array declares both a sampling rate and a regular tick axis, the two describe the same thing and MUST agree (R20 §4). The rate is retained as a validated denormalization, not as a second source of truth.
+Where an array declares both a sampling rate and a regular tick axis, the two describe the same thing and MUST agree. The rate is retained as a validated denormalization, not as a second source of truth.
 
 ### 6.4 Codecs
 
-A writer MAY use any Zarr codec. The catalog MUST name every codec a resource uses. A reader MUST check a resource's declared codecs before opening it, and MUST fail naming what it lacks rather than returning partial data (R14 §2.2, R15 §2).
+A writer MAY use any Zarr codec. The catalog MUST name every codec a resource uses. A reader MUST check a resource's declared codecs before opening it, and MUST fail naming what it lacks rather than returning partial data.
 
-The floor a reader is required to support is stated per Zarr version, because implementations differ between them (R21 §3):
+The floor a reader is required to support is stated per Zarr version, because implementations differ between them:
 
 | `physical_profile` | a reader MUST support | a writer MAY also use |
 |---|---|---|
@@ -1501,7 +1466,7 @@ The asymmetry between the versions is measured, not chosen: `gzip` is in the v3 
 
 ### 6.5 What the array declares, and what the tables declare
 
-`core.array_assets` MUST NOT carry dtype or shape. The Zarr array declares them, and restating them buys no otherwise-unavailable access (R3 §3.0).
+`core.array_assets` MUST NOT carry dtype or shape. The Zarr array declares them, and restating them buys no otherwise-unavailable access.
 
 `core.array_dimensions` carries axis names, because a Zarr binding in another language cannot see them.
 
@@ -1522,19 +1487,19 @@ A value used for filtering, grouping, joining, or validation MUST be a first-cla
 
 ### 8.1 Packet-owned bytes
 
-A writer MUST NOT modify a resource the packet owns once it is committed (R14 §2.3). A correction is a new packet version, not an edit.
+A writer MUST NOT modify a resource the packet owns once it is committed. A correction is a new packet version, not an edit.
 
-This promise is what allows an amendment to skip revalidating untouched files (R35 §2), so it is verified rather than assumed: a writer records a checksum for every packet-owned resource (§10).
+This promise is what allows an amendment to skip revalidating untouched files, so it is verified rather than assumed: a writer records a checksum for every packet-owned resource (§10).
 
 ### 8.2 External bytes
 
-This specification promises nothing about bytes the packet does not own. What a packet records about an external resource is what was true when it was checked, not a claim about now (R14 §2.3.1).
+This specification promises nothing about bytes the packet does not own. What a packet records about an external resource is what was true when it was checked, not a claim about now.
 
 ## 9. Amendment, versioning, and retention
 
 ### 9.1 What an amendment is
 
-An **amendment** produces a new version of an existing packet and MUST NOT modify any file the superseded manifest names (R32 §2). A table that gains rows is written as a **new file**, and the amended manifest names the new file; no byte of the old one changes. Immutability is thereby a property of files, and a resource's *content* may be superseded by naming different bytes.
+An **amendment** produces a new version of an existing packet and MUST NOT modify any file the superseded manifest names. A table that gains rows is written as a **new file**, and the amended manifest names the new file; no byte of the old one changes. Immutability is thereby a property of files, and a resource's *content* may be superseded by naming different bytes.
 
 An amendment MUST set a `packet_version` that sorts strictly after the superseded one, compared as a semantic version.
 
@@ -1556,63 +1521,62 @@ Provenance tables are the exception because they are append-only by nature — a
 
 ### 9.3 The manifest
 
-Every superseded manifest is retained under `manifests/` (R32 §4), so a later cleanup can distinguish a file an old version named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own validation record; an amendment MUST NOT rewrite either.
+Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file an old version named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own validation record; an amendment MUST NOT rewrite either.
 
-Where an amendment installs a different registry, the packet retains the superseded copy alongside it (R32 §4.1). Installing different content under a `registry_version` the packet has already retained makes that version ambiguous **within one packet**, and a writer MUST refuse it.
+Where an amendment installs a different registry, the packet retains the superseded copy alongside it. Installing different content under a `registry_version` the packet has already retained makes that version ambiguous **within one packet**, and a writer MUST refuse it.
 
 ### 9.4 Scope of revalidation
 
-An amendment MUST validate the whole packet, not only what it added (R32 §5). What R35 bounds is
-the *work*, not the verdict: the resources an amendment did not write are immutable, so their
+An amendment MUST validate the whole packet, not only what it added. What is bounded is the
+*work*, not the verdict: the resources an amendment did not write are immutable, so their
 verdict is determined rather than assumed, and re-establishing it costs nothing.
 
 A writer performing an amendment MUST establish the physical order of the resources it writes, and a validator MUST NOT
-require it to re-establish that order for any other packet-owned resource (R35 §4).
+require it to re-establish that order for any other packet-owned resource.
 
 A validator MUST re-run a check when it is **attached to** a resource the amendment writes, **or when its
-query names one**; a check meeting neither condition MAY be skipped (R35 §2). The second test is
+query names one**; a check meeting neither condition MAY be skipped. The second test is
 syntactic — a generated check refers to a resource by its flattened name — so a rule that names a
 resource added later is caught without the registry having to declare that it might.
 
-A validator **MUST make that test over-inclusive where it is uncertain** (R35 §5). Matching a resource name inside
+A validator **MUST make that test over-inclusive where it is uncertain**. Matching a resource name inside
 a string literal or a comment re-runs a check that did not need it, which costs time; failing to
 match one costs correctness. A validator that cannot show an input is immutable MUST run the
-check (R35 §6): skipping a check whose inputs *could* have changed stays forbidden, which is what
-R32 §5 was protecting.
+check: skipping a check whose inputs *could* have changed stays forbidden.
 
 ### 9.5 Cleanup
 
-Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second (R61 §2.1). Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
+Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second. Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
 
-A writer MUST NOT remove a **stray** — a file no manifest ever named (R61 §2.1). A packet may carry
+A writer MUST NOT remove a **stray** — a file no manifest ever named. A packet may carry
 files this specification does not govern, and cleanup that deletes the ungoverned is a data-loss
 bug wearing an operation's name. The operation reports by default and acts only when asked.
 
-An amendment **MUST NOT** delete anything as part of amending (R32 §6). A file that no manifest
+An amendment **MUST NOT** delete anything as part of amending. A file that no manifest
 version names any longer MAY be deleted, but by cleanup, as a separate operation — which is what
 keeps an amendment's failure from having removed something.
 
-A packet MAY declare its own retention, and a writer SHOULD emit one (R61 §2.2): how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
+A packet MAY declare its own retention, and a writer SHOULD emit one: how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 
 ### 9.6 What a version is not
 
-`packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's rows under a future lakehouse profile (R61 §4).
+`packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's rows under a future lakehouse profile.
 
 ## 10. Checksums
 
-A writer records a `sha256` over each packet-owned resource by default (R52 §2). This is the one case where a digest verifies what the packet itself claims, and it is cheap: whole-file, one file per resource.
+A writer records a `sha256` over each packet-owned resource by default. This is the one case where a digest verifies what the packet itself claims, and it is cheap: whole-file, one file per resource.
 
 A digest is whole-file, not per-row-group. Parquet cannot be appended to, so "which pages moved" is not a question the format can be asked, and Parquet's own page CRC32 is a corruption detector that a rewritten file passes.
 
-A packet-owned resource recording no digest is not checked, and a verification report MUST state how many it skipped for that reason (R52 §2.3). A pass that does not say what it skipped reports clean on resources it never looked at.
+A packet-owned resource recording no digest is not checked, and a verification report MUST state how many it skipped for that reason. A pass that does not say what it skipped reports clean on resources it never looked at.
 
 Verification of external resources is optional and layered (Part 04 §5.3).
 
 ## 11. Reaching a source
 
-An adapter reads one source and returns records, and a build assembles a packet from several (Part 05 §3.1). This section is what passes between them: the protocols rows may cross by, what a build supplies an adapter, what a delivery states, and how an adapter declares itself. It is the profile's rather than the pipeline's because every rule in it would change if the profile changed, and because an adapter is the first thing an implementation in another language writes (R115 §3.6).
+An adapter reads one source and returns records, and a build assembles a packet from several (Part 05 §3.1). This section is what passes between them: the protocols rows may cross by, what a build supplies an adapter, what a delivery states, and how an adapter declares itself. It is the profile's rather than the pipeline's because every rule in it would change if the profile changed, and because an adapter is the first thing an implementation in another language writes.
 
-An **adapter** here is code that reads one source, whether the reference implementation ships it or a third party does. A clause binding an adapter binds one it does not ship identically (R115 §1).
+An **adapter** here is code that reads one source, whether the reference implementation ships it or a third party does. A clause binding an adapter binds one it does not ship identically.
 
 ### 11.1 Protocol groups
 
@@ -1624,17 +1588,17 @@ A profile names a **group** for each way rows cross a process boundary, and the 
 | `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
 | `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource |
 
-An adapter **released independently of a build** MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names (R115 §3.3). The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting such an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
+An adapter **released independently of a build** MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names. The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting such an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
 
 An adapter a build ships with need not declare one, and a build reaches it directly. The test is the release boundary rather than who wrote the code: an adapter inside a build's distribution is upgraded in the commit that changes a dependency, where one released apart is on the far side of a version boundary the build moves without asking, and the protocol is what keeps that move from being an outage. A build MAY serve an adapter it ships over any protocol of the group, which is how one becomes reachable out of process without declaring anything.
 
-A protocol carries its version in its name, semantically versioned from `v0.1`. A profile MUST NOT change what a named protocol means; a protocol that changes how rows cross is a new member of the group, and a build MUST NOT read support for one version as support for another (R115 §3.3). Retiring a protocol is a change to this profile and not a decision a build makes.
+A protocol carries its version in its name, semantically versioned from `v0.1`. A profile MUST NOT change what a named protocol means; a protocol that changes how rows cross is a new member of the group, and a build MUST NOT read support for one version as support for another. Retiring a protocol is a change to this profile and not a decision a build makes.
 
 An adapter a recipe opts into the writer's process (Part 05 §3.9) is bound by this section too: the opt-in decides where a build runs an adapter, not what the adapter supports.
 
 ### 11.2 What a build supplies
 
-An adapter MUST declare every value a build supplies it, and a build MUST supply exactly what the adapter declares and MUST NOT decide it from the source's kind (R115 §3.1). Everything supplied is data: a build MUST NOT require an adapter to accept a live handle — an open store, a connection, an object of the implementation's own — because what crosses a process boundary is text, and an adapter with two ways in has one that depends on where it is running.
+An adapter MUST declare every value a build supplies it, and a build MUST supply exactly what the adapter declares and MUST NOT decide it from the source's kind. Everything supplied is data: a build MUST NOT require an adapter to accept a live handle — an open store, a connection, an object of the implementation's own — because what crosses a process boundary is text, and an adapter with two ways in has one that depends on where it is running.
 
 The vocabulary is closed. Each term names one value and the form it takes, so an adapter and a build written by different people pass the same thing:
 
@@ -1650,71 +1614,71 @@ The vocabulary is closed. Each term names one value and the form it takes, so an
 | `array_location` | a location under the staging area to write an array to (§11.3) |
 | an option, by its name | the value the recipe carries under it — a `zone`, an `interval_kind` |
 
-A build MUST resolve each declared name against that list first and the recipe's options second, and MUST refuse a recipe where a name resolves to neither (R115 §3.1). A profile adding a term amends this section.
+A build MUST resolve each declared name against that list first and the recipe's options second, and MUST refuse a recipe where a name resolves to neither. A profile adding a term amends this section.
 
-An adapter MUST declare in `accepts` every option it reads and can be constructed without, and in `needs` every value it cannot; it MUST NOT name one option in both, and MUST NOT name in `accepts` a term of the list above or a term a protocol requires (R119 §3.1). Declaring a name in `needs` is what makes a recipe carry it, so an option holding a default is declarable only as an accepted one. An adapter MUST apply its own default where the recipe sets no value, so what an omitted option means is the adapter's statement rather than a value the build invents.
+An adapter MUST declare in `accepts` every option it reads and can be constructed without, and in `needs` every value it cannot; it MUST NOT name one option in both, and MUST NOT name in `accepts` a term of the list above or a term a protocol requires. Declaring a name in `needs` is what makes a recipe carry it, so an option holding a default is declarable only as an accepted one. An adapter MUST apply its own default where the recipe sets no value, so what an omitted option means is the adapter's statement rather than a value the build invents.
 
-A build MUST supply an option the recipe sets and the adapter names in either list, and MUST NOT require a recipe to set one named in `accepts`. A build MUST refuse a recipe whose source entry sets an option the adapter names in neither, naming the source and the option, before any source is opened (R119 §3.2). A build MUST NOT supply an option the adapter names in neither list, including one it adds itself rather than reading from the recipe, and MUST NOT apply a facility of its own to an adapter that does not name the option carrying it (R119 §3.3).
+A build MUST supply an option the recipe sets and the adapter names in either list, and MUST NOT require a recipe to set one named in `accepts`. A build MUST refuse a recipe whose source entry sets an option the adapter names in neither, naming the source and the option, before any source is opened. A build MUST NOT supply an option the adapter names in neither list, including one it adds itself rather than reading from the recipe, and MUST NOT apply a facility of its own to an adapter that does not name the option carrying it.
 
-A build MUST refuse a recipe where a term the list carries cannot be filled, naming the term and the source, and MUST NOT pass such a term absent or empty: `first_samples` needs a source that states them and `units` one that produced them, and an adapter cannot tell a term nobody filled from one whose value is legitimately empty (R115 §3.1).
+A build MUST refuse a recipe where a term the list carries cannot be filled, naming the term and the source, and MUST NOT pass such a term absent or empty: `first_samples` needs a source that states them and `units` one that produced them, and an adapter cannot tell a term nobody filled from one whose value is legitimately empty.
 
 A build MUST pass a collection as records carrying its key as columns. A mapping's keys are a type the crossing does not keep: an integer key returns as a string, and a compound key does not cross at all.
 
 Some terms belong to a protocol rather than to an adapter. `flight-v0.1` requires `socket`, the address to serve on; `files-v0.1` requires `delivery_root`, the directory to write the delivery into; both `files-v0.1` and `stream-v0.1` require `report_path` where a report is expected (Part 09 §5.8). A build MUST supply whichever terms its adapter's protocol requires, and an adapter MUST NOT declare one — declaring the protocol is what asks for it.
 
-What crosses is one JSON object keyed by the term. A build MUST write it to the command's standard input and MUST close that stream when it has, MUST NOT pass it as an argument, and MUST NOT add any argument to the command the recipe carries (R116 §3.1). An adapter MUST read its standard input to end of file and parse it as that object before it writes any rows, and a build supplies nothing else on that stream. An option appears under `options`, keyed by its name, so no option collides with a term.
+What crosses is one JSON object keyed by the term. A build MUST write it to the command's standard input and MUST close that stream when it has, MUST NOT pass it as an argument, and MUST NOT add any argument to the command the recipe carries. An adapter MUST read its standard input to end of file and parse it as that object before it writes any rows, and a build supplies nothing else on that stream. An option appears under `options`, keyed by its name, so no option collides with a term.
 
-An argument list is not the channel because it has a size no profile can raise — 131,072 bytes for one argument on Linux, 32,767 characters for a whole command line on Windows — and a term carrying one record per unit reached 322,799 bytes on a real session, where an adapter's whole object measured 721 against a fixture that had none (R116 §2.1). Standard input carries nothing under any protocol of the group and has no such limit.
+An argument list is not the channel because it has a size no profile can raise — 131,072 bytes for one argument on Linux, 32,767 characters for a whole command line on Windows — and a term carrying one record per unit reached 322,799 bytes on a real session, where an adapter's whole object measured 721 against a fixture that had none. Standard input carries nothing under any protocol of the group and has no such limit.
 
 The wanted set is a term a build supplies and an adapter MAY act on. A build settles ownership before any source is opened (Part 05 §3.4), so an adapter told what is wanted may extract no more; acting on it is permitted rather than required, because for some sources producing three resources costs what producing all of them costs, and a build cannot tell an adapter that extracted three from one that extracted everything and discarded the rest.
 
 ### 11.3 What a delivery states
 
-A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is Part 02 §5's presence and nothing else (R115 §3.6). A build MUST NOT read an absent column as saying anything more.
+A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is Part 02 §5's presence and nothing else. A build MUST NOT read an absent column as saying anything more.
 
 An adapter MUST hand over identifiers as the names its source used and never as numbers, because a writer mints every assigned identifier packet-wide and the numbers do not exist until it has (Part 05 §8). Types, column order, numbering and the declared sort are the build's: it holds the registry and settles all four on arrival.
 
-A resource an adapter owns and has no rows for MUST arrive empty rather than not arriving (R115 §3.10). An empty delivery states that the source had nothing to say; a resource that does not arrive states that the run failed, and a build that cannot tell them apart cannot report either.
+A resource an adapter owns and has no rows for MUST arrive empty rather than not arriving. An empty delivery states that the source had nothing to say; a resource that does not arrive states that the run failed, and a build that cannot tell them apart cannot report either.
 
 An adapter's arrays MUST NOT cross as rows. A dense array crosses as a reference: its `array_asset_id`, the layout the adapter chose — chunking, sharding, codecs, fill value — and a location. Where the packet will own the array, a build MUST supply a location under the staging area (Part 05 §1) and the adapter MUST write the array there and return the reference, so commit moves it by the rename Part 05 §6 already performs. Where the array is external (§8.2), a build supplies no location and the producer returns the URI its source already has.
 
-**A packet-owned array crosses as the bytes themselves.** A build MUST supply `array_location`, one directory per source, since two sources may each deliver an asset of one name and a shared directory would make them one array; the adapter MUST write each array into it as Zarr v3 (§6.1), in a directory named by the array's `array_asset_id` with the suffix `.zarr` (R117 §3.1). A build MUST take that name as the asset's identifier and MUST refuse a delivery where an array arrives that the source's `core.array_assets` rows do not declare, or where a row declares a packet-owned array that did not: an asset whose bytes and whose row disagree about which asset they are is one a build cannot describe.
+**A packet-owned array crosses as the bytes themselves.** A build MUST supply `array_location`, one directory per source, since two sources may each deliver an asset of one name and a shared directory would make them one array; the adapter MUST write each array into it as Zarr v3 (§6.1), in a directory named by the array's `array_asset_id` with the suffix `.zarr`. A build MUST take that name as the asset's identifier and MUST refuse a delivery where an array arrives that the source's `core.array_assets` rows do not declare, or where a row declares a packet-owned array that did not: an asset whose bytes and whose row disagree about which asset they are is one a build cannot describe.
 
-Nothing else crosses for such an array, and a build MUST NOT require an adapter to state any of it. Every field of its manifest entry is in the array or in the build: `physical_profile` is the array's `zarr_format`, `codecs` its codec chain outermost first and descending through a shard, `size_bytes` and `sha256` the bytes a build digests for anything the packet owns (Part 03 §8.1), and the rest the build's own (R117 §2.2). An adapter delivering an array therefore writes bytes where one delivering rows performs no I/O at all, which is the cost of an array not being records (R115 §3.6).
+Nothing else crosses for such an array, and a build MUST NOT require an adapter to state any of it. Every field of its manifest entry is in the array or in the build: `physical_profile` is the array's `zarr_format`, `codecs` its codec chain outermost first and descending through a shard, `size_bytes` and `sha256` the bytes a build digests for anything the packet owns (Part 03 §8.1), and the rest the build's own. An adapter delivering an array therefore writes bytes where one delivering rows performs no I/O at all, which is the cost of an array not being records.
 
-**A referenced resource crosses as a resource document.** An adapter that delivers one MUST deliver that document with it, under the reserved resource identifier `resources` (§11.4): a JSON object carrying `resources`, an array with one entry per such resource, each a manifest resource entry as Part 04 §5 declares one (R117 §3.2). A build MUST merge each entry into the manifest it writes and MUST NOT require any field but `resource_id` and `uri`, since a writer that cannot reach a URI records nothing (Part 04 §5.2) and `external` is a field a build fills rather than reads. Its shape is published as `registry/resources.schema.json`, and a build MUST refuse a document that does not satisfy it, naming what is wrong, before it writes a manifest: this is the catalog's own content arriving from elsewhere, and a malformed entry merged into a manifest is a packet that misdescribes its own resources (R117 §3.3).
+**A referenced resource crosses as a resource document.** An adapter that delivers one MUST deliver that document with it, under the reserved resource identifier `resources` (§11.4): a JSON object carrying `resources`, an array with one entry per such resource, each a manifest resource entry as Part 04 §5 declares one. A build MUST merge each entry into the manifest it writes and MUST NOT require any field but `resource_id` and `uri`, since a writer that cannot reach a URI records nothing (Part 04 §5.2) and `external` is a field a build fills rather than reads. Its shape is published as `registry/resources.schema.json`, and a build MUST refuse a document that does not satisfy it, naming what is wrong, before it writes a manifest: this is the catalog's own content arriving from elsewhere, and a malformed entry merged into a manifest is a packet that misdescribes its own resources.
 
 The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (Part 09 §5.8), so a fact a catalog cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
 
 ### 11.4 The Arrow IPC floor
 
-An Arrow IPC stream carries one schema and an adapter returns many resources, so under `stream-v0.1` the streams concatenate: each ends with the format's own end-of-stream marker, and the resource identifier rides in the schema's key-value metadata under the key `resource_id` (R115 §3.3). That key and two reserved values of it — `end`, and `resources` for the document §11.3 requires of an adapter delivering a referenced resource — are the whole of what this protocol adds to Arrow. A resource identifier is dotted, so no undotted token collides with either (R117 §3.2). A document carried this way travels as text in a single-row table rather than as a column per field, so the manifest's schema stays the one description of an entry.
+An Arrow IPC stream carries one schema and an adapter returns many resources, so under `stream-v0.1` the streams concatenate: each ends with the format's own end-of-stream marker, and the resource identifier rides in the schema's key-value metadata under the key `resource_id`. That key and two reserved values of it — `end`, and `resources` for the document §11.3 requires of an adapter delivering a referenced resource — are the whole of what this protocol adds to Arrow. A resource identifier is dotted, so no undotted token collides with either. A document carried this way travels as text in a single-row table rather than as a column per field, so the manifest's schema stays the one description of an entry.
 
-"Arrow IPC" names a family, so this profile pins one member of it, as §5.5 pins Parquet's compressions. An adapter MUST write uncompressed record-batch bodies at metadata version V5, and MUST send each dictionary whole rather than as a delta against one already sent (R115 §3.3). Compressing buys nothing on a pipe and costs an adapter author a codec in a language whose Arrow binding may not carry one; V5 has been the default since Arrow 1.0, and a delta dictionary is the least evenly implemented part of the format.
+"Arrow IPC" names a family, so this profile pins one member of it, as §5.5 pins Parquet's compressions. An adapter MUST write uncompressed record-batch bodies at metadata version V5, and MUST send each dictionary whole rather than as a delta against one already sent. Compressing buys nothing on a pipe and costs an adapter author a codec in a language whose Arrow binding may not carry one; V5 has been the default since Arrow 1.0, and a delta dictionary is the least evenly implemented part of the format.
 
 An adapter MUST terminate every resource's stream with the end-of-stream marker and a build MUST consume exactly to it, so the next resource's schema begins at the next byte. An adapter that omits one delivers bytes no reader can frame; a build that consumes past one loses every resource after it and reports a truncation on a delivery that finished.
 
-A reader treats end of file as end of stream, so a delivery cut at a message boundary parses clean and cannot be told from a short one. `stream-v0.1` therefore ends a delivery with an empty stream whose `resource_id` is `end`. A build MUST refuse a delivery that did not end with it, and MUST name the last resource it read as the one the adapter died inside rather than the first that never arrived (R115 §3.10). A resource identifier is dotted, so no undotted token can collide with the reserved value.
+A reader treats end of file as end of stream, so a delivery cut at a message boundary parses clean and cannot be told from a short one. `stream-v0.1` therefore ends a delivery with an empty stream whose `resource_id` is `end`. A build MUST refuse a delivery that did not end with it, and MUST name the last resource it read as the one the adapter died inside rather than the first that never arrived. A resource identifier is dotted, so no undotted token can collide with the reserved value.
 
 Where rows travel on standard output they are bytes. An adapter MUST write the stream to a binary handle and a build MUST read one, because a platform translating a line ending corrupts the stream, which then fails as malformed data rather than as an encoding error.
 
 ### 11.5 The declaration document
 
-A build reads what an adapter declares before it opens any source, and for a class it reads that by importing the adapter — which this section forbids requiring. An adapter a build cannot import MUST publish its declarations as a JSON document the recipe names, and a build MUST read that document before it launches anything (R115 §3.12).
+A build reads what an adapter declares before it opens any source, and for a class it reads that by importing the adapter — which this section forbids requiring. An adapter a build cannot import MUST publish its declarations as a JSON document the recipe names, and a build MUST read that document before it launches anything.
 
 The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocol`, `produces`, `states`, `needs`, `accepts` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. Its shape is published as `registry/adapter.schema.json`.
 
-A document carries `accepts` where the adapter names any, as an array of option names in the same form as `needs`, and a build MUST read a document without it as an adapter accepting no option beyond what it needs (R119 §3.4). A document written before `accepts` existed therefore accepts none, and a recipe setting an option for such an adapter is refused until its document declares one.
+A document carries `accepts` where the adapter names any, as an array of option names in the same form as `needs`, and a build MUST read a document without it as an adapter accepting no option beyond what it needs. A document written before `accepts` existed therefore accepts none, and a recipe setting an option for such an adapter is refused until its document declares one.
 
 A build MUST treat a document and an importable declaration of the same facts as one declaration, and MUST NOT prefer either where both are present. An implementation shipping both MUST generate the document rather than maintain it.
 
-A build MUST refuse a declaration whose `protocol` names no protocol of a group this profile names, whose `produces` names a resource no loaded registry declares, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option (R115 §3.12). A build MUST also refuse one whose `accepts` names a term, names an option its `needs` also names, or is not an array of names (R119 §3.4). None of those need the adapter opened or imported.
+A build MUST refuse a declaration whose `protocol` names no protocol of a group this profile names, whose `produces` names a resource no loaded registry declares, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option. A build MUST also refuse one whose `accepts` names a term, names an option its `needs` also names, or is not an array of names. None of those need the adapter opened or imported.
 
 `states` names the recipe fields a source can state and the values need the source read, so no static document carries them: they travel under `stated` in the run's report (Part 09 §5.8), keyed by the same `block.field` name. An adapter declaring a non-empty `states` MUST return them. A build MUST read a declared field absent from the report as unstated rather than as disagreeing, since a source stating nothing is a fact and not a mismatch (Part 05 §3.6).
 
 ### 11.6 Reaching an adapter that must be running
 
-Where a protocol needs the adapter running — `flight-v0.1` does, `files-v0.1` and `stream-v0.1` do not — the protocol MUST say how a build establishes that. `flight-v0.1` says it by connection: a build retries the address it supplied until the socket answers or the adapter's process exits, and reports the exit (R115 §3.9). A readiness line on standard output is weaker, because a build waiting for a line that never comes cannot tell *not yet* from *never* unless it watches the process as well, which is the whole of what retrying already does.
+Where a protocol needs the adapter running — `flight-v0.1` does, `files-v0.1` and `stream-v0.1` do not — the protocol MUST say how a build establishes that. `flight-v0.1` says it by connection: a build retries the address it supplied until the socket answers or the adapter's process exits, and reports the exit. A readiness line on standard output is weaker, because a build waiting for a line that never comes cannot tell *not yet* from *never* unless it watches the process as well, which is the whole of what retrying already does.
 
 The retry puts one obligation on the adapter: it MUST NOT bind before it can answer `ListFlights`. A build's first call arrives as soon as the socket answers, so an adapter that binds and then extracts serves discovery from a half-built server.
 
@@ -1751,7 +1715,7 @@ The catalog identifies by name. `packet_id`, every entry's `resource_id`, the se
 | `logical_standard_version` | string | MUST |
 | `registry_version` | string | MUST |
 | `created_at` | timestamp | MUST |
-| `sessions` | array of string | MUST (R1 §2) |
+| `sessions` | array of string | MUST |
 | `resources` | array of entry | MUST |
 | `validation` | object | MUST |
 | `required_codecs` | array of string | MUST (§6.2) |
@@ -1771,13 +1735,13 @@ The catalog identifies by name. `packet_id`, every entry's `resource_id`, the se
 | `uri` | string | MUST |
 | `canonical` | bool | MUST |
 | `validation_state` | string | MUST |
-| `sha256` | string | SHOULD for a packet-owned resource (R52 §2.1) |
+| `sha256` | string | SHOULD for a packet-owned resource |
 | `schema_id` | string | MUST for a table |
 | `codecs` | array of string | MUST for an array (§6.2) |
 | `external` | bool | MUST where true (§5) |
 | `source` | string | MAY, on an external entry (§5.5) |
 | `derived_from` | array of string | MUST for a derived resource (§7) |
-| `processing_run_id` | string | MUST for an analysis resource (R31 §3); SHOULD for any other derived resource |
+| `processing_run_id` | string | MUST for an analysis resource; SHOULD for any other derived resource |
 
 ### 4.2 Kinds
 
@@ -1790,15 +1754,15 @@ The catalog identifies by name. `packet_id`, every entry's `resource_id`, the se
 
 ### 4.3 Withdrawn blocks
 
-The `canonical_representations` block is withdrawn: spikes have one canonical representation, so there is nothing to arbitrate (R5 §2).
+The `canonical_representations` block is withdrawn: spikes have one canonical representation, so there is nothing to arbitrate.
 
-A top-level provenance block is withdrawn. Provenance is carried in `core.source_files`, `core.processing_runs`, and `core.processing_run_inputs`; the catalog records outputs at resource granularity only (R9 §2).
+A top-level provenance block is withdrawn. Provenance is carried in `core.source_files`, `core.processing_runs`, and `core.processing_run_inputs`; the catalog records outputs at resource granularity only.
 
 ## 5. External resources
 
 ### 5.1 Declaration
 
-A resource the packet does not own MUST set `external: true`. A resource whose `uri` is absolute MUST declare `external: true`; **the converse does not hold** (R14 §2.3), so a packet MAY declare a resource external and still resolve it relatively, which is how a packet published beside its data records that it does not own it.
+A resource the packet does not own MUST set `external: true`. A resource whose `uri` is absolute MUST declare `external: true`; **the converse does not hold**, so a packet MAY declare a resource external and still resolve it relatively, which is how a packet published beside its data records that it does not own it.
 
 Referencing is expected for large resources. Externalizing a table costs more than externalizing an array: its validation rules cannot run at all while it is unreachable.
 
@@ -1806,7 +1770,7 @@ Referencing is expected for large resources. Externalizing a table costs more th
 
 `sha256`, `size_bytes`, and `verified_at` record what was true when the resource was checked. They are not a claim about now.
 
-A writer that cannot reach a URI MUST record nothing rather than copying a value from a local stand-in (R36 §2.4).
+A writer that cannot reach a URI MUST record nothing rather than copying a value from a local stand-in.
 
 ### 5.3 Verification levels
 
@@ -1817,29 +1781,29 @@ Verification of an external resource is layered, and a report MUST state which l
 | 1 | the catalog is internally consistent |
 | 2 | packet-owned resources match their recorded digests |
 | 3a | the external resource exists and lists |
-| 3b | its recorded per-member store digests still match (R51 §2) |
-| 3c | its bytes read and hash to the recorded `sha256` (R36 §2.2) |
+| 3b | its recorded per-member store digests still match |
+| 3c | its bytes read and hash to the recorded `sha256` |
 
 Structural validation MUST NOT reach the network. Levels 3a to 3c run only in a requested mode.
 
 ### 5.4 Prefix resources
 
-Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — `sha256` and `size_bytes` are **defined over its members** (R36 §2.2), not undefined:
+Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — `sha256` and `size_bytes` are **defined over its members**, not undefined:
 
 - `sha256` is the SHA-256 of the UTF-8 encoding of `[["<key>",<size>,"<sha256>"], ...]`, serialised as compact JSON with `,` and `:` separators, no whitespace and ASCII-escaped keys, one entry per object, `<key>` relative to the resource's `uri` with `/` separators, sorted by `<key>` in byte order.
 - `size_bytes` is the sum of the members' sizes.
 
 Sorting the keys is what makes the digest reproducible without knowing the store, since two implementations enumerate an object-store prefix and a local directory in different orders. Carrying each member's own digest is what lets a consumer that fetched three chunks verify those three without the other two hundred.
 
-Such a resource MAY additionally declare a `members` array recording what was seen, each member optionally carrying a `store_digest` (R51 §2.1).
+Such a resource MAY additionally declare a `members` array recording what was seen, each member optionally carrying a `store_digest`.
 
 A member array is a record, not a resolution rule: a reader hands the prefix to the array library and does not enumerate it.
 
-Where `members` accompanies R36 §2.2's `sha256`, the listing digested MUST be the declared one, so the enumeration and the digest cannot disagree (R51 §2.1).
+Where `members` accompanies `sha256`, the listing digested MUST be the declared one, so the enumeration and the digest cannot disagree.
 
-Where a validator is asked to verify content **without reading**, it compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading (R51 §2.3). A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped.
+Where a validator is asked to verify content **without reading**, it compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading. A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped.
 
-A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A validator MUST report what a verification pass skipped for these reasons, and **MUST NOT** report a store-digest pass as a checksum verification (R51 §2.4): it establishes something weaker and store-specific, so it gets its own finding.
+A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A validator MUST report what a verification pass skipped for these reasons, and **MUST NOT** report a store-digest pass as a checksum verification: it establishes something weaker and store-specific, so it gets its own finding.
 
 ### 5.5 Source resolution
 
@@ -1852,7 +1816,7 @@ Where a source is, is stated by a **source resolution document**: a JSON documen
 `sources_standard_version` and a `sources` object mapping each source name to an entry with a
 required `uri`, and both objects are closed.
 
-A resolution document MUST NOT be a packet resource. Immutability (§5.1, R14 §2.3) does not reach
+A resolution document MUST NOT be a packet resource. Immutability (§5.1) does not reach
 it, which is what lets a location be corrected when a mirror moves without rebuilding the packet.
 
 A reader MUST accept one or more resolution documents from its caller, and resolves a `source` in
@@ -1872,7 +1836,7 @@ the bytes it found.
 
 ### 6.1 Per resource
 
-Every array resource MUST declare the codecs it uses. A reader checks a resource's own declaration before opening it (R15 §2).
+Every array resource MUST declare the codecs it uses. A reader checks a resource's own declaration before opening it.
 
 ### 6.2 Packet union
 
@@ -1884,11 +1848,11 @@ A codec declared for an external resource is a claim rather than an observation,
 
 A derived resource MUST declare `derived_from`, naming the resources it was computed from.
 
-It SHOULD declare `processing_run_id`, naming a run recorded in `core.processing_runs` (R31 §2). A validator resolves that name against the run table's `*_name` column, since the catalog names and the table numbers (§2).
+It SHOULD declare `processing_run_id`, naming a run recorded in `core.processing_runs`. A validator resolves that name against the run table's `*_name` column, since the catalog names and the table numbers (§2).
 
 ## 8. Extensions
 
-Where a packet carries extension resources, the catalog MUST declare each extension namespace, its version, and the path to its registry document (R17 §4):
+Where a packet carries extension resources, the catalog MUST declare each extension namespace, its version, and the path to its registry document:
 
 ```json
 "extensions": {
@@ -1953,7 +1917,7 @@ A recipe declares, for one packet:
 - what to materialize;
 - session facts no source carries.
 
-A recipe MAY declare a fact a source it reads also states; §3.6 says which of the two the packet gets. `core.subjects` is not a resource the recipe supplies unconditionally: a source that states a subject MAY own it, arbitrated as any other resource two sources can produce, and the recipe's `[subject]` block supplies the table only where no source owns it (R87 §2.8).
+A recipe MAY declare a fact a source it reads also states; §3.6 says which of the two the packet gets. `core.subjects` is not a resource the recipe supplies unconditionally: a source that states a subject MAY own it, arbitrated as any other resource two sources can produce, and the recipe's `[subject]` block supplies the table only where no source owns it.
 
 ### 3.2 The recipe is the provenance record
 
@@ -1970,29 +1934,29 @@ Each source declares its resources as `owns` or `contributes`.
 
 `contributes` exists because some resources genuinely have several suppliers. Without the distinction, the last adapter to run wins silently.
 
-A recipe MUST NOT declare `owns` for a resource that more than one of its sources produces rows for, unless it declares a preference between them (R98 §3.2). Exclusivity is for a resource one source is responsible for; where two sources each hold part, `owns` discards the part the owner does not hold, and no check sees it because the resource is claimed.
+A recipe MUST NOT declare `owns` for a resource that more than one of its sources produces rows for, unless it declares a preference between them. Exclusivity is for a resource one source is responsible for; where two sources each hold part, `owns` discards the part the owner does not hold, and no check sees it because the resource is claimed.
 
-A preference is declared in the recipe, in a table keyed by resource, each entry naming the source that owns it and the reason that source knows more. A build MUST apply a declared preference and MUST NOT hold a preference of its own for any resource a recipe does not name (R115 §3.2): a built-in winner is one no recipe can see, and a recipe that has not heard of a new contest is better refused than silently arbitrated.
+A preference is declared in the recipe, in a table keyed by resource, each entry naming the source that owns it and the reason that source knows more. A build MUST apply a declared preference and MUST NOT hold a preference of its own for any resource a recipe does not name: a built-in winner is one no recipe can see, and a recipe that has not heard of a new contest is better refused than silently arbitrated.
 
-A preference MUST NOT name a resource only one source produces (R108 §3.4). Such an entry arbitrates nothing and exempts a report that will never be due, so it is a claim no build tests, and it goes stale the moment the second producer stops producing.
+A preference MUST NOT name a resource only one source produces. Such an entry arbitrates nothing and exempts a report that will never be due, so it is a claim no build tests, and it goes stale the moment the second producer stops producing.
 
 ### 3.4 What a source can produce
 
-Every source adapter MUST declare the set of resource identifiers it can supply (R63 §2.1). It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
+Every source adapter MUST declare the set of resource identifiers it can supply. It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-An adapter declares five such facts, all read before any source is opened: the resources it can supply, the recipe fields it can state (§3.6), the values a build must supply it (Part 03 §11.2), the options it reads and can run without (Part 03 §11.2), and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's (R115 §3.12, R119 §3.4).
+An adapter declares five such facts, all read before any source is opened: the resources it can supply, the recipe fields it can state (§3.6), the values a build must supply it (Part 03 §11.2), the options it reads and can run without (Part 03 §11.2), and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's.
 
-A build MUST read a source entry that declares no `owns` as owning every resource its adapter declares it can supply and no other source owns (R63 §2.2). **A recipe states what it narrows; silence means the whole.**
+A build MUST read a source entry that declares no `owns` as owning every resource its adapter declares it can supply and no other source owns. **A recipe states what it narrows; silence means the whole.**
 
 Where two sources default to the same resource and no preference is declared, a build MUST refuse the recipe naming both.
 
-A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them (R98 §3.3). That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. R63 §2.3's warning covers the neighbouring case, a resource *no* source claims, reported before a byte is read.
+A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them. That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. The neighbouring case, a resource *no* source claims, is reported as a warning before a byte is read.
 
-A build MUST refuse where a preference discards a value another source stated: where a passed-over source's row holds a non-null value in a column the preferred source's row leaves null, or does not produce at all (R108 §3.1). Where a preferred source produces no rows for the resource and another does, that is the rule's limiting case. The comparison is over declared columns and not over `metadata`, which §8 of Part 02 makes schemaless by design, so two sources filling it differently is not a difference a build can weigh. That refusal is what makes the exemption above sound: the exemption rests on the loser's copy being redundant, and a preference is declared before either source is opened.
+A build MUST refuse where a preference discards a value another source stated: where a passed-over source's row holds a non-null value in a column the preferred source's row leaves null, or does not produce at all. Where a preferred source produces no rows for the resource and another does, that is the rule's limiting case. The comparison is over declared columns and not over `metadata`, which §8 of Part 02 makes schemaless by design, so two sources filling it differently is not a difference a build can weigh. That refusal is what makes the exemption above sound: the exemption rests on the loser's copy being redundant, and a preference is declared before either source is opened.
 
-A build MUST NOT compose a row from more than one source (R108 §3.2). The merged row would be a fact no source stated. A recipe resolves the refusal by naming the fact in `[overrides]` with its reason (R87 §2.5), by preferring the other source, or by correcting the source that states less.
+A build MUST NOT compose a row from more than one source. The merged row would be a fact no source stated. A recipe resolves the refusal by naming the fact in `[overrides]` with its reason, by preferring the other source, or by correcting the source that states less.
 
-A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for (R87 §2.2). What an implementation calls that declaration in code is Part 07 §4's, and the key it takes in a declaration document is Part 03 §11.5's.
+A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for. What an implementation calls that declaration in code is Part 07 §4's, and the key it takes in a declaration document is Part 03 §11.5's.
 
 ### 3.5 Checking a recipe
 
@@ -2004,7 +1968,7 @@ A build MUST check a recipe against the registry before it opens any source. A b
 - a clock declared twice, referenced but absent, or parented to nothing;
 - a required source option that is not set.
 
-A build MUST also refuse, on the same terms and before any source is opened (R115 §3.1, §3.12; R119 §3.2, §3.4):
+A build MUST also refuse, on the same terms and before any source is opened:
 
 - an adapter declaring a value Part 03 §11.2 resolves to neither a term nor a recipe option;
 - an adapter declaring a term that list carries and this recipe cannot fill, naming the term and the source;
@@ -2017,42 +1981,42 @@ A build MUST also refuse, on the same terms and before any source is opened (R11
 A build MUST report as a **warning**:
 
 - an owned table whose **nullable** foreign key targets a table nothing supplies;
-- a resource some listed source declares in `PRODUCES` that no source claims (R63 §2.3);
-- a field the recipe declares that some listed source states and no override covers (R87 §2.3).
+- a resource some listed source declares in `PRODUCES` that no source claims;
+- a field the recipe declares that some listed source states and no override covers.
 
 A warning is not an error because narrowing is legitimate, and only the recipe's author knows whether this one was meant.
 
 ### 3.6 Authority for a declared fact
 
-Where a recipe declares a fact and a source the same recipe reads states that fact, a build MUST report a difference between the two, naming the field, the declared value, the source's value and the file it came from (R87 §2.1). A build MUST refuse only where the fact identifies something a reader resolves across packets; otherwise it proceeds, and `--strict` refuses. `[subject].subject_id` is that case and the only one: a subject is not scoped to a session, so a wrong one agrees with another packet's animal instead of colliding with the true value.
+Where a recipe declares a fact and a source the same recipe reads states that fact, a build MUST report a difference between the two, naming the field, the declared value, the source's value and the file it came from. A build MUST refuse only where the fact identifies something a reader resolves across packets; otherwise it proceeds, and `--strict` refuses. `[subject].subject_id` is that case and the only one: a subject is not scoped to a session, so a wrong one agrees with another packet's animal instead of colliding with the true value.
 
-Two values are compared at the type the packet will store, both normalized to it first. A source stating no value for a declared fact is not a disagreement: the declaration stands, a writer MUST NOT report it as a mismatch, and SHOULD note that it went unchecked (R87 §2.4).
+Two values are compared at the type the packet will store, both normalized to it first. A source stating no value for a declared fact is not a disagreement: the declaration stands, a writer MUST NOT report it as a mismatch, and SHOULD note that it went unchecked.
 
-A recipe MAY declare that its own value supersedes the source's, by naming the field in a top-level `[overrides]` table keyed `block.field`. The value MUST be a non-empty reason. Declaring an override is never required: it records a decision and silences the report, and a recipe declaring none is conforming. A build MUST report an override for a field the source agrees with, or that no source states, and MUST NOT refuse on either (R87 §2.5).
+A recipe MAY declare that its own value supersedes the source's, by naming the field in a top-level `[overrides]` table keyed `block.field`. The value MUST be a non-empty reason. Declaring an override is never required: it records a decision and silences the report, and a recipe declaring none is conforming. A build MUST report an override for a field the source agrees with, or that no source states, and MUST NOT refuse on either.
 
-The comparison needs the source read, so it happens as each source is built, and a build MUST refuse before any resource is staged (R87 §2.6). A source's statement of a fact is whatever its adapter exposes for that fact; which of several values inside a file it stands behind is the adapter's judgement and not the recipe's.
+The comparison needs the source read, so it happens as each source is built, and a build MUST refuse before any resource is staged. A source's statement of a fact is whatever its adapter exposes for that fact; which of several values inside a file it stands behind is the adapter's judgement and not the recipe's.
 
-A fact the source **derives** is the source's. `core.sessions.session_start_time` and `session_end_time` come from the session source's declared stream windows, and a writer MUST use the source's value where a session source is present and MUST report a declaration it did not use rather than discarding it silently (R87 §2.7).
+A fact the source **derives** is the source's. `core.sessions.session_start_time` and `session_end_time` come from the session source's declared stream windows, and a writer MUST use the source's value where a session source is present and MUST report a declaration it did not use rather than discarding it silently.
 
 ### 3.7 When a source runs a command
 
-A command that exits non-zero MUST fail the build, and a build MUST name the source whose command failed together with the resources that source owns, rather than reporting the first resource it then finds missing (R109 §3.3). A command belongs to a source and a source is not an extension: one command may produce tables of several extensions, so a finding naming one of them would be wrong about the rest.
+A command that exits non-zero MUST fail the build, and a build MUST name the source whose command failed together with the resources that source owns, rather than reporting the first resource it then finds missing. A command belongs to a source and a source is not an extension: one command may produce tables of several extensions, so a finding naming one of them would be wrong about the rest.
 
-A recipe MUST carry a command as an argument list, and a build MUST NOT derive one by splitting a string (R115 §3.4). A parse is a quoting convention the recipe never declared: POSIX rules applied on every host eat a backslash everywhere, so `C:\Python\python.exe` becomes `C:Pythonpython.exe` and fails as a missing executable rather than as a malformed command. A list needs no convention, because the host's own process interface takes one.
+A recipe MUST carry a command as an argument list, and a build MUST NOT derive one by splitting a string. A parse is a quoting convention the recipe never declared: POSIX rules applied on every host eat a backslash everywhere, so `C:\Python\python.exe` becomes `C:Pythonpython.exe` and fails as a missing executable rather than as a malformed command. A list needs no convention, because the host's own process interface takes one.
 
-Where the command is one a build reaches a source through (Part 03 §11.2), the build MUST write what it supplies that source to the command's standard input and MUST close the stream when it has, without waiting for the command to exit, and MUST read what the command produces while it writes (R116 §3.2). A command that converts a raw source before it is read is not one of these and is supplied nothing. A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
+Where the command is one a build reaches a source through (Part 03 §11.2), the build MUST write what it supplies that source to the command's standard input and MUST close the stream when it has, without waiting for the command to exit, and MUST read what the command produces while it writes. A command that converts a raw source before it is read is not one of these and is supplied nothing. A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
 
-A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards (R109 §3.4). Where the recipe puts rows on standard output (Part 03 §11.1), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one (R115 §3.11). Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
+A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards. Where the recipe puts rows on standard output (Part 03 §11.1), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one. Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 
 ### 3.8 A recipe declares an encoding
 
 A recipe MAY declare a column's Parquet encoding, in an `[encoding]` table keyed `resource.column`,
-each entry naming one of `delta`, `plain` or `dictionary` and the reason it was measured (R110
-§3.4). An entry MUST carry a reason, since a bare choice cannot be re-judged when the data moves.
+each entry naming one of `delta`, `plain` or `dictionary` and the reason it was measured. An entry
+MUST carry a reason, since a bare choice cannot be re-judged when the data moves.
 
 A writer's own exceptions MUST name only tables of the layer it implements, and an extension's MUST
 be declarable without the writer importing anything the extension ships — a writer may require no
-code of an extension (R109 §3.1), so a declaration arriving as a Python object would be one only an
+code of an extension, so a declaration arriving as a Python object would be one only an
 importable extension could make.
 
 The recipe is also the right granularity rather than the only reachable one. An encoding is a fact
@@ -2063,7 +2027,7 @@ belongs to the build.
 
 ### 3.9 Whether a source runs in the writer's process
 
-A build MUST deliver a source whose adapter declares a protocol out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run such a source in process where the recipe does not say so (R115 §3.5). An adapter the build ships with declares none (Part 03 §11.1), so in process is its only route and a recipe naming one declares nothing: a build MUST NOT require a declaration where it offers no choice.
+A build MUST deliver a source whose adapter declares a protocol out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run such a source in process where the recipe does not say so. An adapter the build ships with declares none (Part 03 §11.1), so in process is its only route and a recipe naming one declares nothing: a build MUST NOT require a declaration where it offers no choice.
 
 The recipe declares it because the recipe author chose the environment. One process resolves one dependency closure, so whether a given set of adapters installs together is a fact about one machine on one day rather than a property of any adapter, and the person assembling the recipe is the only party who can find out and the one who carries it when the answer changes.
 
@@ -2081,7 +2045,7 @@ Copy or stream candidate resources into a staging area under the packet root. A 
 
 ### 4.3 Normalize
 
-Map source objects onto the logical schemas: assign identifiers packet-wide before any table is written (R53 §2.5), apply the declared sort, and coerce types to the registry's.
+Map source objects onto the logical schemas: assign identifiers packet-wide before any table is written, apply the declared sort, and coerce types to the registry's.
 
 Normalization MUST be deterministic in the recipe. Two runs of the same recipe over the same sources produce the same packet.
 
@@ -2091,15 +2055,15 @@ An adapter compensating for a known defect in its source MUST declare the compen
 
 ### 4.4 When a source's delivery is complete
 
-What a build expects of a source is the set of resources it owns, settled from `owns` and what the adapter declares before any I/O (§3.4). A run succeeded when every resource in that set arrived and the process exited clean (R115 §3.10).
+What a build expects of a source is the set of resources it owns, settled from `owns` and what the adapter declares before any I/O (§3.4). A run succeeded when every resource in that set arrived and the process exited clean.
 
 A resource an adapter owns and has nothing for MUST arrive empty rather than not arriving (Part 03 §11.3). That is what makes the test usable: a build reads a resource that did not arrive as the run having failed, and never as the source having had nothing to say.
 
-A non-zero exit is a failure whatever arrived. A build MUST report one as a failure even where every resource is present, because an adapter saying it failed is not overruled by its own output, and a command dying between two resources delivers the first one complete and valid (R115 §3.10).
+A non-zero exit is a failure whatever arrived. A build MUST report one as a failure even where every resource is present, because an adapter saying it failed is not overruled by its own output, and a command dying between two resources delivers the first one complete and valid.
 
 A build MUST report a delivery it cannot parse as a failure where the command exited zero, naming what was short. What no protocol catches is a short table from a run that exits zero: where an adapter declares a row count a build MUST check it, and an adapter that cannot know its size before it sends declares none, which a build MUST read as unknown rather than as zero.
 
-A build MUST report everything the protocol it used carries about a failure — standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its detail for `flight-v0.1`, where a failing adapter writes nothing to standard error because the diagnosis travels on the connection it was asked over (R115 §3.11). A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
+A build MUST report everything the protocol it used carries about a failure — standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its detail for `flight-v0.1`, where a failing adapter writes nothing to standard error because the diagnosis travels on the connection it was asked over. A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
 
 ## 5. Stage 4: Validate
 
@@ -2113,13 +2077,13 @@ Declared per table as SQL returning offending rows, or as an expanded template (
 
 ### 5.3 The shim
 
-A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and checksums outside SQL (R12 §4). A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
+A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and checksums outside SQL. A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
 
-A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key (R31 §5).
+A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key.
 
 ### 5.4 Extensions
 
-Each extension registry present is validated on the same terms as core, and its verdict is reported separately (R17 §4). A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension failure invalidate core.
+Each extension registry present is validated on the same terms as core, and its verdict is reported separately. A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension failure invalidate core.
 
 ## 6. Stage 5: Commit
 
@@ -2131,24 +2095,24 @@ Commit MUST be atomic with respect to a concurrent reader:
 4. **publish** the packet catalog at `packet.json`, last and atomically.
 
 A reader MUST observe either the previously committed catalog or the newly published one, and MUST
-NOT observe a catalog naming a resource that is not yet in place (R74 §2.1). Every packet-owned
+NOT observe a catalog naming a resource that is not yet in place. Every packet-owned
 resource the catalog names MUST already be at its final location and MUST have passed validation
 before it is published.
 
 The publication mechanism is the profile's. A filesystem profile MAY publish by atomic rename
 within one directory; an object-store profile MAY publish by a single-object write. A writer MUST
-NOT be required to perform an atomic **directory** rename (R74 §2.2), which no object store
+NOT be required to perform an atomic **directory** rename, which no object store
 offers and which the packet layout does not need — the catalog is one object.
 
 Where the store offers a conditional write, a writer publishing a new version SHOULD use it, so
 two writers cannot silently overwrite one another's head. Where it offers none, a writer MUST NOT
-claim it detected a conflict it could not detect (R74 §2.3).
+claim it detected a conflict it could not detect.
 
 A commit that finds an error MUST NOT write a manifest at the packet root, and SHOULD leave staging in place for inspection.
 
 ## 7. Stage 6: Provenance
 
-Record `core.source_files` for the inputs, one `core.processing_runs` row for the import, and `core.processing_run_inputs` linking them. The run declares its `scope` and `scope_kind` (R44 §2, R49 §2).
+Record `core.source_files` for the inputs, one `core.processing_runs` row for the import, and `core.processing_run_inputs` linking them. The run declares its `scope` and `scope_kind`.
 
 ## 8. Stage 7: Materialize
 
@@ -2180,15 +2144,15 @@ Where an import replaces an existing packet, it SHOULD report every resource the
 
 ## 10. Two conformance classes
 
-A report says which of two claims it is making (R79 §2.1).
+A report says which of two claims it is making.
 
-**Packet conformance** is a property of the bytes. It is evaluated on a packet regardless of how the packet was produced, and it is what `validate` reports. Provenance is SHOULD within it: a packet carrying none is conforming (R9 §5).
+**Packet conformance** is a property of the bytes. It is evaluated on a packet regardless of how the packet was produced, and it is what `validate` reports. Provenance is SHOULD within it: a packet carrying none is conforming.
 
 **Writer conformance** is a property of a process. A writer conforms when it satisfies this part, which includes recording provenance for the import activity and the inputs it read. A packet is not judged by it.
 
-A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only a writer. Where it also checks writer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately (R79 §2.2), as it already does for core and extension verdicts.
+A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only a writer. Where it also checks writer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately, as it already does for core and extension verdicts.
 
-An analysis resource is where the two meet: `processing_run_id` is MUST for one (R31 §3), and that is a packet obligation rather than a writer's, because a derived resource naming no run is unreproducible whoever built it (R79 §2.3).
+An analysis resource is where the two meet: `processing_run_id` is MUST for one, and that is a packet obligation rather than a writer's, because a derived resource naming no run is unreproducible whoever built it.
 
 ## 11. Minimum acceptance criteria
 
@@ -2200,7 +2164,7 @@ A writer conforms when it:
 4. leaves no manifest at the packet root when it refuses;
 5. is **logically deterministic**: for the same recipe, the same source bytes and the same
    declared normalization, it produces the same canonical rows, the same values, the same assigned
-   identifiers, the same resource identities and the same declared physical ordering (R75 §2.1).
+   identifiers, the same resource identities and the same declared physical ordering.
    Identifier assignment MUST be a function of the recipe and the sources, never of wall-clock
    time, iteration order over an unordered collection, or the order a filesystem listed a
    directory.
@@ -2208,17 +2172,16 @@ A writer conforms when it:
 Byte-identical output is **not** required and cannot be: a manifest carries `created_at` and
 `validated_at`, and encoders may encode identical logical content differently between library
 versions. A writer MAY offer a deterministic-build mode that pins those, and a packet
-a validator MUST NOT judge a packet non-conforming for lacking one (R75 §2.2).
+a validator MUST NOT judge a packet non-conforming for lacking one.
 
 A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would
-produce. Two conforming builds of one dataset may record different digests for the same rows
-(R75 §2.3).
+produce. Two conforming builds of one dataset may record different digests for the same rows.
 
 ## 12. Alternatives are resolved before a commit
 
-Where two or more `core.processing_runs` rows share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not (R82 §2.1). Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` (R82 §2.2) — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
+Where two or more `core.processing_runs` rows share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not. Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
 
-Both are checked at `error` level. R41 §2.4's rule that a consumer MUST NOT silently choose stands and becomes unreachable on a conforming packet: a consumer that meets an unresolved alternative is holding a packet that failed validation and reports that (R82 §2.3). Nothing here forbids a packet holding two sortings of one probe or two curations of one sorting (R82 §2.4); what it requires is that the packet says which is current.
+Both are checked at `error` level. A consumer MUST NOT silently choose; on a conforming packet that case is unreachable. A consumer that meets an unresolved alternative is holding a packet that failed validation and reports that. Nothing here forbids a packet holding two sortings of one probe or two curations of one sorting; what it requires is that the packet says which is current.
 
 <!-- END 05_validation_and_import.md -->
 
@@ -2237,23 +2200,23 @@ This part describes the optional `analysis` layer: derived products computed fro
 Normative.
 
 An analysis resource MUST declare lineage naming each canonical resource it derives from — core
-or extension (04 §7, R71 §2.3).
+or extension (Part 04 §7).
 
 An analysis resource is disposable. A writer MAY delete and recompute any of them without loss.
 
-A writer SHOULD materialize an analysis resource only where doing so materially reduces repeated computational or I/O cost, gives an access layout core cannot, preserves the result of an expensive transformation, or provides a stable interface to an explicitly parameterised derivation (R78 §2.1). A cheap filter, projection, rename or small join SHOULD remain a view.
+A writer SHOULD materialize an analysis resource only where doing so materially reduces repeated computational or I/O cost, gives an access layout core cannot, preserves the result of an expensive transformation, or provides a stable interface to an explicitly parameterised derivation. A cheap filter, projection, rename or small join SHOULD remain a view.
 
-Where the justification is an expensive transformation or a parameterised derivation, the producing run MUST record the transformation's parameters and not merely that it ran (R78 §2.2). A spectrogram whose window and overlap are unrecorded is not reproducible, and an irreproducible derived asset fails the disposability test below.
+Where the justification is an expensive transformation or a parameterised derivation, the producing run MUST record the transformation's parameters and not merely that it ran. A spectrogram whose window and overlap are unrecorded is not reproducible, and an irreproducible derived asset fails the disposability test below.
 
 An analysis resource MUST NOT be the only place a fact exists. Anything a consumer needs that is
-not recomputable from the canonical resources belongs among them (R71 §2.3); which canonical layer
+not recomputable from the canonical resources belongs among them; which canonical layer
 it belongs to is decided by Part 09 §3's test, not by this rule.
 
 ## 3. A derived product earns its place by layout
 
 Arithmetic does not earn it. Where the computation is cheap against data already held, a view is the correct answer and a materialized copy is a maintenance liability.
 
-Measured on a real session, the arithmetic of aligning spikes to an event and a window costs 0.13 to 1.72 s against trains already in memory, while a materialized copy of four alignments comes to 100.6% of the spike table itself (R43 §2). A wide trial table is 708 rows in 7.5 ms.
+Measured on a real session, the arithmetic of aligning spikes to an event and a window costs 0.13 to 1.72 s against trains already in memory, while a materialized copy of four alignments comes to 100.6% of the spike table itself. A wide trial table is 708 rows in 7.5 ms.
 
 The test is therefore: does materializing change the *shape* of access, or only pre-compute a cheap step?
 
@@ -2261,7 +2224,7 @@ The test is therefore: does materializing change the *shape* of access, or only 
 
 Core keeps each spike on the clock of the probe that measured it, sorted unit-major. That layout answers "this unit's spikes" well and "every unit's spikes in this window" not at all, because a window across many clocks means nothing.
 
-`analysis.spike_events` is core's spikes mapped onto the reference clock and bucketed by time, sorted by unit within each bucket, so that a time filter and a unit filter both prune (R30 §2).
+`analysis.spike_events` is core's spikes mapped onto the reference clock and bucketed by time, sorted by unit within each bucket, so that a time filter and a unit filter both prune.
 
 <!-- columns: analysis.spike_events -->
 | column | type | presence | |
@@ -2275,9 +2238,9 @@ Core keeps each spike on the clock of the probe that measured it, sorted unit-ma
 
 A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data and is therefore recorded in the producing run's parameters.
 
-**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value (R30 §4), so this table MAY hold fewer rows than core's. A writer MUST record the count omitted in the producing run's parameters, even when it is zero (R40 §2.3): a derived table one row short otherwise looks exactly like a complete one.
+**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value, so this table MAY hold fewer rows than core's. A writer MUST record the count omitted in the producing run's parameters, even when it is zero: a derived table one row short otherwise looks exactly like a complete one.
 
-**A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and MUST record the reason in the producing run's parameters as R40 §2.3 requires of an omitted row (R92 §2.4). A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
+**A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and MUST record the reason in the producing run's parameters as it does for omitted rows. A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
 
 Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
 
@@ -2285,11 +2248,11 @@ Measured on one session, a ten-second population window costs 0.025 s here again
 
 Normative.
 
-A materialization MUST record a `core.processing_runs` row and MUST name it from the resource's catalog entry (R31 §2). The run's parameters MUST carry any transform parameter that cannot be recovered from the output.
+A materialization MUST record a `core.processing_runs` row and MUST name it from the resource's catalog entry. The run's parameters MUST carry any transform parameter that cannot be recovered from the output.
 
 ## 6. Withdrawn resources
 
-Four resources proposed in v0.1 are withdrawn (R43 §2). They were specified before anything measured them:
+Four resources proposed in v0.1 are withdrawn. They were specified before anything measured them:
 
 | resource | disposition |
 |---|---|
@@ -2342,13 +2305,6 @@ Validation requires an embedded SQL engine, because the rules are SQL. Reading d
 
 This is what Part 02 §5.2's ban on nested types exists to preserve — a native reader stays viable in a language without an embedded SQL engine.
 
-<a id="ew-code-comment-guidance" data-spec-anchor="canonical"></a>
-### 2.3 A comment states what the code does not
-
-A comment or docstring SHOULD state what the code does not already say — why this way, what breaks otherwise, the constraint that is not visible locally — and SHOULD NOT restate what the line below it does. Where it gives a reason, Part 00 §10.1 decides what it cites: the part for the requirement, and the revision for the measurement behind it (R112 §3.2).
-
-A comment naming a revision instead of a part sends a reader to the change record rather than to the statement of record, and a comment restating its own line is how a reader learns to stop reading them.
-
 ## 3. Command line
 
 ```text
@@ -2366,23 +2322,23 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 | type | responsibility |
 |---|---|
 | `Packet` | resolve the catalog; hand back resources |
-| `Dataset` | present several packets as one relation per resource (R86) |
+| `Dataset` | present several packets as one relation per resource |
 | `TableResource` | a table, as columnar batches or a scan |
 | `ArrayResource` | an array, opened through the array library |
 | `Validator` | run the generated and declared checks; return a report |
 | `PacketWriter` | accumulate records; stage, validate, commit |
 
-An adapter's return type is records, not a path, and stays records whichever route delivers them. That is what lets an adapter be tested without a filesystem and stops normalization decisions leaking into I/O code. Out of process the transport carries a table and the receiving end returns records again, so nothing downstream of the boundary knows which route was taken (R115 §3.6).
+An adapter's return type is records, not a path, and stays records whichever route delivers them. That is what lets an adapter be tested without a filesystem and stops normalization decisions leaking into I/O code. Out of process the transport carries a table and the receiving end returns records again, so nothing downstream of the boundary knows which route was taken.
 
-An adapter carries five static declarations, all readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4); `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2); `NEEDS`, the values a build must supply it, drawn from Part 03 §11.2's terms and the recipe's options (R115 §3.1); `ACCEPTS`, the options it reads and can run without, which a recipe may leave unset (Part 03 §11.2, R119 §3.1); and `CONSUMES`, the kinds whose output it reads, which is what orders a build. For each name in `STATES` the adapter exposes the value it holds. All five are class attributes here, and Part 03 §11.5's document is the same facts for an adapter a build cannot import; the requirements in Part 05 and Part 03 are on what a build can determine, not on how an implementation stores it.
+An adapter carries five static declarations, all readable with nothing open: `PRODUCES`, the resource identifiers it can supply (Part 05 §3.4); `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (Part 05 §3.4); `NEEDS`, the values a build must supply it, drawn from Part 03 §11.2's terms and the recipe's options; `ACCEPTS`, the options it reads and can run without, which a recipe may leave unset (Part 03 §11.2); and `CONSUMES`, the kinds whose output it reads, which is what orders a build. For each name in `STATES` the adapter exposes the value it holds. All five are class attributes here, and Part 03 §11.5's document is the same facts for an adapter a build cannot import; the requirements in Part 05 and Part 03 are on what a build can determine, not on how an implementation stores it.
 
-An adapter declares its protocol by naming a constant the implementation exports rather than a string it spells, so an adapter resolves the version it was written against and that version speaks what it names (R115 §3.9).
+An adapter declares its protocol by naming a constant the implementation exports rather than a string it spells, so an adapter resolves the version it was written against and that version speaks what it names.
 
-Converting records to a table takes the column set from every row and not from the first. `pyarrow.Table.from_pylist` infers its schema from the leading row and silently drops what later rows carry, which loses a column a source populates for some rows only — measured, one of thirteen resources of the NWB adapter. The rule it implements is Part 03 §11.3's, stated about what a delivery says rather than about how a table is built, because an adapter declaring its schema up front meets it by construction (R115 §3.6).
+Converting records to a table takes the column set from every row and not from the first. `pyarrow.Table.from_pylist` infers its schema from the leading row and silently drops what later rows carry, which loses a column a source populates for some rows only — measured, one of thirteen resources of the NWB adapter. The rule it implements is Part 03 §11.3's, stated about what a delivery says rather than about how a table is built, because an adapter declaring its schema up front meets it by construction.
 
 An adapter that produces a dense array writes it to the location the build supplied and returns the reference, rather than handing the values over for the writer to write (Part 03 §11.3).
 
-A build reports a `metadata` key whose value equals a column of the same row, which is how 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the one R95 §3.3 already makes between two columns, over a key and a column instead, and three keys in the packaged sessions were restating a column a revision had promoted (R97 §2.3).
+A build reports a `metadata` key whose value equals a column of the same row, which is how Part 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the same duplicate-value comparison used between two columns, applied to a key and a column; three keys in the packaged sessions restated a column.
 
 ## 5. Phases
 
@@ -2405,7 +2361,7 @@ Run it after changing the registry, the generator, or any rule.
 
 ## 7. Performance notes
 
-These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section MUST NOT repeat it (R93 §3.5).
+These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section MUST NOT repeat it.
 
 - **Never convert a column to host objects inside a per-batch loop.** Every performance defect found in the reference writer has been this.
 - **Read a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.
@@ -2413,10 +2369,10 @@ These are properties of the reference implementation, not requirements. A number
 - **Do not measure every column's encoding at write time.** Writing each column three ways over a
   65,536-row sample and keeping the smallest costs about **0.4 s** for a whole packet against a
   467 s build, so cost is not what refuses it: a measured choice records no reason for itself, and
-  it differs between a `--sample` build and a full one (R110 §2.5). Counting each column instead, as
+  it differs between a `--sample` build and a full one. Counting each column instead, as
   Part 03 §5.5's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count
-  (R118 §2.5).
-- **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id` (R86 §2.4). A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.
+ .
+- **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id`. A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.
 
 <!-- END 07_reference_implementation.md -->
 
@@ -2469,7 +2425,7 @@ The LFP is referenced rather than copied: ten `dense_array_asset` entries with `
   "packet_id": "ecephys_786867_2025-09-25",
   "packet_version": "0.1.0",
   "profile_id": "escapewheel-portable-v0.1",
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "sessions": ["ecephys_786867_2025-09-25"],
   "required_codecs": ["blosc", "numcodecs.delta", "zstd"],
   "resources": [
@@ -2577,7 +2533,7 @@ This part defines how much metadata core requires, where richer metadata belongs
 | 2 | facts needed to interpret, validate, join, or reproduce | core tables |
 | 3 | domain-rich, lab-specific facts | an extension's tables |
 | 4 | human-readable context | `docs/` sidecars |
-| 3-4 | such facts stated about one row, in the source's own vocabulary | that table's `metadata` column (R97 §3.4) |
+| 3-4 | such facts stated about one row, in the source's own vocabulary | that table's `metadata` column |
 
 ## 3. Core inclusion rule
 
@@ -2597,7 +2553,7 @@ An import MUST NOT fail because optional extension metadata is absent.
 
 ### 5.1 What an extension is
 
-An extension is a registry document in the format of Part 02, in its own namespace (R17 §2). It declares tables, columns, references, and rules on exactly the same terms as core.
+An extension is a registry document in the format of Part 02, in its own namespace. It declares tables, columns, references, and rules on exactly the same terms as core.
 
 An extension needs no code. A registry document names its tables, Parquet files hold their rows, and neither imports anything of the reference implementation.
 
@@ -2613,47 +2569,47 @@ A validator MUST check that a declared registry exists. It MUST NOT require an e
 
 ### 5.4 Separate verdicts
 
-An extension is validated on core's terms and its verdict is reported separately (R17 §4). A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension's failure invalidate core.
+An extension is validated on core's terms and its verdict is reported separately. A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension's failure invalidate core.
 
-Separate verdicts are not an absent one. The **packet's** verdict is the conjunction of core's and every extension's, so a validator MUST NOT report a packet whose core passes and whose extension fails as conforming (R72 §2.4) — an extension's canonical resources are part of what the packet holds (Part 00 §3), and a failure among them is a failure of the packet. A consumer MAY still read core from such a packet, and MUST NOT read the packet's verdict as though the failure were external to it.
+Separate verdicts are not an absent one. The **packet's** verdict is the conjunction of core's and every extension's, so a validator MUST NOT report a packet whose core passes and whose extension fails as conforming — an extension's canonical resources are part of what the packet holds (Part 00 §3), and a failure among them is a failure of the packet. A consumer MAY still read core from such a packet, and MUST NOT read the packet's verdict as though the failure were external to it.
 
 ### 5.5 Independent versioning
 
-An extension carries its own version, independent of `registry_version` (R17 §5).
+An extension carries its own version, independent of `registry_version`.
 
 ### 5.6 A writer requires no code of an extension
 
-A writer MUST be able to build a packet carrying an extension's tables given only the extension's registry document and its rows as files. A writer MUST NOT require an extension to be installed, importable, or resolvable in the writer's own environment (R109 §3.1).
+A writer MUST be able to build a packet carrying an extension's tables given only the extension's registry document and its rows as files. A writer MUST NOT require an extension to be installed, importable, or resolvable in the writer's own environment.
 
 A writer MAY accept an extension that ships code — an adapter registered under an entry-point group, or a registry document loaded from an installed distribution — and MUST NOT treat either as the ordinary case. That is what turns §5.1's "needs no code" from a possibility into a promise.
 
 ### 5.7 How an extension's document and rows reach a build
 
-An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet the recipe names is one way and remains the route every implementation supports; an extension MAY deliver over any protocol of the group its profile names (Part 03 §11.1), since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that (R115 §3.3). Where a raw source needs converting first, a recipe names a command: an argument list carried as a list and run in the source's own root, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how (R109 §3.2).
+An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet the recipe names is one way and remains the route every implementation supports; an extension MAY deliver over any protocol of the group its profile names (Part 03 §11.1), since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that. Where a raw source needs converting first, a recipe names a command: an argument list carried as a list and run in the source's own root, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how.
 
 An extension's registry document and Part 03 §11.5's declaration document are different things for different readers, and neither substitutes for the other: the first declares tables, the second declares what the adapter carrying them produces, states, needs and speaks.
 
-Rows arrive carrying identifiers as the names their source used, and a writer numbers them (R53 §2.5), so an extension neither knows nor needs the packet's numbering.
+Rows arrive carrying identifiers as the names their source used, and a writer numbers them, so an extension neither knows nor needs the packet's numbering.
 
 How the registry document is produced is the extension's business, but an extension MUST NOT derive it from the rows it delivers for the packet being built. A declaration derived from one packet's data cannot disagree with that data, so it declares nothing, and two packets whose extensions each derived one no longer share a schema. Part 02 §5's three presence states are what carry the difference between a column this run did not compute and one the extension does not have.
 
-An extension's command MUST produce the same rows from the same inputs, and MUST NOT let wall-clock time, an unfixed random seed, or iteration over an unordered collection reach a value it writes (R109 §3.7). Which program the command resolves to is the recipe author's, and R75 §2.2 places it: pinning library versions so two runs agree byte for byte is a build property, and a validator MUST NOT judge a packet non-conforming for lacking one. An extension that cannot be a function of its inputs delivers a file produced beforehand rather than a command the build runs.
+An extension's command MUST produce the same rows from the same inputs, and MUST NOT let wall-clock time, an unfixed random seed, or iteration over an unordered collection reach a value it writes. Which program the command resolves to is the recipe author's: pinning library versions so two runs agree byte for byte is a build property, and a validator MUST NOT judge a packet non-conforming for lacking one. An extension that cannot be a function of its inputs delivers a file produced beforehand rather than a command the build runs.
 
 ### 5.8 What an extension may state about its own run
 
-An extension MAY validate its own tables before returning them, against its own registry document and on the same terms a validator applies to core (R17 §4). A build MUST NOT rely on its having done so; its own validation runs over every staged resource whatever produced it (R109 §3.5).
+An extension MAY validate its own tables before returning them, against its own registry document and on the same terms a validator applies to core. A build MUST NOT rely on its having done so; its own validation runs over every staged resource whatever produced it.
 
-An extension MAY write a report of its run at a path the recipe names, and a build MUST report what one contains where it is present. A build MUST NOT require one, and MUST NOT fail on a report's contents alone (R109 §3.6).
+An extension MAY write a report of its run at a path the recipe names, and a build MUST report what one contains where it is present. A build MUST NOT require one, and MUST NOT fail on a report's contents alone.
 
-Where the report is a file, a build MUST remove that path before it runs the command and MUST treat a report it did not see appear as absent (R115 §3.11). A file at a path the recipe names is present after any run that ever wrote one, so last week's findings are otherwise reported as this run's with nothing to distinguish them.
+Where the report is a file, a build MUST remove that path before it runs the command and MUST treat a report it did not see appear as absent. A file at a path the recipe names is present after any run that ever wrote one, so last week's findings are otherwise reported as this run's with nothing to distinguish them.
 
 Which channel carries a report is the protocol's. Under `files-v0.1` and `stream-v0.1` it is a file at the path the recipe names, supplied to the adapter as `report_path` (Part 03 §11.2), because rows have taken standard output and a file is the channel left. Under `flight-v0.1` it is `DoAction("report")`, because the connection is that channel and no file outlives the run; an adapter with a report MUST name `report` among its actions, and a build MUST NOT ask one that did not.
 
 A report carries what a build cannot derive, and a build SHOULD ignore what it can: rows per table, which tables exist, and whether their schemas conform are each established without asking. What no artifact holds is what the command read, what it skipped and why, and whether a table that is short is legitimately short.
 
-A report is JSON. An optional `problems` array carries an entry per finding, each with a `level` of `error`, `warning` or `info` (R2 §7.3), a `message`, and optionally the `resource` the finding concerns; an optional `read` array names what the command consumed; an optional `stated` object carries, per `block.field` name the source declares it states, the value the source holds (Part 03 §11.5). A build MUST report every problem it is given and MUST NOT refuse a report for carrying keys it does not recognise.
+A report is JSON. An optional `problems` array carries an entry per finding, each with a `level` of `error`, `warning` or `info`, a `message`, and optionally the `resource` the finding concerns; an optional `read` array names what the command consumed; an optional `stated` object carries, per `block.field` name the source declares it states, the value the source holds (Part 03 §11.5). A build MUST report every problem it is given and MUST NOT refuse a report for carrying keys it does not recognise.
 
-A build MUST look for a report after a failure as it does after a success, since the run that went wrong is the one with something to say (R115 §3.11).
+A build MUST look for a report after a failure as it does after a success, since the run that went wrong is the one with something to say.
 
 ## 6. Direction of reference
 
@@ -2661,7 +2617,7 @@ A build MUST look for a report after a failure as it does after a success, since
 
 A core table MUST NOT declare a foreign key into an extension's table.
 
-The reasons are separable verdicts (§5.4) and independent versioning (§5.5). "Interpretable when no extension is present" is *not* among them: a packet embeds its extension registries, so they are present whenever the resources are (R55 §2.6).
+The reasons are separable verdicts (§5.4) and independent versioning (§5.5). "Interpretable when no extension is present" is *not* among them: a packet embeds its extension registries, so they are present whenever the resources are.
 
 ### 6.2 Core may name an extension
 
@@ -2689,7 +2645,7 @@ A build MUST NOT block an import because optional institutional metadata is inco
 
 Core MUST NOT contain a table whose purpose is to hold arbitrary name-value pairs.
 
-Nothing constrains the name, type, or meaning of what accretes in such a table, so two packets cannot be compared and neither can be checked. `core.trial_tags` was the one place this format permitted it and is withdrawn (R54 §2.3).
+Nothing constrains the name, type, or meaning of what accretes in such a table, so two packets cannot be compared and neither can be checked. `core.trial_tags` was the one place this format permitted it and is withdrawn.
 
 An extension needing a multi-valued attribute declares its own typed child table, as Part 02 §5.2 requires of everything else.
 
@@ -2699,33 +2655,31 @@ An extension needing a multi-valued attribute declares its own typed child table
 
 # Part 10 — Performance Notes
 
-Informative. Part version **0.1.0** (R93 §3.4).
+Informative. Part version **0.1.0**.
 
 ## 1. Scope
 
 This part carries what a packet's bytes make true under `escapewheel-portable-v0.1`: what an
 encoding costs, what a row group spans, what an object store answers. A number here supports a
 rule that lives elsewhere and states none of its own; where a measurement justifies a requirement,
-the requirement stays in the part that binds and this part carries the reading (R93 §3.4).
+the requirement stays in the part that binds and this part carries the reading.
 
 It is not a substitute for `conformance/`, which holds the probes that produced these numbers.
 This part says what they mean.
 
 A number that would change if the reference implementation were replaced is Part 07 §7's, not this
 part's: how a columnar library decodes a batch, how one query planner treats a projection against
-a join. What survives that replacement is here (R93 §3.5).
+a join. What survives that replacement is here.
 
-**Every measurement below records the revision that took it and that revision's date, and none
-records the library versions it was taken against except where noted.** Those were not kept, and
-saying so is what R93 §3.4 asks: a number whose toolchain is unknown has unknown currency, where a
-number silently missing the field says nothing at all.
+**Every measurement below records its date, and none records the library versions it was taken
+against except where noted.** Those were not kept. A number whose toolchain is unknown has unknown
+currency; a number silently missing the field says nothing at all.
 
 ## 2. Encoding and compression
 
 ### 2.1 A tick column is delta-encoded, not dictionary-encoded
 
-`core.media_frames.pts` over 7,570,450 frames, the same rows in the same row groups (R68 §1.3,
-2026-09-04; toolchain not kept):
+`core.media_frames.pts` over 7,570,450 frames, the same rows in the same row groups (2026-09-04; toolchain not kept):
 
 | `pts` as | encoding | `pts` | whole table |
 |---|---|---:|---:|
@@ -2743,20 +2697,19 @@ turns on.
 Over 287,896,563 spikes, the identifier columns are **8.1 MB, 1% of the table**, because a sorted
 low-cardinality column compresses away; the integer form is **1.1% smaller** than the string one.
 Storage is therefore not what decides the type — the read is, at **10.2x** on a join to
-`core.units` (R53 §1, 2026-09-02; toolchain not kept).
+`core.units` (2026-09-02; toolchain not kept).
 
 ### 2.3 A repeated key column is free under a clustered sort
 
 Four-column unit identity against one numbered `unit_id`, over the same spike table: **819 MB
-either way** (R81 §1, 2026-09-05; toolchain not kept). `core.media_frames` shows the same shape at
-7,570,450 rows, where one distinct `session_id` costs **1.0005x**, 0.013 bits a row (R88 §4,
-2026-09-07; toolchain not kept).
+either way** (2026-09-05; toolchain not kept). `core.media_frames` shows the same shape at
+7,570,450 rows, where one distinct `session_id` costs **1.0005x**, 0.013 bits a row (2026-09-07; toolchain not kept).
 
 ### 2.4 An ascending identifier costs 30.95 bits a row under a dictionary
 
 The first column of a table's sort order whose role is `identifier` ascends across the whole table,
 and a dictionary over it stores the values once and an index into them again. Column-chunk bytes on
-`ecephys_776259` (R110 §2.1, 2026-09-10; pyarrow 25.0.1, Python 3.13.15):
+`ecephys_776259` (2026-09-10; pyarrow 25.0.1, Python 3.13.15):
 
 | column | dictionary | delta | |
 |---|---:|---:|---:|
@@ -2776,7 +2729,7 @@ Of the **32 float columns** reaching 2 kB under pyarrow's default across two pac
 **27 are smaller written plain**, by 1.15x to 1.76x. The five that repeat decide more than the
 twenty-seven: `core.spike_events.amplitude` is quantised to the sorting run's amplitude step, so
 286,896,563 rows hold few distinct values and the dictionary is **1.85x** better across **209 MB**
-(R110 §2.2, 2026-09-10; toolchain as above).
+(2026-09-10; toolchain as above).
 
 ### 2.6 A packet's small tables are what an open transfers
 
@@ -2787,8 +2740,7 @@ anything — 1.80x on `ecephys_786867` over its 37 comparable tables, and **23.9
 `core.media_frames` counted, where 7,570,450 rows go from 30.949 MB to 0.429 MB.
 
 Decoding gives none of it back: over the same 38 tables, warm and interleaved, **15.6 ms against
-15.8 ms**, and 28.8 ms against 57.7 ms where `core.media_frames` is among them (R110 §2.3,
-2026-09-10; toolchain as above). Round trips are the one cost this leaves alone — a column chunk is
+15.8 ms**, and 28.8 ms against 57.7 ms where `core.media_frames` is among them (2026-09-10; toolchain as above). Round trips are the one cost this leaves alone — a column chunk is
 one ranged read at either size, so what an encoding changes is what each request carries (§4.1).
 
 ### 2.7 A rule read off the declaration picks worse on 82 columns of 116
@@ -2799,7 +2751,7 @@ a dictionary for everything else — was measured over the 116 column-and-packet
 under either choice and picked worse on **82**: `core.media_frames.pts` **188x worse** and
 `core.clock_anchors.t_tick` 57x, both climbing steadily without being key columns, and
 `core.unit_electrodes.electrode_id` 1.84x, a trailing key component that climbs within each unit
-and resets (R110 §2.4, 2026-09-10; toolchain as above).
+and resets (2026-09-10; toolchain as above).
 
 A declaration says what a value means. It does not say how the values are spread, and a storage
 choice turns on the second.
@@ -2807,7 +2759,7 @@ choice turns on the second.
 ### 2.8 A dictionary page costs 27 bytes in every row group
 
 A column holding one value gives a dictionary nothing to index that plain's compression does not
-already remove. A constant `int32` under Zstandard (R118 §2.2, 2026-09-15; pyarrow 25.0.1, Python
+already remove. A constant `int32` under Zstandard (2026-09-15; pyarrow 25.0.1, Python
 3.13.15):
 
 | rows | dictionary | plain |
@@ -2830,7 +2782,7 @@ A count over a whole column sees a climb only where the table is sorted by that 
 `core.spike_events.t_tick` climbs within each unit and `core.clock_anchors.anchor_index` within each
 clock, so choosing by counts alone writes both plain: `anchor_index` 28x to 67x off its best,
 `core.clock_anchors.t_tick` 30x to 32x, and the spike tables' `t_tick` 1.24x to 1.30x, 384 MB over
-the best across both packets before any exception (R118 §2.3, 2026-09-15; toolchain as above). The
+the best across both packets before any exception (2026-09-15; toolchain as above). The
 `_tick` suffix, the `structural_index` and `sequence_position` roles and `assigned` identity mark
 such columns. None states a distribution, so §2.7 stands, and a mark is wrong in places:
 `core.unit_electrodes.channel_index` is a structural index cycling through 26 positions in every
@@ -2843,15 +2795,15 @@ two packets: a `free` string plain, an `open` or `closed` one a dictionary, a `d
 and `session_id` plain. No declaration says how many rows share a value, and `session_id` wants
 plain in a 12-row table and a dictionary in a million-row group. `core.spike_events.amplitude` and
 `core.unit_quality_labels.confidence` are both floats: the first repeats and is 1.75x smaller under a
-dictionary, and the second does not and is 1.47x larger (R118 §2.4, 2026-09-15; toolchain as above).
+dictionary, and the second does not and is 1.47x larger (2026-09-15; toolchain as above).
 
 ### 2.11 The four rules leave 15 columns needing an exception
 
-Columns 1.15x or more off their best in either packet (R118 §2.5, 2026-09-15; toolchain as above):
+Columns 1.15x or more off their best in either packet (2026-09-15; toolchain as above):
 
 | rules | columns | at 1.5x | at 2x |
 |---|---:|---:|---:|
-| R110's, with their exceptions | 193 | 61 | 4 |
+| sort-key heuristic, with its exceptions | 193 | 61 | 4 |
 | declarations of type, role, identity and vocabulary | 70 | 20 | 4 |
 | those, plus plain under 32 rows, or for one value under 50,000 rows | 34 | 12 | 4 |
 | counts alone | 26 | 11 | 9 |
@@ -2868,7 +2820,7 @@ packet is what the rules give up against writing each column three ways and keep
 
 `--sample 2000` keeps the first 2,000 spikes of each probe's stream, shrinking the two spike tables
 and changing the values of `core.units`, and each packet then encodes 8 columns differently from its
-full build (R118 §2.7, 2026-09-15; toolchain as above). Seven take the encoding their sampled values
+full build (2026-09-15; toolchain as above). Seven take the encoding their sampled values
 call for, within 1.04x of the best. `core.spike_events.amplitude` does not: each stream is one
 2,000-row row group holding 97 and 128 distinct amplitudes, under 50 rows a value, so it is written
 plain at 1.56x and 1.60x off its best. Every other column of both sampled packets lies within 1.15x
@@ -2881,14 +2833,14 @@ A large table's row groups are sized for analytical scans (Part 03 §5.1). **100
 rows** is a starting point to be adjusted by profiling; it is a number this format fixes rather
 than a rule a packet can fail, which is why Part 03 §5.1 keeps the SHOULD and the number is here.
 
-Where a table declares a time bucket, a row group SHOULD start at each bucket boundary (R30 §3.3):
+Where a table declares a time bucket, a row group SHOULD start at each bucket boundary:
 a group cut at a fixed row count straddles boundaries and spans two buckets' worth of time.
 
 ## 4. The object store
 
 ### 4.1 An endpoint plateaus at about 120 requests a second
 
-Whatever the concurrency (R86 §1.1, 2026-09-06; toolchain not kept). Twenty sessions of metadata
+Whatever the concurrency (2026-09-06; toolchain not kept). Twenty sessions of metadata
 is therefore about a second, which is what makes a union across packets cheap enough that no
 summary table is needed to avoid it.
 
@@ -2896,7 +2848,7 @@ summary table is needed to avoid it.
 
 The same rows staged to S3 four ways — a single file, a declared member list, the same members
 reached by globbing, and hive layout — with the member arms at 682.2 MB against the single file's
-681.6 MB (R42 §4.1, withdrawn 2026-09-02; toolchain not kept). DuckDB's single file wins every
+681.6 MB (withdrawn 2026-09-02; toolchain not kept). DuckDB's single file wins every
 query cold and warm. Where the member arms win, the gain reproduces at the same ratio on local
 disk, so it is scan parallelism rather than skipped round trips.
 
@@ -2906,7 +2858,7 @@ member. No session has yet had a second sorting.
 ## 5. The Zarr codec floor is version-specific
 
 Measured in `conformance/zarr-probe/` against **zarr-python 3.3.0, Zarr.jl 0.10.2 and Julia
-1.12.7** (R21 §2, 2026-08-27) — the one measurement here whose toolchain was kept, and the one that
+1.12.7** (2026-08-27) — the one measurement here whose toolchain was kept, and the one that
 shows why the others should be:
 
 | configuration | zarr-python 3.3.0 | Zarr.jl 0.10.2 |

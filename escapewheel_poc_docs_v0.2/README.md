@@ -2,13 +2,8 @@
 
 ## Status of this document
 
-This document set specifies the Escapewheel proof-of-principle data packet. It is v0.1 with every accepted revision applied:
-
-<!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R120 accepted. R42 and R73 withdrawn. 0 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
-<!-- END facts: revisions -->
-
-The revision documents in `revisions/` remain the record of why each requirement holds. This specification states only what holds. A requirement introduced or changed by a revision cites it as `(R<N> §<clause>)`; an uncited requirement is unchanged from v0.1.
+This document set specifies the Escapewheel v0.2 proof-of-principle data packet. The generated v0.2
+parts and the machine-readable artifacts they incorporate state the current contract.
 
 The specification is versioned independently of the identifiers a packet records. See §5.
 
@@ -55,19 +50,20 @@ A conforming packet MAY omit any resource this specification does not require. A
 
 ### 2.3 Conforming reader
 
-A conforming reader resolves a packet's resources through its catalog rather than through file layout, checks a resource's declared codecs before opening it, and fails naming what it lacks rather than silently returning partial data (R15 §2).
+A conforming reader resolves a packet's resources through its catalog rather than through file layout, checks a resource's declared codecs before opening it, and fails naming what it lacks rather than silently returning partial data.
 
 A reader MUST NOT require an extension schema in order to read core resources (Part 09).
 
 ### 2.4 Extension
 
-An extension is a registry document in the format of Part 02, in its own namespace (R17 §2). Core resources never reference an extension's. A validator MUST NOT require an extension's schema in order to validate core, and MUST NOT fail an import because optional extension metadata is absent.
+An extension is a registry document in the format of Part 02, in its own namespace. Core resources never reference an extension's. A validator MUST NOT require an extension's schema in order to validate core, and MUST NOT fail an import because optional extension metadata is absent.
 
 ## 3. Normative language
 
 The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY, and OPTIONAL are to be interpreted as described in RFC 2119.
 
-Requirements are stated in clauses numbered within each part. A citation of the form `03 §4.2` refers to clause 4.2 of Part 03. A citation of the form `(R53 §2)` refers to a revision document and is provenance, not a requirement.
+Requirements are stated in clauses numbered within each part. A citation such as `Part 03 §5.4`
+refers to clause 5.4 of Part 03.
 
 ## 4. Document organization
 
@@ -99,19 +95,19 @@ This document set is v0.2. The **identifier strings** a packet records are uncha
 | `profile_id` | `escapewheel-portable-v0.1` |
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` |
 | `logical_standard_version` | `escapewheel-logical-v0.1` |
-| `registry_version` | `0.1.0` |
+| `registry_version` | `0.2.0` |
 
-A packet built against v0.1's *schema* does **not** remain conforming. Several accepted revisions are breaking: R53 retyped every identifier from `string` to `int32`, R48 made a `role` required on every column with no default, and R54 replaced `core.trials` with `core.intervals` keyed by a discriminator. Those version strings identify the standard a packet was written against, not a guarantee that older physical shapes still validate — which is why §5.2 makes the embedded registry the authority.
+A packet built against an earlier schema does **not** remain conforming merely because the semantic,
+logical, and profile identifiers are unchanged. Those identifiers state which standards a packet
+uses; they do not guarantee that an older physical shape validates against the current registry.
 
-A packet remains conforming across v0.1 and v0.2 only where it was rebuilt against the current registry. Migration is regeneration (R53 §5): every packet is reproducible from its sources through the recipe recorded in `core.processing_runs.parameters`, so a conversion tool would be a second implementation of the writer that ran once.
+A packet remains conforming across v0.1 and v0.2 only where it was rebuilt against the current registry. Migration is regeneration: every packet is reproducible from its sources through the recipe recorded in `core.processing_runs.parameters`, so a conversion tool would be a second implementation of the writer that ran once.
 
 ### 5.2 Recording the registry version
 
-A packet MUST record the registry version it was written against, and SHOULD embed that registry so the packet is self-describing (R2 §8). A packet whose embedded registry disagrees with its recorded version is invalid.
-
-`registry_version` states **compatibility**, and follows semantic versioning: a removed, renamed or retyped column is a major change; an added nullable column is a minor one; a corrected description is a patch.
-
-It is **deliberately held at `0.1.0` while the schema iterates**, so amendments that would otherwise have incremented it — several of them major — have not. A consumer MUST therefore treat the embedded registry as authoritative and MUST NOT use `registry_version` alone to decide compatibility until the hold is lifted. Lifting it is a decision about the schema's stability, not a defect to be fixed.
+Part 02 §9.2 defines registry self-description and the exact current registry and meta-schema
+identities. Current development packets use core registry `0.2.0` and are regenerated rather than
+treated as compatible with the earlier development shape.
 
 ## 6. Normative references
 

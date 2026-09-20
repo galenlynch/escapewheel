@@ -1,130 +1,8 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
-  "registry_version": "0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.2.0",
+  "registry_version": "0.2.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
-  "derived_from": {
-    "specification": "nwb_lake_poc_docs/02_core_logical_schemas.md",
-    "revisions": [
-      "R1",
-      "R2",
-      "R3",
-      "R4",
-      "R5",
-      "R6",
-      "R7",
-      "R8",
-      "R9",
-      "R10",
-      "R11",
-      "R12",
-      "R13",
-      "R14",
-      "R15",
-      "R16",
-      "R17",
-      "R18",
-      "R19",
-      "R20",
-      "R21",
-      "R22",
-      "R23",
-      "R24",
-      "R25",
-      "R26",
-      "R27",
-      "R28",
-      "R29",
-      "R30",
-      "R31",
-      "R32",
-      "R33",
-      "R34",
-      "R35",
-      "R36",
-      "R37",
-      "R38",
-      "R39",
-      "R40",
-      "R41",
-      "R43",
-      "R44",
-      "R45",
-      "R46",
-      "R47",
-      "R48",
-      "R49",
-      "R50",
-      "R51",
-      "R52",
-      "R53",
-      "R54",
-      "R55",
-      "R56",
-      "R57",
-      "R58",
-      "R59",
-      "R60",
-      "R61",
-      "R62",
-      "R63",
-      "R64",
-      "R65",
-      "R66",
-      "R67",
-      "R68",
-      "R69",
-      "R70",
-      "R71",
-      "R72",
-      "R74",
-      "R75",
-      "R76",
-      "R77",
-      "R78",
-      "R79",
-      "R80",
-      "R81",
-      "R82",
-      "R83",
-      "R84",
-      "R85",
-      "R86",
-      "R87",
-      "R88",
-      "R89",
-      "R90",
-      "R91",
-      "R92",
-      "R93",
-      "R94",
-      "R95",
-      "R96",
-      "R97",
-      "R98",
-      "R99",
-      "R100",
-      "R101",
-      "R102",
-      "R103",
-      "R104",
-      "R105",
-      "R106",
-      "R107",
-      "R108",
-      "R109",
-      "R110",
-      "R111",
-      "R112",
-      "R113",
-      "R114",
-      "R115",
-      "R116",
-      "R117",
-      "R118",
-      "R119"
-    ]
-  },
   "tables": {
     "analysis.array_assets": {
       "columns": [
@@ -134,8 +12,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R20 \u00a75"
+          "identity": "assigned"
         },
         {
           "name": "array_asset_id",
@@ -143,8 +20,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Stable array asset ID.",
-          "identity": "assigned",
-          "since": "R20 \u00a75"
+          "identity": "assigned"
         },
         {
           "name": "array_asset_name",
@@ -152,7 +28,6 @@
           "presence": "required",
           "role": "data",
           "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
         {
@@ -161,8 +36,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 \u00a73.17).",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
         },
         {
           "name": "band",
@@ -171,7 +45,6 @@
           "role": "data",
           "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 \u00a79.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split.",
           "vocabulary": "open",
-          "since": "R107 \u00a73.1",
           "reserved_values": [
             "wideband",
             "ap",
@@ -184,7 +57,6 @@
           "presence": "required",
           "role": "data",
           "description": "URI/path to array store.",
-          "since": "R20 \u00a75",
           "vocabulary": "free"
         },
         {
@@ -193,7 +65,6 @@
           "presence": "required",
           "role": "data",
           "description": "`zarr_v3` for portable profile.",
-          "since": "R20 \u00a75",
           "vocabulary": "open"
         },
         {
@@ -202,8 +73,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "Clock for time axis.",
-          "identity": "assigned",
-          "since": "R20 \u00a75"
+          "identity": "assigned"
         },
         {
           "name": "device_id",
@@ -211,17 +81,15 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The device that produced this array.",
-          "identity": "assigned",
-          "since": "R20 \u00a75"
+          "identity": "assigned"
         },
         {
           "name": "processing_run_id",
           "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "The run that produced this array. Null means it was acquired rather than computed, which is the reading R23 \u00a72 gives a stream.",
-          "identity": "assigned",
-          "since": "R102 \u00a73.1"
+          "description": "The run that produced this array. Null means it was acquired rather than computed.",
+          "identity": "assigned"
         },
         {
           "name": "sample_rate_hz",
@@ -229,8 +97,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "Sample rate if regularly sampled.",
-          "unit": "Hz",
-          "since": "R20 \u00a75"
+          "unit": "Hz"
         },
         {
           "name": "unit",
@@ -238,7 +105,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of the array's values, as a UCUM code.",
-          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             {
@@ -252,8 +118,7 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Multiply stored values by this before offset.",
-          "since": "R20 \u00a75"
+          "description": "Multiply stored values by this before offset."
         },
         {
           "name": "offset",
@@ -261,7 +126,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Add after conversion.",
-          "since": "R20 \u00a75",
           "unit_from": "unit"
         },
         {
@@ -269,8 +133,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -314,8 +177,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R20 \u00a75"
+      "rules": []
     },
     "analysis.array_dimensions": {
       "columns": [
@@ -325,8 +187,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "array_asset_id",
@@ -334,16 +195,14 @@
           "presence": "required",
           "role": "identifier",
           "description": "Array asset ID.",
-          "identity": "assigned",
-          "since": "R20 \u00a75"
+          "identity": "assigned"
         },
         {
           "name": "axis_index",
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "0-based axis position in stored order (Part 03 \u00a76.2).",
-          "since": "R20 \u00a75"
+          "description": "0-based axis position in stored order (Part 03 \u00a76.2)."
         },
         {
           "name": "dimension_name",
@@ -351,7 +210,6 @@
           "presence": "required",
           "role": "data",
           "description": "Axis name.",
-          "since": "R20 \u00a75",
           "vocabulary": "free"
         },
         {
@@ -360,7 +218,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Which column of that resource holds the 0-based position.",
-          "since": "R20 \u00a75",
           "vocabulary": "free"
         },
         {
@@ -368,8 +225,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "discriminator",
-          "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 \u00a72.4).",
-          "since": "R100 \u00a72.1",
+          "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`.",
           "resolves": "required",
           "positions_in": "coordinate_position_column"
         },
@@ -379,8 +235,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "A 1-D array holding one value per position (irregular axis).",
-          "identity": "assigned",
-          "since": "R20 \u00a75"
+          "identity": "assigned"
         },
         {
           "name": "coordinate_unit",
@@ -388,7 +243,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of this axis's coordinate values, as a UCUM code.",
-          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             {
@@ -403,7 +257,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Increment per position.",
-          "since": "R20 \u00a75",
           "unit_from": "coordinate_unit"
         },
         {
@@ -412,7 +265,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Value at position 0 (regular numeric axis).",
-          "since": "R20 \u00a75",
           "unit_from": "coordinate_unit"
         },
         {
@@ -420,24 +272,21 @@
           "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Ticks advanced per position (numerator).",
-          "since": "R20 \u00a75"
+          "description": "Ticks advanced per position (numerator)."
         },
         {
           "name": "step_tick_den",
           "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Denominator of the step, in ticks. Absent means 1.",
-          "since": "R20 \u00a75"
+          "description": "Denominator of the step, in ticks. Absent means 1."
         },
         {
           "name": "origin_tick",
           "type": "int64",
           "presence": "nullable",
           "role": "coordinate",
-          "description": "Tick at position 0.",
-          "since": "R20 \u00a75"
+          "description": "Tick at position 0."
         },
         {
           "name": "clock_id",
@@ -445,8 +294,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "Clock the ticks are counted on (regular tick axis).",
-          "identity": "assigned",
-          "since": "R20 \u00a75"
+          "identity": "assigned"
         }
       ],
       "primary_key": [
@@ -495,11 +343,10 @@
         {
           "id": "analysis.array_dimensions.coordinate_pair_complete",
           "level": "error",
-          "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them (R100 2.2)",
+          "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them",
           "sql": "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column FROM analysis_array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
         }
-      ],
-      "since": "R20 \u00a75"
+      ]
     },
     "analysis.spike_events": {
       "columns": [
@@ -543,7 +390,6 @@
           "presence": "required",
           "role": "coordinate",
           "description": "First tick of the bucket this spike falls in, on clock_id.",
-          "since": "R30 \u00a73.1",
           "determined_by": [
             "t_tick"
           ]
@@ -622,7 +468,6 @@
           "presence": "required",
           "role": "data",
           "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
         {
@@ -631,8 +476,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 \u00a73.17).",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
         },
         {
           "name": "band",
@@ -641,7 +485,6 @@
           "role": "data",
           "description": "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 \u00a79.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split.",
           "vocabulary": "open",
-          "since": "R107 \u00a73.1",
           "reserved_values": [
             "wideband",
             "ap",
@@ -678,17 +521,15 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The device that produced this array.",
-          "identity": "assigned",
-          "since": "R65 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "processing_run_id",
           "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "The run that produced this array. Null means it was acquired rather than computed, which is the reading R23 \u00a72 gives a stream.",
-          "identity": "assigned",
-          "since": "R102 \u00a73.1"
+          "description": "The run that produced this array. Null means it was acquired rather than computed.",
+          "identity": "assigned"
         },
         {
           "name": "sample_rate_hz",
@@ -704,7 +545,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of the array's values, as a UCUM code.",
-          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             {
@@ -733,8 +573,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -801,8 +640,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "array_asset_id",
@@ -817,8 +655,7 @@
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "Axis that channel_index indexes, in stored order.",
-          "since": "R3 \u00a76.1"
+          "description": "Axis that channel_index indexes, in stored order."
         },
         {
           "name": "channel_index",
@@ -848,8 +685,7 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Acquisition time offset within one sample period, in sample periods.",
-          "since": "R19 \u00a72"
+          "description": "Acquisition time offset within one sample period, in sample periods."
         },
         {
           "name": "unit",
@@ -857,7 +693,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of the converted value, as a UCUM code.",
-          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             {
@@ -872,7 +707,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Add after conversion.",
-          "since": "R19 \u00a72",
           "unit_from": "unit"
         },
         {
@@ -880,8 +714,7 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Multiply stored values by this before offset.",
-          "since": "R19 \u00a72"
+          "description": "Multiply stored values by this before offset."
         }
       ],
       "primary_key": [
@@ -936,8 +769,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "array_asset_id",
@@ -945,16 +777,14 @@
           "presence": "required",
           "role": "identifier",
           "description": "Array asset ID.",
-          "identity": "assigned",
-          "since": "R3 \u00a73.1-3.3"
+          "identity": "assigned"
         },
         {
           "name": "axis_index",
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "0-based axis position in stored order (Part 03 \u00a76.2).",
-          "since": "R3 \u00a73.1-3.3"
+          "description": "0-based axis position in stored order (Part 03 \u00a76.2)."
         },
         {
           "name": "dimension_name",
@@ -962,7 +792,6 @@
           "presence": "required",
           "role": "data",
           "description": "Axis name.",
-          "since": "R3 \u00a73.1-3.3",
           "vocabulary": "free"
         },
         {
@@ -971,7 +800,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Which column of that resource holds the 0-based position.",
-          "since": "R20 \u00a72",
           "vocabulary": "free"
         },
         {
@@ -979,8 +807,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "discriminator",
-          "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column` (R20 \u00a72.4).",
-          "since": "R100 \u00a72.1",
+          "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`.",
           "resolves": "required",
           "positions_in": "coordinate_position_column"
         },
@@ -990,8 +817,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "A 1-D array holding one value per position (irregular axis).",
-          "identity": "assigned",
-          "since": "R20 \u00a72"
+          "identity": "assigned"
         },
         {
           "name": "coordinate_unit",
@@ -999,7 +825,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The physical unit of this axis's coordinate values, as a UCUM code.",
-          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             {
@@ -1014,7 +839,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Increment per position.",
-          "since": "R20 \u00a72",
           "unit_from": "coordinate_unit"
         },
         {
@@ -1023,7 +847,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Value at position 0 (regular numeric axis).",
-          "since": "R20 \u00a72",
           "unit_from": "coordinate_unit"
         },
         {
@@ -1031,24 +854,21 @@
           "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Ticks advanced per position (numerator).",
-          "since": "R20 \u00a72"
+          "description": "Ticks advanced per position (numerator)."
         },
         {
           "name": "step_tick_den",
           "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Denominator of the step, in ticks. Absent means 1.",
-          "since": "R33 \u00a72"
+          "description": "Denominator of the step, in ticks. Absent means 1."
         },
         {
           "name": "origin_tick",
           "type": "int64",
           "presence": "nullable",
           "role": "coordinate",
-          "description": "Tick at position 0.",
-          "since": "R20 \u00a72"
+          "description": "Tick at position 0."
         },
         {
           "name": "clock_id",
@@ -1056,8 +876,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "Clock the ticks are counted on (regular tick axis).",
-          "identity": "assigned",
-          "since": "R20 \u00a72"
+          "identity": "assigned"
         }
       ],
       "primary_key": [
@@ -1136,7 +955,7 @@
         {
           "id": "core.array_dimensions.coordinate_resource_is_core",
           "level": "error",
-          "message": "a core axis points outward at a non-core resource (R20 \u00a75.1)",
+          "message": "a core axis points outward at a non-core resource",
           "sql": "SELECT array_asset_id, axis_index, coordinate_resource FROM core_array_dimensions WHERE coordinate_resource IS NOT NULL AND coordinate_resource NOT LIKE 'core.%'"
         },
         {
@@ -1148,11 +967,10 @@
         {
           "id": "core.array_dimensions.coordinate_pair_complete",
           "level": "error",
-          "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them (R100 2.2)",
+          "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them",
           "sql": "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column FROM core_array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
         }
-      ],
-      "since": "R3 \u00a73.1-3.3"
+      ]
     },
     "core.calibration_devices": {
       "columns": [
@@ -1162,8 +980,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R89 \u00a72.2"
+          "identity": "assigned"
         },
         {
           "name": "calibration_id",
@@ -1171,8 +988,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "The calibration this row names a device for.",
-          "identity": "assigned",
-          "since": "R89 \u00a72.2"
+          "identity": "assigned"
         },
         {
           "name": "device_id",
@@ -1180,8 +996,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "A device the calibration covers.",
-          "identity": "assigned",
-          "since": "R89 \u00a72.2"
+          "identity": "assigned"
         }
       ],
       "primary_key": [
@@ -1217,8 +1032,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R89 \u00a72.2"
+      "rules": []
     },
     "core.calibration_points": {
       "columns": [
@@ -1228,8 +1042,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R89 \u00a72.3"
+          "identity": "assigned"
         },
         {
           "name": "calibration_id",
@@ -1237,16 +1050,14 @@
           "presence": "required",
           "role": "identifier",
           "description": "The calibration this point belongs to.",
-          "identity": "assigned",
-          "since": "R89 \u00a72.3"
+          "identity": "assigned"
         },
         {
           "name": "point_index",
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "0-based position in the curve's own order. The key is not `input_value` even though the inputs are distinct: an equality join on a float64 is not safe, which is why R47 could strike `interval_index` and this stays.",
-          "since": "R89 \u00a72.3"
+          "description": "0-based position in the curve's own order. The key is not `input_value` even though the inputs are distinct: an equality join on a float64 is not safe, so the key uses an explicit sequence position."
         },
         {
           "name": "input_value",
@@ -1254,7 +1065,6 @@
           "presence": "required",
           "role": "data",
           "description": "The setting the point was measured at.",
-          "since": "R89 \u00a72.3",
           "unit_from": "core.calibrations.input_unit"
         },
         {
@@ -1263,7 +1073,6 @@
           "presence": "required",
           "role": "data",
           "description": "What the instrument then delivered.",
-          "since": "R89 \u00a72.3",
           "unit_from": "core.calibrations.output_unit"
         }
       ],
@@ -1291,8 +1100,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R89 \u00a72.3"
+      "rules": []
     },
     "core.calibrations": {
       "columns": [
@@ -1302,8 +1110,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R89 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "calibration_id",
@@ -1311,8 +1118,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Stable calibration ID.",
-          "identity": "assigned",
-          "since": "R89 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "calibration_name",
@@ -1320,7 +1126,6 @@
           "presence": "required",
           "role": "data",
           "description": "What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since Part 02 \u00a78.2 makes two calibrations sharing a name one row.",
-          "since": "R89 \u00a72.1",
           "vocabulary": "free"
         },
         {
@@ -1329,7 +1134,6 @@
           "presence": "required",
           "role": "data",
           "description": "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (Part 02 \u00a78.3), and this holds a value that resolves to no table.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -1337,8 +1141,7 @@
           "type": "timestamp",
           "presence": "nullable",
           "role": "data",
-          "description": "When the calibration was measured, which is not when it was in force: R89 \u00a71.2 measures 133 and 302 days between them. Null where the source states none, since what a source did not say is not invented (Part 01 \u00a73.5).",
-          "since": "R89 \u00a72.1"
+          "description": "When the calibration was measured, which is not when it was in force; measured examples differ by 133 and 302 days. Null where the source states none, since what a source did not say is not invented (Part 01 \u00a73.5)."
         },
         {
           "name": "description",
@@ -1346,7 +1149,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What the source said the calibration was.",
-          "since": "R89 \u00a72.1",
           "vocabulary": "free"
         },
         {
@@ -1354,8 +1156,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column (R89 \u00a72.3).",
-          "since": "R101 \u00a73.6",
+          "description": "The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column.",
           "vocabulary": "open",
           "authority": [
             {
@@ -1370,7 +1171,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The unit of `core.calibration_points.output_value`, as a UCUM code.",
-          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             {
@@ -1384,9 +1184,8 @@
           "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics (R89 \u00a72.4).",
-          "identity": "assigned",
-          "since": "R89 \u00a72.1"
+          "description": "The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics.",
+          "identity": "assigned"
         },
         {
           "name": "detail_kind",
@@ -1394,16 +1193,14 @@
           "presence": "nullable",
           "role": "discriminator",
           "description": "A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (Part 02 \u00a712.3).",
-          "resolves": "optional",
-          "since": "R107 \u00a73.1"
+          "resolves": "optional"
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -1433,17 +1230,16 @@
         {
           "id": "core.calibrations.unit_pair_complete",
           "level": "error",
-          "message": "a calibration declares one unit of measure and not the other; the pair is what makes a point readable (R89 \u00a72.3)",
+          "message": "a calibration declares one unit of measure and not the other; the pair is what makes a point readable",
           "sql": "SELECT calibration_id, input_unit, output_unit FROM core_calibrations WHERE (input_unit IS NULL) <> (output_unit IS NULL)"
         },
         {
           "id": "core.calibrations.points_declare_units",
           "level": "error",
-          "message": "a calibration carries points and declares no units, so nothing says what its values are measured in (R89 \u00a72.3)",
+          "message": "a calibration carries points and declares no units, so nothing says what its values are measured in",
           "sql": "SELECT DISTINCT c.calibration_id FROM core_calibrations c JOIN core_calibration_points p USING (calibration_id) WHERE c.input_unit IS NULL OR c.output_unit IS NULL"
         }
-      ],
-      "since": "R89 \u00a72.1"
+      ]
     },
     "core.clock_anchors": {
       "columns": [
@@ -1453,8 +1249,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "clock_id",
@@ -1462,24 +1257,21 @@
           "presence": "required",
           "role": "identifier",
           "description": "The clock being aligned.",
-          "identity": "assigned",
-          "since": "R13 \u00a73"
+          "identity": "assigned"
         },
         {
           "name": "anchor_index",
           "type": "int64",
           "presence": "required",
           "role": "sequence_position",
-          "description": "0-based position in this clock's anchor sequence.",
-          "since": "R13 \u00a73"
+          "description": "0-based position in this clock's anchor sequence."
         },
         {
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
           "role": "coordinate",
-          "description": "Tick on clock_id.",
-          "since": "R13 \u00a73"
+          "description": "Tick on clock_id."
         },
         {
           "name": "parent_tick",
@@ -1487,7 +1279,6 @@
           "presence": "required",
           "role": "coordinate",
           "description": "The corresponding tick on parent_clock_id.",
-          "since": "R13 \u00a73",
           "clock_from": "core.clocks.parent_clock_id"
         }
       ],
@@ -1537,11 +1328,10 @@
         {
           "id": "core.clock_anchors.gap_within_bound",
           "level": "warning",
-          "message": "an anchor gap exceeds twice the median, leaving ticks the mapping does not define (R27 5.3)",
+          "message": "an anchor gap exceeds twice the median, leaving ticks the mapping does not define",
           "sql": "WITH gaps AS (SELECT clock_id, anchor_index, t_tick - LAG(t_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS gap FROM core_clock_anchors), typical AS (SELECT clock_id, median(gap) AS m FROM gaps WHERE gap IS NOT NULL GROUP BY clock_id) SELECT g.clock_id, g.anchor_index, g.gap, t.m FROM gaps g JOIN typical t USING (clock_id) WHERE g.gap IS NOT NULL AND g.gap > t.m * 2"
         }
-      ],
-      "since": "R13 \u00a73"
+      ]
     },
     "core.clock_observation_intervals": {
       "columns": [
@@ -1551,8 +1341,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R38 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "clock_id",
@@ -1560,24 +1349,21 @@
           "presence": "required",
           "role": "identifier",
           "description": "The clock that was observing.",
-          "identity": "assigned",
-          "since": "R38 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "start_tick",
           "type": "int64",
           "presence": "required",
           "role": "coordinate",
-          "description": "First tick observed, on `clock_id` itself.",
-          "since": "R38 \u00a72.1"
+          "description": "First tick observed, on `clock_id` itself."
         },
         {
           "name": "stop_tick",
           "type": "int64",
           "presence": "required",
           "role": "coordinate",
-          "description": "Last tick observed, on `clock_id` itself.",
-          "since": "R38 \u00a72.1"
+          "description": "Last tick observed, on `clock_id` itself."
         }
       ],
       "primary_key": [
@@ -1618,8 +1404,7 @@
           "message": "observation windows overlap, which would double-count observed time",
           "sql": "SELECT session_id, clock_id, start_tick, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, clock_id ORDER BY start_tick) AS prev_stop FROM core_clock_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
         }
-      ],
-      "since": "R38 \u00a72.1"
+      ]
     },
     "core.clock_phase_steps": {
       "columns": [
@@ -1629,8 +1414,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session.",
-          "identity": "assigned",
-          "since": "R99 \u00a73.3"
+          "identity": "assigned"
         },
         {
           "name": "clock_id",
@@ -1638,16 +1422,14 @@
           "presence": "required",
           "role": "identifier",
           "description": "The clock whose alignment stepped.",
-          "identity": "assigned",
-          "since": "R99 \u00a73.3"
+          "identity": "assigned"
         },
         {
           "name": "t_tick",
           "type": "int64",
           "presence": "required",
           "role": "coordinate",
-          "description": "Where the step is, on `clock_id`.",
-          "since": "R99 \u00a73.3"
+          "description": "Where the step is, on `clock_id`."
         },
         {
           "name": "parent_tick",
@@ -1655,7 +1437,6 @@
           "presence": "required",
           "role": "coordinate",
           "description": "The same instant on the parent clock.",
-          "since": "R99 \u00a73.3",
           "clock_from": "core.clocks.parent_clock_id"
         },
         {
@@ -1664,7 +1445,6 @@
           "presence": "required",
           "role": "data",
           "description": "How far the parent's phase moved. Signed.",
-          "since": "R99 \u00a73.3",
           "unit": "s"
         },
         {
@@ -1673,7 +1453,6 @@
           "presence": "required",
           "role": "data",
           "description": "How many consecutive anchor intervals the step spans.",
-          "since": "R99 \u00a73.3",
           "unit": "{anchor_interval}"
         }
       ],
@@ -1706,7 +1485,7 @@
         {
           "id": "core.clock_phase_steps.step_needs_parent",
           "level": "error",
-          "message": "a phase step is recorded on a clock with no parent, and a step is a movement of the parent's phase (R99 3.3)",
+          "message": "a phase step is recorded on a clock with no parent, and a step is a movement of the parent's phase",
           "sql": "SELECT s.session_id, s.clock_id, s.t_tick FROM core_clock_phase_steps s JOIN core_clocks c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE c.parent_clock_id IS NULL"
         }
       ]
@@ -1735,7 +1514,6 @@
           "presence": "required",
           "role": "data",
           "description": "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
         {
@@ -1766,7 +1544,6 @@
           "presence": "required",
           "role": "data",
           "description": "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (Part 01 \u00a72.2).",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -1774,8 +1551,7 @@
           "type": "timestamp",
           "presence": "nullable",
           "role": "data",
-          "description": "Wall-clock instant of tick 0 on this clock.",
-          "since": "R6 \u00a72"
+          "description": "Wall-clock instant of tick 0 on this clock."
         },
         {
           "name": "parent_clock_id",
@@ -1790,16 +1566,14 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Parent ticks per this clock's tick, as measured.",
-          "since": "R3 \u00a73.4"
+          "description": "Parent ticks per this clock's tick, as measured."
         },
         {
           "name": "transform_offset",
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "Parent-clock tick at this clock's tick 0.",
-          "since": "R3 \u00a73.4"
+          "description": "Parent-clock tick at this clock's tick 0."
         },
         {
           "name": "transform_to_parent",
@@ -1813,24 +1587,21 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         },
         {
           "name": "withheld_first_anchor",
           "type": "bool",
           "presence": "nullable",
           "role": "data",
-          "description": "Whether Part 02 \u00a712.6's terminal-anchor test withheld this clock's first anchor. Null means the test did not run.",
-          "since": "R99 \u00a73.2"
+          "description": "Whether Part 02 \u00a712.6's terminal-anchor test withheld this clock's first anchor. Null means the test did not run."
         },
         {
           "name": "withheld_last_anchor",
           "type": "bool",
           "presence": "nullable",
           "role": "data",
-          "description": "Whether Part 02 \u00a712.6's terminal-anchor test withheld this clock's last anchor. Null means the test did not run.",
-          "since": "R99 \u00a73.2"
+          "description": "Whether Part 02 \u00a712.6's terminal-anchor test withheld this clock's last anchor. Null means the test did not run."
         }
       ],
       "primary_key": [
@@ -1866,7 +1637,7 @@
         {
           "id": "core.clocks.tick_rate_one_form",
           "level": "error",
-          "message": "a clock declares both a float rate and a rational one (R95 \u00a73.2)",
+          "message": "a clock declares both a float rate and a rational one",
           "sql": "SELECT clock_id, tick_rate_hz, tick_rate_num, tick_rate_den FROM core_clocks WHERE tick_rate_hz IS NOT NULL AND tick_rate_num IS NOT NULL"
         },
         {
@@ -1902,25 +1673,25 @@
         {
           "id": "core.clocks.parent_chain_well_founded",
           "level": "error",
-          "message": "a clock is its own ancestor, so walking the chain does not terminate (R27 3)",
+          "message": "a clock is its own ancestor, so walking the chain does not terminate",
           "sql": "WITH RECURSIVE up(clock_id, ancestor, depth) AS (SELECT clock_id, parent_clock_id, 1 FROM core_clocks WHERE parent_clock_id IS NOT NULL UNION ALL SELECT u.clock_id, c.parent_clock_id, u.depth + 1 FROM up u JOIN core_clocks c ON c.clock_id = u.ancestor WHERE c.parent_clock_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT clock_id FROM up WHERE ancestor = clock_id OR depth >= 64"
         },
         {
           "id": "core.clocks.alignment_declared_for_conversion",
           "level": "error",
-          "message": "a non-reference clock declares no alignment, so it cannot be converted (R27 4)",
+          "message": "a non-reference clock declares no alignment, so it cannot be converted",
           "sql": "SELECT c.clock_id FROM core_clocks c JOIN core_sessions s USING (session_id) WHERE s.reference_clock_id IS NOT NULL AND c.clock_id <> s.reference_clock_id AND c.transform_slope IS NULL AND NOT EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.clock_id = c.clock_id)"
         },
         {
           "id": "core.clocks.observation_declared",
           "level": "error",
-          "message": "a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit (R98 3.1)",
+          "message": "a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit",
           "sql": "SELECT c.session_id, c.clock_id FROM core_clocks c LEFT JOIN core_clock_observation_intervals o ON o.session_id = c.session_id AND o.clock_id = c.clock_id WHERE o.clock_id IS NULL AND (EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id) OR EXISTS (SELECT 1 FROM core_sessions s WHERE s.session_id = c.session_id AND s.reference_clock_id = c.clock_id))"
         },
         {
           "id": "core.clocks.withheld_needs_anchors",
           "level": "error",
-          "message": "a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it (R99 3.2)",
+          "message": "a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it",
           "sql": "SELECT c.session_id, c.clock_id FROM core_clocks c WHERE (c.withheld_first_anchor IS NOT NULL OR c.withheld_last_anchor IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id)"
         }
       ]
@@ -1933,8 +1704,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session.",
-          "identity": "assigned",
-          "since": "R105 \u00a73.2"
+          "identity": "assigned"
         },
         {
           "name": "coordinate_frame",
@@ -1942,7 +1712,6 @@
           "presence": "required",
           "role": "data",
           "description": "The frame these axes belong to.",
-          "since": "R105 \u00a73.2",
           "vocabulary": "open"
         },
         {
@@ -1950,8 +1719,7 @@
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "Which axis, 0-based (Part 02 \u00a78.1.1).",
-          "since": "R105 \u00a73.2"
+          "description": "Which axis, 0-based (Part 02 \u00a78.1.1)."
         },
         {
           "name": "axis_name",
@@ -1959,7 +1727,6 @@
           "presence": "required",
           "role": "data",
           "description": "Whatever the source called the field these values came from, verbatim (Part 02 \u00a79.3). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be.",
-          "since": "R105 \u00a73.2",
           "vocabulary": "open"
         },
         {
@@ -1967,8 +1734,7 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Which way the values increase -- `right`, `anterior`, `superior`. Null where the source does not state it, which no inference may fill (R105 \u00a73.4).",
-          "since": "R105 \u00a73.2",
+          "description": "Which way the values increase -- `right`, `anterior`, `superior`. Null where the source does not state it, which no inference may fill.",
           "vocabulary": "open"
         },
         {
@@ -1977,7 +1743,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The axis's unit, as a UCUM code (Part 02 \u00a78.4).",
-          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             {
@@ -2018,11 +1783,10 @@
         {
           "id": "core.coordinate_frame_axes.axis_names_distinct",
           "level": "error",
-          "message": "two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told (R105 3.2)",
+          "message": "two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told",
           "sql": "SELECT session_id, coordinate_frame, axis_name, COUNT(*) AS axes FROM core_coordinate_frame_axes GROUP BY session_id, coordinate_frame, axis_name HAVING COUNT(*) > 1"
         }
-      ],
-      "since": "R105 \u00a73.2"
+      ]
     },
     "core.coordinate_frames": {
       "columns": [
@@ -2032,8 +1796,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session.",
-          "identity": "assigned",
-          "since": "R105 \u00a73.1"
+          "identity": "assigned"
         },
         {
           "name": "coordinate_frame",
@@ -2041,7 +1804,6 @@
           "presence": "required",
           "role": "data",
           "description": "The session's own name for this space.",
-          "since": "R105 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -2050,7 +1812,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The published atlas this space is, where it is one. Null where no source names it; a writer MUST NOT read one out of the frame's name.",
-          "since": "R105 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -2059,7 +1820,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "That atlas's version, spelled as the atlas spells it -- `CCFv3`. Two packets naming one atlas at different versions are in different spaces.",
-          "since": "R105 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -2068,7 +1828,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What the frame is, for a reader without the atlas.",
-          "since": "R105 \u00a73.1",
           "vocabulary": "free"
         }
       ],
@@ -2087,8 +1846,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R105 \u00a73.1"
+      "rules": []
     },
     "core.curation_versions": {
       "columns": [
@@ -2114,7 +1872,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
         {
@@ -2155,8 +1912,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The run that produced this record, where provenance is recorded.",
-          "identity": "assigned",
-          "since": "R41 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "parent_curation_id",
@@ -2186,8 +1942,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -2241,8 +1996,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session if device record is session-scoped.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "device_id",
@@ -2258,7 +2012,6 @@
           "presence": "required",
           "role": "data",
           "description": "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
         {
@@ -2267,7 +2020,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -2284,7 +2036,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The firmware the instrument was running, verbatim as its source stated it.",
-          "since": "R66 \u00a72.1",
           "vocabulary": "free"
         },
         {
@@ -2293,7 +2044,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The instrument's hardware revision, verbatim as its source stated it.",
-          "since": "R66 \u00a72.1",
           "vocabulary": "free"
         },
         {
@@ -2310,8 +2060,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it.",
-          "identity": "assigned",
-          "since": "R67 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "parent_port",
@@ -2319,7 +2068,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (Part 01 \u00a73.5).",
-          "since": "R85 \u00a72.1",
           "vocabulary": "open"
         },
         {
@@ -2328,16 +2076,14 @@
           "presence": "nullable",
           "role": "discriminator",
           "description": "The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is Part 02 \u00a78.3's shared-key join. Core declares no such table (Part 02 \u00a78.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (Part 02 \u00a78.3).",
-          "resolves": "optional",
-          "since": "R104 \u00a73.1"
+          "resolves": "optional"
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -2367,13 +2113,13 @@
         {
           "id": "core.devices.parent_chain_well_founded",
           "level": "error",
-          "message": "a device is its own ancestor, or its attachment chain does not terminate (R67 \u00a72.3)",
+          "message": "a device is its own ancestor, or its attachment chain does not terminate",
           "sql": "WITH RECURSIVE up(device_id, ancestor, depth) AS (SELECT device_id, parent_device_id, 1 FROM core_devices WHERE parent_device_id IS NOT NULL UNION ALL SELECT u.device_id, d.parent_device_id, u.depth + 1 FROM up u JOIN core_devices d ON d.device_id = u.ancestor WHERE d.parent_device_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT device_id FROM up WHERE ancestor = device_id OR depth >= 64"
         },
         {
           "id": "core.devices.serial_identifies_one_device",
           "level": "error",
-          "message": "one serial number appears on more than one device row; a device is the physical object (R67 \u00a72.2)",
+          "message": "one serial number appears on more than one device row; a device is the physical object",
           "sql": "SELECT serial_number, COUNT(*) AS n_rows FROM core_devices WHERE serial_number IS NOT NULL GROUP BY serial_number HAVING COUNT(*) > 1"
         }
       ]
@@ -2386,8 +2132,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session.",
-          "identity": "assigned",
-          "since": "R105 \u00a73.3"
+          "identity": "assigned"
         },
         {
           "name": "electrode_id",
@@ -2395,8 +2140,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "The thing positioned.",
-          "identity": "assigned",
-          "since": "R105 \u00a73.3"
+          "identity": "assigned"
         },
         {
           "name": "coordinate_frame",
@@ -2404,7 +2148,6 @@
           "presence": "required",
           "role": "data",
           "description": "The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key.",
-          "since": "R105 \u00a73.3",
           "vocabulary": "open"
         },
         {
@@ -2413,7 +2156,6 @@
           "presence": "required",
           "role": "data",
           "description": "What the coordinate asserts (Part 01 \u00a73.8).",
-          "since": "R105 \u00a73.3",
           "vocabulary": "open"
         },
         {
@@ -2421,8 +2163,7 @@
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "Which of the frame's axes this value is on.",
-          "since": "R105 \u00a73.3"
+          "description": "Which of the frame's axes this value is on."
         },
         {
           "name": "axis_value",
@@ -2430,7 +2171,6 @@
           "presence": "required",
           "role": "data",
           "description": "The value, in the axis's unit.",
-          "since": "R105 \u00a73.3",
           "unit_from": "core.coordinate_frame_axes.unit"
         }
       ],
@@ -2477,8 +2217,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R105 \u00a73.3"
+      "rules": []
     },
     "core.electrode_coordinates": {
       "columns": [
@@ -2488,8 +2227,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "electrode_id",
@@ -2497,8 +2235,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Electrode ID.",
-          "identity": "assigned",
-          "since": "R19 \u00a73"
+          "identity": "assigned"
         },
         {
           "name": "coordinate_frame",
@@ -2506,7 +2243,6 @@
           "presence": "required",
           "role": "data",
           "description": "The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -2515,7 +2251,6 @@
           "presence": "required",
           "role": "data",
           "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (Part 01 \u00a73.8). A consumer that does not recognise a basis MUST NOT treat it as measured (Part 01 \u00a73.8).",
-          "since": "R58 \u00a72.1",
           "vocabulary": "open"
         },
         {
@@ -2524,8 +2259,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names.",
-          "identity": "carried",
-          "since": "R59 \u00a72.1"
+          "identity": "carried"
         },
         {
           "name": "region_label",
@@ -2533,7 +2267,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "That structure's short name, so a consumer without the atlas can read the annotation.",
-          "since": "R59 \u00a72.1",
           "vocabulary": "open"
         },
         {
@@ -2542,8 +2275,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The run that produced this coordinate.",
-          "identity": "assigned",
-          "since": "R58 \u00a72.3"
+          "identity": "assigned"
         }
       ],
       "primary_key": [
@@ -2591,8 +2323,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R19 \u00a73"
+      "rules": []
     },
     "core.electrodes": {
       "columns": [
@@ -2618,7 +2349,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
         {
@@ -2635,7 +2365,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
-          "since": "R8 \u00a72",
           "vocabulary": "free"
         },
         {
@@ -2644,7 +2373,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
-          "since": "R8 \u00a72",
           "vocabulary": "free"
         },
         {
@@ -2660,8 +2388,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -2697,8 +2424,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "event_stream_id",
@@ -2706,8 +2432,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "The stream being observed.",
-          "identity": "assigned",
-          "since": "R25 \u00a72"
+          "identity": "assigned"
         },
         {
           "name": "start_tick",
@@ -2715,7 +2440,6 @@
           "presence": "required",
           "role": "coordinate",
           "description": "First observed tick, on the stream's clock.",
-          "since": "R25 \u00a72",
           "clock_from": "core.event_streams.clock_id"
         },
         {
@@ -2724,7 +2448,6 @@
           "presence": "required",
           "role": "coordinate",
           "description": "Last observed tick, on the stream's clock.",
-          "since": "R25 \u00a72",
           "clock_from": "core.event_streams.clock_id"
         }
       ],
@@ -2765,8 +2488,7 @@
           "message": "observation windows overlap, which would double-count observed time",
           "sql": "SELECT event_stream_id, start_tick, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY event_stream_id ORDER BY start_tick) AS prev_stop FROM core_event_stream_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
         }
-      ],
-      "since": "R25 \u00a72"
+      ]
     },
     "core.event_streams": {
       "columns": [
@@ -2776,8 +2498,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R23 \u00a72-3"
+          "identity": "assigned"
         },
         {
           "name": "event_stream_id",
@@ -2785,8 +2506,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Stable ID.",
-          "identity": "assigned",
-          "since": "R23 \u00a72-3"
+          "identity": "assigned"
         },
         {
           "name": "event_stream_name",
@@ -2794,7 +2514,6 @@
           "presence": "required",
           "role": "data",
           "description": "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
         {
@@ -2803,7 +2522,6 @@
           "presence": "required",
           "role": "data",
           "description": "What kind of event this stream emits. A stream emits one kind, so a source emitting several on one channel is written as several streams.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -2813,7 +2531,6 @@
           "role": "discriminator",
           "description": "A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (Part 02 \u00a78.3). Resolved against `core.events`' key by Part 02 \u00a78.3's shared key, through the reference `discriminates_via` names.",
           "resolves": "optional",
-          "since": "R107 \u00a73.1",
           "discriminates_via": "core.events.stream_id"
         },
         {
@@ -2822,8 +2539,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The device that produced it, where one is identified.",
-          "identity": "assigned",
-          "since": "R23 \u00a72-3"
+          "identity": "assigned"
         },
         {
           "name": "clock_id",
@@ -2831,25 +2547,22 @@
           "presence": "required",
           "role": "identifier",
           "description": "The clock its events are timed on.",
-          "identity": "assigned",
-          "since": "R23 \u00a72-3"
+          "identity": "assigned"
         },
         {
           "name": "processing_run_id",
           "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "The run that produced it. Null means it came off the device as recorded. A narrow exception to R9 \u00a74: the manifest records outputs per resource and cannot distinguish streams within one table.",
-          "identity": "assigned",
-          "since": "R23 \u00a72-3"
+          "description": "The run that produced it. Null means it came off the device as recorded. The manifest records outputs per resource and cannot distinguish streams within one table.",
+          "identity": "assigned"
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -2901,8 +2614,7 @@
           "message": "streams carry no observation intervals and their clock declares none, so no rate over them has a denominator",
           "sql": "SELECT s.event_stream_id, s.event_stream_name FROM core_event_streams s WHERE NOT EXISTS (SELECT 1 FROM core_event_stream_observation_intervals o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS (SELECT 1 FROM core_clock_observation_intervals c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
         }
-      ],
-      "since": "R23 \u00a72-3"
+      ]
     },
     "core.events": {
       "columns": [
@@ -2920,8 +2632,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "The stream this event belongs to.",
-          "identity": "assigned",
-          "since": "R23 \u00a72-3"
+          "identity": "assigned"
         },
         {
           "name": "t_tick",
@@ -2943,8 +2654,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -2997,8 +2707,7 @@
           "presence": "required",
           "role": "discriminator",
           "description": "The resource that specialises this interval, as a dotted resource ID, resolved as Part 02 \u00a78.3's shared key.",
-          "resolves": "required",
-          "since": "R107 \u00a73.1"
+          "resolves": "required"
         },
         {
           "name": "interval_id",
@@ -3006,24 +2715,21 @@
           "presence": "required",
           "role": "identifier",
           "description": "Stable trial ID.",
-          "identity": "carried",
-          "since": "R54 \u00a72.1"
+          "identity": "carried"
         },
         {
           "name": "start_tick",
           "type": "int64",
           "presence": "required",
           "role": "coordinate",
-          "description": "First tick of the trial, inclusive, on `clock_id`.",
-          "since": "R45 \u00a72.4"
+          "description": "First tick of the trial, inclusive, on `clock_id`."
         },
         {
           "name": "stop_tick",
           "type": "int64",
           "presence": "required",
           "role": "coordinate",
-          "description": "Last tick of the trial, inclusive, on `clock_id`.",
-          "since": "R45 \u00a72.4"
+          "description": "Last tick of the trial, inclusive, on `clock_id`."
         },
         {
           "name": "clock_id",
@@ -3038,8 +2744,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -3100,7 +2805,6 @@
           "presence": "required",
           "role": "data",
           "description": "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
         {
@@ -3109,8 +2813,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 \u00a73.17).",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
         },
         {
           "name": "uri",
@@ -3126,7 +2829,6 @@
           "presence": "required",
           "role": "data",
           "description": "The container format, as the file extension names it: `mp4`, `avi`.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3135,24 +2837,21 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (Part 01 \u00a73.5).",
-          "identity": "assigned",
-          "since": "R102 \u00a73.2"
+          "identity": "assigned"
         },
         {
           "name": "pts_rate_num",
           "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Presentation timestamps per second in this asset's container: numerator.",
-          "since": "R70 \u00a72.1"
+          "description": "Presentation timestamps per second in this asset's container: numerator."
         },
         {
           "name": "pts_rate_den",
           "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Presentation timestamps per second in this asset's container: denominator.",
-          "since": "R70 \u00a72.1"
+          "description": "Presentation timestamps per second in this asset's container: denominator."
         },
         {
           "name": "clock_id",
@@ -3167,8 +2866,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -3207,13 +2905,13 @@
         {
           "id": "core.media_assets.pts_rate_pair_complete",
           "level": "error",
-          "message": "an asset declares one half of its presentation-timestamp rate; half a rational is unusable (R70 \u00a72.2)",
+          "message": "an asset declares one half of its presentation-timestamp rate; half a rational is unusable",
           "sql": "SELECT media_asset_id, pts_rate_num, pts_rate_den FROM core_media_assets WHERE (pts_rate_num IS NULL) <> (pts_rate_den IS NULL)"
         },
         {
           "id": "core.media_assets.pts_rate_declared_where_frames_carry_pts",
           "level": "error",
-          "message": "frames carry pts for an asset that does not say what those timestamps count (R70 \u00a72.2)",
+          "message": "frames carry pts for an asset that does not say what those timestamps count",
           "sql": "SELECT a.media_asset_id FROM core_media_assets a WHERE a.pts_rate_num IS NULL AND EXISTS (SELECT 1 FROM core_media_frames f WHERE f.media_asset_id = a.media_asset_id AND f.pts IS NOT NULL)"
         },
         {
@@ -3232,8 +2930,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "media_asset_id",
@@ -3270,8 +2967,7 @@
           "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Container presentation timestamp, verbatim in the container's own time base.",
-          "since": "R68 \u00a72.1"
+          "description": "Container presentation timestamp, verbatim in the container's own time base."
         },
         {
           "name": "dropped",
@@ -3324,7 +3020,7 @@
         {
           "id": "core.media_frames.pts_increases_with_frame_index",
           "level": "error",
-          "message": "pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order (R69 \u00a72.1)",
+          "message": "pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order",
           "sql": "SELECT media_asset_id, frame_index, pts, prev AS previous_pts FROM (SELECT media_asset_id, frame_index, pts, LAG(pts) OVER (PARTITION BY media_asset_id ORDER BY frame_index) AS prev FROM core_media_frames WHERE pts IS NOT NULL) WHERE prev IS NOT NULL AND pts <= prev"
         }
       ]
@@ -3337,8 +3033,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R41 \u00a72.3"
+          "identity": "assigned"
         },
         {
           "name": "activity_type",
@@ -3346,7 +3041,6 @@
           "presence": "required",
           "role": "data",
           "description": "Which kind of output this preference is about, in the vocabulary `core.processing_runs.activity_type` uses (Part 02 \u00a79.3).",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3354,10 +3048,9 @@
           "type": "string",
           "presence": "required",
           "role": "discriminator",
-          "description": "The resource whose primary key `scope` holds, as a dotted resource ID (R49 \u00a72.2).",
+          "description": "The resource whose primary key `scope` holds, as a dotted resource ID.",
           "resolves": "optional",
-          "discriminates": "scope",
-          "since": "R107 \u00a73.1"
+          "discriminates": "scope"
         },
         {
           "name": "scope",
@@ -3365,7 +3058,6 @@
           "presence": "required",
           "role": "data",
           "description": "What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide.",
-          "since": "R41 \u00a72.3",
           "vocabulary": "free"
         },
         {
@@ -3374,16 +3066,14 @@
           "presence": "required",
           "role": "identifier",
           "description": "The preferred run.",
-          "identity": "assigned",
-          "since": "R41 \u00a72.3"
+          "identity": "assigned"
         },
         {
           "name": "chosen_at",
           "type": "timestamp",
           "presence": "nullable",
           "role": "data",
-          "description": "When the choice was made.",
-          "since": "R41 \u00a72.3"
+          "description": "When the choice was made."
         },
         {
           "name": "reason",
@@ -3391,7 +3081,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Why, in one line.",
-          "since": "R41 \u00a72.3",
           "vocabulary": "free"
         }
       ],
@@ -3440,8 +3129,7 @@
           "message": "the preferred run is superseded by another run",
           "sql": "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core_preferred_runs p WHERE EXISTS (SELECT 1 FROM core_processing_runs r WHERE r.supersedes_run_id = p.processing_run_id)"
         }
-      ],
-      "since": "R41 \u00a72.3"
+      ]
     },
     "core.probes": {
       "columns": [
@@ -3467,7 +3155,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R95 \u00a73.1",
           "vocabulary": "free"
         },
         {
@@ -3484,7 +3171,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The probe's model, as the manufacturer names it: `Neuropixels 1.0`.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3493,7 +3179,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3518,7 +3203,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The structure the probe was aimed at, as an atlas acronym where the source gives one. Not resolvable: no column here names the atlas, which only a coordinate frame does (Part 01 \u00a73.24).",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -3526,8 +3210,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -3563,8 +3246,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "processing_run_id",
@@ -3572,8 +3254,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "The run.",
-          "identity": "assigned",
-          "since": "R9"
+          "identity": "assigned"
         },
         {
           "name": "source_file_id",
@@ -3581,8 +3262,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "A source file the run consumed.",
-          "identity": "assigned",
-          "since": "R9"
+          "identity": "assigned"
         }
       ],
       "primary_key": [
@@ -3618,8 +3298,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R9"
+      "rules": []
     },
     "core.processing_runs": {
       "columns": [
@@ -3629,8 +3308,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID if session-scoped.",
-          "identity": "assigned",
-          "since": "R88 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "processing_run_id",
@@ -3646,7 +3324,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
         {
@@ -3655,16 +3332,14 @@
           "presence": "required",
           "role": "data",
           "description": "What kind of work the run did: `import`, `validation`, `sorting`, `curation`, `materialization`. A pipeline names its own.",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
         },
         {
           "name": "scope",
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Read only with the `scope_kind` beside it, which names the table the value keys into (R49 \u00a72.2).",
-          "since": "R107 \u00a73.1",
+          "description": "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Read only with the `scope_kind` beside it, which names the table the value keys into.",
           "vocabulary": "free"
         },
         {
@@ -3674,8 +3349,7 @@
           "role": "discriminator",
           "description": "The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all.",
           "resolves": "optional",
-          "discriminates": "scope",
-          "since": "R107 \u00a73.1"
+          "discriminates": "scope"
         },
         {
           "name": "supersedes_run_id",
@@ -3683,8 +3357,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The run this one replaces, if any.",
-          "identity": "assigned",
-          "since": "R50 \u00a72"
+          "identity": "assigned"
         },
         {
           "name": "software_name",
@@ -3742,7 +3415,6 @@
             "failed",
             "partial"
           ],
-          "since": "R107 \u00a73.1",
           "vocabulary": "closed"
         },
         {
@@ -3750,8 +3422,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -3805,19 +3476,19 @@
         {
           "id": "core.processing_runs.undeclared_currency",
           "level": "error",
-          "message": "several runs share an activity and scope and none is preferred, so a consumer cannot choose between them (R82 \u00a72.1)",
+          "message": "several runs share an activity and scope and none is preferred, so a consumer cannot choose between them",
           "sql": "WITH grouped AS ( SELECT session_id, activity_type, scope, count(*) AS n FROM core_processing_runs WHERE scope IS NOT NULL GROUP BY session_id, activity_type, scope HAVING count(*) > 1) SELECT g.session_id, g.activity_type, g.scope, g.n FROM grouped g WHERE NOT EXISTS ( SELECT 1 FROM core_preferred_runs p WHERE p.activity_type = g.activity_type AND p.scope = g.scope AND (p.session_id = g.session_id OR (p.session_id IS NULL AND g.session_id IS NULL)))"
         },
         {
           "id": "core.processing_runs.scope_undeclared",
           "level": "error",
-          "message": "an activity has several runs and at least one records no scope, so whether they compete cannot be determined (R82 \u00a72.2)",
+          "message": "an activity has several runs and at least one records no scope, so whether they compete cannot be determined",
           "sql": "WITH per_activity AS ( SELECT session_id, activity_type, count(*) AS n, count(*) FILTER (WHERE scope IS NULL) AS unscoped FROM core_processing_runs GROUP BY session_id, activity_type) SELECT session_id, activity_type, n, unscoped FROM per_activity WHERE n > 1 AND unscoped > 0"
         },
         {
           "id": "core.processing_runs.scope_pair_complete",
           "level": "error",
-          "message": "a run declares one half of its scope; the pair is what carries the meaning (R49 \u00a72.4)",
+          "message": "a run declares one half of its scope; the pair is what carries the meaning",
           "sql": "SELECT processing_run_id, scope_kind, scope FROM core_processing_runs WHERE (scope IS NULL) <> (scope_kind IS NULL)"
         }
       ]
@@ -3830,8 +3501,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R3 \u00a73.1-3.3"
+          "identity": "assigned"
         },
         {
           "name": "experimenter",
@@ -3839,7 +3509,6 @@
           "presence": "required",
           "role": "data",
           "description": "One experimenter.",
-          "since": "R3 \u00a73.1-3.3",
           "vocabulary": "free"
         }
       ],
@@ -3858,8 +3527,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R3 \u00a73.1-3.3"
+      "rules": []
     },
     "core.sessions": {
       "columns": [
@@ -3877,7 +3545,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
         {
@@ -3900,17 +3567,15 @@
           "type": "timestamp",
           "presence": "nullable",
           "role": "data",
-          "description": "When the session ended, UTC. Metadata, not derived from the tables (R25 5).",
-          "since": "R25 \u00a72"
+          "description": "When the session ended, UTC. Metadata, not derived from the tables."
         },
         {
           "name": "reference_clock_id",
           "type": "int32",
           "presence": "nullable",
           "role": "identifier",
-          "description": "The clock this session's times are reported on by default (R27 2).",
-          "identity": "assigned",
-          "since": "R27 \u00a72"
+          "description": "The clock this session's times are reported on by default.",
+          "identity": "assigned"
         },
         {
           "name": "session_description",
@@ -3950,7 +3615,6 @@
           "presence": "nullable",
           "role": "coordinate",
           "description": "Earliest observed tick, on `reference_clock_id`; the origin seconds count from.",
-          "since": "R39 \u00a72.2",
           "clock_from": "reference_clock_id"
         },
         {
@@ -3958,8 +3622,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         },
         {
           "name": "alignment_bound",
@@ -3967,7 +3630,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "How far past its anchors the writer mapped, in median anchor intervals (Part 01 \u00a73.9). Null means the default of one.",
-          "since": "R99 \u00a73.1",
           "unit": "{median_anchor_interval}"
         }
       ],
@@ -3998,7 +3660,7 @@
         {
           "id": "core.sessions.manifest_sessions_match",
           "level": "error",
-          "message": "the manifest's session inventory and core.sessions disagree; the manifest names a session by its session_name, since an assigned session_id means nothing outside the packet that assigned it (R53 \u00a72.3.1)",
+          "message": "the manifest's session inventory and core.sessions disagree; the manifest names a session by its session_name, since an assigned session_id means nothing outside the packet that assigned it",
           "sql": "SELECT session_name FROM core_sessions WHERE session_name NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_name FROM core_sessions)"
         },
         {
@@ -4010,7 +3672,7 @@
         {
           "id": "core.sessions.reference_clock_declared",
           "level": "error",
-          "message": "a session declaring more than one clock names no reference clock (R27 2)",
+          "message": "a session declaring more than one clock names no reference clock",
           "sql": "SELECT s.session_id, COUNT(*) AS n_clocks FROM core_sessions s JOIN core_clocks c USING (session_id) WHERE s.reference_clock_id IS NULL GROUP BY s.session_id HAVING COUNT(*) > 1"
         },
         {
@@ -4022,7 +3684,7 @@
         {
           "id": "core.sessions.alignment_bound_at_least_default",
           "level": "error",
-          "message": "a session declares an alignment bound below R27 5.3's default of one median anchor interval, which reaches no further than declaring nothing (R99 3.1)",
+          "message": "a session declares an alignment bound below the default of one median anchor interval, which reaches no further than declaring nothing",
           "sql": "SELECT session_id, alignment_bound FROM core_sessions WHERE alignment_bound < 1.0"
         }
       ]
@@ -4035,8 +3697,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R83 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "sorting_run_id",
@@ -4044,16 +3705,14 @@
           "presence": "required",
           "role": "identifier",
           "description": "The run whose channel list this row belongs to.",
-          "identity": "assigned",
-          "since": "R83 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "channel_index",
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "0-based position in the run's own channel order, which is what a source's channel index counts (R83 \u00a71.1). int64 as every structural index is.",
-          "since": "R83 \u00a72.1"
+          "description": "0-based position in the run's own channel order, which is what a source's channel index counts. int64 as every structural index is."
         },
         {
           "name": "electrode_id",
@@ -4061,8 +3720,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "The contact at that position.",
-          "identity": "assigned",
-          "since": "R83 \u00a72.1"
+          "identity": "assigned"
         }
       ],
       "primary_key": [
@@ -4112,8 +3770,7 @@
           "message": "channel_index is not contiguous from 0 within a run",
           "sql": "SELECT session_id, sorting_run_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core_sorting_run_channels GROUP BY session_id, sorting_run_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
         }
-      ],
-      "since": "R83 \u00a72.1"
+      ]
     },
     "core.sorting_runs": {
       "columns": [
@@ -4139,7 +3796,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
         {
@@ -4172,8 +3828,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The run that produced this record, where provenance is recorded.",
-          "identity": "assigned",
-          "since": "R41 \u00a72.1"
+          "identity": "assigned"
         },
         {
           "name": "parameters",
@@ -4209,8 +3864,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -4272,7 +3926,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
         {
@@ -4289,7 +3942,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The file's format in the producer's own terms, which this specification does not constrain.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -4320,8 +3972,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -4354,8 +4005,7 @@
           "presence": "required",
           "role": "coordinate",
           "description": "Spike tick.",
-          "clock_from": "core.units.clock_id",
-          "since": "R96 \u00a73.3"
+          "clock_from": "core.units.clock_id"
         },
         {
           "name": "amplitude",
@@ -4363,8 +4013,7 @@
           "presence": "nullable",
           "role": "data",
           "description": "Spike amplitude if available.",
-          "unit_from": "core.units.amplitude_unit",
-          "since": "R96 \u00a73.3"
+          "unit_from": "core.units.amplitude_unit"
         }
       ],
       "primary_key": [
@@ -4423,7 +4072,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
         {
@@ -4432,7 +4080,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- Part 01 \u00a73.4 admits a preparation, and a phantom or a simulation has no species.",
-          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             {
@@ -4447,7 +4094,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks such as `Long-Evans`.",
-          "since": "R101 \u00a73.6",
           "vocabulary": "open",
           "authority": [
             {
@@ -4473,7 +4119,6 @@
             "other"
           ],
           "vocabulary": "closed",
-          "since": "R101 \u00a73.6",
           "authority": [
             {
               "name": "HL7 FHIR administrative gender",
@@ -4494,7 +4139,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "The genotype as the source states it, in MGI allele nomenclature where it uses one.",
-          "since": "R101 \u00a73.5",
           "vocabulary": "open"
         },
         {
@@ -4502,8 +4146,7 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -4520,8 +4163,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session.",
-          "identity": "assigned",
-          "since": "R105 \u00a73.3"
+          "identity": "assigned"
         },
         {
           "name": "unit_id",
@@ -4529,8 +4171,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "The thing positioned.",
-          "identity": "assigned",
-          "since": "R105 \u00a73.3"
+          "identity": "assigned"
         },
         {
           "name": "coordinate_frame",
@@ -4538,7 +4179,6 @@
           "presence": "required",
           "role": "data",
           "description": "The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key.",
-          "since": "R105 \u00a73.3",
           "vocabulary": "open"
         },
         {
@@ -4547,7 +4187,6 @@
           "presence": "required",
           "role": "data",
           "description": "What the coordinate asserts (Part 01 \u00a73.8).",
-          "since": "R105 \u00a73.3",
           "vocabulary": "open"
         },
         {
@@ -4555,8 +4194,7 @@
           "type": "int64",
           "presence": "required",
           "role": "structural_index",
-          "description": "Which of the frame's axes this value is on.",
-          "since": "R105 \u00a73.3"
+          "description": "Which of the frame's axes this value is on."
         },
         {
           "name": "axis_value",
@@ -4564,7 +4202,6 @@
           "presence": "required",
           "role": "data",
           "description": "The value, in the axis's unit.",
-          "since": "R105 \u00a73.3",
           "unit_from": "core.coordinate_frame_axes.unit"
         }
       ],
@@ -4614,8 +4251,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R105 \u00a73.3"
+      "rules": []
     },
     "core.unit_coordinates": {
       "columns": [
@@ -4625,8 +4261,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R28 \u00a72-4"
+          "identity": "assigned"
         },
         {
           "name": "unit_id",
@@ -4634,8 +4269,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Unit ID.",
-          "identity": "assigned",
-          "since": "R28 \u00a72-4"
+          "identity": "assigned"
         },
         {
           "name": "coordinate_frame",
@@ -4643,7 +4277,6 @@
           "presence": "required",
           "role": "data",
           "description": "The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open"
         },
         {
@@ -4652,7 +4285,6 @@
           "presence": "required",
           "role": "data",
           "description": "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (Part 01 \u00a73.8). A consumer that does not recognise a basis MUST NOT treat it as measured (Part 01 \u00a73.8).",
-          "since": "R58 \u00a72.1",
           "vocabulary": "open"
         },
         {
@@ -4661,8 +4293,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names.",
-          "identity": "carried",
-          "since": "R59 \u00a72.1"
+          "identity": "carried"
         },
         {
           "name": "region_label",
@@ -4670,7 +4301,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "That structure's short name, so a consumer without the atlas can read the annotation.",
-          "since": "R59 \u00a72.1",
           "vocabulary": "open"
         },
         {
@@ -4679,8 +4309,7 @@
           "presence": "nullable",
           "role": "identifier",
           "description": "The run that produced this coordinate.",
-          "identity": "assigned",
-          "since": "R58 \u00a72.3"
+          "identity": "assigned"
         }
       ],
       "primary_key": [
@@ -4729,8 +4358,7 @@
           ]
         }
       ],
-      "rules": [],
-      "since": "R28 \u00a72-4"
+      "rules": []
     },
     "core.unit_electrodes": {
       "columns": [
@@ -4740,8 +4368,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R28 \u00a72-4"
+          "identity": "assigned"
         },
         {
           "name": "unit_id",
@@ -4749,8 +4376,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Unit ID.",
-          "identity": "assigned",
-          "since": "R28 \u00a72-4"
+          "identity": "assigned"
         },
         {
           "name": "electrode_id",
@@ -4758,24 +4384,21 @@
           "presence": "required",
           "role": "identifier",
           "description": "An electrode this unit was detected on.",
-          "identity": "assigned",
-          "since": "R28 \u00a72-4"
+          "identity": "assigned"
         },
         {
           "name": "channel_index",
           "type": "int64",
           "presence": "nullable",
           "role": "structural_index",
-          "description": "0-based position of this electrode in the unit's channel list, where a dense array axis is indexed by it (R20 \u00a72). Nothing joins on it.",
-          "since": "R50 \u00a72"
+          "description": "0-based position of this electrode in the unit's channel list, where a dense array axis is indexed by it. Nothing joins on it."
         },
         {
           "name": "is_primary",
           "type": "bool",
           "presence": "nullable",
           "role": "data",
-          "description": "Whether this is the unit's peak electrode.",
-          "since": "R28 \u00a72-4"
+          "description": "Whether this is the unit's peak electrode."
         }
       ],
       "primary_key": [
@@ -4816,7 +4439,7 @@
         {
           "id": "core.unit_electrodes.one_primary",
           "level": "warning",
-          "message": "a unit designates more than one peak electrode (R28 2)",
+          "message": "a unit designates more than one peak electrode",
           "sql": "SELECT unit_id, COUNT(*) AS n FROM core_unit_electrodes WHERE is_primary GROUP BY unit_id HAVING COUNT(*) > 1"
         },
         {
@@ -4831,8 +4454,7 @@
           "message": "a unit sits on an electrode its sorting run did not use",
           "sql": "SELECT ue.unit_id, ue.electrode_id FROM core_unit_electrodes ue JOIN core_units u ON ue.unit_id = u.unit_id JOIN (SELECT DISTINCT session_id, sorting_run_id FROM core_sorting_run_channels) d ON d.session_id = u.session_id AND d.sorting_run_id = u.sorting_run_id LEFT JOIN core_sorting_run_channels c ON c.session_id = u.session_id AND c.sorting_run_id = u.sorting_run_id AND c.electrode_id = ue.electrode_id WHERE c.electrode_id IS NULL"
         }
-      ],
-      "since": "R28 \u00a72-4"
+      ]
     },
     "core.unit_observation_intervals": {
       "columns": [
@@ -4842,8 +4464,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R18 \u00a72"
+          "identity": "assigned"
         },
         {
           "name": "unit_id",
@@ -4851,8 +4472,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Unit ID.",
-          "identity": "assigned",
-          "since": "R18 \u00a72"
+          "identity": "assigned"
         },
         {
           "name": "start_tick",
@@ -4860,7 +4480,6 @@
           "presence": "required",
           "role": "coordinate",
           "description": "First tick, inclusive.",
-          "since": "R96 \u00a73.4",
           "clock_from": "core.units.clock_id"
         },
         {
@@ -4869,7 +4488,6 @@
           "presence": "required",
           "role": "coordinate",
           "description": "Last tick, inclusive.",
-          "since": "R96 \u00a73.4",
           "clock_from": "core.units.clock_id"
         }
       ],
@@ -4911,8 +4529,7 @@
           "message": "observation windows overlap, which would double-count observed time",
           "sql": "SELECT session_id, unit_id, start_tick, start_tick, stop_tick FROM (SELECT *, LAG(stop_tick) OVER (PARTITION BY session_id, unit_id ORDER BY start_tick) AS prev_stop FROM core_unit_observation_intervals) WHERE prev_stop IS NOT NULL AND start_tick <= prev_stop"
         }
-      ],
-      "since": "R18 \u00a72"
+      ]
     },
     "core.unit_quality_labels": {
       "columns": [
@@ -4922,8 +4539,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Session ID.",
-          "identity": "assigned",
-          "since": "R16 \u00a72-3"
+          "identity": "assigned"
         },
         {
           "name": "unit_id",
@@ -4931,8 +4547,7 @@
           "presence": "required",
           "role": "identifier",
           "description": "Unit ID.",
-          "identity": "assigned",
-          "since": "R16 \u00a72-3"
+          "identity": "assigned"
         },
         {
           "name": "source",
@@ -4940,7 +4555,6 @@
           "presence": "required",
           "role": "data",
           "description": "What produced the label, e.g. kilosort, decoder, bombcell.",
-          "since": "R16 \u00a72-3",
           "vocabulary": "open"
         },
         {
@@ -4949,7 +4563,6 @@
           "presence": "required",
           "role": "data",
           "description": "The source's own label, verbatim.",
-          "since": "R16 \u00a72-3",
           "vocabulary": "open"
         },
         {
@@ -4958,7 +4571,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Declared projection onto the closed set. Null where the source's label does not project.",
-          "since": "R16 \u00a72-3",
           "enum": [
             "sua",
             "mua",
@@ -4971,8 +4583,7 @@
           "type": "float64",
           "presence": "nullable",
           "role": "data",
-          "description": "The source's confidence, where it reports one.",
-          "since": "R16 \u00a72-3"
+          "description": "The source's confidence, where it reports one."
         }
       ],
       "primary_key": [
@@ -5007,8 +4618,7 @@
           "message": "a (source, label) pair projects onto more than one normalized_label",
           "sql": "SELECT source, label, COUNT(DISTINCT COALESCE(normalized_label, '')) AS distinct_projections FROM core_unit_quality_labels GROUP BY source, label HAVING COUNT(DISTINCT COALESCE(normalized_label, '')) > 1"
         }
-      ],
-      "since": "R16 \u00a72-3"
+      ]
     },
     "core.units": {
       "columns": [
@@ -5034,7 +4644,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
-          "since": "R53 \u00a72.3.1",
           "vocabulary": "free"
         },
         {
@@ -5067,7 +4676,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Opaque source label; undefined base, not an offset.",
-          "since": "R8 \u00a72",
           "vocabulary": "free"
         },
         {
@@ -5081,7 +4689,6 @@
             "mua",
             "noise"
           ],
-          "since": "R11 \u00a73-4",
           "vocabulary": "closed"
         },
         {
@@ -5090,7 +4697,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts.",
-          "since": "R107 \u00a73.1",
           "vocabulary": "open",
           "authority": [
             {
@@ -5105,7 +4711,6 @@
           "presence": "nullable",
           "role": "data",
           "description": "Which core.unit_quality_labels source the designated label came from.",
-          "since": "R16 \u00a72-3",
           "vocabulary": "open"
         },
         {
@@ -5121,24 +4726,21 @@
           "type": "int64",
           "presence": "nullable",
           "role": "data",
-          "description": "Total spikes for this unit in this context.",
-          "since": "R5"
+          "description": "Total spikes for this unit in this context."
         },
         {
           "name": "first_spike_tick",
           "type": "int64",
           "presence": "nullable",
           "role": "coordinate",
-          "description": "Lowest t_tick for this unit.",
-          "since": "R5"
+          "description": "Lowest t_tick for this unit."
         },
         {
           "name": "last_spike_tick",
           "type": "int64",
           "presence": "nullable",
           "role": "coordinate",
-          "description": "Highest t_tick for this unit.",
-          "since": "R5"
+          "description": "Highest t_tick for this unit."
         },
         {
           "name": "clock_id",
@@ -5146,16 +4748,14 @@
           "presence": "required",
           "role": "identifier",
           "description": "The clock every tick of this unit is counted on.",
-          "identity": "assigned",
-          "since": "R96 \u00a73.2"
+          "identity": "assigned"
         },
         {
           "name": "metadata",
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.4"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
         }
       ],
       "primary_key": [
@@ -5237,7 +4837,7 @@
         {
           "id": "core.units.amplitude_unit_declared",
           "level": "error",
-          "message": "a unit's spikes carry an amplitude and the unit declares no amplitude_unit (R96 \u00a73.5)",
+          "message": "a unit's spikes carry an amplitude and the unit declares no amplitude_unit",
           "sql": "SELECT DISTINCT u.unit_id FROM core_spike_events s JOIN core_units u USING (unit_id) WHERE s.amplitude IS NOT NULL AND u.amplitude_unit IS NULL"
         }
       ]

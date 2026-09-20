@@ -45,7 +45,7 @@ The LFP is referenced rather than copied: ten `dense_array_asset` entries with `
   "packet_id": "ecephys_786867_2025-09-25",
   "packet_version": "0.1.0",
   "profile_id": "escapewheel-portable-v0.1",
-  "registry_version": "0.1.0",
+  "registry_version": "0.2.0",
   "sessions": ["ecephys_786867_2025-09-25"],
   "required_codecs": ["blosc", "numcodecs.delta", "zstd"],
   "resources": [

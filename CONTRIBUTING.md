@@ -93,11 +93,11 @@ the order matters.
 
 1. **`parse02.py`** reads the frozen Part 02 and returns its tables as structure. This is the only
    thing that ever reads Part 02.
-2. **`build.py`** applies each accepted revision's block, in revision order, to that structure.
-   Each block sets `SINCE[0] = "R<N> §<x>"` first, which stamps every column it creates or amends
-   (R29) *and* records that the revision was applied, so `derived_from` cannot omit it.
-3. **`build.py`** runs the two passes that apply a rule rather than one revision's decision, after
-   every block so that both see the final primary keys: R97 §3.1 emits a `metadata` column wherever
+2. **`build.py`** applies the transformations that produce the current declaration set. Historical
+   comments may explain a transformation, but neither select its behavior nor enter the generated
+   registry.
+3. **`build.py`** runs the two passes that apply a general rule after the transformations, so both
+   see the final primary keys: the metadata pass emits a `metadata` column wherever
    the key decides it and strikes one where the key forbids it, and `session_id` moves to the front
    of every table carrying it.
 
@@ -117,11 +117,11 @@ the order matters.
    Each varies only where the rule says it may — a `clock_id` in the key leads because it is key,
    and a table with no coordinate has nothing to sit beside — so a placement that looks odd is
    one the rule accounts for rather than one nobody decided.
-4. **`build.py`** merges `rules.json`, expanding any R24 template invocation into plain SQL —
+4. **`build.py`** merges `rules.json`, expanding each template invocation into plain SQL —
    templates are a build-time device, so the registry a packet embeds carries no vocabulary a
    validator would have to learn.
 5. **`build.py`** writes `logical_schemas.json`, then calls `render.py` for `tables.md` and the
-   README's regions, then copies the two hand-written schemas into the validator and the reader.
+   README's regions, then copies the hand-written schemas into their consuming packages.
 6. **`check.py`** verifies the result: the structural invariants, each applied to core and to
    every extension registry, then the meta-schema, the naming conventions, and — with DuckDB
    present — that every Tier 2 rule is executable SQL against empty tables built from the
@@ -168,16 +168,12 @@ every packet three times — R48, R53 and R56 — and each time it surfaced as a
 about the *data* rather than one about the copy. `build.py` writes them and `check.py` compares
 them, so the class is closed; do not edit a vendored copy.
 
-**A ledger going stale.** Four lists track the registry and cannot be fully derived from it:
-`derived_from` in `build.py`, the R9 §2 table ledger in `conformance/spec-sweep/tables.py`, the
-`NAMING_EXCEPTIONS` in `check.py`, and `applied.toml`'s dispositions. Every one now fails a check
-rather than drifting: `derived_from` is verified in **both** directions (each accepted
-specification-domain revision appears, and nothing appears that is not an accepted specification
-decision — the missing direction is what let R54, R65 and R66 be applied and left out for several
-revisions each), each naming exception is checked to still
-break a convention, and the clause ledger is checked for entries naming clauses that no longer
-exist. What stays a human judgement is *which* disposition a clause gets, which is the part that
-should be.
+**A maintained inventory going stale.** Three records cannot be fully derived from the generated
+registry: the table ledger in `conformance/spec-sweep/tables.py`, the `NAMING_EXCEPTIONS` in
+`check.py`, and `applied.toml`'s clause dispositions. Each fails a check rather than drifting. Every
+naming exception must still identify a present declaration that breaks a convention, and the
+clause ledger must still name real accepted clauses and existing current owners. What stays a human
+judgement is *which* disposition a clause gets.
 
 **A revision clause that never reaches the spec.** Two independent audits found normative clauses
 dropped during compilation of the v0.2 prose — `R53 §2.4`'s `int64` escape, `R21`'s codec floor,
@@ -188,7 +184,7 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 fall and must not rise. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 620 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 622 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for
@@ -199,7 +195,7 @@ is held to; `check.py` imports them and adds what is true of this repository's b
 there are is counted from both sources, by `facts.py` parsing them:
 
 <!-- BEGIN facts: checks -->
-35 structural invariants, each applied to core and to each of the 4 extension registries, and 41 further checks over the whole set
+35 structural invariants, each applied to core and to each of the 4 extension registries, and 43 further checks over the whole set
 <!-- END facts: checks -->
 
 | check | catches |

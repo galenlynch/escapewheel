@@ -1,5 +1,5 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.2.0",
   "registry_version": "0.1.0",
   "logical_standard_version": "0.1",
   "extension_id": "aind_unit_qc",

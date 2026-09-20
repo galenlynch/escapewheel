@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json
+import importlib.util
 import sys
 import tempfile
 import unittest
@@ -15,8 +15,14 @@ sys.path.insert(0, str(ROOT / "escapewheel_poc_docs_v0.2"))
 
 import combine
 
-import release
 from revisions import check_citations, impact, ledger, process_rules, stages
+
+_release_spec = importlib.util.spec_from_file_location(
+    "release_bundle_probe", ROOT / "prototype/release-bundle/probe.py"
+)
+assert _release_spec is not None and _release_spec.loader is not None
+release = importlib.util.module_from_spec(_release_spec)
+_release_spec.loader.exec_module(release)
 
 
 def metadata(**values: str) -> str:
@@ -29,11 +35,13 @@ class ProcessSemanticsTests(unittest.TestCase):
 
     def test_decision_domain_legacy_cutoff(self) -> None:
         self.assertEqual(stages.accepted(Path("R119-legacy.md")), [])
-        derived = json.loads((ROOT / "registry/logical_schemas.json").read_text())[
-            "derived_from"
-        ]["revisions"]
-        self.assertIn("R119", derived)
-        self.assertNotIn("R120", derived)
+        self.assertEqual(
+            stages.accepted(
+                ROOT
+                / "revisions/accepted/R120-allow-controlled-specification-reorganization.md"
+            ),
+            [],
+        )
 
     def test_decision_domain_required_prospectively(self) -> None:
         errors = stages.lifecycle_metadata(Path("future.md"), "", proposal_stage=True)
@@ -164,7 +172,8 @@ class ProcessSemanticsTests(unittest.TestCase):
             and not site.startswith("escapewheel_poc_docs_v0.2/07_")
         ]
         self.assertEqual(live_process, [])
-        self.assertEqual(len(sites), 5)
+        self.assertTrue(sites)
+        self.assertTrue(all(site.startswith("revisions/accepted/") for site in sites))
 
     def test_release_generator_selects_moved_ledger(self) -> None:
         self.assertEqual(release.PARTS["provenance"], ("revisions/applied.toml",))
@@ -172,6 +181,21 @@ class ProcessSemanticsTests(unittest.TestCase):
             release.digest(ROOT / release.PARTS["provenance"][0]),
             release.digest(ROOT / "revisions/applied.toml"),
         )
+
+    def test_release_probe_is_non_writing(self) -> None:
+        with (
+            mock.patch.object(sys, "argv", ["probe.py"]),
+            mock.patch.object(Path, "write_text") as write_text,
+        ):
+            release.main()
+            write_text.assert_not_called()
+        with (
+            mock.patch.object(sys, "argv", ["probe.py", "--write"]),
+            mock.patch.object(Path, "write_text") as write_text,
+            self.assertRaises(SystemExit),
+        ):
+            release.main()
+        write_text.assert_not_called()
 
 
 if __name__ == "__main__":

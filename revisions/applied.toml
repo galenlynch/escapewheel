@@ -375,8 +375,8 @@ disposition = "applied"
 where = [{ part = "02", section = "8.4" }]
 
 [clause."R77 §2.3"]
-disposition = "applied"
-where = [{ part = "02", section = "9.4" }]
+disposition = "superseded"
+by = "R121"
 
 [clause."R56 §2.1"]
 disposition = "superseded"
@@ -1192,8 +1192,8 @@ disposition = "registry"
 note = "default_electrode_id stays"
 
 [clause."R29 §6"]
-disposition = "registry"
-note = "the meta-schema permits since on tables and columns"
+disposition = "superseded"
+by = "R121"
 
 [clause."R34 §2"]
 disposition = "registry"
@@ -2444,20 +2444,19 @@ note = "05 carried two sections numbered 11 through five accepted revisions"
 
 [clause."R112 §3.1"]
 disposition = "applied"
-where = [{ part = "00", section = "10.1" }]
+where = [{ part = "00", anchor = "ew-numbered-part-ownership" }]
 
 [clause."R112 §3.2"]
-disposition = "applied"
-where = [{ part = "07", section = "2.3" }]
+disposition = "superseded"
+by = "R121"
 
 [clause."R112 §3.4"]
-disposition = "applied"
-where = [{ part = "00", section = "10.3" }]
+disposition = "superseded"
+by = "R120"
 
 [clause."R112 §3.5"]
-disposition = "applied"
-where = [{ part = "00", section = "10.3" }]
-note = "check_citations.py refuses a colliding number and reports sections that do not ascend"
+disposition = "superseded"
+by = "R120"
 
 [clause."R113 §2.1"]
 disposition = "rationale"
@@ -2468,14 +2467,12 @@ disposition = "rationale"
 note = "that R111 and R112 disagreed on one day, which is the measurement rather than a rule"
 
 [clause."R113 §3.1"]
-disposition = "applied"
-where = [{ part = "00", section = "10.4" }]
-note = "the spelling, and why an implementation's source is not bound where Part 00 §10.1 binds it"
+disposition = "superseded"
+by = "R120"
 
 [clause."R113 §3.2"]
-disposition = "applied"
-where = [{ part = "00", section = "10.4" }]
-note = "the check, and the exception it must admit for a two-digit number that is not a part"
+disposition = "superseded"
+by = "R120"
 
 [clause."R114 §2.1"]
 disposition = "rationale"
@@ -2792,3 +2789,13 @@ note = "one-way ledger destinations, anchored Markdown evidence owners, and curr
 disposition = "applied"
 where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-process-incorporation-boundary" }]
 note = "process incorporation boundary and provisional moved-ledger release selector"
+
+[clause."R121 §3.1"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-document" }]
+note = "the registry-document shape excludes registry-build derived_from and table or column since while keeping those objects closed"
+
+[clause."R121 §3.2"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-self-description" }]
+note = "registry meta-schema identity 0.2.0, the matching schema identifier on shipped registries, and core registry version 0.2.0"

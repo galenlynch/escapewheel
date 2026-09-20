@@ -119,8 +119,8 @@ explains meaning, constraints, and relationships that the declaration cannot exp
 
 ## 6. Make structure support lookup
 
-Number sections hierarchically and preserve stable numbers by appending rather than inserting when
-the document's citation rules require it. A section has one subject. Split it when its paragraphs
+Number sections hierarchically and follow the structural-editing procedure in
+`revisions/CONTRIBUTING.md`. A section has one subject. Split it when its paragraphs
 belong under different entries in an index or when a citation would have to point at unrelated
 rules.
 
@@ -136,13 +136,13 @@ every item syntactically.
 
 ## 7. Use citations to identify the current rule
 
-Cite a requirement by part name and section number in the form defined by Part 00. Cite the section
-that actually states the rule, not a neighboring section or the revision that introduced it. Use an
-accepted revision citation for provenance or rationale that the current part deliberately does not
-carry.
+Cite a requirement by part name and section number, such as `Part 02 §9.1`. Cite the section that
+actually states the rule, not a neighboring section or the revision that introduced it. Current
+specification parts and incorporated machine-readable artifacts do not cite revision records;
+accepted records and Git preserve that provenance and rationale.
 
-The specification and accepted revisions never cite proposals, drafts, agent instructions, or
-contribution guides. Those documents may change or disappear and have no normative standing.
+The specification never cites proposals, drafts, agent instructions, or contribution guides.
+Those documents may change or disappear and have no normative standing for packet conformance.
 
 Place a citation next to the claim it supports. Do not collect citations in a provenance paragraph
 whose reader must map them back to several claims. Cross-references use section numbers, never line

@@ -37,8 +37,8 @@ Every lifecycle artifact declares one `Decision domain`:
 
 Both domains use this lifecycle and the same `R<N>` incorporation sequence. A process decision's
 current owner is this guide; acceptance makes its revision a historical record, not a second
-owner. Part 00 §§10.1–10.4 are not a second owner of repository-change procedure while the
-dependent authoritative-source cleanup disposes them.
+owner. The former editing-procedure material in Part 00 has been retired, so this guide is the sole
+current owner of repository-change procedure.
 
 Proposals, drafts, and accepted revisions declare `Decision domain`. Drafts and accepted revisions
 also declare `Change form: ordinary` or `Change form: structural`; a proposal does not. A
@@ -530,8 +530,9 @@ separately appraised specification-domain change.
 The ledger, registry-target map, and checker live under `revisions/`. The ledger proves one-way
 traceability from accepted clause to disposition to an existing current owner. It does not require
 the owner to cite its revision back and does not claim semantic fidelity merely because a target
-exists. The provisional release generator selects `revisions/applied.toml`; changing the tracked
-release snapshot remains an explicit publication action.
+exists. `prototype/release-bundle/probe.py` is a non-writing experiment that includes
+`revisions/applied.toml` in one candidate inventory; it is not publication machinery and produces
+no tracked release snapshot.
 
 Run the focused checks, then the complete verifier:
 

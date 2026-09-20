@@ -28,13 +28,6 @@ Validation requires an embedded SQL engine, because the rules are SQL. Reading d
 
 This is what Part 02 §5.2's ban on nested types exists to preserve — a native reader stays viable in a language without an embedded SQL engine.
 
-<a id="ew-code-comment-guidance" data-spec-anchor="canonical"></a>
-### 2.3 A comment states what the code does not
-
-A comment or docstring SHOULD state what the code does not already say — why this way, what breaks otherwise, the constraint that is not visible locally — and SHOULD NOT restate what the line below it does. Where it gives a reason, Part 00 §10.1 decides what it cites: the part for the requirement, and the revision for the measurement behind it (R112 §3.2).
-
-A comment naming a revision instead of a part sends a reader to the change record rather than to the statement of record, and a comment restating its own line is how a reader learns to stop reading them.
-
 ## 3. Command line
 
 ```text
@@ -52,23 +45,23 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 | type | responsibility |
 |---|---|
 | `Packet` | resolve the catalog; hand back resources |
-| `Dataset` | present several packets as one relation per resource (R86) |
+| `Dataset` | present several packets as one relation per resource |
 | `TableResource` | a table, as columnar batches or a scan |
 | `ArrayResource` | an array, opened through the array library |
 | `Validator` | run the generated and declared checks; return a report |
 | `PacketWriter` | accumulate records; stage, validate, commit |
 
-An adapter's return type is records, not a path, and stays records whichever route delivers them. That is what lets an adapter be tested without a filesystem and stops normalization decisions leaking into I/O code. Out of process the transport carries a table and the receiving end returns records again, so nothing downstream of the boundary knows which route was taken (R115 §3.6).
+An adapter's return type is records, not a path, and stays records whichever route delivers them. That is what lets an adapter be tested without a filesystem and stops normalization decisions leaking into I/O code. Out of process the transport carries a table and the receiving end returns records again, so nothing downstream of the boundary knows which route was taken.
 
-An adapter carries five static declarations, all readable with nothing open: `PRODUCES`, the resource identifiers it can supply (05 §3.4); `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (05 §3.4, R87 §2.2); `NEEDS`, the values a build must supply it, drawn from Part 03 §11.2's terms and the recipe's options (R115 §3.1); `ACCEPTS`, the options it reads and can run without, which a recipe may leave unset (Part 03 §11.2, R119 §3.1); and `CONSUMES`, the kinds whose output it reads, which is what orders a build. For each name in `STATES` the adapter exposes the value it holds. All five are class attributes here, and Part 03 §11.5's document is the same facts for an adapter a build cannot import; the requirements in Part 05 and Part 03 are on what a build can determine, not on how an implementation stores it.
+An adapter carries five static declarations, all readable with nothing open: `PRODUCES`, the resource identifiers it can supply (Part 05 §3.4); `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (Part 05 §3.4); `NEEDS`, the values a build must supply it, drawn from Part 03 §11.2's terms and the recipe's options; `ACCEPTS`, the options it reads and can run without, which a recipe may leave unset (Part 03 §11.2); and `CONSUMES`, the kinds whose output it reads, which is what orders a build. For each name in `STATES` the adapter exposes the value it holds. All five are class attributes here, and Part 03 §11.5's document is the same facts for an adapter a build cannot import; the requirements in Part 05 and Part 03 are on what a build can determine, not on how an implementation stores it.
 
-An adapter declares its protocol by naming a constant the implementation exports rather than a string it spells, so an adapter resolves the version it was written against and that version speaks what it names (R115 §3.9).
+An adapter declares its protocol by naming a constant the implementation exports rather than a string it spells, so an adapter resolves the version it was written against and that version speaks what it names.
 
-Converting records to a table takes the column set from every row and not from the first. `pyarrow.Table.from_pylist` infers its schema from the leading row and silently drops what later rows carry, which loses a column a source populates for some rows only — measured, one of thirteen resources of the NWB adapter. The rule it implements is Part 03 §11.3's, stated about what a delivery says rather than about how a table is built, because an adapter declaring its schema up front meets it by construction (R115 §3.6).
+Converting records to a table takes the column set from every row and not from the first. `pyarrow.Table.from_pylist` infers its schema from the leading row and silently drops what later rows carry, which loses a column a source populates for some rows only — measured, one of thirteen resources of the NWB adapter. The rule it implements is Part 03 §11.3's, stated about what a delivery says rather than about how a table is built, because an adapter declaring its schema up front meets it by construction.
 
 An adapter that produces a dense array writes it to the location the build supplied and returns the reference, rather than handing the values over for the writer to write (Part 03 §11.3).
 
-A build reports a `metadata` key whose value equals a column of the same row, which is how 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the one R95 §3.3 already makes between two columns, over a key and a column instead, and three keys in the packaged sessions were restating a column a revision had promoted (R97 §2.3).
+A build reports a `metadata` key whose value equals a column of the same row, which is how Part 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the same duplicate-value comparison used between two columns, applied to a key and a column; three keys in the packaged sessions restated a column.
 
 ## 5. Phases
 
@@ -91,7 +84,7 @@ Run it after changing the registry, the generator, or any rule.
 
 ## 7. Performance notes
 
-These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section MUST NOT repeat it (R93 §3.5).
+These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section MUST NOT repeat it.
 
 - **Never convert a column to host objects inside a per-batch loop.** Every performance defect found in the reference writer has been this.
 - **Read a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.
@@ -99,7 +92,7 @@ These are properties of the reference implementation, not requirements. A number
 - **Do not measure every column's encoding at write time.** Writing each column three ways over a
   65,536-row sample and keeping the smallest costs about **0.4 s** for a whole packet against a
   467 s build, so cost is not what refuses it: a measured choice records no reason for itself, and
-  it differs between a `--sample` build and a full one (R110 §2.5). Counting each column instead, as
+  it differs between a `--sample` build and a full one. Counting each column instead, as
   Part 03 §5.5's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count
-  (R118 §2.5).
-- **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id` (R86 §2.4). A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.
+ .
+- **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id`. A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.

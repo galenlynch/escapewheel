@@ -1,5 +1,5 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.2.0",
   "registry_version": "0.2.0",
   "logical_standard_version": "0.1",
   "extension_id": "aind_opto",
@@ -29,8 +29,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "What the light was for, in the rig's own words: tagging and inactivation are the same measurement differently parameterised.",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
+
         },
         {
           "name": "duration_s",
@@ -86,8 +86,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "The rig's own condition label.",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
+
         },
         {
           "name": "condition_probability",
@@ -108,8 +108,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.1"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
         }
       ],
       "primary_key": [

@@ -1,32 +1,30 @@
 # Part 10 — Performance Notes
 
-Informative. Part version **0.1.0** (R93 §3.4).
+Informative. Part version **0.1.0**.
 
 ## 1. Scope
 
 This part carries what a packet's bytes make true under `escapewheel-portable-v0.1`: what an
 encoding costs, what a row group spans, what an object store answers. A number here supports a
 rule that lives elsewhere and states none of its own; where a measurement justifies a requirement,
-the requirement stays in the part that binds and this part carries the reading (R93 §3.4).
+the requirement stays in the part that binds and this part carries the reading.
 
 It is not a substitute for `conformance/`, which holds the probes that produced these numbers.
 This part says what they mean.
 
 A number that would change if the reference implementation were replaced is Part 07 §7's, not this
 part's: how a columnar library decodes a batch, how one query planner treats a projection against
-a join. What survives that replacement is here (R93 §3.5).
+a join. What survives that replacement is here.
 
-**Every measurement below records the revision that took it and that revision's date, and none
-records the library versions it was taken against except where noted.** Those were not kept, and
-saying so is what R93 §3.4 asks: a number whose toolchain is unknown has unknown currency, where a
-number silently missing the field says nothing at all.
+**Every measurement below records its date, and none records the library versions it was taken
+against except where noted.** Those were not kept. A number whose toolchain is unknown has unknown
+currency; a number silently missing the field says nothing at all.
 
 ## 2. Encoding and compression
 
 ### 2.1 A tick column is delta-encoded, not dictionary-encoded
 
-`core.media_frames.pts` over 7,570,450 frames, the same rows in the same row groups (R68 §1.3,
-2026-09-04; toolchain not kept):
+`core.media_frames.pts` over 7,570,450 frames, the same rows in the same row groups (2026-09-04; toolchain not kept):
 
 | `pts` as | encoding | `pts` | whole table |
 |---|---|---:|---:|
@@ -44,20 +42,19 @@ turns on.
 Over 287,896,563 spikes, the identifier columns are **8.1 MB, 1% of the table**, because a sorted
 low-cardinality column compresses away; the integer form is **1.1% smaller** than the string one.
 Storage is therefore not what decides the type — the read is, at **10.2x** on a join to
-`core.units` (R53 §1, 2026-09-02; toolchain not kept).
+`core.units` (2026-09-02; toolchain not kept).
 
 ### 2.3 A repeated key column is free under a clustered sort
 
 Four-column unit identity against one numbered `unit_id`, over the same spike table: **819 MB
-either way** (R81 §1, 2026-09-05; toolchain not kept). `core.media_frames` shows the same shape at
-7,570,450 rows, where one distinct `session_id` costs **1.0005x**, 0.013 bits a row (R88 §4,
-2026-09-07; toolchain not kept).
+either way** (2026-09-05; toolchain not kept). `core.media_frames` shows the same shape at
+7,570,450 rows, where one distinct `session_id` costs **1.0005x**, 0.013 bits a row (2026-09-07; toolchain not kept).
 
 ### 2.4 An ascending identifier costs 30.95 bits a row under a dictionary
 
 The first column of a table's sort order whose role is `identifier` ascends across the whole table,
 and a dictionary over it stores the values once and an index into them again. Column-chunk bytes on
-`ecephys_776259` (R110 §2.1, 2026-09-10; pyarrow 25.0.1, Python 3.13.15):
+`ecephys_776259` (2026-09-10; pyarrow 25.0.1, Python 3.13.15):
 
 | column | dictionary | delta | |
 |---|---:|---:|---:|
@@ -77,7 +74,7 @@ Of the **32 float columns** reaching 2 kB under pyarrow's default across two pac
 **27 are smaller written plain**, by 1.15x to 1.76x. The five that repeat decide more than the
 twenty-seven: `core.spike_events.amplitude` is quantised to the sorting run's amplitude step, so
 286,896,563 rows hold few distinct values and the dictionary is **1.85x** better across **209 MB**
-(R110 §2.2, 2026-09-10; toolchain as above).
+(2026-09-10; toolchain as above).
 
 ### 2.6 A packet's small tables are what an open transfers
 
@@ -88,8 +85,7 @@ anything — 1.80x on `ecephys_786867` over its 37 comparable tables, and **23.9
 `core.media_frames` counted, where 7,570,450 rows go from 30.949 MB to 0.429 MB.
 
 Decoding gives none of it back: over the same 38 tables, warm and interleaved, **15.6 ms against
-15.8 ms**, and 28.8 ms against 57.7 ms where `core.media_frames` is among them (R110 §2.3,
-2026-09-10; toolchain as above). Round trips are the one cost this leaves alone — a column chunk is
+15.8 ms**, and 28.8 ms against 57.7 ms where `core.media_frames` is among them (2026-09-10; toolchain as above). Round trips are the one cost this leaves alone — a column chunk is
 one ranged read at either size, so what an encoding changes is what each request carries (§4.1).
 
 ### 2.7 A rule read off the declaration picks worse on 82 columns of 116
@@ -100,7 +96,7 @@ a dictionary for everything else — was measured over the 116 column-and-packet
 under either choice and picked worse on **82**: `core.media_frames.pts` **188x worse** and
 `core.clock_anchors.t_tick` 57x, both climbing steadily without being key columns, and
 `core.unit_electrodes.electrode_id` 1.84x, a trailing key component that climbs within each unit
-and resets (R110 §2.4, 2026-09-10; toolchain as above).
+and resets (2026-09-10; toolchain as above).
 
 A declaration says what a value means. It does not say how the values are spread, and a storage
 choice turns on the second.
@@ -108,7 +104,7 @@ choice turns on the second.
 ### 2.8 A dictionary page costs 27 bytes in every row group
 
 A column holding one value gives a dictionary nothing to index that plain's compression does not
-already remove. A constant `int32` under Zstandard (R118 §2.2, 2026-09-15; pyarrow 25.0.1, Python
+already remove. A constant `int32` under Zstandard (2026-09-15; pyarrow 25.0.1, Python
 3.13.15):
 
 | rows | dictionary | plain |
@@ -131,7 +127,7 @@ A count over a whole column sees a climb only where the table is sorted by that 
 `core.spike_events.t_tick` climbs within each unit and `core.clock_anchors.anchor_index` within each
 clock, so choosing by counts alone writes both plain: `anchor_index` 28x to 67x off its best,
 `core.clock_anchors.t_tick` 30x to 32x, and the spike tables' `t_tick` 1.24x to 1.30x, 384 MB over
-the best across both packets before any exception (R118 §2.3, 2026-09-15; toolchain as above). The
+the best across both packets before any exception (2026-09-15; toolchain as above). The
 `_tick` suffix, the `structural_index` and `sequence_position` roles and `assigned` identity mark
 such columns. None states a distribution, so §2.7 stands, and a mark is wrong in places:
 `core.unit_electrodes.channel_index` is a structural index cycling through 26 positions in every
@@ -144,15 +140,15 @@ two packets: a `free` string plain, an `open` or `closed` one a dictionary, a `d
 and `session_id` plain. No declaration says how many rows share a value, and `session_id` wants
 plain in a 12-row table and a dictionary in a million-row group. `core.spike_events.amplitude` and
 `core.unit_quality_labels.confidence` are both floats: the first repeats and is 1.75x smaller under a
-dictionary, and the second does not and is 1.47x larger (R118 §2.4, 2026-09-15; toolchain as above).
+dictionary, and the second does not and is 1.47x larger (2026-09-15; toolchain as above).
 
 ### 2.11 The four rules leave 15 columns needing an exception
 
-Columns 1.15x or more off their best in either packet (R118 §2.5, 2026-09-15; toolchain as above):
+Columns 1.15x or more off their best in either packet (2026-09-15; toolchain as above):
 
 | rules | columns | at 1.5x | at 2x |
 |---|---:|---:|---:|
-| R110's, with their exceptions | 193 | 61 | 4 |
+| sort-key heuristic, with its exceptions | 193 | 61 | 4 |
 | declarations of type, role, identity and vocabulary | 70 | 20 | 4 |
 | those, plus plain under 32 rows, or for one value under 50,000 rows | 34 | 12 | 4 |
 | counts alone | 26 | 11 | 9 |
@@ -169,7 +165,7 @@ packet is what the rules give up against writing each column three ways and keep
 
 `--sample 2000` keeps the first 2,000 spikes of each probe's stream, shrinking the two spike tables
 and changing the values of `core.units`, and each packet then encodes 8 columns differently from its
-full build (R118 §2.7, 2026-09-15; toolchain as above). Seven take the encoding their sampled values
+full build (2026-09-15; toolchain as above). Seven take the encoding their sampled values
 call for, within 1.04x of the best. `core.spike_events.amplitude` does not: each stream is one
 2,000-row row group holding 97 and 128 distinct amplitudes, under 50 rows a value, so it is written
 plain at 1.56x and 1.60x off its best. Every other column of both sampled packets lies within 1.15x
@@ -182,14 +178,14 @@ A large table's row groups are sized for analytical scans (Part 03 §5.1). **100
 rows** is a starting point to be adjusted by profiling; it is a number this format fixes rather
 than a rule a packet can fail, which is why Part 03 §5.1 keeps the SHOULD and the number is here.
 
-Where a table declares a time bucket, a row group SHOULD start at each bucket boundary (R30 §3.3):
+Where a table declares a time bucket, a row group SHOULD start at each bucket boundary:
 a group cut at a fixed row count straddles boundaries and spans two buckets' worth of time.
 
 ## 4. The object store
 
 ### 4.1 An endpoint plateaus at about 120 requests a second
 
-Whatever the concurrency (R86 §1.1, 2026-09-06; toolchain not kept). Twenty sessions of metadata
+Whatever the concurrency (2026-09-06; toolchain not kept). Twenty sessions of metadata
 is therefore about a second, which is what makes a union across packets cheap enough that no
 summary table is needed to avoid it.
 
@@ -197,7 +193,7 @@ summary table is needed to avoid it.
 
 The same rows staged to S3 four ways — a single file, a declared member list, the same members
 reached by globbing, and hive layout — with the member arms at 682.2 MB against the single file's
-681.6 MB (R42 §4.1, withdrawn 2026-09-02; toolchain not kept). DuckDB's single file wins every
+681.6 MB (withdrawn 2026-09-02; toolchain not kept). DuckDB's single file wins every
 query cold and warm. Where the member arms win, the gain reproduces at the same ratio on local
 disk, so it is scan parallelism rather than skipped round trips.
 
@@ -207,7 +203,7 @@ member. No session has yet had a second sorting.
 ## 5. The Zarr codec floor is version-specific
 
 Measured in `conformance/zarr-probe/` against **zarr-python 3.3.0, Zarr.jl 0.10.2 and Julia
-1.12.7** (R21 §2, 2026-08-27) — the one measurement here whose toolchain was kept, and the one that
+1.12.7** (2026-08-27) — the one measurement here whose toolchain was kept, and the one that
 shows why the others should be:
 
 | configuration | zarr-python 3.3.0 | Zarr.jl 0.10.2 |

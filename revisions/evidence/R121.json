@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "revision": "R121",
+  "based_on": "41aad8a15b7c8c3415f6c52b3c12e64114658718",
+  "clauses": {
+    "R121 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-document"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "registry/registry.schema.json",
+          "registry/logical_schemas.json",
+          "registry/tables.md",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "history cleanup preserves declarations and rules"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "removed registry history fields are rejected"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "name-column selector resolves the seven targets"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "name-column selector rejects missing or ambiguous inputs"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "registry validates against its meta-schema"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every extension validates against the same meta-schema"
+          },
+          {
+            "kind": "check",
+            "stage": "citations: every one resolves, and no part number repeats",
+            "id": "current contract artifacts contain no revision references"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "registry/render.py",
+          "registry/check.py",
+          "revisions/check_citations.py",
+          "conformance/history-cleanup/probe.py",
+          "conformance/interval-kinds/probe.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "CONTRIBUTING.md",
+          "revisions/CONTRIBUTING.md",
+          "revisions/drafts/README.md",
+          "registry/README.md"
+        ]
+      }
+    },
+    "R121 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "registry/registry.schema.json",
+          "registry/logical_schemas.json",
+          "registry/extensions/aind_opto.json",
+          "registry/extensions/aind_unit_qc.json",
+          "registry/extensions/dynamic_foraging.json",
+          "registry/extensions/vr_foraging.json",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "registry meta-schema identity is 0.2.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "core registry version is 0.2.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every shipped registry names the current meta-schema"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every vendored schema matches its source"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "escapewheel-writer/tests/test_writer.py",
+          "prototype/release-bundle/probe.py",
+          "revisions/test_process.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md",
+          "TODO.md",
+          "STATUS.md",
+          "escapewheel-validator/CONTRIBUTING.md"
+        ]
+      }
+    }
+  }
+}

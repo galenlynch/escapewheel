@@ -1,9 +1,7 @@
-"""Render the registry as markdown, so a table can be read without reading JSON.
+"""Render the registry as Markdown, so a table can be read without reading JSON.
 
-What a table looks like *now* is currently answerable only by reading Part 02 and then the
-revisions that amended it, or by reading generated JSON. Neither is a document. This is
-generated from `logical_schemas.json` at build time, so it states the registry's content and
-cannot drift from it.
+This is generated from `logical_schemas.json` at build time, so it states the current registry
+content and cannot drift from it.
 
 It is not a standalone specification. The repository authority model identifies the sources that
 bind; this rendering exposes the generated registry content for inspection.
@@ -55,13 +53,9 @@ def _declares(column: dict[str, Any]) -> str:
 def _table(name: str, spec: dict[str, Any]) -> list[str]:
     """Render one table: its columns, then everything that constrains them."""
     out = [f"### `{name}`", ""]
-    if introduced := spec.get("since"):
-        note = f"*Introduced by {introduced} (R29 §2). A column with no revision came from Part 02 unamended.*"
-        out += [note, ""]
-
     out += [
-        "| Column | Type | Presence | Declares | Since | Description |",
-        "|---|---|:---:|---|---|---|",
+        "| Column | Type | Presence | Declares | Description |",
+        "|---|---|:---:|---|---|",
     ]
     for column in spec["columns"]:
         description = (column.get("description") or "").replace("|", "\\|")
@@ -69,12 +63,12 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
             f"| `{column['name']}` | {column['type']} | "
             f"{PRESENCE.get(column['presence'], column['presence'])} | "
             f"{_declares(column)} | "
-            f"{column.get('since', '')} | {description} |"
+            f"{description} |"
         )
     out.append("")
 
     key = spec.get("primary_key")
-    out.append(f"**Primary key** — {_code(key) if key else 'none declared (R7)'}  ")
+    out.append(f"**Primary key** — {_code(key) if key else 'none declared'}  ")
     out.append("")
 
     if references := spec.get("references"):
@@ -90,7 +84,7 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
         out.append("")
         for rule in rules:
             level = rule.get("level", "error")
-            advisory = " *(advisory, R26)*" if rule.get("advisory") else ""
+            advisory = " *(advisory)*" if rule.get("advisory") else ""
             out.append(
                 f"- `{rule['id']}` — {level}{advisory}: {rule.get('message', '')}"
             )
@@ -105,8 +99,6 @@ def render(registry: dict[str, Any]) -> str:
     columns = sum(len(t["columns"]) for t in tables.values())
     references = sum(len(t.get("references") or []) for t in tables.values())
     rules = sum(len(t.get("rules") or []) for t in tables.values())
-    derived = registry.get("derived_from", {})
-
     out = [
         "# Logical schemas, as the registry stands",
         "",
@@ -122,8 +114,6 @@ def render(registry: dict[str, Any]) -> str:
             f"registry {registry.get('registry_version')}   "
             f"logical standard {registry.get('logical_standard_version')}"
         ),
-        f"derived from {derived.get('specification', '02')}, "
-        + f"revisions {', '.join(derived.get('revisions', []) or ['none'])}",
         "```",
         "",
     ]
@@ -148,8 +138,7 @@ def render(registry: dict[str, Any]) -> str:
 README = HERE / "README.md"
 
 #: Where the README's generated regions begin and end. A count stated in prose is a count that
-#: goes stale: the README claimed 33 tables and 51 rules against a registry holding 34 and 61,
-#: and listed two rules that revisions had since removed.
+#: goes stale: the README once disagreed with the generated registry's table and rule counts.
 REGION = re.compile(
     r"(<!-- BEGIN generated: (\w+) -->\n).*?(<!-- END generated: \2 -->)", re.DOTALL
 )
@@ -160,8 +149,7 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
 
     Only what the registry *declares*. How many Tier 1 checks that becomes is deliberately not
     here: it turns on which tables the shim's ordering scan settles uniqueness for, which is the
-    validator's judgement (R12 §4), and a second implementation of it would be a number that
-    agrees until it does not.
+    validator's judgement, and a second implementation of it would drift.
     """
     tables = registry["tables"]
     columns = [c for t in tables.values() for c in t["columns"]]

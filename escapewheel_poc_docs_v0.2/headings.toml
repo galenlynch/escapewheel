@@ -34,11 +34,6 @@
 "7.3" = "Iceberg later"
 "8" = "Implementation thesis"
 "9" = "The parts, and what each one binds"
-"10" = "Citing this specification"
-"10.1" = "A requirement is cited from the part that states it"
-"10.2" = "A revision is cited for what a part does not carry"
-"10.3" = "A part is numbered by appending"
-"10.4" = "A part is cited as Part 02"
 
 ["01"]
 "1" = "Scope"
@@ -102,7 +97,6 @@
 "9.1" = "The schema is one document"
 "9.2" = "Self-description"
 "9.3" = "Vocabularies"
-"9.4" = "Provenance of a declaration"
 "10" = "Validation rules"
 "10.1" = "Tier 1: generated from structure"
 "10.2" = "Tier 2: declared"
@@ -236,7 +230,6 @@
 "2" = "Distribution layout"
 "2.1" = "One command, three providers"
 "2.2" = "Dependency discipline"
-"2.3" = "A comment states what the code does not"
 "3" = "Command line"
 "4" = "Object model"
 "5" = "Phases"
@@ -292,46 +285,16 @@
 "4.2" = "One file beats a partitioned prefix on the engine that matters"
 "5" = "The Zarr codec floor is version-specific"
 
-[anchor.ew-append-only-numbering]
-part = "00"
-section = "10.3"
-title = "A part is numbered by appending"
-aliases = []
-
-[anchor.ew-code-comment-guidance]
-part = "07"
-section = "2.3"
-title = "A comment states what the code does not"
-aliases = []
-
 [anchor.ew-core-logical-schema-scope]
 part = "02"
 section = "1"
 title = "Scope"
 aliases = []
 
-[anchor.ew-current-requirement-citations]
-part = "00"
-section = "10.1"
-title = "A requirement is cited from the part that states it"
-aliases = []
-
-[anchor.ew-declaration-provenance]
-part = "02"
-section = "9.4"
-title = "Provenance of a declaration"
-aliases = []
-
 [anchor.ew-numbered-part-ownership]
 part = "00"
 section = "9"
 title = "The parts, and what each one binds"
-aliases = []
-
-[anchor.ew-part-citation-form]
-part = "00"
-section = "10.4"
-title = "A part is cited as Part 02"
 aliases = []
 
 [anchor.ew-registry-document]
@@ -344,16 +307,4 @@ aliases = []
 part = "02"
 section = "9.2"
 title = "Self-description"
-aliases = []
-
-[anchor.ew-revision-rationale-citations]
-part = "00"
-section = "10.2"
-title = "A revision is cited for what a part does not carry"
-aliases = []
-
-[anchor.ew-specification-citations]
-part = "00"
-section = "10"
-title = "Citing this specification"
 aliases = []

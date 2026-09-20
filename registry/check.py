@@ -1,4 +1,4 @@
-"""Check the built registry against the invariants R2-R9 establish."""
+"""Check the built registry and its extensions against the current contract."""
 
 import json
 import re
@@ -44,54 +44,7 @@ expected = {
     for l in ledger.splitlines()
     if re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", l.strip())
 }
-check("table set matches R9 §2 ledger", expected ^ set(T))
-# R29 §6. A 02 table whose columns a revision amended carries `since` on those columns and
-# not on itself, which is right -- so the checkable claims are the format and that every
-# revision the build stamps is one the registry says it derived from.
-# The inverse, and the one that was actually missing: a revision may be accepted, implemented,
-# and left out of the list. R54, R65 and R66 all were, for several revisions each, because the
-# list was hand-maintained and only the stamped direction was checked.
-_accepted = set()
-for _revision in (HERE.parent / "revisions/accepted").glob("R[0-9]*.md"):
-    _head = _revision.read_text()[:2000]
-    _number = int(re.match(r"R(\d+)", _revision.name).group(1))
-    _domain = re.search(
-        r"^\| \*\*Decision domain\*\* \| (.*?) \|$", _head, re.MULTILINE
-    )
-    if "**Accepted**" in _head and (
-        _number < 120 or (_domain is not None and _domain.group(1) == "specification")
-    ):
-        _accepted.add(f"R{_number}")
-_listed = set(REG.get("derived_from", {}).get("revisions", []))
-check(
-    "every accepted specification revision is declared in derived_from",
-    sorted(_accepted - _listed, key=lambda r: int(r[1:])),
-)
-check(
-    "derived_from declares no revision that is not an accepted specification decision",
-    sorted(_listed - _accepted, key=lambda r: int(r[1:])),
-)
-check(
-    "every stamped revision is declared in derived_from",
-    sorted(
-        {
-            v.split(" ")[0]
-            for n, t in T.items()
-            for v in [t.get("since"), *(c.get("since") for c in t["columns"])]
-            if v
-        }
-        - set(REG.get("derived_from", {}).get("revisions", []))
-    ),
-)
-check(
-    "a since names a revision",
-    [
-        (n, v)
-        for n, t in T.items()
-        for v in [t.get("since"), *(c.get("since") for c in t["columns"])]
-        if v is not None and not re.fullmatch(r"R\d+(?: §[\d.\-]+)?", v)
-    ],
-)
+check("table set matches the Part 02 ledger", expected ^ set(T))
 # Part 09 §2's invariants live in `escapewheel_validator.registry_document`, because an author
 # outside this repository has the same document and the same question and no way to ask it. Core
 # is held to exactly what an extension is held to, which is only true while there is one
@@ -134,10 +87,22 @@ for _id, _doc in EXT.items():
 # is verifiable offline against the schema in hand.
 META_ID = json.loads((HERE / "registry.schema.json").read_text())["$id"]
 check(
-    "the core registry names this meta-schema",
+    "every shipped registry names the current meta-schema",
     [f"logical_schemas: {REG.get('$schema', 'declares none')}"]
     if REG.get("$schema") != META_ID
-    else [],
+    else [
+        f"{name}: {document.get('$schema', 'declares none')}"
+        for name, document in EXT.items()
+        if document.get("$schema") != META_ID
+    ],
+)
+check(
+    "registry meta-schema identity is 0.2.0",
+    [] if META_ID == "https://escapewheel.org/schemas/registry/0.2.0" else [META_ID],
+)
+check(
+    "core registry version is 0.2.0",
+    [] if REG.get("registry_version") == "0.2.0" else [REG.get("registry_version")],
 )
 
 check(
@@ -162,7 +127,92 @@ check("every rules.json table exists in the registry", sorted(set(RULES) - set(T
 # Template invocations carry no id until build.py expands them (R24 §3). Expand through the
 # same function rather than a second copy, so this cannot drift from what the build does.
 sys.path.insert(0, str(HERE))
-from build import expand
+from build import expand, merged_name_target
+
+_name_targets = {
+    "analysis.array_assets": "array_asset_name",
+    "core.array_assets": "array_asset_name",
+    "core.clocks": "clock_name",
+    "core.devices": "device_name",
+    "core.event_streams": "event_stream_name",
+    "core.media_assets": "media_asset_name",
+    "core.probes": "probe_name",
+}
+check(
+    "name-column selector resolves the seven targets",
+    [
+        f"{resource}: {merged_name_target(resource, spec | {'columns': [*spec['columns'], {'name': 'name'}]})}"
+        for resource, spec in T.items()
+        if resource in _name_targets
+        and merged_name_target(
+            resource, spec | {"columns": [*spec["columns"], {"name": "name"}]}
+        )
+        != _name_targets[resource]
+    ]
+    + sorted(set(_name_targets) - set(T)),
+)
+
+
+def _selector_rejects(spec):
+    """Return whether a malformed literal-name declaration is rejected."""
+    try:
+        merged_name_target("test.resource", spec)
+    except ValueError:
+        return True
+    return False
+
+
+_selector_base = {
+    "columns": [
+        {"name": "thing_id", "role": "identifier", "identity": "assigned"},
+        {"name": "thing_name", "role": "data"},
+        {"name": "name", "role": "data"},
+    ],
+    "primary_key": ["thing_id"],
+    "references": [],
+}
+check(
+    "name-column selector rejects missing or ambiguous inputs",
+    [
+        label
+        for label, malformed in {
+            "missing identifier": _selector_base | {"primary_key": []},
+            "ambiguous identifier": _selector_base
+            | {
+                "columns": _selector_base["columns"]
+                + [
+                    {
+                        "name": "other_id",
+                        "role": "identifier",
+                        "identity": "assigned",
+                    }
+                ],
+                "primary_key": ["thing_id", "other_id"],
+            },
+            "missing target": _selector_base
+            | {"columns": [_selector_base["columns"][0], _selector_base["columns"][2]]},
+            "ambiguous target": _selector_base
+            | {"columns": _selector_base["columns"] + [_selector_base["columns"][1]]},
+        }.items()
+        if not _selector_rejects(malformed)
+    ],
+)
+
+_history_cleanup = subprocess.run(
+    [
+        sys.executable,
+        str(HERE.parent / "conformance/history-cleanup/probe.py"),
+    ],
+    capture_output=True,
+    text=True,
+    check=False,
+)
+check(
+    "history cleanup preserves declarations and rules",
+    []
+    if _history_cleanup.returncode == 0
+    else (_history_cleanup.stdout + _history_cleanup.stderr).splitlines(),
+)
 
 authored_rules = []
 for resource, rs in RULES.items():
@@ -704,6 +754,32 @@ try:
         [f"{list(e.path)[:4]}: {e.message[:60]}" for e in errs],
     )
     validator = jsonschema.Draft202012Validator(meta)
+    _history_cases = []
+    for _label, _mutate in (
+        (
+            "root derived_from",
+            lambda document: document.update(
+                {"derived_from": {"specification": "02", "revisions": []}}
+            ),
+        ),
+        (
+            "table since",
+            lambda document: next(iter(document["tables"].values())).update(
+                {"since": "R1"}
+            ),
+        ),
+        (
+            "column since",
+            lambda document: next(iter(document["tables"].values()))["columns"][
+                0
+            ].update({"since": "R1"}),
+        ),
+    ):
+        _case = json.loads(json.dumps(REG))
+        _mutate(_case)
+        if not list(validator.iter_errors(_case)):
+            _history_cases.append(_label)
+    check("removed registry history fields are rejected", _history_cases)
     check(
         "every extension validates against the same meta-schema",
         [

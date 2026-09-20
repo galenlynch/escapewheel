@@ -292,8 +292,8 @@ P1 authority framework
 |---|---|---|---|---|
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
 | P0.1 | Controlled reorganization of specification parts | **Complete** | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) | P0 |
-| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Draft** — appraised ready for acceptance; commit the exact candidate and coordination records before requesting authorization | [current draft](../drafts/remove-historical-and-misplaced-maintenance-material.md) | R120 |
-| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise before acceptance; blocked on P0.2 | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | R120, P0.2 |
+| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Complete** | [R121](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) | R120 |
+| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise and rebase before acceptance | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | R120, R121 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P4 | Registry-document semantics and uniform conformance | **Not started** | anticipated proposal; slug to be assigned | P3 |
@@ -434,7 +434,7 @@ draft. Its complete pre-acceptance appraisal then passed, and the exact candidat
 
 ### P0.2 — Remove historical and misplaced maintenance material from authoritative artifacts
 
-The [active draft](../drafts/remove-historical-and-misplaced-maintenance-material.md) carries the
+The [accepted revision](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) carries the
 measured inventory, compatibility analysis, candidate Decision, structural crosswalk, and evidence
 plan for this work. Its appraised proposal is preserved at
 `4baad5df16c74d6cea445f05594d57d45c74c7a2`.
@@ -449,6 +449,9 @@ development packets. Replace the generator's one history-valued name-column sele
 equivalent assigned-primary-key derivation. Do not confuse this registry-build provenance with the
 packet catalog's `derived_from`, which names source resources and remains part of the packet
 contract.
+
+**Completed as R121 on 2026-09-19.** The cleaned current owners, projections, implementation,
+evidence manifest, and process/documentation updates were incorporated atomically.
 
 Account separately for every statement in Part 00 §§10.1–10.4. Remove repository-maintenance and
 citation-presentation rules after their current process owners exist in
@@ -474,9 +477,9 @@ machine-readable artifact whose semantics or current contents remain under dispu
 P1, not P0.1, owns candidate authority, artifact roles and membership, release identity, and
 publication terminology.
 
-P1 is rebased on R120's incorporation commit. Its pre-acceptance appraisal remains open and P0.2
-remains a gating predecessor rather than an accepted dependency. After P0.2 lands, revise P1 with
-an exact human-readable old-location-to-new-location crosswalk, a statement-level disposition of
+P1 still names its pre-R121 baseline. Its pre-acceptance appraisal remains open; before another
+appraisal, rebase it on R121 and revise it with an exact human-readable
+old-location-to-new-location crosswalk, a statement-level disposition of
 the specification README, stable anchors for reorganized sections, all affected citation and
 tooling surfaces, and explicit binding for specification-candidate and publication obligations;
 then rerun the appraisal from its freshness gate.

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.2.0",
   "registry_version": "0.3.0",
   "logical_standard_version": "0.1",
   "extension_id": "dynamic_foraging",
@@ -20,8 +20,7 @@
           "type": "string",
           "presence": "required",
           "role": "data",
-          "description": "Always `dynamic_foraging.trials`. Carries `core.intervals.interval_kind` as part of R90 \u00a73.5's shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know (R90 \u00a73.3).",
-          "since": "R90 \u00a73.3",
+          "description": "Always `dynamic_foraging.trials`. Carries `core.intervals.interval_kind` as part of the shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know.",
           "vocabulary": "open"
         },
         {
@@ -45,14 +44,14 @@
           "type": "string",
           "presence": "nullable",
           "role": "data",
-          "description": "Which way the animal responded. The source emits 0, 1 and 2; the writer decodes them, because a code whose key is not in the packet leaves no rule, query or reader able to tell one response from another (R106 \u00a73.1).",
+          "description": "Which way the animal responded. The source emits 0, 1 and 2; the writer decodes them, because a code whose key is not in the packet leaves no rule, query or reader able to tell one response from another.",
           "vocabulary": "closed",
           "enum": [
             "left",
             "no_response",
             "right"
-          ],
-          "since": "R106 \u00a73.2"
+          ]
+
         },
         {
           "name": "rewarded_history_left",
@@ -309,7 +308,7 @@
           "type": "int64",
           "presence": "required",
           "role": "coordinate",
-          "description": "Last tick of the block, inclusive (R45 \u00a72).",
+          "description": "Last tick of the block, inclusive.",
           "clock_from": "clock_id"
         },
         {
@@ -333,8 +332,8 @@
           "type": "json_string",
           "presence": "optional",
           "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule.",
-          "since": "R97 \u00a73.1"
+          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
         }
       ],
       "primary_key": [
@@ -555,8 +554,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Whether a session-wide control condition was in force.",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
+
         },
         {
           "name": "session_start_with",
@@ -564,8 +563,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Which condition the session opened on.",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
+
         },
         {
           "name": "session_alternation",
@@ -573,8 +572,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Whether conditions alternated.",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
+
         },
         {
           "name": "auto_train_curriculum_name",
@@ -582,8 +581,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Curriculum the trainer was running.",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
+
         },
         {
           "name": "auto_train_curriculum_version",
@@ -607,8 +606,8 @@
           "presence": "nullable",
           "role": "data",
           "description": "Stage within the curriculum.",
-          "vocabulary": "open",
-          "since": "R107 \u00a73.1"
+          "vocabulary": "open"
+
         },
         {
           "name": "auto_train_engaged",

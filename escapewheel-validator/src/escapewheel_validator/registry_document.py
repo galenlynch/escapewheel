@@ -12,9 +12,9 @@ sound or not, and the answer arrived when a build refused it, or did not arrive.
 `structural` from here, so the invariants core is held to and the ones an extension is held to
 cannot drift apart.
 
-What is **not** here is the rest of `check.py`: the R9 §2 ledger, the `derived_from` bookkeeping,
-the rule-expansion round trip and the vendored-schema comparison are all facts about this
-repository's build rather than about a document, and an author has no use for them.
+What is **not** here is the rest of `check.py`: the repository's table ledger, rule-expansion round
+trip, current-version ratchets, and vendored-schema comparison are facts about this repository's
+build rather than about a registry document, and an author has no use for them.
 """
 
 from __future__ import annotations

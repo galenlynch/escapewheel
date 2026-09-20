@@ -65,7 +65,6 @@ def base_registry():
         ],
         "sort": ["session_id", "interval_kind", "interval_id"],
         "rules": [],
-        "since": "Part 01 §3.10",
     }
     return registry
 

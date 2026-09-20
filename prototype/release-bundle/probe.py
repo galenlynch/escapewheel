@@ -1,16 +1,11 @@
-"""Assemble what a release of this specification consists of, and record its digests.
+"""Explore a possible specification bundle and print its digests.
 
-The specification is not one document. A consumer implementing it needs the prose, the registry
-the prose delegates to, the two meta-schemas that say what a registry and a manifest look like,
-the extension registries, and the conformance corpus that settles what a validator must find.
-Shipping the prose alone ships a document whose normative content is elsewhere.
+This is a non-authoritative design probe, not a release or publication tool. It inventories one
+candidate bundle so its composition can be discussed without creating a tracked release snapshot.
 
-    python release.py            # print the bundle and its digests
-    python release.py --write    # also write RELEASE.json
+    python prototype/release-bundle/probe.py
 
-Nothing is copied. The bundle is a manifest of paths and SHA-256 digests, so a consumer can
-verify that the artifacts they hold are the ones the release names, and the repository stays the
-single copy of each.
+Nothing is copied or written.
 """
 
 from __future__ import annotations
@@ -21,8 +16,7 @@ import json
 import subprocess
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-OUT = ROOT / "RELEASE.json"
+ROOT = Path(__file__).resolve().parents[2]
 
 #: What a consumer needs, and why each is in the bundle rather than assumed.
 PARTS: dict[str, tuple[str, ...]] = {
@@ -83,10 +77,9 @@ def described() -> dict[str, object]:
 
 
 def main() -> int:
-    """Print the bundle, and write it where asked."""
+    """Print the candidate bundle without writing repository state."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--write", action="store_true", help="write RELEASE.json")
-    args = parser.parse_args()
+    parser.parse_args()
 
     bundle = described()
     total = sum(len(files) for files in bundle["parts"].values())
@@ -98,9 +91,6 @@ def main() -> int:
         print(f"  {part}")
         for name, value in files.items():
             print(f"    {value[:12]}  {name}")
-    if args.write:
-        OUT.write_text(json.dumps(bundle, indent=2) + "\n")
-        print(f"\nwrote {OUT.name}")
     return 0 if bundle["clean"] else 1
 
 

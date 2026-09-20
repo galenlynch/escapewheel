@@ -1,5 +1,5 @@
 {
-  "_comment": "Tier 2 validation rules (R2 7.2): checks the registry's structure cannot imply. Hand-authored. build.py merges these into logical_schemas.json, which is generated and must not be edited directly. Each rule's query returns offending rows; an empty result is a pass (R2 7.3).",
+  "_comment": "Tier 2 validation rules: checks the registry's structure cannot imply. Hand-authored. build.py merges these into logical_schemas.json, which is generated and must not be edited directly. Each rule's query returns offending rows; an empty result is a pass.",
   "rules": {
     "analysis.spike_events": [
       {
@@ -71,7 +71,7 @@
       {
         "id": "core.array_dimensions.coordinate_resource_is_core",
         "level": "error",
-        "message": "a core axis points outward at a non-core resource (R20 \u00a75.1)",
+        "message": "a core axis points outward at a non-core resource",
         "sql": "SELECT array_asset_id, axis_index, coordinate_resource FROM core_array_dimensions WHERE coordinate_resource IS NOT NULL AND coordinate_resource NOT LIKE 'core.%'"
       },
       {
@@ -83,7 +83,7 @@
       {
         "id": "core.array_dimensions.coordinate_pair_complete",
         "level": "error",
-        "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them (R100 2.2)",
+        "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them",
         "sql": "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column FROM core_array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
       }
     ],
@@ -91,13 +91,13 @@
       {
         "id": "core.calibrations.unit_pair_complete",
         "level": "error",
-        "message": "a calibration declares one unit of measure and not the other; the pair is what makes a point readable (R89 \u00a72.3)",
+        "message": "a calibration declares one unit of measure and not the other; the pair is what makes a point readable",
         "sql": "SELECT calibration_id, input_unit, output_unit FROM core_calibrations WHERE (input_unit IS NULL) <> (output_unit IS NULL)"
       },
       {
         "id": "core.calibrations.points_declare_units",
         "level": "error",
-        "message": "a calibration carries points and declares no units, so nothing says what its values are measured in (R89 \u00a72.3)",
+        "message": "a calibration carries points and declares no units, so nothing says what its values are measured in",
         "sql": "SELECT DISTINCT c.calibration_id FROM core_calibrations c JOIN core_calibration_points p USING (calibration_id) WHERE c.input_unit IS NULL OR c.output_unit IS NULL"
       }
     ],
@@ -123,7 +123,7 @@
       {
         "id": "core.clock_anchors.gap_within_bound",
         "level": "warning",
-        "message": "an anchor gap exceeds twice the median, leaving ticks the mapping does not define (R27 5.3)",
+        "message": "an anchor gap exceeds twice the median, leaving ticks the mapping does not define",
         "sql": "WITH gaps AS (SELECT clock_id, anchor_index, t_tick - LAG(t_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS gap FROM core_clock_anchors), typical AS (SELECT clock_id, median(gap) AS m FROM gaps WHERE gap IS NOT NULL GROUP BY clock_id) SELECT g.clock_id, g.anchor_index, g.gap, t.m FROM gaps g JOIN typical t USING (clock_id) WHERE g.gap IS NOT NULL AND g.gap > t.m * 2"
       }
     ],
@@ -150,7 +150,7 @@
       {
         "id": "core.clocks.tick_rate_one_form",
         "level": "error",
-        "message": "a clock declares both a float rate and a rational one (R95 \u00a73.2)",
+        "message": "a clock declares both a float rate and a rational one",
         "sql": "SELECT clock_id, tick_rate_hz, tick_rate_num, tick_rate_den FROM core_clocks WHERE tick_rate_hz IS NOT NULL AND tick_rate_num IS NOT NULL"
       },
       {
@@ -186,25 +186,25 @@
       {
         "id": "core.clocks.parent_chain_well_founded",
         "level": "error",
-        "message": "a clock is its own ancestor, so walking the chain does not terminate (R27 3)",
+        "message": "a clock is its own ancestor, so walking the chain does not terminate",
         "sql": "WITH RECURSIVE up(clock_id, ancestor, depth) AS (SELECT clock_id, parent_clock_id, 1 FROM core_clocks WHERE parent_clock_id IS NOT NULL UNION ALL SELECT u.clock_id, c.parent_clock_id, u.depth + 1 FROM up u JOIN core_clocks c ON c.clock_id = u.ancestor WHERE c.parent_clock_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT clock_id FROM up WHERE ancestor = clock_id OR depth >= 64"
       },
       {
         "id": "core.clocks.alignment_declared_for_conversion",
         "level": "error",
-        "message": "a non-reference clock declares no alignment, so it cannot be converted (R27 4)",
+        "message": "a non-reference clock declares no alignment, so it cannot be converted",
         "sql": "SELECT c.clock_id FROM core_clocks c JOIN core_sessions s USING (session_id) WHERE s.reference_clock_id IS NOT NULL AND c.clock_id <> s.reference_clock_id AND c.transform_slope IS NULL AND NOT EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.clock_id = c.clock_id)"
       },
       {
         "id": "core.clocks.observation_declared",
         "level": "error",
-        "message": "a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit (R98 3.1)",
+        "message": "a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit",
         "sql": "SELECT c.session_id, c.clock_id FROM core_clocks c LEFT JOIN core_clock_observation_intervals o ON o.session_id = c.session_id AND o.clock_id = c.clock_id WHERE o.clock_id IS NULL AND (EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id) OR EXISTS (SELECT 1 FROM core_sessions s WHERE s.session_id = c.session_id AND s.reference_clock_id = c.clock_id))"
       },
       {
         "id": "core.clocks.withheld_needs_anchors",
         "level": "error",
-        "message": "a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it (R99 3.2)",
+        "message": "a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it",
         "sql": "SELECT c.session_id, c.clock_id FROM core_clocks c WHERE (c.withheld_first_anchor IS NOT NULL OR c.withheld_last_anchor IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM core_clock_anchors a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id)"
       }
     ],
@@ -212,13 +212,13 @@
       {
         "id": "core.devices.parent_chain_well_founded",
         "level": "error",
-        "message": "a device is its own ancestor, or its attachment chain does not terminate (R67 \u00a72.3)",
+        "message": "a device is its own ancestor, or its attachment chain does not terminate",
         "sql": "WITH RECURSIVE up(device_id, ancestor, depth) AS (SELECT device_id, parent_device_id, 1 FROM core_devices WHERE parent_device_id IS NOT NULL UNION ALL SELECT u.device_id, d.parent_device_id, u.depth + 1 FROM up u JOIN core_devices d ON d.device_id = u.ancestor WHERE d.parent_device_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT device_id FROM up WHERE ancestor = device_id OR depth >= 64"
       },
       {
         "id": "core.devices.serial_identifies_one_device",
         "level": "error",
-        "message": "one serial number appears on more than one device row; a device is the physical object (R67 \u00a72.2)",
+        "message": "one serial number appears on more than one device row; a device is the physical object",
         "sql": "SELECT serial_number, COUNT(*) AS n_rows FROM core_devices WHERE serial_number IS NOT NULL GROUP BY serial_number HAVING COUNT(*) > 1"
       }
     ],
@@ -262,13 +262,13 @@
       {
         "id": "core.media_assets.pts_rate_pair_complete",
         "level": "error",
-        "message": "an asset declares one half of its presentation-timestamp rate; half a rational is unusable (R70 \u00a72.2)",
+        "message": "an asset declares one half of its presentation-timestamp rate; half a rational is unusable",
         "sql": "SELECT media_asset_id, pts_rate_num, pts_rate_den FROM core_media_assets WHERE (pts_rate_num IS NULL) <> (pts_rate_den IS NULL)"
       },
       {
         "id": "core.media_assets.pts_rate_declared_where_frames_carry_pts",
         "level": "error",
-        "message": "frames carry pts for an asset that does not say what those timestamps count (R70 \u00a72.2)",
+        "message": "frames carry pts for an asset that does not say what those timestamps count",
         "sql": "SELECT a.media_asset_id FROM core_media_assets a WHERE a.pts_rate_num IS NULL AND EXISTS (SELECT 1 FROM core_media_frames f WHERE f.media_asset_id = a.media_asset_id AND f.pts IS NOT NULL)"
       },
       {
@@ -288,7 +288,7 @@
       {
         "id": "core.media_frames.pts_increases_with_frame_index",
         "level": "error",
-        "message": "pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order (R69 \u00a72.1)",
+        "message": "pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order",
         "sql": "SELECT media_asset_id, frame_index, pts, prev AS previous_pts FROM (SELECT media_asset_id, frame_index, pts, LAG(pts) OVER (PARTITION BY media_asset_id ORDER BY frame_index) AS prev FROM core_media_frames WHERE pts IS NOT NULL) WHERE prev IS NOT NULL AND pts <= prev"
       }
     ],
@@ -340,19 +340,19 @@
       {
         "id": "core.processing_runs.undeclared_currency",
         "level": "error",
-        "message": "several runs share an activity and scope and none is preferred, so a consumer cannot choose between them (R82 \u00a72.1)",
+        "message": "several runs share an activity and scope and none is preferred, so a consumer cannot choose between them",
         "sql": "WITH grouped AS ( SELECT session_id, activity_type, scope, count(*) AS n FROM core_processing_runs WHERE scope IS NOT NULL GROUP BY session_id, activity_type, scope HAVING count(*) > 1) SELECT g.session_id, g.activity_type, g.scope, g.n FROM grouped g WHERE NOT EXISTS ( SELECT 1 FROM core_preferred_runs p WHERE p.activity_type = g.activity_type AND p.scope = g.scope AND (p.session_id = g.session_id OR (p.session_id IS NULL AND g.session_id IS NULL)))"
       },
       {
         "id": "core.processing_runs.scope_undeclared",
         "level": "error",
-        "message": "an activity has several runs and at least one records no scope, so whether they compete cannot be determined (R82 \u00a72.2)",
+        "message": "an activity has several runs and at least one records no scope, so whether they compete cannot be determined",
         "sql": "WITH per_activity AS ( SELECT session_id, activity_type, count(*) AS n, count(*) FILTER (WHERE scope IS NULL) AS unscoped FROM core_processing_runs GROUP BY session_id, activity_type) SELECT session_id, activity_type, n, unscoped FROM per_activity WHERE n > 1 AND unscoped > 0"
       },
       {
         "id": "core.processing_runs.scope_pair_complete",
         "level": "error",
-        "message": "a run declares one half of its scope; the pair is what carries the meaning (R49 \u00a72.4)",
+        "message": "a run declares one half of its scope; the pair is what carries the meaning",
         "sql": "SELECT processing_run_id, scope_kind, scope FROM core_processing_runs WHERE (scope IS NULL) <> (scope_kind IS NULL)"
       }
     ],
@@ -360,7 +360,7 @@
       {
         "id": "core.sessions.manifest_sessions_match",
         "level": "error",
-        "message": "the manifest's session inventory and core.sessions disagree; the manifest names a session by its session_name, since an assigned session_id means nothing outside the packet that assigned it (R53 \u00a72.3.1)",
+        "message": "the manifest's session inventory and core.sessions disagree; the manifest names a session by its session_name, since an assigned session_id means nothing outside the packet that assigned it",
         "sql": "SELECT session_name FROM core_sessions WHERE session_name NOT IN (SELECT session_id FROM manifest_sessions) UNION ALL SELECT session_id FROM manifest_sessions WHERE session_id NOT IN (SELECT session_name FROM core_sessions)"
       },
       {
@@ -372,7 +372,7 @@
       {
         "id": "core.sessions.reference_clock_declared",
         "level": "error",
-        "message": "a session declaring more than one clock names no reference clock (R27 2)",
+        "message": "a session declaring more than one clock names no reference clock",
         "sql": "SELECT s.session_id, COUNT(*) AS n_clocks FROM core_sessions s JOIN core_clocks c USING (session_id) WHERE s.reference_clock_id IS NULL GROUP BY s.session_id HAVING COUNT(*) > 1"
       },
       {
@@ -384,7 +384,7 @@
       {
         "id": "core.sessions.alignment_bound_at_least_default",
         "level": "error",
-        "message": "a session declares an alignment bound below R27 5.3's default of one median anchor interval, which reaches no further than declaring nothing (R99 3.1)",
+        "message": "a session declares an alignment bound below the default of one median anchor interval, which reaches no further than declaring nothing",
         "sql": "SELECT session_id, alignment_bound FROM core_sessions WHERE alignment_bound < 1.0"
       }
     ],
@@ -421,7 +421,7 @@
       {
         "id": "core.unit_electrodes.one_primary",
         "level": "warning",
-        "message": "a unit designates more than one peak electrode (R28 2)",
+        "message": "a unit designates more than one peak electrode",
         "sql": "SELECT unit_id, COUNT(*) AS n FROM core_unit_electrodes WHERE is_primary GROUP BY unit_id HAVING COUNT(*) > 1"
       },
       {
@@ -487,7 +487,7 @@
       {
         "id": "core.units.amplitude_unit_declared",
         "level": "error",
-        "message": "a unit's spikes carry an amplitude and the unit declares no amplitude_unit (R96 \u00a73.5)",
+        "message": "a unit's spikes carry an amplitude and the unit declares no amplitude_unit",
         "sql": "SELECT DISTINCT u.unit_id FROM core_spike_events s JOIN core_units u USING (unit_id) WHERE s.amplitude IS NOT NULL AND u.amplitude_unit IS NULL"
       }
     ],
@@ -495,7 +495,7 @@
       {
         "id": "core.clock_phase_steps.step_needs_parent",
         "level": "error",
-        "message": "a phase step is recorded on a clock with no parent, and a step is a movement of the parent's phase (R99 3.3)",
+        "message": "a phase step is recorded on a clock with no parent, and a step is a movement of the parent's phase",
         "sql": "SELECT s.session_id, s.clock_id, s.t_tick FROM core_clock_phase_steps s JOIN core_clocks c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE c.parent_clock_id IS NULL"
       }
     ],
@@ -503,7 +503,7 @@
       {
         "id": "core.coordinate_frame_axes.axis_names_distinct",
         "level": "error",
-        "message": "two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told (R105 3.2)",
+        "message": "two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told",
         "sql": "SELECT session_id, coordinate_frame, axis_name, COUNT(*) AS axes FROM core_coordinate_frame_axes GROUP BY session_id, coordinate_frame, axis_name HAVING COUNT(*) > 1"
       }
     ],
@@ -511,7 +511,7 @@
       {
         "id": "analysis.array_dimensions.coordinate_pair_complete",
         "level": "error",
-        "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them (R100 2.2)",
+        "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them",
         "sql": "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column FROM analysis_array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
       }
     ]
