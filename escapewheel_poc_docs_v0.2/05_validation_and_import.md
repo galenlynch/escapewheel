@@ -263,6 +263,7 @@ A validator MUST NOT downgrade an error to make a packet pass. An advisory rule 
 
 Where an import replaces an existing packet, it SHOULD report every resource the prior catalog declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
 
+<a id="ew-conformance-classes" data-spec-anchor="canonical"></a>
 ## 10. Two conformance classes
 
 A report says which of two claims it is making.

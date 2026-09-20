@@ -2,6 +2,7 @@
 
 Normative.
 
+<a id="ew-semantic-standard-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part defines what the concepts in a packet mean. It does not decide how they are stored.

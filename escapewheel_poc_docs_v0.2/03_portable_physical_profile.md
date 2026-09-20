@@ -2,6 +2,7 @@
 
 Normative. Profile identifier: `escapewheel-portable-v0.1`.
 
+<a id="ew-portable-profile-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part defines how the logical resources of Part 02 are stored in the portable profile. A packet under this profile MUST be readable without a server.

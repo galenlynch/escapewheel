@@ -2,6 +2,7 @@
 
 Normative.
 
+<a id="ew-packet-catalog-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part defines the packet catalog: the document that binds a packet's resources together. In the portable profile it is `packet.json` at the packet root.
@@ -14,6 +15,7 @@ The catalog binds every resource kind, including tables, dense arrays, media, an
 
 The catalog identifies by name. `packet_id`, every entry's `resource_id`, the session list, and a resource's `processing_run_id` hold names rather than assigned numbers, because the catalog is read before any table and a number resolves against nothing.
 
+<a id="ew-packet-identifiers" data-spec-anchor="canonical"></a>
 ## 3. Required top-level fields
 
 | field | type | requirement |
