@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative coordination record |
-| **Updated** | 2026-09-19 |
+| **Updated** | 2026-09-20 |
 | **Review baseline** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
 | **Objective** | Reconcile the data-driven contract, then publish one internally consistent and immutable v0.2 specification release |
 
@@ -173,8 +173,8 @@ This direction follows established patterns rather than a repository-specific pr
 
 ## 3. Promotion history of the authority work
 
-**Original disposition: revise before promotion. Current state: promoted to Draft on 2026-09-17;
-first pre-acceptance appraisal requires revision and a process prerequisite.**
+**Original disposition: revise before promotion. Current state: promoted to Draft on 2026-09-17,
+rebased after R120 and R121, and appraised on 2026-09-20 with no remaining acceptance blocker.**
 The original proposal contained sound research and a useful target model, but combined the first
 enabling decision with the final publication step. Its scope was narrowed on 2026-09-17, and the
 first promotion appraisal's ownership, terminology, impact, and evidence findings were
@@ -474,8 +474,9 @@ The draft makes Part 00 capable of locating later decisions without publishing t
 bundle prematurely. It states the relationship between semantic, logical, and physical
 abstraction levels and the separate packet content classes, and it incorporates no
 machine-readable artifact whose semantics or current contents remain under dispute.
-P1, not P0.1, owns candidate authority, artifact roles and membership, release identity, and
-publication terminology.
+P1, not P0.1, owns the semantics of specification-candidate authority, artifact roles and candidate
+membership, and candidate-versus-release terminology. It does not select final release membership,
+identifiers, or the publication record; P11 owns those decisions.
 
 P1 is rebased on the metadata-only anchor bootstrap
 `41da62e3fd4924e5526f8f812492e90607d14d97`, immediately after R121. Its 2026-09-20
