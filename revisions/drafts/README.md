@@ -23,4 +23,3 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | [`define-specification-artifacts-and-normative-ownership`](define-specification-artifacts-and-normative-ownership.md) | 6,796 | Appraised 2026-09-20 against `41da62e3fd4924e5526f8f812492e90607d14d97`: ready for acceptance authorization. The R121 rebase, exact structural and README crosswalks, authority and bibliography corrections, 22-section impact inventory, 11 semantic citation dispositions, owner/evidence plan, roadmap-alignment pass, and all pre-acceptance gates are complete. `stages.py`, citation and repointing checks, `headings.py --check`, and all 25 quick-verifier stages pass. | No blocker remains. Preserve these exact bytes in Git before authorization; after authorization, follow the atomic acceptance and incorporation sequence. |

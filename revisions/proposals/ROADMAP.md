@@ -25,7 +25,7 @@ The principal inputs are the
 [project sanity check](../../Escapewheel_Project_Sanity_Check_2026-09-17.md), the
 [change-process audit](../../Escapewheel_Specification_Change_Process_Audit.md), the root
 [TODO](../../TODO.md), and the research carried into the current
-[authority draft](../drafts/define-specification-artifacts-and-normative-ownership.md). The project review
+[R122 authority revision](../accepted/R122-define-specification-artifacts-and-normative-ownership.md). The project review
 was performed at commit `32f9e06884b483818c7156f80ea81f7e3a6ce002`. Subsequent commits through
 the review baseline changed documentation, revision workflow, lint findings, and formatting rather
 than resolving the packet-contract findings mapped below.
@@ -173,8 +173,8 @@ This direction follows established patterns rather than a repository-specific pr
 
 ## 3. Promotion history of the authority work
 
-**Original disposition: revise before promotion. Current state: promoted to Draft on 2026-09-17,
-rebased after R120 and R121, and appraised on 2026-09-20 with no remaining acceptance blocker.**
+**Original disposition: revise before promotion. Current state: accepted and incorporated as R122
+on 2026-09-20.**
 The original proposal contained sound research and a useful target model, but combined the first
 enabling decision with the final publication step. Its scope was narrowed on 2026-09-17, and the
 first promotion appraisal's ownership, terminology, impact, and evidence findings were
@@ -293,7 +293,7 @@ P1 authority framework
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
 | P0.1 | Controlled reorganization of specification parts | **Complete** | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) | P0 |
 | P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Complete** | [R121](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) | R120 |
-| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — appraised and ready for acceptance authorization | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | R120, R121 |
+| P1 | Specification authority, abstraction levels, and normative ownership | **Complete** | [R122](../accepted/R122-define-specification-artifacts-and-normative-ownership.md) | R120, R121 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P4 | Registry-document semantics and uniform conformance | **Not started** | anticipated proposal; slug to be assigned | P3 |
@@ -470,7 +470,7 @@ current publication state. P1 begins only after this cleanup lands.
 
 ### P1 — Authority framework
 
-The draft makes Part 00 capable of locating later decisions without publishing the final release
+R122 makes Part 00 capable of locating later decisions without publishing the final release
 bundle prematurely. It states the relationship between semantic, logical, and physical
 abstraction levels and the separate packet content classes, and it incorporates no
 machine-readable artifact whose semantics or current contents remain under dispute.
@@ -478,7 +478,7 @@ P1, not P0.1, owns the semantics of specification-candidate authority, artifact 
 membership, and candidate-versus-release terminology. It does not select final release membership,
 identifiers, or the publication record; P11 owns those decisions.
 
-P1 is rebased on the metadata-only anchor bootstrap
+R122 was appraised against the metadata-only anchor bootstrap
 `41da62e3fd4924e5526f8f812492e90607d14d97`, immediately after R121. Its 2026-09-20
 pre-acceptance appraisal is complete: the exact old-to-new structural crosswalk, statement-level
 README disposition, authority and reference rules, affected citation and tooling surfaces,

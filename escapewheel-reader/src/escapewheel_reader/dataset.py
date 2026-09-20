@@ -31,11 +31,11 @@ from .sql import sql_name
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from duckdb import DuckDBPyConnection
 
-#: The table session scope is measured against (Part 00 §2.4).
+#: The table session scope is measured against (Part 00 §3.3).
 SESSIONS = "core.sessions"
 
 #: The columns a dataset projects onto every session-scoped table. `session_key` is the
-#: discriminator Part 00 §2.4 requires; `session_name` is the label it permits beside one, and
+#: discriminator Part 00 §3.3 requires; `session_name` is the label it permits beside one, and
 #: promises nothing about what two packets' matching labels denote.
 PROJECTED = ("session_key", "session_name")
 
@@ -43,7 +43,7 @@ PROJECTED = ("session_key", "session_name")
 class MultiSessionUnresolved(PacketError):
     """A packet holds several sessions and a scoped table cannot say which row is whose.
 
-    Part 00 §2.4 requires a discriminator on every session-scoped table, and eight of the 33 reached
+    Part 00 §3.3 requires a discriminator on every session-scoped table, and eight of the 33 reached
     `core.sessions` without carrying `session_id`, so their rows could only be attributed by
     joining -- which Part 07 §7 measures at 2.22x and does not specify.
 
@@ -55,7 +55,7 @@ class MultiSessionUnresolved(PacketError):
 
 
 def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
-    """Return every table reaching `core.sessions` through its declared references (Part 00 §2.4).
+    """Return every table reaching `core.sessions` through its declared references (Part 00 §3.3).
 
     A property of the registry, decided with no packet in hand. The stricter of the two
     available tests: every table carrying a `session_id` reaches `core.sessions`, while eight
@@ -114,12 +114,12 @@ class Dataset:
     """Several packets, presented as one relation per resource.
 
     The discriminator is **the packet a row came from together with the row's `session_id`**
-    (Part 00 §2.4). Both are known for certain -- the reader opened the file, and the identifier is
+    (Part 00 §3.3). Both are known for certain -- the reader opened the file, and the identifier is
     unique within it -- so their pair is unique by construction and nothing has to be assumed
     about the world. A `*_name` is never used for it: measured across two packets sharing no
     session, no animal and no probe, 6 of 13 name columns hold a value appearing in both.
 
-    Identity is **carried, not joined on** (Part 00 §2.4). Within one packet an assigned identifier
+    Identity is **carried, not joined on** (Part 00 §3.3). Within one packet an assigned identifier
     is already unique, so a query over one session joins on it alone; a query spanning sessions
     joins on `(session_key, unit_id)`, which is where the second column buys correctness rather
     than costing 2.93x for nothing.
@@ -197,7 +197,7 @@ class Dataset:
 
     @property
     def scoped(self) -> frozenset[str]:
-        """Which resources carry a session discriminator (Part 00 §2.4)."""
+        """Which resources carry a session discriminator (Part 00 §3.3)."""
         return self._scoped
 
     def __repr__(self) -> str:
@@ -284,7 +284,7 @@ class Dataset:
         target = f"{base}/**/*.parquet" if resource.is_partitioned else base
         source = f"SELECT * FROM '{target}'"
         if resource_id not in self._scoped:
-            # Part 00 §2.4: MUST NOT carry a discriminator on a table that is not session-scoped.
+            # Part 00 §3.3: MUST NOT carry a discriminator on a table that is not session-scoped.
             return source
         return f"SELECT *, {self._identity(packet, resource_id)} FROM '{target}'"
 
@@ -307,7 +307,7 @@ class Dataset:
         if len(held) != 1:
             raise MultiSessionUnresolved(
                 f"{resource_id} is session-scoped, carries no session_id, and "
-                f"{packet.manifest.packet_id} holds {len(held)} sessions; Part 00 §2.4 requires a "
+                f"{packet.manifest.packet_id} holds {len(held)} sessions; Part 00 §3.3 requires a "
                 "discriminator and Part 07 §7 specifies no join to derive one"
             )
         only = next(iter(held.values()))

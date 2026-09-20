@@ -268,6 +268,12 @@ Where an import replaces an existing packet, it SHOULD report every resource the
 
 A report says which of two claims it is making.
 
+A packet conforms to this specification when it declares a profile defined here, carries every
+resource that profile requires, satisfies every structural requirement of Part 02, and produces no
+error-level finding from the checks of this part. A conforming packet MAY omit any resource this
+specification does not require. A validator MUST NOT reject a packet merely for carrying a resource
+this specification does not define. Part 09 §5.4 defines how core and extension verdicts compose.
+
 **Packet conformance** is a property of the bytes. It is evaluated on a packet regardless of how the packet was produced, and it is what `validate` reports. Provenance is SHOULD within it: a packet carrying none is conforming.
 
 **Writer conformance** is a property of a process. A writer conforms when it satisfies this part, which includes recording provenance for the import activity and the inputs it read. A packet is not judged by it.

@@ -10,21 +10,27 @@
 
 ["00"]
 "1" = "Scope"
-"2" = "Terms and definitions"
-"2.1" = "Semantic standard"
-"2.2" = "Logical standard"
-"2.3" = "Physical profile"
-"2.4" = "Packet"
-"2.5" = "Packet catalog"
-"2.6" = "Iceberg catalog"
-"2.7" = "Resource identity"
-"2.8" = "Actors"
-"3" = "Layer model"
-"4" = "Core layer"
+"2" = "Specification authority and conformance"
+"2.1" = "Specification candidate and release"
+"2.2" = "Authority by concern"
+"2.3" = "Internal consistency"
+"2.4" = "Conformance targets and actors"
+"2.5" = "Normative language"
+"3" = "Architecture classifications"
+"3.1" = "Abstraction levels"
+"3.1.1" = "Semantic standard"
+"3.1.2" = "Logical standard"
+"3.1.3" = "Physical profile"
+"3.2" = "Packet content classes"
+"3.3" = "Packet"
+"3.4" = "Packet catalog"
+"3.5" = "Iceberg catalog"
+"3.6" = "Resource identity"
+"4" = "Core content class"
 "4.1" = "Requirements"
 "4.2" = "Spike representation"
 "4.3" = "Unit identity"
-"5" = "Analysis layer"
+"5" = "Analysis content class"
 "5.1" = "Requirements"
 "5.2" = "Materialization is justified by layout, not by arithmetic"
 "6" = "Deferred NWB projection"
@@ -33,7 +39,8 @@
 "7.2" = "Referencing"
 "7.3" = "Iceberg later"
 "8" = "Implementation thesis"
-"9" = "The parts, and what each one binds"
+"9" = "Part subjects and normative status"
+"10" = "Normative references"
 
 ["01"]
 "1" = "Scope"
@@ -285,10 +292,16 @@
 "4.2" = "One file beats a partitioned prefix on the engine that matters"
 "5" = "The Zarr codec floor is version-specific"
 
+[anchor.ew-abstraction-levels]
+part = "00"
+section = "3.1"
+title = "Abstraction levels"
+aliases = []
+
 [anchor.ew-analysis-content-class]
 part = "00"
 section = "5"
-title = "Analysis layer"
+title = "Analysis content class"
 aliases = []
 
 [anchor.ew-analysis-content-requirements]
@@ -297,16 +310,28 @@ section = "5.1"
 title = "Requirements"
 aliases = []
 
+[anchor.ew-architecture-classifications]
+part = "00"
+section = "3"
+title = "Architecture classifications"
+aliases = []
+
 [anchor.ew-architecture-scope]
 part = "00"
 section = "1"
 title = "Scope"
 aliases = []
 
-[anchor.ew-architecture-terms]
+[anchor.ew-authority-by-concern]
 part = "00"
-section = "2"
-title = "Terms and definitions"
+section = "2.2"
+title = "Authority by concern"
+aliases = []
+
+[anchor.ew-candidate-consistency]
+part = "00"
+section = "2.3"
+title = "Internal consistency"
 aliases = []
 
 [anchor.ew-conformance-classes]
@@ -318,7 +343,7 @@ aliases = []
 [anchor.ew-core-content-class]
 part = "00"
 section = "4"
-title = "Core layer"
+title = "Core content class"
 aliases = []
 
 [anchor.ew-core-content-requirements]
@@ -335,31 +360,43 @@ aliases = []
 
 [anchor.ew-iceberg-catalog]
 part = "00"
-section = "2.6"
+section = "3.5"
 title = "Iceberg catalog"
 aliases = []
 
 [anchor.ew-logical-standard]
 part = "00"
-section = "2.2"
+section = "3.1.2"
 title = "Logical standard"
+aliases = []
+
+[anchor.ew-normative-language]
+part = "00"
+section = "2.5"
+title = "Normative language"
+aliases = []
+
+[anchor.ew-normative-references]
+part = "00"
+section = "10"
+title = "Normative references"
 aliases = []
 
 [anchor.ew-numbered-part-ownership]
 part = "00"
 section = "9"
-title = "The parts, and what each one binds"
+title = "Part subjects and normative status"
 aliases = []
 
 [anchor.ew-packet]
 part = "00"
-section = "2.4"
+section = "3.3"
 title = "Packet"
 aliases = []
 
 [anchor.ew-packet-catalog]
 part = "00"
-section = "2.5"
+section = "3.4"
 title = "Packet catalog"
 aliases = []
 
@@ -371,8 +408,8 @@ aliases = []
 
 [anchor.ew-packet-content-classes]
 part = "00"
-section = "3"
-title = "Layer model"
+section = "3.2"
+title = "Packet content classes"
 aliases = []
 
 [anchor.ew-packet-identifiers]
@@ -383,7 +420,7 @@ aliases = []
 
 [anchor.ew-physical-profile]
 part = "00"
-section = "2.3"
+section = "3.1.3"
 title = "Physical profile"
 aliases = []
 
@@ -407,13 +444,13 @@ aliases = []
 
 [anchor.ew-resource-identity]
 part = "00"
-section = "2.7"
+section = "3.6"
 title = "Resource identity"
 aliases = []
 
 [anchor.ew-semantic-standard]
 part = "00"
-section = "2.1"
+section = "3.1.1"
 title = "Semantic standard"
 aliases = []
 
@@ -425,6 +462,18 @@ aliases = []
 
 [anchor.ew-specification-actors]
 part = "00"
-section = "2.8"
-title = "Actors"
+section = "2.4"
+title = "Conformance targets and actors"
+aliases = []
+
+[anchor.ew-specification-authority]
+part = "00"
+section = "2"
+title = "Specification authority and conformance"
+aliases = []
+
+[anchor.ew-specification-candidate]
+part = "00"
+section = "2.1"
+title = "Specification candidate and release"
 aliases = []

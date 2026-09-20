@@ -366,7 +366,7 @@ def _amend(root, registry, tables, **kwargs):
 
 
 def _runs(**overrides):
-    """A materialization activity (Part 04 §3), which is what an amendment normally carries."""
+    """A materialization activity (Part 06 §5), which is what an amendment normally carries."""
     return [
         {
             "processing_run_id": "run1",
@@ -836,7 +836,7 @@ def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, regist
     writer.add("core.processing_runs", [_run("run_import")])
 
     def derive(packet, target):
-        # Part 04 §3: a materialization records what produced it, which its own rule checks.
+        # Part 06 §5: a materialization records the run that produced it.
         target.add(
             "core.processing_runs",
             [
@@ -861,7 +861,7 @@ def _run(run_id, activity="import"):
     """One `core.processing_runs` row.
 
     The activity is a parameter because R82 §2.2 makes two runs of one activity declare their
-    scopes, and a derived run is a materialization rather than a second import (Part 04 §3).
+    scopes, and a derived run is a materialization rather than a second import (Part 06 §5).
     """
     return {
         "processing_run_id": run_id,
@@ -910,7 +910,7 @@ def test_a_relative_reference_is_refused(tmp_path, registry):
 
 
 def test_a_referenced_codec_joins_required_codecs(tmp_path, registry, minimal):
-    """Part 04 §3: the top-level list is the union, so a reader can answer the whole-packet question."""
+    """Part 04 §6.2: the top-level list is the union for the whole-packet question."""
     from escapewheel_writer.writer import ExternalArray
 
     root = tmp_path / "s001"

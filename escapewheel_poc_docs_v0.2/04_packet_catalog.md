@@ -5,7 +5,9 @@ Normative.
 <a id="ew-packet-catalog-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
-This part defines the packet catalog: the document that binds a packet's resources together. In the portable profile it is `packet.json` at the packet root.
+This part defines the packet catalog: the document that binds a packet's concrete resources to the
+semantic, logical, registry, and physical-profile contracts that govern them. In the portable
+profile it is `packet.json` at the packet root.
 
 ## 2. Principles
 
@@ -17,6 +19,10 @@ The catalog identifies by name. `packet_id`, every entry's `resource_id`, the se
 
 <a id="ew-packet-identifiers" data-spec-anchor="canonical"></a>
 ## 3. Required top-level fields
+
+The catalog records the semantic-standard identifier owned by Part 01, the logical-standard and
+registry identifiers owned by Part 02, and the physical-profile identifier owned by Part 03. The
+fields below record those identifiers; they do not redefine their values or meaning.
 
 | field | type | requirement |
 |---|---|---|

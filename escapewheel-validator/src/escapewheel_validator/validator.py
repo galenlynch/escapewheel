@@ -227,7 +227,7 @@ def _check_materialization_provenance(packet: Packet, report: Report) -> None:
         report.add(
             "error",
             "provenance.no_processing_run",
-            f"{resource_id} is derived but names no processing_run_id (Part 04 §3)",
+            f"{resource_id} is derived but names no processing_run_id (Part 04 §4.1)",
         )
 
     named = {r.entry["processing_run_id"] for r in analysis if r.entry.get("processing_run_id")}

@@ -9,17 +9,23 @@ This is a proof of principle.
 
 ## Authority
 
-For v0.2, use this order:
+For v0.2, authority is assigned by concern in
+[Part 00](escapewheel_poc_docs_v0.2/00_architecture.md#ew-specification-authority):
 
-1. `escapewheel_poc_docs_v0.2/README.md` and the numbered parts are the authoritative behavioral
-   specification.
-2. `registry/logical_schemas.json` supplies the exact table declarations that Part 02 incorporates.
-3. `Escapewheel_POC_v0.2_Implementation_Spec.md` is a generated convenience rendering of the
-   authoritative files, not a separately edited source.
-4. `nwb_lake_poc_docs/` and `revisions/` preserve the starting point, decisions, and rationale.
-   They do not override the incorporated v0.2 text.
-5. Implementations, tests, examples, and developer documentation are non-normative. A disagreement
-   with an authoritative artifact is a defect to resolve, not an alternate rule.
+- The numbered parts own meanings, processing semantics, obligations, conformance, artifact roles,
+  and the subject boundaries assigned there.
+- A machine-readable artifact owns exact structures or assignments only where a numbered part
+  expressly incorporates it. Part 02 incorporates `registry/logical_schemas.json` for the exact
+  current table declarations.
+- `escapewheel_poc_docs_v0.2/README.md` is an informational entry point, and
+  `Escapewheel_POC_v0.2_Implementation_Spec.md` is a generated convenience rendering. Neither is a
+  separately edited normative owner.
+- `nwb_lake_poc_docs/` and `revisions/` preserve the starting point, decisions, and rationale.
+  Implementations, tests, examples, and developer documentation provide behavior or evidence but
+  acquire no independent authority.
+
+A disagreement among owning artifacts makes the specification candidate internally inconsistent;
+no general prose-wins or data-wins rule chooses one silently.
 
 ## Why
 

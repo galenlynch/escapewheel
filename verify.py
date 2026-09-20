@@ -96,6 +96,16 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         ROOT / "escapewheel_poc_docs_v0.2",
         [sys.executable, "headings.py", "--check"],
     ),
+    (
+        "spec: framework declarations agree",
+        ROOT / "escapewheel_poc_docs_v0.2",
+        [sys.executable, "framework.py"],
+    ),
+    (
+        "spec: framework rejects conflicting projections",
+        ROOT / "conformance/specification-framework",
+        [sys.executable, "probe.py"],
+    ),
     # Before the rendering, since a part's column tables come from the registry: a stale one
     # would otherwise be concatenated into the single file and look authoritative.
     (

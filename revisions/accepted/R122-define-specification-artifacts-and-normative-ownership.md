@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-20 |
 | **Based on** | `41da62e3fd4924e5526f8f812492e90607d14d97` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -128,12 +128,14 @@ crosswalk, and 44 other live occurrences. The selectors are Part 00 §1, §2 and
 §10. Incorporation leaves historical records unchanged and reads and repoints every live
 occurrence whose displayed section number or target changes.
 
-Reading the 44 external live occurrences found two existing semantic citation defects. Part 03 §4
-cites current Part 00 §3 for the permissible forms of a packet root, but that rule is current
+Reading the 44 external live occurrences found eleven existing semantic citation defects. Part 03
+§4 cites current Part 00 §3 for the permissible forms of a packet root, but that rule is current
 `ew-packet` in §2.4 and moves with that anchor. Ten validator, writer, and test citations cite Part
-04 §3 for an analysis resource's `processing_run_id`, but that field and obligation are in Part 04
-§4.1. Incorporation corrects those targets while preserving behavior; they are not deferred merely
-because they predate this draft.
+04 §3 for downstream facts it does not own. Incorporation's contextual read refines their targets:
+three concern the resource entry's `processing_run_id` in Part 04 §4.1, six concern materialization
+provenance in Part 06 §5, and one concerns the codec union in Part 04 §6.2. Incorporation corrects
+those targets while preserving behavior; they are not deferred merely because they predate this
+draft.
 
 There are no published remote, external consumers, or released packets. No packet bytes or
 implementation behavior change here, so packet migration is not required. The organizational
@@ -492,7 +494,7 @@ summary is explicitly informative and links to its owner.
 | packet catalog and JSON Schemas | Part 04 explains that its identifier fields record the identifiers their subject parts own. Packet schemas, requiredness, `layer`, `canonical`, and registry binding remain deferred. | JSON Schemas and packet corpus remain unchanged; the checker finds each required identifier and its owner. |
 | validation and import | Part 05 §10 receives the general packet-conformance statement and links extension composition rather than redefining it. Procedures and verdicts do not change. | Existing corpus results remain unchanged; the relocation inventory accounts for every conformance paragraph. |
 | extensions | Part 09 already owns every README extension statement, so its normative body and extension registries remain unchanged; the README replaces duplicates with links. | Existing Part 09 and extension-registry checks remain unchanged. |
-| reader, writer, validator, adapters | No runtime behavior changes. Repoint the ten validator, writer, and test citations that name Part 04 §3 for `processing_run_id` to Part 04 §4.1. A new specification-framework check is repository tooling rather than packet validation. | Existing package tests pass; the evidence manifest records the citation-only changes and marks every other implementation surface unchanged with a reason. |
+| reader, writer, validator, adapters | No runtime behavior changes. Repoint the ten validator, writer, and test citations that name Part 04 §3 to their actual owners: Part 04 §4.1 for the resource's `processing_run_id`, Part 06 §5 for materialization provenance, and Part 04 §6.2 for the codec union. A new specification-framework check is repository tooling rather than packet validation. | Existing package tests pass; the evidence manifest records the citation-only changes and marks every other implementation surface unchanged with a reason. |
 | conformance fixtures and tests | Packet fixtures remain unchanged because the packet contract does not change. Add positive and negative cases for the specification-framework checker. | `conformance/specification-framework/probe.py` covers every numbered part, mixed status, README informativity, normative-reference placement, and combined-rendering reproducibility. |
 | revision process and tooling | R120 already owns structural sequencing, stable anchors, citation presentation, ledger destinations, and evidence-owner forms. This revision uses those rules and does not restate or amend them in Part 00. | The process, stage, citation, repointing, heading, ledger, and evidence checks pass against the incorporation. |
 | generated publications and developer documentation | The specification README becomes informational; `combine.py` no longer claims it supplies conformance; the combined specification is regenerated; root authority and contribution guidance point to Part 00. Repoint Part 03 §4's packet-root citation from current Part 00 §3 to `ew-packet`. The placement-defect inventory remains non-authoritative. | Generated output is stable on a second run; every current README statement has a disposition; authority summaries link to the same owner. |

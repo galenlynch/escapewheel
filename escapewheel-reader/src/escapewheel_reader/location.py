@@ -1,7 +1,7 @@
 """Where bytes are: a local directory or a prefix in an object store.
 
 A packet's own resources travel because each is a **name** resolved against a root the reader
-supplies when it opens the packet, and Part 00 §2.4 names three forms that root may take -- a local
+supplies when it opens the packet, and Part 00 §3.3 names three forms that root may take -- a local
 directory, an object-store prefix, or a release manifest pointing at distributed assets.
 Resolving it as a filesystem path admits only the first, which is what this exists to fix.
 

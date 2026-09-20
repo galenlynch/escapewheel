@@ -830,7 +830,7 @@ class PacketWriter:
         self._referenced_media[resource_id] = media
 
     def produced_by(self, resource_id: str, processing_run_id: str) -> None:
-        """Name the run that produced a resource (Part 04 §3).
+        """Name the run that produced a resource (Part 04 §4.1).
 
         Part 06 requires a derived resource to declare its transform parameters and software
         version, and R31 puts them in a `core.processing_runs` row that the manifest points at.
@@ -1225,7 +1225,7 @@ class PacketWriter:
         (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, None), indent=2) + "\n")
         if materialize:
             # Row counts, not just names: a materializer adds its own `core.processing_runs`
-            # row (Part 04 §3), and that table was staged in the pass above. Restaging only what is
+            # row (Part 06 §5), and that table was staged in the pass above. Restaging only what is
             # new would leave the run record in memory and the resource pointing at a run the
             # packet does not contain -- which is exactly what the validator then says.
             def counts() -> dict[str, int]:

@@ -7,12 +7,15 @@ Normative.
 
 This part defines how a logical schema is declared, what a declaration must contain, and which resources the core layer comprises.
 
+The logical standard defined by this part is identified by `escapewheel-logical-v0.1`.
+
 The column-level definitions themselves are not written here. They are data (§9), carried in a registry document that a packet embeds and that generates the checks of Part 05. This part is the rules the registry obeys; the registry is the schema.
 
-Two renderings of that registry accompany this specification and are **generated, never edited**:
-`registry/logical_schemas.json`, which is normative and is what a packet embeds, and
-`registry/tables.md`, a human-readable listing of every table and column. Where this part and a
-rendering disagree, this part states the rule and the rendering states the current content.
+This part expressly incorporates `registry/logical_schemas.json` as normative for its exact current
+table, column, key, reference, vocabulary, and rule declarations; that generated registry is what a
+packet embeds. `registry/tables.md` is a generated, informative listing of the same declarations.
+This part owns their declaration model and meaning. A disagreement between the part, incorporated
+registry, or informative projection makes the specification candidate internally inconsistent.
 
 ## 2. Table resource requirements
 

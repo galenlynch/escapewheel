@@ -1083,7 +1083,7 @@ def open_packet(
     ----------
     path : str, Path, or Location
         Packet root: a local directory, or a store prefix such as ``s3://bucket/prefix``.
-        Part 00 §2.4 admits both, and an object store is where a shared dataset lives.
+        Part 00 §3.3 admits both, and an object store is where a shared dataset lives.
     validate_manifest : bool, default True
         Whether to check the manifest against its JSON Schema before parsing.
     rewrite : Mapping, optional

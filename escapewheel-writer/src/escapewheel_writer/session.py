@@ -342,7 +342,7 @@ def _reference_clock(recipe: Recipe, context: Context) -> Any:
 
 
 #: Part 05 §3.6: facts whose difference refuses a build rather than being reported. A subject is not
-#: scoped to a session (Part 00 §2.4), so a wrong one agrees with another packet's animal instead of
+#: scoped to a session (Part 00 §3.3), so a wrong one agrees with another packet's animal instead of
 #: colliding with the true value, and nothing downstream can detect it.
 REFUSES_ON_DIFFERENCE = frozenset({"subject.subject_id"})
 

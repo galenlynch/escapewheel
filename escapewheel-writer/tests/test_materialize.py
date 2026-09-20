@@ -281,7 +281,7 @@ def test_into_records_the_run_that_produced_the_table(tmp_path):
 
 
 def test_the_bucket_width_is_recorded_because_it_cannot_be_recovered(tmp_path):
-    """Part 04 §3: a table whose buckets are all non-empty looks the same at 300 s as at 299 s."""
+    """Part 06 §5: an unrecoverable transform parameter is recorded."""
     from escapewheel_writer.materialize import into
 
     writer = Recorder()

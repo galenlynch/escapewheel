@@ -31,8 +31,8 @@ STEPS = [
         {"core.unit_observation_intervals"},
     ),
     ("R19 §3  + core.electrode_coordinates", set(), {"core.electrode_coordinates"}),
-    ("Part 00 §3  + analysis.array_assets", set(), {"analysis.array_assets"}),
-    ("Part 00 §3  + analysis.array_dimensions", set(), {"analysis.array_dimensions"}),
+    ("Part 00 §3.2  + analysis.array_assets", set(), {"analysis.array_assets"}),
+    ("Part 00 §3.2  + analysis.array_dimensions", set(), {"analysis.array_dimensions"}),
     ("R23 §2  + core.event_streams", set(), {"core.event_streams"}),
     (
         "R25 §2  + core.event_stream_observation_intervals",

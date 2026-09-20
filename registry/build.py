@@ -1762,7 +1762,7 @@ def build() -> dict:
     # ---- R65 §2.1 : an array names the instrument that made it -----------------------------------
     # core.probes has named its device since 02; an array asset was the only acquired thing in core
     # that could not. Nullable, because a derived array has no instrument and a referenced one may
-    # come from a producer the packet cannot attribute. Placed before the Part 00 §3 mirror, so the
+    # come from a producer the packet cannot attribute. Placed before the Part 00 §3.2 mirror, so the
     # analysis copy gains it too -- its reference stays pointing at core.devices, which is right:
     # there is no analysis.devices and Part 09 §2 lets a layer reference core's tables.
     add_col(
@@ -2325,10 +2325,10 @@ def build() -> dict:
     )
     # A table reaching `core.sessions` through its declared references is session-scoped (R86
     # §2.1), which 33 of 35 are, and until now they used four conventions between them. Eight
-    # held no session column at all, so Part 00 §2.4's discriminator had nothing to derive from and
+    # held no session column at all, so Part 00 §3.3's discriminator had nothing to derive from and
     # the reader refused; six held one and declared no reference, so Tier 1 generated no
     # anti-join and 418,618,218 rows across the two packets carried a session key nothing
-    # validated. `core.devices` and `core.processing_runs` were nullable for a question Part 00 §2.4
+    # validated. `core.devices` and `core.processing_runs` were nullable for a question Part 00 §3.3
     # now answers, and neither is null in any packet built.
     SESSION_COLUMN = (
         "analysis.array_dimensions",

@@ -7,6 +7,8 @@ Normative.
 
 This part defines what the concepts in a packet mean. It does not decide how they are stored.
 
+The semantic standard defined by this part is identified by `escapewheel-semantic-v0.1`.
+
 Every semantic concept MUST be representable in the logical standard (Part 02). The semantic standard itself is independent of Parquet, Zarr, Iceberg, or any other substrate.
 
 ## 2. Global semantic rules

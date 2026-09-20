@@ -431,7 +431,7 @@ def into(
 
     `bucket_seconds` goes in `parameters` because it cannot be recovered from the data -- a
     table whose buckets all happen to be non-empty looks the same at 300 s as at 299 s
-    (Part 04 §3). So does the count of spikes this could not place (Part 06 §4), which is otherwise
+    (Part 06 §5). So does the count of spikes this could not place (Part 06 §4), which is otherwise
     invisible: a derived table one row short looks exactly like a derived table. `memory_budget`
     and `scratch` do not: they change how the rows are produced, not which rows they are, and
     recording them would make two identical packets claim different provenance.

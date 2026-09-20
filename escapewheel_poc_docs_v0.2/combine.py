@@ -1,4 +1,4 @@
-"""Render the parts of this specification as one file.
+"""Render the informational entry point and numbered parts as one file.
 
 The single-file rendering is a convenience, not a second source: every byte of it comes from the
 parts, delimited so a reader can see which part a clause came from and a tool can split it back.
@@ -18,8 +18,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-#: The order the parts are published in. `README` first, because it carries the conformance
-#: clauses and the version identifiers every other part is read against.
+#: The order the parts are presented in. The informational `README` comes first for orientation;
+#: Part 00 and the subject-owning numbered parts carry the framework and identifiers.
 ORDER = ("README.md", *(sorted(p.name for p in HERE.glob("[0-9][0-9]_*.md"))))
 
 OUT = HERE / "Escapewheel_POC_v0.2_Implementation_Spec.md"

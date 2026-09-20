@@ -352,7 +352,7 @@ def _declare(root, **overrides):
 
 
 def test_an_analysis_resource_without_a_run_is_an_error(packet_root):
-    """Part 04 §3: a derived resource that does not say how it was derived is not conforming."""
+    """Part 04 §4.1: an analysis resource must name its producing run."""
     _declare(packet_root)
     report = validate(open_packet(packet_root))
     assert any(f.check == "provenance.no_processing_run" for f in report.findings)

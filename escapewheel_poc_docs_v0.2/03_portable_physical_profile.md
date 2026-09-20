@@ -7,6 +7,11 @@ Normative. Profile identifier: `escapewheel-portable-v0.1`.
 
 This part defines how the logical resources of Part 02 are stored in the portable profile. A packet under this profile MUST be readable without a server.
 
+The portable physical profile defined by this part is identified by
+`escapewheel-portable-v0.1`. Its requirements use the JSON, URI, Parquet, Arrow, Zarr,
+Zstandard, and SHA-256 authorities identified in
+[Part 00 §10](00_architecture.md#ew-normative-references).
+
 This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology. Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's.
 
 ## 2. Required technologies
@@ -62,7 +67,9 @@ A URI in the catalog or in a table MAY be relative to the packet root or absolut
 
 An absolute URI MAY name an external asset. A catalog entry for an external asset MUST declare it external (Part 04 §5).
 
-A packet root MAY itself be an object-store prefix rather than a directory, in which case a relative URI resolves under that prefix (Part 00 §3).
+A packet root MAY itself be an object-store prefix rather than a directory, in which case a
+relative URI resolves under that prefix
+([Part 00 §3.3](00_architecture.md#ew-packet)).
 
 ## 5. Table storage
 

@@ -5,7 +5,7 @@ which phase is in progress. The repository [authority model](README.md#authority
 file is not normative.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R121 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R122 accepted. R42 and R73 withdrawn. No proposal or draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -24,7 +24,7 @@ Phases are Part 07's plan of record.
 
 | Phase | State | Notes |
 |---|---|---|
-| — Specification | **complete** | Current v0.2 publication; see the repository [authority model](README.md#authority). The block above records accepted provenance. |
+| — Specification | **in reconciliation** | The generated v0.2 material is the authoritative specification candidate under [Part 00](escapewheel_poc_docs_v0.2/00_architecture.md#ew-specification-authority). R122 establishes its authority framework; the reconciliation roadmap must close before immutable publication. |
 | — Registry content | **complete** | The counts are in the block above. The cleaned registry shape, meta-schema identity, and core registry version are `0.2.0`; extension versions remain independent. |
 | 0 Spec fixtures | **complete** | Single-session packet plus the variant corpus carrying one extension; `fixtures/`. |
 | 1 Manifest and table reader | **complete** | `escapewheel-reader`; 156 tests, mypy strict. Ticks come back on the packet's reference clock by default, and `seconds=True` derives R39 §2.3's seconds from the declared origin or refuses. `TableResource` and `ArrayResource`, each with its heavy dependency behind an extra. |
@@ -32,7 +32,7 @@ Phases are Part 07's plan of record.
 | 3 NWB source importer | **complete** | Four adapters: `NWBSource` (the tables the NWB is authority for; the CCF frame and R28's unit coordinates are `AindNWBSource`'s in `escapewheel-aind` since 2026-09-16), `SessionSource` (`tick_zero_utc`, observation intervals; in `escapewheel-aind` since 2026-09-16, reached through the `escapewheel.sources` entry point), `SorterSource` (units, spikes, per-stream clocks), `SyncSource` (anchors), plus `WaveformSource`. The session recipe and `escapewheel inspect` / `init` / `import` replace the ad-hoc scripts: 776259 commits clean from `session.toml` in 2.5 min, and the recipe lands in `core.processing_runs.parameters`, closing Part 05 Stage 3. |
 | 4 Analysis materializations | **complete** | `analysis.spike_events` (R30) materialised and amended into both packets. The success criterion is met — PSTH measured three ways, 2026-09-01, all bin-identical. The other six Part 06 names are **not** oversights: `spikes_by_trial`, `trials_wide` and `unit_condition_rates` were measured and declined by R43; `good_units` was already a view; `binned_spikes` and the spectrogram are Phase 5. |
 | 5 Dense arrays | **complete** | `core.waveform_mean`, a sparse int16 template array, `(6781, 26, 150)` in 26 MB, packet-owned Zarr v3. Layout measured in `conformance/zarr-probe/waveforms.py`: the chunk is the unit of the question, the shard the unit of the object, and the compressor goes *inside* the shard. **LFP is referenced, not copied** (R14 §2.3, R21 §3.2): twelve Zarr v2 arrays, 6.8 GB the packet points at, with R20's regular-tick axis replacing 767 MB of timestamps with three integers per series and `core.array_channels` carrying R19's per-channel `inter_sample_shift`. Both success criteria are met: `pkt.array("core.waveform_mean")` opens it, and the structural agreement is validated — rank against `core.array_dimensions`, codecs against the store, `zarr_format`, transpose ban. Part 07's "dtype/shape" wording is superseded, since R3 §3.3 struck both columns. Media assets are not Phase 5 scope: Part 07 never names them. |
-| 6 Release and version discipline | **partial** | `escapewheel verify` records what is true about external resources (R36 §2.4); `escapewheel prune` removes what a committed packet no longer names (R61 §3). Registry identity is settled at `0.2.0`; the specification publication model remains in the authority draft. |
+| 6 Release and version discipline | **partial** | `escapewheel verify` records what is true about external resources (R36 §2.4); `escapewheel prune` removes what a committed packet no longer names (R61 §3). Registry identity is settled at `0.2.0`; R122 distinguishes the working candidate from an immutable release, whose exact publication record remains deferred. |
 | 7 Iceberg experiment | not started | Explicitly last; MUST NOT be required earlier. |
 
 ## What exists
@@ -41,7 +41,7 @@ One repository since 2026-09-04; the `Repo` column is gone with the split that n
 
 | Path | Contents |
 |---|---|
-| `escapewheel_poc_docs_v0.2/` | Authoritative README and numbered parts, plus their generated convenience rendering. |
+| `escapewheel_poc_docs_v0.2/` | Authoritative numbered parts and expressly incorporated artifacts, an informational README, and their generated convenience rendering. |
 | `nwb_lake_poc_docs/` | Frozen starting point. Not edited. |
 | `revisions/` | Specification-change lifecycle and records; start at `revisions/README.md`. |
 | `conformance/` | Probe suites producing the evidence revisions cite. |
