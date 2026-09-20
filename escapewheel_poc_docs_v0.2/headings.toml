@@ -291,3 +291,69 @@
 "4.1" = "An endpoint plateaus at about 120 requests a second"
 "4.2" = "One file beats a partitioned prefix on the engine that matters"
 "5" = "The Zarr codec floor is version-specific"
+
+[anchor.ew-append-only-numbering]
+part = "00"
+section = "10.3"
+title = "A part is numbered by appending"
+aliases = []
+
+[anchor.ew-code-comment-guidance]
+part = "07"
+section = "2.3"
+title = "A comment states what the code does not"
+aliases = []
+
+[anchor.ew-core-logical-schema-scope]
+part = "02"
+section = "1"
+title = "Scope"
+aliases = []
+
+[anchor.ew-current-requirement-citations]
+part = "00"
+section = "10.1"
+title = "A requirement is cited from the part that states it"
+aliases = []
+
+[anchor.ew-declaration-provenance]
+part = "02"
+section = "9.4"
+title = "Provenance of a declaration"
+aliases = []
+
+[anchor.ew-numbered-part-ownership]
+part = "00"
+section = "9"
+title = "The parts, and what each one binds"
+aliases = []
+
+[anchor.ew-part-citation-form]
+part = "00"
+section = "10.4"
+title = "A part is cited as Part 02"
+aliases = []
+
+[anchor.ew-registry-document]
+part = "02"
+section = "9.1"
+title = "The schema is one document"
+aliases = []
+
+[anchor.ew-registry-self-description]
+part = "02"
+section = "9.2"
+title = "Self-description"
+aliases = []
+
+[anchor.ew-revision-rationale-citations]
+part = "00"
+section = "10.2"
+title = "A revision is cited for what a part does not carry"
+aliases = []
+
+[anchor.ew-specification-citations]
+part = "00"
+section = "10"
+title = "Citing this specification"
+aliases = []

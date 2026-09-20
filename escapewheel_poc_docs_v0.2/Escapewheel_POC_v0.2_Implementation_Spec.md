@@ -331,6 +331,7 @@ The first implementation is not a generic NWB backend. It is:
 
 An import succeeds only when validation succeeds (Part 05 §1).
 
+<a id="ew-numbered-part-ownership" data-spec-anchor="canonical"></a>
 ## 9. The parts, and what each one binds
 
 A reader learns what binds them here rather than by opening ten files and reading the third line of
@@ -357,8 +358,10 @@ sections and informative in the rest. The table is appended rather than inserted
 reason the sequence is not renumbered — 119 citations across the accepted revisions and the parts
 depend on part and section identifiers both.
 
+<a id="ew-specification-citations" data-spec-anchor="canonical"></a>
 ## 10. Citing this specification
 
+<a id="ew-current-requirement-citations" data-spec-anchor="canonical"></a>
 ### 10.1 A requirement is cited from the part that states it
 
 Where a part states a requirement, a citation of it — in an implementation's source, in a packet's documentation, or in a revision's Decision — MUST name that part and section, and MUST NOT name a revision in its place (R112 §3.1). The part's sentence is what binds (§9), and a revision naming the same rule records how the part came to say it.
@@ -367,18 +370,21 @@ Naming an actor does not exempt a clause. A requirement binding a writer, a read
 
 Two dispositions leave a requirement outside the parts. A clause the registry carries is cited from the registry, which is where a consumer reads it, and a clause that decided nothing states no requirement to cite. Where a clause is recorded as landing anywhere but a part, the revision is the statement of record.
 
+<a id="ew-revision-rationale-citations" data-spec-anchor="canonical"></a>
 ### 10.2 A revision is cited for what a part does not carry
 
 A revision MAY be cited for the reasoning a part does not hold: the measurement behind a rule, the alternative that was rejected and why, and the defect that prompted the change (R112 §3.3). A part states what holds; a revision states why, and a reader wanting the second is sent to the revision by name.
 
 Three uses name a revision and are sound: a registry column's `since`, whose value names the revision that set it (Part 02 §9.4); the ledger mapping each clause to where it landed, which is what §10.1 is resolved through; and a revision citing another revision. The exemption says which document to cite and not that the citation is accurate.
 
+<a id="ew-append-only-numbering" data-spec-anchor="canonical"></a>
 ### 10.3 A part is numbered by appending
 
 Whoever amends a part MUST add a section at the end of that part, and a subsection at the end of its section, neither of which renumbers anything already cited. They MUST NOT insert one between two that exist, and a part MUST NOT carry two sections with one number (R112 §3.4). Part 01 §3 is not an exception: that section is a flat list of concepts every later part cites by number, so a concept is appended as the next number.
 
 A tool that checks citations MUST refuse a part carrying two sections with one number, and SHOULD refuse one whose sections do not ascend (R112 §3.5). Both are decidable from the headings alone, with no citation in hand.
 
+<a id="ew-part-citation-form" data-spec-anchor="canonical"></a>
 ### 10.4 A part is cited as Part 02
 
 A citation of a part, in a part or in a revision, MUST write the word `Part` before the number, as `Part 02 §5.2`, and MUST NOT name the part by its number alone, with or without backticks (R113 §3.1). An implementation's source is not bound. §10.1 binds which document a citation names, because naming the wrong one sends a reader to prose that does not bind them; a spelling is presentation, and this specification does not impose one on code it does not own.
@@ -738,6 +744,7 @@ A frame belongs to one session, because a name two sessions reuse may name diffe
 
 Normative.
 
+<a id="ew-core-logical-schema-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part defines how a logical schema is declared, what a declaration must contain, and which resources the core layer comprises.
@@ -1017,10 +1024,12 @@ No rule checks either half, and none is added. Nothing structural tells a code f
 
 ## 9. The registry
 
+<a id="ew-registry-document" data-spec-anchor="canonical"></a>
 ### 9.1 The schema is one document
 
 Table structure and validation rules are carried in one JSON document (R2 §2). It declares the semantic and logical standard versions, its own registry version, and its tables.
 
+<a id="ew-registry-self-description" data-spec-anchor="canonical"></a>
 ### 9.2 Self-description
 
 A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on (R2 §8). A packet whose embedded registry disagrees with its recorded version is invalid.
@@ -1060,6 +1069,7 @@ An `open` column MUST carry a description stating the form its values take (R101
 
 A column's declarations are rendered in `registry/tables.md` from the fields holding them (R107 §3.4) — the vocabulary, the closed set itself, the reserved values, the authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is, and it showed none of them, which is why 35 descriptions had come to say them in prose.
 
+<a id="ew-declaration-provenance" data-spec-anchor="canonical"></a>
 ### 9.4 Provenance of a declaration
 
 A table and a column SHOULD each carry `since`, naming the revision that introduced or last changed it (R77 §2.3). The registry stamps both: 19 tables and 213 columns carry one.
@@ -2332,6 +2342,7 @@ Validation requires an embedded SQL engine, because the rules are SQL. Reading d
 
 This is what Part 02 §5.2's ban on nested types exists to preserve — a native reader stays viable in a language without an embedded SQL engine.
 
+<a id="ew-code-comment-guidance" data-spec-anchor="canonical"></a>
 ### 2.3 A comment states what the code does not
 
 A comment or docstring SHOULD state what the code does not already say — why this way, what breaks otherwise, the constraint that is not visible locally — and SHOULD NOT restate what the line below it does. Where it gives a reason, Part 00 §10.1 decides what it cites: the part for the requirement, and the revision for the measurement behind it (R112 §3.2).
