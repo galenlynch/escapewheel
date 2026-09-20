@@ -137,26 +137,31 @@ treated as compatible with the earlier development shape.
 
 Normative.
 
+<a id="ew-architecture-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part defines the architecture of an Escapewheel packet: the vocabulary levels, the layers a packet is divided into, and the storage stance. It defines no schema and no file format; those are Parts 02 and 03.
 
 The design objectives are that a packet be fast to query, straightforward to produce from existing acquisition and sorting outputs, readable from more than one language, independent of HDMF as a runtime data model, and precise enough to drive validation.
 
+<a id="ew-architecture-terms" data-spec-anchor="canonical"></a>
 ## 2. Terms and definitions
 
+<a id="ew-semantic-standard" data-spec-anchor="canonical"></a>
 ### 2.1 Semantic standard
 
 The **semantic standard** defines what concepts mean. A Trial is a bounded interval of experimental time; a Unit is a sorted or curated spiking entity; an ElectricalSeries is sampled extracellular voltage over time and channels.
 
 The semantic standard is independent of storage format, and independent of whether a concept is represented as a table or an array. It is specified in Part 01.
 
+<a id="ew-logical-standard" data-spec-anchor="canonical"></a>
 ### 2.2 Logical standard
 
 The **logical standard** defines how semantic concepts are represented as computable resources: tables, dense array assets, media assets, document assets, views, materialized tables, materialized arrays, and references between them.
 
 The logical standard is storage-agnostic but not shape-agnostic: trials are logically table-shaped. It is specified in Part 02.
 
+<a id="ew-physical-profile" data-spec-anchor="canonical"></a>
 ### 2.3 Physical profile
 
 A **physical profile** defines how logical resources are stored. Two are contemplated:
@@ -170,6 +175,7 @@ Only the portable profile, `escapewheel-portable-v0.1`, is specified. It is Part
 normative for a packet whose manifest declares its `profile_id` and binds no other packet, and is
 the only part whose rules may depend on a storage technology.
 
+<a id="ew-packet" data-spec-anchor="canonical"></a>
 ### 2.4 Packet
 
 A **packet** is one concrete dataset bundle under a declared profile. It may be a local directory, an object-store prefix, or a manifest pointing at distributed assets.
@@ -184,20 +190,24 @@ A reader presenting one or more packets MUST carry a session discriminator on ev
 
 Session identity MUST NOT become part of a join key where the assigned identifier is already unique. Within one packet `unit_id` identifies a unit by itself, and widening the join to `(session_id, unit_id)` costs 2.93x over 286,896,563 spikes; across packets that identifier is genuinely ambiguous and the second column buys correctness.
 
+<a id="ew-packet-catalog" data-spec-anchor="canonical"></a>
 ### 2.5 Packet catalog
 
 The **packet catalog** is the dataset-level map. In the portable profile it is `packet.json`, specified in Part 04.
 
 It records what resources exist, where they live, what semantic type each represents, what logical schema and physical profile each uses, which are canonical and which derived, and what validation and provenance records apply.
 
+<a id="ew-iceberg-catalog" data-spec-anchor="canonical"></a>
 ### 2.6 Iceberg catalog
 
 An **Iceberg catalog** is distinct from the packet catalog. It is relevant only to the lakehouse profile and manages only tabular resources. It does not catalog dense arrays, media, documents, or semantic relationships across a packet, and therefore does not replace the packet catalog.
 
+<a id="ew-resource-identity" data-spec-anchor="canonical"></a>
 ### 2.7 Resource identity
 
 Resources and rows reference each other by stable identifier. An implementation MUST NOT use HDF5 object references, Zarr hierarchy paths, host object identity, or file layout as the primary identity system.
 
+<a id="ew-specification-actors" data-spec-anchor="canonical"></a>
 ### 2.8 Actors
 
 Four actors appear throughout this specification, and every requirement binds one of them or states
@@ -228,6 +238,7 @@ on HDF5 object references does.
 `importer` is another name for a writer, `client` and `binding` for a reader, and `caller` for a
 consumer. An accepted revision using one binds the actor it names.
 
+<a id="ew-packet-content-classes" data-spec-anchor="canonical"></a>
 ## 3. Layer model
 
 A packet is divided into layers by namespace prefix.
@@ -253,8 +264,10 @@ conclude it has read every canonical fact the packet holds; a discriminator reso
 
 Extension namespaces are additional to these and are specified in Part 09.
 
+<a id="ew-core-content-class" data-spec-anchor="canonical"></a>
 ## 4. Core layer
 
+<a id="ew-core-content-requirements" data-spec-anchor="canonical"></a>
 ### 4.1 Requirements
 
 The core layer MUST contain canonical facts in the logical schemas of Part 02. A writer MUST validate core resources before it commits them.
@@ -275,8 +288,10 @@ Core resources are normalized enough to avoid drift and no further. One row per 
 
 A unit's identity is the tuple `(session_id, unit_id, sorting_run_id, curation_id)`, never `unit_id` alone. A packet carrying sorted units MUST carry `core.sorting_runs` and `core.curation_versions`.
 
+<a id="ew-analysis-content-class" data-spec-anchor="canonical"></a>
 ## 5. Analysis layer
 
+<a id="ew-analysis-content-requirements" data-spec-anchor="canonical"></a>
 ### 5.1 Requirements
 
 The analysis layer MAY contain denormalized, prejoined, binned, aligned, or otherwise transformed products. An analysis resource MUST declare lineage to the core resources it derives from.
@@ -362,6 +377,7 @@ depend on part and section identifiers both.
 
 Normative.
 
+<a id="ew-semantic-standard-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part defines what the concepts in a packet mean. It does not decide how they are stored.
@@ -1265,6 +1281,7 @@ A coordinate MAY carry values on fewer axes than its frame declares, where its s
 
 Normative. Profile identifier: `escapewheel-portable-v0.1`.
 
+<a id="ew-portable-profile-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part defines how the logical resources of Part 02 are stored in the portable profile. A packet under this profile MUST be readable without a server.
@@ -1692,6 +1709,7 @@ A build that started a process owns it and terminates it once it holds the rows 
 
 Normative.
 
+<a id="ew-packet-catalog-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part defines the packet catalog: the document that binds a packet's resources together. In the portable profile it is `packet.json` at the packet root.
@@ -1704,6 +1722,7 @@ The catalog binds every resource kind, including tables, dense arrays, media, an
 
 The catalog identifies by name. `packet_id`, every entry's `resource_id`, the session list, and a resource's `processing_run_id` hold names rather than assigned numbers, because the catalog is read before any table and a number resolves against nothing.
 
+<a id="ew-packet-identifiers" data-spec-anchor="canonical"></a>
 ## 3. Required top-level fields
 
 | field | type | requirement |
@@ -2142,6 +2161,7 @@ A validator MUST NOT downgrade an error to make a packet pass. An advisory rule 
 
 Where an import replaces an existing packet, it SHOULD report every resource the prior catalog declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
 
+<a id="ew-conformance-classes" data-spec-anchor="canonical"></a>
 ## 10. Two conformance classes
 
 A report says which of two claims it is making.

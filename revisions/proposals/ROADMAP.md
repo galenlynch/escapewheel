@@ -293,7 +293,7 @@ P1 authority framework
 | P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
 | P0.1 | Controlled reorganization of specification parts | **Complete** | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) | P0 |
 | P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Complete** | [R121](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) | R120 |
-| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — revise and rebase before acceptance | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | R120, R121 |
+| P1 | Specification authority, abstraction levels, and normative ownership | **Draft** — appraised and ready for acceptance authorization | [current draft](../drafts/define-specification-artifacts-and-normative-ownership.md) | R120, R121 |
 | P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
 | P4 | Registry-document semantics and uniform conformance | **Not started** | anticipated proposal; slug to be assigned | P3 |
@@ -477,12 +477,13 @@ machine-readable artifact whose semantics or current contents remain under dispu
 P1, not P0.1, owns candidate authority, artifact roles and membership, release identity, and
 publication terminology.
 
-P1 still names its pre-R121 baseline. Its pre-acceptance appraisal remains open; before another
-appraisal, rebase it on R121 and revise it with an exact human-readable
-old-location-to-new-location crosswalk, a statement-level disposition of
-the specification README, stable anchors for reorganized sections, all affected citation and
-tooling surfaces, and explicit binding for specification-candidate and publication obligations;
-then rerun the appraisal from its freshness gate.
+P1 is rebased on the metadata-only anchor bootstrap
+`41da62e3fd4924e5526f8f812492e90607d14d97`, immediately after R121. Its 2026-09-20
+pre-acceptance appraisal is complete: the exact old-to-new structural crosswalk, statement-level
+README disposition, authority and reference rules, affected citation and tooling surfaces,
+owner/evidence plan, and mechanical gates have no remaining blocker. Eleven pre-existing semantic
+citation defects found during the required citation reading have explicit incorporation
+dispositions rather than being silently carried through the reorganization.
 
 **Exit evidence:** Part 00 and the informational README boundary are unambiguous; every numbered
 part has a stated subject and dependency direction; candidate disagreements are classified as
