@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | `reconcile-unit-identity-and-placement.md` | 3,514 | promoted; pre-acceptance appraisal pending | structural; six-anchor bootstrap required before final appraisal |
