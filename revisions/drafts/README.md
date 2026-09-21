@@ -23,4 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | `define-a-portable-tier-2-rule-language.md` | 5,325 | rebased on anchor bootstrap; acceptance appraisal pending | structural; five-anchor bootstrap verified |
+| 1 | `define-a-portable-tier-2-rule-language.md` | 7,226 | 2026-09-21 — ready for acceptance on `b78fd3fc246469e2c8d1fb78a277c4ec9fe16595`; P3 follows R123 and precedes P4; the hybrid descriptor and exact type semantics close the remaining portability gaps; all 28 quick-verifier stages pass | structural; five-anchor bootstrap verified |
