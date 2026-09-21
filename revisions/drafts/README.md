@@ -23,4 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | `reconcile-unit-identity-and-placement.md` | 3,613 | rebased 2026-09-21; revise before acceptance: complete session scoping for reader operations | structural; six-anchor bootstrap completed at `74844d338f8f65d084ddcac85e90238f456633aa` |
+| 1 | `reconcile-unit-identity-and-placement.md` | 4,316 | appraised 2026-09-21; no blockers; ready for acceptance authorization | structural; bootstrap complete; appraisal added same-session correlation and support scoping |

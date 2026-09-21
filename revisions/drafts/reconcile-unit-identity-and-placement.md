@@ -11,7 +11,7 @@
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6 |
 
-Section 3 is normative. Sections 1, 2, and 4–7 are informative.
+Section 3 is normative. Sections 1, 2, and 4–8 are informative.
 
 Normative keywords follow BCP 14.
 
@@ -28,7 +28,8 @@ It also completes the directly coupled placement repair in Part 00 §3.3. Part 0
 of logical session scope, Part 05 becomes the explicit owner of reader composition and exact-unit
 selection behavior, and Part 07 retains only informative implementation rationale. Part 00 keeps
 the packet concept and architectural map rather than exact registry counts, reader algorithms,
-join keys, or measurements.
+join keys, or measurements. The reader rules preserve session scope on every side of a
+session-dependent operation rather than filtering only one input.
 
 This is a structural revision because append-only text would leave the contradictory identity and
 misplaced reader rules in their present owners. The existing source material must be retired,
@@ -105,6 +106,12 @@ lookup and not its spike rows. That can retain rows from sessions other than the
 attach a missing or wrong clock. Retaining the parameter as query scope therefore requires applying
 it consistently; it does not restore it to unit identity.
 
+The alignment helpers expose the same defect across two relations. Their optional `session_id`
+restriction applies to the event subquery but not the spike relation, and their time join does not
+compare session scope. In a two-session probe with one spike and one event at tick 100 in each
+session, that query shape returned four pairs, including the two cross-session pairs; adding equal
+`session_id` to the match returned the two same-session pairs.
+
 ### 2.3 Identifier types are another projection of the registry
 
 The affected public reader annotations describe several logical identifiers as strings. The
@@ -134,7 +141,7 @@ references and a generalized transitive rule; uniform registry-document conforma
 dependent P4 work.
 
 The refreshed reverse-impact scan covered Part 00 §§3.3, 4.3, and 9; Part 01 §3.13; Part 02 §§7.1
-and 12.1; Part 07 §7; and Part 08 §4. It found 134 citation occurrences across current
+and 12.1; Part 07 §7; and Part 08 §4. It found 135 citation occurrences across current
 implementation, documentation, lifecycle records, and immutable history. The repository-wide
 citation inventory examined 126 revision documents and 264 other working-tree files, found no
 unresolved citation, and identified 55 citations that intentionally use the frozen v0.1 numbering.
@@ -178,6 +185,15 @@ The discriminator **MUST** distinguish the packet a row came from together with 
 **SHOULD** expose a compact integer for each such packet-and-session pair and **SHOULD** carry
 `session_name` beside it as a non-identifying label.
 
+A reader operation that correlates rows from two or more session-scoped relations **MUST** preserve
+session scope. Within one packet, a correlation that does not follow a declared reference to a
+packet-unique target **MUST** compare or match only rows with equal `session_id`. After presenting
+packets together, a correlation **MUST** compare or match only rows with equal session
+discriminators. If the caller supplies an explicit session restriction, the reader **MUST** apply
+it to every participating relation and **MUST NOT** scope only one side of the operation. A
+declared packet-local reference retains its exact key; the reader's discriminator supplies
+presentation context rather than widening that reference.
+
 Within one packet, a reader **MUST** join a unit-keyed relation to `core.units` through `unit_id`
 alone. Across packets, it **MUST** include the session discriminator with `unit_id`; it **MUST NOT**
 widen the packet-local unit reference itself. A reader **SHOULD** add the discriminator and label
@@ -199,7 +215,9 @@ violates Part 05 §12 conforming.
 
 Where an exact-unit reader operation accepts `session_id`, it **MUST** use it only as query and
 time-conversion scope. It **MUST** apply the restriction to every selected spike row and to the
-clock and origin used for conversion, and **MUST NOT** use it to disambiguate `unit_id`.
+clock, origin, and attached observation support used for the result, and **MUST NOT** use it to
+disambiguate `unit_id`. A selection that does not match the named session **MUST NOT** attach
+support from another session.
 
 ### 3.5 Reader projections of identifier types
 
@@ -243,13 +261,14 @@ meaning.
 
 ## 5. Consequence
 
-The packet contract converges without a byte migration. The behavioral compatibility change is in
-the unreleased reader API: `Packet.spike_times()` loses its nonfunctional `sorting_run_id` and
+The packet contract converges without a byte migration. The behavioral compatibility changes are
+in the unreleased reader API: `Packet.spike_times()` loses its nonfunctional `sorting_run_id` and
 `curation_id` parameters, treats explicit units as exact selections, and applies `session_id`
-consistently as a query and conversion scope. There are no released consumers or remote
-compatibility commitments. The broader identifier-annotation correction changes static API
-descriptions from strings to host-language integers where the registry declares `int32`; manifest
-and catalog strings remain strings.
+consistently as a query and conversion scope; session-dependent combinations no longer correlate
+rows from different sessions. There are no released consumers or remote compatibility
+commitments. The broader identifier-annotation correction changes static API descriptions from
+strings to host-language integers where the registry declares `int32`; manifest and catalog
+strings remain strings.
 
 The structural draft was preceded by a metadata-only anchor bootstrap. Incorporation is then one
 atomic accepted change that updates owners, live citations, ledger destinations, generated
@@ -282,10 +301,13 @@ The following cases distinguish the completed change from the contradictory base
    `Packet.units()` raises the existing ambiguity, while a known `unit_id` and an explicit unit
    table read exactly the selected spikes. The test does not treat that packet as conforming.
 4. A multi-session fixture verifies that `session_id` restricts both single- and multi-unit spike
-   rows and selects the same session's reference clock and origin. A mismatched scope cannot attach
-   another session's clock or seconds.
-5. Alignment and observation results contain the current columns, preserve clock mapping and
-   attached support, and never filter support by removed run or curation columns.
+   rows and selects the same session's reference clock, origin, and observation support. A
+   mismatched scope cannot attach another session's clock, seconds, or support.
+5. Two sessions with overlapping event and spike ticks produce only same-session alignment pairs,
+   both with no explicit session restriction and with one supplied. The explicit restriction
+   applies to both input relations. Alignment and observation results contain the current columns,
+   preserve clock mapping and attached support, and never filter support by removed run or curation
+   columns.
 6. The Part 08 quality query executes against current core and `aind_unit_qc` tables using
    `unit_id` and returns its expected groups.
 7. A checked mapping names each public reader symbol that directly exposes a logical identifier,
@@ -320,7 +342,51 @@ other than the six canonical-anchor insertions. The new Part 05 headings receive
 created. This draft's `Based on` value, registry and session-scope counts, impact scan, and citation
 inventory have been refreshed against that commit.
 
-## 7. Open
+## 7. Pre-acceptance appraisal
+
+The pre-acceptance appraisal completed on 2026-09-21 against
+`74844d338f8f65d084ddcac85e90238f456633aa` with no remaining blocker:
+
+- **Freshness:** the baseline is the metadata-only anchor bootstrap immediately after this draft's
+  promotion and remains the relevant authoritative contract. This is the sole open lifecycle
+  artifact. Registry `0.2.0`, the 43/41/2 table and session-scope counts, the reader failure, the
+  135-occurrence section impact scan, the 55-occurrence anchor scan, and the repository citation
+  inventory were rerun and read.
+- **Decision:** §§3.1–3.6 select one packet-local unit identity, preserve its required resources,
+  separate logical session scope from reader operations, distinguish exact selection from
+  currency choice, derive public identifier types from declarations, and assign one owner per
+  subject. Session correlation cannot cross sessions, but a declared packet-local reference keeps
+  its exact key, so the new scope rule does not recreate the obsolete composite unit identity.
+- **Structural:** no registry, meta-schema, packet schema, rule, key, reference, field, or
+  vocabulary changes. Inspection confirms `core.units` has primary key `unit_id` and every current
+  core, analysis, and extension reference to it uses `unit_id` alone. The structural prose change
+  has an exact crosswalk and stable source and destination anchors.
+- **Feasibility:** the current conforming packet still returns 30 stored-clock spikes for
+  `unit_id = 0`, while the obsolete sorting-run argument still reproduces its Arrow field failure.
+  Exact selections can bypass the currency guard without bypassing `Packet.units()`, and both the
+  range and ASOF alignment probes return only same-session pairs when equality on `session_id` is
+  added. The registry-backed public-type check has a bounded symbol-to-column design and excludes
+  manifest and catalog names.
+- **Compatibility:** packet bytes, declarations, and interpretation do not change. The unreleased
+  reader removes two unusable arguments, corrects static identifier types, changes exact-selection
+  guard behavior, and prevents cross-session correlations. No packet migration, regeneration,
+  profile change, or compatibility support for a released consumer is required.
+- **Traceability and evidence:** every Decision clause has a prose owner or unchanged declaration,
+  every impact row gives a change or unchanged reason, the six existing structural destinations
+  are bootstrapped, and nine positive or negative evidence cases cover the contract,
+  implementations, fixtures, documentation, and lifecycle artifacts. P4, P6, and P10 retain the
+  explicitly deferred decisions.
+- **Mechanical:** `stages.py`, `check_citations.py`, and `repoint.py --quiet` pass;
+  `headings.py --check` reports 262 recorded sections with no defect; `verify.py --quick` passes all
+  27 stages, including all 28 conformance packets; and generation preserves the candidate state.
+
+The material appraisal finding was the one-sided handling of session scope in multi-session reader
+operations. The revised Decision now requires every participating relation to share the same
+session and requires an explicit restriction to govern rows, clocks, origins, and observation
+support. The draft is ready for acceptance authorization once these exact bytes and the appraisal
+record in `drafts/README.md` are committed.
+
+## 8. Deferred work
 
 The broader meaning-preserving placement inventory in Parts 01 and 02 remains ordinary P2
 maintenance after this revision. Any discovered semantic difference starts a separate proposal.
