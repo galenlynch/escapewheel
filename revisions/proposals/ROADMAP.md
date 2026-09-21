@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative coordination record |
-| **Updated** | 2026-09-20 |
+| **Updated** | 2026-09-21 |
 | **Review baseline** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
 | **Objective** | Reconcile the data-driven contract, then publish one internally consistent and immutable v0.2 specification release |
 
@@ -35,25 +35,18 @@ This roadmap tracks dependency and disposition at the work-item level. The separ
 occupy the wrong owner or duplicate another rule; those details do not belong in this sequencing
 document.
 
-## 1. How to maintain this roadmap
+## 1. How to use and maintain this roadmap
 
-The status table is a coordination aid; the lifecycle artifact named in its `Artifact` column is
-the record of the actual decision. Use these statuses:
+This document owns the durable plan: design direction, work-item scope, dependency order, exit
+evidence, and the mapping from review findings to work. It does not track transient working state;
+keep the current artifact, baseline, appraisal state, pending decisions, and next action outside the
+version-controlled roadmap.
 
-- **Not started:** no proposal has reproduced and bounded the problem.
-- **Proposal:** an exploratory proposal exists but has not been promoted.
-- **Revise before promotion:** appraisal found a material scope, dependency, or evidence defect.
-- **Draft:** promotion was authorized and an appraised candidate decision exists.
-- **In incorporation:** acceptance was authorized and the atomic incorporation change is open.
-- **Complete:** incorporation closure passed and the accepted revision and all affected surfaces
-  were committed together.
-- **Ordinary maintenance:** the work changes no contract and follows the normal repository workflow.
-- **Deferred:** the work is intentionally outside the v0.2 release gate.
-
-Whenever a lifecycle artifact changes stage, update its row, baseline, dependencies, and material
-findings here in the same commit. Do not copy generated counts into this document. Before appraising
-any proposal, re-establish the baseline and overlap inventory described in the change-process guide;
-this ordering is a plan, not evidence that a later proposal remains fresh.
+Update this roadmap when appraisal changes a work item's scope, dependency graph, exit evidence,
+finding disposition, or the long-term design direction. Do not update it merely because a lifecycle
+artifact changes stage, and do not copy generated counts into it. Before appraising any proposal,
+re-establish the baseline and overlap inventory described in the change-process guide; this ordering
+is a plan, not evidence that a later proposal remains fresh.
 
 ## 2. Long-term design direction preserved from the authority research
 
@@ -249,7 +242,7 @@ would force the new framework and relocated README material to the
 ends of their parts, so the separate controlled-reorganization process change is now a prerequisite.
 Promotion did not accept or incorporate the authority decision.
 
-## 4. Proposal dependency order and status
+## 4. Work-item dependency order and records
 
 The ordering below follows normative dependencies. It does not require unrelated proposals in the
 same family to wait when their owners and evidence are independent.
@@ -288,22 +281,22 @@ P1 authority framework
                                   P11 immutable v0.2 publication
 ```
 
-| ID | Work item | Status | Artifact | Depends on |
-|---|---|---|---|---|
-| P0 | Revision-process foundation | **Complete** | [change-process guide](../CONTRIBUTING.md) and process audit | — |
-| P0.1 | Controlled reorganization of specification parts | **Complete** | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) | P0 |
-| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | **Complete** | [R121](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) | R120 |
-| P1 | Specification authority, abstraction levels, and normative ownership | **Complete** | [R122](../accepted/R122-define-specification-artifacts-and-normative-ownership.md) | R120, R121 |
-| P2 | Placement cleanup and unit-identity reconciliation | **Not started** | anticipated proposal; slug to be assigned | P1 |
-| P3 | Executable declarative-rule language | **Not started** | anticipated proposal; slug to be assigned | P1 |
-| P4 | Registry-document semantics and uniform conformance | **Not started** | anticipated proposal; slug to be assigned | P3 |
-| P5 | Resource/profile declarations and resource classification | **Not started** | anticipated proposal; slug to be assigned | P4 |
-| P6 | Packet manifest, requiredness, and registry binding | **Not started** | anticipated proposal; slug to be assigned | P5 |
-| P7 | Core, extension, and packet validity composition | **Not started** | anticipated proposal; slug to be assigned | P4, P6 |
-| P8 | Recipe arbitration and adapter contract | **Not started** | anticipated proposal; slug to be assigned | P5, P6 |
-| P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | **Not started** | proposal family; split before promotion | P5–P8 as applicable |
-| P10 | Final identifiers, direct registry source, and release integration | **Not started** | proposal plus ordinary maintenance | P2–P9 |
-| P11 | Immutable v0.2 specification publication | **Not started** | anticipated proposal; slug to be assigned | P1–P10 |
+| ID | Work item | Depends on | Accepted record or target |
+|---|---|---|---|
+| P0 | Revision-process foundation | — | [Change-process guide](../CONTRIBUTING.md) and process audit |
+| P0.1 | Controlled reorganization of specification parts | P0 | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) |
+| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | P0.1 | [R121](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) |
+| P1 | Specification authority, abstraction levels, and normative ownership | P0.1, P0.2 | [R122](../accepted/R122-define-specification-artifacts-and-normative-ownership.md) |
+| P2 | Placement cleanup and unit-identity reconciliation | P1 | Proposal to be scoped |
+| P3 | Executable declarative-rule language | P1 | Proposal to be scoped |
+| P4 | Registry-document semantics and uniform conformance | P3 | Proposal to be scoped |
+| P5 | Resource/profile declarations and resource classification | P4 | Proposal to be scoped |
+| P6 | Packet manifest, requiredness, and registry binding | P5 | Proposal to be scoped |
+| P7 | Core, extension, and packet validity composition | P4, P6 | Proposal to be scoped |
+| P8 | Recipe arbitration and adapter contract | P5, P6 | Proposal to be scoped |
+| P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5–P8 as applicable | Proposal family; split before promotion |
+| P10 | Final identifiers, direct registry source, and release integration | P2–P9 | Proposal plus ordinary maintenance |
+| P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
 
 ### P0 — Revision-process foundation
 
