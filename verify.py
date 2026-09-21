@@ -18,6 +18,7 @@ Usage:
     python verify.py            # every stage; package suites dominate the runtime
     python verify.py --quick    # skip the test suites, which dominate the runtime
     python verify.py --stage-timeout 60  # bound each individual stage
+    python verify.py --heartbeat 30      # report the active stage every 30 seconds
 """
 
 from __future__ import annotations
@@ -25,8 +26,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import re
+import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -170,8 +174,53 @@ GENERATED = (
 )
 
 
-def run(cwd: Path, argv: list[str], timeout: float | None) -> tuple[bool, str]:
-    """Run one stage, returning whether it passed and its last line of output.
+def _text(output: str | bytes | None) -> str:
+    """Return subprocess output as text, including timeout output documented as bytes."""
+    if output is None:
+        return ""
+    return output.decode(errors="replace") if isinstance(output, bytes) else output
+
+
+def _last_output(output: str) -> str:
+    """Return the last visible output fragment, including one without a newline."""
+    lines = output.strip().splitlines()
+    return lines[-1] if lines else "no output yet"
+
+
+def _failure_log(name: str, output: str) -> Path:
+    """Preserve complete output for a failed stage outside the candidate tree."""
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "stage"
+    descriptor, filename = tempfile.mkstemp(prefix=f"escapewheel-verify-{slug}-", suffix=".log")
+    with os.fdopen(descriptor, "w") as stream:
+        stream.write(output)
+    return Path(filename)
+
+
+def _stop(process: subprocess.Popen[str]) -> str:
+    """Stop a timed-out stage and every child it started, then return all output."""
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    try:
+        stdout, _ = process.communicate(timeout=2)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        stdout, _ = process.communicate()
+    return _text(stdout)
+
+
+def run(
+    name: str,
+    cwd: Path,
+    argv: list[str],
+    timeout: float | None,
+    heartbeat: float | None,
+) -> tuple[bool, str]:
+    """Run one stage, reporting progress and preserving complete failure output.
 
     `TMPDIR` is dropped. The project points scratch at `/mnt/Data` to keep large temporary files
     out of a tmpfs the memory cap cannot hold, and that mount forces root ownership, which pytest
@@ -179,25 +228,51 @@ def run(cwd: Path, argv: list[str], timeout: float | None) -> tuple[bool, str]:
     the suites fail for it.
     """
     env = {k: v for k, v in os.environ.items() if k != "TMPDIR"}
-    try:
-        done = subprocess.run(
-            argv,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            check=False,
-            env=env,
-            timeout=timeout,
-        )
-    except subprocess.TimeoutExpired as exc:
-        output = exc.stdout or exc.stderr or ""
-        if isinstance(output, bytes):
-            output = output.decode(errors="replace")
-        tail = output.strip().splitlines()
-        detail = f"; last output: {tail[-1][:80]}" if tail else ""
-        return False, f"timed out after {timeout:g}s{detail}"
-    tail = (done.stdout or done.stderr).strip().splitlines()
-    return done.returncode == 0, tail[-1] if tail else ""
+    # Test names are the useful progress unit. Quiet pytest emits anonymous dots, which made a
+    # timeout impossible to locate; verbose output remains captured and only its current line is
+    # surfaced by the heartbeat.
+    env["PYTHONUNBUFFERED"] = "1"
+    process = subprocess.Popen(
+        argv,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        env=env,
+        start_new_session=True,
+    )
+    started = time.monotonic()
+    deadline = None if timeout is None else started + timeout
+    output = ""
+    while True:
+        now = time.monotonic()
+        remaining = None if deadline is None else max(0.0, deadline - now)
+        wait = heartbeat
+        if remaining is not None:
+            wait = remaining if wait is None else min(wait, remaining)
+        try:
+            stdout, _ = process.communicate(timeout=wait)
+            output = _text(stdout)
+            break
+        except subprocess.TimeoutExpired as exc:
+            output = _text(exc.stdout or exc.stderr)
+            elapsed = time.monotonic() - started
+            if deadline is not None and time.monotonic() >= deadline:
+                output = _stop(process) or output
+                log = _failure_log(name, output)
+                return False, (
+                    f"timed out after {timeout:g}s; last output: {_last_output(output)[:160]}; "
+                    f"full log: {log}"
+                )
+            print(
+                f"wait {name:46s} {elapsed:5.1f}s  {_last_output(output)[:160]}",
+                flush=True,
+            )
+
+    if process.returncode:
+        log = _failure_log(name, output)
+        return False, f"{_last_output(output)[:160]}; full log: {log}"
+    return True, _last_output(output)
 
 
 def candidate_state(where: str) -> dict[str, tuple[int, str]]:
@@ -259,15 +334,25 @@ def main() -> int:
         default=300,
         help="maximum seconds for one stage; 0 disables the timeout (default: 300)",
     )
+    parser.add_argument(
+        "--heartbeat",
+        type=float,
+        default=15,
+        help="seconds between progress reports; 0 disables them (default: 15)",
+    )
     args = parser.parse_args()
     if args.stage_timeout < 0:
         parser.error("--stage-timeout cannot be negative")
+    if args.heartbeat < 0:
+        parser.error("--heartbeat cannot be negative")
     timeout = args.stage_timeout or None
+    heartbeat = args.heartbeat or None
 
     stages = list(STAGES)
     if not args.quick:
         stages += [
-            (f"{p}: tests", ROOT / p, ["uv", "run", "pytest", "-q"]) for p in SUITES
+            (f"{p}: tests", ROOT / p, ["uv", "run", "pytest", "-vv"])
+            for p in SUITES
         ]
 
     baseline = {where: candidate_state(where) for where in GENERATED}
@@ -275,10 +360,11 @@ def main() -> int:
     for name, cwd, argv in stages:
         print(f"run  {name}", flush=True)
         clock = time.perf_counter()
-        passed, tail = run(cwd, argv, timeout)
+        passed, tail = run(name, cwd, argv, timeout, heartbeat)
+        detail = tail[:80] if passed else tail
         print(
             f"{'ok  ' if passed else 'FAIL'} {name:46s} "
-            f"{time.perf_counter() - clock:5.1f}s  {tail[:80]}",
+            f"{time.perf_counter() - clock:5.1f}s  {detail}",
             flush=True,
         )
         if not passed:
