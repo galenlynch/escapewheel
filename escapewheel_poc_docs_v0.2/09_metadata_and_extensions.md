@@ -48,6 +48,7 @@ A packet carrying extension resources MUST declare each namespace in the catalog
 
 A validator MUST check that a declared registry exists. It MUST NOT require an extension's schema in order to validate core.
 
+<a id="ew-extension-verdicts" data-spec-anchor="canonical"></a>
 ### 5.4 Separate verdicts
 
 An extension is validated on core's terms and its verdict is reported separately. A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension's failure invalidate core.

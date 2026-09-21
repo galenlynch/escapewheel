@@ -270,6 +270,7 @@ Every superseded manifest is retained under `manifests/`, so a later cleanup can
 
 Where an amendment installs a different registry, the packet retains the superseded copy alongside it. Installing different content under a `registry_version` the packet has already retained makes that version ambiguous **within one packet**, and a writer MUST refuse it.
 
+<a id="ew-incremental-revalidation" data-spec-anchor="canonical"></a>
 ### 9.4 Scope of revalidation
 
 An amendment MUST validate the whole packet, not only what it added. What is bounded is the

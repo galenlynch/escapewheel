@@ -192,10 +192,12 @@ A build MUST report everything the protocol it used carries about a failure — 
 
 Generated from structure (Part 02 §10.1): required-column non-null, primary-key uniqueness, foreign-key anti-joins, closed-vocabulary membership.
 
+<a id="ew-tier-2-validation" data-spec-anchor="canonical"></a>
 ### 5.2 Tier 2
 
 Declared per table as SQL returning offending rows, or as an expanded template (Part 02 §10.2).
 
+<a id="ew-validation-shim" data-spec-anchor="canonical"></a>
 ### 5.3 The shim
 
 A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and checksums outside SQL. A query cannot observe them, so such a check written as SQL fails silently rather than loudly.

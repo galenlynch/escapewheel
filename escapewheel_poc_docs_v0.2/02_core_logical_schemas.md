@@ -347,6 +347,7 @@ A validator MUST generate, from the declaration alone: required-column non-null 
 
 A validator MUST establish that a table's primary key is unique, by query or by any means a physical profile defines as establishing it. That a key is unique holds under any profile and is this part's; how a validator may establish it depends on how rows are stored, and is the profile's.
 
+<a id="ew-tier-2-rules" data-spec-anchor="canonical"></a>
 ### 10.2 Tier 2: declared
 
 A rule the structure cannot imply is declared as SQL returning offending rows, or as a named template the registry build expands.
