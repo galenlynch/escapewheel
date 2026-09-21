@@ -394,6 +394,7 @@ representation. The ragged chunked representation of v0.1 is withdrawn, as is th
 `core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that
 a validator checks against `core.spike_events`.
 
+<a id="ew-unit-identity-architecture" data-spec-anchor="canonical"></a>
 ### 4.3 Unit identity
 
 A unit's identity is the tuple `(session_id, unit_id, sorting_run_id, curation_id)`, never
@@ -801,6 +802,7 @@ A stream emits **one kind** of event, so a source emitting several on one channe
 several streams. What a stream's events carry beyond a tick is that named table's to declare, not
 core's: how many marks an event has and of what type is a property of what produced it.
 
+<a id="ew-unit-concept" data-spec-anchor="canonical"></a>
 ### 3.13 Unit
 
 A sorted or curated spiking entity.
@@ -1034,6 +1036,7 @@ A reference MUST relate columns of the same type, of the same role, and of the s
 
 Where §5.3 requires `int64` of an identifier whose distinct values may exceed `int32`, every column referencing it is `int64` too — the escape is taken on both sides or on neither, since a narrow column referencing a wide one truncates silently.
 
+<a id="ew-session-scope" data-spec-anchor="canonical"></a>
 ### 7.1 Session scope
 
 A table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively. That is a property of the registry, computable with no packet in hand.
@@ -1383,6 +1386,7 @@ Frames stand to a coordinate as §11.3's clocks stand to a tick: the declared re
 Sections 2 through 10 bind every table. What follows binds particular ones, where identifying a
 row, resolving a value, or reading an absence takes more than the generic rules give.
 
+<a id="ew-unit-identity" data-spec-anchor="canonical"></a>
 ### 12.1 Unit identity
 
 `unit_id` identifies a unit on its own. The packet assigns it, numbering units by
@@ -2600,6 +2604,7 @@ A conformance corpus holds one conforming packet and a set of variants, each wit
 
 Run it after changing the registry, the generator, or any rule.
 
+<a id="ew-reference-performance-notes" data-spec-anchor="canonical"></a>
 ## 7. Performance notes
 
 These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section MUST NOT repeat it.
@@ -2714,6 +2719,7 @@ The LFP is referenced rather than copied: ten `dense_array_asset` entries with `
 }
 ```
 
+<a id="ew-example-queries" data-spec-anchor="canonical"></a>
 ## 4. Queries
 
 Resource identifiers are dotted; a SQL engine registers them with underscores.

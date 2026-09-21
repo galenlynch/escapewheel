@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `8ac911aab964c0da54ec22b5b73ce5cc199be864` |
+| **Based on** | `74844d338f8f65d084ddcac85e90238f456633aa` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 00 §§3.3, 4.3, and 9; Part 01 §3.13; Part 02 §§7.1 and 12.1; Part 05 (new §13); Part 07 §7; Part 08 §4 |
+| **Amends** | Part 00 §§3.3, 4.3, and 9; Part 01 §3.13; Part 02 §§7.1 and 12.1; Part 05 title and new §13; Part 07 §7; Part 08 §4 |
 | **Depends on** | R81 §§2.1–2.6; R86 §§2.1–2.4; R120 §§3.3–3.8; R122 §§3.3–3.6 |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6 |
@@ -36,8 +36,8 @@ split, or reduced while its surviving rules move to the sections that own their 
 
 ### 1.1 Structural crosswalk
 
-The canonical anchors in this table are the stable identities used during incorporation. Six
-existing headings do not yet have them; §6.1 records the required metadata-only bootstrap.
+The canonical anchors in this table are the stable identities used during incorporation. The six
+existing headings that lacked them received them in the metadata-only bootstrap recorded by §6.1.
 
 | old location | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
@@ -53,8 +53,9 @@ existing headings do not yet have them; §6.1 records the required metadata-only
 | Part 01 §3.13 `ew-unit-concept` — one sorting and curation per Unit | retain | Part 01 §3.13 `ew-unit-concept` | none | §3.1 |
 | Part 02 §7.1 `ew-session-scope` | retain as the logical owner | Part 02 §7.1 `ew-session-scope` | none; direct-versus-transitive extension conformance remains deferred | §§3.3, 3.6 |
 | Part 02 §12.1 `ew-unit-identity` | retain and add the relocated resource condition | Part 02 §12.1 `ew-unit-identity` | identity unchanged from the incorporated registry; conditional requiredness becomes single-owned prose | §§3.1, 3.2, 3.6 |
+| Part 05 title | rename to include reader operations | Part 05 title | make the part's lookup name agree with the reader subject assigned by Part 00 §9 | §3.6 |
 | Part 05, after §12 | add three reader-operation subsections under the planned anchor `ew-reader-operations` | planned anchors `ew-reader-session-presentation`, `ew-reader-unit-selection`, and `ew-reader-declared-types` | state reader presentation, exact-selection, and declared-type behavior in the normative operational part | §§3.3–3.6 |
-| Part 07 §7 `ew-reference-performance-notes` | demote its uppercase reader recommendation to informative rationale and repoint it | the new Part 05 reader-session-presentation subsection owns the rule; Part 07 §7 remains informative | none; exact historical ratios not re-established at this baseline are not presented as current measurements | §§3.3, 3.6 |
+| Part 07 §7 `ew-reference-performance-notes` | demote its uppercase implementation and editorial recommendations to informative rationale and repoint the reader rule | the new Part 05 reader-session-presentation subsection owns the reader rule; Part 07 §7 remains informative | none; exact historical ratios not re-established at this baseline are not presented as current measurements | §§3.3, 3.6 |
 | Part 08 §4 `ew-example-queries` | correct the query projection | Part 02 §12.1 and the incorporated registry own the key; Part 08 remains informative | none; the example begins agreeing with the current contract | §§3.1, 3.6 |
 
 The specification README, root README, registry README, reader README, API documentation, and
@@ -132,10 +133,12 @@ the weaker transitive interpretation. This revision does not select between redu
 references and a generalized transitive rule; uniform registry-document conformance remains the
 dependent P4 work.
 
-The final reverse-impact scan covered Part 00 §§3.3, 4.3, and 9; Part 01 §3.13; Part 02 §§7.1 and
-12.1; Part 07 §7; and Part 08 §4. It found 117 citation occurrences across current implementation,
-documentation, lifecycle records, and immutable history. Current citers must be repointed during
-incorporation; accepted records remain unchanged.
+The refreshed reverse-impact scan covered Part 00 §§3.3, 4.3, and 9; Part 01 §3.13; Part 02 §§7.1
+and 12.1; Part 07 §7; and Part 08 §4. It found 134 citation occurrences across current
+implementation, documentation, lifecycle records, and immutable history. The repository-wide
+citation inventory examined 126 revision documents and 264 other working-tree files, found no
+unresolved citation, and identified 55 citations that intentionally use the frozen v0.1 numbering.
+Current citers must be repointed during incorporation; accepted records remain unchanged.
 
 ## 3. Decision
 
@@ -200,11 +203,11 @@ clock and origin used for conversion, and **MUST NOT** use it to disambiguate `u
 
 ### 3.5 Reader projections of identifier types
 
-Where a reader publishes a static type for a parameter, return value, or field that directly
-carries a logical-table identifier, it **MUST** derive the corresponding host-language scalar type
-from the incorporated registry's declared logical type. It **MUST NOT** infer the type from an
-`_id` suffix or apply a logical-table identifier mapping to a catalog, manifest, vocabulary, or
-discriminator-scope name governed by another declaration.
+Where a reader's public API publishes a static type for a parameter, return value, or field that
+directly carries a logical-table identifier, the reader **MUST** derive the corresponding
+host-language scalar type from the incorporated registry's declared logical type. It **MUST NOT**
+infer the type from an `_id` suffix or apply a logical-table identifier mapping to a catalog,
+manifest, vocabulary, or discriminator-scope name governed by another declaration.
 
 ### 3.6 Ownership and informative projections
 
@@ -214,10 +217,11 @@ measurements. Its Part 05 subject entry **MUST** include reader operations, cons
 dependency direction already stated there.
 
 Part 01 **MUST** own the substrate-independent Unit meaning, Part 02 **MUST** own unit identity and
-logical session scope, and Part 05 **MUST** own the reader obligations in §§3.3–3.5. Part 07 and
-Part 08 **MUST** remain informative projections and **MUST NOT** state a second normative version
-of those rules. The structural incorporation **MUST** follow the crosswalk in §1.1 without treating
-relocation alone as authority to change meaning.
+logical session scope, and Part 05 **MUST** own the reader obligations in §§3.3–3.5 and identify
+reader operations in its title. Part 07 and Part 08 **MUST** remain informative projections and
+**MUST NOT** state a second normative version of those rules. The structural incorporation
+**MUST** follow the crosswalk in §1.1 without treating relocation alone as authority to change
+meaning.
 
 ## 4. What this does not change
 
@@ -247,8 +251,8 @@ compatibility commitments. The broader identifier-annotation correction changes 
 descriptions from strings to host-language integers where the registry declares `int32`; manifest
 and catalog strings remain strings.
 
-The structural incorporation requires a metadata-only anchor bootstrap before final appraisal,
-then an atomic accepted change that updates owners, live citations, ledger destinations, generated
+The structural draft was preceded by a metadata-only anchor bootstrap. Incorporation is then one
+atomic accepted change that updates owners, live citations, ledger destinations, generated
 renderings, implementations, fixtures, tests, and human documentation.
 
 | surface | required change or reason unchanged | evidence after incorporation |
@@ -257,11 +261,11 @@ renderings, implementations, fixtures, tests, and human documentation.
 | logical prose and registry | Keep Part 02 §§7.1 and 12.1 as owners; add the conditional resource sentence to §12.1. Registry and rules remain byte-identical. | Registry diff is empty; structural checks show `core.units` primary key and every unit reference; ledger resolves §§3.1–3.3. |
 | physical profiles | Unchanged because no encoding, ordering, partition, or storage rule changes. | No authored or generated Part 03 diff beyond repointed citations, if any. |
 | packet catalog and JSON Schemas | Unchanged because the catalog does not encode a unit key and the manifest session inventory remains external names. | Schema and vendored-schema generation preserve candidate bytes. |
-| validation and import | Add no new packet verdict; retain the prose-only conditional resource obligation pending P6. Reconcile the validator's standalone fixture with registry `0.2.0`. | Existing valid corpus verdict is unchanged; validator fixture and focused suite pass. |
+| validation and import | Rename Part 05 to advertise its reader-operation subject, add the three operational subsections, add no new packet verdict, and retain the prose-only conditional resource obligation pending P6. Reconcile the validator's standalone fixture with registry `0.2.0`. | Existing valid corpus verdict is unchanged; validator fixture and focused suite pass. |
 | extensions | Keep declarations unchanged; correct the Part 08 and extension-test joins to `unit_id`. Defer the four session-reference declarations to P4. | Extension structural checks and executable unit-QC join pass. |
 | reader, writer, validator, adapters | Correct reader selection, alignment, support, run rationale, session filtering, and identifier types. Writer and adapters remain behaviorally unchanged; review their citations. | Focused reader suite; registry-derived symbol-type test; current writer-built packet opened by reader and validated; repoint check. |
 | conformance fixtures and tests | Replace legacy unit shapes in standalone reader and validator fixtures; add exact-selection, session-scope, current-schema integration, and positive/negative type-mapping cases. | Named tests collect and pass; complete 28-packet corpus remains unchanged in verdict. |
-| revision process and tooling | Use structural crosswalk, bootstrap six anchors, repoint R81/R86 ledger targets, update headings and one evidence manifest. Process semantics do not change. | Anchor-bootstrap check, headings, ledger, evidence, impact, stages, and citation checks pass. |
+| revision process and tooling | Use the six bootstrapped anchors, repoint R81/R86 ledger targets, and update headings and one evidence manifest. Process semantics do not change. | Anchor-bootstrap check, headings, ledger, evidence, impact, stages, and citation checks pass. |
 | generated publications and developer documentation | Regenerate the combined specification and column views; correct specification/root/registry/reader summaries, examples, API docs, placement inventory, status, and TODO facts. | Generators preserve candidate state; documentation examples match callable APIs and current declarations. |
 
 ## 6. Conformance and implementation evidence
@@ -297,10 +301,10 @@ The following cases distinguish the completed change from the contradictory base
    conformance corpus and repository verifier. Citation, repoint, ledger, evidence, heading, and
    generation-preservation checks pass on the same candidate.
 
-### 6.1 Required anchor bootstrap
+### 6.1 Completed anchor bootstrap
 
-Before the final acceptance appraisal, a separate metadata-only commit must add one canonical
-anchor immediately before each of these existing headings:
+Commit `74844d338f8f65d084ddcac85e90238f456633aa` added one canonical anchor immediately before each
+of these existing headings:
 
 | current heading | canonical anchor |
 |---|---|
@@ -311,9 +315,10 @@ anchor immediately before each of these existing headings:
 | Part 07 §7 | `ew-reference-performance-notes` |
 | Part 08 §4 | `ew-example-queries` |
 
-Part 00 §§3.3 and 9 already have canonical anchors. The new Part 05 headings receive their anchors
-when created. After the bootstrap, this draft's `Based on` value, counts, impact scan, and citation
-inventory must be refreshed before final appraisal.
+Part 00 §§3.3 and 9 already had canonical anchors. The metadata-only comparator found no change
+other than the six canonical-anchor insertions. The new Part 05 headings receive their anchors when
+created. This draft's `Based on` value, registry and session-scope counts, impact scan, and citation
+inventory have been refreshed against that commit.
 
 ## 7. Open
 

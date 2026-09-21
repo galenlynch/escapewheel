@@ -358,6 +358,12 @@ section = "1"
 title = "Scope"
 aliases = []
 
+[anchor.ew-example-queries]
+part = "08"
+section = "4"
+title = "Queries"
+aliases = []
+
 [anchor.ew-iceberg-catalog]
 part = "00"
 section = "3.5"
@@ -430,6 +436,12 @@ section = "1"
 title = "Scope"
 aliases = []
 
+[anchor.ew-reference-performance-notes]
+part = "07"
+section = "7"
+title = "Performance notes"
+aliases = []
+
 [anchor.ew-registry-document]
 part = "02"
 section = "9.1"
@@ -460,6 +472,12 @@ section = "1"
 title = "Scope"
 aliases = []
 
+[anchor.ew-session-scope]
+part = "02"
+section = "7.1"
+title = "Session scope"
+aliases = []
+
 [anchor.ew-specification-actors]
 part = "00"
 section = "2.4"
@@ -476,4 +494,22 @@ aliases = []
 part = "00"
 section = "2.1"
 title = "Specification candidate and release"
+aliases = []
+
+[anchor.ew-unit-concept]
+part = "01"
+section = "3.13"
+title = "Unit"
+aliases = []
+
+[anchor.ew-unit-identity]
+part = "02"
+section = "12.1"
+title = "Unit identity"
+aliases = []
+
+[anchor.ew-unit-identity-architecture]
+part = "00"
+section = "4.3"
+title = "Unit identity"
 aliases = []
