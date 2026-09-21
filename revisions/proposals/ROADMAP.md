@@ -597,6 +597,10 @@ Split this family wherever the decisions can stand independently:
 4. **Profile scope and document organization** — state the present electrophysiology/profile scope
    accurately and consider moving the adapter/build interface out of the physical-storage part in
    the next version (S12 and documentation organization).
+5. **Non-finite domain semantics** — after P3 defines deterministic floating-point language
+   behavior, audit each scientific rule that can receive NaN and decide whether its domain
+   predicate intentionally accepts or rejects that value. Do not confuse that domain decision with
+   the rule language's comparison semantics.
 
 Analysis lineage and canonicality belong in P5 rather than this catch-all; adapter write capability
 belongs in P8. This placement keeps the earlier review's “remaining reconciliations” from becoming
