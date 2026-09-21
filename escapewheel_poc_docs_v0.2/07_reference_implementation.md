@@ -82,6 +82,7 @@ A conformance corpus holds one conforming packet and a set of variants, each wit
 
 Run it after changing the registry, the generator, or any rule.
 
+<a id="ew-reference-performance-notes" data-spec-anchor="canonical"></a>
 ## 7. Performance notes
 
 These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section MUST NOT repeat it.

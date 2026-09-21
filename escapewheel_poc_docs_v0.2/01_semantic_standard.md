@@ -229,6 +229,7 @@ A stream emits **one kind** of event, so a source emitting several on one channe
 several streams. What a stream's events carry beyond a tick is that named table's to declare, not
 core's: how many marks an event has and of what type is a property of what produced it.
 
+<a id="ew-unit-concept" data-spec-anchor="canonical"></a>
 ### 3.13 Unit
 
 A sorted or curated spiking entity.

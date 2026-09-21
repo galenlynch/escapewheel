@@ -304,6 +304,7 @@ representation. The ragged chunked representation of v0.1 is withdrawn, as is th
 `core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that
 a validator checks against `core.spike_events`.
 
+<a id="ew-unit-identity-architecture" data-spec-anchor="canonical"></a>
 ### 4.3 Unit identity
 
 A unit's identity is the tuple `(session_id, unit_id, sorting_run_id, curation_id)`, never

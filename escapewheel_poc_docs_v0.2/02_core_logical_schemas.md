@@ -114,6 +114,7 @@ A reference MUST relate columns of the same type, of the same role, and of the s
 
 Where §5.3 requires `int64` of an identifier whose distinct values may exceed `int32`, every column referencing it is `int64` too — the escape is taken on both sides or on neither, since a narrow column referencing a wide one truncates silently.
 
+<a id="ew-session-scope" data-spec-anchor="canonical"></a>
 ### 7.1 Session scope
 
 A table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively. That is a property of the registry, computable with no packet in hand.
@@ -463,6 +464,7 @@ Frames stand to a coordinate as §11.3's clocks stand to a tick: the declared re
 Sections 2 through 10 bind every table. What follows binds particular ones, where identifying a
 row, resolving a value, or reading an absence takes more than the generic rules give.
 
+<a id="ew-unit-identity" data-spec-anchor="canonical"></a>
 ### 12.1 Unit identity
 
 `unit_id` identifies a unit on its own. The packet assigns it, numbering units by

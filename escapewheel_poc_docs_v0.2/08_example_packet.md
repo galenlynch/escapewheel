@@ -93,6 +93,7 @@ The LFP is referenced rather than copied: ten `dense_array_asset` entries with `
 }
 ```
 
+<a id="ew-example-queries" data-spec-anchor="canonical"></a>
 ## 4. Queries
 
 Resource identifiers are dotted; a SQL engine registers them with underscores.
