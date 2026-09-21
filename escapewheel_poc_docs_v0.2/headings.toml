@@ -367,10 +367,22 @@ section = "4"
 title = "Queries"
 aliases = []
 
+[anchor.ew-extension-verdicts]
+part = "09"
+section = "5.4"
+title = "Separate verdicts"
+aliases = []
+
 [anchor.ew-iceberg-catalog]
 part = "00"
 section = "3.5"
 title = "Iceberg catalog"
+aliases = []
+
+[anchor.ew-incremental-revalidation]
+part = "03"
+section = "9.4"
+title = "Scope of revalidation"
 aliases = []
 
 [anchor.ew-logical-standard]
@@ -523,6 +535,18 @@ section = "2.1"
 title = "Specification candidate and release"
 aliases = []
 
+[anchor.ew-tier-2-rules]
+part = "02"
+section = "10.2"
+title = "Tier 2: declared"
+aliases = []
+
+[anchor.ew-tier-2-validation]
+part = "05"
+section = "5.2"
+title = "Tier 2"
+aliases = []
+
 [anchor.ew-unit-concept]
 part = "01"
 section = "3.13"
@@ -534,3 +558,9 @@ part = "02"
 section = "12.1"
 title = "Unit identity"
 aliases = ["ew-unit-identity-architecture"]
+
+[anchor.ew-validation-shim]
+part = "05"
+section = "5.3"
+title = "The shim"
+aliases = []

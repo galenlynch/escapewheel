@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `4791c8d3825527502009842f0fbd8344952db80b` |
+| **Based on** | `b78fd3fc246469e2c8d1fb78a277c4ec9fe16595` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 00 §10; Part 02 §§1, 9.1–9.2, and 10.2; Part 03 §9.4; Part 05 §§5.2–5.3 and §10, plus a new subsection under §9; Part 09 §5.4; registry meta-schema, registries, Tier 2 rules, and the new rule-language profile |
@@ -521,10 +521,10 @@ The vector set and focused package tests must establish at least:
 11. the focused validator, writer, reader, extension, registry, conformance-corpus, and complete
     repository suites pass after generation.
 
-### 6.1 Required anchor bootstrap
+### 6.1 Completed anchor bootstrap
 
-Before final acceptance appraisal, a separate metadata-only commit must add one canonical anchor
-immediately before each affected existing heading that lacks one:
+Commit `b78fd3fc246469e2c8d1fb78a277c4ec9fe16595` added one canonical anchor immediately before each
+affected existing heading that lacked one:
 
 | current heading | canonical anchor |
 |---|---|
@@ -535,9 +535,10 @@ immediately before each affected existing heading that lacks one:
 | Part 09 §5.4 | `ew-extension-verdicts` |
 
 Part 00 §10, Part 02 §§1, 9.1, and 9.2, and Part 05 §10 already have canonical anchors. The new
-Part 02 child headings and the new subsection under Part 05 §9 receive anchors when created. After the bootstrap, this
-draft's `Based on`, rule and citation measurements, impact scan, and anchor inventory must be
-refreshed before final appraisal.
+Part 02 child headings and the new subsection under Part 05 §9 receive anchors when created. The
+metadata-only comparator found no change between the bootstrap and its parent other than the five
+canonical-anchor insertions; no heading, numbering, order, prose, normativity marker, or alias
+changed.
 
 ## 7. Open
 

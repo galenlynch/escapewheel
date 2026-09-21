@@ -1238,6 +1238,7 @@ A validator MUST generate, from the declaration alone: required-column non-null 
 
 A validator MUST establish that a table's primary key is unique, by query or by any means a physical profile defines as establishing it. That a key is unique holds under any profile and is this part's; how a validator may establish it depends on how rows are stored, and is the profile's.
 
+<a id="ew-tier-2-rules" data-spec-anchor="canonical"></a>
 ### 10.2 Tier 2: declared
 
 A rule the structure cannot imply is declared as SQL returning offending rows, or as a named template the registry build expands.
@@ -1727,6 +1728,7 @@ Every superseded manifest is retained under `manifests/`, so a later cleanup can
 
 Where an amendment installs a different registry, the packet retains the superseded copy alongside it. Installing different content under a `registry_version` the packet has already retained makes that version ambiguous **within one packet**, and a writer MUST refuse it.
 
+<a id="ew-incremental-revalidation" data-spec-anchor="canonical"></a>
 ### 9.4 Scope of revalidation
 
 An amendment MUST validate the whole packet, not only what it added. What is bounded is the
@@ -2281,10 +2283,12 @@ A build MUST report everything the protocol it used carries about a failure — 
 
 Generated from structure (Part 02 §10.1): required-column non-null, primary-key uniqueness, foreign-key anti-joins, closed-vocabulary membership.
 
+<a id="ew-tier-2-validation" data-spec-anchor="canonical"></a>
 ### 5.2 Tier 2
 
 Declared per table as SQL returning offending rows, or as an expanded template (Part 02 §10.2).
 
+<a id="ew-validation-shim" data-spec-anchor="canonical"></a>
 ### 5.3 The shim
 
 A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and checksums outside SQL. A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
@@ -2850,6 +2854,7 @@ A packet carrying extension resources MUST declare each namespace in the catalog
 
 A validator MUST check that a declared registry exists. It MUST NOT require an extension's schema in order to validate core.
 
+<a id="ew-extension-verdicts" data-spec-anchor="canonical"></a>
 ### 5.4 Separate verdicts
 
 An extension is validated on core's terms and its verdict is reported separately. A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension's failure invalidate core.
