@@ -104,8 +104,8 @@ Units by quality, joined across core and an extension:
 SELECT q.normalized_label, count(*) AS units,
        round(avg(m.isi_violations_ratio), 3) AS isi
 FROM core_units u
-JOIN aind_unit_qc_metrics m USING (session_id, unit_id, sorting_run_id, curation_id)
-JOIN core_unit_quality_labels q USING (session_id, unit_id, sorting_run_id, curation_id)
+JOIN aind_unit_qc_metrics m USING (unit_id)
+JOIN core_unit_quality_labels q USING (unit_id)
 WHERE q.source = 'decoder'
 GROUP BY 1 ORDER BY units DESC;
 ```

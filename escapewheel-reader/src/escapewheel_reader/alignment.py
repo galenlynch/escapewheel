@@ -66,38 +66,43 @@ def _connect(packet: Any, connection: duckdb.DuckDBPyConnection | None) -> duckd
     return con
 
 
-def _clock(packet: Any, event_type: str) -> str:
+def _clock(packet: Any, event_type: str, session_id: int | None) -> int:
     """Return the clock both sides are on, refusing if they differ.
 
     Checked rather than assumed. A packet may carry several streams on several clocks, and is
     free to hold one the mapping never touched. The clock is the stream's since R91 §3.1, so this
     reads `core.event_streams` where it read the event.
     """
-    streams = packet.table(STREAMS, columns=["event_type", "clock_id"], event_type=event_type)
+    streams = packet.table(
+        STREAMS,
+        columns=["event_type", "clock_id"],
+        event_type=event_type,
+        session_id=session_id,
+    )
     if not streams.num_rows:
         raise KeyError(f"no {event_type!r} stream in {STREAMS}")
     on = sorted({v for v in streams.column("clock_id").unique().to_pylist() if v is not None})
-    spikes = packet.table(SPIKES, columns=["clock_id"]).column("clock_id").unique().to_pylist()
+    spikes = packet.table(SPIKES, columns=["clock_id"], session_id=session_id).column("clock_id").unique().to_pylist()
     reference = sorted({v for v in spikes if v is not None})
     if len(on) > 1 or on != reference:
         raise ClockMismatch(
             f"{event_type!r} events are on {on} and {SPIKES} is on {reference}; "
             "map one onto the other before comparing ticks"
         )
-    return str(on[0])
+    return int(on[0])
 
 
 def _literal(value: str) -> str:
     """Return a SQL string literal, doubling any quote as SQL defines.
 
-    The values here are an event type and a session ID, both of which come from a caller and
-    reach the engine as text; `sql.quote` covers identifiers and is the wrong tool.
+    The event type comes from a caller and reaches the engine as text; `sql.quote` covers
+    identifiers and is the wrong tool.
     """
     escaped = value.replace("'", "''")
     return f"'{escaped}'"
 
 
-def _events(event_type: str, session_id: str | None) -> str:
+def _events(event_type: str, session_id: int | None) -> str:
     """Build the event subquery both operations join against.
 
     The kind is the stream's (R91 §3.1), so selecting one kind of event is a join rather than a
@@ -105,14 +110,20 @@ def _events(event_type: str, session_id: str | None) -> str:
     """
     where = f"m.event_type = {_literal(event_type)}"
     if session_id is not None:
-        where += f" AND e.session_id = {_literal(session_id)}"
+        where += f" AND e.session_id = {session_id}"
     return (
-        f"(SELECT e.t_tick FROM {sql_name(EVENTS)} e "
+        f"(SELECT e.session_id, e.t_tick FROM {sql_name(EVENTS)} e "
         f"JOIN {sql_name(STREAMS)} m ON e.stream_id = m.event_stream_id WHERE {where})"
     )
 
 
-def windows_disjoint(packet: Any, event_type: str, half_window: int, *, session_id: str | None = None) -> bool:
+def _spikes(session_id: int | None) -> str:
+    """Build the spike relation with the same explicit session scope as the events."""
+    table = sql_name(SPIKES)
+    return table if session_id is None else f"(SELECT * FROM {table} WHERE session_id = {session_id})"
+
+
+def windows_disjoint(packet: Any, event_type: str, half_window: int, *, session_id: int | None = None) -> bool:
     """Whether every pair of windows is disjoint, so one spike falls in at most one.
 
     Costs about 1.3 ms over a few thousand events, against seconds for the query it decides --
@@ -127,7 +138,7 @@ def windows_disjoint(packet: Any, event_type: str, half_window: int, *, session_
         The event type the windows are centred on.
     half_window : int
         Half the window, in ticks on the events' clock.
-    session_id : str, optional
+    session_id : int, optional
         Restrict to one session.
 
     Returns
@@ -136,7 +147,10 @@ def windows_disjoint(packet: Any, event_type: str, half_window: int, *, session_
         True when the closest pair of events is at least a full window apart.
     """
     con = _connect(packet, None)
-    gaps = f"SELECT t_tick - lag(t_tick) OVER (ORDER BY t_tick) AS d FROM {_events(event_type, session_id)}"
+    gaps = (
+        "SELECT t_tick - lag(t_tick) OVER (PARTITION BY session_id ORDER BY t_tick) AS d "
+        f"FROM {_events(event_type, session_id)}"
+    )
     full = 2 * half_window
     row = con.sql(f"SELECT coalesce(min(d), {full + 1}) >= {full} FROM ({gaps}) WHERE d IS NOT NULL").fetchone()
     # An aggregate over an empty set still yields a row; the guard is for the type, not the data.
@@ -148,7 +162,7 @@ def aligned_spikes(
     event_type: str,
     half_window: int,
     *,
-    session_id: str | None = None,
+    session_id: int | None = None,
     connection: duckdb.DuckDBPyConnection | None = None,
 ) -> duckdb.DuckDBPyRelation:
     """Spikes within a window of each event, **one row per (spike, event) pair**.
@@ -169,7 +183,7 @@ def aligned_spikes(
         Which events to align to, from `core.events.event_type`.
     half_window : int
         Half the window, in ticks. The window is closed: ``[t - half, t + half]``.
-    session_id : str, optional
+    session_id : int, optional
         Restrict to one session.
     connection : duckdb.DuckDBPyConnection, optional
         Register into this connection rather than a new one.
@@ -177,9 +191,9 @@ def aligned_spikes(
     Returns
     -------
     duckdb.DuckDBPyRelation
-        Columns ``session_id``, ``unit_id``, ``sorting_run_id``, ``curation_id``,
-        ``event_tick``, ``t_tick`` and ``t_rel_tick``, the last being the spike's tick
-        relative to its event. R91 §3.2 struck ``event_id``; an event is named by its tick,
+        Columns ``session_id``, ``unit_id``, ``event_tick``, ``t_tick`` and ``t_rel_tick``,
+        the last being the spike's tick relative to its event. R91 §3.2 struck ``event_id``;
+        an event is named by its tick,
         unique within the ``(session_id, event_type)`` scope these queries impose.
         A relation rather than a table, so it composes with a filter or an aggregate and the
         rows a caller does not want are never materialised.
@@ -196,17 +210,20 @@ def aligned_spikes(
     >>> psth = aligned_spikes(packet, "go_cue", 15_625).aggregate(  # doctest: +SKIP
     ...     "t_rel_tick // 625 AS bin, count(*) AS n", "bin")
     """
-    _clock(packet, event_type)
+    _clock(packet, event_type, session_id)
     con = _connect(packet, connection)
-    spikes, events = sql_name(SPIKES), _events(event_type, session_id)
+    spikes, events = _spikes(session_id), _events(event_type, session_id)
     if windows_disjoint(packet, event_type, half_window, session_id=session_id):
-        join = f"ASOF JOIN {events} e ON s.t_tick >= e.t_tick - {half_window}"
+        join = f"ASOF JOIN {events} e ON s.session_id = e.session_id AND s.t_tick >= e.t_tick - {half_window}"
         where = f"WHERE s.t_tick <= e.t_tick + {half_window}"
     else:
-        join = f"JOIN {events} e ON s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window}"
+        join = (
+            f"JOIN {events} e ON s.session_id = e.session_id "
+            f"AND s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window}"
+        )
         where = ""
     return con.sql(
-        f"SELECT s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, e.t_tick AS event_tick, "
+        f"SELECT s.session_id, s.unit_id, e.t_tick AS event_tick, "
         f"s.t_tick, s.t_tick - e.t_tick AS t_rel_tick FROM {spikes} s {join} {where}"
     )
 
@@ -217,7 +234,7 @@ def assigned_spikes(
     *,
     to: str = "preceding",
     half_window: int | None = None,
-    session_id: str | None = None,
+    session_id: int | None = None,
     connection: duckdb.DuckDBPyConnection | None = None,
 ) -> duckdb.DuckDBPyRelation:
     """Each spike labelled with the one event it belongs to, **at most one row per spike**.
@@ -239,7 +256,7 @@ def assigned_spikes(
     half_window : int, optional
         Leave a spike unassigned when no event is within this many ticks. Unbounded by default,
         so every spike is assigned however far away its event is.
-    session_id : str, optional
+    session_id : int, optional
         Restrict to one session.
     connection : duckdb.DuckDBPyConnection, optional
         Register into this connection rather than a new one.
@@ -258,16 +275,17 @@ def assigned_spikes(
     """
     if to not in ASSIGNMENTS:
         raise ValueError(f"to must be one of {ASSIGNMENTS}, not {to!r}")
-    _clock(packet, event_type)
+    _clock(packet, event_type, session_id)
     con = _connect(packet, connection)
-    spikes, events = sql_name(SPIKES), _events(event_type, session_id)
-    keys = "s.session_id, s.unit_id, s.sorting_run_id, s.curation_id, s.t_tick"
+    spikes, events = _spikes(session_id), _events(event_type, session_id)
+    keys = "s.session_id, s.unit_id, s.t_tick"
 
     if to == "preceding":
         bound = "" if half_window is None else f"WHERE s.t_tick <= e.t_tick + {half_window}"
         return con.sql(
             f"SELECT {keys}, e.t_tick AS event_tick, s.t_tick - e.t_tick AS t_rel_tick "
-            f"FROM {spikes} s ASOF JOIN {events} e ON s.t_tick >= e.t_tick {bound}"
+            f"FROM {spikes} s ASOF JOIN {events} e "
+            f"ON s.session_id = e.session_id AND s.t_tick >= e.t_tick {bound}"
         )
     # `nearest` cannot be an ASOF join in either direction: the closest event may be the one
     # after the spike. Grouping over a bounded range join is what makes the comparison possible,
@@ -278,7 +296,8 @@ def assigned_spikes(
         f"SELECT {keys}, argmin(e.t_tick, abs(s.t_tick - e.t_tick)) AS event_tick, "
         f"argmin(s.t_tick - e.t_tick, abs(s.t_tick - e.t_tick)) AS t_rel_tick "
         f"FROM {spikes} s JOIN {events} e "
-        f"ON s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window} "
+        f"ON s.session_id = e.session_id "
+        f"AND s.t_tick BETWEEN e.t_tick - {half_window} AND e.t_tick + {half_window} "
         f"GROUP BY {keys}"
     )
 

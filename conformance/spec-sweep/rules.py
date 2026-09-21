@@ -25,9 +25,7 @@ ROOT = HERE.parent.parent
 ALIASES = {
     "manifest.sessions_match_core": "core.sessions.manifest_sessions_match",  # R1
     "core.spike_events.clock_resolves": "core.spike_events.clock_id_resolves",  # R5, generated
-    "core.spike_events.unit_resolves": (  # R5, generated
-        "core.spike_events.session_id_unit_id_sorting_run_id_curation_id_resolves"
-    ),
+    "core.spike_events.unit_resolves": "core.spike_events.unit_id_resolves",  # R5, generated
     "core.spike_events.ticks_sorted_within_unit": "core.spike_events.physical_order",  # R5, moved to the shim by R12
 }
 

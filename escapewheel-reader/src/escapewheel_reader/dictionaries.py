@@ -31,8 +31,8 @@ def constant(value: Any, rows: int, type_: pa.DataType | None = None) -> pa.Dict
     return pa.DictionaryArray.from_arrays(pa.array([0] * rows, type=pa.int32()), pa.array([value], type=type_))
 
 
-def values(column: Any) -> list[str]:
-    """Distinct values of a string column, read from the dictionary where there is one.
+def values(column: Any) -> list[Any]:
+    """Distinct values of a column, read from the dictionary where there is one.
 
     A dictionary already lists them, so this is a read of a handful of entries rather than a
     scan. It may name a value no row in this batch uses, which is why the caller skips an empty

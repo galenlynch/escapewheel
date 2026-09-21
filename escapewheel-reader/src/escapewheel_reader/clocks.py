@@ -34,7 +34,7 @@ and are exactly the ones a caller would otherwise silently misplace.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pyarrow as pa
@@ -195,7 +195,7 @@ class NotAligned(ValueError):
     """A clock the spikes are on has no anchors, so its ticks reach no reference."""
 
 
-def anchors(packet: Any) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]]:
+def anchors(packet: Any) -> dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]]:
     """Read `core.clock_anchors` into arrays per clock, memoised on the packet.
 
     The packet owns the cache because the answer is a property of its bytes. Memoised because an
@@ -209,7 +209,7 @@ def anchors(packet: Any) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]
     clock = table.column("clock_id").to_pylist()
     tick = np.asarray(table.column("t_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
     parent = np.asarray(table.column("parent_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
-    out: dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]] = {}
+    out: dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]] = {}
     for name in dict.fromkeys(clock):
         where = np.array([i for i, c in enumerate(clock) if c == name])
         order = np.argsort(tick[where], kind="stable")
@@ -249,14 +249,14 @@ def declared_bound(packet: Any) -> float:
     return widest
 
 
-def reference_clock(packet: Any) -> Any:
+def reference_clock(packet: Any) -> int:
     """Return the clock a session reports its times on (R27 §2)."""
     sessions = packet.table("core.sessions")
     declared = (
         sessions.column("reference_clock_id").to_pylist() if "reference_clock_id" in sessions.column_names else []
     )
     if named := [d for d in declared if d is not None]:
-        return named[0]
+        return int(named[0])
     raise NotAligned("the session declares no reference_clock_id (R27 §2), so there is nothing to map onto")
 
 
@@ -266,8 +266,8 @@ def mapped(batch: pa.RecordBatch, reference: Any, anchors: Any, bound: float) ->
     clocks = batch.column("clock_id")
     parent = np.empty(ticks.size, dtype=np.int64)
     keep = np.zeros(ticks.size, dtype=bool)
-    # A batch spans at most two streams, since the table is sorted by sorting_run_id and each
-    # stream is one run, so this loop runs once or twice. Its *body* must still stay in Arrow:
+    # A batch ordinarily spans only a few clocks because spike rows are clustered by unit and a
+    # unit declares one clock. Its *body* must still stay in Arrow:
     # materialising the column as Python objects to group it costs one per spike, and the
     # comparison that follows is over a handful of distinct values either way.
     for name in values(clocks):
@@ -284,8 +284,8 @@ def mapped(batch: pa.RecordBatch, reference: Any, anchors: Any, bound: float) ->
 
 
 def stored_span(
-    by_clock: dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]],
-    target: str,
+    by_clock: dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]],
+    target: int,
     span: tuple[int, int],
 ) -> tuple[int, int]:
     """Widen a range on `target` into one that covers it on every stored clock.
@@ -332,20 +332,23 @@ __all__ = [
 # on a table, owned by neither. `Packet` keeps one-line delegates for discoverability.
 
 
-def _present(column: Any) -> list[str]:
+def _present(column: Any) -> list[int]:
     """Distinct clock IDs in a column, read from its dictionary where it has one."""
-    return sorted(set(values(column)))
+    return sorted({int(value) for value in values(column)})
 
 
-def _flat(column: Any) -> pa.Array:
+def _flat(column: Any) -> pa.Array[Any]:
     """Return one Array from a column that may arrive in chunks."""
     combined = column.combine_chunks() if isinstance(column, pa.ChunkedArray) else column
     if isinstance(combined, pa.ChunkedArray):
-        return combined.chunk(0) if combined.num_chunks else combined.cast(combined.type).combine_chunks()
-    return combined
+        return cast(
+            "pa.Array[Any]",
+            combined.chunk(0) if combined.num_chunks else pa.array([], type=combined.type),
+        )
+    return cast("pa.Array[Any]", combined)
 
 
-def default_clock(packet: Any, present: list[Any]) -> Any:
+def default_clock(packet: Any, present: list[int]) -> int:
     """Return the clock to map onto when the caller named none.
 
     The declared reference, or -- where a packet declares none -- the one clock the rows are
@@ -354,14 +357,14 @@ def default_clock(packet: Any, present: list[Any]) -> Any:
     as stored invites a comparison that means nothing.
     """
     try:
-        return packet.reference_clock()
+        return int(packet.reference_clock())
     except NotAligned:
         if len(present) == 1:
             return present[0]
         raise
 
 
-def tick_rate(packet: Any, clock_id: Any) -> tuple[int, int]:
+def tick_rate(packet: Any, clock_id: int) -> tuple[int, int]:
     """Return a clock's rational tick rate, which Part 01 §2.1 prefers to `tick_rate_hz`."""
     clocks = packet.table("core.clocks")
     names = clocks.column("clock_id").to_pylist()
@@ -375,7 +378,7 @@ def tick_rate(packet: Any, clock_id: Any) -> tuple[int, int]:
     return int(num), int(den or 1)
 
 
-def origin(packet: Any, session_id: str | None = None) -> tuple[int, int, int]:
+def origin(packet: Any, session_id: int | None = None) -> tuple[int, int, int]:
     """Return the session's time origin and the reference clock's rational rate (Part 05 §7).
 
     Read from `core.sessions.t_zero_tick` rather than recomputed: the writer took the minimum
@@ -386,7 +389,7 @@ def origin(packet: Any, session_id: str | None = None) -> tuple[int, int, int]:
     ----------
     packet : Packet
         The packet to read.
-    session_id : str, optional
+    session_id : int, optional
         Which session's origin. Only needed where a multi-session packet's sessions disagree.
 
     Returns
@@ -430,7 +433,7 @@ def origin(packet: Any, session_id: str | None = None) -> tuple[int, int, int]:
     return (found_tick, num, den)
 
 
-def on_clock(packet: Any, table: pa.Table, clock: str | None = None, *, bound: float | None = None) -> pa.Table:
+def on_clock(packet: Any, table: pa.Table, clock: int | None = None, *, bound: float | None = None) -> pa.Table:
     """Return `table` with its ticks on one clock.
 
     A row whose tick the anchors cannot place is **dropped**, which is what Part 01 §3.9 leaves
@@ -446,7 +449,7 @@ def on_clock(packet: Any, table: pa.Table, clock: str | None = None, *, bound: f
         The packet the table came from, for its anchors and its declared bound.
     table : pyarrow.Table
         Any table carrying `t_tick` and `clock_id`.
-    clock : str, optional
+    clock : int, optional
         The clock to map onto. Defaults to the packet's reference clock.
     bound : float, optional
         How far from an anchor the mapping stays defined, in median anchor intervals. Defaults
@@ -462,7 +465,7 @@ def on_clock(packet: Any, table: pa.Table, clock: str | None = None, *, bound: f
         return table
     columns = {name: _flat(table.column(name)) for name in ("t_tick", "clock_id")}
     present = _present(columns["clock_id"])
-    target = clock or default_clock(packet, present)
+    target = default_clock(packet, present) if clock is None else clock
     if present == [target]:
         # Already there. Worth the check: it is the whole single-clock case, and it keeps a
         # packet with no anchors readable.
@@ -473,12 +476,16 @@ def on_clock(packet: Any, table: pa.Table, clock: str | None = None, *, bound: f
     out = table.set_column(names.index("t_tick"), "t_tick", pa.array(ticks))
     # The replacement keeps the column's declared type. A dictionary would change it, and buys
     # nothing on an integer, which is what every identifier is (R53 §2.1).
-    clock = table.column("clock_id")
-    out = out.set_column(names.index("clock_id"), "clock_id", pa.array([target] * table.num_rows, type=clock.type))
+    clock_column = table.column("clock_id")
+    out = out.set_column(
+        names.index("clock_id"),
+        "clock_id",
+        pa.array([target] * table.num_rows, type=clock_column.type),
+    )
     return out.filter(pa.array(keep))
 
 
-def seconds(packet: Any, table: pa.Table, *, session_id: str | None = None) -> pa.Table:
+def seconds(packet: Any, table: pa.Table, *, session_id: int | None = None) -> pa.Table:
     """Add a `t_second` column to a table whose ticks are on the reference clock.
 
     Part 01 §2.1: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the declared
@@ -496,7 +503,7 @@ def seconds(packet: Any, table: pa.Table, *, session_id: str | None = None) -> p
         The packet the table came from, for its origin and reference rate.
     table : pyarrow.Table
         A table carrying `t_tick` and `clock_id`.
-    session_id : str, optional
+    session_id : int, optional
         Which session's origin to use.
 
     Returns

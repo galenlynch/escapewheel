@@ -1,10 +1,10 @@
 """Which of several coexisting derived runs to read (R41).
 
 A project re-sorts, re-curates and re-runs models over the same session, and the format lets
-the alternatives coexist: unit identity carries `sorting_run_id` and `curation_id`, so a second
-sorting collides with nothing. Coexisting is the point and it is also the hazard — reading
-`core.units` without saying which sorting returns both, concatenated, and every count derived
-from it is wrong by however many units the other sorting found.
+the alternatives coexist: each unit records the sorting and curation that produced it, while
+its packet-assigned `unit_id` remains unique. Coexisting is the point and it is also the hazard
+— reading `core.units` without saying which result is current returns every alternative, and
+every count derived from it is wrong by however many units the other sorting found.
 
 Part 01 §2.4 forbids resolving that silently. This is where the packet is asked, and it answers in
 three states rather than two:
@@ -37,11 +37,11 @@ PREFERENCES = "core.preferred_runs"
 class Ambiguity:
     """Several runs share a purpose and the packet does not say which to read."""
 
-    session_id: str | None
+    session_id: int | None
     activity_type: str
     scope_kind: str | None
     scope: str | None
-    run_ids: tuple[str, ...]
+    run_ids: tuple[int, ...]
 
     @property
     def determinable(self) -> bool:
@@ -61,7 +61,9 @@ class Ambiguity:
         """
         about = f"{self.scope} in {self.scope_kind}" if self.determinable else "an unrecorded scope"
         listed = sorted(self.run_ids)
-        shown = ", ".join(listed[:3]) + (f", +{len(listed) - 3} more" if len(listed) > 3 else "")
+        shown = ", ".join(str(run_id) for run_id in listed[:3]) + (
+            f", +{len(listed) - 3} more" if len(listed) > 3 else ""
+        )
         return f"{self.activity_type} for {about}: {len(self.run_ids)} runs ({shown})"
 
 
@@ -81,7 +83,7 @@ def _rows(packet: Any, resource_id: str, columns: list[str]) -> list[dict[str, A
     return [{c: row.get(c) for c in columns} for row in rows]
 
 
-def preferences(packet: Any) -> dict[tuple[str | None, str, str, str], str]:
+def preferences(packet: Any) -> dict[tuple[int | None, str, str, str], int]:
     """Return the declared preferences, keyed by purpose (Part 01 §2.4).
 
     Parameters
@@ -140,8 +142,8 @@ def ambiguities(packet: Any) -> tuple[Ambiguity, ...]:
     rows = _rows(packet, RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"])
     declared = preferences(packet) if rows else {}
 
-    grouped: dict[tuple[str | None, str, str | None, str | None], list[str]] = {}
-    unscoped: dict[tuple[str | None, str], list[str]] = {}
+    grouped: dict[tuple[int | None, str, str | None, str | None], list[int]] = {}
+    unscoped: dict[tuple[int | None, str], list[int]] = {}
     for row in rows:
         if row["activity_type"] is None or row["processing_run_id"] is None:
             continue
@@ -174,8 +176,8 @@ def preferred_run(
     scope_kind: str,
     scope: str,
     *,
-    session_id: str | None = None,
-) -> str:
+    session_id: int | None = None,
+) -> int:
     """Return the run to read for one purpose.
 
     Parameters
@@ -189,12 +191,12 @@ def preferred_run(
         ``core.probes``, ``core.sorting_runs``, ``core.sessions``.
     scope : str
         The primary-key value of the thing the run is about.
-    session_id : str, optional
+    session_id : int, optional
         Which session. Required only for a multi-session packet.
 
     Returns
     -------
-    str
+    int
         The preferred ``processing_run_id``.
 
     Raises
@@ -220,10 +222,10 @@ def preferred_run(
     for candidate in sessions:
         declared = preferences(packet).get((candidate, activity_type, scope_kind, scope))
         if declared is not None:
-            return declared
+            return int(declared)
     if len(matching) == 1:
         # Part 01 §2.4: exactly one run is the preference by construction.
-        return matching[0]["processing_run_id"]
+        return int(matching[0]["processing_run_id"])
     raise AmbiguousRun(
         f"{len(matching)} runs produced {activity_type!r} for {scope!r} and none is preferred; "
         f"declare one in {PREFERENCES} (Part 01 §2.4)"

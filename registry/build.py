@@ -2325,10 +2325,10 @@ def build() -> dict:
     )
     # A table reaching `core.sessions` through its declared references is session-scoped (R86
     # §2.1), which 33 of 35 are, and until now they used four conventions between them. Eight
-    # held no session column at all, so Part 00 §3.3's discriminator had nothing to derive from and
+    # held no session column at all, so Part 05 §13.1's discriminator had nothing to derive from and
     # the reader refused; six held one and declared no reference, so Tier 1 generated no
     # anti-join and 418,618,218 rows across the two packets carried a session key nothing
-    # validated. `core.devices` and `core.processing_runs` were nullable for a question Part 00 §3.3
+    # validated. `core.devices` and `core.processing_runs` were nullable for a question Part 02 §7.1
     # now answers, and neither is null in any packet built.
     SESSION_COLUMN = (
         "analysis.array_dimensions",

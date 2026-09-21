@@ -1,7 +1,5 @@
 """Mapping ticks onto a parent clock, and refusing where the mapping is undefined."""
 
-import json
-
 import numpy as np
 import pyarrow as pa
 import pytest
@@ -224,7 +222,7 @@ def test_on_clock_is_the_same_whether_called_as_a_function_or_a_method(two_clock
     from escapewheel_reader.clocks import on_clock
 
     packet = open_packet(two_clock_packet)
-    spikes = packet.table("core.spike_events")
+    spikes = packet.spike_times(units=packet.units(), clock="stored")
     assert on_clock(packet, spikes).to_pylist() == packet.on_clock(spikes).to_pylist()
 
 
@@ -233,7 +231,7 @@ def test_seconds_is_the_same_whether_called_as_a_function_or_a_method(two_clock_
     from escapewheel_reader.clocks import on_clock, seconds
 
     packet = open_packet(two_clock_packet)
-    mapped_spikes = on_clock(packet, packet.table("core.spike_events"))
+    mapped_spikes = on_clock(packet, packet.spike_times(units=packet.units(), clock="stored"))
     assert seconds(packet, mapped_spikes).to_pylist() == packet.seconds(mapped_spikes).to_pylist()
 
 

@@ -90,8 +90,6 @@ def observed_packet(tmp_path, packet_root):
             {
                 "session_id": pa.array([SESSION]),
                 "unit_id": pa.array([UNITS[1]]),
-                "sorting_run_id": pa.array([SORTING_RUN]),
-                "curation_id": pa.array([CURATION]),
                 "interval_index": pa.array([0], type=pa.int64()),
                 "start_tick": pa.array([100], type=pa.int64()),
                 "stop_tick": pa.array([599], type=pa.int64()),
@@ -103,7 +101,7 @@ def observed_packet(tmp_path, packet_root):
 
 
 def test_a_unit_without_its_own_window_inherits_its_clocks(observed_packet):
-    """R38 §2.2: the clock is where observation lives, and a unit reaches it via its run."""
+    """The clock is where observation lives, and the unit declares that clock directly."""
     rows = {r["unit_id"]: r for r in unit_windows(observed_packet).to_pylist()}
     assert rows[UNITS[0]]["source"] == INHERITED
     assert (rows[UNITS[0]]["start_tick"], rows[UNITS[0]]["stop_tick"]) == (0, 999)

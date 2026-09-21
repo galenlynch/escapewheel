@@ -231,29 +231,6 @@ sidecars, analysis materializations, and validation and provenance records.
 A packet is primarily single-session. Multi-session packets are a permitted extension, and a
 packet declares its sessions in the catalog.
 
-A packet is the unit of storage and a session is the unit of analysis, so a consumer holding
-several packets — or one packet holding several sessions — has to know which rows belong to which
-session. That is derivable rather than declared: a table is **session-scoped** where it reaches
-`core.sessions` through its declared references, directly or transitively. 33 of 35 tables are,
-the exceptions being `core.subjects` and `core.source_files`, which `core.sessions` references
-rather than the reverse. `registry/check.py` computes it, and every table carrying a `session_id`
-reaches the table while eight reach it without carrying the column, so the reference graph is the
-stricter test.
-
-A reader presenting one or more packets MUST carry a session discriminator on every session-scoped
-table, and MUST NOT carry one on a table that is not. The discriminator is **the packet a row came
-from together with the row's `session_id`**: the reader opened the file and the identifier is unique
-within it, so the pair is unique by construction and nothing has to be assumed about the world. A
-reader MUST NOT derive it from a `*_name` — a name is a label, and 6 of 13 name columns hold a value
-appearing in both of two packets that share no session, no animal and no probe. It SHOULD carry
-`session_name` beside the discriminator, which promises nothing: whether two packets' matching
-labels denote one thing is a fact about the world, and an analyst asserting it does so knowingly.
-
-Session identity MUST NOT become part of a join key where the assigned identifier is already
-unique. Within one packet `unit_id` identifies a unit by itself, and widening the join to
-`(session_id, unit_id)` costs 2.93x over 286,896,563 spikes; across packets that identifier is
-genuinely ambiguous and the second column buys correctness.
-
 <a id="ew-packet-catalog" data-spec-anchor="canonical"></a>
 ### 3.4 Packet catalog
 
@@ -303,13 +280,6 @@ representation. The ragged chunked representation of v0.1 is withdrawn, as is th
 
 `core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that
 a validator checks against `core.spike_events`.
-
-<a id="ew-unit-identity-architecture" data-spec-anchor="canonical"></a>
-### 4.3 Unit identity
-
-A unit's identity is the tuple `(session_id, unit_id, sorting_run_id, curation_id)`, never
-`unit_id` alone. A packet carrying sorted units MUST carry `core.sorting_runs` and
-`core.curation_versions`.
 
 <a id="ew-analysis-content-class" data-spec-anchor="canonical"></a>
 ## 5. Analysis content class
@@ -399,7 +369,7 @@ MUST make the candidate inconsistent.
 | 02 | logical resources, declarations, identities, references, and registry semantics | normative |
 | 03 | portable physical mapping of logical resources to stored bytes | normative |
 | 04 | packet catalog structure, resource entries, and dataset-to-resource bindings | normative |
-| 05 | validation, import, writer lifecycle, reporting, and publication of a packet | normative |
+| 05 | validation, import, writer and reader operations, reporting, and publication of a packet | normative |
 | 06 | analysis policy, examples, and explanation | informative except §§2 and 5, which are normative |
 | 07 | reference-implementation design and examples | informative |
 | 08 | executable packet example | informative |

@@ -76,6 +76,8 @@ def test_embedded_registry_is_exposed(packet_root):
     assert registry["registry_version"] == "0.1.0"
     assert set(registry["tables"]) == {
         "core.sessions",
+        "core.clocks",
+        "core.processing_runs",
         "core.intervals",
         "core.units",
         "core.event_streams",

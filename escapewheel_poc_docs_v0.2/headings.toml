@@ -29,7 +29,6 @@
 "4" = "Core content class"
 "4.1" = "Requirements"
 "4.2" = "Spike representation"
-"4.3" = "Unit identity"
 "5" = "Analysis content class"
 "5.1" = "Requirements"
 "5.2" = "Materialization is justified by layout, not by arithmetic"
@@ -221,6 +220,10 @@
 "10" = "Two conformance classes"
 "11" = "Minimum acceptance criteria"
 "12" = "Alternatives are resolved before a commit"
+"13" = "Reader operations"
+"13.1" = "Session presentation and correlation"
+"13.2" = "Exact unit selection and currency"
+"13.3" = "Declared identifier types"
 
 ["06"]
 "1" = "Scope"
@@ -436,6 +439,30 @@ section = "1"
 title = "Scope"
 aliases = []
 
+[anchor.ew-reader-declared-types]
+part = "05"
+section = "13.3"
+title = "Declared identifier types"
+aliases = []
+
+[anchor.ew-reader-operations]
+part = "05"
+section = "13"
+title = "Reader operations"
+aliases = []
+
+[anchor.ew-reader-session-presentation]
+part = "05"
+section = "13.1"
+title = "Session presentation and correlation"
+aliases = []
+
+[anchor.ew-reader-unit-selection]
+part = "05"
+section = "13.2"
+title = "Exact unit selection and currency"
+aliases = []
+
 [anchor.ew-reference-performance-notes]
 part = "07"
 section = "7"
@@ -506,10 +533,4 @@ aliases = []
 part = "02"
 section = "12.1"
 title = "Unit identity"
-aliases = []
-
-[anchor.ew-unit-identity-architecture]
-part = "00"
-section = "4.3"
-title = "Unit identity"
-aliases = []
+aliases = ["ew-unit-identity-architecture"]

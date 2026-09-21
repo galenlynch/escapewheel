@@ -234,7 +234,6 @@ core's: how many marks an event has and of what type is a property of what produ
 
 A sorted or curated spiking entity.
 
-- MUST be identified by session, unit, sorting run, and curation version together.
 - MUST belong to one sorting run and one curation version.
 - MAY sit on several electrodes, and MAY have a position in one or more frames.
 

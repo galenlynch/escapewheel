@@ -85,7 +85,7 @@ Run it after changing the registry, the generator, or any rule.
 <a id="ew-reference-performance-notes" data-spec-anchor="canonical"></a>
 ## 7. Performance notes
 
-These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section MUST NOT repeat it.
+These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section does not repeat it.
 
 - **Never convert a column to host objects inside a per-batch loop.** Every performance defect found in the reference writer has been this.
 - **Read a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.
@@ -96,4 +96,6 @@ These are properties of the reference implementation, not requirements. A number
   it differs between a `--sample` build and a full one. Counting each column instead, as
   Part 03 §5.5's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count
  .
-- **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id`. A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.
+- **Project a constant rather than joining for it.** The reference reader adds session identity to a
+  view as a scalar expression over `session_id`. An engine can prune a projection a query does not
+  select; it generally cannot prune a join whose output might filter or duplicate rows.

@@ -1,8 +1,22 @@
+import json
+import shutil
+
 import pyarrow as pa
 import pytest
 
 from escapewheel_reader import STORED, NotAligned, NoTimeOrigin, open_packet
-from tests.conftest import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION, SORTING_RUN, UNITS, _resource, _write
+from escapewheel_reader.observation import support_of
+from tests.conftest import (
+    CLOCK_BEHAVIOUR,
+    CLOCK_PROBE,
+    CURATION,
+    SESSION,
+    SESSION_NAME,
+    SORTING_RUN,
+    UNITS,
+    _resource,
+    _write,
+)
 
 
 def test_trials_unfiltered(packet_root):
@@ -64,10 +78,10 @@ def test_spike_times_returns_ticks_with_their_clock(packet_root):
     assert set(result.to_pydict()["clock_id"]) == {CLOCK_PROBE}
 
 
-def test_spike_times_narrowed_by_sorting_context(packet_root):
-    pkt = open_packet(packet_root)
-    assert pkt.spike_times(UNITS[1], sorting_run_id=SORTING_RUN).num_rows == 2
-    assert pkt.spike_times(UNITS[1], sorting_run_id=SORTING_RUN + 1).num_rows == 0
+def test_spike_times_rejects_removed_identity_arguments(packet_root):
+    """Run and curation are unit facts, not redundant spike-selection arguments."""
+    with pytest.raises(TypeError, match="sorting_run_id"):
+        open_packet(packet_root).spike_times(UNITS[1], sorting_run_id=1)
 
 
 def test_accessors_push_predicates_into_the_reader(packet_root, monkeypatch):
@@ -139,6 +153,91 @@ def test_spike_times_accepts_a_tick_range(packet_root):
     assert result.to_pydict()["t_tick"] == [30000, 39000]
 
 
+def test_session_scope_reaches_spikes_time_conversion_and_support(tmp_path, packet_root):
+    """One session restriction governs rows, unit clocks, origins, and attached support."""
+    root = tmp_path / "two_sessions"
+    shutil.copytree(packet_root, root)
+    manifest = json.loads((root / "packet.json").read_text())
+    by_id = {resource["resource_id"]: resource for resource in manifest["resources"]}
+    other = SESSION + 1
+    i32 = pa.int32()
+
+    sessions = pa.table(
+        {
+            "session_id": pa.array([SESSION, other], type=i32),
+            "session_name": pa.array([SESSION_NAME, "s002"]),
+            "subject_id": pa.array([7, 8], type=i32),
+            "session_start_time": pa.array(
+                [1_756_000_000_000_000, 1_756_000_100_000_000],
+                type=pa.timestamp("us", tz="UTC"),
+            ),
+            "reference_clock_id": pa.array([CLOCK_BEHAVIOUR, CLOCK_PROBE], type=i32),
+            "t_zero_tick": pa.array([0, 100], type=pa.int64()),
+        }
+    )
+    units = pa.table(
+        {
+            "session_id": pa.array([SESSION, other], type=i32),
+            "unit_id": pa.array([UNITS[0], UNITS[2]], type=i32),
+            "sorting_run_id": pa.array([SORTING_RUN, SORTING_RUN + 1], type=i32),
+            "curation_id": pa.array([CURATION, CURATION + 1], type=i32),
+            "quality_label": pa.array(["sua", "mua"]),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR, CLOCK_PROBE], type=i32),
+        }
+    )
+    spikes = pa.table(
+        {
+            "session_id": pa.array([SESSION, other, other], type=i32),
+            "unit_id": pa.array([UNITS[0], UNITS[2], UNITS[2]], type=i32),
+            "t_tick": pa.array([50, 150, 200], type=pa.int64()),
+        }
+    )
+    clocks = pa.table(
+        {
+            "clock_id": pa.array([CLOCK_BEHAVIOUR, CLOCK_PROBE], type=i32),
+            "session_id": pa.array([SESSION, other], type=i32),
+            "tick_rate_num": pa.array([100, 100], type=pa.int64()),
+            "tick_rate_den": pa.array([1, 1], type=pa.int64()),
+        }
+    )
+    windows = pa.table(
+        {
+            "session_id": pa.array([SESSION, other], type=i32),
+            "clock_id": pa.array([CLOCK_BEHAVIOUR, CLOCK_PROBE], type=i32),
+            "start_tick": pa.array([0, 100], type=pa.int64()),
+            "stop_tick": pa.array([99, 299], type=pa.int64()),
+        }
+    )
+    for resource_id, name, table in (
+        ("core.sessions", "sessions", sessions),
+        ("core.units", "units", units),
+        ("core.spike_events", "spike_events", spikes),
+    ):
+        by_id[resource_id]["uri"] = _write(root, name, table)
+    manifest["resources"].extend(
+        [
+            _resource("core.clocks", _write(root, "clocks", clocks)),
+            _resource("core.clock_observation_intervals", _write(root, "clock_observation_intervals", windows)),
+        ]
+    )
+    manifest["sessions"] = [SESSION_NAME, "s002"]
+    (root / "packet.json").write_text(json.dumps(manifest, indent=2))
+
+    packet = open_packet(root)
+    single = packet.spike_times(UNITS[2], session_id=other, seconds=True)
+    assert single.column("t_tick").to_pylist() == [150, 200]
+    assert single.column("t_second").to_pylist() == [0.5, 1.0]
+    assert support_of(single).to_pylist() == [{"clock_id": CLOCK_PROBE, "start_tick": 100, "stop_tick": 299}]
+    assert packet.reference_clock(session_id=other) == CLOCK_PROBE
+    assert packet.t_zero(session_id=other) == 100
+
+    explicit = packet.spike_times(units=packet.units(), session_id=other, clock=STORED)
+    assert explicit.column("t_tick").to_pylist() == [150, 200]
+    mismatched = packet.spike_times(UNITS[0], session_id=other, clock=STORED)
+    assert mismatched.num_rows == 0
+    assert support_of(mismatched) is None
+
+
 def test_scan_is_lazy(packet_root):
     """scan() must not read; it hands back a dataset for what constraints cannot express."""
     import pyarrow.dataset as pads
@@ -185,7 +284,7 @@ def test_a_packet_with_one_clock_needs_no_declaration(packet_root):
 def test_rows_spanning_clocks_with_no_reference_are_refused(two_clock_packet, monkeypatch):
     """Returning these as stored would invite a comparison that means nothing."""
     pkt = open_packet(two_clock_packet)
-    spanning = pkt.table("core.spike_events")
+    spanning = pkt.spike_times(units=pkt.units(), clock=STORED)
     monkeypatch.setattr(pkt, "reference_clock", _raise_unaligned)
     assert sorted(set(spanning.to_pydict()["clock_id"])) == [CLOCK_BEHAVIOUR, CLOCK_PROBE]
     with pytest.raises(NotAligned):

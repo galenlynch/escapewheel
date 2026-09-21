@@ -107,8 +107,9 @@ def _registry():
                     _col("sorting_run_id", "string", "required"),
                     _col("curation_id", "string", "required"),
                     _col("quality_label", "string", "nullable", enum=["sua", "mua", "noise"]),
+                    _col("clock_id", "string", "required"),
                 ],
-                "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                "primary_key": ["unit_id"],
                 "references": [],
                 "rules": [],
             },
@@ -128,18 +129,20 @@ def _registry():
                 "columns": [
                     _col("session_id", "string", "required"),
                     _col("unit_id", "string", "required"),
-                    _col("sorting_run_id", "string", "required"),
-                    _col("curation_id", "string", "required"),
                     _col("t_tick", "int64", "required"),
-                    _col("clock_id", "string", "required"),
                 ],
-                "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick"],
+                "primary_key": ["session_id", "unit_id", "t_tick"],
                 "references": [
                     {
-                        "columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                        "columns": ["session_id"],
+                        "resource": "core.sessions",
+                        "resource_columns": ["session_id"],
+                    },
+                    {
+                        "columns": ["unit_id"],
                         "resource": "core.units",
-                        "resource_columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
-                    }
+                        "resource_columns": ["unit_id"],
+                    },
                 ],
                 "rules": [],
             },
@@ -176,6 +179,7 @@ def packet_root(tmp_path):
             "sorting_run_id": pa.array(["sort_001"] * 2),
             "curation_id": pa.array(["cur_001"] * 2),
             "quality_label": pa.array(["sua", "mua"]),
+            "clock_id": pa.array(["imec_ap_s001"] * 2),
         }
     )
     events = pa.table(
@@ -191,10 +195,7 @@ def packet_root(tmp_path):
         {
             "session_id": pa.array(["s001"] * 5),
             "unit_id": pa.array(["unit_001"] * 3 + ["unit_002"] * 2),
-            "sorting_run_id": pa.array(["sort_001"] * 5),
-            "curation_id": pa.array(["cur_001"] * 5),
             "t_tick": pa.array([30000, 39000, 48000, 45000, 66000], type=pa.int64()),
-            "clock_id": pa.array(["imec_ap_s001"] * 5),
         }
     )
     resources = [

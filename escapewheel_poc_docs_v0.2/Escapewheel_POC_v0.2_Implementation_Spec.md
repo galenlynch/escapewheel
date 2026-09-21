@@ -49,7 +49,7 @@ This table is an informative projection of
 | 02 | Core logical schemas | normative |
 | 03 | Portable physical profile | normative |
 | 04 | Packet catalog | normative |
-| 05 | Validation and import | normative |
+| 05 | Validation, import, and reader operations | normative |
 | 06 | Analysis layer | informative except §§2 and 5, which are normative |
 | 07 | Reference implementation and plan | informative |
 | 08 | Example packet | informative |
@@ -321,29 +321,6 @@ sidecars, analysis materializations, and validation and provenance records.
 A packet is primarily single-session. Multi-session packets are a permitted extension, and a
 packet declares its sessions in the catalog.
 
-A packet is the unit of storage and a session is the unit of analysis, so a consumer holding
-several packets — or one packet holding several sessions — has to know which rows belong to which
-session. That is derivable rather than declared: a table is **session-scoped** where it reaches
-`core.sessions` through its declared references, directly or transitively. 33 of 35 tables are,
-the exceptions being `core.subjects` and `core.source_files`, which `core.sessions` references
-rather than the reverse. `registry/check.py` computes it, and every table carrying a `session_id`
-reaches the table while eight reach it without carrying the column, so the reference graph is the
-stricter test.
-
-A reader presenting one or more packets MUST carry a session discriminator on every session-scoped
-table, and MUST NOT carry one on a table that is not. The discriminator is **the packet a row came
-from together with the row's `session_id`**: the reader opened the file and the identifier is unique
-within it, so the pair is unique by construction and nothing has to be assumed about the world. A
-reader MUST NOT derive it from a `*_name` — a name is a label, and 6 of 13 name columns hold a value
-appearing in both of two packets that share no session, no animal and no probe. It SHOULD carry
-`session_name` beside the discriminator, which promises nothing: whether two packets' matching
-labels denote one thing is a fact about the world, and an analyst asserting it does so knowingly.
-
-Session identity MUST NOT become part of a join key where the assigned identifier is already
-unique. Within one packet `unit_id` identifies a unit by itself, and widening the join to
-`(session_id, unit_id)` costs 2.93x over 286,896,563 spikes; across packets that identifier is
-genuinely ambiguous and the second column buys correctness.
-
 <a id="ew-packet-catalog" data-spec-anchor="canonical"></a>
 ### 3.4 Packet catalog
 
@@ -393,13 +370,6 @@ representation. The ragged chunked representation of v0.1 is withdrawn, as is th
 
 `core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that
 a validator checks against `core.spike_events`.
-
-<a id="ew-unit-identity-architecture" data-spec-anchor="canonical"></a>
-### 4.3 Unit identity
-
-A unit's identity is the tuple `(session_id, unit_id, sorting_run_id, curation_id)`, never
-`unit_id` alone. A packet carrying sorted units MUST carry `core.sorting_runs` and
-`core.curation_versions`.
 
 <a id="ew-analysis-content-class" data-spec-anchor="canonical"></a>
 ## 5. Analysis content class
@@ -489,7 +459,7 @@ MUST make the candidate inconsistent.
 | 02 | logical resources, declarations, identities, references, and registry semantics | normative |
 | 03 | portable physical mapping of logical resources to stored bytes | normative |
 | 04 | packet catalog structure, resource entries, and dataset-to-resource bindings | normative |
-| 05 | validation, import, writer lifecycle, reporting, and publication of a packet | normative |
+| 05 | validation, import, writer and reader operations, reporting, and publication of a packet | normative |
 | 06 | analysis policy, examples, and explanation | informative except §§2 and 5, which are normative |
 | 07 | reference-implementation design and examples | informative |
 | 08 | executable packet example | informative |
@@ -807,7 +777,6 @@ core's: how many marks an event has and of what type is a property of what produ
 
 A sorted or curated spiking entity.
 
-- MUST be identified by session, unit, sorting run, and curation version together.
 - MUST belong to one sorting run and one curation version.
 - MAY sit on several electrodes, and MAY have a position in one or more frames.
 
@@ -1386,6 +1355,7 @@ Frames stand to a coordinate as §11.3's clocks stand to a tick: the declared re
 Sections 2 through 10 bind every table. What follows binds particular ones, where identifying a
 row, resolving a value, or reading an absence takes more than the generic rules give.
 
+<a id="ew-unit-identity-architecture" data-spec-anchor="alias"></a>
 <a id="ew-unit-identity" data-spec-anchor="canonical"></a>
 ### 12.1 Unit identity
 
@@ -1393,6 +1363,8 @@ row, resolving a value, or reading an absence takes more than the generic rules 
 ascending `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces the same
 numbers; `core.units` records the run and the curation as ordinary columns, and
 `local_unit_label` records what the sorter called it.
+
+A packet carrying `core.units` MUST carry `core.sorting_runs` and `core.curation_versions`.
 
 A table keyed on a unit carries `unit_id` and not the run or the curation, and a
 consumer relating a unit to anything outside the packet uses `(sorting_run_id, local_unit_label)`.
@@ -2115,7 +2087,7 @@ A packet whose committed manifest records `failed` MUST NOT present its resource
 
 <!-- BEGIN 05_validation_and_import.md -->
 
-# Part 05 — Validation and Import
+# Part 05 — Validation, Import, and Reader Operations
 
 Normative.
 
@@ -2428,6 +2400,68 @@ Where two or more `core.processing_runs` rows share `(session_id, activity_type,
 
 Both are checked at `error` level. A consumer MUST NOT silently choose; on a conforming packet that case is unreachable. A consumer that meets an unresolved alternative is holding a packet that failed validation and reports that. Nothing here forbids a packet holding two sortings of one probe or two curations of one sorting; what it requires is that the packet says which is current.
 
+<a id="ew-reader-operations" data-spec-anchor="canonical"></a>
+## 13. Reader operations
+
+Reader operations apply the logical identities and session scope defined by Part 02. They do not
+widen a packet-local reference or infer identity from a label.
+
+<a id="ew-reader-session-presentation" data-spec-anchor="canonical"></a>
+### 13.1 Session presentation and correlation
+
+A reader presenting one or more packets as one relation MUST carry a session discriminator on
+every session-scoped table and MUST NOT carry one on a table that is not session-scoped. Part 02
+§7.1 defines session scope.
+
+The discriminator MUST distinguish the packet a row came from together with that packet's
+`session_id`. A reader MUST NOT derive it from `session_name` or another `*_name`. A reader SHOULD
+expose a compact integer for each such packet-and-session pair and SHOULD carry `session_name`
+beside it as a non-identifying label.
+
+A reader operation that correlates rows from two or more session-scoped relations MUST preserve
+session scope. Within one packet, a correlation that does not follow a declared reference to a
+packet-unique target MUST compare or match only rows with equal `session_id`. After presenting
+packets together, a correlation MUST compare or match only rows with equal session discriminators.
+If the caller supplies an explicit session restriction, the reader MUST apply it to every
+participating relation and MUST NOT scope only one side of the operation. A declared packet-local
+reference retains its exact key; the reader's discriminator supplies presentation context rather
+than widening that reference.
+
+Within one packet, a reader MUST join a unit-keyed relation to `core.units` through `unit_id`
+alone. Across packets, it MUST include the session discriminator with `unit_id`; it MUST NOT widen
+the packet-local unit reference itself. A reader SHOULD add the discriminator and label as scalar
+projections over `session_id` rather than joining them from `core.sessions`, so an engine can prune
+values a query does not select.
+
+<a id="ew-reader-unit-selection" data-spec-anchor="canonical"></a>
+### 13.2 Exact unit selection and currency
+
+A reader operation given an exact packet-assigned `unit_id` or an explicit table of units MUST
+treat that input as the selected unit or units. It MUST NOT reject that selection solely because
+the packet leaves a sorting or curation preference unresolved, and MUST NOT require
+`sorting_run_id` or `curation_id` as redundant identity arguments.
+
+An operation that offers to choose the packet's current unit set MUST continue to report an
+unresolved alternative rather than silently select or concatenate competing results. Passing the
+result of that guarded operation into an exact spike read remains guarded at the selection step.
+Exact selection does not declare a non-preferred result current and does not make a packet that
+violates §12 conforming.
+
+Where an exact-unit reader operation accepts `session_id`, it MUST use it only as query and
+time-conversion scope. It MUST apply the restriction to every selected spike row and to the clock,
+origin, and attached observation support used for the result, and MUST NOT use it to disambiguate
+`unit_id`. A selection that does not match the named session MUST NOT attach support from another
+session.
+
+<a id="ew-reader-declared-types" data-spec-anchor="canonical"></a>
+### 13.3 Declared identifier types
+
+Where a reader's public API publishes a static type for a parameter, return value, or field that
+directly carries a logical-table identifier, the reader MUST derive the corresponding host-language
+scalar type from the incorporated registry's declared logical type. It MUST NOT infer the type from
+an `_id` suffix or apply a logical-table identifier mapping to a catalog, manifest, vocabulary, or
+discriminator-scope name governed by another declaration.
+
 <!-- END 05_validation_and_import.md -->
 
 <!-- BEGIN 06_analysis_layer.md -->
@@ -2607,7 +2641,7 @@ Run it after changing the registry, the generator, or any rule.
 <a id="ew-reference-performance-notes" data-spec-anchor="canonical"></a>
 ## 7. Performance notes
 
-These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section MUST NOT repeat it.
+These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section does not repeat it.
 
 - **Never convert a column to host objects inside a per-batch loop.** Every performance defect found in the reference writer has been this.
 - **Read a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.
@@ -2618,7 +2652,9 @@ These are properties of the reference implementation, not requirements. A number
   it differs between a `--sample` build and a full one. Counting each column instead, as
   Part 03 §5.5's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count
  .
-- **Project a constant rather than joining for it.** A reader adding session identity to a view SHOULD emit a scalar expression over `session_id`. A projection a query does not select is pruned and costs 1.02x; the join a reader writes first cannot be pruned, because the planner cannot show it neither filters nor duplicates rows, and costs 2.22x whether its output is read or not.
+- **Project a constant rather than joining for it.** The reference reader adds session identity to a
+  view as a scalar expression over `session_id`. An engine can prune a projection a query does not
+  select; it generally cannot prune a join whose output might filter or duplicate rows.
 
 <!-- END 07_reference_implementation.md -->
 
@@ -2730,8 +2766,8 @@ Units by quality, joined across core and an extension:
 SELECT q.normalized_label, count(*) AS units,
        round(avg(m.isi_violations_ratio), 3) AS isi
 FROM core_units u
-JOIN aind_unit_qc_metrics m USING (session_id, unit_id, sorting_run_id, curation_id)
-JOIN core_unit_quality_labels q USING (session_id, unit_id, sorting_run_id, curation_id)
+JOIN aind_unit_qc_metrics m USING (unit_id)
+JOIN core_unit_quality_labels q USING (unit_id)
 WHERE q.source = 'decoder'
 GROUP BY 1 ORDER BY units DESC;
 ```
@@ -2913,10 +2949,6 @@ the requirement stays in the part that binds and this part carries the reading.
 
 It is not a substitute for `conformance/`, which holds the probes that produced these numbers.
 This part says what they mean.
-
-A number that would change if the reference implementation were replaced is Part 07 §7's, not this
-part's: how a columnar library decodes a batch, how one query planner treats a projection against
-a join. What survives that replacement is here.
 
 **Every measurement below records its date, and none records the library versions it was taken
 against except where noted.** Those were not kept. A number whose toolchain is unknown has unknown

@@ -6,7 +6,7 @@ import contextlib
 import json
 import re
 import warnings
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -91,8 +91,8 @@ class Packet:
         self._manifest = manifest
         self._by_id = {r.resource_id: r for r in manifest.resources}
         self._anchor_cache: dict[str, Any] | None = None
-        self._reference_cache: str | None = None
-        self._origin_cache: dict[str | None, tuple[int, int, int]] = {}
+        self._reference_cache: int | None = None
+        self._origin_cache: dict[int | None, tuple[int, int, int]] = {}
         self._bound_cache: float | None = None
         self._ambiguity_cache: tuple[Ambiguity, ...] | None = None
         self._support_cache: pa.Table | None = None
@@ -601,7 +601,7 @@ class Packet:
             expression = term if expression is None else expression & term
         return expression
 
-    def intervals(self, *, session_id: str | None = None, interval_kind: str | None = None) -> pa.Table:
+    def intervals(self, *, session_id: int | None = None, interval_kind: str | None = None) -> pa.Table:
         """Read ``core.intervals``, optionally filtered (Part 01 §3.10).
 
         Filtering by kind prunes rather than scans: the kind is the second key column, so each
@@ -609,7 +609,7 @@ class Packet:
 
         Parameters
         ----------
-        session_id : str, optional
+        session_id : int, optional
             Keep only this session.
         interval_kind : str, optional
             Keep only intervals of this kind, named as a dotted resource ID.
@@ -621,12 +621,12 @@ class Packet:
         """
         return self.table("core.intervals", session_id=session_id, interval_kind=interval_kind)
 
-    def units(self, *, session_id: str | None = None, quality_label: str | None = None) -> pa.Table:
+    def units(self, *, session_id: int | None = None, quality_label: str | None = None) -> pa.Table:
         """Read ``core.units``, optionally filtered.
 
         Parameters
         ----------
-        session_id : str, optional
+        session_id : int, optional
             Keep only this session.
         quality_label : str, optional
             Keep only units with this curation label: ``sua``, ``mua``, or ``noise``.
@@ -651,9 +651,9 @@ class Packet:
         self,
         *,
         event_type: str | None = None,
-        session_id: str | None = None,
+        session_id: int | None = None,
         t_tick: tuple[int, int] | None = None,
-        clock: str | None = None,
+        clock: int | Literal["stored"] | None = None,
         seconds: bool = False,
     ) -> pa.Table:
         """Read ``core.events``, on the packet's reference clock unless told otherwise.
@@ -664,14 +664,14 @@ class Packet:
             Keep only events of this type. The type is the stream's since R91 §3.1, so this
             resolves the streams that emit it and keeps their events. The vocabulary is open,
             so an unrecognized value is not an error, only empty.
-        session_id : str, optional
+        session_id : int, optional
             Keep only this session.
         t_tick : tuple of int, optional
             Keep only events within this closed tick range, stated on the clock the result
             comes back on -- so a range and the ticks it selects are always in the same space.
             A loose translation of it is pushed into the Parquet reader for pruning and the
             exact one applied after mapping.
-        clock : str, optional
+        clock : int or 'stored', optional
             The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
             :data:`STORED` for the ticks the file holds.
         seconds : bool, default False
@@ -697,12 +697,16 @@ class Packet:
                 .column("event_stream_id")
                 .to_pylist()
             )
-        found = self.table(
-            "core.events",
-            session_id=session_id,
-            t_tick=self._span(t_tick, clock),
-            **({"stream_id": streams} if streams is not None else {}),
-        )
+        span = self._span(t_tick, clock)
+        if streams is None:
+            found = self.table("core.events", session_id=session_id, t_tick=span)
+        else:
+            found = self.table(
+                "core.events",
+                session_id=session_id,
+                t_tick=span,
+                stream_id=streams,
+            )
         # A tick has no meaning without its clock, and R91 §3.2 puts the clock on the stream, so
         # the accessor attaches it: `core.event_streams` is tens of rows against an event table's
         # thousands, and every caller of this needs it either to convert or to report.
@@ -719,7 +723,8 @@ class Packet:
             "clock_id", pa.array([clocks.get(s) for s in found.column("stream_id").to_pylist()])
         )
         if clock != STORED:
-            found = self._narrowed(self.on_clock(found, clock), t_tick)
+            target_clock = None if clock is None else int(clock)
+            found = self._narrowed(self.on_clock(found, target_clock), t_tick)
         return self.seconds(found, session_id=session_id) if seconds else found
 
     def _unit_clocks(self, keys: Sequence[str], **narrow: Any) -> dict[tuple[Any, ...], Any]:
@@ -734,14 +739,12 @@ class Packet:
 
     def spike_times(
         self,
-        unit_id: str | None = None,
+        unit_id: int | None = None,
         *,
         units: pa.Table | None = None,
-        session_id: str | None = None,
-        sorting_run_id: str | None = None,
-        curation_id: str | None = None,
+        session_id: int | None = None,
         t_tick: tuple[int, int] | None = None,
-        clock: str | None = None,
+        clock: int | Literal["stored"] | None = None,
         seconds: bool = False,
     ) -> pa.Table:
         """Read spike times for one unit, or for a table of them.
@@ -752,10 +755,10 @@ class Packet:
         easy one. `clock_id` comes back alongside `t_tick` either way, because a tick has no
         meaning without the clock it was counted on.
 
-        A unit is identified by ``(session_id, unit_id, sorting_run_id, curation_id)``, never
-        by ``unit_id`` alone. Passing `units` carries that whole identity, so a packet holding
-        two sortings of the same unit cannot be read ambiguously; naming `unit_id` on its own
-        leaves the caller to supply the rest and to notice when they have not.
+        A unit is identified within a packet by ``unit_id`` alone. ``session_id`` scopes the
+        rows searched but never contributes to the unit's identity. An exact ``unit_id`` or an
+        explicit table of units is already an unambiguous selection, so this accessor does not
+        apply the current-run chooser used by :meth:`units`.
 
         It is also the fast path. `core.units` is thousands of rows and `core.spike_events` is
         hundreds of millions, so resolving which units are wanted in the small table and
@@ -767,18 +770,18 @@ class Packet:
 
         Parameters
         ----------
-        unit_id : str, optional
+        unit_id : int, optional
             One unit. Mutually exclusive with `units`.
         units : pyarrow.Table, optional
             Units to read, as returned by :meth:`units` and filtered however the caller
             likes. Only its key columns are used; any others are ignored.
-        session_id, sorting_run_id, curation_id : str, optional
-            Narrow the identifying context when naming a single `unit_id`.
+        session_id : int, optional
+            Restrict every session-scoped input used by the read to this session.
         t_tick : tuple of int, optional
             Keep only spikes within this closed tick range, stated on the clock the result
             comes back on, not on the unit's stored clock -- a range and the ticks it selects
             are always in the same space. Pass `clock=STORED` for both in stored ticks.
-        clock : str, optional
+        clock : int or 'stored', optional
             The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
             :data:`STORED` for the ticks the file holds. Mapping drops a spike the anchors
             cannot place, exactly as `analysis.spike_events` does.
@@ -799,8 +802,6 @@ class Packet:
         ------
         ValueError
             If both or neither of `unit_id` and `units` are given.
-        AmbiguousRun
-            If the packet does not say which sorting to read (Part 01 §2.4).
 
         Examples
         --------
@@ -808,27 +809,25 @@ class Packet:
         """
         if (unit_id is None) == (units is None):
             raise ValueError("name exactly one of unit_id or units")
-        _check_runs(self, SORTING_ACTIVITIES)
         if unit_id is not None:
             found = self.table(
                 "core.spike_events",
                 columns=["t_tick"],
                 unit_id=unit_id,
                 session_id=session_id,
-                sorting_run_id=sorting_run_id,
-                curation_id=curation_id,
                 t_tick=self._span(t_tick, clock),
             )
             clocks = self._unit_clocks(["unit_id"], unit_id=unit_id, session_id=session_id)
             found = found.append_column("clock_id", pa.array([clocks.get((unit_id,))] * found.num_rows))
             if clock != STORED:
-                found = self._narrowed(self.on_clock(found, clock), t_tick)
+                target_clock = None if clock is None else int(clock)
+                found = self._narrowed(self.on_clock(found, target_clock), t_tick)
             if seconds:
                 found = self.seconds(found, session_id=session_id)
             if t_tick is None:
                 # Only for the unit's whole record. A range-narrowed read is a subset the
                 # caller chose, and the window it was observed over is no denominator for it.
-                found = attach_support(found, self._unit_support(unit_id, sorting_run_id, curation_id))
+                found = attach_support(found, self._unit_support(unit_id, session_id))
             return found
 
         assert units is not None  # the exclusivity check above settles this
@@ -848,6 +847,8 @@ class Packet:
         wanted = tests[0]
         for test in tests[1:]:
             wanted = wanted & test
+        if session_id is not None:
+            wanted = wanted & (pc.field("session_id") == session_id)
         if (pushed := self._span(t_tick, clock)) is not None:
             wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
         # R96 §3.4 struck `core.spike_events.clock_id`: a tick reaches its clock through its
@@ -860,10 +861,11 @@ class Packet:
         )
         found = found.select(["t_tick", "clock_id"])
         if clock != STORED:
-            found = self._narrowed(self.on_clock(found, clock), t_tick)
+            target_clock = None if clock is None else int(clock)
+            found = self._narrowed(self.on_clock(found, target_clock), t_tick)
         return self.seconds(found, session_id=session_id) if seconds else found
 
-    def reference_clock(self, *, session_id: Any | None = None) -> Any:
+    def reference_clock(self, *, session_id: int | None = None) -> int:
         """Return the clock this packet reports times on (R27 §2).
 
         Parameters
@@ -898,16 +900,16 @@ class Packet:
         if session_id is not None:
             if session_id not in declared:
                 raise NotAligned(f"session {session_id!r} declares no reference_clock_id (R27 §2)")
-            return declared[session_id]
-        named = sorted(set(declared.values()))
+            return int(declared[session_id])
+        named = sorted({int(clock) for clock in declared.values()})
         if not named:
             raise NotAligned("no session declares a reference_clock_id (R27 §2)")
         if len(named) > 1:
             raise NotAligned(f"sessions declare different reference clocks {named}; name a session_id")
-        self._reference_cache = named[0]
+        self._reference_cache = int(named[0])
         return self._reference_cache
 
-    def t_zero(self, *, session_id: str | None = None) -> int:
+    def t_zero(self, *, session_id: int | None = None) -> int:
         """Return the session's time origin, on the reference clock (Part 05 §7).
 
         The earliest tick at which any of the session's clocks was observing. It is read from
@@ -922,21 +924,21 @@ class Packet:
         """
         return origin(self, session_id)[0]
 
-    def seconds(self, table: pa.Table, *, session_id: str | None = None) -> pa.Table:
+    def seconds(self, table: pa.Table, *, session_id: int | None = None) -> pa.Table:
         """Add a `t_second` column to a table whose ticks are on the reference clock.
 
         Delegates to :func:`escapewheel_reader.clocks.seconds`, where the docstring lives.
         """
         return seconds(self, table, session_id=session_id)
 
-    def on_clock(self, table: pa.Table, clock: str | None = None, *, bound: float | None = None) -> pa.Table:
+    def on_clock(self, table: pa.Table, clock: int | None = None, *, bound: float | None = None) -> pa.Table:
         """Return `table` with its ticks on one clock.
 
         Delegates to :func:`escapewheel_reader.clocks.on_clock`, where the docstring lives.
         """
         return on_clock(self, table, clock, bound=bound)
 
-    def _unit_support(self, unit_id: str, sorting_run_id: str | None, curation_id: str | None) -> pa.Table:
+    def _unit_support(self, unit_id: int, session_id: int | None) -> pa.Table:
         """Return one unit's observation windows, from the packet's resolved set (R38).
 
         The resolution is read once per packet and filtered here, because it reads three tables
@@ -947,18 +949,19 @@ class Packet:
         windows = self._support_cache
         if not windows.num_rows:
             return windows
-        keep = pc.equal(windows.column("unit_id"), unit_id)
-        for column, value in (("sorting_run_id", sorting_run_id), ("curation_id", curation_id)):
-            if value is not None:
-                keep = pc.and_(keep, pc.equal(windows.column(column), value))
+        unit_column = windows.column("unit_id")
+        keep = pc.equal(unit_column, pa.scalar(unit_id, type=unit_column.type))
+        if session_id is not None:
+            session_column = windows.column("session_id")
+            keep = pc.and_(keep, pc.equal(session_column, pa.scalar(session_id, type=session_column.type)))
         return windows.filter(keep)
 
-    def _span(self, span: tuple[int, int] | None, clock: str | None) -> tuple[int, int] | None:
+    def _span(self, span: tuple[int, int] | None, clock: int | Literal["stored"] | None) -> tuple[int, int] | None:
         """Widen a range stated on the result's clock into one the file can be pruned by."""
         if span is None or clock == STORED:
             return span
         try:
-            target = clock or self.reference_clock()
+            target = self.reference_clock() if clock is None else int(clock)
         except NotAligned:
             return span
         return stored_span(anchors(self), target, span)
@@ -968,14 +971,15 @@ class Packet:
         if span is None:
             return table
         ticks = table.column("t_tick")
-        return table.filter(pc.and_(pc.greater_equal(ticks, span[0]), pc.less_equal(ticks, span[1])))
+        lower = pa.scalar(span[0], type=ticks.type)
+        upper = pa.scalar(span[1], type=ticks.type)
+        return table.filter(pc.and_(pc.greater_equal(ticks, lower), pc.less_equal(ticks, upper)))
 
     def _reference_columns(self, resource_id: str, parent: str) -> list[str]:
         """Return the columns by which one resource references another, per the registry.
 
-        The registry declares 46 of these and nothing read them. For spikes and units it is
-        the four-column contextual identity, which is the whole reason to take it from the
-        registry rather than write it out here and let the two drift.
+        Taking this from the registry keeps the accessor synchronized with the incorporated
+        declaration instead of restating a relationship that can change independently.
         """
         registry = self.registry
         table = (registry or {}).get("tables", {}).get(resource_id, {})

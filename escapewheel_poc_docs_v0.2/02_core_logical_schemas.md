@@ -464,6 +464,7 @@ Frames stand to a coordinate as §11.3's clocks stand to a tick: the declared re
 Sections 2 through 10 bind every table. What follows binds particular ones, where identifying a
 row, resolving a value, or reading an absence takes more than the generic rules give.
 
+<a id="ew-unit-identity-architecture" data-spec-anchor="alias"></a>
 <a id="ew-unit-identity" data-spec-anchor="canonical"></a>
 ### 12.1 Unit identity
 
@@ -471,6 +472,8 @@ row, resolving a value, or reading an absence takes more than the generic rules 
 ascending `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces the same
 numbers; `core.units` records the run and the curation as ordinary columns, and
 `local_unit_label` records what the sorter called it.
+
+A packet carrying `core.units` MUST carry `core.sorting_runs` and `core.curation_versions`.
 
 A table keyed on a unit carries `unit_id` and not the run or the curation, and a
 consumer relating a unit to anything outside the packet uses `(sorting_run_id, local_unit_label)`.

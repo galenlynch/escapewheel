@@ -19,9 +19,10 @@ not validate their contents beyond the manifest's own shape — that is
 from escapewheel_reader import open_packet
 
 packet = open_packet("session_packet/")
-packet.manifest.sessions  # what it covers
-trials = packet.trials(session_id="s001")  # a pyarrow.Table
-spikes = packet.spike_times(units=["unit_0001"])  # pushed down, not scanned
+packet.manifest.sessions  # external session names from packet.json
+trials = packet.intervals(session_id=1, interval_kind="task.trials")  # a pyarrow.Table
+spikes = packet.spike_times(unit_id=17)  # packet-assigned integer ID; pushed down, not scanned
+good_spikes = packet.spike_times(units=packet.units(quality_label="sua"))
 
 array = packet.array_resource("core.waveform_mean")
 array.shape, array.dtype, array.chunks, array.codecs  # no Zarr needed for any of this

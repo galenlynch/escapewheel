@@ -12,10 +12,6 @@ the requirement stays in the part that binds and this part carries the reading.
 It is not a substitute for `conformance/`, which holds the probes that produced these numbers.
 This part says what they mean.
 
-A number that would change if the reference implementation were replaced is Part 07 §7's, not this
-part's: how a columnar library decodes a batch, how one query planner treats a projection against
-a join. What survives that replacement is here.
-
 **Every measurement below records its date, and none records the library versions it was taken
 against except where noted.** Those were not kept. A number whose toolchain is unknown has unknown
 currency; a number silently missing the field says nothing at all.

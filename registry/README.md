@@ -101,10 +101,11 @@ begins with its primary key has its uniqueness settled by the shim's ordering sc
 the count is fewer than the keys (R12 §4). `escapewheel_validator.generate` decides it, and
 restating the total here is what let this section claim 122 against a registry producing 236.
 
-A reference may be composite (`core.spike_events` → `core.units` on four columns) or
-conditional, where a `nullable` foreign key gets an `IS NOT NULL` guard so legitimately absent
-values do not report as violations. A discriminator yields two checks, not one: that the value
-is a dotted resource ID at all, and that it names a resource the packet declares (R55 §2.4).
+A reference may be composite or conditional, where a `nullable` foreign key gets an `IS NOT NULL`
+guard so legitimately absent values do not report as violations. Unit references are deliberately
+not composite: `core.spike_events` references `core.units` on packet-assigned `unit_id` alone. A
+discriminator yields two checks, not one: that the value is a dotted resource ID at all, and that
+it names a resource the packet declares (R55 §2.4).
 
 ## Tier 2 rules
 

@@ -73,7 +73,7 @@ def test_a_table_referencing_sessions_directly_is_scoped():
 
 
 def test_a_table_reaching_sessions_through_a_parent_is_scoped():
-    """Part 00 §3.3. Eight core tables reach it without carrying a `session_id` of their own."""
+    """Part 02 §7.1: scope follows declared references to `core.sessions`."""
     registry = _registry(**{"core.units": ("core.sessions",), "core.spikes": ("core.units",)})
     assert session_scoped(registry) == {"core.sessions", "core.units", "core.spikes"}
 
@@ -119,7 +119,7 @@ def test_the_identifier_collides_and_the_pair_does_not(two):
 
 
 def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
-    """Part 00 §3.3 MUST NOT: `core.subjects` is not session-scoped, so it gets no key."""
+    """Part 05 §13.1: `core.subjects` is not session-scoped, so it gets no key."""
     subjects = pa.table({"subject_id": pa.array([7], type=pa.int32()), "subject_name": pa.array(["m001"])})
     for root in (packet_root, _second(packet_root, tmp_path)):
         pq.write_table(subjects, root / "tables/core/subjects.parquet")
@@ -161,7 +161,7 @@ def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
 
 
 def test_one_packet_gets_the_same_shape_as_many(packet_root):
-    """Part 00 §3.3. An analysis later pointed at twenty sessions must meet the same relation."""
+    """Part 05 §13.1: one or many sessions expose the same relation shape."""
     one = open_dataset([packet_root])
     assert one.table("core.units").column("session_key").to_pylist() == [0, 0]
 
@@ -175,7 +175,7 @@ def test_a_dataset_needs_a_packet():
 
 
 def test_the_sql_view_projects_the_identity(two):
-    """Part 07 §7. A scalar CASE over a column already scanned, so an unused key is pruned."""
+    """Part 05 §13.1 uses a scalar projection, so an unused key is pruned."""
     duckdb = pytest.importorskip("duckdb")
     assert duckdb
     con = two.duckdb(tables=["core.units"])
@@ -200,6 +200,20 @@ def test_the_arrow_path_and_the_sql_path_agree(two):
     arrow = two.table("core.units", columns=["unit_id"])
     from_arrow = sorted(zip(arrow.column("session_key").to_pylist(), arrow.column("unit_id").to_pylist(), strict=True))
     assert from_sql == from_arrow
+
+
+def test_cross_packet_unit_join_adds_the_session_discriminator(two):
+    """Part 05 §13.2: packet-local `unit_id` is widened only by presentation context."""
+    con = two.duckdb(tables=["core.units", "core.spike_events"])
+    correct = con.sql(
+        "SELECT count(*) FROM core_spike_events s JOIN core_units u "
+        "ON s.session_key = u.session_key AND s.unit_id = u.unit_id"
+    ).fetchone()
+    cross_product = con.sql(
+        "SELECT count(*) FROM core_spike_events s JOIN core_units u ON s.unit_id = u.unit_id"
+    ).fetchone()
+    assert correct == (10,)
+    assert cross_product == (20,)
 
 
 def test_nothing_is_registered_unless_asked_for(two):
@@ -227,7 +241,7 @@ def test_a_resource_no_packet_holds_is_not_a_view(two):
 
 
 def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_root, tmp_path):
-    """Part 00 §3.3 wants a discriminator; §3.3 specifies no join, so this is refused not guessed."""
+    """Part 05 §13.1 requires a discriminator derived from packet and session, not a guessed name."""
     root = tmp_path / "two_sessions"
     shutil.copytree(packet_root, root)
     i32 = pa.int32()

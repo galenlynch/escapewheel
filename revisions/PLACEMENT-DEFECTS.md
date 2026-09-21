@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative maintenance inventory |
-| **Updated** | 2026-09-20 |
+| **Updated** | 2026-09-21 |
 | **Review baseline** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
 
 This document tracks statements that appear to occupy the wrong specification abstraction or to
@@ -38,9 +38,9 @@ The roadmap owns sequencing among work items; this file owns the observation-lev
 | PD-001 | Specification README §§1–5 | Scope, conformance, normative-language, organization, and version statements made an informational entry point an unnumbered normative preamble and duplicated several numbered parts. | R122 relocated each binding statement to Part 00 or the subject-owning part and left linked summaries in the README. | Resolved: R122 |
 | PD-002 | Specification README §§6–7 | The only normative bibliography was in the README even though that file was to become informational. | R122 moved the complete normative bibliography and its applicability rule to Part 00; the README retains only informative references and a link. | Resolved: R122 |
 | PD-003 | Specification README §4, Part 00 §9, and each part header | Part status was maintained in overlapping lists, and the README omitted Part 10. The local-header precedence rule permitted drift instead of rejecting it. | R122 made Part 00 the owner, made local headers checked projections, and added a framework check. | Resolved: R122 |
-| PD-004 | Part 00 §3.3 | Exact session-scope table counts, named columns, and copied registry measurements are logical facts or generated evidence rather than architecture. Several counts are stale. | P2 removes or replaces them with links to Part 02, the registry, or generated evidence. | Tracked: P2 |
-| PD-005 | Part 00 §3.3 | Reader projection behavior, session discriminators, join-key instructions, and a measured join cost combine logical identity, reader operation, and performance evidence in the architecture. | P2 separates the logical and reader contracts from Part 10 evidence while reconciling unit identity. | Tracked: P2 |
-| PD-006 | Part 00 §4.3 and Part 01 §3.13 | The composite unit-identity statements are misplaced duplicates and contradict the Part 02 and registry `unit_id` identity. | P2 treats Part 02 and the registry as the intended decision point, then updates examples, APIs, fixtures, and tests. | Tracked: P2 |
+| PD-004 | Part 00 §3.3 | Exact session-scope table counts, named columns, and copied registry measurements were logical facts or generated evidence rather than architecture. Several counts were stale. | R123 removed the counts and left logical session scope with Part 02 §7.1. | Resolved: R123 |
+| PD-005 | Part 00 §3.3 | Reader projection behavior, session discriminators, join-key instructions, and a measured join cost combined logical identity, reader operation, and performance evidence in the architecture. | R123 moved reader presentation and correlation to Part 05 §13, retained logical scope in Part 02, and removed the unrefreshed ratio. | Resolved: R123 |
+| PD-006 | Part 00 §4.3 and Part 01 §3.13 | The composite unit-identity statements were misplaced duplicates and contradicted the Part 02 and registry `unit_id` identity. | R123 retained Unit meaning in Part 01, made Part 02 §12.1 the logical owner, and corrected reader behavior and projections. | Resolved: R123 |
 | PD-007 | Part 00 §§3.2–4 | Packet content classification, namespace ownership, exact resource declarations, and canonicality remain interleaved; several statements duplicate Parts 02, 04, 06, and 09 or the registry. | R122 named the independent axes; P5 appraises classification and canonicality, after which placement-only cleanup follows the selected owners. | Tracked: P5 |
 | PD-008 | Part 00 §5 | Analysis lineage, materialization policy, the exact `analysis.spike_events` declaration, and performance rationale duplicate or compete with Parts 02, 06, and 10. | P5 owns the lineage and canonicality decision; subsequent placement work leaves exact declarations with Part 02 or the registry and evidence in Part 10. | Tracked: P5 |
 | PD-009 | Part 00 §7 | Portable encodings, external-resource behavior, profile requirements, and packet-version behavior are physical, catalog, or lifecycle rules rather than framework-level architecture. | P9 reconciles the physical, integrity, and lifecycle rules after P5–P8 establish their owners. | Tracked: P9 |
@@ -61,3 +61,6 @@ The roadmap owns sequencing among work items; this file owns the observation-lev
 - R122 resolved PD-001 through PD-003 by making the specification README informational, assigning
   its binding statements to numbered owners, centralizing normative references in Part 00, and
   checking the README and local part-status lines as projections.
+- R123 resolved PD-004 through PD-006 by removing stale architecture counts and implementation
+  measurements, assigning reader composition to Part 05, and reconciling unit identity around the
+  packet-assigned `unit_id` owned by Part 02.

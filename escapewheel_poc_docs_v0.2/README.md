@@ -41,7 +41,7 @@ This table is an informative projection of
 | 02 | Core logical schemas | normative |
 | 03 | Portable physical profile | normative |
 | 04 | Packet catalog | normative |
-| 05 | Validation and import | normative |
+| 05 | Validation, import, and reader operations | normative |
 | 06 | Analysis layer | informative except §§2 and 5, which are normative |
 | 07 | Reference implementation and plan | informative |
 | 08 | Example packet | informative |

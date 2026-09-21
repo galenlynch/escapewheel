@@ -1,4 +1,4 @@
-# Part 05 — Validation and Import
+# Part 05 — Validation, Import, and Reader Operations
 
 Normative.
 
@@ -310,3 +310,65 @@ produce. Two conforming builds of one dataset may record different digests for t
 Where two or more `core.processing_runs` rows share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not. Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
 
 Both are checked at `error` level. A consumer MUST NOT silently choose; on a conforming packet that case is unreachable. A consumer that meets an unresolved alternative is holding a packet that failed validation and reports that. Nothing here forbids a packet holding two sortings of one probe or two curations of one sorting; what it requires is that the packet says which is current.
+
+<a id="ew-reader-operations" data-spec-anchor="canonical"></a>
+## 13. Reader operations
+
+Reader operations apply the logical identities and session scope defined by Part 02. They do not
+widen a packet-local reference or infer identity from a label.
+
+<a id="ew-reader-session-presentation" data-spec-anchor="canonical"></a>
+### 13.1 Session presentation and correlation
+
+A reader presenting one or more packets as one relation MUST carry a session discriminator on
+every session-scoped table and MUST NOT carry one on a table that is not session-scoped. Part 02
+§7.1 defines session scope.
+
+The discriminator MUST distinguish the packet a row came from together with that packet's
+`session_id`. A reader MUST NOT derive it from `session_name` or another `*_name`. A reader SHOULD
+expose a compact integer for each such packet-and-session pair and SHOULD carry `session_name`
+beside it as a non-identifying label.
+
+A reader operation that correlates rows from two or more session-scoped relations MUST preserve
+session scope. Within one packet, a correlation that does not follow a declared reference to a
+packet-unique target MUST compare or match only rows with equal `session_id`. After presenting
+packets together, a correlation MUST compare or match only rows with equal session discriminators.
+If the caller supplies an explicit session restriction, the reader MUST apply it to every
+participating relation and MUST NOT scope only one side of the operation. A declared packet-local
+reference retains its exact key; the reader's discriminator supplies presentation context rather
+than widening that reference.
+
+Within one packet, a reader MUST join a unit-keyed relation to `core.units` through `unit_id`
+alone. Across packets, it MUST include the session discriminator with `unit_id`; it MUST NOT widen
+the packet-local unit reference itself. A reader SHOULD add the discriminator and label as scalar
+projections over `session_id` rather than joining them from `core.sessions`, so an engine can prune
+values a query does not select.
+
+<a id="ew-reader-unit-selection" data-spec-anchor="canonical"></a>
+### 13.2 Exact unit selection and currency
+
+A reader operation given an exact packet-assigned `unit_id` or an explicit table of units MUST
+treat that input as the selected unit or units. It MUST NOT reject that selection solely because
+the packet leaves a sorting or curation preference unresolved, and MUST NOT require
+`sorting_run_id` or `curation_id` as redundant identity arguments.
+
+An operation that offers to choose the packet's current unit set MUST continue to report an
+unresolved alternative rather than silently select or concatenate competing results. Passing the
+result of that guarded operation into an exact spike read remains guarded at the selection step.
+Exact selection does not declare a non-preferred result current and does not make a packet that
+violates §12 conforming.
+
+Where an exact-unit reader operation accepts `session_id`, it MUST use it only as query and
+time-conversion scope. It MUST apply the restriction to every selected spike row and to the clock,
+origin, and attached observation support used for the result, and MUST NOT use it to disambiguate
+`unit_id`. A selection that does not match the named session MUST NOT attach support from another
+session.
+
+<a id="ew-reader-declared-types" data-spec-anchor="canonical"></a>
+### 13.3 Declared identifier types
+
+Where a reader's public API publishes a static type for a parameter, return value, or field that
+directly carries a logical-table identifier, the reader MUST derive the corresponding host-language
+scalar type from the incorporated registry's declared logical type. It MUST NOT infer the type from
+an `_id` suffix or apply a logical-table identifier mapping to a catalog, manifest, vocabulary, or
+discriminator-scope name governed by another declaration.

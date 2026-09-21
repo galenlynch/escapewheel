@@ -70,6 +70,11 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         ["uv", "run", "--project", str(TOOLS), "python", "check.py"],
     ),
     (
+        "spec: unit identity declarations agree",
+        ROOT / "conformance/unit-identity",
+        [sys.executable, "probe.py"],
+    ),
+    (
         "citations: every one resolves, and no part number repeats",
         ROOT / "revisions",
         [sys.executable, "check_citations.py", "--quiet"],

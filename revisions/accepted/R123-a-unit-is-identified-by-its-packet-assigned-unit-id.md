@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-21 |
 | **Based on** | `74844d338f8f65d084ddcac85e90238f456633aa` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -280,7 +280,7 @@ renderings, implementations, fixtures, tests, and human documentation.
 | logical prose and registry | Keep Part 02 §§7.1 and 12.1 as owners; add the conditional resource sentence to §12.1. Registry and rules remain byte-identical. | Registry diff is empty; structural checks show `core.units` primary key and every unit reference; ledger resolves §§3.1–3.3. |
 | physical profiles | Unchanged because no encoding, ordering, partition, or storage rule changes. | No authored or generated Part 03 diff beyond repointed citations, if any. |
 | packet catalog and JSON Schemas | Unchanged because the catalog does not encode a unit key and the manifest session inventory remains external names. | Schema and vendored-schema generation preserve candidate bytes. |
-| validation and import | Rename Part 05 to advertise its reader-operation subject, add the three operational subsections, add no new packet verdict, and retain the prose-only conditional resource obligation pending P6. Reconcile the validator's standalone fixture with registry `0.2.0`. | Existing valid corpus verdict is unchanged; validator fixture and focused suite pass. |
+| validation and import | Rename Part 05 to advertise its reader-operation subject, add the three operational subsections, add no new packet verdict, and retain the prose-only conditional resource obligation pending P6. Reconcile the validator's obsolete unit and spike shapes with registry `0.2.0`. | Existing valid corpus verdict is unchanged; validator fixture and focused suite pass. |
 | extensions | Keep declarations unchanged; correct the Part 08 and extension-test joins to `unit_id`. Defer the four session-reference declarations to P4. | Extension structural checks and executable unit-QC join pass. |
 | reader, writer, validator, adapters | Correct reader selection, alignment, support, run rationale, session filtering, and identifier types. Writer and adapters remain behaviorally unchanged; review their citations. | Focused reader suite; registry-derived symbol-type test; current writer-built packet opened by reader and validated; repoint check. |
 | conformance fixtures and tests | Replace legacy unit shapes in standalone reader and validator fixtures; add exact-selection, session-scope, current-schema integration, and positive/negative type-mapping cases. | Named tests collect and pass; complete 28-packet corpus remains unchanged in verdict. |

@@ -2835,3 +2835,40 @@ where = [{ part = "00", anchor = "ew-specification-candidate" }]
 [clause."R122 §3.9"]
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-normative-references" }]
+
+[clause."R123 §3.1"]
+disposition = "applied"
+where = [
+  { part = "01", anchor = "ew-unit-concept" },
+  { part = "02", anchor = "ew-unit-identity" },
+  { part = "05", anchor = "ew-reader-unit-selection" },
+]
+note = "Unit meaning remains semantic, while packet-local identity and reader unit selection have separate current owners."
+
+[clause."R123 §3.2"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-unit-identity" }]
+note = "A packet carrying core.units also carries the sorting-run and curation-version resources its rows name."
+
+[clause."R123 §3.3"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-session-scope" },
+  { part = "05", anchor = "ew-reader-session-presentation" },
+]
+note = "Part 02 owns logical session scope and Part 05 owns reader presentation and same-session correlation."
+
+[clause."R123 §3.4"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-reader-unit-selection" }]
+note = "Exact unit selection is distinct from choosing the current unit set."
+
+[clause."R123 §3.5"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-reader-declared-types" }]
+note = "Public logical identifier types follow their registry declarations without retyping unrelated names."
+
+[clause."R123 §3.6"]
+disposition = "applied"
+where = [{ part = "00", anchor = "ew-numbered-part-ownership" }]
+note = "Part 00 assigns the semantic, logical, reader-operation, and informative projection subjects to their numbered owners."

@@ -91,6 +91,36 @@ def _registry():
                     }
                 ],
             },
+            "core.clocks": {
+                "columns": [
+                    _col("clock_id", "int32", "required"),
+                    _col("session_id", "int32", "required"),
+                ],
+                "primary_key": ["clock_id"],
+                "references": [
+                    {
+                        "columns": ["session_id"],
+                        "resource": "core.sessions",
+                        "resource_columns": ["session_id"],
+                    }
+                ],
+                "rules": [],
+            },
+            "core.processing_runs": {
+                "columns": [
+                    _col("processing_run_id", "int32", "required"),
+                    _col("session_id", "int32", "required"),
+                ],
+                "primary_key": ["processing_run_id"],
+                "references": [
+                    {
+                        "columns": ["session_id"],
+                        "resource": "core.sessions",
+                        "resource_columns": ["session_id"],
+                    }
+                ],
+                "rules": [],
+            },
             "core.intervals": {
                 "columns": [
                     _col("session_id", "int32", "required"),
@@ -127,7 +157,7 @@ def _registry():
                     # R96 §3.2: the unit names the clock its ticks are counted on.
                     _col("clock_id", "int32", "required"),
                 ],
-                "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                "primary_key": ["unit_id"],
                 "references": [
                     {
                         "columns": ["session_id"],
@@ -181,18 +211,20 @@ def _registry():
                 "columns": [
                     _col("session_id", "int32", "required"),
                     _col("unit_id", "int32", "required"),
-                    _col("sorting_run_id", "int32", "required"),
-                    _col("curation_id", "int32", "required"),
                     _col("t_tick", "int64", "required"),
-                    _col("clock_id", "int32", "required"),
                 ],
-                "primary_key": ["session_id", "unit_id", "sorting_run_id", "curation_id", "t_tick"],
+                "primary_key": ["session_id", "unit_id", "t_tick"],
                 "references": [
                     {
-                        "columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
+                        "columns": ["session_id"],
+                        "resource": "core.sessions",
+                        "resource_columns": ["session_id"],
+                    },
+                    {
+                        "columns": ["unit_id"],
                         "resource": "core.units",
-                        "resource_columns": ["session_id", "unit_id", "sorting_run_id", "curation_id"],
-                    }
+                        "resource_columns": ["unit_id"],
+                    },
                 ],
                 "rules": [],
             },
@@ -255,8 +287,6 @@ def packet_root(tmp_path):
         {
             "session_id": pa.array([SESSION] * 5, type=i32),
             "unit_id": pa.array([UNITS[0]] * 3 + [UNITS[1]] * 2, type=i32),
-            "sorting_run_id": pa.array([SORTING_RUN] * 5, type=i32),
-            "curation_id": pa.array([CURATION] * 5, type=i32),
             "t_tick": pa.array([30000, 39000, 48000, 45000, 66000], type=pa.int64()),
         }
     )
@@ -335,6 +365,16 @@ def two_clock_packet(tmp_path, packet_root):
             "parent_clock_id": pa.array([None, CLOCK_BEHAVIOUR], type=i32),
         }
     )
+    units = pa.table(
+        {
+            "session_id": pa.array([SESSION] * 3, type=i32),
+            "unit_id": pa.array(list(UNITS), type=i32),
+            "sorting_run_id": pa.array([SORTING_RUN] * 3, type=i32),
+            "curation_id": pa.array([CURATION] * 3, type=i32),
+            "quality_label": pa.array(["sua", "mua", "noise"]),
+            "clock_id": pa.array([CLOCK_PROBE, CLOCK_PROBE, CLOCK_BEHAVIOUR], type=i32),
+        }
+    )
     # Probe tick 0 is harp tick 1,000,000, and the probe runs at 30 kHz against harp's 31,250.
     n = 8
     anchors = pa.table(
@@ -349,10 +389,7 @@ def two_clock_packet(tmp_path, packet_root):
         {
             "session_id": pa.array([SESSION] * 3, type=i32),
             "unit_id": pa.array([UNITS[0], UNITS[0], UNITS[2]], type=i32),
-            "sorting_run_id": pa.array([SORTING_RUN] * 3, type=i32),
-            "curation_id": pa.array([CURATION] * 3, type=i32),
             "t_tick": pa.array([30_000, 60_000, 90_000], type=pa.int64()),
-            "clock_id": pa.array([CLOCK_PROBE, CLOCK_PROBE, CLOCK_BEHAVIOUR], type=i32),
         }
     )
     events = pa.table(
@@ -374,6 +411,7 @@ def two_clock_packet(tmp_path, packet_root):
     )
     for resource_id, name, table in (
         ("core.sessions", "sessions", sessions),
+        ("core.units", "units", units),
         ("core.spike_events", "spike_events", spikes),
         ("core.event_streams", "event_streams", event_streams),
         ("core.events", "events", events),

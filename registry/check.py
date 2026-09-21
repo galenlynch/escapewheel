@@ -456,7 +456,7 @@ print(
 )
 
 
-# Part 00 §3.3. Which tables a reader must carry a session discriminator on: the ones reaching
+# Part 02 §7.1. Which tables are session-scoped: the ones reaching
 # `core.sessions` through their declared references. A property of the registry, decided with no
 # packet in hand, and the stricter of the two available tests -- every table carrying a
 # `session_id` reaches the table, while eight reach it without carrying the column, so the graph
@@ -484,7 +484,7 @@ carries = {
     n for n, t in T.items() if any(c["name"] == "session_id" for c in t["columns"])
 }
 check(
-    "every table carrying session_id reaches core.sessions (Part 00 §3.3)",
+    "every table carrying session_id reaches core.sessions (Part 02 §7.1)",
     sorted(carries - scoped),
 )
 # Part 02 §7.1's two halves, neither of which anything checked. The column and the reference are

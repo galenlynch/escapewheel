@@ -500,6 +500,14 @@ owner is clear. Any move that changes what a conforming implementation can do re
 proposal. Any large reorganization uses P0.1's relocation and citation controls; forwarding text
 remains available when a published anchor needs a compatibility period.
 
+**Completed as R123 on 2026-09-21.** Part 02 now solely owns packet-local unit identity and logical
+session scope; Part 05 owns reader presentation, same-session correlation, exact-unit selection,
+and registry-derived public identifier types. The composite statements and stale counts and
+measurements were removed from Part 00 and Part 01, and the reader, fixtures, examples, evidence,
+and current documentation were reconciled. Meaning-preserving cleanup elsewhere in Parts 01 and
+02 remains ordinary placement maintenance; any semantic difference returns through a separate
+proposal.
+
 **Review coverage:** S0, S1, S8, S9, I3, I10, and the unit-identity portion of I9.
 
 ### P3 — Executable declarative-rule language

@@ -22,10 +22,11 @@ from escapewheel_reader.alignment import (
     windows_disjoint,
 )
 
-from .conftest import CLOCK_BEHAVIOUR, CLOCK_PROBE, CURATION, SESSION, SORTING_RUN, UNITS, _resource
+from .conftest import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION, UNITS, _resource
 
 CUES = [100, 200]
 SPIKES = [90, 100, 145, 190, 210]
+CUE_STREAM = 90
 
 
 @pytest.fixture
@@ -45,8 +46,6 @@ def aligned_packet(tmp_path, packet_root):
         {
             "session_id": pa.array([SESSION] * len(SPIKES)),
             "unit_id": pa.array([UNITS[0]] * len(SPIKES)),
-            "sorting_run_id": pa.array([SORTING_RUN] * len(SPIKES)),
-            "curation_id": pa.array([CURATION] * len(SPIKES)),
             "t_tick": pa.array(SPIKES, type=pa.int64()),
             "clock_id": pa.array([CLOCK_BEHAVIOUR] * len(SPIKES)),
             "time_bucket_tick": pa.array([0] * len(SPIKES), type=pa.int64()),
@@ -56,13 +55,13 @@ def aligned_packet(tmp_path, packet_root):
     events = pa.table(
         {
             "session_id": pa.array([SESSION] * len(CUES)),
-            "stream_id": pa.array(["cue_stream"] * len(CUES)),
+            "stream_id": pa.array([CUE_STREAM] * len(CUES)),
             "t_tick": pa.array(CUES, type=pa.int64()),
         }
     )
     streams = pa.table(
         {
-            "event_stream_id": pa.array(["cue_stream"]),
+            "event_stream_id": pa.array([CUE_STREAM]),
             "session_id": pa.array([SESSION]),
             "name": pa.array(["cue"]),
             "event_type": pa.array(["cue"]),
@@ -94,7 +93,7 @@ def test_a_spike_in_two_windows_is_returned_twice(aligned_packet):
 
     by_tick: dict[int, list[int]] = {}
     for row in rows:
-        by_tick.setdefault(row[5], []).append(row[4])
+        by_tick.setdefault(row[3], []).append(row[2])
     assert sorted(by_tick[145]) == sorted(CUES), "the shared spike names both events"
     assert all(len(v) == 1 for t, v in by_tick.items() if t != 145)
 
@@ -103,7 +102,7 @@ def test_disjoint_windows_return_each_spike_once(aligned_packet):
     """Spike 145 falls outside both narrow windows, so four rows and no duplicates."""
     rows = aligned_spikes(aligned_packet, "cue", 30).fetchall()
     assert len(rows) == 4
-    assert sorted(r[5] for r in rows) == [90, 100, 190, 210]
+    assert sorted(r[3] for r in rows) == [90, 100, 190, 210]
 
 
 def test_the_asof_shortcut_returns_the_same_rows(aligned_packet):
@@ -112,18 +111,19 @@ def test_the_asof_shortcut_returns_the_same_rows(aligned_packet):
     half = 30
     reference = con.sql(
         "SELECT s.t_tick, e.t_tick FROM analysis_spike_events s "
-        "JOIN (SELECT e.t_tick FROM core_events e JOIN core_event_streams m "
+        "JOIN (SELECT e.session_id, e.t_tick FROM core_events e JOIN core_event_streams m "
         "ON e.stream_id = m.event_stream_id WHERE m.event_type = 'cue') e "
-        f"ON s.t_tick BETWEEN e.t_tick - {half} AND e.t_tick + {half}"
+        f"ON s.session_id = e.session_id "
+        f"AND s.t_tick BETWEEN e.t_tick - {half} AND e.t_tick + {half}"
     ).fetchall()
     assert windows_disjoint(aligned_packet, "cue", half)
-    got = [(r[5], r[4]) for r in aligned_spikes(aligned_packet, "cue", half).fetchall()]
+    got = [(r[3], r[2]) for r in aligned_spikes(aligned_packet, "cue", half).fetchall()]
     assert sorted(got) == sorted(reference)
 
 
 def test_relative_ticks_are_signed(aligned_packet):
     """A spike before its event has a negative offset, which is what a PSTH bins on."""
-    rows = {r[5]: r[6] for r in aligned_spikes(aligned_packet, "cue", 30).fetchall()}
+    rows = {r[3]: r[4] for r in aligned_spikes(aligned_packet, "cue", 30).fetchall()}
     assert rows[90] == -10
     assert rows[100] == 0
     assert rows[210] == 10
@@ -133,7 +133,7 @@ def test_assignment_gives_each_spike_at_most_one_event(aligned_packet):
     """Where alignment duplicates, assignment chooses -- which is the whole difference."""
     rows = assigned_spikes(aligned_packet, "cue", to="nearest", half_window=60).fetchall()
     assert len(rows) == 5
-    assert len({r[4] for r in rows}) == len(rows), "one row per spike"
+    assert len({r[2] for r in rows}) == len(rows), "one row per spike"
 
 
 def test_preceding_and_nearest_disagree(aligned_packet):
@@ -143,8 +143,8 @@ def test_preceding_and_nearest_disagree(aligned_packet):
     further away than the window, so preceding drops it while nearest keeps it. R91 §3.2 names an
     event by its tick, there being no identifier to name it by.
     """
-    nearest = {r[4]: r[5] for r in assigned_spikes(aligned_packet, "cue", to="nearest", half_window=60).fetchall()}
-    preceding = {r[4]: r[5] for r in assigned_spikes(aligned_packet, "cue", to="preceding", half_window=60).fetchall()}
+    nearest = {r[2]: r[3] for r in assigned_spikes(aligned_packet, "cue", to="nearest", half_window=60).fetchall()}
+    preceding = {r[2]: r[3] for r in assigned_spikes(aligned_packet, "cue", to="preceding", half_window=60).fetchall()}
     assert nearest[190] == CUES[1]
     assert 190 not in preceding
     assert len(nearest) == 5
@@ -183,3 +183,53 @@ def test_events_on_another_clock_are_refused(aligned_packet):
     pq.write_table(moved, path, compression="zstd")
     with pytest.raises(ClockMismatch, match="map one onto the other"):
         aligned_spikes(open_packet(root), "cue", 30)
+
+
+def test_alignment_never_correlates_different_sessions(aligned_packet):
+    """Equal ticks in two sessions yield two same-session pairs, never their cross product."""
+    root = aligned_packet.root
+    other = SESSION + 1
+    pq.write_table(
+        pa.table(
+            {
+                "session_id": pa.array([SESSION, other]),
+                "unit_id": pa.array([UNITS[0], UNITS[1]]),
+                "t_tick": pa.array([100, 100], type=pa.int64()),
+                "clock_id": pa.array([CLOCK_BEHAVIOUR, CLOCK_BEHAVIOUR]),
+                "time_bucket_tick": pa.array([0, 0], type=pa.int64()),
+            }
+        ),
+        root / "tables" / "analysis" / "spike_events.parquet",
+        compression="zstd",
+    )
+    pq.write_table(
+        pa.table(
+            {
+                "session_id": pa.array([SESSION, other]),
+                "stream_id": pa.array([CUE_STREAM, CUE_STREAM + 1]),
+                "t_tick": pa.array([100, 100], type=pa.int64()),
+            }
+        ),
+        root / "tables" / "core" / "events.parquet",
+        compression="zstd",
+    )
+    pq.write_table(
+        pa.table(
+            {
+                "event_stream_id": pa.array([CUE_STREAM, CUE_STREAM + 1]),
+                "session_id": pa.array([SESSION, other]),
+                "name": pa.array(["cue-a", "cue-b"]),
+                "event_type": pa.array(["cue", "cue"]),
+                "clock_id": pa.array([CLOCK_BEHAVIOUR, CLOCK_BEHAVIOUR]),
+            }
+        ),
+        root / "tables" / "core" / "event_streams.parquet",
+        compression="zstd",
+    )
+    packet = open_packet(root)
+    assert windows_disjoint(packet, "cue", 1)
+    assert {(row[0], row[3], row[2]) for row in aligned_spikes(packet, "cue", 0).fetchall()} == {
+        (SESSION, 100, 100),
+        (other, 100, 100),
+    }
+    assert [row[0] for row in aligned_spikes(packet, "cue", 0, session_id=other).fetchall()] == [other]

@@ -97,14 +97,14 @@ def _empty(names: tuple[str, ...]) -> pa.Table:
     return pa.table({f.name: pa.array([], type=f.type) for f in fields})
 
 
-def clock_windows(packet: Any, *, session_id: str | None = None, clock_id: str | None = None) -> pa.Table:
+def clock_windows(packet: Any, *, session_id: int | None = None, clock_id: int | None = None) -> pa.Table:
     """Return the intervals over which each clock was observing, in that clock's own ticks.
 
     Parameters
     ----------
     packet : Packet
         The packet to read.
-    session_id, clock_id : str, optional
+    session_id, clock_id : int, optional
         Restrict to one session or one clock.
 
     Returns
@@ -116,7 +116,7 @@ def clock_windows(packet: Any, *, session_id: str | None = None, clock_id: str |
     if not _has(packet, CLOCK_INTERVALS):
         return pa.table(
             {
-                n: pa.array([], type=pa.string() if n.endswith("id") else pa.int64())
+                n: pa.array([], type=pa.int32() if n.endswith("id") else pa.int64())
                 for n in ("session_id", "clock_id", "start_tick", "stop_tick")
             }
         )
@@ -141,18 +141,17 @@ def _resolve(own: pa.Table, inherited: pa.Table, key: tuple[str, ...]) -> pa.Tab
     return pa.concat_tables([own, inherited.take(pa.array(keep, type=pa.int64()))])
 
 
-def unit_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
+def unit_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
     """Return each unit's observation windows, its own where declared and its clock's otherwise.
 
-    A unit reaches its clock through its sorting run (R38 §2.5), which is why
-    `core.sorting_runs.clock_id` exists: before it, a unit's clock was a naming convention no
-    rule and no reader could follow.
+    A unit declares the clock on which its ticks are counted. Observation support belongs to
+    the session carrying that unit, so inherited windows match both the session and the clock.
 
     Parameters
     ----------
     packet : Packet
         The packet to read.
-    session_id : str, optional
+    session_id : int, optional
         Restrict to one session.
 
     Returns
@@ -168,7 +167,7 @@ def unit_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
     if not _has(packet, "core.units"):
         return _empty(_UNIT_KEY)
     units = packet.table("core.units", columns=[*_UNIT_KEY, "clock_id"], session_id=session_id)
-    windows: dict[tuple[str | None, str | None], list[tuple[int, int]]] = {}
+    windows: dict[tuple[int | None, int | None], list[tuple[int, int]]] = {}
     for row in clock_windows(packet, session_id=session_id).to_pylist():
         windows.setdefault((row["session_id"], row["clock_id"]), []).append((row["start_tick"], row["stop_tick"]))
 
@@ -203,14 +202,14 @@ def unit_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
     return _resolve(own, inherited, _UNIT_KEY)
 
 
-def stream_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
+def stream_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
     """Return each event stream's observation windows, declared or inherited from its clock.
 
     Parameters
     ----------
     packet : Packet
         The packet to read.
-    session_id : str, optional
+    session_id : int, optional
         Restrict to one session.
 
     Returns
@@ -225,7 +224,7 @@ def stream_windows(packet: Any, *, session_id: str | None = None) -> pa.Table:
     streams = packet.table(
         "core.event_streams", columns=["event_stream_id", "session_id", "clock_id"], session_id=session_id
     ).to_pylist()
-    windows: dict[tuple[str | None, str | None], list[tuple[int, int]]] = {}
+    windows: dict[tuple[int | None, int | None], list[tuple[int, int]]] = {}
     for row in clock_windows(packet, session_id=session_id).to_pylist():
         windows.setdefault((row["session_id"], row["clock_id"]), []).append((row["start_tick"], row["stop_tick"]))
 
