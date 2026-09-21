@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | `define-a-portable-tier-2-rule-language.md` | 5,326 | promotion authorized; acceptance appraisal pending | structural; five-anchor bootstrap required before final appraisal |
