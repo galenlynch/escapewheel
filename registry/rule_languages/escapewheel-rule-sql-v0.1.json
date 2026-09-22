@@ -1,0 +1,60 @@
+{
+  "$schema": "https://escapewheel.org/schemas/rule-language/0.1.0",
+  "id": "escapewheel-rule-sql-v0.1",
+  "basis": {
+    "sql_framework": {
+      "standard": "ISO/IEC 9075-1:2023",
+      "corrigendum": "ISO/IEC 9075-1:2023/Cor 1:2026"
+    },
+    "sql_foundation": {
+      "standard": "ISO/IEC 9075-2:2023",
+      "corrigendum": "ISO/IEC 9075-2:2023/Cor 1:2026"
+    },
+    "floating_point": "IEEE 754-2019"
+  },
+  "iso_feature_dependencies": [
+    "E011-01", "E011-02", "E011-03", "E011-04", "E011-05", "E011-06",
+    "E021-02", "E021-03", "E021-12", "E031-01", "E031-02", "E051",
+    "E051-01", "E051-02", "E051-05", "E051-06", "E051-08", "E051-09",
+    "E061", "E061-01", "E061-02", "E061-03", "E061-04", "E061-06",
+    "E061-08", "E061-09", "E061-11", "E061-13", "E061-14", "E071-01",
+    "E071-02", "E071-05", "E071-06", "E091-02", "E091-03", "E091-04",
+    "E091-07", "E131", "E161", "F041-01", "F041-02", "F041-03",
+    "F041-07", "F041-08", "F051-01", "F051-03", "F051-04", "F052",
+    "F201", "F261-02", "F261-04", "F411", "F441", "F471", "F561",
+    "F591", "F690", "T031", "T061", "T071", "T121", "T131", "T151",
+    "T441", "T611", "T612", "T615"
+  ],
+  "contract_clauses": [
+    "ew-tier-2-language-selection",
+    "ew-tier-2-query-profile",
+    "ew-tier-2-relation-environment",
+    "ew-tier-2-type-binding",
+    "ew-tier-2-deterministic-semantics",
+    "ew-tier-2-bounded-recursion",
+    "ew-tier-2-finding-relation",
+    "ew-tier-2-evaluation-outcomes"
+  ],
+  "type_bindings": {
+    "bool": "BOOLEAN",
+    "date": "DATE",
+    "float32": "REAL",
+    "float64": "DOUBLE PRECISION",
+    "int32": "INTEGER",
+    "int64": "BIGINT",
+    "json_string": "CHARACTER VARYING",
+    "string": "CHARACTER VARYING",
+    "timestamp": "TIMESTAMP(6) WITH TIME ZONE"
+  },
+  "execution": {
+    "approximate_arithmetic": "IEEE 754-2019 roundTiesToEven",
+    "approximate_order": "negative-infinity finite positive-infinity nan",
+    "character_order": "unicode-scalar-value",
+    "exact_arithmetic": "checked-no-wrap",
+    "identifier_resolution": "exact-lower-snake-case",
+    "interval_day_seconds": 86400,
+    "null_order": "last",
+    "result_model": "typed-unordered-bag",
+    "time_zone": "UTC"
+  }
+}

@@ -20,6 +20,7 @@ def _document(**tables):
         "$schema": json.loads(SCHEMA.read_text())["$id"],
         "registry_version": "0.1.0",
         "logical_standard_version": "0.1",
+        "rule_language": "escapewheel-rule-sql-v0.1",
         "extension_id": "demo",
         "extends": "escapewheel-logical-v0.1",
         "tables": {

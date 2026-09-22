@@ -97,12 +97,35 @@ check(
     ],
 )
 check(
-    "registry meta-schema identity is 0.2.0",
-    [] if META_ID == "https://escapewheel.org/schemas/registry/0.2.0" else [META_ID],
+    "registry meta-schema identity is 0.3.0",
+    [] if META_ID == "https://escapewheel.org/schemas/registry/0.3.0" else [META_ID],
 )
 check(
-    "core registry version is 0.2.0",
-    [] if REG.get("registry_version") == "0.2.0" else [REG.get("registry_version")],
+    "core registry version is 0.3.0",
+    [] if REG.get("registry_version") == "0.3.0" else [REG.get("registry_version")],
+)
+EXPECTED_EXTENSION_VERSIONS = {
+    "aind_opto": "0.3.0",
+    "aind_unit_qc": "0.2.0",
+    "dynamic_foraging": "0.4.0",
+    "vr_foraging": "0.3.0",
+}
+check(
+    "shipped extension registry versions match Part 02",
+    [
+        f"{name}: {document.get('registry_version')}"
+        for name, document in EXT.items()
+        if document.get("registry_version") != EXPECTED_EXTENSION_VERSIONS.get(name)
+    ]
+    + sorted(set(EXPECTED_EXTENSION_VERSIONS) - set(EXT)),
+)
+check(
+    "every shipped registry selects the incorporated rule language",
+    [
+        name
+        for name, document in {"core": REG, **EXT}.items()
+        if document.get("rule_language") != "escapewheel-rule-sql-v0.1"
+    ],
 )
 
 check(
@@ -854,6 +877,20 @@ try:
         if _proto.exists()
         else [],
     )
+    _language_schema = json.loads((HERE / "rule_language.schema.json").read_text())
+    jsonschema.Draft202012Validator.check_schema(_language_schema)
+    _language = json.loads(
+        (HERE / "rule_languages/escapewheel-rule-sql-v0.1.json").read_text()
+    )
+    check(
+        "the incorporated rule-language profile validates against its schema",
+        [
+            f"{list(e.path)[:4]} {e.message[:60]}"
+            for e in jsonschema.Draft202012Validator(_language_schema).iter_errors(
+                _language
+            )
+        ],
+    )
 except ImportError:
     print("skip  schema validation (jsonschema not available)")
 
@@ -872,24 +909,27 @@ DDL = {
 }
 try:
     import duckdb
+    from escapewheel_validator.rule_language import RuleProfileError, check_rule
 
     con = duckdb.connect()
+    con.sql("SET TimeZone = 'UTC'")
+    for namespace in sorted({name.split(".", 1)[0] for name in ALL}):
+        con.sql(f"CREATE SCHEMA {namespace}")
     for n, t_ in ALL.items():
         cols = ", ".join(f'"{c["name"]}" {DDL[c["type"]]}' for c in t_["columns"])
-        con.sql(f"CREATE TABLE {n.replace('.', '_')} ({cols})")
-    con.sql(
-        "CREATE TABLE manifest_sessions (session_id VARCHAR)"
-    )  # supplied by the shim
+        con.sql(f"CREATE TABLE {n} ({cols})")
     broken = []
-    for n, t_ in ALL.items():
-        for r in t_["rules"]:
-            try:
-                con.sql(r["sql"]).fetchall()
-            except duckdb.Error as e:
-                broken.append((r["id"], str(e).splitlines()[0][:70]))
-    check("every Tier 2 rule is executable SQL", broken)
+    for document in [REG, *EXT.values()]:
+        for t_ in document["tables"].values():
+            for r in t_["rules"]:
+                try:
+                    check_rule(r["sql"], document, core_resources=REG)
+                    con.sql(r["sql"]).fetchall()
+                except (RuleProfileError, duckdb.Error) as e:
+                    broken.append((r["id"], str(e).splitlines()[0][:70]))
+    check("every Tier 2 rule conforms and executes against empty tables", broken)
     print(
-        f"      {sum(len(t_['rules']) for t_ in ALL.values())} rules executed against "
+        f"      {sum(len(t_['rules']) for t_ in ALL.values())} rules checked against "
         f"{len(ALL)} empty tables"
     )
 except ImportError:

@@ -219,6 +219,7 @@
 "9.1" = "Findings"
 "9.2" = "Error policy"
 "9.3" = "Comparison against a prior packet"
+"9.4" = "Incomplete validation"
 "10" = "Two conformance classes"
 "11" = "Minimum acceptance criteria"
 "12" = "Alternatives are resolved before a commit"
@@ -296,6 +297,17 @@
 "4.1" = "An endpoint plateaus at about 120 requests a second"
 "4.2" = "One file beats a partitioned prefix on the engine that matters"
 "5" = "The Zarr codec floor is version-specific"
+
+["11"]
+"1" = "Language identity, authority, and selection"
+"2" = "Query profile"
+"3" = "Relation environment, names, and dependencies"
+"4" = "Logical type binding and general expression semantics"
+"5" = "Numeric, timestamp, and character semantics"
+"6" = "Bounded recursive common table expressions"
+"7" = "Finding-relation semantics"
+"8" = "Evaluation outcomes"
+"9" = "Normative references"
 
 [anchor.ew-abstraction-levels]
 part = "00"
@@ -379,6 +391,12 @@ aliases = []
 part = "00"
 section = "3.5"
 title = "Iceberg catalog"
+aliases = []
+
+[anchor.ew-incomplete-validation]
+part = "05"
+section = "9.4"
+title = "Incomplete validation"
 aliases = []
 
 [anchor.ew-incremental-revalidation]
@@ -513,6 +531,12 @@ section = "3.6"
 title = "Resource identity"
 aliases = []
 
+[anchor.ew-rule-language-normative-references]
+part = "11"
+section = "9"
+title = "Normative references"
+aliases = []
+
 [anchor.ew-semantic-standard]
 part = "00"
 section = "3.1.1"
@@ -549,10 +573,58 @@ section = "2.1"
 title = "Specification candidate and release"
 aliases = []
 
+[anchor.ew-tier-2-bounded-recursion]
+part = "11"
+section = "6"
+title = "Bounded recursive common table expressions"
+aliases = []
+
+[anchor.ew-tier-2-deterministic-semantics]
+part = "11"
+section = "5"
+title = "Numeric, timestamp, and character semantics"
+aliases = []
+
+[anchor.ew-tier-2-evaluation-outcomes]
+part = "11"
+section = "8"
+title = "Evaluation outcomes"
+aliases = []
+
+[anchor.ew-tier-2-finding-relation]
+part = "11"
+section = "7"
+title = "Finding-relation semantics"
+aliases = []
+
+[anchor.ew-tier-2-language-selection]
+part = "11"
+section = "1"
+title = "Language identity, authority, and selection"
+aliases = []
+
+[anchor.ew-tier-2-query-profile]
+part = "11"
+section = "2"
+title = "Query profile"
+aliases = []
+
+[anchor.ew-tier-2-relation-environment]
+part = "11"
+section = "3"
+title = "Relation environment, names, and dependencies"
+aliases = []
+
 [anchor.ew-tier-2-rules]
 part = "02"
 section = "10.2"
 title = "Tier 2: declared"
+aliases = []
+
+[anchor.ew-tier-2-type-binding]
+part = "11"
+section = "4"
+title = "Logical type binding and general expression semantics"
 aliases = []
 
 [anchor.ew-tier-2-validation]

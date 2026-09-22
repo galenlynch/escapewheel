@@ -1,8 +1,9 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.2.0",
-  "registry_version": "0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.3.0",
+  "registry_version": "0.2.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
+  "rule_language": "escapewheel-rule-sql-v0.1",
   "tables": {
     "core.sessions": {
       "columns": [
@@ -193,7 +194,7 @@
           "id": "core.intervals.interval_valid",
           "level": "error",
           "message": "stop_tick precedes start_tick",
-          "sql": "SELECT session_id, interval_kind, interval_id, start_tick, stop_tick FROM core_intervals WHERE stop_tick < start_tick"
+          "sql": "SELECT session_id, interval_kind, interval_id, start_tick, stop_tick FROM core.intervals WHERE stop_tick < start_tick"
         }
       ]
     }

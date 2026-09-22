@@ -1,0 +1,282 @@
+{
+  "version": 1,
+  "profile": "escapewheel-rule-sql-v0.1",
+  "vectors": [
+    {
+      "id": "parsed-base-resources-ignore-alias-literal-and-comment",
+      "mode": "accept",
+      "inputs": {
+        "core.units": {
+          "primary_key": ["unit_id"],
+          "columns": [{"name": "unit_id", "type": "int64"}],
+          "rows": []
+        }
+      },
+      "query": "SELECT text.unit_id FROM core.units AS text WHERE 'analysis.spike_events' <> '-- core.sessions' -- core.clocks",
+      "expected_resources": ["core.units"],
+      "expected_result_names": ["unit_id"],
+      "row_order_ignored": true
+    },
+    {
+      "id": "qualified-names-remain-distinct",
+      "mode": "execute",
+      "inputs": {
+        "a.b_c": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": [[1]]},
+        "a_b.c": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": [[2]]}
+      },
+      "query": "SELECT value FROM a.b_c UNION ALL SELECT value FROM a_b.c",
+      "expected_resources": ["a.b_c", "a_b.c"],
+      "expected_result_names": ["value"],
+      "expected_rows": [["1"], ["2"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "duplicate-result-rows-remain-a-bag",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {"primary_key": null, "columns": [{"name": "value", "type": "int32"}], "rows": [[7], [7]]}
+      },
+      "query": "SELECT value FROM core.measurements",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["value"],
+      "expected_rows": [["7"], ["7"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "absent-resource-is-a-typed-empty-relation",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int64"}], "rows": []}
+      },
+      "query": "SELECT value FROM core.measurements",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["value"],
+      "expected_rows": [],
+      "row_order_ignored": true
+    },
+    {
+      "id": "fractional-division-is-explicit-double",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int64"}], "rows": [[1]]}
+      },
+      "query": "SELECT value / CAST(2 AS DOUBLE PRECISION) AS quotient FROM core.measurements",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["quotient"],
+      "expected_rows": [["0.5"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "ordered-set-median-is-binary64",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int64"}], "rows": [[1], [2], [9], [10]]}
+      },
+      "query": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY value) AS median_value FROM core.measurements",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["median_value"],
+      "expected_rows": [["5.5"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "day-interval-is-an-elapsed-day",
+      "mode": "execute-time-zones",
+      "inputs": {
+        "core.times": {
+          "primary_key": ["instant"],
+          "columns": [{"name": "instant", "type": "timestamp"}],
+          "rows": [["2026-03-08T10:30:00+00:00"]]
+        }
+      },
+      "query": "SELECT instant + INTERVAL '1' DAY AS next_instant FROM core.times",
+      "expected_resources": ["core.times"],
+      "expected_result_names": ["next_instant"],
+      "expected_rows": [["2026-03-09 10:30:00+00:00"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "unicode-scalar-order",
+      "mode": "execute",
+      "inputs": {
+        "core.labels": {"primary_key": ["label"], "columns": [{"name": "label", "type": "string"}], "rows": [["😀"], ["é"]]}
+      },
+      "query": "SELECT MIN(label) AS first_label FROM core.labels",
+      "expected_resources": ["core.labels"],
+      "expected_result_names": ["first_label"],
+      "expected_rows": [["é"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "approximate-zero-division-keeps-ieee-results",
+      "mode": "execute",
+      "inputs": {
+        "core.ratios": {
+          "primary_key": ["numerator"],
+          "columns": [{"name": "numerator", "type": "float64"}, {"name": "denominator", "type": "float64"}],
+          "rows": [[1.0, 0.0], [-1.0, 0.0], [0.0, 0.0]]
+        }
+      },
+      "query": "SELECT numerator / CAST(denominator AS DOUBLE PRECISION) AS quotient FROM core.ratios",
+      "expected_resources": ["core.ratios"],
+      "expected_result_names": ["quotient"],
+      "expected_rows": [["Infinity"], ["-Infinity"], ["NaN"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "approximate-exponent-markers",
+      "mode": "execute",
+      "inputs": {},
+      "query": "SELECT 1e0 AS lower_exponent, 1E0 AS upper_exponent",
+      "expected_resources": [],
+      "expected_result_names": ["lower_exponent", "upper_exponent"],
+      "expected_rows": [["1.0", "1.0"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "nan-and-finite-predicates",
+      "mode": "execute",
+      "inputs": {
+        "core.ratios": {
+          "primary_key": ["numerator"],
+          "columns": [{"name": "numerator", "type": "float64"}, {"name": "denominator", "type": "float64"}],
+          "rows": [[0.0, 0.0], [1.0, 2.0]]
+        }
+      },
+      "query": "SELECT isnan(numerator / CAST(denominator AS DOUBLE PRECISION)) AS is_nan, isfinite(numerator / CAST(denominator AS DOUBLE PRECISION)) AS is_finite FROM core.ratios",
+      "expected_resources": ["core.ratios"],
+      "expected_result_names": ["is_nan", "is_finite"],
+      "expected_rows": [["True", "False"], ["False", "True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "ddl-is-rejected",
+      "mode": "reject",
+      "inputs": {},
+      "query": "CREATE TABLE stolen(value INTEGER)",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "multiple-statements-are-rejected",
+      "mode": "reject",
+      "inputs": {},
+      "query": "SELECT 1 AS value; SELECT 2 AS value",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "filesystem-table-function-is-rejected",
+      "mode": "reject",
+      "inputs": {},
+      "query": "SELECT value FROM read_csv('/etc/passwd') AS stolen",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "undeclared-system-relation-is-rejected",
+      "mode": "reject",
+      "inputs": {},
+      "query": "SELECT table_name FROM information_schema.tables",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "flattened-relation-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.units": {"primary_key": ["unit_id"], "columns": [{"name": "unit_id", "type": "int64"}], "rows": []}
+      },
+      "query": "SELECT unit_id FROM core_units",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "duplicate-result-names-are-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": []}
+      },
+      "query": "SELECT value, value FROM core.measurements",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "unaliased-derived-table-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": []}
+      },
+      "query": "SELECT value FROM (SELECT value FROM core.measurements)",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "derived-alias-without-as-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": []}
+      },
+      "query": "SELECT value FROM (SELECT value FROM core.measurements) values_alias WHERE value > 0",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "explicit-null-placement-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": []}
+      },
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY value NULLS LAST) AS row_number FROM core.measurements",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "case-folded-identifier-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": []}
+      },
+      "query": "SELECT Value FROM core.measurements",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "unknown-routine-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": []}
+      },
+      "query": "SELECT random() AS value FROM core.measurements",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "implicit-fractional-division-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int64"}], "rows": []}
+      },
+      "query": "SELECT value / 2 AS quotient FROM core.measurements",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "unsafe-exact-subtraction-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.measurements": {"primary_key": ["left_value"], "columns": [{"name": "left_value", "type": "int64"}, {"name": "right_value", "type": "int64"}], "rows": []}
+      },
+      "query": "SELECT left_value - right_value AS difference FROM core.measurements",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "unbounded-recursion-is-rejected",
+      "mode": "reject",
+      "inputs": {},
+      "query": "WITH RECURSIVE up(depth) AS (SELECT 0 UNION ALL SELECT depth + 1 FROM up) SELECT depth FROM up",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    }
+  ]
+}

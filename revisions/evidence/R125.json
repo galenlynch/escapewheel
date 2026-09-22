@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "revision": "R125",
+  "based_on": "9639bbea358eda57b1f36995429d7ed6a9e7904a",
+  "clauses": {
+    "R125 §3.1": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/00_architecture.md", "anchor": "ew-numbered-part-ownership"},
+        {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-registry-document"},
+        {"path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md", "anchor": "ew-tier-2-language-selection"},
+        {"path": "registry/registry.schema.json", "pointer": "/properties/rule_language"},
+        {"path": "registry/rule_languages/escapewheel-rule-sql-v0.1.json", "pointer": "/id"}
+      ],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/README.md", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "rules: portable language vectors and shipped rules", "id": "incorporated profile and anchors"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/rule_language.py", "registry/build.py"]},
+      "documentation": {"paths": ["registry/README.md", "escapewheel-validator/README.md"]}
+    },
+    "R125 §3.2": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md", "anchor": "ew-tier-2-query-profile"},
+        {"path": "registry/rule_language.schema.json", "pointer": "/properties"},
+        {"path": "registry/rule_languages/escapewheel-rule-sql-v0.1.json", "pointer": "/iso_feature_dependencies"}
+      ],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md", "escapewheel-validator/src/escapewheel_validator/schemas/escapewheel-rule-sql-v0.1.json"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "rules: portable language vectors and shipped rules", "id": "machine-readable rule-language vectors"}, {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_rule_language.py::test_maintained_profile_validates_and_vendored_copies_are_exact"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/rule_language.py"]},
+      "documentation": {"paths": ["escapewheel-validator/CONTRIBUTING.md"]}
+    },
+    "R125 §3.3": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md", "anchor": "ew-tier-2-relation-environment"}
+      ],
+      "projections": {"paths": ["registry/logical_schemas.json", "registry/extensions/dynamic_foraging.json"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "rules: portable language vectors and shipped rules", "id": "121 shipped rules statically check, bind, and execute empty"}, {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_rule_language.py::test_cross_extension_relation_is_rejected_before_execution"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/rule_language.py", "escapewheel-validator/src/escapewheel_validator/validator.py"]},
+      "documentation": {"paths": ["registry/README.md", "escapewheel-validator/README.md"]}
+    },
+    "R125 §3.4": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md", "anchor": "ew-tier-2-type-binding"},
+        {"path": "registry/rule_languages/escapewheel-rule-sql-v0.1.json", "pointer": "/type_bindings"}
+      ],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md", "escapewheel-validator/src/escapewheel_validator/schemas/escapewheel-rule-sql-v0.1.json"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "rules: portable language vectors and shipped rules", "id": "machine-readable rule-language vectors"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/rule_language.py", "escapewheel-validator/src/escapewheel_validator/validator.py"]},
+      "documentation": {"paths": ["escapewheel-validator/README.md"]}
+    },
+    "R125 §3.5": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md", "anchor": "ew-tier-2-deterministic-semantics"},
+        {"path": "registry/rule_languages/escapewheel-rule-sql-v0.1.json", "pointer": "/execution"}
+      ],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md", "registry/logical_schemas.json"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "rules: portable language vectors and shipped rules", "id": "machine-readable rule-language vectors"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/validator.py", "conformance/rule-language/probe.py"]},
+      "documentation": {"paths": ["escapewheel-validator/README.md"]}
+    },
+    "R125 §3.6": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md", "anchor": "ew-tier-2-bounded-recursion"}
+      ],
+      "projections": {"paths": ["registry/logical_schemas.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "rules: portable language vectors and shipped rules", "id": "121 shipped rules statically check, bind, and execute empty"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/rule_language.py"]},
+      "documentation": {"paths": ["escapewheel-validator/CONTRIBUTING.md"]}
+    },
+    "R125 §3.7": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-tier-2-rules"},
+        {"path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md", "anchor": "ew-tier-2-finding-relation"}
+      ],
+      "projections": {"paths": ["registry/logical_schemas.json", "registry/tables.md", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "rules: portable language vectors and shipped rules", "id": "machine-readable rule-language vectors"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/rule_language.py", "escapewheel-validator/src/escapewheel_validator/validator.py"]},
+      "documentation": {"paths": ["registry/README.md", "escapewheel-validator/README.md"]}
+    },
+    "R125 §3.8": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md", "anchor": "ew-incomplete-validation"},
+        {"path": "escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md", "anchor": "ew-extension-verdicts"},
+        {"path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md", "anchor": "ew-tier-2-evaluation-outcomes"}
+      ],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_rule_language.py::test_invalid_rule_is_not_executed_or_reported_as_a_packet_finding"}, {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_rule_language.py::test_unsupported_language_is_distinct_from_a_finding"}, {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_rule_language.py::test_engine_failure_is_incomplete_not_a_packet_finding"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/validator.py", "escapewheel-validator/src/escapewheel_validator/scripts/cli.py"]},
+      "documentation": {"paths": ["escapewheel-validator/README.md"]}
+    },
+    "R125 §3.9": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md", "anchor": "ew-validation-shim"}
+      ],
+      "projections": {"paths": ["registry/logical_schemas.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_conforming_packet_passes"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/validator.py", "registry/rules.json"]},
+      "documentation": {"paths": ["escapewheel-validator/README.md"]}
+    },
+    "R125 §3.10": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-incremental-revalidation"}
+      ],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_recheck_narrows_the_rules_that_run"}, {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_resource_text_in_a_comment_is_not_a_dependency"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/generate.py", "escapewheel-validator/src/escapewheel_validator/rule_language.py"]},
+      "documentation": {"paths": ["escapewheel-validator/CONTRIBUTING.md"]}
+    },
+    "R125 §3.11": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-registry-self-description"},
+        {"path": "registry/logical_schemas.json", "pointer": "/registry_version"},
+        {"path": "registry/logical_schemas.json", "pointer": "/rule_language"},
+        {"path": "registry/extensions/aind_opto.json", "pointer": "/registry_version"},
+        {"path": "registry/extensions/aind_unit_qc.json", "pointer": "/registry_version"},
+        {"path": "registry/extensions/dynamic_foraging.json", "pointer": "/registry_version"},
+        {"path": "registry/extensions/vr_foraging.json", "pointer": "/registry_version"}
+      ],
+      "projections": {"paths": ["registry/tables.md", "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "registry: structural checks", "id": "every shipped registry selects the incorporated rule language"}, {"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"}]},
+      "implementations": {"paths": ["registry/build.py", "escapewheel-writer/src/escapewheel_writer/writer.py"]},
+      "documentation": {"paths": ["registry/README.md", "escapewheel-validator/README.md"]}
+    }
+  }
+}

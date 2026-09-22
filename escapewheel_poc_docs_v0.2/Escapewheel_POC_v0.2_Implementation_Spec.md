@@ -55,6 +55,7 @@ This table is an informative projection of
 | 08 | Example packet | informative |
 | 09 | Metadata minimalism and extensions | normative |
 | 10 | Performance notes | informative |
+| 11 | Tier 2 rule language | normative |
 
 A consolidated convenience rendering is provided as
 `Escapewheel_POC_v0.2_Implementation_Spec.md`. It is generated from this entry point and the
@@ -70,10 +71,10 @@ candidate is versioned independently of the identifiers a packet records.
 | `profile_id` | `escapewheel-portable-v0.1` | [Part 03 §1](03_portable_physical_profile.md#ew-portable-profile-scope) |
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](02_core_logical_schemas.md#ew-core-logical-schema-scope) |
-| `registry_version` | `0.2.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description) |
+| `registry_version` | `0.3.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description) |
 
 Part 02 §9.2 defines registry self-description and compatibility. Current development packets
-use core registry `0.2.0` and are regenerated rather than treated as compatible with the earlier
+use core registry `0.3.0` and are regenerated rather than treated as compatible with the earlier
 development shape. Part 04 §3 defines the catalog fields that record these identifiers.
 
 ## 5. Informative references
@@ -86,6 +87,8 @@ lists shared external authorities. References invoked only by the portable profi
 [Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references), and the
 SHA-256 authority invoked by the packet catalog is in
 [Part 04 §10](04_packet_catalog.md#ew-packet-catalog-normative-references).
+The SQL and IEEE authorities invoked by the portable Tier 2 language are in
+[Part 11 §9](11_tier_2_rule_language.md#ew-rule-language-normative-references).
 
 <!-- END README.md -->
 
@@ -468,6 +471,7 @@ MUST make the candidate inconsistent.
 | 08 | executable packet example | informative |
 | 09 | extension boundaries, namespace ownership, extension declarations, and extension independence | normative |
 | 10 | performance measurements and rationale | informative |
+| 11 | portable language and execution semantics for registry-declared validation rules | normative |
 
 An informative section MUST NOT be the sole statement of an obligation. A part MUST NOT state a
 second version of a rule another part owns. It MAY cite the owner, or summarize the rule only when
@@ -478,13 +482,15 @@ The numbered parts MUST observe this dependency direction:
 1. Part 01 defines meaning without selecting a resource shape or storage technology.
 2. Part 02 and an expressly incorporated registry represent Part 01 concepts as logical resources,
    identities, relationships, and constraints without selecting a storage technology.
-3. Part 03 maps logical resources to bytes under a profile without changing their logical identity
+3. Part 11 maps Part 02's declared resources and types into portable rule evaluation without
+   redefining logical declarations or Part 05's validation and reporting workflow.
+4. Part 03 maps logical resources to bytes under a profile without changing their logical identity
    or semantic meaning.
-4. Part 04 binds concrete packet resources to the semantic, logical, registry, and profile
+5. Part 04 binds concrete packet resources to the semantic, logical, registry, and profile
    identifiers that govern them without redefining those contracts.
-5. Part 05 specifies how writers, readers, and validators construct and judge instances under the
+6. Part 05 specifies how writers, readers, and validators construct and judge instances under the
    upstream contracts rather than becoming a second owner of those contracts.
-6. Part 09 permits namespaced extension declarations under the same applicable semantic, logical,
+7. Part 09 permits namespaced extension declarations under the same applicable semantic, logical,
    physical, catalog, and conformance boundaries without altering core.
 
 A writer MUST interpret adapter declarations and output under the owning numbered parts and
@@ -543,8 +549,8 @@ The application column states the extent to which the specification invokes each
 | [RFC 3986](https://www.rfc-editor.org/info/rfc3986) | exact | URI syntax |
 | [JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core) and [Validation](https://json-schema.org/draft/2020-12/json-schema-validation) | Draft 2020-12 | incorporated JSON Schemas |
 
-The missing-authority release block applies currently to the unspecified Tier 2 rule language and
-to any required Zarr codec configuration or binary behavior not determined by the authorities in
+The missing-authority release block applies currently to any required Zarr codec configuration or
+binary behavior not determined by the authorities in
 [Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references).
 
 <!-- END 00_architecture.md -->
@@ -1194,7 +1200,9 @@ No rule checks either half, and none is added. Nothing structural tells a code f
 ### 9.1 The schema is one document
 
 Table structure and validation rules are carried in one JSON document. It declares the semantic and
-logical standard versions, its own registry version, and its tables. The document MUST NOT contain
+logical standard versions, its own registry version, one document-wide `rule_language`, and its
+tables. The selected language applies atomically to every Tier 2 rule. A rule MUST NOT repeat or
+override it, and one registry document MUST NOT mix languages. The document MUST NOT contain
 registry-build `derived_from` at its root or `since` on a table or column declaration. The root,
 table, and column objects are closed, so any such property makes the document invalid. This rule
 does not apply to the packet catalog's resource-lineage `derived_from`.
@@ -1205,8 +1213,12 @@ does not apply to the packet catalog's resource-lineage `derived_from`.
 A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on. A packet whose embedded registry disagrees with its recorded version is invalid.
 
 A core or extension registry document published with this specification MUST carry a top-level
-`$schema` equal to `https://escapewheel.org/schemas/registry/0.2.0`. The registry meta-schema MUST
-carry that exact value as its `$id`. The core registry's `registry_version` MUST be exactly `0.2.0`.
+`$schema` equal to `https://escapewheel.org/schemas/registry/0.3.0`. The registry meta-schema MUST
+carry that exact value as its `$id`. The core registry's `registry_version` MUST be exactly `0.3.0`.
+A registry published with this specification MUST select
+`rule_language: escapewheel-rule-sql-v0.1`. The shipped extension versions are `0.3.0` for
+`aind_opto`, `0.2.0` for `aind_unit_qc`, `0.4.0` for `dynamic_foraging`, and `0.3.0` for
+`vr_foraging`.
 A validator MUST NOT dereference `$schema`.
 
 If `$schema` names no meta-schema the consumer holds, the document MUST be reported as governed by
@@ -1251,11 +1263,17 @@ A validator MUST establish that a table's primary key is unique, by query or by 
 <a id="ew-tier-2-rules" data-spec-anchor="canonical"></a>
 ### 10.2 Tier 2: declared
 
-A rule the structure cannot imply is declared as SQL returning offending rows, or as a named template the registry build expands.
+A rule the structure cannot imply declares `id`, `level`, `message`, and `sql`, or uses a named
+template that the registry build expands to those fields. Its registry-level `rule_language`
+selects the interpretation of `sql`; [Part 11](11_tier_2_rule_language.md) defines the current
+language, relation mapping, and finding relation. A rule is logically attached to the resource
+whose `rules` array contains it, but it may name other resources the selected language permits.
 
 A rule's SQL MUST NOT reference a column whose presence is `optional`. A rule is executed against the file, and `optional` permits the column to be absent from it (§6), so a rule naming one does not miss a check — the query fails to parse, and the run meant to find defects reports an error of its own. A constraint that wants an optional column either makes it `nullable`, which declares it always present and sometimes empty, or moves to the shim of §10.3.
 
-The execution contract is the whole protocol: **a check's query returns offending rows; empty is a pass, non-empty is a failure, and the returned rows are the finding.**
+The language contract determines the result relation. A completed empty result passes; a completed
+non-empty result produces the declared finding. Invalid, unsupported, and incomplete evaluation
+are not findings and cannot establish a pass (Part 11 §8).
 
 A rule declares a level of `error`, `warning`, or `info`. A rule MAY be `advisory`, in which case
 it is off by default and MUST NOT be `error`, so that enabling it cannot change whether a packet
@@ -1751,10 +1769,18 @@ verdict is determined rather than assumed, and re-establishing it costs nothing.
 A writer performing an amendment MUST establish the physical order of the resources it writes, and a validator MUST NOT
 require it to re-establish that order for any other packet-owned resource.
 
-A validator MUST re-run a check when it is **attached to** a resource the amendment writes, **or when its
-query names one**; a check meeting neither condition MAY be skipped. The second test is
-syntactic — a generated check refers to a resource by its flattened name — so a rule that names a
-resource added later is caught without the registry having to declare that it might.
+A validator MUST derive a complete input set from the layer that owns each check. A generated
+Tier 1 check takes its inputs from the registry declarations that generated it: the attached
+resource, both ends of a foreign key, and every specialization or discriminator branch it reads.
+A Tier 2 check takes its inputs from the parsed base-resource set Part 11 §3 requires static
+validation to return. A Part 05 shim check declares its inputs explicitly.
+
+A validator MUST re-run a check when it is attached to a resource the amendment writes or any
+member of its input set was written. A Tier 2 dependency MUST NOT be inferred by searching query
+text: an alias, common table expression, literal, or comment that resembles a resource does not
+create one. The session-inventory shim declares the packet catalog and `core.sessions`; installing
+a manifest writes the catalog input for this purpose. A shim without a complete declaration MUST
+run rather than be skipped.
 
 A validator **MUST make that test over-inclusive where it is uncertain**. Matching a resource name inside
 a string literal or a comment re-runs a check that did not need it, which costs time; failing to
@@ -2327,7 +2353,10 @@ Generated from structure (Part 02 §10.1): required-column non-null, primary-key
 <a id="ew-tier-2-validation" data-spec-anchor="canonical"></a>
 ### 5.2 Tier 2
 
-Declared per table as SQL returning offending rows, or as an expanded template (Part 02 §10.2).
+Declared per table under Part 02 §10.2 and interpreted by the registry's selected language. Before
+execution, a validator MUST support that exact language and MUST parse, statically validate, bind,
+and type-check the rule as Part 11 requires. It MUST execute only a checked query. A language or
+profile defect makes the registry invalid rather than producing a packet finding.
 
 <a id="ew-validation-shim" data-spec-anchor="canonical"></a>
 ### 5.3 The shim
@@ -2335,6 +2364,13 @@ Declared per table as SQL returning offending rows, or as an expanded template (
 A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and checksums outside SQL. A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
 
 A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key.
+
+The shim MUST compare the catalog's session inventory with `core.sessions.session_name` under the
+check ID `core.sessions.manifest_sessions_match`, at `error`, with the message carried by the
+registry before that check moved here. It reports each non-null table value absent from the
+catalog, preserving duplicates, and each catalog session absent from every table row. The shim
+declares the packet catalog and `core.sessions` as inputs. No Tier 2 rule may depend on the shim's
+implementation mechanism.
 
 ### 5.4 Extensions
 
@@ -2397,14 +2433,24 @@ A validator MUST NOT downgrade an error to make a packet pass. An advisory rule 
 
 Where an import replaces an existing packet, it SHOULD report every resource the prior catalog declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
 
+<a id="ew-incomplete-validation" data-spec-anchor="canonical"></a>
+### 9.4 Incomplete validation
+
+A report MUST distinguish an invalid registry rule, an unsupported selected language, an
+incomplete valid evaluation, and a completed query that produced packet findings. An unreadable
+input, engine failure, exact overflow, out-of-range timestamp, timeout, or resource limit makes the
+affected required evaluation incomplete. A validator MUST NOT turn its inability to evaluate into
+an error-level packet finding. Core and every extension retain separate evaluation state.
+
 <a id="ew-conformance-classes" data-spec-anchor="canonical"></a>
 ## 10. Two conformance classes
 
 A report says which of two claims it is making.
 
 A packet conforms to this specification when it declares a profile defined here, carries every
-resource that profile requires, satisfies every structural requirement of Part 02, and produces no
-error-level finding from the checks of this part. A conforming packet MAY omit any resource this
+resource that profile requires, satisfies every structural requirement of Part 02, completes every
+required evaluation, and produces no error-level finding from the checks of this part. An invalid,
+unsupported, or incomplete required evaluation cannot support a conformance claim. A conforming packet MAY omit any resource this
 specification does not require. A validator MUST NOT reject a packet merely for carrying a resource
 this specification does not define. Part 09 §5.4 defines how core and extension verdicts compose.
 
@@ -2752,7 +2798,7 @@ The LFP is referenced rather than copied: ten `dense_array_asset` entries with `
   "packet_id": "ecephys_786867_2025-09-25",
   "packet_version": "0.1.0",
   "profile_id": "escapewheel-portable-v0.1",
-  "registry_version": "0.2.0",
+  "registry_version": "0.3.0",
   "sessions": ["ecephys_786867_2025-09-25"],
   "required_codecs": ["blosc", "numcodecs.delta", "zstd"],
   "resources": [
@@ -2899,6 +2945,10 @@ A validator MUST check that a declared registry exists. It MUST NOT require an e
 ### 5.4 Separate verdicts
 
 An extension is validated on core's terms and its verdict is reported separately. A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension's failure invalidate core.
+
+An unsupported or incomplete extension evaluation is separate from both core state and an
+extension rule failure. A validator MUST NOT fabricate a finding for it or omit it from a claim
+that the complete packet conforms.
 
 Separate verdicts are not an absent one. The **packet's** verdict is the conjunction of core's and every extension's, so a validator MUST NOT report a packet whose core passes and whose extension fails as conforming — an extension's canonical resources are part of what the packet holds ([Part 00 §3.2](00_architecture.md#ew-packet-content-classes)), and a failure among them is a failure of the packet. A consumer MAY still read core from such a packet, and MUST NOT read the packet's verdict as though the failure were external to it.
 
@@ -3197,3 +3247,269 @@ changing to show it. That is what Part 03 §6.1's per-version codec floor exists
 and what this table exists to explain.
 
 <!-- END 10_performance_notes.md -->
+
+<!-- BEGIN 11_tier_2_rule_language.md -->
+
+# Part 11 — Tier 2 rule language
+
+Normative.
+
+<a id="ew-tier-2-language-selection" data-spec-anchor="canonical"></a>
+## 1. Language identity, authority, and selection
+
+This part defines the portable language and execution semantics for registry-declared Tier 2
+rules. It maps the logical resources and types of Part 02 into rule evaluation. Part 02 owns
+registry selection and rule declarations; Part 05 owns validation and reporting workflow. This
+part MUST NOT redefine either subject.
+
+The language identified by `escapewheel-rule-sql-v0.1` is based on the SQL framework and
+SQL/Foundation editions, corrigenda, and IEEE floating-point edition identified in §9. Those
+authorities apply to the SQL and numerical requirements in §§2–7 only to the extent selected here.
+The narrower Escapewheel rules in this part govern where the external standards permit choices or
+additional features.
+
+This part expressly incorporates `registry/rule_language.schema.json`, which defines the closed
+shape of a rule-language profile, and
+`registry/rule_languages/escapewheel-rule-sql-v0.1.json`, which assigns the exact external basis,
+ISO feature dependencies, contract clauses, type bindings, and execution settings of this
+language. The JSON artifacts MUST conform to the incorporated profile schema. Their fields carry
+the meanings defined here; neither artifact makes a parser, abstract syntax tree, database engine,
+or validator implementation authoritative.
+
+A validator claiming support for this language MUST support the identified contract as a whole.
+It MUST NOT construct a different language by independently toggling profile dependencies or
+settings. A changed language contract MUST receive a new language ID. A registry may change its
+rules without changing the language ID only when the registry version changes and the rules retain
+this contract's meaning.
+
+<a id="ew-tier-2-query-profile" data-spec-anchor="canonical"></a>
+## 2. Query profile
+
+A rule MUST contain exactly one SQL/Foundation query expression and no second statement. The
+profile admits:
+
+- query specifications with expression select lists, `WHERE`, `SELECT DISTINCT`, column-reference
+  `GROUP BY`, and `HAVING`;
+- derived tables, one-column scalar subqueries, `EXISTS`, and correlated subqueries;
+- one optional top-level `WITH` containing ordinary common table expressions or §6's bounded
+  recursive form;
+- explicit inner and left outer joins qualified by `ON` or `USING`;
+- `UNION` and `UNION ALL`;
+- searched `CASE`, aggregate `DISTINCT`, and aggregate `FILTER (WHERE ...)`;
+- window partitioning and ordering for the routines below, using ascending column references; and
+- `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY expression)` with implicit ascending order.
+
+A comma, cross, natural, right, or full join is outside the profile. So are nested `WITH`, a
+top-level result `ORDER BY`, window frames, order ordinals, `DESC`, and explicit `NULLS FIRST` or
+`NULLS LAST`. An unqualified `*` is admitted only in `COUNT(*)` or an intermediate query whose
+expanded names are unique; a final result MUST NOT project `*`. A derived table MUST have an
+explicit `AS` correlation name. ISO line comments beginning with `--` are admitted; bracketed
+comments are not.
+
+Every window invocation MUST have a non-empty `ORDER BY`. For `LAG` and `ROW_NUMBER`, a validator
+MUST establish statically that the partition and ordering columns together identify one input row;
+otherwise the rule is invalid. Ties in `DENSE_RANK` intentionally receive the same rank.
+
+The admitted literals are an ISO character string, `NULL`, an unsigned base-10 integer, an
+unsigned base-10 decimal with digits on both sides of the point, an approximate numeric literal
+using `e` or `E` and an optionally signed decimal exponent, and
+`INTERVAL '<unsigned-base-10-integer>' DAY`. Unary minus is a separate operator. An exact numeric
+literal MUST have no more than 38 digits.
+
+The admitted operators are unary minus; numeric `+`, `-`, `*`, and `/`; a timestamp left operand
+plus or minus a day interval; `=`, `<>`, `<`, `<=`, `>`, and `>=`; `IS NULL`, `IS NOT NULL`, and
+`IS DISTINCT FROM`; `BETWEEN`, `IN`, `LIKE`, `EXISTS`, and their negated forms; and `AND`, `OR`,
+and `NOT`. `IN` takes a non-empty scalar list or a one-column subquery. Other engine spellings,
+including `!=`, are outside the profile.
+
+| class | admitted routines |
+|---|---|
+| scalar | `ABS` over one approximate numeric; `COALESCE` over two or more common-type arguments; `CAST` only to `DOUBLE PRECISION` or `DECIMAL(38,0)`; one-argument `isnan` and `isfinite` over an approximate numeric |
+| aggregate | `COUNT(*)`, one-argument `COUNT`, `COUNT(DISTINCT expression)`, one-argument `MIN` and `MAX`, and the ordered-set `PERCENTILE_CONT` form above |
+| window | one-argument `LAG`, zero-argument `ROW_NUMBER`, and zero-argument `DENSE_RANK` |
+
+`ABS`, `MIN`, `MAX`, and `LAG` return their argument's domain. `COALESCE` returns its arguments'
+common domain, and `CAST` returns its target domain. `COUNT`, `ROW_NUMBER`, and `DENSE_RANK`
+return `BIGINT`; `PERCENTILE_CONT` returns `DOUBLE PRECISION`. Comparisons, predicates, Boolean
+operators, `isnan`, and `isfinite` return `BOOLEAN`. An aggregate MUST NOT be used as a window
+routine, and a window routine MUST carry `OVER`. SQL keywords and routine names are
+case-insensitive; identifiers follow §3.
+
+A validator MUST parse and statically check a rule before executing it. It MUST reject a second
+statement, any surface outside this positive profile, and every DDL, DML, transaction, catalog,
+configuration, attachment, import/export, extension, macro, filesystem, network, parameter,
+volatile, or environment-dependent surface before execution. An engine feature does not enter the
+language merely because the engine implements it.
+
+<a id="ew-tier-2-relation-environment" data-spec-anchor="canonical"></a>
+## 3. Relation environment, names, and dependencies
+
+A base relation MUST use its canonical two-part registry resource ID, such as `core.units` or
+`dynamic_foraging.trials`, with the exact lowercase spelling in the registry. A validator MUST NOT
+expose flattened names as part of this language or resolve alternate spelling by case folding.
+
+A core rule may name only core and analysis resources in the core registry. An extension rule may
+name those resources and resources in its own extension registry, and MUST NOT name another
+extension. Local aliases and common-table-expression names are one-part names. Every identifier
+MUST match `^[a-z][a-z0-9_]*$`, be unique in its resolution scope, and compare code point for code
+point. Delimiting an identifier does not admit another spelling or a keyword. Every other base
+relation, including a system catalog or validator-created relation, makes the registry invalid.
+
+Each visible table exposes exactly its registry-declared columns under §4. A resource absent from
+the packet binds as an empty relation of that shape. A declared resource that cannot be read MUST
+NOT be substituted with an empty relation for a rule that depends on it; that rule is incomplete
+under §8.
+
+Static validation MUST return the complete set of base registry resources named by a rule. Local
+aliases, common table expressions, derived tables, literals, and comments do not enter that set. A
+registry MUST NOT maintain a second dependency list for the same fact.
+
+<a id="ew-tier-2-type-binding" data-spec-anchor="canonical"></a>
+## 4. Logical type binding and general expression semantics
+
+The complete registry-to-SQL binding is:
+
+| registry type | SQL domain |
+|---|---|
+| `int32` | `INTEGER` |
+| `int64` | `BIGINT` |
+| `float32` | `REAL` |
+| `float64` | `DOUBLE PRECISION` |
+| `bool` | `BOOLEAN` |
+| `date` | `DATE` |
+| `timestamp` | `TIMESTAMP(6) WITH TIME ZONE` |
+| `string` | unbounded `CHARACTER VARYING` |
+| `json_string` | unbounded `CHARACTER VARYING` |
+
+`INTEGER` and `BIGINT` are signed 32-bit and signed 64-bit domains. `REAL` and
+`DOUBLE PRECISION` are IEEE 754 binary32 and binary64. `DECIMAL(p,s)` denotes exact multiples of
+10^-s with at most `p` digits, where 1 ≤ `p` ≤ 38 and 0 ≤ `s` ≤ `p`. The profile additionally
+admits the domain of an exact-decimal literal and `DECIMAL(38,0)` as an explicit cast target. It
+provides no JSON parsing or implicit distinction between `string` and `json_string`.
+
+A cast to `DECIMAL(38,0)` accepts an integer or scale-zero decimal and preserves its mathematical
+value. A cast to `DOUBLE PRECISION` accepts an exact or approximate numeric and rounds to nearest,
+ties to even. No other explicit cast is admitted. An implementation may lower these domains to
+engine-native representations only when values and operations retain the specified semantics.
+
+ISO SQL null and three-valued Boolean semantics apply except where this part narrows them.
+`COUNT` follows ISO SQL; `MIN`, `MAX`, and `PERCENTILE_CONT` ignore null inputs; grouping,
+`DISTINCT`, and set operations treat nulls on ISO terms. Window and ordered-set ordering places
+null after every non-null value.
+
+A validator MUST bind and type-check the complete query before execution. No implicit cast may
+convert character, Boolean, date, or timestamp values to or from a numeric domain. Identical
+domains retain that domain. `INTEGER` with `BIGINT` yields `BIGINT`; an integer with
+`DECIMAL(38,0)` yields `DECIMAL(38,0)`; `REAL` with `DOUBLE PRECISION` yields
+`DOUBLE PRECISION`; and an exact with an approximate numeric yields the approximate domain,
+widened to `DOUBLE PRECISION` if either operand has it. No other pair has an implicit common type.
+These rules govern comparisons, `CASE`, `COALESCE`, set operations, and routine arguments. An
+exact-decimal literal may instead compare with an exact numeric by mathematical value.
+
+<a id="ew-tier-2-deterministic-semantics" data-spec-anchor="canonical"></a>
+## 5. Numeric, timestamp, and character semantics
+
+Approximate values use this total order for comparison, grouping, distinctness, set operations,
+`MIN`, `MAX`, and ordering:
+
+```text
+-infinity < finite values < +infinity < NaN
+```
+
+All NaN encodings compare equal for those operations; positive and negative zero compare equal.
+Null retains §4's semantics. `isnan` and `isfinite` accept either approximate domain, return null
+for null, and otherwise identify NaN and finite values respectively.
+
+An exact-integer literal takes the first containing domain in the order `INTEGER`, `BIGINT`,
+`DECIMAL(38,0)` and is invalid outside that range. An exact decimal with `p` digits and `s`
+fractional digits takes `DECIMAL(p,s)`. A non-zero-scale exact decimal is admitted only in an
+exact comparison, through conversion to an approximate common type, or as `PERCENTILE_CONT`'s
+fixed `0.5`. An approximate literal converts to `DOUBLE PRECISION` with round-to-nearest,
+ties-to-even.
+
+Approximate arithmetic and `ABS` use the corresponding IEEE binary operation with
+round-to-nearest, ties-to-even. Mixed approximate expressions use the wider domain; an exact value
+combined with an approximate value converts to the approximate domain. IEEE infinity, NaN, and
+signed zero result from overflow, invalid operations, and zero division rather than a host
+exception.
+
+Division MUST have at least one operand explicitly cast to `DOUBLE PRECISION` and returns
+`DOUBLE PRECISION`. `PERCENTILE_CONT(0.5)` converts its ordering value to binary64, performs
+linear interpolation there, and returns binary64.
+
+Exact integer and scale-zero decimal addition, subtraction, multiplication, and unary minus are
+mathematical over the common result domain. A rule whose admitted values can overflow `INTEGER` or
+`BIGINT` MUST cast its operands to `DECIMAL(38,0)` first. Static validation MUST reject an
+expression that can overflow without that widening. Overflow of `DECIMAL(38,0)` is incomplete
+evaluation; wraparound, saturation, and truncation are forbidden.
+
+The execution time zone is UTC. `TIMESTAMP(6) WITH TIME ZONE` denotes an instant at microsecond
+precision. `INTERVAL '<digits>' DAY` denotes the stated integer multiplied by 86,400 elapsed
+seconds. Only a timestamp left operand plus or minus such an interval is admitted and returns the
+timestamp domain. A result outside the supported timestamp range makes evaluation incomplete and
+MUST NOT wrap, clamp, saturate, or truncate.
+
+Character operations compare stored Unicode scalar sequences in ascending scalar-value order,
+without case folding or normalization. A scalar is in U+0000–U+D7FF or U+E000–U+10FFFF. In
+`LIKE`, `_` matches one scalar and `%` matches zero or more scalars.
+
+<a id="ew-tier-2-bounded-recursion" data-spec-anchor="canonical"></a>
+## 6. Bounded recursive common table expressions
+
+A recursive common table expression is admitted only when a validator can establish that it:
+
+1. declares an integer depth column;
+2. assigns a non-negative integer literal to depth in every seed arm;
+3. contains exactly one self-reference in the recursive arm joined through `UNION ALL`;
+4. assigns the next depth as prior depth plus a positive integer literal; and
+5. guards the recursive arm by comparing prior depth with a finite integer-literal upper bound.
+
+Mutual recursion, multiple self-references, data-dependent bounds, non-increasing depth, and any
+other recursive form make the registry invalid before execution. An execution limit is only a
+backstop and does not prove that a query conforms.
+
+<a id="ew-tier-2-finding-relation" data-spec-anchor="canonical"></a>
+## 7. Finding-relation semantics
+
+A completed rule produces a typed, unordered bag of rows. Row order carries no meaning; duplicate
+multiplicity does. An empty bag passes, and every row of a non-empty bag is an offending row for
+the declared finding.
+
+Every final column MUST have a unique lower-snake-case name. A simple reference may inherit its
+declared name when unique. Every other expression, and either of two references with the same
+inherited name, MUST use an explicit alias. Static validation rejects duplicate, unnamed, or
+nonconforming final names before execution.
+
+A report may serialize or sample fewer rows only under its reporting contract. Sampling MUST NOT
+redefine the complete result or imply that omitted rows do not exist.
+
+<a id="ew-tier-2-evaluation-outcomes" data-spec-anchor="canonical"></a>
+## 8. Evaluation outcomes
+
+SQL outside the selected profile makes its registry invalid. A validator MUST reject it before
+execution and MUST NOT report that language defect as an offending packet row.
+
+A validator lacking the exact selected language reports the registry's Tier 2 evaluation as
+**unsupported**. A validator that supports the language but cannot complete a valid rule because
+an input is unreadable, the engine fails, exact arithmetic overflows, a timestamp exceeds the
+supported range, or a resource or timeout limit is reached reports that evaluation as
+**incomplete**. It MUST NOT fabricate a packet finding from its inability to evaluate.
+
+Only a completed query returning rows produces the rule's declared finding. An invalid,
+unsupported, or incomplete required evaluation cannot support a claim that the affected core or
+extension registry passed. Core and each extension retain separate evaluation state; one state
+MUST NOT be attributed to another, relabeled as a rule failure, or omitted from a complete-packet
+claim. Part 05 owns the reporting workflow and eventual report representation.
+
+<a id="ew-rule-language-normative-references" data-spec-anchor="canonical"></a>
+## 9. Normative references
+
+| reference | candidate edition | application |
+|---|---|---|
+| [ISO/IEC 9075-1:2023](https://www.iso.org/standard/76583.html) | exact | SQL framework, terminology, and feature identification |
+| [ISO/IEC 9075-1:2023/Cor 1:2026](https://www.iso.org/standard/93690.html) | exact | corrections to the SQL framework edition |
+| [ISO/IEC 9075-2:2023](https://www.iso.org/standard/76584.html) | exact | SQL/Foundation grammar and semantics selected by the profile |
+| [ISO/IEC 9075-2:2023/Cor 1:2026](https://www.iso.org/standard/93691.html) | exact | corrections to the SQL/Foundation edition |
+| [IEEE 754-2019](https://standards.ieee.org/ieee/754/6210/) | exact | binary32, binary64, rounding, exceptional values, and approximate arithmetic |
+
+<!-- END 11_tier_2_rule_language.md -->

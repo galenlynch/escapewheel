@@ -31,10 +31,10 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from escapewheel_reader import Packet, PacketError, ResourceUnreadableError, sql_name
 from escapewheel_reader.location import SOURCES_FILENAME
-
 from escapewheel_reader.ordering import stored_order
 
-from .generate import adjacency_settles_uniqueness, concerns, generate
+from .generate import Check, adjacency_settles_uniqueness, concerns, generate
+from .rule_language import PROFILE_ID, RuleProfileError, check_rule
 from .stores import StoreUnreachable, digest, listing, read_member
 
 #: Registry column type -> the Arrow type a conforming writer must emit (Part 03 §5.5).
@@ -79,6 +79,16 @@ class Finding:
     extension: str | None = None
 
 
+@dataclass(frozen=True)
+class Evaluation:
+    """A registry-level Tier 2 evaluation outcome distinct from packet findings."""
+
+    registry: str
+    status: str
+    rule: str | None = None
+    detail: str = ""
+
+
 @dataclass
 class Report:
     """The outcome of validating a packet.
@@ -93,6 +103,7 @@ class Report:
     """
 
     findings: list[Finding] = field(default_factory=list)
+    evaluations: list[Evaluation] = field(default_factory=list)
     advisory: bool = False
 
     @property
@@ -117,16 +128,27 @@ class Report:
         change the core verdict either -- otherwise holding the schema would make a packet fail
         that passes without it.
         """
-        return sum(f.level == "error" and f.extension is None for f in self.findings) == 0
+        complete = all(e.registry != "core" or e.status == "complete" for e in self.evaluations)
+        return complete and sum(f.level == "error" and f.extension is None for f in self.findings) == 0
 
     def extension_passed(self, extension: str) -> bool:
         """Whether one extension's tables validated."""
-        return sum(f.level == "error" and f.extension == extension for f in self.findings) == 0
+        complete = all(e.registry != extension or e.status == "complete" for e in self.evaluations)
+        return complete and sum(f.level == "error" and f.extension == extension for f in self.findings) == 0
 
     @property
     def extensions(self) -> tuple[str, ...]:
         """Extensions this report says anything about."""
-        return tuple(dict.fromkeys(f.extension for f in self.findings if f.extension is not None))
+        return tuple(
+            dict.fromkeys(
+                [f.extension for f in self.findings if f.extension is not None]
+                + [e.registry for e in self.evaluations if e.registry != "core"]
+            )
+        )
+
+    def record_evaluation(self, registry: str, status: str, *, rule: str | None = None, detail: str = "") -> None:
+        """Record a Tier 2 outcome without turning validator inability into a finding."""
+        self.evaluations.append(Evaluation(registry, status, rule, detail))
 
     def add(
         self,
@@ -176,6 +198,10 @@ class Report:
             "findings": [
                 {"level": f.level, "check": f.check, "message": f.message, "rows": [list(r) for r in f.rows]}
                 for f in self.findings
+            ],
+            "evaluations": [
+                {"registry": e.registry, "status": e.status, "rule": e.rule, "detail": e.detail}
+                for e in self.evaluations
             ],
         }
 
@@ -288,6 +314,8 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
     for clock, start in zip(
         intervals.column("clock_id").to_pylist(), intervals.column("start_tick").to_pylist(), strict=True
     ):
+        if start is None:
+            continue
         if clock == reference:
             starts.append(int(start))
             continue
@@ -1132,7 +1160,7 @@ def _duplicated_columns(handle: Any, spec: Mapping[str, Any]) -> list[tuple[str,
     meta, names = reader.metadata, reader.schema_arrow.names
     ranges: dict[str, list[Any]] = {}
     for index, name in enumerate(names):
-        chunks = []
+        chunks: list[tuple[Any, Any, int | None]] = []
         for group in range(meta.num_row_groups):
             stats = meta.row_group(group).column(index).statistics
             if stats is None or not stats.has_min_max:
@@ -1262,7 +1290,9 @@ def _check_ordering(
     return unsound
 
 
-def _scan_one_ordering(resource_id: str, handle: Any, spec: Mapping[str, Any], report: Report) -> bool:
+def _scan_one_ordering(  # noqa: C901
+    resource_id: str, handle: Any, spec: Mapping[str, Any], report: Report
+) -> bool:
     """One table's ordering scan. True where uniqueness must fall back to the aggregate."""
     # Part 03 §5.3 puts every table in its key's order unless Part 03 §5.4 overrides it, and R93 §3.3
     # moved that list out of the registry, so both come from `escapewheel_reader.ordering`.
@@ -1464,6 +1494,7 @@ def _bounded(connection: Any, limits: Mapping[str, Any], spill: Path | None = No
     `spill` supplies `temp_directory` when the caller has not, since a memory limit without
     one bounds nothing.
     """
+    connection.execute("SET TimeZone = 'UTC'")
     settings = dict(limits)
     if spill is not None and "memory_limit" in settings:
         settings.setdefault("temp_directory", str(spill))
@@ -1515,53 +1546,176 @@ def _run_rules(
 ) -> None:
     """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
     with _spill_beside(packet) as spill:
-        # Every table, because a validator runs every rule: this is the one caller that
-        # wants what the reader stopped doing by default.
-        connection = _bounded(packet.duckdb(tables="all"), LIMITS if limits is None else limits, spill)
+        connection = _bounded(packet.duckdb(), LIMITS if limits is None else limits, spill)
         try:
-            # A Tier 2 rule may reference a table other than the one it is declared on --
-            # core.clocks.one_alignment_model reads core.clock_anchors, for instance. A packet that
-            # does not declare a table genuinely has no rows of it, so an empty stand-in lets such a
-            # rule evaluate rather than fail to run. A table that IS declared but unreadable is a
-            # different case, already reported as resource.missing.
-            for resource_id, spec in registry["tables"].items():
-                if resource_id in present:
-                    continue
-                columns = ", ".join(f'"{c["name"]}" {_DDL[c["type"]]}' for c in spec["columns"])
-                connection.sql(f"CREATE OR REPLACE TABLE {sql_name(resource_id)} ({columns})")
-
-            connection.sql("CREATE OR REPLACE TABLE manifest_sessions (session_id VARCHAR)")
-            for session in packet.manifest.sessions:
-                connection.sql("INSERT INTO manifest_sessions VALUES (?)", params=[session])
+            extension_documents = list(packet.extensions().values())
+            unreadable = _install_rule_relations(packet, connection, [registry, *extension_documents])
 
             kinds = _declared_kinds(packet, registry)
-            checks = generate(
+            tier1 = generate(
                 registry,
                 only=set(present),
                 advisory=advisory,
                 aggregate=unsound or set(),
                 kinds=kinds,
                 specialises=_specialisations(packet, registry),
+                declared=False,
             )
+            tier2 = _tier2_checks(registry, registry, report, "core", advisory)
+            checks = [*tier1, *tier2]
             if recheck is not None:
                 checks = [check for check in checks if concerns(check, recheck)]
-            _run_checks(connection, checks, report, None)
-            _check_extensions(packet, connection, registry, report, advisory, kinds)
+            _run_checks(connection, checks, report, None, "core", unreadable, finalize=False)
+            _check_manifest_sessions(packet, report)
+            if not any(e.registry == "core" and e.status != "complete" for e in report.evaluations):
+                report.record_evaluation("core", "complete")
+            _check_extensions(packet, connection, registry, report, advisory, kinds, unreadable, recheck)
         finally:
             with contextlib.suppress(Exception):
                 connection.close()
 
 
-def _run_checks(connection: Any, checks: Sequence[Any], report: Report, extension: str | None) -> None:
+def _install_rule_relations(packet: Packet, connection: Any, documents: Sequence[Mapping[str, Any]]) -> set[str]:
+    """Install exact qualified packet relations and typed empties for absent resources."""
+    declared = {
+        resource.resource_id for resource in packet.resources() if resource.kind in {"table", "materialized_table"}
+    }
+    unreadable: set[str] = set()
+    installed: set[str] = set()
+    for document in documents:
+        for resource_id, spec in document.get("tables", {}).items():
+            if resource_id in installed:
+                continue
+            installed.add(resource_id)
+            namespace, _ = resource_id.split(".", 1)
+            connection.sql(f"CREATE SCHEMA IF NOT EXISTS {namespace}")
+            if resource_id in declared:
+                try:
+                    packet.table_resource(resource_id).register(connection, name=resource_id)
+                    continue
+                except (PacketError, OSError, ValueError):
+                    unreadable.add(resource_id)
+            columns = ", ".join(f'"{c["name"]}" {_DDL[c["type"]]}' for c in spec["columns"])
+            connection.sql(f"CREATE OR REPLACE TABLE {resource_id} ({columns})")
+    return unreadable
+
+
+def _tier2_checks(
+    document: Mapping[str, Any],
+    core_registry: Mapping[str, Any],
+    report: Report,
+    registry_id: str,
+    advisory: bool,
+) -> list[Check]:
+    """Return checked Tier 2 rules, or record why this registry cannot be evaluated."""
+    language = document.get("rule_language")
+    if language != PROFILE_ID:
+        report.record_evaluation(
+            registry_id,
+            "unsupported",
+            detail=f"rule language {language!r} is not supported; expected {PROFILE_ID!r}",
+        )
+        return []
+    checked: list[Check] = []
+    invalid = False
+    for resource, table in document.get("tables", {}).items():
+        for rule in table.get("rules", []):
+            if rule.get("advisory") and not advisory:
+                continue
+            try:
+                parsed = check_rule(rule["sql"], document, core_resources=core_registry)
+            except RuleProfileError as exc:
+                invalid = True
+                report.record_evaluation(registry_id, "invalid", rule=rule.get("id"), detail=str(exc))
+                continue
+            checked.append(
+                Check(
+                    rule["id"],
+                    rule["level"],
+                    rule["message"],
+                    parsed.sql,
+                    resource,
+                    tier=2,
+                    dependencies=parsed.resources,
+                )
+            )
+    return [] if invalid else checked
+
+
+def _run_checks(
+    connection: Any,
+    checks: Sequence[Check],
+    report: Report,
+    extension: str | None,
+    registry_id: str,
+    unreadable: set[str],
+    *,
+    finalize: bool = True,
+) -> None:
     """Run generated checks and record what they returned."""
+    tier2_incomplete = False
     for check in checks:
+        if check.tier == 2 and (missing := sorted(check.dependencies & unreadable)):
+            tier2_incomplete = True
+            report.record_evaluation(
+                registry_id,
+                "incomplete",
+                rule=check.id,
+                detail=f"unreadable input(s): {', '.join(missing)}",
+            )
+            continue
         try:
             rows = _offending(connection, check.sql)
-        except Exception as exc:  # noqa: BLE001 - an engine error is a finding, not a crash
-            report.add("error", check.id, f"check could not run: {str(exc).splitlines()[0][:90]}", extension=extension)
+        except Exception as exc:  # noqa: BLE001 - converted to the layer-owned outcome below
+            if check.tier == 2:
+                tier2_incomplete = True
+                report.record_evaluation(
+                    registry_id,
+                    "incomplete",
+                    rule=check.id,
+                    detail=str(exc).splitlines()[0][:160],
+                )
+            else:
+                report.add(
+                    "error",
+                    check.id,
+                    f"check could not run: {str(exc).splitlines()[0][:90]}",
+                    extension=extension,
+                )
             continue
         if rows:
             report.add(check.level, check.id, check.message, rows, extension=extension)
+    prior_failure = any(e.registry == registry_id and e.status != "complete" for e in report.evaluations)
+    if finalize and not tier2_incomplete and not prior_failure:
+        report.record_evaluation(registry_id, "complete")
+
+
+def _check_manifest_sessions(packet: Packet, report: Report) -> None:
+    """Compare the catalog inventory with ``core.sessions`` at the Part 05 shim."""
+    check = "core.sessions.manifest_sessions_match"
+    message = (
+        "the manifest's session inventory and core.sessions disagree; the manifest names a "
+        "session by its session_name, since an assigned session_id means nothing outside the "
+        "packet that assigned it"
+    )
+    declared = {resource.resource_id for resource in packet.resources(kind="table")}
+    table_values: list[str] = []
+    if "core.sessions" in declared:
+        try:
+            table_values = [
+                value
+                for value in packet.table("core.sessions", columns=["session_name"]).column("session_name").to_pylist()
+                if value is not None
+            ]
+        except (PacketError, OSError, pa.ArrowException) as exc:
+            report.record_evaluation("core", "incomplete", rule=check, detail=str(exc))
+            return
+    catalog = list(packet.manifest.sessions)
+    catalog_set, table_set = set(catalog), set(table_values)
+    rows = [(value,) for value in table_values if value not in catalog_set]
+    rows.extend((value,) for value in catalog if value not in table_set)
+    if rows:
+        report.add("error", check, message, rows)
 
 
 def _resolve_column(spec: Mapping[str, Any]) -> str | None:
@@ -1639,6 +1793,8 @@ def _check_extensions(
     report: Report,
     advisory: bool,
     kinds: Mapping[str, str | None] | None = None,
+    unreadable: set[str] | None = None,
+    recheck: Collection[str] | None = None,
 ) -> None:
     """Validate each extension registry the packet carries (Part 05 §5.4).
 
@@ -1673,10 +1829,19 @@ def _check_extensions(
                 [(name,) for name in absent],
                 extension=extension_id,
             )
-        if not carried:
-            continue
-        checks = generate(document, only=carried, advisory=advisory, resolvable=set(registry["tables"]), kinds=kinds)
-        _run_checks(connection, checks, report, extension_id)
+        tier1 = generate(
+            document,
+            only=carried,
+            advisory=advisory,
+            resolvable=set(registry["tables"]),
+            kinds=kinds,
+            declared=False,
+        )
+        tier2 = _tier2_checks(document, registry, report, extension_id, advisory)
+        checks = [*tier1, *tier2]
+        if recheck is not None:
+            checks = [check for check in checks if concerns(check, recheck)]
+        _run_checks(connection, checks, report, extension_id, extension_id, unreadable or set())
         report.add(
             "info",
             "extension.validated",
@@ -1800,4 +1965,4 @@ def validate(
     return report
 
 
-__all__ = ["ARROW_TYPES", "Finding", "Report", "registry_meta_schema", "sql_name", "validate"]
+__all__ = ["ARROW_TYPES", "Evaluation", "Finding", "Report", "registry_meta_schema", "sql_name", "validate"]

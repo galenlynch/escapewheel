@@ -127,11 +127,11 @@ the order matters.
 5. **`build.py`** writes `logical_schemas.json`, then calls `render.py` for `tables.md` and the
    README's regions, then copies the hand-written schemas into their consuming packages.
 6. **`check.py`** verifies the result: the structural invariants, each applied to core and to
-   every extension registry, then the meta-schema, the naming conventions, and — with DuckDB
-   present — that every Tier 2 rule is executable SQL against empty tables built from the
-   registry. The invariants themselves are imported from
-   `escapewheel_validator.registry_document`, so an extension author runs the same ones through
-   `escapewheel extension check`. Section 7 counts them.
+   every extension registry, then the meta-schema, the naming conventions, the selected rule
+   language, and — with DuckDB present — that every Tier 2 rule passes the static profile check
+   and binds against empty qualified tables built from the registry. The invariants themselves are
+   imported from `escapewheel_validator.registry_document`, so an extension author runs the same
+   ones through `escapewheel extension check`. Section 7 counts them.
 7. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the
    registry at validation time: not-null from `presence`, uniqueness from `primary_key`,
    anti-joins from `references`, membership from `enum`, and two more from each discriminator.
@@ -188,7 +188,7 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 fall and must not rise. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 640 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 651 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for
@@ -199,7 +199,7 @@ is held to; `check.py` imports them and adds what is true of this repository's b
 there are is counted from both sources, by `facts.py` parsing them:
 
 <!-- BEGIN facts: checks -->
-35 structural invariants, each applied to core and to each of the 4 extension registries, and 43 further checks over the whole set
+35 structural invariants, each applied to core and to each of the 4 extension registries, and 46 further checks over the whole set
 <!-- END facts: checks -->
 
 | check | catches |

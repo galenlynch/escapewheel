@@ -1,8 +1,9 @@
-"""Compare the cleaned registry contract with the pre-cleanup declarations.
+"""Compare the accepted cleanup result with its pre-cleanup declarations.
 
 The comparison removes only repository-history fields, the two identifiers deliberately changed
 by R121, and revision-only wording. Everything else—including keys, references, roles, rule SQL,
-levels, execution modes, and table placement—must remain byte-for-byte equal as JSON values.
+levels, execution modes, and table placement—must remain byte-for-byte equal as JSON values. Both
+sides are frozen commits so later accepted registry changes cannot invalidate historical evidence.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = "41aad8a15b7c8c3415f6c52b3c12e64114658718"
+INCORPORATED = "194bdb9f5240af345f3dd77d4441b991c3434099"
 
 CORE = "registry/logical_schemas.json"
 RULES = "registry/rules.json"
@@ -40,9 +42,16 @@ def _at_baseline(path: str) -> Any:
     return json.loads(result.stdout)
 
 
-def _current(path: str) -> Any:
-    """Load one JSON document from the working tree."""
-    return json.loads((ROOT / path).read_text())
+def _incorporated(path: str) -> Any:
+    """Load the reviewed R121 result, insulated from later registry revisions."""
+    result = subprocess.run(
+        ["git", "show", f"{INCORPORATED}:{path}"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return json.loads(result.stdout)
 
 
 def _text(value: str) -> str:
@@ -94,13 +103,13 @@ def defects() -> list[str]:
     """Return each declaration or rule set changed beyond the reviewed cleanup."""
     found = []
     if _normalize(_at_baseline(CORE), core=True) != _normalize(
-        _current(CORE), core=True
+        _incorporated(CORE), core=True
     ):
         found.append(CORE)
     for path in EXTENSIONS:
-        if _normalize(_at_baseline(path)) != _normalize(_current(path)):
+        if _normalize(_at_baseline(path)) != _normalize(_incorporated(path)):
             found.append(path)
-    if _normalize(_at_baseline(RULES)) != _normalize(_current(RULES)):
+    if _normalize(_at_baseline(RULES)) != _normalize(_incorporated(RULES)):
         found.append(RULES)
     return found
 

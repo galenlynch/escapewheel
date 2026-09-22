@@ -9,11 +9,6 @@ import json
 from pathlib import Path
 
 
-def sql_name(resource: str) -> str:
-    """core.trials -> core_trials. Resource IDs are dotted; SQL identifiers are not."""
-    return resource.replace(".", "_")
-
-
 def q(column: str) -> str:
     """Quote a column identifier. `offset` is reserved in DuckDB, and every engine
     reserves a different set, so emitted SQL quotes unconditionally."""
@@ -27,7 +22,7 @@ def generate(registry: dict) -> list[dict]:
         checks.append({"id": cid, "level": level, "message": message, "sql": sql})
 
     for resource, table in registry["tables"].items():
-        t = sql_name(resource)
+        t = resource
         presence = {c["name"]: c["presence"] for c in table["columns"]}
 
         for column in table["columns"]:
@@ -61,7 +56,7 @@ def generate(registry: dict) -> list[dict]:
             )
 
         for ref in table.get("references", []):
-            parent = sql_name(ref["resource"])
+            parent = ref["resource"]
             on = " AND ".join(
                 f"c.{q(a)} = p.{q(b)}"
                 for a, b in zip(ref["columns"], ref["resource_columns"])

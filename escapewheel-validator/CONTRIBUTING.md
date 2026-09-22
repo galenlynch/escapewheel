@@ -25,7 +25,7 @@ package belongs in the registry, and the design is what makes that true.
 - **Tier 1 is generated** from structure — required-column presence, primary keys, foreign keys,
   closed vocabularies, none of them hand-written. If your check is one of
   those four shapes, it already exists the moment the registry declares the column.
-- **Tier 2 is hand-written SQL**, and it lives in `../registry/rules.json`, **not here**. Adding
+- **Tier 2 is hand-written portable-profile SQL**, and it lives in `../registry/rules.json`, **not here**. Adding
   one is editing a JSON file in the registry and running `build.py`. Nothing in this package
   needs to change.
 
@@ -70,9 +70,8 @@ packet, which is worse than having no check.
 - **A nullable foreign key needs an `IS NOT NULL` guard.** Without it every null row reports as an
   unresolved reference.
 - **An amendment re-runs only the rules its resources implicate** (R35 §5). `validate` takes
-  `recheck`; a check survives when it is attached to a named resource or when its SQL *names* one.
-  The name test is syntactic and deliberately over-inclusive: a match in a comment costs time, a
-  missed one costs correctness.
+  `recheck`; Tier 1 inputs come from declarations, Tier 2 inputs from the parsed base-resource
+  set, and shim inputs from their explicit contracts.
 - **Validation does not reach the network by default** (R14 §2.3.2, R15 §4). Three levels:
   manifest-internal codec consistency always; a packet-owned array's actual Zarr metadata always;
   an external resource's URI, size and codecs only under `external=True`. Unreachable is a
@@ -88,8 +87,8 @@ packet, which is worse than having no check.
 - **What the manifest JSON Schema already refuses is not re-checked here.** A packet breaking
   R14 §2.3's "absolute URI implies external" cannot be opened at all, so a second copy in Python
   would never run.
-- **Identifiers come from `escapewheel_reader.sql`.** The reader registers tables under flattened
-  names and this package emits SQL against them. One implementation, so they cannot drift.
+- **Tier 2 relation names are canonical resource IDs.** Use qualified names such as `core.units`;
+  the validator installs exact packet-local schemas and rejects flattened aliases.
 
 ## An advisory rule is not a compromise
 
@@ -121,7 +120,7 @@ cd ../fixtures && uv run --no-cache --with ../escapewheel-validator --with duckd
 
 Run it after changing the registry, the generator, or any rule. A new rule should arrive with a
 variant that trips it — a rule nothing exercises is a rule nobody knows works. `registry/check.py`
-executes every Tier 2 rule against empty tables, which proves a rule *binds* but not that it can
+statically checks every Tier 2 rule and executes it against typed empty tables, which proves a rule *binds* but not that it can
 *report*: one bound cleanly for weeks and failed only once it had a finding to return.
 
 ## Before you push

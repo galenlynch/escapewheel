@@ -48,7 +48,7 @@ class EvidenceTests(unittest.TestCase):
                         {
                             "kind": "check",
                             "stage": "registry: structural checks",
-                            "id": "every Tier 2 rule is executable SQL",
+                            "id": "every Tier 2 rule conforms and executes against empty tables",
                         },
                     ]
                 },

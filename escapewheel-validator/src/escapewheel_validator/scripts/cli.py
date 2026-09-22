@@ -32,6 +32,12 @@ def _validate(args: argparse.Namespace) -> int:
         print(f"  {finding.level:8s} {where}{finding.check}: {finding.message}")
         for row in finding.rows:
             print(f"           {tuple(row)}")
+    for evaluation in report.evaluations:
+        if evaluation.status == "complete":
+            continue
+        rule = f" {evaluation.rule}" if evaluation.rule else ""
+        detail = f": {evaluation.detail}" if evaluation.detail else ""
+        print(f"  {evaluation.status:11s} [{evaluation.registry}]{rule}{detail}")
     # Part 05 §5.4: the two verdicts are separate, so printing one total would say a packet failed when
     # its core is conformant and an extension nobody is required to hold is not.
     core_errors = sum(f.level == "error" and f.extension is None for f in report.findings)

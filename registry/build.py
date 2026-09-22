@@ -27,6 +27,10 @@ OUT = HERE / "logical_schemas.json"
 VENDORED = {
     "registry.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+    "rule_language.schema.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/rule_language.schema.json",
+    "rule_languages/escapewheel-rule-sql-v0.1.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/escapewheel-rule-sql-v0.1.json",
     "manifest.schema.json": HERE.parent
     / "escapewheel-reader/src/escapewheel_reader/schemas/manifest.schema.json",
     "sources.schema.json": HERE.parent
@@ -790,15 +794,15 @@ def expand(
     if template != "interval":
         raise SystemExit(f"{resource}: unknown rule template {template!r}")
 
-    name = resource.replace(".", "_")
+    name = resource
     start, stop = call["start"], call["stop"]
-    report = ", ".join(key)
+    report = ", ".join(dict.fromkeys([*key, start, stop]))
     rules = [
         {
             "id": f"{resource}.interval_valid",
             "level": "error",
             "message": f"{stop} precedes {start}",
-            "sql": f"SELECT {report}, {start}, {stop} FROM {name} WHERE {stop} < {start}",
+            "sql": f"SELECT {report} FROM {name} WHERE {stop} < {start}",
         }
     ]
 
@@ -829,8 +833,8 @@ def expand(
             "level": "error",
             "message": call["overlap_message"],
             "sql": (
-                f"SELECT {report}, {start}, {stop} FROM (SELECT *, LAG({stop}) OVER "
-                f"(PARTITION BY {by} ORDER BY {index or start}) AS prev_stop FROM {name}) "
+                f"SELECT {report} FROM (SELECT *, LAG({stop}) OVER "
+                f"(PARTITION BY {by} ORDER BY {index or start}) AS prev_stop FROM {name}) AS checked_interval "
                 f"WHERE prev_stop IS NOT NULL AND {start} {op} prev_stop"
             ),
         }
@@ -3303,9 +3307,10 @@ def build() -> dict:
     # the meta-schema rather than repeated, since a copy is what goes stale.
     return {
         "$schema": json.loads((HERE / "registry.schema.json").read_text())["$id"],
-        "registry_version": "0.2.0",
+        "registry_version": "0.3.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
+        "rule_language": "escapewheel-rule-sql-v0.1",
         "tables": dict(sorted(tables.items())),
     }
 

@@ -80,6 +80,7 @@ dev = [
     "ruff",
     "interrogate",
     "types-jsonschema>=4.26.0.20260518",
+    "zarr>=3",
 ]
 jupyter = [{ include-group = "dev" }, "ipykernel", "pip"]
 docs = [

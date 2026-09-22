@@ -35,7 +35,7 @@ much, so the counts below are the current reference registry's and a packet carr
 gets its own.
 
 <!-- BEGIN facts: registry -->
-43 tables, 351 columns, 111 references, 77 Tier 2 rules (2 advisory)
+43 tables, 351 columns, 111 references, 76 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: tier1 -->
 167 not-null, 111 foreign-key, 4 closed-vocabulary and 16 discriminator checks, plus one uniqueness check per table whose sort does not begin with its primary key
@@ -48,7 +48,7 @@ gets its own.
 | primary-key uniqueness | `primary_key`, and only where a streaming scan does not already settle it |
 | closed vocabulary | `enum` |
 | discriminator | `role: discriminator`, two checks each (R55 §2.4) |
-| Tier 2 | SQL the structure cannot imply, authored in `registry/rules.json` |
+| Tier 2 | statically checked `escapewheel-rule-sql-v0.1` queries the structure cannot imply, authored in `registry/rules.json` |
 
 ## SQL and the shim
 
@@ -58,6 +58,11 @@ a storage check written as SQL agrees with itself rather than failing. The shim 
 order (R10), column presence and physical type, manifest-internal consistency, and every
 packet-owned array against its own Zarr metadata (R15 §4 level 2) — the last needing no Zarr,
 because that metadata is JSON.
+
+Tier 2 SQL is not DuckDB's full dialect. The validator parses each rule against the versioned
+portable profile before execution, derives its base-resource dependencies from that parse, exposes
+canonical schema-qualified relations, and reports unsupported, invalid, or incomplete evaluation
+separately from packet findings.
 
 The two halves cooperate: the ordering scan compares neighbours, so where a table's sort begins
 with its primary key, duplicates must be adjacent and the same pass settles uniqueness. On 287

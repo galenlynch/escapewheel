@@ -283,10 +283,18 @@ verdict is determined rather than assumed, and re-establishing it costs nothing.
 A writer performing an amendment MUST establish the physical order of the resources it writes, and a validator MUST NOT
 require it to re-establish that order for any other packet-owned resource.
 
-A validator MUST re-run a check when it is **attached to** a resource the amendment writes, **or when its
-query names one**; a check meeting neither condition MAY be skipped. The second test is
-syntactic — a generated check refers to a resource by its flattened name — so a rule that names a
-resource added later is caught without the registry having to declare that it might.
+A validator MUST derive a complete input set from the layer that owns each check. A generated
+Tier 1 check takes its inputs from the registry declarations that generated it: the attached
+resource, both ends of a foreign key, and every specialization or discriminator branch it reads.
+A Tier 2 check takes its inputs from the parsed base-resource set Part 11 §3 requires static
+validation to return. A Part 05 shim check declares its inputs explicitly.
+
+A validator MUST re-run a check when it is attached to a resource the amendment writes or any
+member of its input set was written. A Tier 2 dependency MUST NOT be inferred by searching query
+text: an alias, common table expression, literal, or comment that resembles a resource does not
+create one. The session-inventory shim declares the packet catalog and `core.sessions`; installing
+a manifest writes the catalog input for this purpose. A shim without a complete declaration MUST
+run rather than be skipped.
 
 A validator **MUST make that test over-inclusive where it is uncertain**. Matching a resource name inside
 a string literal or a comment re-runs a check that did not need it, which costs time; failing to

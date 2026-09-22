@@ -269,7 +269,7 @@ def test_advisory_rules_are_off_by_default(packet_root):
             "level": "info",
             "advisory": True,
             "message": "advice",
-            "sql": "SELECT session_id, trial_id FROM core_trials",
+            "sql": "SELECT session_id, trial_id FROM core.trials",
         }
     )
     quiet = validate(open_packet(packet_root), registry=registry)
@@ -288,7 +288,7 @@ def test_advisory_cannot_change_the_verdict(packet_root):
             "level": "info",
             "advisory": True,
             "message": "advice",
-            "sql": "SELECT session_id, trial_id FROM core_trials",
+            "sql": "SELECT session_id, trial_id FROM core.trials",
         }
     )
     quiet = validate(open_packet(packet_root), registry=registry)
@@ -631,6 +631,7 @@ def test_a_column_determined_by_a_non_key_still_refuses():
     from unittest.mock import patch
 
     from escapewheel_reader.ordering import OVERRIDES
+
     from escapewheel_validator.generate import adjacency_settles_uniqueness
 
     table = {
@@ -645,6 +646,7 @@ def test_an_undeclared_column_ahead_of_the_key_refuses():
     from unittest.mock import patch
 
     from escapewheel_reader.ordering import OVERRIDES
+
     from escapewheel_validator.generate import adjacency_settles_uniqueness
 
     table = {"primary_key": ["a", "b"], "columns": [{"name": "x"}]}
@@ -679,8 +681,15 @@ def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
 # -- Part 03 §9.4: an amendment re-runs only the rules its own resources implicate ---------------
 
 
-def _check(sql, resource="core.units"):
-    return Check(f"{resource}.rule", "error", "message", sql, resource)
+def _check(sql, resource="core.units", dependencies=()):
+    return Check(
+        f"{resource}.rule",
+        "error",
+        "message",
+        sql,
+        resource,
+        dependencies=frozenset(dependencies or {resource}),
+    )
 
 
 def test_a_rule_attached_to_a_written_resource_runs():
@@ -688,20 +697,19 @@ def test_a_rule_attached_to_a_written_resource_runs():
 
 
 def test_a_rule_whose_query_names_a_written_resource_runs():
-    """The syntactic test is what makes Part 03 §9.4's objection answerable without the registry
-    promising that no existing rule references a resource added later."""
+    """Parsed base relations are authoritative dependencies for Tier 2."""
     sql = "SELECT c.unit_id FROM core_units c LEFT JOIN analysis_spike_events p ON c.unit_id = p.unit_id"
-    assert concerns(_check(sql), {"analysis.spike_events"})
+    assert concerns(_check(sql, dependencies={"core.units", "analysis.spike_events"}), {"analysis.spike_events"})
 
 
 def test_a_rule_reading_only_untouched_resources_may_be_skipped():
     assert not concerns(_check("SELECT * FROM core_units"), {"analysis.spike_events"})
 
 
-def test_the_test_errs_toward_running():
-    """Part 03 §9.4: a match inside a comment costs time, a missed one costs correctness."""
+def test_resource_text_in_a_comment_is_not_a_dependency():
+    """Part 03 §9.4: comments do not create Tier 2 dependencies."""
     sql = "SELECT * FROM core_units -- nothing to do with analysis_spike_events"
-    assert concerns(_check(sql), {"analysis.spike_events"})
+    assert not concerns(_check(sql), {"analysis.spike_events"})
 
 
 def test_recheck_narrows_the_rules_that_run(packet_root):
@@ -1082,6 +1090,7 @@ def _extension(root, *, tables=None, mutate=None):
     document = {
         "registry_version": "0.1.0",
         "logical_standard_version": "0.1",
+        "rule_language": "escapewheel-rule-sql-v0.1",
         "extension_id": "task",
         "extends": "escapewheel-logical-v0.1",
         "tables": {

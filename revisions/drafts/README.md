@@ -23,4 +23,3 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | `define-a-portable-tier-2-rule-language.md` | 7,667 | 2026-09-21 — rebased on `6c50a3d7471242ab03f2426ce8081f6328439a1c` and ready for acceptance; Part 11 owns the detailed language, incorporated profile, and five local SQL/IEEE entries, while Part 02 owns registry selection and declarations; all 29 quick-verifier stages pass | structural; five existing-source anchors remain verified, and ten new destination anchors are assigned during incorporation |

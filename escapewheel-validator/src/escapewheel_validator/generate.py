@@ -40,24 +40,24 @@ class Check:
     message: str
     sql: str
     resource: str
+    tier: int = 1
+    dependencies: frozenset[str] = frozenset()
+
+    def __post_init__(self) -> None:
+        """Default a generated check's inputs to its attached resource."""
+        if not self.dependencies:
+            object.__setattr__(self, "dependencies", frozenset({self.resource}))
 
 
 def concerns(check: Check, written: Collection[str]) -> bool:
     """Whether Part 03 §9.4 obliges `check` to run when `written` are the resources just written.
 
-    A check must run when it is attached to one of them, or when its query names one. Anything
-    else reads only files an amendment may not modify (Part 03 §9.2) and Part 04 §5.1 declares immutable,
-    so it can only reach the verdict it reached before.
-
-    The test is syntactic, over the flattened name a query must use (R2 §7), because that is
-    what makes it sound without the registry having to promise that no existing rule references
-    a resource added later. It is deliberately over-inclusive: a match inside a string literal
-    or a comment re-runs a check that did not need it, which costs time, where missing one costs
-    correctness.
+    Generated Tier 1 checks carry dependencies derived from registry structure, while Tier 2
+    checks carry base relations returned by the Part 11 parser. Anything else reads only files an
+    amendment may not modify (Part 03 §9.2) and Part 04 §5.1 declares immutable, so it can only
+    reach the verdict it reached before.
     """
-    if check.resource in written:
-        return True
-    return any(sql_name(resource) in check.sql for resource in written)
+    return bool(check.dependencies & set(written))
 
 
 def adjacency_settles_uniqueness(resource: str, table: Mapping[str, Any]) -> bool:
@@ -200,8 +200,9 @@ def _discriminator(
                     f"a row names {kind} and has no counterpart there (Part 02 §8.3)",
                     f"SELECT {', '.join(quote(c) for c in table['primary_key'])} FROM {name} d "
                     f"WHERE d.{col} = '{kind}' "
-                    f"AND NOT EXISTS (SELECT 1 FROM {sql_name(kind)} s WHERE {on})",
+                    f"AND NOT EXISTS (SELECT 1 FROM {kind} s WHERE {on})",
                     resource,
+                    dependencies=frozenset({resource, kind}),
                 )
             )
         return checks
@@ -215,8 +216,7 @@ def _discriminator(
     # mixes types by construction. Uncast, DuckDB coerces the string and *raises* on one that is
     # not a number, turning a finding into a check that could not run.
     union = " UNION ALL ".join(
-        f"SELECT '{k}' AS kind, CAST({quote(key)} AS VARCHAR) AS id FROM {sql_name(k)}"
-        for k, key in sorted(joinable.items())
+        f"SELECT '{k}' AS kind, CAST({quote(key)} AS VARCHAR) AS id FROM {k}" for k, key in sorted(joinable.items())
     )
     val = quote(paired)
     return checks + [
@@ -228,6 +228,7 @@ def _discriminator(
             f"WHERE r.{col} IN (SELECT DISTINCT kind FROM known) AND NOT EXISTS "
             f"(SELECT 1 FROM known k WHERE k.kind = r.{col} AND k.id = CAST(r.{val} AS VARCHAR))",
             resource,
+            dependencies=frozenset({resource, *joinable}),
         )
     ]
 
@@ -241,6 +242,7 @@ def generate(
     resolvable: set[str] | None = None,
     kinds: Mapping[str, str | None] | None = None,
     specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
+    declared: bool = True,
 ) -> list[Check]:
     """Build every check a registry implies.
 
@@ -282,7 +284,7 @@ def generate(
     for resource, table in tables.items():
         if resource not in included:
             continue
-        name = sql_name(resource)
+        name = resource
         presence = {c["name"]: c["presence"] for c in table["columns"]}
 
         for column in table["columns"]:
@@ -330,7 +332,7 @@ def generate(
         for ref in table.get("references", []):
             if ref["resource"] not in reachable:
                 continue
-            parent = sql_name(ref["resource"])
+            parent = ref["resource"]
             on = " AND ".join(f"c.{quote(a)} = p.{quote(b)}" for a, b in zip(ref["columns"], ref["resource_columns"]))
             # A nullable foreign key constrains only its non-null values; without this
             # guard every legitimately absent value reports as a violation.
@@ -344,12 +346,13 @@ def generate(
                     f"{', '.join(ref['columns'])} does not resolve to {ref['resource']}",
                     f"SELECT DISTINCT {selected} FROM {name} c LEFT JOIN {parent} p ON {on} WHERE {where}",
                     resource,
+                    dependencies=frozenset({resource, ref["resource"]}),
                 )
             )
 
-        for rule in table.get("rules", []):
+        for rule in table.get("rules", []) if declared else []:
             if rule.get("advisory") and not advisory:
                 continue
-            checks.append(Check(rule["id"], rule["level"], rule["message"], rule["sql"], resource))
+            checks.append(Check(rule["id"], rule["level"], rule["message"], rule["sql"], resource, tier=2))
 
     return checks

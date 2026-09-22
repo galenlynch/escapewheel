@@ -813,6 +813,7 @@ dependencies = [
     { name = "jsonschema" },
     { name = "numpy" },
     { name = "pyarrow" },
+    { name = "sqlglot" },
 ]
 
 [package.optional-dependencies]
@@ -831,6 +832,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "pyarrow", specifier = ">=25.0.1" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.6" },
+    { name = "sqlglot", specifier = ">=27.0" },
 ]
 provides-extras = ["remote", "s3"]
 
@@ -918,6 +920,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "types-jsonschema" },
+    { name = "zarr" },
 ]
 docs = [
     { name = "codespell" },
@@ -934,6 +937,7 @@ docs = [
     { name = "sphinx-autodoc-typehints" },
     { name = "sphinx-copybutton" },
     { name = "types-jsonschema" },
+    { name = "zarr" },
 ]
 jupyter = [
     { name = "codespell" },
@@ -947,6 +951,7 @@ jupyter = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "types-jsonschema" },
+    { name = "zarr" },
 ]
 types = [
     { name = "mypy" },
@@ -979,6 +984,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+    { name = "zarr", specifier = ">=3" },
 ]
 docs = [
     { name = "codespell" },
@@ -995,6 +1001,7 @@ docs = [
     { name = "sphinx-autodoc-typehints" },
     { name = "sphinx-copybutton" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+    { name = "zarr", specifier = ">=3" },
 ]
 jupyter = [
     { name = "codespell" },
@@ -1008,6 +1015,7 @@ jupyter = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
+    { name = "zarr", specifier = ">=3" },
 ]
 types = [
     { name = "mypy" },
@@ -2601,6 +2609,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/3b/44/6716b257b0aa6bfd51a1b31665d1c205fb12cb5ad56de752dfa15657de2f/sphinxcontrib_serializinghtml-2.0.0.tar.gz", hash = "sha256:e9d912827f872c029017a53f0ef2180b327c3f7fd23c87229f7a8e8b70031d4d", size = 16080, upload-time = "2024-07-29T01:10:09.332Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/52/a7/d2782e4e3f77c8450f727ba74a8f12756d5ba823d81b941f1b04da9d033a/sphinxcontrib_serializinghtml-2.0.0-py3-none-any.whl", hash = "sha256:6e2cb0eef194e10c27ec0023bfeb25badbbb5868244cf5bc5bdc04e4464bf331", size = 92072, upload-time = "2024-07-29T01:10:08.203Z" },
+]
+
+[[package]]
+name = "sqlglot"
+version = "30.18.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/73/5b5ce3e23b3ded3ea1986c2c2991217460d5fd5161b3e00a8425f5dcb8a3/sqlglot-30.18.0.tar.gz", hash = "sha256:e57e1b205e341979d1df5b1212c1435c598a0437e4619e3f428b15d5bc3a5cc6", size = 6018496, upload-time = "2026-09-03T13:12:58.206Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/9f/3dd2ec8dd84a33e0092f1c815267bc055073f9e833b93e389c59c10f62cc/sqlglot-30.18.0-py3-none-any.whl", hash = "sha256:ee0f9a9f3e2193e763c326e52dfb377b96fdb4292f6305c3ff2d9a220e71c601", size = 748788, upload-time = "2026-09-03T13:12:56.467Z" },
 ]
 
 [[package]]

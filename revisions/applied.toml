@@ -333,8 +333,9 @@ disposition = "applied"
 where = [{ part = "02", section = "5.3" }]
 
 [clause."R1 §2"]
-disposition = "registry"
-note = "the manifest.sessions rule is core.sessions.manifest_sessions_match; the field is 04 §3"
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim" }]
+note = "R125 moved the manifest-to-session comparison from a hidden SQL relation to the validation shim while preserving its check identity."
 
 [clause."R2 §2"]
 disposition = "applied"
@@ -2902,3 +2903,69 @@ where = [
   { part = "04", anchor = "ew-packet-catalog-normative-references" },
 ]
 note = "exact current allocation and invocation of the eleven existing bibliographic rows"
+
+[clause."R125 §3.1"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-numbered-part-ownership" },
+  { part = "02", anchor = "ew-registry-document" },
+  { part = "11", anchor = "ew-tier-2-language-selection" },
+]
+note = "Part 11 owns the selected language, Part 02 owns its registry-level selection, and Part 00 records the boundary."
+
+[clause."R125 §3.2"]
+disposition = "applied"
+where = [{ part = "11", anchor = "ew-tier-2-query-profile" }]
+note = "closed hybrid descriptor and admitted SQL query surface"
+
+[clause."R125 §3.3"]
+disposition = "applied"
+where = [{ part = "11", anchor = "ew-tier-2-relation-environment" }]
+note = "qualified registry relations, exact names, visibility, typed absence, and parsed dependencies"
+
+[clause."R125 §3.4"]
+disposition = "applied"
+where = [{ part = "11", anchor = "ew-tier-2-type-binding" }]
+note = "logical-to-SQL type binding and common-type semantics"
+
+[clause."R125 §3.5"]
+disposition = "applied"
+where = [{ part = "11", anchor = "ew-tier-2-deterministic-semantics" }]
+note = "deterministic numeric, timestamp, interval, and character semantics"
+
+[clause."R125 §3.6"]
+disposition = "applied"
+where = [{ part = "11", anchor = "ew-tier-2-bounded-recursion" }]
+note = "statically bounded recursive common-table-expression form"
+
+[clause."R125 §3.7"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-tier-2-rules" },
+  { part = "11", anchor = "ew-tier-2-finding-relation" },
+]
+note = "Tier 2 declarations return typed unordered finding bags with unique names."
+
+[clause."R125 §3.8"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-incomplete-validation" },
+  { part = "09", anchor = "ew-extension-verdicts" },
+  { part = "11", anchor = "ew-tier-2-evaluation-outcomes" },
+]
+note = "invalid, unsupported, incomplete, and completed findings remain distinct for core and each extension"
+
+[clause."R125 §3.9"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim" }]
+note = "catalog-to-session comparison is a shim check rather than a hidden SQL relation"
+
+[clause."R125 §3.10"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-incremental-revalidation" }]
+note = "each validation layer supplies its own dependency facts"
+
+[clause."R125 §3.11"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-self-description" }]
+note = "registry identities and the document-wide language selection changed atomically with migrated rules"

@@ -56,6 +56,7 @@ owned by a lower layer.
 | worked packet examples | Part 08 |
 | metadata boundaries and extension behavior | Part 09 |
 | measured performance evidence | Part 10 |
+| portable Tier 2 query language, type binding, deterministic semantics, and evaluation outcomes | Part 11 |
 
 Use two tests when placement is unclear:
 

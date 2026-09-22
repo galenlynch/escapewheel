@@ -54,26 +54,18 @@ def _registry():
         "registry_version": "0.1.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
+        "rule_language": "escapewheel-rule-sql-v0.1",
         "tables": {
             "core.sessions": {
                 "columns": [
                     _col("session_id", "string", "required"),
+                    _col("session_name", "string", "required"),
                     _col("subject_id", "string", "required"),
                     _col("session_start_time", "timestamp", "required"),
                 ],
                 "primary_key": ["session_id"],
                 "references": [],
-                "rules": [
-                    {
-                        "id": "core.sessions.manifest_sessions_match",
-                        "level": "error",
-                        "message": "the manifest sessions list disagrees with core.sessions",
-                        "sql": (
-                            "SELECT session_id FROM core_sessions WHERE session_id NOT IN "
-                            "(SELECT session_id FROM manifest_sessions)"
-                        ),
-                    }
-                ],
+                "rules": [],
             },
             "core.trials": {
                 "columns": [
@@ -96,7 +88,7 @@ def _registry():
                         "id": "core.trials.interval_valid",
                         "level": "error",
                         "message": "stop_tick precedes start_tick",
-                        "sql": "SELECT session_id, trial_id FROM core_trials WHERE stop_tick < start_tick",
+                        "sql": "SELECT session_id, trial_id FROM core.trials WHERE stop_tick < start_tick",
                     }
                 ],
             },
@@ -159,6 +151,7 @@ def packet_root(tmp_path):
     sessions = pa.table(
         {
             "session_id": pa.array(["s001"]),
+            "session_name": pa.array(["s001"]),
             "subject_id": pa.array(["m001"]),
             "session_start_time": pa.array([1_756_000_000_000_000], type=TS),
         }

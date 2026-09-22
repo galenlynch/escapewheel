@@ -375,6 +375,7 @@ MUST make the candidate inconsistent.
 | 08 | executable packet example | informative |
 | 09 | extension boundaries, namespace ownership, extension declarations, and extension independence | normative |
 | 10 | performance measurements and rationale | informative |
+| 11 | portable language and execution semantics for registry-declared validation rules | normative |
 
 An informative section MUST NOT be the sole statement of an obligation. A part MUST NOT state a
 second version of a rule another part owns. It MAY cite the owner, or summarize the rule only when
@@ -385,13 +386,15 @@ The numbered parts MUST observe this dependency direction:
 1. Part 01 defines meaning without selecting a resource shape or storage technology.
 2. Part 02 and an expressly incorporated registry represent Part 01 concepts as logical resources,
    identities, relationships, and constraints without selecting a storage technology.
-3. Part 03 maps logical resources to bytes under a profile without changing their logical identity
+3. Part 11 maps Part 02's declared resources and types into portable rule evaluation without
+   redefining logical declarations or Part 05's validation and reporting workflow.
+4. Part 03 maps logical resources to bytes under a profile without changing their logical identity
    or semantic meaning.
-4. Part 04 binds concrete packet resources to the semantic, logical, registry, and profile
+5. Part 04 binds concrete packet resources to the semantic, logical, registry, and profile
    identifiers that govern them without redefining those contracts.
-5. Part 05 specifies how writers, readers, and validators construct and judge instances under the
+6. Part 05 specifies how writers, readers, and validators construct and judge instances under the
    upstream contracts rather than becoming a second owner of those contracts.
-6. Part 09 permits namespaced extension declarations under the same applicable semantic, logical,
+7. Part 09 permits namespaced extension declarations under the same applicable semantic, logical,
    physical, catalog, and conformance boundaries without altering core.
 
 A writer MUST interpret adapter declarations and output under the owning numbered parts and
@@ -450,6 +453,6 @@ The application column states the extent to which the specification invokes each
 | [RFC 3986](https://www.rfc-editor.org/info/rfc3986) | exact | URI syntax |
 | [JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core) and [Validation](https://json-schema.org/draft/2020-12/json-schema-validation) | Draft 2020-12 | incorporated JSON Schemas |
 
-The missing-authority release block applies currently to the unspecified Tier 2 rule language and
-to any required Zarr codec configuration or binary behavior not determined by the authorities in
+The missing-authority release block applies currently to any required Zarr codec configuration or
+binary behavior not determined by the authorities in
 [Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references).

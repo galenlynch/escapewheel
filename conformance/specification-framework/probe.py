@@ -57,9 +57,9 @@ def main() -> int:
         _replace(
             "00_architecture.md",
             part_row,
-            part_row + "\n| 11 | unknown | informative |",
+            part_row + "\n| 12 | unknown | informative |",
         ),
-        "part table has unknown: 11",
+        "part table has unknown: 12",
     )
     _assert_rejected(
         "conflicting local status",
@@ -151,6 +151,15 @@ def main() -> int:
         ),
         "Part 04 normative references are missing FIPS 180-4",
     )
+    _assert_rejected(
+        "missing Part 11 reference",
+        _replace(
+            "11_tier_2_rule_language.md",
+            "https://standards.ieee.org/ieee/754/6210/",
+            "https://example.invalid/missing-ieee-754",
+        ),
+        "Part 11 normative references are missing IEEE 754-2019",
+    )
     parquet_marker = framework.REFERENCE_MARKERS["Parquet"]
     misplaced_part_03 = _text("03_portable_physical_profile.md").replace(
         parquet_marker, "example.invalid/misplaced-parquet"
@@ -198,6 +207,15 @@ def main() -> int:
             "Its requirements use the shared JSON and URI authorities",
         ),
         "Part 04 external-reference invocation is missing",
+    )
+    _assert_rejected(
+        "missing Part 11 invocation",
+        _replace(
+            "11_tier_2_rule_language.md",
+            "SQL/Foundation editions, corrigenda, and IEEE floating-point edition identified in §9",
+            "SQL and floating-point references identified in §9",
+        ),
+        "Part 11 external-reference invocation is missing",
     )
     _assert_rejected(
         "implementation used as authority",

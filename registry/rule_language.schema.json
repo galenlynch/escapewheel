@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://escapewheel.org/schemas/rule-language/0.1.0",
+  "title": "Escapewheel rule-language profile",
+  "type": "object",
+  "required": [
+    "$schema",
+    "id",
+    "basis",
+    "iso_feature_dependencies",
+    "contract_clauses",
+    "type_bindings",
+    "execution"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "const": "https://escapewheel.org/schemas/rule-language/0.1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*-v[0-9]+\\.[0-9]+$"
+    },
+    "basis": {
+      "type": "object",
+      "required": ["sql_framework", "sql_foundation", "floating_point"],
+      "additionalProperties": false,
+      "properties": {
+        "sql_framework": { "$ref": "#/$defs/sql_basis" },
+        "sql_foundation": { "$ref": "#/$defs/sql_basis" },
+        "floating_point": { "type": "string", "minLength": 1 }
+      }
+    },
+    "iso_feature_dependencies": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][0-9]{3}(-[0-9]{2})?$" }
+    },
+    "contract_clauses": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^ew-[a-z0-9]+(-[a-z0-9]+)*$" }
+    },
+    "type_bindings": {
+      "type": "object",
+      "required": ["bool", "date", "float32", "float64", "int32", "int64", "json_string", "string", "timestamp"],
+      "additionalProperties": false,
+      "properties": {
+        "bool": { "$ref": "#/$defs/nonempty" },
+        "date": { "$ref": "#/$defs/nonempty" },
+        "float32": { "$ref": "#/$defs/nonempty" },
+        "float64": { "$ref": "#/$defs/nonempty" },
+        "int32": { "$ref": "#/$defs/nonempty" },
+        "int64": { "$ref": "#/$defs/nonempty" },
+        "json_string": { "$ref": "#/$defs/nonempty" },
+        "string": { "$ref": "#/$defs/nonempty" },
+        "timestamp": { "$ref": "#/$defs/nonempty" }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "required": ["approximate_arithmetic", "approximate_order", "character_order", "exact_arithmetic", "identifier_resolution", "interval_day_seconds", "null_order", "result_model", "time_zone"],
+      "additionalProperties": false,
+      "properties": {
+        "approximate_arithmetic": { "$ref": "#/$defs/nonempty" },
+        "approximate_order": { "$ref": "#/$defs/nonempty" },
+        "character_order": { "$ref": "#/$defs/nonempty" },
+        "exact_arithmetic": { "$ref": "#/$defs/nonempty" },
+        "identifier_resolution": { "$ref": "#/$defs/nonempty" },
+        "interval_day_seconds": { "type": "integer", "minimum": 1 },
+        "null_order": { "$ref": "#/$defs/nonempty" },
+        "result_model": { "$ref": "#/$defs/nonempty" },
+        "time_zone": { "$ref": "#/$defs/nonempty" }
+      }
+    }
+  },
+  "$defs": {
+    "nonempty": { "type": "string", "minLength": 1 },
+    "sql_basis": {
+      "type": "object",
+      "required": ["standard", "corrigendum"],
+      "additionalProperties": false,
+      "properties": {
+        "standard": { "$ref": "#/$defs/nonempty" },
+        "corrigendum": { "$ref": "#/$defs/nonempty" }
+      }
+    }
+  }
+}

@@ -1,7 +1,8 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.2.0",
-  "registry_version": "0.1.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.3.0",
+  "registry_version": "0.2.0",
   "logical_standard_version": "0.1",
+  "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "aind_unit_qc",
   "extends": "escapewheel-logical-v0.1",
   "tables": {
@@ -211,43 +212,43 @@
           "id": "aind_unit_qc.metrics.presence_ratio_is_bounded",
           "level": "error",
           "message": "presence_ratio falls outside 0-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, presence_ratio FROM aind_unit_qc_metrics WHERE presence_ratio IS NOT NULL AND (presence_ratio < 0 OR presence_ratio > 1)"
+          "sql": "SELECT session_id, unit_id, presence_ratio FROM aind_unit_qc.metrics WHERE presence_ratio IS NOT NULL AND (presence_ratio < 0 OR presence_ratio > 1)"
         },
         {
           "id": "aind_unit_qc.metrics.amplitude_cutoff_is_bounded",
           "level": "error",
           "message": "amplitude_cutoff falls outside 0-0.5, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, amplitude_cutoff FROM aind_unit_qc_metrics WHERE amplitude_cutoff IS NOT NULL AND (amplitude_cutoff < 0 OR amplitude_cutoff > 0.5)"
+          "sql": "SELECT session_id, unit_id, amplitude_cutoff FROM aind_unit_qc.metrics WHERE amplitude_cutoff IS NOT NULL AND (amplitude_cutoff < 0 OR amplitude_cutoff > 0.5)"
         },
         {
           "id": "aind_unit_qc.metrics.rp_contamination_is_bounded",
           "level": "error",
           "message": "rp_contamination falls outside 0-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, rp_contamination FROM aind_unit_qc_metrics WHERE rp_contamination IS NOT NULL AND (rp_contamination < 0 OR rp_contamination > 1)"
+          "sql": "SELECT session_id, unit_id, rp_contamination FROM aind_unit_qc.metrics WHERE rp_contamination IS NOT NULL AND (rp_contamination < 0 OR rp_contamination > 1)"
         },
         {
           "id": "aind_unit_qc.metrics.nn_hit_rate_is_bounded",
           "level": "error",
           "message": "nn_hit_rate falls outside 0-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, nn_hit_rate FROM aind_unit_qc_metrics WHERE nn_hit_rate IS NOT NULL AND (nn_hit_rate < 0 OR nn_hit_rate > 1)"
+          "sql": "SELECT session_id, unit_id, nn_hit_rate FROM aind_unit_qc.metrics WHERE nn_hit_rate IS NOT NULL AND (nn_hit_rate < 0 OR nn_hit_rate > 1)"
         },
         {
           "id": "aind_unit_qc.metrics.nn_miss_rate_is_bounded",
           "level": "error",
           "message": "nn_miss_rate falls outside 0-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, nn_miss_rate FROM aind_unit_qc_metrics WHERE nn_miss_rate IS NOT NULL AND (nn_miss_rate < 0 OR nn_miss_rate > 1)"
+          "sql": "SELECT session_id, unit_id, nn_miss_rate FROM aind_unit_qc.metrics WHERE nn_miss_rate IS NOT NULL AND (nn_miss_rate < 0 OR nn_miss_rate > 1)"
         },
         {
           "id": "aind_unit_qc.metrics.silhouette_is_bounded",
           "level": "error",
           "message": "silhouette falls outside -1-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, silhouette FROM aind_unit_qc_metrics WHERE silhouette IS NOT NULL AND (silhouette < -1 OR silhouette > 1)"
+          "sql": "SELECT session_id, unit_id, silhouette FROM aind_unit_qc.metrics WHERE silhouette IS NOT NULL AND (silhouette < -1 OR silhouette > 1)"
         },
         {
           "id": "aind_unit_qc.metrics.a_count_is_not_negative",
           "level": "error",
           "message": "a violation count is negative",
-          "sql": "SELECT session_id, unit_id FROM aind_unit_qc_metrics WHERE isi_violations_count < 0 OR rp_violations < 0"
+          "sql": "SELECT session_id, unit_id FROM aind_unit_qc.metrics WHERE isi_violations_count < 0 OR rp_violations < 0"
         }
       ]
     },
@@ -381,7 +382,7 @@
           "id": "aind_unit_qc.waveform_metrics.a_width_is_positive",
           "level": "error",
           "message": "a waveform width is zero or negative, which no waveform has",
-          "sql": "SELECT session_id, unit_id FROM aind_unit_qc_waveform_metrics WHERE peak_to_valley <= 0 OR half_width <= 0"
+          "sql": "SELECT session_id, unit_id FROM aind_unit_qc.waveform_metrics WHERE peak_to_valley <= 0 OR half_width <= 0"
         }
       ]
     },
@@ -448,19 +449,19 @@
           "id": "aind_unit_qc.synchrony.a_size_is_at_least_two",
           "level": "error",
           "message": "a synchrony size below two describes a unit firing with itself",
-          "sql": "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc_synchrony WHERE synchrony_size < 2"
+          "sql": "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc.synchrony WHERE synchrony_size < 2"
         },
         {
           "id": "aind_unit_qc.synchrony.a_fraction_is_a_fraction",
           "level": "error",
           "message": "a synchrony fraction falls outside 0-1",
-          "sql": "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc_synchrony WHERE sync_spike IS NOT NULL AND (sync_spike < 0 OR sync_spike > 1)"
+          "sql": "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc.synchrony WHERE sync_spike IS NOT NULL AND (sync_spike < 0 OR sync_spike > 1)"
         },
         {
           "id": "aind_unit_qc.synchrony.larger_is_rarer",
           "level": "error",
           "message": "a larger synchrony size is reported as more common than a smaller one, which its nesting forbids",
-          "sql": "SELECT a.session_id, a.unit_id, a.synchrony_size, b.synchrony_size AS larger FROM aind_unit_qc_synchrony a JOIN aind_unit_qc_synchrony b ON a.unit_id = b.unit_id AND a.synchrony_size < b.synchrony_size WHERE a.sync_spike IS NOT NULL AND b.sync_spike IS NOT NULL AND b.sync_spike > a.sync_spike"
+          "sql": "SELECT a.session_id, a.unit_id, a.synchrony_size, b.synchrony_size AS larger FROM aind_unit_qc.synchrony AS a JOIN aind_unit_qc.synchrony AS b ON a.unit_id = b.unit_id AND a.synchrony_size < b.synchrony_size WHERE a.sync_spike IS NOT NULL AND b.sync_spike IS NOT NULL AND b.sync_spike > a.sync_spike"
         }
       ]
     }

@@ -7,8 +7,8 @@ This generated rendering is not a standalone specification. See the repository
 [authority model](../README.md#authority) for the sources that bind.
 
 ```text
-43 tables, 351 columns, 111 references, 77 Tier 2 rules
-registry 0.2.0   logical standard escapewheel-logical-v0.1
+43 tables, 351 columns, 111 references, 76 Tier 2 rules
+registry 0.3.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -812,9 +812,8 @@ registry 0.2.0   logical standard escapewheel-logical-v0.1
 - `subject_id` → `core.subjects` (`subject_id`)
 - `reference_clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 5
+**Tier 2 rules** — 4
 
-- `core.sessions.manifest_sessions_match` — error: the manifest's session inventory and core.sessions disagree; the manifest names a session by its session_name, since an assigned session_id means nothing outside the packet that assigned it
 - `core.sessions.session_interval_valid` — error: session_end_time precedes session_start_time
 - `core.sessions.reference_clock_declared` — error: a session declaring more than one clock names no reference clock
 - `core.sessions.every_clock_reaches_the_reference` — error: a clock does not reach the session's reference clock, so it cannot be converted to it

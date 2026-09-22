@@ -89,9 +89,6 @@ locations = [{ path = "registry/rules.json", pointer = "/rules/core.media_frames
 [target."R76 §2.3"]
 locations = [{ path = "registry/registry.schema.json", pointer = "/$defs/column/properties/identity" }]
 
-[target."R1 §2"]
-locations = [{ path = "registry/rules.json", pointer = "/rules/core.sessions/0/id", equals = "core.sessions.manifest_sessions_match" }]
-
 [target."R13 §3"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.clock_anchors" }]
 
@@ -413,7 +410,7 @@ locations = [
 [target."R99 §3.1"]
 locations = [
   { path = "registry/logical_schemas.json", pointer = "/tables/core.sessions" },
-  { path = "registry/rules.json", pointer = "/rules/core.sessions/4/id", equals = "core.sessions.alignment_bound_at_least_default" },
+  { path = "registry/rules.json", pointer = "/rules/core.sessions/3/id", equals = "core.sessions.alignment_bound_at_least_default" },
 ]
 
 [target."R99 §3.2"]

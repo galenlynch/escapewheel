@@ -293,7 +293,9 @@ No rule checks either half, and none is added. Nothing structural tells a code f
 ### 9.1 The schema is one document
 
 Table structure and validation rules are carried in one JSON document. It declares the semantic and
-logical standard versions, its own registry version, and its tables. The document MUST NOT contain
+logical standard versions, its own registry version, one document-wide `rule_language`, and its
+tables. The selected language applies atomically to every Tier 2 rule. A rule MUST NOT repeat or
+override it, and one registry document MUST NOT mix languages. The document MUST NOT contain
 registry-build `derived_from` at its root or `since` on a table or column declaration. The root,
 table, and column objects are closed, so any such property makes the document invalid. This rule
 does not apply to the packet catalog's resource-lineage `derived_from`.
@@ -304,8 +306,12 @@ does not apply to the packet catalog's resource-lineage `derived_from`.
 A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on. A packet whose embedded registry disagrees with its recorded version is invalid.
 
 A core or extension registry document published with this specification MUST carry a top-level
-`$schema` equal to `https://escapewheel.org/schemas/registry/0.2.0`. The registry meta-schema MUST
-carry that exact value as its `$id`. The core registry's `registry_version` MUST be exactly `0.2.0`.
+`$schema` equal to `https://escapewheel.org/schemas/registry/0.3.0`. The registry meta-schema MUST
+carry that exact value as its `$id`. The core registry's `registry_version` MUST be exactly `0.3.0`.
+A registry published with this specification MUST select
+`rule_language: escapewheel-rule-sql-v0.1`. The shipped extension versions are `0.3.0` for
+`aind_opto`, `0.2.0` for `aind_unit_qc`, `0.4.0` for `dynamic_foraging`, and `0.3.0` for
+`vr_foraging`.
 A validator MUST NOT dereference `$schema`.
 
 If `$schema` names no meta-schema the consumer holds, the document MUST be reported as governed by
@@ -350,11 +356,17 @@ A validator MUST establish that a table's primary key is unique, by query or by 
 <a id="ew-tier-2-rules" data-spec-anchor="canonical"></a>
 ### 10.2 Tier 2: declared
 
-A rule the structure cannot imply is declared as SQL returning offending rows, or as a named template the registry build expands.
+A rule the structure cannot imply declares `id`, `level`, `message`, and `sql`, or uses a named
+template that the registry build expands to those fields. Its registry-level `rule_language`
+selects the interpretation of `sql`; [Part 11](11_tier_2_rule_language.md) defines the current
+language, relation mapping, and finding relation. A rule is logically attached to the resource
+whose `rules` array contains it, but it may name other resources the selected language permits.
 
 A rule's SQL MUST NOT reference a column whose presence is `optional`. A rule is executed against the file, and `optional` permits the column to be absent from it (§6), so a rule naming one does not miss a check — the query fails to parse, and the run meant to find defects reports an error of its own. A constraint that wants an optional column either makes it `nullable`, which declares it always present and sometimes empty, or moves to the shim of §10.3.
 
-The execution contract is the whole protocol: **a check's query returns offending rows; empty is a pass, non-empty is a failure, and the returned rows are the finding.**
+The language contract determines the result relation. A completed empty result passes; a completed
+non-empty result produces the declared finding. Invalid, unsupported, and incomplete evaluation
+are not findings and cannot establish a pass (Part 11 §8).
 
 A rule declares a level of `error`, `warning`, or `info`. A rule MAY be `advisory`, in which case
 it is off by default and MUST NOT be `error`, so that enabling it cannot change whether a packet

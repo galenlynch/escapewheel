@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/registry/0.2.0",
+  "$id": "https://escapewheel.org/schemas/registry/0.3.0",
   "title": "Escapewheel schema registry",
   "description": "Shape of logical_schemas.json. Validates the registry document; column semantics are values within it, not JSON Schema types.",
   "type": "object",
   "required": [
     "registry_version",
     "logical_standard_version",
+    "rule_language",
     "tables"
   ],
   "additionalProperties": false,
@@ -24,6 +25,10 @@
     },
     "logical_standard_version": {
       "type": "string"
+    },
+    "rule_language": {
+      "type": "string",
+      "minLength": 1
     },
     "tables": {
       "type": "object",

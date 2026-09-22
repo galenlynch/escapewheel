@@ -195,7 +195,10 @@ Generated from structure (Part 02 §10.1): required-column non-null, primary-key
 <a id="ew-tier-2-validation" data-spec-anchor="canonical"></a>
 ### 5.2 Tier 2
 
-Declared per table as SQL returning offending rows, or as an expanded template (Part 02 §10.2).
+Declared per table under Part 02 §10.2 and interpreted by the registry's selected language. Before
+execution, a validator MUST support that exact language and MUST parse, statically validate, bind,
+and type-check the rule as Part 11 requires. It MUST execute only a checked query. A language or
+profile defect makes the registry invalid rather than producing a packet finding.
 
 <a id="ew-validation-shim" data-spec-anchor="canonical"></a>
 ### 5.3 The shim
@@ -203,6 +206,13 @@ Declared per table as SQL returning offending rows, or as an expanded template (
 A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and checksums outside SQL. A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
 
 A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key.
+
+The shim MUST compare the catalog's session inventory with `core.sessions.session_name` under the
+check ID `core.sessions.manifest_sessions_match`, at `error`, with the message carried by the
+registry before that check moved here. It reports each non-null table value absent from the
+catalog, preserving duplicates, and each catalog session absent from every table row. The shim
+declares the packet catalog and `core.sessions` as inputs. No Tier 2 rule may depend on the shim's
+implementation mechanism.
 
 ### 5.4 Extensions
 
@@ -265,14 +275,24 @@ A validator MUST NOT downgrade an error to make a packet pass. An advisory rule 
 
 Where an import replaces an existing packet, it SHOULD report every resource the prior catalog declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
 
+<a id="ew-incomplete-validation" data-spec-anchor="canonical"></a>
+### 9.4 Incomplete validation
+
+A report MUST distinguish an invalid registry rule, an unsupported selected language, an
+incomplete valid evaluation, and a completed query that produced packet findings. An unreadable
+input, engine failure, exact overflow, out-of-range timestamp, timeout, or resource limit makes the
+affected required evaluation incomplete. A validator MUST NOT turn its inability to evaluate into
+an error-level packet finding. Core and every extension retain separate evaluation state.
+
 <a id="ew-conformance-classes" data-spec-anchor="canonical"></a>
 ## 10. Two conformance classes
 
 A report says which of two claims it is making.
 
 A packet conforms to this specification when it declares a profile defined here, carries every
-resource that profile requires, satisfies every structural requirement of Part 02, and produces no
-error-level finding from the checks of this part. A conforming packet MAY omit any resource this
+resource that profile requires, satisfies every structural requirement of Part 02, completes every
+required evaluation, and produces no error-level finding from the checks of this part. An invalid,
+unsupported, or incomplete required evaluation cannot support a conformance claim. A conforming packet MAY omit any resource this
 specification does not require. A validator MUST NOT reject a packet merely for carrying a resource
 this specification does not define. Part 09 §5.4 defines how core and extension verdicts compose.
 

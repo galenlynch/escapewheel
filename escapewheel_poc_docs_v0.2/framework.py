@@ -16,7 +16,7 @@ import combine
 HERE = Path(__file__).resolve().parent
 
 PARTS = {path.name[:2]: path.name for path in sorted(HERE.glob("[0-9][0-9]_*.md"))}
-EXPECTED_PARTS = {f"{number:02d}" for number in range(11)}
+EXPECTED_PARTS = {f"{number:02d}" for number in range(12)}
 
 IDENTIFIERS = {
     "profile_id": (
@@ -34,7 +34,7 @@ IDENTIFIERS = {
         "02",
         "ew-core-logical-schema-scope",
     ),
-    "registry_version": ("0.2.0", "02", "ew-registry-self-description"),
+    "registry_version": ("0.3.0", "02", "ew-registry-self-description"),
 }
 
 REFERENCE_MARKERS = {
@@ -61,6 +61,11 @@ REFERENCE_MARKERS = {
     "Zarr v2": "zarr-specs.readthedocs.io/en/latest/v2/v2.0.html",
     "RFC 8878": "https://www.rfc-editor.org/info/rfc8878",
     "FIPS 180-4": "csrc.nist.gov/pubs/fips/180-4",
+    "ISO/IEC 9075-1:2023": "https://www.iso.org/standard/76583.html",
+    "ISO/IEC 9075-1:2023/Cor 1:2026": "https://www.iso.org/standard/93690.html",
+    "ISO/IEC 9075-2:2023": "https://www.iso.org/standard/76584.html",
+    "ISO/IEC 9075-2:2023/Cor 1:2026": "https://www.iso.org/standard/93691.html",
+    "IEEE 754-2019": "https://standards.ieee.org/ieee/754/6210/",
 }
 
 REFERENCE_OWNERS = {
@@ -87,12 +92,18 @@ REFERENCE_OWNERS = {
     "Zarr v2": "03",
     "RFC 8878": "03",
     "FIPS 180-4": "04",
+    "ISO/IEC 9075-1:2023": "11",
+    "ISO/IEC 9075-1:2023/Cor 1:2026": "11",
+    "ISO/IEC 9075-2:2023": "11",
+    "ISO/IEC 9075-2:2023/Cor 1:2026": "11",
+    "IEEE 754-2019": "11",
 }
 
 REFERENCE_ANCHORS = {
     "00": "ew-normative-references",
     "03": "ew-portable-profile-normative-references",
     "04": "ew-packet-catalog-normative-references",
+    "11": "ew-rule-language-normative-references",
 }
 
 REFERENCE_ROWS = {
@@ -157,12 +168,40 @@ REFERENCE_ROWS = {
             "SHA-256",
         ),
     ),
+    "11": (
+        (
+            "[ISO/IEC 9075-1:2023](https://www.iso.org/standard/76583.html)",
+            "exact",
+            "SQL framework, terminology, and feature identification",
+        ),
+        (
+            "[ISO/IEC 9075-1:2023/Cor 1:2026](https://www.iso.org/standard/93690.html)",
+            "exact",
+            "corrections to the SQL framework edition",
+        ),
+        (
+            "[ISO/IEC 9075-2:2023](https://www.iso.org/standard/76584.html)",
+            "exact",
+            "SQL/Foundation grammar and semantics selected by the profile",
+        ),
+        (
+            "[ISO/IEC 9075-2:2023/Cor 1:2026](https://www.iso.org/standard/93691.html)",
+            "exact",
+            "corrections to the SQL/Foundation edition",
+        ),
+        (
+            "[IEEE 754-2019](https://standards.ieee.org/ieee/754/6210/)",
+            "exact",
+            "binary32, binary64, rounding, exceptional values, and approximate arithmetic",
+        ),
+    ),
 }
 
 REFERENCE_INVOCATIONS = {
     "00": "Normative prose invokes an external authority **directly**",
     "03": "Its requirements directly invoke the shared JSON and URI authorities",
     "04": "Its requirements directly invoke the shared JSON and URI authorities",
+    "11": "SQL/Foundation editions, corrigenda, and IEEE floating-point edition identified in §9",
 }
 
 NORMATIVE_KEYWORD = re.compile(
@@ -300,7 +339,7 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
     )
     readme_parts = [row[0] for row in readme_rows]
     if readme_parts != sorted(EXPECTED_PARTS):
-        found.append("README part projection does not contain Parts 00–10 exactly once")
+        found.append("README part projection does not contain Parts 00–11 exactly once")
     for number, title, status in readme_rows:
         if number not in PARTS:
             continue
@@ -313,7 +352,7 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
     for field, (value, owner, _anchor) in IDENTIFIERS.items():
         if field == "registry_version":
             declaration = (
-                "The core registry's `registry_version` MUST be exactly `0.2.0`."
+                "The core registry's `registry_version` MUST be exactly `0.3.0`."
             )
             if declaration not in numbered_texts[owner]:
                 found.append(f"{field} owner declaration is missing from Part {owner}")

@@ -6,7 +6,7 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 
 <!-- BEGIN generated: counts -->
 ```
-43 tables, 351 columns, 111 references, 77 Tier 2 rules
+43 tables, 351 columns, 111 references, 76 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -17,14 +17,18 @@ to see what a table looks like now; read Part 02 plus the revisions to see why.
 |---|---|
 | `logical_schemas.json` | The registry. Embedded in packets at `schemas/logical_schemas.json`. |
 | `registry.schema.json` | Meta-schema; the registry validates against it (R2 §9). |
+| `rule_language.schema.json` | Closed schema for a rule-language profile. |
+| `rule_languages/escapewheel-rule-sql-v0.1.json` | Exact incorporated portable Tier 2 language profile. |
 | `manifest.schema.json` | JSON Schema for `packet.json` (R2 §10). |
 
-The two schemas are hand-written here and **vendored** by the distributions that use them — a
+The schemas and language profile are hand-written here and **vendored** by the distributions that use them — a
 wheel cannot read a file from another distribution. Those copies are *build artifacts*, written by
 `build.py` and compared by `check.py`, not files to maintain:
 
 ```
 registry.schema.json  ──build.py──>  escapewheel-validator/src/escapewheel_validator/schemas/
+rule_language.schema.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
+rule_languages/escapewheel-rule-sql-v0.1.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
 manifest.schema.json  ──build.py──>  escapewheel-reader/src/escapewheel_reader/schemas/
 ```
 
@@ -59,9 +63,9 @@ python3 check.py      # structural invariants; exit 1 on any failure
 ```
 
 `build.py` rejects a `rules.json` entry naming a table the registry does not define;
-`check.py` verifies the merge round-trips and that every rule executes as SQL against
-tables built from the registry, which is what catches a rule referencing a column that a
-revision has since removed.
+`check.py` verifies the merge round-trips. The rule-language conformance suite statically checks
+every Tier 2 rule against the selected profile, binds it against qualified relations built from
+the registry, and exercises typed semantic vectors.
 
 `render.py` writes `tables.md` and fills this file's generated regions. Every count below is
 one of those: a number stated in prose is a number that goes stale, which this file
@@ -109,21 +113,22 @@ it names a resource the packet declares (R55 §2.4).
 
 ## Tier 2 rules
 
-Authored in `rules.json` and merged inline into each table's `rules` array. R2 §13 left
+Authored in `rules.json` and merged inline into each table's `rules` array. The whole registry
+selects `escapewheel-rule-sql-v0.1`; individual rules cannot override it. R2 §13 left
 inline-versus-sibling open, to be decided when the content was generated; inline was chosen, so
 a table's whole contract is readable in one place.
 
 <!-- BEGIN generated: rules -->
-77 rules over 27 tables: 68 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
+76 rules over 27 tables: 67 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
 | `core.clocks` | 11 |
 | `core.array_dimensions` | 8 |
 | `core.processing_runs` | 7 |
-| `core.sessions` | 5 |
 | `core.units` | 5 |
 | `core.clock_anchors` | 4 |
+| `core.sessions` | 4 |
 | `core.media_assets` | 3 |
 | `core.preferred_runs` | 3 |
 | `core.unit_electrodes` | 3 |
@@ -147,16 +152,13 @@ a table's whole contract is readable in one place.
 | `core.unit_quality_labels` | 1 |
 <!-- END generated: rules -->
 
-`tables.md` lists them by id with the message each reports. `core.sessions` requires the shim to
-register the manifest's `sessions` array as a `manifest_sessions` relation before rules run,
-which is the one rule that reads something no table holds.
+`tables.md` lists them by ID with the message each reports. The catalog-to-`core.sessions`
+comparison is a Part 05 shim check because the catalog is not a SQL relation.
 
 ## Identifier quoting
 
-Emitted SQL quotes every column identifier. `core.array_assets.offset` is reserved in
-DuckDB, and each engine reserves a different set, so quoting is unconditional rather than
-conditional on a word list. `check.py` builds DDL from the registry and executes every rule
-against empty tables, which is what surfaced the collision.
+Tier 2 rules name canonical qualified resources such as `core.array_assets`. Identifiers use the
+exact lowercase spelling declared by the registry; delimiters do not create alternate names.
 
 ## Not yet present
 
