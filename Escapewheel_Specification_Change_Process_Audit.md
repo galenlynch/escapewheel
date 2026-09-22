@@ -54,10 +54,10 @@ after this audit:
 3. `revisions/evidence.py` and `revisions/evidence/R<N>.json` map each current-format accepted
    Decision clause to authoritative owners, generated projections, collected conformance evidence,
    implementation paths, and documentation paths or explicit unchanged reasons.
-4. CI runs `ci/runtime_capabilities.py` before full verification, proving that its runner can wake
-   the asynchronous thread bridge, round-trip Zarr v3, and bind the Arrow Flight Unix-domain
-   socket. A runner missing one of these facilities fails in a bounded probe rather than hanging a
-   package suite.
+4. Full verification runs `ci/runtime_capabilities.py` before generation or package tests, proving
+   that its runner can wake the asynchronous thread bridge, round-trip Zarr v3, and bind the Arrow
+   Flight Unix-domain socket. A runner missing one of these facilities fails in a bounded probe
+   rather than hanging a package suite; CI uses the same verifier entry point.
 
 ## 1. Verifier diagnosis
 
@@ -87,9 +87,10 @@ submitted coroutine. A minimal background `asyncio` event-loop test and a minima
 `asyncio.to_thread` test also time out inside this sandbox. The failure therefore precedes
 Escapewheel's reader code and reproduces without a packet.
 
-The correct response is not to skip the array test. The verifier now announces a stage before
-entering it and bounds each stage, so the failure is named and eventually returned instead of
-looking like an indefinite repository hang. The environment-specific failure remains visible.
+The correct response is not to skip the array test. The full verifier now runs the isolated
+capability supervisor first. A blocked primitive is named and returned within ten seconds, before
+generation or a package suite begins; the per-stage timeout remains a backstop for failures that
+are not covered by the preflight. The environment-specific failure remains visible.
 
 The writer suite exposes a second sandbox boundary independently: its Flight delivery test cannot
 bind the Unix-domain socket requested by PyArrow Flight (`Failed to add port to server`). Running

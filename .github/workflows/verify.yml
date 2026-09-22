@@ -23,7 +23,5 @@ jobs:
           for package in escapewheel-reader escapewheel-validator escapewheel-writer escapewheel-aind; do
             uv sync --all-extras --project "$package"
           done
-      - name: Exercise required thread, Zarr, and Flight facilities
-        run: uv run --project escapewheel-writer python ci/runtime_capabilities.py
       - name: Every generator and every check
         run: uv run --project escapewheel-writer python verify.py

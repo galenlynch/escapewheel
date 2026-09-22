@@ -55,6 +55,11 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         [sys.executable, "-m", "unittest", "revisions.test_evidence"],
     ),
     (
+        "root: verifier control-flow tests",
+        ROOT,
+        [sys.executable, "-m", "unittest", "ci.test_verify"],
+    ),
+    (
         "revisions: process semantics tests",
         ROOT,
         [sys.executable, "revisions/test_process.py"],
@@ -166,6 +171,15 @@ SUITES = (
     "escapewheel-aind",
 )
 
+# Full verification needs facilities that some restricted execution environments deny or cannot
+# wake. Prove those facilities before doing any of the comparatively expensive generation and
+# corpus work, rather than discovering the problem in a package fixture after many minutes.
+RUNTIME_CAPABILITY_STAGE = (
+    "runtime: full-suite capabilities",
+    ROOT,
+    [sys.executable, "ci/runtime_capabilities.py"],
+)
+
 #: Directories whose tracked content must be unchanged once the generators have run. Only the
 #: ones holding generated output; an unrelated edit elsewhere is not this tool's business.
 GENERATED = (
@@ -195,7 +209,9 @@ def _last_output(output: str) -> str:
 def _failure_log(name: str, output: str) -> Path:
     """Preserve complete output for a failed stage outside the candidate tree."""
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "stage"
-    descriptor, filename = tempfile.mkstemp(prefix=f"escapewheel-verify-{slug}-", suffix=".log")
+    descriptor, filename = tempfile.mkstemp(
+        prefix=f"escapewheel-verify-{slug}-", suffix=".log"
+    )
     with os.fdopen(descriptor, "w") as stream:
         stream.write(output)
     return Path(filename)
@@ -353,11 +369,28 @@ def main() -> int:
     timeout = args.stage_timeout or None
     heartbeat = args.heartbeat or None
 
+    if not args.quick:
+        name, cwd, argv = RUNTIME_CAPABILITY_STAGE
+        print(f"run  {name}", flush=True)
+        clock = time.perf_counter()
+        passed, tail = run(name, cwd, argv, timeout, heartbeat)
+        detail = tail[:80] if passed else tail
+        print(
+            f"{'ok  ' if passed else 'FAIL'} {name:46s} "
+            f"{time.perf_counter() - clock:5.1f}s  {detail}",
+            flush=True,
+        )
+        if not passed:
+            print("\nfull verification stopped before generation and package tests")
+            print(
+                "use --quick for checks that do not require these runtime capabilities"
+            )
+            return 1
+
     stages = list(STAGES)
     if not args.quick:
         stages += [
-            (f"{p}: tests", ROOT / p, ["uv", "run", "pytest", "-vv"])
-            for p in SUITES
+            (f"{p}: tests", ROOT / p, ["uv", "run", "pytest", "-vv"]) for p in SUITES
         ]
 
     baseline = {where: candidate_state(where) for where in GENERATED}

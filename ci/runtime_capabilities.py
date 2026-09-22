@@ -1,9 +1,10 @@
-"""Fail unless CI can exercise the runtime facilities used by the full package suites.
+"""Fail unless the runtime can exercise facilities used by the full package suites.
 
 The local restricted agent sandbox cannot wake Zarr's synchronous asyncio bridge or bind the
 Unix-domain socket used by Arrow Flight. Those are environment failures, but silently skipping the
-tests would leave the monorepo without conformance evidence. CI runs these isolated probes before
-the verifier so its environment contract is explicit and a blocked primitive fails quickly.
+tests would leave the monorepo without conformance evidence. The full verifier runs these isolated
+probes before generation or package tests so its environment contract is explicit and a blocked
+primitive fails quickly. CI reaches them through that same verifier entry point.
 """
 
 from __future__ import annotations
@@ -60,6 +61,12 @@ PROBES = {
     "flight-socket": flight_socket,
 }
 
+# A healthy probe completes in well under a second. This outer bound is deliberately
+# longer than async_bridge's five-second diagnostic bound because it also includes interpreter
+# startup and imports. It exists for runtimes where the event loop itself cannot wake, so the
+# in-process asyncio timeout cannot fire.
+PROBE_TIMEOUT = 10
+
 
 def main() -> int:
     """Run one child probe or supervise every probe with a short hard timeout."""
@@ -70,7 +77,6 @@ def main() -> int:
         PROBES[args.probe]()
         return 0
 
-    failures = []
     for name in PROBES:
         print(f"run  {name}", flush=True)
         try:
@@ -79,21 +85,18 @@ def main() -> int:
                 capture_output=True,
                 text=True,
                 check=False,
-                timeout=30,
+                timeout=PROBE_TIMEOUT,
             )
         except subprocess.TimeoutExpired:
-            failures.append(f"{name}: timed out after 30 seconds")
-            continue
+            print(f"FAIL {name}: timed out after {PROBE_TIMEOUT} seconds")
+            return 1
         if done.returncode:
             output = (done.stdout + done.stderr).strip().splitlines()
-            failures.append(
-                f"{name}: {output[-1] if output else 'failed without output'}"
-            )
-        else:
-            print(f"ok   {name}", flush=True)
-    for failure in failures:
-        print(f"FAIL {failure}")
-    return 1 if failures else 0
+            detail = output[-1] if output else "failed without output"
+            print(f"FAIL {name}: {detail}")
+            return 1
+        print(f"ok   {name}", flush=True)
+    return 0
 
 
 if __name__ == "__main__":

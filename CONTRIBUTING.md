@@ -67,11 +67,13 @@ uv run --project escapewheel-writer python verify.py --stage-timeout 60
 
 Run it before committing anything that touches the registry, a rule, a fixture, or a generator.
 It prints each stage before entering it; every stage is bounded to 300 seconds by default, and
-`--stage-timeout 0` disables that bound for an intentionally long monitored run. CI runs the same
-command. CI first runs `ci/runtime_capabilities.py`, which proves its runner can wake the
-asynchronous thread bridge used by Zarr, round-trip a Zarr v3 array, and bind the Unix-domain socket
-used by Arrow Flight. A runner lacking those facilities is unsuitable for the full suite and fails
-before a package test can hang or be mistaken for an implementation defect.
+`--stage-timeout 0` disables that bound for an intentionally long monitored run. A full run first
+executes `ci/runtime_capabilities.py`, which proves its runner can wake the asynchronous thread
+bridge used by Zarr, round-trip a Zarr v3 array, and bind the Unix-domain socket used by Arrow
+Flight. Each healthy probe completes in well under a second; a blocked probe has a ten-second hard
+limit. A runner lacking those facilities is unsuitable for the full suite and fails before
+generation or a package test can hang or be mistaken for an implementation defect. CI runs the
+same command and therefore exercises the same preflight.
 
 ## 3.1 Working with large packets
 
