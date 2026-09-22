@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `b78fd3fc246469e2c8d1fb78a277c4ec9fe16595` |
+| **Based on** | `6c50a3d7471242ab03f2426ce8081f6328439a1c` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 00 §10; Part 02 §§1, 9.1–9.2, and 10.2; Part 03 §9.4; Part 05 §§5.2–5.3 and §10, plus a new subsection under §9; Part 09 §5.4; registry meta-schema, registries, Tier 2 rules, and the new rule-language profile |
-| **Depends on** | R2 §§7.2–7.3 and §§8–9; R24 §§3–4; R26 §§3–5; R35 §5; R94 §3; R121 §3.2; R122 §§3.2–3.3, §3.6, and §3.9 |
+| **Amends** | Part 00 §§9–10; Part 02 §§9.1–9.2 and 10.2; Part 03 §9.4; Part 05 §§5.2–5.3 and §10, plus a new subsection under §9; Part 09 §5.4; a new Part 11; registry meta-schema, registries, Tier 2 rules, and the new rule-language profile |
+| **Depends on** | R2 §§7.2–7.3 and §§8–9; R24 §§3–4; R26 §§3–5; R35 §5; R94 §3; R121 §3.2; R122 §§3.2–3.3 and §3.6; R124 §§3.1–3.3 |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6; §3.7; §3.8; §3.9; §3.10; §3.11 |
 
@@ -18,11 +18,12 @@ Normative keywords follow BCP 14.
 ## 1. Scope
 
 This revision defines the language and evaluation boundary of registry-declared Tier 2 rules. It
-replaces unspecified “SQL” with a versioned Escapewheel profile of ISO SQL/Foundation, selected
-once by each registry document and represented by a directly maintained, schema-validated JSON
-profile. It defines the visible relations, type binding, allowed query surface, deterministic edge
-semantics, bounded recursion, result relation, failure classes, and dependency extraction needed
-by independent validators.
+replaces unspecified “SQL” with a versioned Escapewheel profile of ISO SQL/Foundation. Each
+registry document selects the language once under Part 02, while a new normative Part 11 owns the
+language contract and expressly incorporates a directly maintained, schema-validated JSON profile.
+Part 11 defines the visible relations, type binding, allowed query surface, deterministic edge
+semantics, bounded recursion, result relation, and language-level failure classes needed by
+independent validators.
 
 The revision keeps DuckDB as the reference implementation without making DuckDB's full dialect,
 parser representation, defaults, or release cycle normative. It also removes the one hidden
@@ -31,17 +32,19 @@ Part 05 shim boundary.
 
 This is a structural revision. Append-only text would leave Part 02 §10.2's unspecified language,
 Part 03 §9.4's flattened textual dependency test, and the hidden catalog relation in their current
-owners while placing incompatible replacement rules later. The existing clauses and one registry
-rule must instead be replaced or moved under stable anchors.
+owners while placing incompatible replacement rules later. Putting the detailed language inside
+Part 02 would also interrupt the logical-declaration contract with a separate specification-wide
+execution language. The existing clauses and one registry rule must therefore be replaced under
+stable anchors, and the language contract must receive its own Part 11.
 
 ### 1.1 Structural crosswalk
 
 | old location or artifact | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
-| Part 00 §10 `ew-normative-references` — missing Tier 2 language remains a release blocker | replace the omission with the SQL framework and foundation editions, both applicable corrigenda, and the floating-arithmetic reference after the language is incorporated | Part 00 §10 retains the bibliography; Part 02 owns the language semantics | resolves the named candidate defect | §§3.1, 3.5 |
-| Part 02 §1 `ew-core-logical-schema-scope` — incorporated logical registry only | retain and extend | Part 02 §1 expressly incorporates the rule-language profile and its schema for exact assignments | gives the machine profile bounded authority without moving semantic ownership out of Part 02 | §3.1 |
+| Part 00 §9 `ew-numbered-part-ownership` — Parts 00–10 and no rule-language subject | amend | Part 00 §9 assigns Part 11 the normative rule-language subject and records its dependency boundary | makes the new owner's status and relationship to Parts 02 and 05 explicit | §3.1 |
+| Part 00 §10 `ew-normative-references` — unspecified Tier 2 language remains a release blocker | amend the defect statement without adding SQL or IEEE entries there | Part 00 retains shared-reference policy; the new Part 11 normative-reference section owns the five subject-local entries | resolves the named candidate defect under R124's subject-owned-reference rule | §§3.1, 3.5 |
 | Part 02 §§9.1–9.2 `ew-registry-document` and `ew-registry-self-description` | amend | the same sections | adds one required registry-level language selection and updates changed document identities | §§3.1, 3.11 |
-| Part 02 §10.2 — Tier 2 is unspecified SQL returning offending rows | replace and subdivide under planned anchor `ew-tier-2-rules` | Part 02 §10.2 and new child subsections | defines the language, binding, semantics, result, and rule-validity boundary | §§3.1–3.8 |
+| Part 02 §10.2 `ew-tier-2-rules` — Tier 2 is unspecified SQL returning offending rows | replace while preserving the section and anchor | Part 02 §10.2 owns Tier 2 rule declarations, registry-level selection, optional-column exclusion, severity, advisory behavior, and the link to Part 11 | removes language semantics from the logical-schema part while retaining declaration semantics there | §§3.1, 3.7–3.8 |
 | Part 02 §10.3 — physical facts are outside SQL | retain | Part 02 §10.3 and Part 05 §5.3 | none; the new profile narrows rather than expands the observable domain | §§3.2–3.3, 3.9 |
 | Part 03 §9.4 — revalidation searches flattened SQL text for every generated and declared query | replace under planned anchor `ew-incremental-revalidation` | Part 03 §9.4 | Tier 1 dependencies come from registry structure, Tier 2 dependencies from parsed base relations, and shim dependencies from explicit declarations | §3.10 |
 | Part 05 §5.2 — validator invokes unspecified SQL | replace under planned anchor `ew-tier-2-validation` | Part 05 §5.2 | validator checks language support and profile conformance before execution | §§3.1–3.8 |
@@ -52,7 +55,8 @@ rule must instead be replaced or moved under stable anchors.
 | `registry/registry.schema.json` | replace its current shape and identity | the registry meta-schema incorporated through Part 02 | requires one non-empty `rule_language` string per registry document | §§3.1, 3.11 |
 | core rule `core.sessions.manifest_sessions_match` | remove from Tier 2 | Part 05 §5.3 shim check with the same check identity | removes the undeclared `manifest_sessions` relation while preserving the compared values and corpus outcome | §3.9 |
 | the other 121 core and extension Tier 2 rules | rewrite in place | their core or extension registry documents | uses qualified resource names, standard spellings, safe arithmetic, and unique result names without changing predicates or pass/fail meaning | §§3.2–3.7, 3.11 |
-| no present rule-language profile | add `registry/rule_language.schema.json` and `registry/rule_languages/escapewheel-rule-sql-v0.1.json` | Part 02 semantics plus the incorporated machine assignments | creates a language-neutral, data-driven contract | §§3.1–3.6 |
+| no Part 11 | add §§1–9 with new canonical anchors | Part 11 owns language identity and authority, query profile, relation environment, type binding, deterministic semantics, bounded recursion, finding relations, evaluation outcomes, and local normative references | gives the specification-wide execution language one readable normative owner outside the logical-registry part | §§3.1–3.8 |
+| no present rule-language profile | add `registry/rule_language.schema.json` and `registry/rule_languages/escapewheel-rule-sql-v0.1.json` | Part 11 semantics plus the incorporated machine assignments | creates a language-neutral, data-driven contract | §§3.1–3.6 |
 
 The specification README, registry README, validator and package documentation, rendered tables,
 and combined specification are projections or human guidance. They change during incorporation
@@ -65,8 +69,9 @@ but do not become additional normative owners.
 Part 02 §10.2 says that a Tier 2 rule is SQL returning offending rows and defines empty as pass and
 non-empty as failure. It does not identify a SQL edition or dialect, define the relations visible
 to a query, map registry types to SQL domains, restrict statements and routines, or settle null,
-NaN, arithmetic, timestamp, collation, result, and execution-error semantics. Part 00 §10 therefore
-correctly lists the Tier 2 language as a release-blocking omission.
+NaN, arithmetic, timestamp, collation, result, and execution-error semantics. No numbered part owns
+that missing language contract, and Part 00 §10 therefore correctly lists it as a release-blocking
+omission.
 
 The registry meta-schema requires `id`, `level`, `message`, and `sql` for a rule, but no field says
 which language interprets `sql`. The reference validator passes that string to DuckDB. Its table
@@ -140,7 +145,7 @@ The language basis is ISO/IEC 9075-1:2023 and ISO/IEC 9075-2:2023, as corrected 
 ISO/IEC 9075-1:2023/Cor 1:2026 and ISO/IEC 9075-2:2023/Cor 1:2026 respectively. ISO SQL is
 feature-based and deliberately broad; citing it does not itself select a safe query subset or
 settle the numerical and environmental choices exposed above. The machine profile makes that
-selection, while Part 02 supplies the Escapewheel-specific meaning.
+selection, while Part 11 supplies the Escapewheel-specific meaning.
 
 ISO SQL's conformance model identifies formal features and subfeatures rather than defining a
 portable dialect JSON format. PostgreSQL's
@@ -148,7 +153,7 @@ portable dialect JSON format. PostgreSQL's
 shows the standard `feature_id` and `sub_feature_id` representation, and its published
 [SQL:2023 feature inventory](https://raw.githubusercontent.com/postgres/postgres/master/src/backend/catalog/sql_features.txt)
 provides the corresponding identifiers. The profile descriptor follows that identification model
-for standard dependencies, while stable Part 02 clauses state the narrower permission and
+for standard dependencies, while stable Part 11 clauses state the narrower permission and
 semantic contract. It is not an engine parser configuration or a claim of full implementation of
 each broad ISO feature.
 
@@ -156,30 +161,46 @@ There are no released packets, external consumers, or remote compatibility commi
 Development registries and packets can be regenerated. This permits correcting names, registry
 shape, and results rather than preserving prototype aliases.
 
-P4 remains downstream because it applies all registry-document invariants uniformly after P3
-supplies a rule language. P6 later reconciles packet-to-registry binding, P7 defines the complete
-report-composition model, and P10 confirms final release identifiers. None can substitute for a
-defined executable language now.
+Roadmap P4 remains downstream because it applies all registry-document invariants uniformly after
+P3 supplies a rule language. Roadmap P6 later reconciles packet-to-registry binding, roadmap P7
+defines the complete report-composition model, and roadmap P10 confirms final release identifiers.
+None can substitute for a defined executable language now.
 
 ## 3. Decision
 
 ### 3.1 Language authority and registry-level selection
 
-Part 02 **MUST** define the semantic interpretation of the Tier 2 rule language identified by
-`escapewheel-rule-sql-v0.1`. Part 00 **MUST** cite ISO/IEC 9075-1:2023,
-ISO/IEC 9075-1:2023/Cor 1:2026, ISO/IEC 9075-2:2023, ISO/IEC 9075-2:2023/Cor 1:2026, and IEEE
-754-2019 as exact normative references to the extent Part 02 invokes them.
+Part 00 §9 **MUST** assign Part 11 the normative subject “portable language and execution semantics
+for registry-declared validation rules.” It **MUST** state the boundary explicitly: Part 11 maps
+Part 02's declared logical resources and types into rule evaluation, while Part 05 owns validation
+and reporting workflow. Part 11 **MUST NOT** redefine either subject.
 
-Part 02 **MUST** expressly incorporate:
+Part 11 **MUST** define the semantic interpretation of the Tier 2 rule language identified by
+`escapewheel-rule-sql-v0.1`. Its scope **MUST** invoke the exact external authorities used by its
+query and numerical requirements, and its local normative-reference section **MUST** contain
+exactly these entries:
+
+| reference | candidate edition | application |
+|---|---|---|
+| [ISO/IEC 9075-1:2023](https://www.iso.org/standard/76583.html) | exact | SQL framework, terminology, and feature identification |
+| [ISO/IEC 9075-1:2023/Cor 1:2026](https://www.iso.org/standard/93690.html) | exact | corrections to the SQL framework edition |
+| [ISO/IEC 9075-2:2023](https://www.iso.org/standard/76584.html) | exact | SQL/Foundation grammar and semantics selected by the profile |
+| [ISO/IEC 9075-2:2023/Cor 1:2026](https://www.iso.org/standard/93691.html) | exact | corrections to the SQL/Foundation edition |
+| [IEEE 754-2019](https://standards.ieee.org/ieee/754/6210/) | exact | binary32, binary64, rounding, exceptional values, and approximate arithmetic |
+
+Part 11 **MUST** expressly incorporate:
 
 - `registry/rule_language.schema.json` for the exact closed shape of a rule-language profile; and
 - `registry/rule_languages/escapewheel-rule-sql-v0.1.json` for the exact external basis, ISO
-  feature dependencies, Part 02 contract-clause references, type bindings, and execution-setting
+  feature dependencies, Part 11 contract-clause references, type bindings, and execution-setting
   assignments of this profile.
 
-Part 02 **MUST** remain the owner of the fields' meanings, query semantics, actor obligations, and
-failure boundaries. The incorporated JSON artifacts **MUST NOT** make a particular parser, AST,
-database engine, or validator implementation authoritative.
+Part 11 **MUST** remain the owner of the profile fields' meanings, query semantics, actor
+obligations, and language-level failure boundaries. The incorporated JSON artifacts **MUST NOT**
+make a particular parser, abstract syntax tree, database engine, or validator implementation
+authoritative. Part 02 **MUST** remain the owner of the registry's `rule_language` field, its
+document-wide selection semantics, and each Tier 2 rule's declaration fields and logical
+attachment to a resource. Part 05 **MUST** remain the owner of validation and reporting workflow.
 
 Every core or extension registry document **MUST** carry one required top-level `rule_language`
 string. For the registries published with this candidate its value **MUST** be
@@ -342,7 +363,7 @@ JSON whitespace and object-member or array order carry no meaning.
 An ISO feature or subfeature identifier in `iso_feature_dependencies` identifies a definition on
 which the profile depends. It is not a claim of full ISO implementation conformance, does not
 permit every form covered by that feature, and does not permit syntax by itself. The complete
-permission and semantic boundary is the cited Part 02 clause set. Part 02 **MUST** create those
+permission and semantic boundary is the cited Part 11 clause set. Part 11 **MUST** create those
 eight canonical anchors when it incorporates the profile, and the profile and clauses **MUST**
 enter the candidate atomically. A validator **MUST** support the contract identified by `id` as a
 whole; it **MUST NOT** construct a different language by independently toggling the dependency
@@ -416,7 +437,7 @@ filesystem, network, parameter, volatile, or environment-dependent surface. An e
 
 A validator **MUST** parse and statically check a rule against this profile before executing it. It
 **MUST NOT** execute a rule that fails the check. An implementation **MAY** use an engine parser,
-but neither the descriptor nor Part 02 **MUST** contain that parser's node names or depend on
+but neither the descriptor nor Part 11 **MUST** contain that parser's node names or depend on
 unpublished AST behavior.
 
 ### 3.3 Relation environment, names, and dependencies
@@ -632,8 +653,8 @@ rule.
 Only a completed query returning rows **MUST** produce that query's declared finding. A required
 Tier 2 evaluation that is invalid, unsupported, or incomplete **MUST NOT** support a claim that the
 affected core or extension registry passed, and a validator **MUST NOT** report the complete packet
-as conforming from the mere absence of an error-level finding. P7 **MUST** remain responsible for
-the final report representation and the composition of complete, incomplete, core, and extension
+as conforming from the mere absence of an error-level finding. This revision does not define the
+final report representation or the composition of complete, incomplete, core, and extension
 results.
 
 Core and each extension **MUST** retain separate evaluation state. An unsupported or incomplete
@@ -653,8 +674,7 @@ catalog inventory and each catalog session string absent from every `core.sessio
 relation. The existing Tier 1 non-null check remains responsible for a null required
 `session_name`.
 
-P6 **MAY** later replace or generalize this shim when it reconciles manifest requiredness and
-registry binding, but no Tier 2 rule **MAY** depend on the interim implementation mechanism.
+No Tier 2 rule **MAY** depend on the shim's implementation mechanism.
 
 ### 3.10 Incremental revalidation uses layer-owned dependencies
 
@@ -715,17 +735,10 @@ operand. The median rule **MUST** use the profile's ordered-set expression; the 
 **MUST** use its standard form; and the eight duplicate result projections **MUST** be repaired
 under §3.7.
 
-The reference validator **MUST** create schema-qualified packet-local relations, statically check
-every Tier 2 rule, lock the deterministic settings in §§3.4–3.5, disable external state and side
-effects defensively, lower standard profile types to equivalent engine-native representations
-where necessary, and execute only checked queries. The directly maintained profile and schema
-**MUST** be vendored with the validator by the registry build and mechanically compared with their
-sources.
-
-Development packets and embedded registries **MUST** be regenerated together. No migration
-guarantee applies to the earlier unreleased shape. P10 **MAY** assign later final release
-identifiers only through its own reviewed decision; it **MUST NOT** mutate this profile's contract
-while retaining `escapewheel-rule-sql-v0.1`.
+A validator claiming support for `escapewheel-rule-sql-v0.1` **MUST** create schema-qualified
+packet-local relations, statically check every Tier 2 rule, lock the deterministic settings in
+§§3.4–3.5, disable external state and side effects defensively, lower standard profile types to
+equivalent engine-native representations where necessary, and execute only checked queries.
 
 ## 4. What this does not change
 
@@ -736,11 +749,11 @@ while retaining `escapewheel-rule-sql-v0.1`.
 - A reader remains able to open ordinary packet resources without embedding a SQL engine. A
   reader's public ad hoc query interface may expose a broader engine dialect; it does not define
   registry-rule conformance.
-- P4 still owns uniform non-JSON registry-document invariants and invocation at every registry
-  boundary. P6 still owns general packet-to-registry binding and requiredness. P7 still owns final
-  report serialization, sampling, coverage, and validity composition.
+- Roadmap P4 still owns uniform non-JSON registry-document invariants and invocation at every
+  registry boundary. Roadmap P6 still owns general packet-to-registry binding and requiredness.
+  Roadmap P7 still owns final report serialization, sampling, coverage, and validity composition.
 - The rule language defines how a present predicate treats NaN. It does not decide whether each
-  scientific domain predicate should admit NaN; P9 retains that separate audit.
+  scientific domain predicate should admit NaN; roadmap P9 retains that separate audit.
 - Adapter protocols and source-specific extraction do not change.
 
 ## 5. Consequence
@@ -753,12 +766,13 @@ shapes and scientific data do not change.
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged because no scientific concept changes meaning. | No authored Part 01 change; semantic review against the Decision. |
-| logical prose and registry | Expand Part 02, incorporate the profile and schema, add `rule_language`, update identities, rewrite 121 rules, remove one SQL rule, and repair eight results. | Meta-schema validation; profile-schema validation; static check of core and all extensions; exact rule inventory and predicate-equivalence review. |
+| logical prose and registry | Amend Part 02 only for registry selection and Tier 2 declaration semantics; add `rule_language`, update identities, rewrite 121 rules, remove one SQL rule, and repair eight results. | Meta-schema validation; static check of core and all extensions; exact rule inventory and predicate-equivalence review. |
+| rule-language prose and profile | Add normative Part 11, incorporate the profile schema and exact profile there, and place the five directly invoked SQL and IEEE references in its local normative-reference section. | Profile-schema validation; exact JSON comparison; contract-anchor and reference-allocation checks; typed semantic vectors. |
 | physical profiles | Replace Part 03 §9.4's flattened text search with layer-owned Tier 1, Tier 2, and shim dependencies; stored encodings remain unchanged. | Focused incremental-revalidation tests for all three check classes and no physical-format diff. |
 | packet catalog and JSON Schemas | Catalog shape is unchanged; its session inventory is read by a Part 05 shim rather than an SQL relation. | Manifest schema remains byte-identical; orphan-session corpus finding retains its ID and outcome. |
 | validation and import | Check profile conformance before execution, distinguish four outcome classes, move the session check, and forbid a conformance claim on incomplete evaluation. | Positive, rejection, runtime-failure, timeout, and unsupported-language tests; corpus expectations. |
 | extensions | Add the language declaration and versions, qualify relation names, and enforce core-plus-own visibility and separate incomplete state. | All four extension documents validate; cross-extension and forbidden-language negative cases fail before execution. |
-| reader, writer, validator, adapters | Validator gains the checker, relation environment, deterministic settings, and failure state; writer embeds regenerated registries. Reader ordinary access and adapters remain behaviorally unchanged. | Focused validator and writer suites; reader packet-open regression; implementation citation check. |
+| reader, writer, validator, adapters | Validator gains the checker, relation environment, deterministic settings, and failure state; the registry build vendors the maintained profile artifacts with the validator, and the writer embeds regenerated registries. Reader ordinary access and adapters remain behaviorally unchanged. | Focused validator and writer suites; exact source-to-vendor comparison; reader packet-open regression; implementation citation check. |
 | conformance fixtures and tests | Add typed semantic vectors, syntax rejection cases, security probes, dependency cases, and preserved packet findings. | Named vector runner and package tests pass; all 28 packet variants retain expected outcomes except intentionally richer incomplete-state assertions. |
 | revision process and tooling | No lifecycle semantics change. Add structural anchors, ledger destinations, registry pointers, and clause evidence. | Anchor-bootstrap check, headings, ledger, evidence, stages, citations, and repoint checks pass. |
 | generated publications and developer documentation | Regenerate registry JSON, tables, READMEs, vendored artifacts, combined specification, examples, and current counts. | Generators preserve the final candidate state and examples name qualified relations. |
@@ -773,9 +787,9 @@ ignored. The evidence is not a second language definition; it exercises the inco
 The vector set and focused package tests must establish at least:
 
 1. the maintained schema enforces the closed shape and identifier formats, the maintained profile
-   is semantically equal to the exact JSON value in §3.2, every ISO dependency and contract anchor
-   resolves, and all 121 retained core and extension rules pass static profile checking, bind only
-   authorized qualified resources, and execute against typed empty relations;
+   is semantically equal to the exact JSON value in §3.2, every ISO dependency and Part 11 contract
+   anchor resolves, and all 121 retained core and extension rules pass static profile checking,
+   bind only authorized qualified resources, and execute against typed empty relations;
 2. DDL, DML, multiple statements, system catalogs, configuration, external table functions,
    filesystem access, unknown routines, undeclared relations, cross-extension relations,
    unbounded recursion, duplicate output names, case-folded identifiers, unaliased derived tables,
@@ -821,17 +835,34 @@ affected existing heading that lacked one:
 | Part 05 §5.3 | `ew-validation-shim` |
 | Part 09 §5.4 | `ew-extension-verdicts` |
 
-Part 00 §10, Part 02 §§1, 9.1, and 9.2, and Part 05 §10 already have canonical anchors. The new
-Part 02 child headings and the new subsection under Part 05 §9 receive anchors when created. The
-metadata-only comparator found no change between the bootstrap and its parent other than the five
-canonical-anchor insertions; no heading, numbering, order, prose, normativity marker, or alias
-changed.
+The new destinations receive these canonical anchors during incorporation:
+
+| new heading | canonical anchor |
+|---|---|
+| Part 11 — Language identity, authority, and selection | `ew-tier-2-language-selection` |
+| Part 11 — Query profile | `ew-tier-2-query-profile` |
+| Part 11 — Relation environment, names, and dependencies | `ew-tier-2-relation-environment` |
+| Part 11 — Logical type binding and general expression semantics | `ew-tier-2-type-binding` |
+| Part 11 — Numeric, timestamp, and character semantics | `ew-tier-2-deterministic-semantics` |
+| Part 11 — Bounded recursive common table expressions | `ew-tier-2-bounded-recursion` |
+| Part 11 — Finding-relation semantics | `ew-tier-2-finding-relation` |
+| Part 11 — Evaluation outcomes | `ew-tier-2-evaluation-outcomes` |
+| Part 11 — Normative references | `ew-rule-language-normative-references` |
+| Part 05 — Incomplete validation, appended under Reporting | `ew-incomplete-validation` |
+
+Part 00 §§9–10, Part 02 §§9.1–9.2, and Part 05 §10 already have canonical anchors. The new Part 11
+sections and the new subsection under Part 05 §9 receive anchors when created, so they require no
+pre-existing-source bootstrap. The metadata-only comparator found no change between the bootstrap
+and its parent other than the five canonical-anchor insertions; no heading, numbering, order,
+prose, normativity marker, or alias changed. Rebase on R124 confirmed that every bootstrapped source
+anchor remains assigned to the same heading.
 
 ## 7. Open
 
-P4 will define and apply the remaining whole-registry invariants uniformly. P6 will define general
-packet-to-registry binding and required-resource declarations. P7 will define the report's exact
-machine shape, finding sampling, coverage, and validity composition. P9 will audit domain-specific
-NaN acceptance. P10 will settle final release identifiers, and P11 will freeze publication bytes.
-Those later decisions may build on or supersede this contract through their own revisions; none is
-needed to interpret the Decision above.
+Roadmap P4 will define and apply the remaining whole-registry invariants uniformly. Roadmap P6 will
+define general packet-to-registry binding and required-resource declarations. Roadmap P7 will
+define the report's exact machine shape, finding sampling, coverage, and validity composition.
+Roadmap P9 will audit domain-specific NaN acceptance. Roadmap P10 will settle final release
+identifiers, and roadmap P11 will freeze publication bytes. Those later decisions may build on or
+supersede this contract through their own revisions; none is needed to interpret the Decision
+above.
