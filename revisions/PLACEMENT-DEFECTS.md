@@ -55,6 +55,7 @@ The roadmap owns sequencing among work items; this file owns the observation-lev
 | PD-018 | Part 08 | An informative example's acceptance checklist and SQL resemble an independent contract and preserve obsolete unit columns. | P2 reconciles unit examples; P10 generates and executes the example from current authoritative declarations. | Tracked: P2/P10 |
 | PD-019 | Part 09 | The core/extension placement boundary repeats Part 00, while adapter and report-delivery behavior belongs with the build interface. | R122 established the architectural owner; P8 reconciles adapter behavior and makes Part 09 reference rather than restate it. | Tracked: P8 |
 | PD-020 | Part 10 §3 | An informative performance part states an uppercase `SHOULD` about time-bucket row groups. | Move the storage obligation to Part 03 and retain its measurement and rationale in Part 10. | Tracked: P9 |
+| PD-021 | Part 00 §§2 and 10 | The complete central bibliography places external authorities used only by one numbered part in the framework rather than beside the subject that invokes them. | P2.1 appraises retaining policy and shared references in Part 00 while moving single-part references to Parts 03, 04, and the future Part 11. | Tracked: P2.1 |
 
 ## Closure record
 

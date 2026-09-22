@@ -82,9 +82,10 @@ combined specification can reproduce normative text without becoming a separatel
 ### 2.2 Part 00 is the framework; the specification README is an entry point
 
 Part 00 is the natural owner of specification identity, conformance targets, normative-language
-conventions, normative-reference policy and bibliography, artifact roles, status conventions,
-actors, abstraction boundaries, part ownership, dependency direction, and publication conventions.
-It should distinguish:
+conventions, normative-reference policy and cross-cutting references, artifact roles, status
+conventions, actors, abstraction boundaries, part ownership, dependency direction, and publication
+conventions. A reference used by only one numbered part should live with that part's subject; a
+shared reference should retain one entry in Part 00. Part 00 should distinguish:
 
 - **abstraction levels:** semantic, logical, and physical; and
 - **packet content classes:** the architectural relationship of core, extension, analysis, and
@@ -261,24 +262,30 @@ P1 authority framework
  |\
  | +--> P2 placement and unit-identity reconciliation
  |
- +----> P3 executable rule language --> P4 registry conformance
-                                         |
-                                         v
-                               P5 resource/profile model
-                                         |
-                                         v
-                               P6 packet manifest contract
-                                  |                \
-                                  v                 v
-                         P7 validity composition   P8 recipe/adapter contract
-                                  \                 /
-                                   +---- P9 remaining reconciliations
-                                                  |
-                                                  v
-                                  P10 identifiers and source cleanup
-                                                  |
-                                                  v
-                                  P11 immutable v0.2 publication
+ +--> P2.1 subject-owned normative references
+       |
+       v
+     P3 executable rule language
+       |
+       v
+     P4 registry conformance
+       |
+       v
+     P5 resource/profile model
+       |
+       v
+     P6 packet manifest contract
+       |                \
+       v                 v
+     P7 validity       P8 recipe/adapter contract
+       \                 /
+        +---- P9 remaining reconciliations
+                      |
+                      v
+        P10 identifiers and source cleanup
+                      |
+                      v
+        P11 immutable v0.2 publication
 ```
 
 | ID | Work item | Depends on | Accepted record or target |
@@ -287,15 +294,16 @@ P1 authority framework
 | P0.1 | Controlled reorganization of specification parts | P0 | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) |
 | P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | P0.1 | [R121](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) |
 | P1 | Specification authority, abstraction levels, and normative ownership | P0.1, P0.2 | [R122](../accepted/R122-define-specification-artifacts-and-normative-ownership.md) |
-| P2 | Placement cleanup and unit-identity reconciliation | P1 | Proposal to be scoped |
-| P3 | Executable declarative-rule language | P1 | Proposal to be scoped |
+| P2 | Placement cleanup and unit-identity reconciliation | P1 | [R123](../accepted/R123-a-unit-is-identified-by-its-packet-assigned-unit-id.md) |
+| P2.1 | Locate normative references with their subject owners | P1; executed after P2 | [Active proposal](locate-normative-references-with-their-subjects.md) |
+| P3 | Executable declarative-rule language | P2.1 | Active draft, to be rebased after P2.1 |
 | P4 | Registry-document semantics and uniform conformance | P3 | Proposal to be scoped |
 | P5 | Resource/profile declarations and resource classification | P4 | Proposal to be scoped |
 | P6 | Packet manifest, requiredness, and registry binding | P5 | Proposal to be scoped |
 | P7 | Core, extension, and packet validity composition | P4, P6 | Proposal to be scoped |
 | P8 | Recipe arbitration and adapter contract | P5, P6 | Proposal to be scoped |
 | P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5–P8 as applicable | Proposal family; split before promotion |
-| P10 | Final identifiers, direct registry source, and release integration | P2–P9 | Proposal plus ordinary maintenance |
+| P10 | Final identifiers, direct registry source, and release integration | P2, P2.1, and P3–P9 | Proposal plus ordinary maintenance |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
 
 ### P0 — Revision-process foundation
@@ -509,6 +517,27 @@ and current documentation were reconciled. Meaning-preserving cleanup elsewhere 
 proposal.
 
 **Review coverage:** S0, S1, S8, S9, I3, I10, and the unit-identity portion of I9.
+
+### P2.1 — Subject-owned normative references
+
+R122 deliberately gave Part 00 the complete normative bibliography. Review of P3's proposed SQL
+and IEEE dependencies reopened that choice: the numbered parts are separately readable normative
+documents, and an external authority used by one part is easier to find and better placed beside
+the subject that invokes it. Part 00 should retain the reference policy and one copy of genuinely
+cross-cutting references, while Part 03 receives the portable-format references, Part 04 receives
+the SHA-256 reference, and the future Part 11 receives its SQL and floating-point references.
+
+This is a small structural precursor rather than an incidental P3 edit because it changes an
+accepted ownership rule independently of the rule language. It preserves every existing external
+identity, candidate edition state, invocation scope, packet behavior, and release-time requirement
+to pin exact editions. The framework checker moves from a central-only inventory to an exact-owner
+inventory. P3 then rebases on the resulting general policy instead of creating a language-specific
+exception.
+
+**Exit evidence:** Part 00 states the general and shared-reference rule; each existing bibliography
+entry appears once in its approved owner; framework mutations reject a missing, misplaced, or
+duplicated entry; current packet and corpus behavior is unchanged; and P3 can place the ISO SQL and
+IEEE 754 references in Part 11.
 
 ### P3 — Executable declarative-rule language
 
