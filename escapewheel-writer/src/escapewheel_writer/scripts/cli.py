@@ -27,8 +27,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+from escapewheel_validator import RegistryRejected, check_registry_context_bytes
+
 from .. import compare
-from ..extensions import load as load_extension
+from ..extensions import load_checked as load_extension_context
 from ..recipe import RECIPE_SUPPLIES, SHARED, Recipe, preferences
 from ..session import build, materializers
 from ..writer import CommitRefused
@@ -198,7 +200,7 @@ def _wins(kind: str, offering: list[str]) -> bool:
     return kind == preferred.get(resource_owner or "", offering[0]) if resource_owner else kind == offering[0]
 
 
-def _import(args: argparse.Namespace) -> int:
+def _import(args: argparse.Namespace) -> int:  # noqa: C901
     """Build and commit a packet from a recipe (Part 05 Stages 2-6)."""
     # The override goes into the load rather than onto the result: a build derives where a
     # delivery lands and where the source cache sits from where the packet is going, and the
@@ -208,8 +210,21 @@ def _import(args: argparse.Namespace) -> int:
     if registry_path is None:
         print("error: no registry; declare [packet].registry or pass --registry", file=sys.stderr)
         return 2
-    registry = json.loads(Path(registry_path).read_text())
-    extensions = [load_extension(named, base=recipe.path.parent) for named in recipe.extensions]
+    core_context = check_registry_context_bytes(Path(registry_path).read_bytes())
+    if args.registry_result is not None:
+        args.registry_result.write_text(json.dumps(core_context.result.to_dict(), indent=2) + "\n")
+    if core_context.result.state != "valid":
+        print(f"error: core registry is {core_context.result.state}", file=sys.stderr)
+        return 2
+    registry = core_context.document
+    extension_contexts = [
+        load_extension_context(named, core_context, base=recipe.path.parent) for named in recipe.extensions
+    ]
+    rejected = [context for context in extension_contexts if context.result.state != "valid"]
+    if rejected:
+        print(f"error: extension registry is {rejected[0].result.state}", file=sys.stderr)
+        return 2
+    extensions = [context.document for context in extension_contexts]
     if args.sample:
         recipe = recipe.with_sample(args.sample)
 
@@ -238,7 +253,17 @@ def _import(args: argparse.Namespace) -> int:
     # One budget for the build. The CLI wins over the recipe, because the recipe travels with
     # the data and the machine packaging it does not.
     budget = args.memory_budget or recipe.memory_budget
-    writer = build(recipe, registry, say=say, strict=args.strict)
+    try:
+        writer = build(
+            recipe,
+            core_context,
+            extension_contexts=extension_contexts,
+            say=say,
+            strict=args.strict,
+        )
+    except RegistryRejected as exc:
+        print(json.dumps(exc.result.to_dict(), indent=2), file=sys.stderr)
+        return 2
     derive = materializers(recipe, memory_budget=budget)
     limits = {k: v for k, v in recipe.limits.items() if k != "memory_budget"}
     if budget and "memory_limit" not in limits:
@@ -354,43 +379,38 @@ def _extension_check(args: argparse.Namespace) -> int:
     an author whether it was sound, so the answer arrived when a build refused it, or did not
     arrive. Core is checked by exactly this function, which is what keeps the two from drifting.
     """
-    from escapewheel_validator.registry_document import check_extension
-
     if not args.document.is_file():
         print(f"error: {args.document} does not exist", file=sys.stderr)
         return 2
     if args.packet is not None:
         from escapewheel_reader import open_packet
 
-        core = open_packet(args.packet).registry
-        if core is None:
+        packet = open_packet(args.packet)
+        try:
+            core_context = check_registry_context_bytes(
+                packet.location.join("schemas/logical_schemas.json").read_bytes()
+            )
+        except OSError:
             print(f"error: {args.packet} embeds no registry to check against", file=sys.stderr)
             return 2
     else:
         if not args.registry.is_file():
             print(f"error: {args.registry} does not exist", file=sys.stderr)
             return 2
-        core = json.loads(args.registry.read_text())
+        core_context = check_registry_context_bytes(args.registry.read_bytes())
 
-    try:
-        document = json.loads(args.document.read_text())
-    except json.JSONDecodeError as exc:
-        print(f"error: {args.document} is not valid JSON: {exc}", file=sys.stderr)
-        return 2
-
-    # The stem is what the document is filed as, which its `extension_id` must match.
-    findings = check_extension(document, core, name=args.document.stem)
-    broken = [f for f in findings if not f.passed]
-    for finding in findings if args.all else broken:
-        print(f"{'FAIL' if not finding.passed else 'ok  '}  {finding}")
-    tables = len(document.get("tables", {}))
-    if broken:
-        print(
-            f"\n{args.document}: {len(broken)} of {len(findings)} invariant(s) broken over {tables} table(s)",
-            file=sys.stderr,
-        )
+    context = check_registry_context_bytes(args.document.read_bytes(), core=core_context)
+    if args.result is not None:
+        args.result.write_text(json.dumps(context.result.to_dict(), indent=2) + "\n")
+    for phase in context.result.phases:
+        for outcome in phase.outcomes:
+            print(f"{outcome.state.upper():11s} {phase.phase}: {outcome.id} at {outcome.instance or '<root>'}")
+    document = context.document
+    tables = len(document.get("tables", {})) if isinstance(document, dict) else 0
+    if context.result.state != "valid":
+        print(f"\n{args.document}: {context.result.state} over {tables} table(s)", file=sys.stderr)
         return 1
-    print(f"\n{args.document}: sound — {len(findings)} invariant(s) over {tables} table(s)")
+    print(f"\n{args.document}: sound — complete result over {tables} table(s)")
     return 0
 
 
@@ -483,6 +503,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     checking.add_argument(
         "--all", action="store_true", help="list every invariant checked, not only the ones that failed"
     )
+    checking.add_argument("--result", type=Path, help="write the complete portable registry result as JSON")
     checking.set_defaults(func=_extension_check)
 
     verifier = subcommands.add_parser(
@@ -531,6 +552,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         help="a packet to compare the result against; defaults to the one being replaced",
     )
     importer.add_argument("--registry", type=Path, help="registry, overriding [packet].registry")
+    importer.add_argument("--registry-result", type=Path, help="write the complete core-registry result as JSON")
     importer.add_argument("--check", action="store_true", help="check the recipe and stop")
     importer.add_argument(
         "--strict",

@@ -32,9 +32,10 @@ from typing import Any
 
 import numpy as np
 from escapewheel_reader.clocks import BOUND, align
+from escapewheel_validator import CheckedRegistryContext, RegistryRejected, check_registry_context
 from numpy.typing import NDArray
 
-from .extensions import load as load_extension
+from .extensions import load_checked as load_extension_context
 from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, arbitrated, declared, preferences, redacted
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
@@ -748,10 +749,11 @@ def materializers(recipe: Recipe, memory_budget: int | str = 0) -> list[Callable
     return built
 
 
-def build(
+def build(  # noqa: C901
     recipe: Recipe,
-    registry: Mapping[str, Any],
+    registry: Mapping[str, Any] | CheckedRegistryContext,
     *,
+    extension_contexts: Collection[CheckedRegistryContext] | None = None,
     say: Callable[[str], None] = lambda _: None,
     strict: bool = False,
 ) -> PacketWriter:
@@ -777,26 +779,40 @@ def build(
     PacketWriter
         Loaded with every record, ready to commit.
     """
+    registry_context = registry if isinstance(registry, CheckedRegistryContext) else check_registry_context(registry)
+    if registry_context.result.state != "valid":
+        raise RegistryRejected("core", registry_context)
+    checked_registry = registry_context.document
+    assert isinstance(checked_registry, Mapping)
+    if extension_contexts is None:
+        extension_contexts = tuple(
+            load_extension_context(named, registry_context, base=recipe.path.parent) for named in recipe.extensions
+        )
+    for extension_context in extension_contexts:
+        if extension_context.result.state != "valid":
+            document = extension_context.document
+            subject = str(document.get("extension_id", "extension")) if isinstance(document, Mapping) else "extension"
+            raise RegistryRejected(subject, extension_context)
     session_id = str(recipe.session["session_id"])
     # Reported rather than chosen here: `Recipe.load` places it, because a store root is opened
     # through a chained path that carries the location and is built as the recipe parses.
     say(f"source cache {cache_directory()}")
     context = Context(
         session_id=session_id,
-        fact_types=_fact_types(registry),
+        fact_types=_fact_types(checked_registry),
         workspace=Path(f"{recipe.out}.deliveries"),
         say=say,
     )
     if recipe.session.get("reference_clock_id"):
         context.reference = _reference_clock(recipe, context)
     writer = PacketWriter(
-        registry,
+        registry_context,
         packet_id=recipe.packet_id,
         description=recipe.description,
         # Part 09 §2: the recipe names them, so a source may own an extension's table exactly as it
         # owns a core one. Which is what keeps declaring an extension from being harder than
         # adding a column to core -- the gradient that leaves NWB's own mechanism unused.
-        extensions=[load_extension(named, base=recipe.path.parent) for named in recipe.extensions],
+        extensions=tuple(extension_contexts),
         # Part 02 §7.1's fill needs the session before any source runs, and `core.sessions` is staged
         # last: three tables reached validation with a null `session_id` because of the order.
         session=session_id,

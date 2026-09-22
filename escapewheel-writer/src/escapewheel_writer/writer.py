@@ -34,7 +34,14 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader import Manifest, Packet, open_packet
-from escapewheel_validator import Report, validate, verify_order
+from escapewheel_validator import (
+    CheckedRegistryContext,
+    RegistryRejected,
+    Report,
+    check_registry_context,
+    validate,
+    verify_order,
+)
 from escapewheel_validator.generate import adjacency_settles_uniqueness
 from escapewheel_validator.validator import OrderViolation
 
@@ -457,11 +464,11 @@ class PacketWriter:
 
     def __init__(
         self,
-        registry: Mapping[str, Any],
+        registry: Mapping[str, Any] | CheckedRegistryContext,
         *,
         packet_id: str,
         description: str | None = None,
-        extensions: Sequence[Mapping[str, Any]] = (),
+        extensions: Sequence[Mapping[str, Any] | CheckedRegistryContext] = (),
         session: str | None = None,
         encoding_exceptions: Mapping[str, Mapping[str, tuple[str, ...]]] | None = None,
         workspace: str | Path | None = None,
@@ -483,12 +490,29 @@ class PacketWriter:
         #: that table last: reading it back left every table added before it unfilled, and only the
         #: adapters that happened to emit the column themselves were saved by it.
         self._session = session
-        self._registry = registry
+        core_context = registry if isinstance(registry, CheckedRegistryContext) else check_registry_context(registry)
+        if core_context.result.state != "valid":
+            raise RegistryRejected("core", core_context)
+        checked_registry = core_context.document
+        assert isinstance(checked_registry, Mapping)
+        self._registry = checked_registry
         #: Extension registries this packet carries (Part 09 §2), by `extension_id`. An extension is a
         #: registry document in R2's format, so everything below resolves a resource against core
         #: and then these -- there is no second code path for an extension's tables.
         self._extensions: dict[str, Mapping[str, Any]] = {}
-        for document in extensions:
+        for supplied in extensions:
+            extension_context = (
+                supplied
+                if isinstance(supplied, CheckedRegistryContext)
+                else check_registry_context(supplied, core=core_context)
+            )
+            if extension_context.core is not core_context:
+                extension_context = check_registry_context(extension_context.document, core=core_context)
+            if extension_context.result.state != "valid":
+                subject = str(extension_context.document.get("extension_id", "extension"))
+                raise RegistryRejected(subject, extension_context)
+            document = extension_context.document
+            assert isinstance(document, Mapping)
             extension_id = str(document["extension_id"])
             for resource_id in document["tables"]:
                 if not resource_id.startswith(f"{extension_id}."):
@@ -496,7 +520,7 @@ class PacketWriter:
                         f"{resource_id} is not namespaced by {extension_id!r}; Part 09 §2 requires it, "
                         "and an extension MUST NOT define a table in core or analysis"
                     )
-                if resource_id in registry["tables"]:
+                if resource_id in checked_registry["tables"]:
                     raise ValueError(f"{resource_id} redefines a core table, which Part 09 §2 forbids")
             self._extensions[extension_id] = document
         #: Assigns the integer every identifier holds (Part 05 §8). One per packet, shared by every

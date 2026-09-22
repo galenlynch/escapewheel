@@ -32,10 +32,12 @@ ALIASES = {
 
 def emitted() -> set[str]:
     """Every check id a validator can produce: generated, carried, and shim."""
-    from escapewheel_validator import generate
+    from escapewheel_validator import check_registry_context_bytes, generate
 
-    registry = json.loads((ROOT / "registry" / "logical_schemas.json").read_text())
-    ids = {c.id for c in generate(registry, advisory=True)}
+    registry_path = ROOT / "registry" / "logical_schemas.json"
+    registry = json.loads(registry_path.read_text())
+    context = check_registry_context_bytes(registry_path.read_bytes())
+    ids = {c.id for c in generate(context, advisory=True)}
     shim = (
         ROOT
         / "escapewheel-validator"

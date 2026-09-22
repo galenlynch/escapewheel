@@ -53,7 +53,8 @@ def test_invalid_rule_is_not_executed_or_reported_as_a_packet_finding(packet_roo
     registry = _rule(packet.registry, "DELETE FROM core.trials")
     report = validate(packet, registry=registry)
     assert not report.passed
-    assert any(e.status == "invalid" and e.rule == "core.trials.profile_test" for e in report.evaluations)
+    supplied = next(item for item in report.registries if item.subject == "core:supplied")
+    assert supplied.result.state == "invalid"
     assert not any(f.check == "core.trials.profile_test" for f in report.findings)
 
 
@@ -63,7 +64,8 @@ def test_unsupported_language_is_distinct_from_a_finding(packet_root):
     registry["rule_language"] = "another-rule-language-v1.0"
     report = validate(packet, registry=registry)
     assert not report.passed
-    assert any(e.status == "unsupported" for e in report.evaluations)
+    supplied = next(item for item in report.registries if item.subject == "core:supplied")
+    assert supplied.result.state == "unsupported"
     assert not any(f.check == "rule_language.unsupported" for f in report.findings)
 
 

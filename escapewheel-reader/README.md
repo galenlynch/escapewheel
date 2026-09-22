@@ -15,6 +15,12 @@ than by path, and hands back Arrow tables and Zarr arrays. It does not write pac
 not validate their contents beyond the manifest's own shape — that is
 [escapewheel-validator](../escapewheel-validator).
 
+Reading is deliberately not a validation boundary. Opening a packet, resolving references and
+discriminators, correlating sessions, and extension-aware analysis require neither a validation
+receipt nor the validator package. These operations interpret declarations without claiming that
+the registry or packet conforms; applications invoke validation separately when they need that
+claim.
+
 ```python
 from escapewheel_reader import open_packet
 

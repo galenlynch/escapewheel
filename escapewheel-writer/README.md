@@ -56,6 +56,12 @@ silently. `escapewheel import --check` refuses a recipe where two sources own on
 where an owned table's required foreign key points at a table nothing produces — both knowable
 from the recipe and the registry, with no data in hand.
 
+Before recipe checking or source I/O, the importer checks the exact core registry bytes and binds
+the complete result to an in-process checked context. Extension registries are checked against
+that same core context. A non-valid result stops the build before an adapter opens or staging
+begins; `--registry-result PATH` writes the portable core result for automation. The public
+`PacketWriter` constructor provides the same boundary for callers supplying mappings.
+
 ## An importer is not one step
 
 Part 05 is explicit: *"do not combine source parsing, normalization, validation, and writing into

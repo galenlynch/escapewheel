@@ -16,10 +16,11 @@ uses the same result for core and extensions. Local JSON shape comes from the re
 meta-schema, cross-declaration meaning from Parts 02 and 09, Tier 2 static checks from Part 11,
 and literal units from an offline case-sensitive UCUM 2.2 parser.
 
-Computing that registry result is a separate trust-boundary operation. Part 02 does not require an
-ordinary packet read to revalidate an unchanged registry; a caller may reuse a result cached by a
-stable content identity. The public boundaries that require a fresh or cached result remain a
-separate specification decision.
+Validation checks the exact embedded registry bytes before deriving packet checks. The report
+retains the complete portable result, including `unsupported` and `incomplete` states, and pairs
+it with the registry's external role. A caller-supplied mapping is copied before it is checked.
+Only the resulting in-process checked context may direct generated checks; paths, declared
+versions, and unspecified JSON digests are not transferable validation receipts.
 
 Rules are **data, not code**. `registry/logical_schemas.json` carries every table's structure
 and its Tier 2 rules, and the checks are generated from it rather than written per table. The
@@ -37,6 +38,7 @@ from escapewheel_validator import validate
 
 report = validate(open_packet("packet/"))
 report.passed, report.errors, report.warnings
+report.registries  # complete, role-labelled registry-document results
 ```
 
 ## What runs

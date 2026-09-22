@@ -5,15 +5,19 @@ import json
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
-from escapewheel_validator import registry_document
+from escapewheel_validator import RegistryRejected, generate, registry_document
 from escapewheel_validator.registry_document import (
     CONTRACT,
     METADATA_DESCRIPTION,
     PHASES,
+    RESULT_SCHEMA,
     SCHEMA,
     check_registry,
     check_registry_bytes,
+    check_registry_context,
+    check_registry_context_bytes,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -78,6 +82,55 @@ def test_reference_registry_has_one_complete_valid_result():
     assert result.phases[0].state == "skipped"
     assert result.phases[0].reason == "registry.phase.mapping_input"
     assert result.findings == ()
+
+
+def test_portable_result_validates_against_the_incorporated_schema():
+    context = check_registry_context_bytes((ROOT / "registry/logical_schemas.json").read_bytes())
+    Draft202012Validator(json.loads(RESULT_SCHEMA.read_text())).validate(context.result.to_dict())
+
+
+def test_diagnostic_detail_does_not_affect_result_comparison():
+    first = registry_document.Outcome("invalid", "example", detail="first wording")
+    second = registry_document.Outcome("invalid", "example", detail="different wording")
+    assert first == second
+
+
+def test_mapping_context_isolated_from_later_caller_mutation():
+    supplied = copy.deepcopy(CORE)
+    context = check_registry_context(supplied)
+    supplied["tables"].clear()
+    assert context.result.state == "valid"
+    assert context.document["tables"]
+    assert context.result.phases[0].reason == "registry.phase.mapping_input"
+
+
+def test_extension_context_retains_the_exact_checked_core_context():
+    core = check_registry_context(CORE)
+    extension = check_registry_context(json.loads(EXTENSIONS[0].read_text()), core=core)
+    assert extension.result.state == "valid"
+    assert extension.core is core
+
+
+def test_generator_rejects_a_nonvalid_checked_context():
+    context = check_registry_context({"$schema": "https://example.org/unknown"})
+    with pytest.raises(RegistryRejected) as caught:
+        generate(context)
+    assert caught.value.result is context.result
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda value: value.update(extra=True),
+        lambda value: value["phases"].reverse(),
+        lambda value: value["phases"][0].pop("reason"),
+        lambda value: value["phases"][1]["outcomes"][0].update(instance="not-a-pointer"),
+    ],
+)
+def test_result_schema_rejects_inconsistent_serializations(mutate):
+    document = check_registry({}).to_dict()
+    mutate(document)
+    assert list(Draft202012Validator(json.loads(RESULT_SCHEMA.read_text())).iter_errors(document))
 
 
 def test_descriptor_and_semantic_implementation_have_no_hidden_checks():

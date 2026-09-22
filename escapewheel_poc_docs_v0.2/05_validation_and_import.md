@@ -394,3 +394,105 @@ directly carries a logical-table identifier, the reader MUST derive the correspo
 scalar type from the incorporated registry's declared logical type. It MUST NOT infer the type from
 an `_id` suffix or apply a logical-table identifier mapping to a catalog, manifest, vocabulary, or
 discriminator-scope name governed by another declaration.
+
+<a id="ew-registry-conformance-boundaries" data-spec-anchor="canonical"></a>
+
+## 14. Registry-document conformance boundaries
+
+<a id="ew-checked-registry-context" data-spec-anchor="canonical"></a>
+
+### 14.1 Checked registry context
+
+A **checked registry context** is an immutable in-process association of the exact evaluated
+registry input; its decoded JSON value when decoding succeeded; its complete Part 02 result;
+immutable representations of the local descriptor set and external-domain capabilities used; and,
+for an extension, the exact checked core context supplied to its evaluation.
+
+For a byte input, the context retains the exact bytes. For a mapping input, it retains an immutable
+structural copy made before checking and records the skipped JSON phase required by Part 02 §9.4.
+A valid context authorizes production or registry-derived checks only from the decoded document in
+that same context. Another state authorizes no such interpretation. A context may be reused only
+while all its associated elements remain identical. A path, declared version, mutable object
+identity, or digest under an unspecified canonicalization does not prove that identity. This
+specification defines neither a portable result cache nor a transferable validation receipt.
+
+<a id="ew-registry-conformance-boundary" data-spec-anchor="canonical"></a>
+
+### 14.2 Required boundaries
+
+An implementation MUST obtain one complete Part 02 result before it interprets a registry to:
+
+- publish or release that registry;
+- start a packet build, before checking a recipe, opening a source, or staging output;
+- construct a public writer directly from registry input;
+- validate a packet using an embedded or caller-supplied registry;
+- perform an extension-author registry check; or
+- generate Tier 1, Tier 2, or another conformance check from registry declarations.
+
+A boundary that owns source bytes uses the byte entry point. A boundary given only a decoded
+mapping uses the mapping entry point and does not claim byte-level JSON checks. A low-level
+generator either establishes the checked context or requires one; a mapping accompanied by a
+result, Boolean, or caller assertion is insufficient.
+
+<a id="ew-reader-registry-independence" data-spec-anchor="canonical"></a>
+
+### 14.3 Reader independence
+
+A reader MUST NOT require a registry result, checked context, or validation receipt to open a
+packet, access its catalog or raw resources, present or correlate sessions, resolve
+discriminators, references, or session scope, provide extension-aware access, or analyze one or
+more packets. It may interpret declarations for those operations without making a conformance
+claim, and the reference reader does not depend on the validator package to do so. An explicit
+validation operation may evaluate the same input separately.
+
+An unusable declaration need not produce a result for a reader operation. Its local failure or
+partial-access behavior is not defined here, but ordinary analysis MUST NOT acquire a general
+validation-receipt prerequisite.
+
+<a id="ew-registry-producer-boundary" data-spec-anchor="canonical"></a>
+
+### 14.4 Producer and authoring reactions
+
+Registry publication, release, and generation of registry-derived conformance checks complete only
+from a `valid` context. An extension-author check reports success only for `valid`. For another
+state, the operation stops and exposes the complete result.
+
+A writer rejects a non-valid registry before opening a source or staging output. A public mapping
+constructor copies and checks the mapping before retaining or interpreting it. Rejection does not
+open an adapter. A structured rejection exception makes the complete portable result retrievable;
+a command-line boundary offers machine-readable output containing the same result. Authoring may
+create an explicitly unfinished draft when it makes no conformance or publication claim.
+
+<a id="ew-validator-registry-boundary" data-spec-anchor="canonical"></a>
+
+### 14.5 Validator reactions
+
+A packet validator obtains a complete result for every embedded or caller-supplied core registry it
+loads and for every available extension registry that §5.4 requires it to validate. An extension
+registry is available when its declared bytes can be acquired, whether or not they parse as JSON.
+The validator identifies the checked core context directing packet checks and supplies that exact
+context to every extension evaluation. If it is non-valid, each available extension is still
+evaluated as far as Part 02 permits.
+
+Only a `valid` context directs generation or execution of registry-derived packet checks. For a
+non-valid result, the validator retains the complete result, skips every dependent packet check,
+preserves invalid outcomes as registry-document findings, and does not fabricate packet findings
+for unsupported, incomplete, or skipped work. Independent checks may continue. Missing or
+unreadable registry policy, extension-table byte validation, and final composition of core,
+extension, and packet verdicts are not defined here. A non-valid required evaluation remains
+insufficient to support a conformance claim.
+
+<a id="ew-registry-result-reporting" data-spec-anchor="canonical"></a>
+
+### 14.6 Portable reporting
+
+Each reported result has an external subject label identifying its registry role, such as `core` or
+a manifest extension identifier. Multiple documents in one role receive source-distinguishing
+labels. A label does not replace or manufacture the document's own identity.
+
+Public checking APIs, machine-readable command output, validation reports, and structured
+exceptions expose the same Part 02 §9.5 representation rather than reducing it to a Boolean or
+invalid-finding list. Human rendering may differ. Diagnostic `detail` is not interoperable
+identity. The result schema begins at version 0.1.0; this boundary and reporting change does not by
+itself change a registry meta-schema, core registry, extension registry, packet catalog, or their
+version identifiers.

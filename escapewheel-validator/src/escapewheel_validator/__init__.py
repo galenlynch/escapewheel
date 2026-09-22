@@ -12,7 +12,14 @@ separate package: `escapewheel_reader` opens a packet with PyArrow alone.
 from importlib.metadata import PackageNotFoundError, version
 
 from .generate import Check, generate
-from .validator import Evaluation, Finding, OrderViolation, Report, validate, verify_order
+from .registry_document import (
+    CheckedRegistryContext,
+    RegistryRejected,
+    RegistryResult,
+    check_registry_context,
+    check_registry_context_bytes,
+)
+from .validator import Evaluation, Finding, OrderViolation, RegistryEvaluation, Report, validate, verify_order
 
 try:
     __version__ = version("escapewheel-validator")
@@ -21,11 +28,17 @@ except PackageNotFoundError:  # pragma: no cover - only when running from a sour
 
 __all__ = [
     "Check",
+    "CheckedRegistryContext",
     "Evaluation",
     "Finding",
     "OrderViolation",
+    "RegistryEvaluation",
+    "RegistryRejected",
+    "RegistryResult",
     "Report",
     "__version__",
+    "check_registry_context",
+    "check_registry_context_bytes",
     "generate",
     "validate",
     "verify_order",

@@ -34,6 +34,12 @@ from escapewheel_reader.location import SOURCES_FILENAME
 from escapewheel_reader.ordering import stored_order
 
 from .generate import Check, adjacency_settles_uniqueness, concerns, generate
+from .registry_document import (
+    CheckedRegistryContext,
+    RegistryResult,
+    check_registry_context,
+    check_registry_context_bytes,
+)
 from .rule_language import PROFILE_ID, RuleProfileError, check_rule
 from .stores import StoreUnreachable, digest, listing, read_member
 
@@ -89,6 +95,15 @@ class Evaluation:
     detail: str = ""
 
 
+@dataclass(frozen=True)
+class RegistryEvaluation:
+    """A complete registry-document result and the external role it evaluated."""
+
+    subject: str
+    result: RegistryResult
+    directs_checks: bool = False
+
+
 @dataclass
 class Report:
     """The outcome of validating a packet.
@@ -104,6 +119,7 @@ class Report:
 
     findings: list[Finding] = field(default_factory=list)
     evaluations: list[Evaluation] = field(default_factory=list)
+    registries: list[RegistryEvaluation] = field(default_factory=list)
     advisory: bool = False
 
     @property
@@ -129,12 +145,22 @@ class Report:
         that passes without it.
         """
         complete = all(e.registry != "core" or e.status == "complete" for e in self.evaluations)
-        return complete and sum(f.level == "error" and f.extension is None for f in self.findings) == 0
+        registry_valid = all(not item.directs_checks or item.result.state == "valid" for item in self.registries)
+        return (
+            registry_valid and complete and sum(f.level == "error" and f.extension is None for f in self.findings) == 0
+        )
 
     def extension_passed(self, extension: str) -> bool:
         """Whether one extension's tables validated."""
         complete = all(e.registry != extension or e.status == "complete" for e in self.evaluations)
-        return complete and sum(f.level == "error" and f.extension == extension for f in self.findings) == 0
+        registry_valid = all(
+            item.subject.split(":", 1)[0] != extension or item.result.state == "valid" for item in self.registries
+        )
+        return (
+            registry_valid
+            and complete
+            and sum(f.level == "error" and f.extension == extension for f in self.findings) == 0
+        )
 
     @property
     def extensions(self) -> tuple[str, ...]:
@@ -143,12 +169,26 @@ class Report:
             dict.fromkeys(
                 [f.extension for f in self.findings if f.extension is not None]
                 + [e.registry for e in self.evaluations if e.registry != "core"]
+                + [item.subject.split(":", 1)[0] for item in self.registries if not item.subject.startswith("core")]
             )
         )
 
     def record_evaluation(self, registry: str, status: str, *, rule: str | None = None, detail: str = "") -> None:
         """Record a Tier 2 outcome without turning validator inability into a finding."""
         self.evaluations.append(Evaluation(registry, status, rule, detail))
+
+    def record_registry(self, subject: str, context: CheckedRegistryContext, *, directs_checks: bool = False) -> None:
+        """Retain a complete result and expose invalid outcomes as document findings."""
+        self.registries.append(RegistryEvaluation(subject, context.result, directs_checks))
+        extension = None if subject.startswith("core") else subject.split(":", 1)[0]
+        for outcome in context.result.findings:
+            self.add(
+                "error",
+                outcome.id,
+                f"{subject} registry {outcome.instance or '<root>'}: "
+                f"{outcome.detail or outcome.reason or outcome.state}",
+                extension=extension,
+            )
 
     def add(
         self,
@@ -202,6 +242,14 @@ class Report:
             "evaluations": [
                 {"registry": e.registry, "status": e.status, "rule": e.rule, "detail": e.detail}
                 for e in self.evaluations
+            ],
+            "registries": [
+                {
+                    "subject": item.subject,
+                    "directs_checks": item.directs_checks,
+                    "result": item.result.to_dict(),
+                }
+                for item in self.registries
             ],
         }
 
@@ -1536,7 +1584,8 @@ def _spill_beside(packet: Packet) -> Iterator[Path | None]:
 
 def _run_rules(
     packet: Packet,
-    registry: Mapping[str, Any],
+    core_context: CheckedRegistryContext,
+    extension_contexts: Mapping[str, CheckedRegistryContext],
     present: Mapping[str, Any],
     report: Report,
     advisory: bool,
@@ -1545,20 +1594,24 @@ def _run_rules(
     recheck: Collection[str] | None = None,
 ) -> None:
     """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
+    registry = core_context.document
+    assert isinstance(registry, Mapping)
+    extension_documents = [
+        context.document for context in extension_contexts.values() if context.result.state == "valid"
+    ]
     with _spill_beside(packet) as spill:
         connection = _bounded(packet.duckdb(), LIMITS if limits is None else limits, spill)
         try:
-            extension_documents = list(packet.extensions().values())
             unreadable = _install_rule_relations(packet, connection, [registry, *extension_documents])
 
-            kinds = _declared_kinds(packet, registry)
+            kinds = _declared_kinds(packet, registry, extension_documents)
             tier1 = generate(
-                registry,
+                core_context,
                 only=set(present),
                 advisory=advisory,
                 aggregate=unsound or set(),
                 kinds=kinds,
-                specialises=_specialisations(packet, registry),
+                specialises=_specialisations(packet, registry, extension_documents),
                 declared=False,
             )
             tier2 = _tier2_checks(registry, registry, report, "core", advisory)
@@ -1569,7 +1622,17 @@ def _run_rules(
             _check_manifest_sessions(packet, report)
             if not any(e.registry == "core" and e.status != "complete" for e in report.evaluations):
                 report.record_evaluation("core", "complete")
-            _check_extensions(packet, connection, registry, report, advisory, kinds, unreadable, recheck)
+            _check_extensions(
+                packet,
+                connection,
+                core_context,
+                extension_contexts,
+                report,
+                advisory,
+                kinds,
+                unreadable,
+                recheck,
+            )
         finally:
             with contextlib.suppress(Exception):
                 connection.close()
@@ -1739,7 +1802,9 @@ def _resolve_column(spec: Mapping[str, Any]) -> str | None:
     return named if any(c["name"] == named for c in spec["columns"]) else None
 
 
-def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, str | None]:
+def _declared_kinds(
+    packet: Packet, registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()
+) -> dict[str, str | None]:
     """Every resource a discriminator may name, mapped to the column a paired value joins to.
 
     Built from the packet's registry *and* the extension registries it carries, because Part 02 §8.3
@@ -1750,7 +1815,7 @@ def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, st
     # Core's absent tables get empty stand-ins in _layer4, so all of them can be joined. An
     # extension's do not, so only what the packet carries can appear in the union.
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
-    for document in packet.extensions().values():
+    for document in extensions:
         if isinstance(document.get("tables"), Mapping):
             tables.update({n: t for n, t in document["tables"].items() if n in carried})
     # Every declarable resource, whether or not a *paired* value could name it. Part 02 §8.3's
@@ -1760,7 +1825,9 @@ def _declared_kinds(packet: Packet, registry: Mapping[str, Any]) -> dict[str, st
     return {name: _resolve_column(spec) for name, spec in tables.items()}
 
 
-def _specialisations(packet: Packet, registry: Mapping[str, Any]) -> dict[str, list[tuple[str, dict[str, str]]]]:
+def _specialisations(
+    packet: Packet, registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()
+) -> dict[str, list[tuple[str, dict[str, str]]]]:
     """Which resources could specialise which, keyed by the discriminated resource.
 
     A specialisation declares a reference back over the discriminated table's **whole** key
@@ -1769,7 +1836,7 @@ def _specialisations(packet: Packet, registry: Mapping[str, Any]) -> dict[str, l
     """
     tables = dict(registry["tables"])
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
-    for document in packet.extensions().values():
+    for document in extensions:
         if isinstance(document.get("tables"), Mapping):
             tables.update({n: t for n, t in document["tables"].items() if n in carried})
     found: dict[str, list[tuple[str, dict[str, str]]]] = {}
@@ -1789,7 +1856,8 @@ def _specialisations(packet: Packet, registry: Mapping[str, Any]) -> dict[str, l
 def _check_extensions(
     packet: Packet,
     connection: Any,
-    registry: Mapping[str, Any],
+    core_context: CheckedRegistryContext,
+    extension_contexts: Mapping[str, CheckedRegistryContext],
     report: Report,
     advisory: bool,
     kinds: Mapping[str, str | None] | None = None,
@@ -1808,15 +1876,13 @@ def _check_extensions(
     A core validator is not required to hold an extension's schema at all (Part 09 §6), so holding
     one must not be able to fail a packet that passes without it.
     """
-    for extension_id, document in packet.extensions().items():
-        if not isinstance(document.get("tables"), Mapping):
-            report.add(
-                "error",
-                "extension.unusable",
-                f"{extension_id}: the declared registry has no tables",
-                extension=extension_id,
-            )
+    registry = core_context.document
+    assert isinstance(registry, Mapping)
+    for extension_id, extension_context in extension_contexts.items():
+        if extension_context.result.state != "valid":
             continue
+        document = extension_context.document
+        assert isinstance(document, Mapping)
         declared = set(document["tables"])
         # What the *packet* declares, not what the core registry knows: an extension's tables are
         # by definition absent from core's, and `present` is built from core's.
@@ -1830,7 +1896,7 @@ def _check_extensions(
                 extension=extension_id,
             )
         tier1 = generate(
-            document,
+            extension_context,
             only=carried,
             advisory=advisory,
             resolvable=set(registry["tables"]),
@@ -1862,6 +1928,26 @@ def _offending(connection: Any, sql: str) -> list[tuple[Any, ...]]:
     """
     table = connection.sql(sql).arrow().read_all()
     return list(zip(*[column.to_pylist() for column in table.columns], strict=True))
+
+
+def _available_extension_contexts(
+    packet: Packet, core: CheckedRegistryContext, report: Report
+) -> dict[str, CheckedRegistryContext]:
+    """Check every declared extension whose exact bytes can be acquired."""
+    contexts: dict[str, CheckedRegistryContext] = {}
+    for extension_id, entry in (packet.manifest.extensions or {}).items():
+        location = entry.get("registry") if isinstance(entry, Mapping) else None
+        if not location:
+            continue
+        try:
+            data = packet.location.join(str(location)).read_bytes()
+        except (OSError, PacketError, ResourceUnreadableError, ValueError):
+            # Missing/unreadable policy is deliberately owned by a later decision.
+            continue
+        context = check_registry_context_bytes(data, core=core)
+        contexts[str(extension_id)] = context
+        report.record_registry(str(extension_id), context)
+    return contexts
 
 
 def validate(
@@ -1938,15 +2024,33 @@ def validate(
         If no registry is available.
     """
     report = Report(advisory=advisory)
-    embedded = packet.registry
-    effective = registry if registry is not None else embedded
-    if effective is None:
+    embedded_context: CheckedRegistryContext | None = None
+    try:
+        embedded_bytes = packet.location.join("schemas/logical_schemas.json").read_bytes()
+    except (OSError, PacketError, ResourceUnreadableError, ValueError):
+        embedded_bytes = None
+    if embedded_bytes is not None:
+        embedded_context = check_registry_context_bytes(embedded_bytes)
+
+    supplied_context = check_registry_context(registry) if registry is not None else None
+    effective_context = supplied_context or embedded_context
+    if effective_context is None:
         raise PacketError(
             f"{packet.manifest.packet_id} embeds no registry at schemas/logical_schemas.json and none was supplied"
         )
+    if embedded_context is not None:
+        report.record_registry(
+            "core:embedded" if supplied_context is not None else "core",
+            embedded_context,
+            directs_checks=supplied_context is None,
+        )
+    if supplied_context is not None:
+        report.record_registry("core:supplied", supplied_context, directs_checks=True)
 
-    if embedded is not None:
-        _check_embedded_registry(packet, embedded, report)
+    effective = effective_context.document
+    if embedded_context is not None and isinstance(embedded_context.document, Mapping):
+        _check_embedded_registry(packet, embedded_context.document, report)
+    extension_contexts = _available_extension_contexts(packet, effective_context, report)
     _check_sources(packet, report)
     _check_codec_declarations(packet, report, resolved=external)
     if external:
@@ -1956,12 +2060,24 @@ def validate(
     _check_packet_owned_arrays(packet, report)
     _check_materialization_provenance(packet, report)
     _check_time_origin(packet, report)
+    if effective_context.result.state != "valid" or not isinstance(effective, Mapping):
+        return report
     present = _check_schemas(packet, effective["tables"], report)
     unsound = _check_ordering(effective["tables"], present, report, scan)
     _check_duplication(present, effective["tables"], report)
     _check_unfilled_metadata(present, effective["tables"], report)
     _check_reserved_values(present, effective["tables"], report)
-    _run_rules(packet, effective, present, report, advisory, limits, unsound, recheck)
+    _run_rules(
+        packet,
+        effective_context,
+        extension_contexts,
+        present,
+        report,
+        advisory,
+        limits,
+        unsound,
+        recheck,
+    )
     return report
 
 

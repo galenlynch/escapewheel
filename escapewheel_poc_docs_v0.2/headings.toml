@@ -104,6 +104,7 @@
 "9.2" = "Self-description"
 "9.3" = "Vocabularies"
 "9.4" = "Registry-document conformance"
+"9.5" = "Registry-result serialization"
 "10" = "Validation rules"
 "10.1" = "Tier 1: generated from structure"
 "10.2" = "Tier 2: declared"
@@ -229,6 +230,13 @@
 "13.1" = "Session presentation and correlation"
 "13.2" = "Exact unit selection and currency"
 "13.3" = "Declared identifier types"
+"14" = "Registry-document conformance boundaries"
+"14.1" = "Checked registry context"
+"14.2" = "Required boundaries"
+"14.3" = "Reader independence"
+"14.4" = "Producer and authoring reactions"
+"14.5" = "Validator reactions"
+"14.6" = "Portable reporting"
 
 ["06"]
 "1" = "Scope"
@@ -351,6 +359,12 @@ aliases = []
 part = "00"
 section = "2.3"
 title = "Internal consistency"
+aliases = []
+
+[anchor.ew-checked-registry-context]
+part = "05"
+section = "14.1"
+title = "Checked registry context"
 aliases = []
 
 [anchor.ew-column-declaration]
@@ -575,6 +589,12 @@ section = "13"
 title = "Reader operations"
 aliases = []
 
+[anchor.ew-reader-registry-independence]
+part = "05"
+section = "14.3"
+title = "Reader independence"
+aliases = []
+
 [anchor.ew-reader-session-presentation]
 part = "05"
 section = "13.1"
@@ -599,10 +619,40 @@ section = "9.4"
 title = "Registry-document conformance"
 aliases = []
 
+[anchor.ew-registry-conformance-boundaries]
+part = "05"
+section = "14"
+title = "Registry-document conformance boundaries"
+aliases = []
+
+[anchor.ew-registry-conformance-boundary]
+part = "05"
+section = "14.2"
+title = "Required boundaries"
+aliases = []
+
 [anchor.ew-registry-document]
 part = "02"
 section = "9.1"
 title = "The schema is one document"
+aliases = []
+
+[anchor.ew-registry-producer-boundary]
+part = "05"
+section = "14.4"
+title = "Producer and authoring reactions"
+aliases = []
+
+[anchor.ew-registry-result-reporting]
+part = "05"
+section = "14.6"
+title = "Portable reporting"
+aliases = []
+
+[anchor.ew-registry-result-serialization]
+part = "02"
+section = "9.5"
+title = "Registry-result serialization"
 aliases = []
 
 [anchor.ew-registry-self-description]
@@ -753,4 +803,10 @@ aliases = ["ew-unit-identity-architecture"]
 part = "05"
 section = "5.3"
 title = "The shim"
+aliases = []
+
+[anchor.ew-validator-registry-boundary]
+part = "05"
+section = "14.5"
+title = "Validator reactions"
 aliases = []

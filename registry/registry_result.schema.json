@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://escapewheel.org/schemas/registry-result/0.1.0",
+  "type": "object",
+  "required": ["$schema", "descriptor_id", "state", "phases"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"const": "https://escapewheel.org/schemas/registry-result/0.1.0"},
+    "descriptor_id": {"type": ["string", "null"]},
+    "state": {"enum": ["valid", "invalid", "unsupported", "incomplete"]},
+    "phases": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "prefixItems": [
+        {"$ref": "#/$defs/json_phase"},
+        {"$ref": "#/$defs/schema_selection_phase"},
+        {"$ref": "#/$defs/shape_phase"},
+        {"$ref": "#/$defs/contract_selection_phase"},
+        {"$ref": "#/$defs/semantic_phase"},
+        {"$ref": "#/$defs/rule_static_phase"},
+        {"$ref": "#/$defs/external_domain_phase"}
+      ],
+      "items": false
+    }
+  },
+  "$defs": {
+    "pointer": {"type": "string", "pattern": "^(?:/(?:[^~/]|~0|~1)*)*$"},
+    "outcome": {
+      "type": "object",
+      "required": ["state", "id", "instance"],
+      "additionalProperties": false,
+      "properties": {
+        "state": {"enum": ["invalid", "unsupported", "incomplete", "skipped"]},
+        "id": {"type": "string", "minLength": 1},
+        "instance": {"$ref": "#/$defs/pointer"},
+        "owner": {"type": "string", "minLength": 1},
+        "reason": {"type": "string", "minLength": 1},
+        "schema_location": {"$ref": "#/$defs/pointer"},
+        "detail": {"type": "string"}
+      },
+      "if": {"properties": {"state": {"const": "skipped"}}, "required": ["state"]},
+      "then": {"required": ["reason"]}
+    },
+    "phase": {
+      "type": "object",
+      "required": ["phase", "state", "outcomes"],
+      "additionalProperties": false,
+      "properties": {
+        "phase": {"type": "string"},
+        "state": {"enum": ["passed", "invalid", "unsupported", "incomplete", "skipped"]},
+        "outcomes": {"type": "array", "items": {"$ref": "#/$defs/outcome"}},
+        "reason": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"state": {"const": "passed"}}, "required": ["state"]},
+          "then": {"properties": {"outcomes": {"maxItems": 0}}, "not": {"required": ["reason"]}}
+        },
+        {
+          "if": {"properties": {"state": {"const": "skipped"}}, "required": ["state"]},
+          "then": {"properties": {"outcomes": {"maxItems": 0}}, "required": ["reason"]}
+        },
+        {
+          "if": {
+            "properties": {"state": {"enum": ["invalid", "unsupported", "incomplete"]}},
+            "required": ["state"]
+          },
+          "then": {"properties": {"outcomes": {"minItems": 1}}, "not": {"required": ["reason"]}}
+        }
+      ]
+    },
+    "json_phase": {"allOf": [{"$ref": "#/$defs/phase"}, {"properties": {"phase": {"const": "json"}}}]},
+    "schema_selection_phase": {"allOf": [{"$ref": "#/$defs/phase"}, {"properties": {"phase": {"const": "schema_selection"}}}]},
+    "shape_phase": {"allOf": [{"$ref": "#/$defs/phase"}, {"properties": {"phase": {"const": "shape"}}}]},
+    "contract_selection_phase": {"allOf": [{"$ref": "#/$defs/phase"}, {"properties": {"phase": {"const": "contract_selection"}}}]},
+    "semantic_phase": {"allOf": [{"$ref": "#/$defs/phase"}, {"properties": {"phase": {"const": "semantic"}}}]},
+    "rule_static_phase": {"allOf": [{"$ref": "#/$defs/phase"}, {"properties": {"phase": {"const": "rule_static"}}}]},
+    "external_domain_phase": {"allOf": [{"$ref": "#/$defs/phase"}, {"properties": {"phase": {"const": "external_domain"}}}]}
+  }
+}

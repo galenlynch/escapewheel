@@ -16,6 +16,8 @@ from typing import Any
 from escapewheel_reader import quote, sql_name
 from escapewheel_reader.ordering import stored_order
 
+from .registry_document import CheckedRegistryContext, RegistryRejected
+
 
 @dataclass(frozen=True)
 class Check:
@@ -233,7 +235,7 @@ def _discriminator(
     ]
 
 
-def generate(
+def _generate(
     registry: Mapping[str, Any],
     *,
     only: set[str] | None = None,
@@ -356,3 +358,34 @@ def generate(
             checks.append(Check(rule["id"], rule["level"], rule["message"], rule["sql"], resource, tier=2))
 
     return checks
+
+
+def generate(
+    registry: CheckedRegistryContext,
+    *,
+    only: set[str] | None = None,
+    advisory: bool = False,
+    aggregate: set[str] | None = None,
+    resolvable: set[str] | None = None,
+    kinds: Mapping[str, str | None] | None = None,
+    specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
+    declared: bool = True,
+) -> list[Check]:
+    """Build checks only from a valid context bound to the registry it checked."""
+    if not isinstance(registry, CheckedRegistryContext):
+        raise TypeError("generate() requires a CheckedRegistryContext")
+    if registry.result.state != "valid":
+        raise RegistryRejected("check generator", registry)
+    document = registry.document
+    if not isinstance(document, Mapping):  # guarded by a valid result; retained for type safety
+        raise RegistryRejected("check generator", registry)
+    return _generate(
+        document,
+        only=only,
+        advisory=advisory,
+        aggregate=aggregate,
+        resolvable=resolvable,
+        kinds=kinds,
+        specialises=specialises,
+        declared=declared,
+    )

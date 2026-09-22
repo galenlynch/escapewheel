@@ -5,6 +5,14 @@ import pyarrow.parquet as pq
 import pytest
 
 TS = pa.timestamp("us", tz="UTC")
+METADATA_DESCRIPTION = (
+    "What the source stated about this row that the standard does not model, carried "
+    "in the source's own vocabulary and read by no rule."
+)
+
+
+def _metadata():
+    return _col("metadata", "json_string", "optional", description=METADATA_DESCRIPTION)
 
 
 def _write(root, name, table):
@@ -63,6 +71,7 @@ def _registry():
                     _col("session_name", "string", "required"),
                     _col("subject_id", "int32", "required"),
                     _col("session_start_time", "timestamp", "required"),
+                    _metadata(),
                 ],
                 "primary_key": ["session_id"],
                 "references": [],
@@ -72,9 +81,11 @@ def _registry():
                 "columns": [
                     _col("session_id", "int32", "required"),
                     _col("trial_id", "int32", "required"),
-                    _col("start_tick", "int64", "required"),
-                    _col("stop_tick", "int64", "required"),
+                    _col("trial_name", "string", "optional"),
+                    _col("start_tick", "int64", "required", clock_from="clock_id"),
+                    _col("stop_tick", "int64", "required", clock_from="clock_id"),
                     _col("clock_id", "int32", "required"),
+                    _metadata(),
                 ],
                 "primary_key": ["session_id", "trial_id"],
                 "references": [
@@ -82,7 +93,8 @@ def _registry():
                         "columns": ["session_id"],
                         "resource": "core.sessions",
                         "resource_columns": ["session_id"],
-                    }
+                    },
+                    {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]},
                 ],
                 "rules": [
                     {
@@ -97,32 +109,42 @@ def _registry():
                 "columns": [
                     _col("session_id", "int32", "required"),
                     _col("unit_id", "int32", "required"),
+                    _col("unit_name", "string", "optional"),
                     _col("sorting_run_id", "int32", "required"),
                     _col("curation_id", "int32", "required"),
                     _col("quality_label", "string", "nullable", enum=["sua", "mua", "noise"]),
                     _col("clock_id", "int32", "required"),
+                    _metadata(),
                 ],
                 "primary_key": ["unit_id"],
-                "references": [],
+                "references": [
+                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+                    {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]},
+                ],
                 "rules": [],
             },
             "core.events": {
                 "columns": [
                     _col("session_id", "int32", "required"),
                     _col("event_id", "int32", "required"),
+                    _col("event_name", "string", "optional"),
                     _col("event_type", "string", "required", vocabulary="open"),
-                    _col("t_tick", "int64", "required"),
+                    _col("t_tick", "int64", "required", clock_from="clock_id"),
                     _col("clock_id", "int32", "required"),
+                    _metadata(),
                 ],
                 "primary_key": ["session_id", "event_id"],
-                "references": [],
+                "references": [
+                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+                    {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]},
+                ],
                 "rules": [],
             },
             "core.spike_events": {
                 "columns": [
                     _col("session_id", "int32", "required"),
                     _col("unit_id", "int32", "required"),
-                    _col("t_tick", "int64", "required"),
+                    _col("t_tick", "int64", "required", clock_from="core.units.clock_id"),
                 ],
                 "primary_key": ["session_id", "unit_id", "t_tick"],
                 "references": [
@@ -137,6 +159,16 @@ def _registry():
                         "resource_columns": ["unit_id"],
                     },
                 ],
+                "rules": [],
+            },
+            "core.clocks": {
+                "columns": [
+                    _col("clock_id", "int32", "required"),
+                    _col("clock_name", "string", "required"),
+                    _metadata(),
+                ],
+                "primary_key": ["clock_id"],
+                "references": [],
                 "rules": [],
             },
         },

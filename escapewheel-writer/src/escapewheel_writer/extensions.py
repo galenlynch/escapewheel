@@ -23,6 +23,8 @@ from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
+from escapewheel_validator import CheckedRegistryContext, check_registry_context, check_registry_context_bytes
+
 #: Entry-point group a distribution registers an extension registry under. The value loads to the
 #: parsed document, or to a path to it -- whichever is natural for how the package ships it.
 EXTENSION_GROUP = "escapewheel.extensions"
@@ -79,4 +81,19 @@ def load(named: str, *, base: Path | None = None) -> dict[str, Any]:
     )
 
 
-__all__ = ["EXTENSION_GROUP", "ExtensionNotFound", "installed", "load"]
+def load_checked(named: str, core: CheckedRegistryContext, *, base: Path | None = None) -> CheckedRegistryContext:
+    """Load and check one extension, preserving exact bytes whenever this process owns them."""
+    candidates = [Path(named)] + ([base / named] if base is not None else [])
+    for candidate in candidates:
+        if candidate.is_file():
+            return check_registry_context_bytes(candidate.read_bytes(), core=core)
+    available = installed()
+    if named in available:
+        return check_registry_context(available[named], core=core)
+    known = ", ".join(sorted(available)) or "none installed"
+    raise ExtensionNotFound(
+        f"{named!r} is neither a file nor an installed extension; registered under {EXTENSION_GROUP}: {known}"
+    )
+
+
+__all__ = ["EXTENSION_GROUP", "ExtensionNotFound", "installed", "load", "load_checked"]

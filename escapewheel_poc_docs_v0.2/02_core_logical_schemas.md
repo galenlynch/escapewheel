@@ -557,6 +557,29 @@ Each rule MUST pass Part 11's static contract, including rejection of every opti
 This section defines an abstract result. Public APIs, command-line output, reports, exception
 serialization, and the boundaries that require invocation are defined separately.
 
+<a id="ew-registry-result-serialization" data-spec-anchor="canonical"></a>
+
+### 9.5 Registry-result serialization
+
+A portable registry result MUST validate against the incorporated closed Draft 2020-12 schema
+`registry/registry_result.schema.json`, whose identifier is
+`https://escapewheel.org/schemas/registry-result/0.1.0`. It contains the selected descriptor ID, or
+null when contract selection did not succeed; the complete document state; and exactly the seven
+phase records in the order defined in §9.4.
+
+Each phase record contains its phase, state, and outcomes. A `skipped` phase also contains a stable
+reason; another phase MUST NOT contain a phase reason. A `passed` or `skipped` phase has no
+outcomes. An `invalid`, `unsupported`, or `incomplete` phase has at least one outcome.
+
+Each outcome contains its state, stable ID, and instance JSON Pointer. It may contain its owner,
+reason, schema-location JSON Pointer, and informative diagnostic detail. A skipped outcome contains
+a stable reason. The `instance` and `schema_location` fields conform to RFC 6901. Diagnostic
+`detail` does not affect conformance, equality, or ordering.
+
+The incorporated schema owns this representation's structure. Section 9.4 owns phase algorithms,
+state precedence, applicability and ordering of outcomes, reason and outcome semantics, and when
+the descriptor ID is null.
+
 ## 10. Validation rules
 
 ### 10.1 Tier 1: generated from structure

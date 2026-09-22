@@ -5,8 +5,11 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
+from functools import cache
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -21,6 +24,8 @@ SCHEMAS = Path(__file__).resolve().parent / "schemas"
 SCHEMA = SCHEMAS / "registry.schema.json"
 CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
 CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.1.json"
+RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
+RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
 METADATA_DESCRIPTION = (
     "What the source stated about this row that the standard does not model, carried "
     "in the source's own vocabulary and read by no rule."
@@ -47,7 +52,15 @@ class Outcome:
     owner: str | None = None
     reason: str | None = None
     schema_location: str | None = None
-    detail: str | None = None
+    detail: str | None = dataclass_field(default=None, compare=False)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return this outcome's portable Part 02 representation."""
+        result: dict[str, Any] = {"state": self.state, "id": self.id, "instance": self.instance}
+        for name in ("owner", "reason", "schema_location", "detail"):
+            if (value := getattr(self, name)) is not None:
+                result[name] = value
+        return result
 
 
 @dataclass(frozen=True)
@@ -58,6 +71,17 @@ class PhaseRecord:
     state: str
     outcomes: tuple[Outcome, ...] = ()
     reason: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return this phase's portable Part 02 representation."""
+        result: dict[str, Any] = {
+            "phase": self.phase,
+            "state": self.state,
+            "outcomes": [outcome.to_dict() for outcome in self.outcomes],
+        }
+        if self.reason is not None:
+            result["reason"] = self.reason
+        return result
 
 
 @dataclass(frozen=True)
@@ -72,6 +96,83 @@ class RegistryResult:
     def findings(self) -> tuple[Outcome, ...]:
         """Return exactly the invalid outcomes."""
         return tuple(outcome for phase in self.phases for outcome in phase.outcomes if outcome.state == "invalid")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return the portable representation incorporated by Part 02 §9.5."""
+        return {
+            "$schema": RESULT_SCHEMA_ID,
+            "descriptor_id": self.descriptor_id,
+            "state": self.state,
+            "phases": [phase.to_dict() for phase in self.phases],
+        }
+
+
+def _freeze(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        from types import MappingProxyType
+
+        return MappingProxyType({key: _freeze(child) for key, child in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(child) for child in value)
+    return value
+
+
+def _thaw(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {key: _thaw(child) for key, child in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw(child) for child in value]
+    return value
+
+
+@dataclass(frozen=True)
+class CheckedRegistryContext(Mapping[str, Any]):
+    """One registry result bound to immutable input and evaluation context."""
+
+    input_kind: str
+    exact_input: Any
+    decoded: Any
+    result: RegistryResult
+    descriptors: tuple[str, ...]
+    external_domains: tuple[str, ...]
+    core: CheckedRegistryContext | None = None
+
+    @property
+    def document(self) -> Any:
+        """Return an isolated ordinary-Python copy of the checked decoded value."""
+        return _thaw(self.decoded)
+
+    def __getitem__(self, key: str) -> Any:
+        """Read one member from an isolated copy of the checked document."""
+        document = self.document
+        if not isinstance(document, Mapping):
+            raise KeyError(key)
+        return document[key]
+
+    def __iter__(self) -> Iterator[str]:
+        """Iterate the checked document's root member names."""
+        document = self.document
+        return iter(document if isinstance(document, Mapping) else {})
+
+    def __len__(self) -> int:
+        """Return the checked document's number of root members."""
+        document = self.document
+        return len(document) if isinstance(document, Mapping) else 0
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> Any:
+        """Materialize a mutable copy without copying locks or mapping proxies."""
+        del memo
+        return self.document
+
+
+class RegistryRejected(ValueError):
+    """A production boundary received a non-valid registry context."""
+
+    def __init__(self, subject: str, context: CheckedRegistryContext) -> None:
+        self.subject = subject
+        self.context = context
+        self.result = context.result
+        super().__init__(f"{subject} registry is {context.result.state}")
 
 
 @dataclass(frozen=True)
@@ -164,38 +265,68 @@ def check_registry_bytes(
     descriptors: Iterable[Mapping[str, Any]] | None = None,
 ) -> RegistryResult:
     """Validate UTF-8 JSON bytes, including duplicate object members."""
+    core_context = check_registry_context(core, descriptors=descriptors) if core is not None else None
+    return check_registry_context_bytes(data, core=core_context, descriptors=descriptors).result
+
+
+def check_registry_context_bytes(
+    data: bytes,
+    core: CheckedRegistryContext | None = None,
+    *,
+    descriptors: Iterable[Mapping[str, Any]] | None = None,
+) -> CheckedRegistryContext:
+    """Check exact registry bytes and bind the complete result to them."""
+    descriptor_values = _load_contracts(descriptors)
+    descriptor_identity = tuple(json.dumps(item, sort_keys=True, separators=(",", ":")) for item in descriptor_values)
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError as exc:
         outcome = Outcome("invalid", "registry.json.invalid_utf8", detail=str(exc))
-        return _complete(
+        result = _complete(
             [
                 _phase("json", [outcome]),
                 *[_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[1:]],
             ],
             None,
+        )
+        return CheckedRegistryContext(
+            "bytes", bytes(data), None, result, descriptor_identity, _external_domains(), core
         )
     try:
         document = json.loads(text, object_pairs_hook=_Object)
     except json.JSONDecodeError as exc:
         outcome = Outcome("invalid", "registry.json.invalid_syntax", detail=str(exc))
-        return _complete(
+        result = _complete(
             [
                 _phase("json", [outcome]),
                 *[_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[1:]],
             ],
             None,
         )
+        return CheckedRegistryContext(
+            "bytes", bytes(data), None, result, descriptor_identity, _external_domains(), core
+        )
     duplicate_outcomes = _duplicates(document)
     if duplicate_outcomes:
-        return _complete(
+        result = _complete(
             [
                 _phase("json", duplicate_outcomes),
                 *[_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[1:]],
             ],
             None,
         )
-    return _check_mapping(document, core, PhaseRecord("json", "passed"), descriptors)
+        return CheckedRegistryContext(
+            "bytes", bytes(data), _freeze(document), result, descriptor_identity, _external_domains(), core
+        )
+    result = _check_mapping(
+        document,
+        core.document if core is not None else None,
+        PhaseRecord("json", "passed"),
+        descriptor_values,
+        core.result if core is not None else None,
+    )
+    domains = _external_domains()
+    return CheckedRegistryContext("bytes", bytes(data), _freeze(document), result, descriptor_identity, domains, core)
 
 
 def check_registry(
@@ -205,7 +336,30 @@ def check_registry(
     descriptors: Iterable[Mapping[str, Any]] | None = None,
 ) -> RegistryResult:
     """Validate an already-decoded mapping, beginning after byte-level JSON checks."""
-    return _check_mapping(document, core, _skipped("json", "registry.phase.mapping_input"), descriptors)
+    core_context = check_registry_context(core, descriptors=descriptors) if core is not None else None
+    return check_registry_context(document, core=core_context, descriptors=descriptors).result
+
+
+def check_registry_context(
+    document: Mapping[str, Any],
+    core: CheckedRegistryContext | None = None,
+    *,
+    descriptors: Iterable[Mapping[str, Any]] | None = None,
+) -> CheckedRegistryContext:
+    """Copy and check a decoded mapping, binding its result before caller mutation."""
+    copied = deepcopy(document)
+    descriptor_values = _load_contracts(descriptors)
+    result = _check_mapping(
+        copied,
+        core.document if core is not None else None,
+        _skipped("json", "registry.phase.mapping_input"),
+        descriptor_values,
+        core.result if core is not None else None,
+    )
+    descriptor_identity = tuple(json.dumps(item, sort_keys=True, separators=(",", ":")) for item in descriptor_values)
+    domains = _external_domains()
+    frozen = _freeze(copied)
+    return CheckedRegistryContext("mapping", frozen, frozen, result, descriptor_identity, domains, core)
 
 
 def _load_contracts(descriptors: Iterable[Mapping[str, Any]] | None) -> list[dict[str, Any]]:
@@ -226,6 +380,7 @@ def _check_mapping(
     core: Mapping[str, Any] | None,
     json_phase: PhaseRecord,
     descriptors: Iterable[Mapping[str, Any]] | None,
+    checked_core_result: RegistryResult | None = None,
 ) -> RegistryResult:
     phases = [json_phase]
     if not isinstance(document, Mapping):
@@ -276,7 +431,7 @@ def _check_mapping(
     core_usable = class_name == "core"
     core_semantic: Any = document.get("semantic_standard_version")
     if class_name == "extension" and core is not None:
-        core_result = check_registry(core, descriptors=contracts)
+        core_result = checked_core_result or check_registry(core, descriptors=contracts)
         core_usable = (
             core_result.state == "valid"
             and "extension_id" not in core
@@ -1132,6 +1287,7 @@ def _rule_outcomes(document: Mapping[str, Any], core: Mapping[str, Any] | None) 
     return outcomes
 
 
+@cache
 def _ucum_parser() -> Any | None:
     try:
         from ucumvert import get_ucum_parser  # type: ignore[import-untyped]
@@ -1143,6 +1299,11 @@ def _ucum_parser() -> Any | None:
         return get_ucum_parser()
     except (ImportError, FileNotFoundError, ElementTree.ParseError):
         return None
+
+
+def _external_domains() -> tuple[str, ...]:
+    """Name the exact external semantic domains available to this evaluation."""
+    return ("ucum-2.2-2024-06-17",) if _ucum_parser() is not None else ()
 
 
 def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
@@ -1219,30 +1380,32 @@ def declarations(document: Any, name: str | None = None) -> list[Finding]:
     ]
 
 
-def check_extension(document: Any, core: Any, *, name: str | None = None) -> list[Finding]:
-    """Validate one extension and return a concise legacy finding list."""
+def check_extension(document: Any, core: Any, *, name: str | None = None) -> RegistryResult:
+    """Validate one extension and return its complete portable result."""
     del name
     if not isinstance(document, Mapping) or not isinstance(core, Mapping):
-        return [Finding("registry document", ("document and core must be mappings",))]
-    result = check_registry(document, core)
-    grouped: dict[str, list[str]] = {}
-    for outcome in result.findings:
-        grouped.setdefault(outcome.id, []).append(outcome.detail or outcome.instance)
-    return [Finding(label, tuple(offenders)) for label, offenders in grouped.items()]
+        return check_registry({})
+    return check_registry(document, core)
 
 
 __all__ = [
     "CONTRACT",
     "CONTRACT_SCHEMA",
+    "RESULT_SCHEMA",
+    "RESULT_SCHEMA_ID",
     "SCHEMA",
+    "CheckedRegistryContext",
     "Finding",
     "Outcome",
     "PhaseRecord",
+    "RegistryRejected",
     "RegistryResult",
     "against_schema",
     "check_extension",
     "check_registry",
     "check_registry_bytes",
+    "check_registry_context",
+    "check_registry_context_bytes",
     "declarations",
     "structural",
 ]

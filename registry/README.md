@@ -18,6 +18,7 @@ history and rationale but are not current normative owners.
 |---|---|
 | `logical_schemas.json` | The registry. Embedded in packets at `schemas/logical_schemas.json`. |
 | `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
+| `registry_result.schema.json` | Closed portable representation of a complete registry-document result. |
 | `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
 | `registry_contracts/escapewheel-registry-contract-v0.1.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
@@ -30,6 +31,7 @@ wheel cannot read a file from another distribution. Those copies are *build arti
 
 ```
 registry.schema.json  ──build.py──>  escapewheel-validator/src/escapewheel_validator/schemas/
+registry_result.schema.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
 registry_contract.schema.json ─┐
 registry_contracts/*.json ────├─build.py─> escapewheel-validator/src/escapewheel_validator/schemas/
 rule_language.schema.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/

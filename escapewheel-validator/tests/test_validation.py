@@ -5,8 +5,9 @@ import pyarrow.parquet as pq
 import pytest
 from escapewheel_reader import PacketError, open_packet
 
-from escapewheel_validator import generate, validate
+from escapewheel_validator import validate
 from escapewheel_validator.generate import Check, concerns
+from escapewheel_validator.generate import _generate as generate
 
 
 def _rewrite(root, name, table):
@@ -102,6 +103,25 @@ def test_supplied_registry_overrides_the_absent_one(packet_root):
     assert validate(open_packet(packet_root), registry=registry).passed
 
 
+def test_unsupported_registry_result_is_preserved_and_dependent_checks_are_skipped(packet_root):
+    path = packet_root / "schemas" / "logical_schemas.json"
+    registry = json.loads(path.read_text())
+    registry["$schema"] = "https://example.org/unknown"
+    path.write_text(json.dumps(registry))
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert report.registries[0].result.state == "unsupported"
+    assert not any(f.check.startswith("core.trials.") for f in report.findings)
+
+
+def test_invalid_json_registry_is_a_complete_result_not_a_crash(packet_root):
+    (packet_root / "schemas" / "logical_schemas.json").write_text("{not json")
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert report.registries[0].result.state == "invalid"
+    assert "registry.json.invalid_syntax" in {finding.check for finding in report.findings}
+
+
 def test_absent_tables_are_not_required(packet_root):
     """A packet need not carry every table the registry defines."""
     import json as _json
@@ -118,6 +138,8 @@ def test_report_renders_as_json(packet_root):
     rendered = report.to_dict("session_001")
     assert rendered["status"] == "passed"
     assert rendered["summary"] == {"errors": 0, "warnings": 0}
+    assert rendered["registries"][0]["subject"] == "core"
+    assert rendered["registries"][0]["result"]["state"] == "valid"
 
 
 def test_generator_emits_nothing_for_an_empty_registry():
@@ -139,12 +161,6 @@ def test_nullable_foreign_keys_are_guarded(packet_root):
 
 def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
     """Part 02 §8.6, at `info`. The column may be absent from the file, so this can never fail."""
-    path = packet_root / "schemas" / "logical_schemas.json"
-    registry = json.loads(path.read_text())
-    registry["tables"]["core.trials"]["columns"].append(
-        {"name": "metadata", "type": "json_string", "presence": "optional", "role": "data", "description": "metadata"}
-    )
-    path.write_text(json.dumps(registry))
     report = validate(open_packet(packet_root))
     assert report.passed
     finding = next(f for f in report.findings if f.check == "core.trials.metadata_unfilled")
@@ -153,12 +169,6 @@ def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
 
 def test_a_filled_metadata_column_is_not_reported(packet_root):
     """The other side: one non-null value in the packet is enough, so the report cannot nag."""
-    path = packet_root / "schemas" / "logical_schemas.json"
-    registry = json.loads(path.read_text())
-    registry["tables"]["core.trials"]["columns"].append(
-        {"name": "metadata", "type": "json_string", "presence": "optional", "role": "data", "description": "metadata"}
-    )
-    path.write_text(json.dumps(registry))
     trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
     filled = trials.append_column("metadata", pa.array(['{"a": 1}', None]))
     _rewrite(packet_root, "trials", filled)
@@ -775,7 +785,7 @@ def test_an_external_resource_is_reported_as_unverified_by_default(packet_root):
     """Part 04 §5.3: structural validation must not reach for bytes the packet does not own."""
     report = validate(open_packet(_external(packet_root)))
     assert report.passed
-    assert [f.check for f in report.findings if f.level == "info"] == ["external.unverified"]
+    assert "external.unverified" in [f.check for f in report.findings if f.level == "info"]
 
 
 def test_the_requested_mode_resolves_it(packet_root):
@@ -1210,6 +1220,17 @@ def test_an_unreadable_extension_registry_is_ignored_by_the_reader(packet_root):
     root = _extension(packet_root)
     (root / "extensions" / "task.json").write_text("{not json")
     assert open_packet(root).extensions() == {}
+
+
+def test_validator_preserves_an_available_unparseable_extension_result(packet_root):
+    root = _extension(packet_root)
+    (root / "extensions" / "task.json").write_text("{not json")
+    report = validate(open_packet(root))
+    task = next(item for item in report.registries if item.subject == "task")
+    assert task.result.state == "invalid"
+    assert not report.extension_passed("task")
+    assert "task" in report.extensions
+    assert not any(f.check == "extension.validated" for f in report.findings)
 
 
 def _discriminated(role="discriminator", **extra):

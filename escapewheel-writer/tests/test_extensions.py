@@ -6,7 +6,7 @@ from pathlib import Path
 import pyarrow as pa
 import pytest
 from escapewheel_reader import open_packet
-from escapewheel_validator import validate
+from escapewheel_validator import RegistryRejected, validate
 
 from escapewheel_writer import PacketWriter
 
@@ -40,7 +40,14 @@ EXTENSION = {
                     "role": "identifier",
                     "identity": "carried",
                 },
-                {"name": "choice", "type": "string", "presence": "nullable", "role": "data", "enum": ["left", "right"]},
+                {
+                    "name": "choice",
+                    "type": "string",
+                    "presence": "nullable",
+                    "role": "data",
+                    "vocabulary": "closed",
+                    "enum": ["left", "right"],
+                },
             ],
             "primary_key": ["session_id", "trial_id"],
             "references": [
@@ -133,14 +140,16 @@ def test_the_extension_is_validated_and_reported_apart(tmp_path, registry, minim
 
 def test_a_core_table_cannot_be_redefined(registry):
     stray = {**EXTENSION, "tables": {"core.intervals": EXTENSION["tables"]["task.trials"]}}
-    with pytest.raises(ValueError, match="not namespaced"):
+    with pytest.raises(RegistryRejected) as caught:
         PacketWriter(registry, packet_id="s001", extensions=[stray])
+    assert caught.value.result.state == "invalid"
 
 
 def test_an_unnamespaced_table_is_refused(registry):
     stray = {**EXTENSION, "tables": {"elsewhere.trials": EXTENSION["tables"]["task.trials"]}}
-    with pytest.raises(ValueError, match="not namespaced"):
+    with pytest.raises(RegistryRejected) as caught:
         PacketWriter(registry, packet_id="s001", extensions=[stray])
+    assert caught.value.result.state == "invalid"
 
 
 # -- a source adapter may come from another distribution ------------------------------------
@@ -396,7 +405,22 @@ def _vrf_registry():
                         "role": "identifier",
                         "identity": "carried",
                     },
-                    {"name": "odor", "type": "string", "presence": "nullable", "role": "data"},
+                    {
+                        "name": "odor",
+                        "type": "string",
+                        "presence": "nullable",
+                        "role": "data",
+                        "vocabulary": "open",
+                        "description": "Odor label reported by the source.",
+                    },
+                    {
+                        "name": "metadata",
+                        "type": "json_string",
+                        "presence": "optional",
+                        "role": "data",
+                        "description": "What the source stated about this row that the standard does not model, "
+                        "carried in the source's own vocabulary and read by no rule.",
+                    },
                 ],
                 "primary_key": ["session_id", "site_id"],
                 "references": [

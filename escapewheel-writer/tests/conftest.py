@@ -2,14 +2,16 @@ import json
 from pathlib import Path
 
 import pytest
+from escapewheel_validator import check_registry_context
 
 REGISTRY = json.loads((Path(__file__).resolve().parents[2] / "registry" / "logical_schemas.json").read_text())
+REGISTRY_CONTEXT = check_registry_context(REGISTRY)
 
 
 @pytest.fixture
 def registry():
     """The reference registry, read from the sibling repository."""
-    return REGISTRY
+    return REGISTRY_CONTEXT
 
 
 @pytest.fixture

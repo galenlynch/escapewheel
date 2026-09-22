@@ -6,7 +6,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 from escapewheel_reader import open_packet
-from escapewheel_validator import validate
+from escapewheel_validator import RegistryRejected, validate
 
 from escapewheel_writer import CommitRefused, PacketWriter
 from escapewheel_writer.encoding import (
@@ -23,6 +23,13 @@ def _write(root, registry, tables, **kwargs):
     for resource_id, records in tables.items():
         writer.add(resource_id, records)
     return writer.commit(root)
+
+
+def test_constructor_rejects_a_nonvalid_registry_with_the_complete_result():
+    with pytest.raises(RegistryRejected) as caught:
+        PacketWriter({"$schema": "https://example.org/unknown"}, packet_id="s001")
+    assert caught.value.result.state == "unsupported"
+    assert caught.value.result.to_dict()["state"] == "unsupported"
 
 
 def test_stamp_sets_columns_on_rows_already_added(registry, minimal):

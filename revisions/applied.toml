@@ -3047,3 +3047,38 @@ note = "offline exact UCUM syntax and canonical non-dereferenced authority ident
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-self-description" }]
 note = "incompatible development meta-schema, core-registry, and extension-example version transition"
+
+[clause."R127 §3.1"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-result-serialization" }]
+note = "portable result structure is incorporated as registry_result.schema.json and explained with its semantic owner"
+
+[clause."R127 §3.2"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-checked-registry-context" }]
+note = "immutable in-process association binds exact input, result, capabilities, and extension core context"
+
+[clause."R127 §3.3"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-registry-conformance-boundary" }]
+note = "publication, production, validation, authoring, and check generation invoke the complete contract"
+
+[clause."R127 §3.4"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-reader-registry-independence" }]
+note = "ordinary reader analysis remains independent of results, contexts, receipts, and the validator package"
+
+[clause."R127 §3.5"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-registry-producer-boundary" }]
+note = "producer and authoring boundaries proceed only from valid contexts and expose complete rejection results"
+
+[clause."R127 §3.6"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validator-registry-boundary" }]
+note = "validators preserve all registry states and run derived checks only from valid contexts"
+
+[clause."R127 §3.7"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-registry-result-reporting" }]
+note = "reports pair each complete portable result with an external subject label"

@@ -8,16 +8,15 @@ from collections import Counter
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REG = json.loads((HERE / "logical_schemas.json").read_text())
+REG_BYTES = (HERE / "logical_schemas.json").read_bytes()
+REG = json.loads(REG_BYTES)
 T = REG["tables"]
 # Part 09 §2: an extension is a registry document in R2's format, so the invariants that hold of a
 # registry hold of it. They are checked here for the same reason core's are -- a naming
 # convention or an unparseable rule is a property of the document, which no packet's rows can
 # show and no SQL can see (R12 §4).
-EXT = {
-    f.stem: json.loads(f.read_text())
-    for f in sorted((HERE / "extensions").glob("*.json"))
-}
+EXT_PATHS = {f.stem: f for f in sorted((HERE / "extensions").glob("*.json"))}
+EXT = {name: json.loads(path.read_bytes()) for name, path in EXT_PATHS.items()}
 EXT_T = {n: t for doc in EXT.values() for n, t in doc["tables"].items()}
 ALL = T | EXT_T
 
@@ -49,12 +48,13 @@ check("table set matches the Part 02 ledger", expected ^ set(T))
 # Part 02 §9.4 defines one complete result for core and extension registry documents. This
 # repository check consumes that result rather than maintaining another invariant subset.
 sys.path.insert(0, str(HERE))
-from escapewheel_validator.registry_document import check_registry
+from escapewheel_validator.registry_document import CheckedRegistryContext, check_registry_context_bytes
 
 
-def _registry_result(name, document, core=None):
+def _registry_result(name, data, core: CheckedRegistryContext | None = None):
     """Require one repository registry to complete the incorporated contract."""
-    result = check_registry(document, core)
+    context = check_registry_context_bytes(data, core=core)
+    result = context.result
     check(
         f"{name} registry document is valid",
         [
@@ -66,11 +66,12 @@ def _registry_result(name, document, core=None):
         if result.state != "valid"
         else [],
     )
+    return context
 
 
-_registry_result("core", REG)
-for _id, _doc in EXT.items():
-    _registry_result(_id, _doc, REG)
+_core_context = _registry_result("core", REG_BYTES)
+for _id, _path in EXT_PATHS.items():
+    _registry_result(_id, _path.read_bytes(), _core_context)
 
 META_ID = json.loads((HERE / "registry.schema.json").read_text())["$id"]
 check(

@@ -25,6 +25,8 @@ OUT = HERE / "logical_schemas.json"
 #: Where each hand-written schema is vendored. A wheel cannot read a file from another
 #: distribution, so each carries a copy -- which makes the copy an output of this build.
 VENDORED = {
+    "registry_result.schema.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_result.schema.json",
     "registry.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
     "registry_contract.schema.json": HERE.parent
