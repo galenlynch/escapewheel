@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "revision": "R124",
+  "based_on": "3769082d29514ea9eeabe81c0931f98171faf8ea",
+  "clauses": {
+    "R124 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-specification-authority"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-normative-references"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-normative-references"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-catalog-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-catalog-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "specification framework declarations agree"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "missing Part 03 invocation"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "missing Part 04 invocation"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "conformance/specification-framework/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "CONTRIBUTING.md",
+          "escapewheel_poc_docs_v0.2/CONTRIBUTING.md",
+          "revisions/PLACEMENT-DEFECTS.md",
+          "revisions/proposals/ROADMAP.md"
+        ]
+      }
+    },
+    "R124 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "changed reference row"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "implementation used as authority"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "zarr-python used as authority"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "Numcodecs used as authority"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "conformance/specification-framework/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/CONTRIBUTING.md"
+        ]
+      }
+    },
+    "R124 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-normative-references"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-normative-references"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-catalog-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-catalog-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "specification framework declarations agree"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "missing Part 03 reference"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "missing Part 04 reference"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "misplaced reference"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "duplicate reference"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "conformance/specification-framework/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "CONTRIBUTING.md",
+          "escapewheel_poc_docs_v0.2/README.md",
+          "revisions/PLACEMENT-DEFECTS.md",
+          "revisions/proposals/ROADMAP.md"
+        ]
+      }
+    }
+  }
+}

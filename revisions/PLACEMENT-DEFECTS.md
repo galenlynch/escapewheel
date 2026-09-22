@@ -36,7 +36,7 @@ The roadmap owns sequencing among work items; this file owns the observation-lev
 | ID | Current location | Observed placement or duplication defect | Candidate disposition | State |
 |---|---|---|---|---|
 | PD-001 | Specification README §§1–5 | Scope, conformance, normative-language, organization, and version statements made an informational entry point an unnumbered normative preamble and duplicated several numbered parts. | R122 relocated each binding statement to Part 00 or the subject-owning part and left linked summaries in the README. | Resolved: R122 |
-| PD-002 | Specification README §§6–7 | The only normative bibliography was in the README even though that file was to become informational. | R122 moved the complete normative bibliography and its applicability rule to Part 00; the README retains only informative references and a link. | Resolved: R122 |
+| PD-002 | Specification README §§6–7 | The only normative bibliography was in the README even though that file was to become informational. | R122 moved reference authority into the numbered specification; R124 retained policy and shared references in Part 00 and placed single-part references with their subject owners. The README retains only informative navigation. | Resolved: R122/R124 |
 | PD-003 | Specification README §4, Part 00 §9, and each part header | Part status was maintained in overlapping lists, and the README omitted Part 10. The local-header precedence rule permitted drift instead of rejecting it. | R122 made Part 00 the owner, made local headers checked projections, and added a framework check. | Resolved: R122 |
 | PD-004 | Part 00 §3.3 | Exact session-scope table counts, named columns, and copied registry measurements were logical facts or generated evidence rather than architecture. Several counts were stale. | R123 removed the counts and left logical session scope with Part 02 §7.1. | Resolved: R123 |
 | PD-005 | Part 00 §3.3 | Reader projection behavior, session discriminators, join-key instructions, and a measured join cost combined logical identity, reader operation, and performance evidence in the architecture. | R123 moved reader presentation and correlation to Part 05 §13, retained logical scope in Part 02, and removed the unrefreshed ratio. | Resolved: R123 |
@@ -55,7 +55,7 @@ The roadmap owns sequencing among work items; this file owns the observation-lev
 | PD-018 | Part 08 | An informative example's acceptance checklist and SQL resemble an independent contract and preserve obsolete unit columns. | P2 reconciles unit examples; P10 generates and executes the example from current authoritative declarations. | Tracked: P2/P10 |
 | PD-019 | Part 09 | The core/extension placement boundary repeats Part 00, while adapter and report-delivery behavior belongs with the build interface. | R122 established the architectural owner; P8 reconciles adapter behavior and makes Part 09 reference rather than restate it. | Tracked: P8 |
 | PD-020 | Part 10 §3 | An informative performance part states an uppercase `SHOULD` about time-bucket row groups. | Move the storage obligation to Part 03 and retain its measurement and rationale in Part 10. | Tracked: P9 |
-| PD-021 | Part 00 §§2 and 10 | The complete central bibliography places external authorities used only by one numbered part in the framework rather than beside the subject that invokes them. | P2.1 appraises retaining policy and shared references in Part 00 while moving single-part references to Parts 03, 04, and the future Part 11. | Tracked: P2.1 |
+| PD-021 | Part 00 §§2 and 10 | The complete central bibliography places external authorities used only by one numbered part in the framework rather than beside the subject that invokes them. | R124 retained policy and shared references in Part 00, moved portable-profile references to Part 03 and SHA-256 to Part 04, and established the rule that lets future Part 11 own its SQL and floating-point references. | Resolved: R124 |
 
 ## Closure record
 
@@ -65,3 +65,6 @@ The roadmap owns sequencing among work items; this file owns the observation-lev
 - R123 resolved PD-004 through PD-006 by removing stale architecture counts and implementation
   measurements, assigning reader composition to Part 05, and reconciling unit identity around the
   packet-assigned `unit_id` owned by Part 02.
+- R124 resolved PD-021 and completed PD-002's ownership cleanup by distributing single-part
+  normative references to their subject owners while retaining policy and shared references in
+  Part 00.

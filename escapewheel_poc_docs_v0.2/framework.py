@@ -1,7 +1,7 @@
 """Check the specification framework and its informative projections.
 
 Part 00 owns artifact roles, numbered-part subjects and statuses, identifier ownership, and the
-normative bibliography. This checker verifies the representations that can be compared
+normative-reference policy. Subject-owning parts own their local bibliographies. This checker verifies the representations that can be compared
 mechanically. It does not decide whether prose is well placed or semantically complete.
 """
 
@@ -43,7 +43,7 @@ REFERENCE_MARKERS = {
     "RFC 3986": "https://www.rfc-editor.org/info/rfc3986",
     "JSON Schema Core": "json-schema.org/draft/2020-12/json-schema-core",
     "JSON Schema Validation": "json-schema.org/draft/2020-12/json-schema-validation",
-    "Parquet": "github.com/apache/parquet-format",
+    "Parquet": "[Apache Parquet format](https://github.com/apache/parquet-format)",
     "Parquet logical types": "LogicalTypes.md",
     "Arrow columnar": "arrow.apache.org/docs/format/Columnar.html",
     "Arrow IPC": "#serialization-and-interprocess-communication-ipc",
@@ -61,6 +61,108 @@ REFERENCE_MARKERS = {
     "Zarr v2": "zarr-specs.readthedocs.io/en/latest/v2/v2.0.html",
     "RFC 8878": "https://www.rfc-editor.org/info/rfc8878",
     "FIPS 180-4": "csrc.nist.gov/pubs/fips/180-4",
+}
+
+REFERENCE_OWNERS = {
+    "BCP 14": "00",
+    "RFC 8259": "00",
+    "RFC 3986": "00",
+    "JSON Schema Core": "00",
+    "JSON Schema Validation": "00",
+    "Parquet": "03",
+    "Parquet logical types": "03",
+    "Arrow columnar": "03",
+    "Arrow IPC": "03",
+    "Arrow Flight": "03",
+    "Zarr v3 core": "03",
+    "Zarr data types": "03",
+    "Zarr regular chunk grid": "03",
+    "Zarr default chunk keys": "03",
+    "Zarr Bytes": "03",
+    "Zarr Gzip": "03",
+    "Zarr Blosc": "03",
+    "Zarr CRC32C": "03",
+    "Zarr transpose": "03",
+    "Zarr sharding": "03",
+    "Zarr v2": "03",
+    "RFC 8878": "03",
+    "FIPS 180-4": "04",
+}
+
+REFERENCE_ANCHORS = {
+    "00": "ew-normative-references",
+    "03": "ew-portable-profile-normative-references",
+    "04": "ew-packet-catalog-normative-references",
+}
+
+REFERENCE_ROWS = {
+    "00": (
+        (
+            "[BCP 14](https://www.rfc-editor.org/info/bcp14), comprising RFC 2119 and RFC 8174",
+            "exact RFC editions",
+            "normative keywords",
+        ),
+        (
+            "[RFC 8259](https://www.rfc-editor.org/info/rfc8259)",
+            "exact",
+            "JSON",
+        ),
+        (
+            "[RFC 3986](https://www.rfc-editor.org/info/rfc3986)",
+            "exact",
+            "URI syntax",
+        ),
+        (
+            "[JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core) and [Validation](https://json-schema.org/draft/2020-12/json-schema-validation)",
+            "Draft 2020-12",
+            "incorporated JSON Schemas",
+        ),
+    ),
+    "03": (
+        (
+            "[Apache Parquet format](https://github.com/apache/parquet-format), including [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)",
+            "unversioned",
+            "Parquet files and logical types",
+        ),
+        (
+            "[Apache Arrow columnar format](https://arrow.apache.org/docs/format/Columnar.html), [IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc), and [Flight](https://arrow.apache.org/docs/format/Flight.html)",
+            "unversioned",
+            "Arrow data, IPC, and Flight",
+        ),
+        (
+            "[Zarr v3 core](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html), [data types](https://zarr-specs.readthedocs.io/en/latest/v3/data-types/index.html), [regular chunk grid](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-grids/regular-grid/index.html), and [default chunk-key encoding](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-key-encodings/default/index.html)",
+            "core v3.0; other entries unversioned",
+            "Zarr v3 arrays",
+        ),
+        (
+            "Zarr v3 [Bytes](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/bytes/), [Gzip](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/gzip/), [Blosc](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/blosc/), [CRC32C](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/), [transpose](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/), and [sharding-indexed](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/) codec specifications",
+            "unversioned",
+            "permitted Zarr v3 codec pipeline components",
+        ),
+        (
+            "[Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html)",
+            "2.0",
+            "permitted external Zarr v2 arrays",
+        ),
+        (
+            "[RFC 8878](https://www.rfc-editor.org/info/rfc8878)",
+            "exact",
+            "Zstandard framing",
+        ),
+    ),
+    "04": (
+        (
+            "[NIST FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final)",
+            "exact",
+            "SHA-256",
+        ),
+    ),
+}
+
+REFERENCE_INVOCATIONS = {
+    "00": "Normative prose invokes an external authority **directly**",
+    "03": "Its requirements directly invoke the shared JSON and URI authorities",
+    "04": "Its requirements directly invoke the shared JSON and URI authorities",
 }
 
 NORMATIVE_KEYWORD = re.compile(
@@ -108,6 +210,18 @@ def _table_after(
                 rows.append(values)
         return rows
     return []
+
+
+def _anchored_section(text: str, anchor: str) -> str:
+    """Return one top-level numbered section selected by its canonical anchor."""
+    start = text.find(f'id="{anchor}"')
+    if start < 0:
+        return ""
+    heading = text.find("\n## ", start)
+    if heading < 0:
+        return ""
+    end = text.find("\n## ", heading + 4)
+    return text[start:] if end < 0 else text[start:end]
 
 
 def _status(value: str) -> tuple[str, tuple[str, ...]]:
@@ -241,17 +355,51 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
     if match := NORMATIVE_KEYWORD.search(readme):
         found.append(f"README contains normative keyword {match.group(0)}")
 
-    reference_start = architecture.find('id="ew-normative-references"')
-    references = architecture[reference_start:] if reference_start >= 0 else ""
-    if reference_start < 0:
-        found.append("Part 00 normative bibliography is missing")
-    for name, marker in REFERENCE_MARKERS.items():
-        if marker not in references:
-            found.append(f"Part 00 normative bibliography is missing {name}")
-    for implementation in ("DuckDB", "zarr-python", "Numcodecs"):
-        if implementation in references:
+    reference_sections = {
+        number: _anchored_section(numbered_texts[number], anchor)
+        for number, anchor in REFERENCE_ANCHORS.items()
+    }
+    for number, references in reference_sections.items():
+        if not references:
+            found.append(f"Part {number} normative-reference section is missing")
+            continue
+        rows = _table_after(
+            references,
+            REFERENCE_ANCHORS[number],
+            ("reference", "candidate edition", "application"),
+        )
+        if tuple(rows) != REFERENCE_ROWS[number]:
             found.append(
-                f"Part 00 normative bibliography promotes implementation {implementation}"
+                f"Part {number} normative-reference rows disagree with the approved allocation"
+            )
+    for name, marker in REFERENCE_MARKERS.items():
+        expected = REFERENCE_OWNERS[name]
+        owners = [
+            number
+            for number, references in reference_sections.items()
+            if marker in references
+        ]
+        if owners == [expected]:
+            continue
+        if not owners:
+            found.append(f"Part {expected} normative references are missing {name}")
+        elif expected not in owners and len(owners) == 1:
+            found.append(
+                f"{name} normative reference is in Part {owners[0]}, expected Part {expected}"
+            )
+        else:
+            found.append(
+                f"{name} normative reference appears in Parts {', '.join(owners)}, expected only Part {expected}"
+            )
+    for number, marker in REFERENCE_INVOCATIONS.items():
+        if marker not in numbered_texts[number]:
+            found.append(f"Part {number} external-reference invocation is missing")
+    for implementation in ("DuckDB", "zarr-python", "Numcodecs"):
+        if any(
+            implementation in references for references in reference_sections.values()
+        ):
+            found.append(
+                f"normative references promote implementation {implementation}"
             )
 
     combined = documents["Escapewheel_POC_v0.2_Implementation_Spec.md"]

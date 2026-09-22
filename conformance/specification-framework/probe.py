@@ -131,7 +131,73 @@ def main() -> int:
             "https://www.rfc-editor.org/info/bcp14",
             "https://example.invalid/missing-bcp14",
         ),
-        "normative bibliography is missing BCP 14",
+        "Part 00 normative references are missing BCP 14",
+    )
+    _assert_rejected(
+        "missing Part 03 reference",
+        _replace(
+            "03_portable_physical_profile.md",
+            "[Apache Parquet format](https://github.com/apache/parquet-format)",
+            "[Apache Parquet format](https://example.invalid/missing-parquet)",
+        ),
+        "Part 03 normative references are missing Parquet",
+    )
+    _assert_rejected(
+        "missing Part 04 reference",
+        _replace(
+            "04_packet_catalog.md",
+            "https://csrc.nist.gov/pubs/fips/180-4/upd1/final",
+            "https://example.invalid/missing-fips-180-4",
+        ),
+        "Part 04 normative references are missing FIPS 180-4",
+    )
+    parquet_marker = framework.REFERENCE_MARKERS["Parquet"]
+    misplaced_part_03 = _text("03_portable_physical_profile.md").replace(
+        parquet_marker, "example.invalid/misplaced-parquet"
+    )
+    misplaced_part_04 = _text("04_packet_catalog.md") + f"\n{parquet_marker}\n"
+    _assert_rejected(
+        "misplaced reference",
+        {
+            "03_portable_physical_profile.md": misplaced_part_03,
+            "04_packet_catalog.md": misplaced_part_04,
+        },
+        "Parquet normative reference is in Part 04, expected Part 03",
+    )
+    _assert_rejected(
+        "duplicate reference",
+        {
+            "04_packet_catalog.md": _text("04_packet_catalog.md")
+            + f"\n{parquet_marker}\n"
+        },
+        "Parquet normative reference appears in Parts 03, 04",
+    )
+    _assert_rejected(
+        "changed reference row",
+        _replace(
+            "03_portable_physical_profile.md",
+            "| [RFC 8878](https://www.rfc-editor.org/info/rfc8878) | exact | Zstandard framing |",
+            "| [RFC 8878](https://www.rfc-editor.org/info/rfc8878) | unversioned | Zstandard framing |",
+        ),
+        "Part 03 normative-reference rows disagree with the approved allocation",
+    )
+    _assert_rejected(
+        "missing Part 03 invocation",
+        _replace(
+            "03_portable_physical_profile.md",
+            "Its requirements directly invoke the shared JSON and URI authorities",
+            "Its requirements use the shared JSON and URI authorities",
+        ),
+        "Part 03 external-reference invocation is missing",
+    )
+    _assert_rejected(
+        "missing Part 04 invocation",
+        _replace(
+            "04_packet_catalog.md",
+            "Its requirements directly invoke the shared JSON and URI authorities",
+            "Its requirements use the shared JSON and URI authorities",
+        ),
+        "Part 04 external-reference invocation is missing",
     )
     _assert_rejected(
         "implementation used as authority",
@@ -140,7 +206,25 @@ def main() -> int:
             "| [RFC 8259]",
             "| DuckDB behavior and [RFC 8259]",
         ),
-        "normative bibliography promotes implementation DuckDB",
+        "normative references promote implementation DuckDB",
+    )
+    _assert_rejected(
+        "zarr-python used as authority",
+        _replace(
+            "03_portable_physical_profile.md",
+            "| [Zarr v3 core]",
+            "| zarr-python behavior and [Zarr v3 core]",
+        ),
+        "normative references promote implementation zarr-python",
+    )
+    _assert_rejected(
+        "Numcodecs used as authority",
+        _replace(
+            "03_portable_physical_profile.md",
+            "| Zarr v3 [Bytes]",
+            "| Numcodecs behavior and Zarr v3 [Bytes]",
+        ),
+        "normative references promote implementation Numcodecs",
     )
     _assert_rejected(
         "stale combined rendering",

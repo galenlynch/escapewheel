@@ -73,5 +73,8 @@ development shape. Part 04 §3 defines the catalog fields that record these iden
 - [Apache Iceberg table specification](https://iceberg.apache.org/spec/), for the deferred
   lakehouse profile discussed in Part 00.
 
-External authorities on which conformance requirements depend are listed centrally in
-[Part 00 §10](00_architecture.md#ew-normative-references).
+[Part 00 §10](00_architecture.md#ew-normative-references) defines normative-reference policy and
+lists shared external authorities. References invoked only by the portable profile are in
+[Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references), and the
+SHA-256 authority invoked by the packet catalog is in
+[Part 04 §10](04_packet_catalog.md#ew-packet-catalog-normative-references).

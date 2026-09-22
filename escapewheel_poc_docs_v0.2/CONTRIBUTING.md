@@ -148,6 +148,12 @@ Place a citation next to the claim it supports. Do not collect citations in a pr
 whose reader must map them back to several claims. Cross-references use section numbers, never line
 or page numbers.
 
+Place an external normative reference in the reference section of the only numbered part that
+invokes it directly. Keep one shared entry in Part 00 when several parts invoke the authority or
+the framework itself does. The invoking prose identifies the entry and its extent; one scope
+statement may cover a defined group of requirements. A part relying on another part's contract
+cites that contract rather than treating its external authorities as new local dependencies.
+
 ## 8. Treat examples and measurements as evidence
 
 Introduce what an example demonstrates, keep it minimal, and make it conform unless its purpose is

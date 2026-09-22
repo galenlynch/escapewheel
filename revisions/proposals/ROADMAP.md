@@ -489,7 +489,8 @@ dispositions rather than being silently carried through the reorganization.
 
 **Exit evidence:** Part 00 and the informational README boundary are unambiguous; every numbered
 part has a stated subject and dependency direction; candidate disagreements are classified as
-release defects; normative references have one central owner; later proposals can name an
+release defects; normative references have exactly one owner under the hybrid policy completed by
+R124; later proposals can name an
 authoritative owner without invoking an informal precedence rule. Individual placement problems
 remain traceable in the [placement-defect inventory](../PLACEMENT-DEFECTS.md) rather than in Part 00
 or this roadmap.
@@ -538,6 +539,12 @@ exception.
 entry appears once in its approved owner; framework mutations reject a missing, misplaced, or
 duplicated entry; current packet and corpus behavior is unchanged; and P3 can place the ISO SQL and
 IEEE 754 references in Part 11.
+
+**Completed as R124 on 2026-09-21.** Part 00 now owns reference policy and the four shared entries;
+Part 03 owns the six portable-profile rows; and Part 04 owns FIPS 180-4. Direct invocation, rather
+than transitive reliance on another part's contract, determines placement. The distributed
+framework check and its mutation probes enforce exact ownership, invocation, and the ban on
+implementation-valued authorities. P3 may now place its SQL and IEEE references in Part 11.
 
 ### P3 — Executable declarative-rule language
 

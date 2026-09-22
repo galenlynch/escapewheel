@@ -25,7 +25,7 @@ runtime data model, and precise enough to drive validation.
 ## 2. Specification authority and conformance
 
 Part 00 MUST own specification-candidate identity and candidate/release terminology; conformance
-targets and normative-language conventions; the normative-reference policy and bibliography;
+targets and normative-language conventions; the normative-reference policy and shared bibliography;
 actors and the terms that resolve to them; normative, informative, and mixed status; artifact
 roles and authority by concern; abstraction levels and their dependency direction; packet content
 classes; each numbered part's subject; and publication-state conventions.
@@ -403,21 +403,45 @@ A future release manifest MAY record numbered-part status, but that value MUST b
 projection of this section. The manifest MUST NOT become a second owner of numbered-part status.
 
 <a id="ew-normative-references" data-spec-anchor="canonical"></a>
-## 10. Normative references
+## 10. Normative-reference policy and shared references
 
-Part 00 MUST carry the complete normative bibliography and the rule for how a normative reference
-applies. A reference in this section is normative only to the extent that a requirement in its
-subject-owning part invokes it. A subject-owning part whose requirements depend on an external
-specification MUST cite the corresponding entry here and MUST NOT maintain a second normative
-bibliography. Centralizing the citation does not move the subject requirement into Part 00.
+Part 00 MUST own the specification-wide policy for external normative references. An external
+authority that normative prose in exactly one numbered part invokes directly MUST have its
+bibliographic entry in a normative-reference section of that part. An external authority that
+normative prose in more than one numbered part invokes directly, or that the Part 00 framework
+itself invokes, MUST have one shared bibliographic entry in Part 00.
 
-An **exact** entry identifies the edition used by this candidate. An **unversioned** entry follows
-the linked external specification during development. The candidate bibliography MUST distinguish
-those two states. A specification release MUST identify the exact external edition on which each
-conformance requirement depends.
+Normative prose invokes an external authority **directly** when it identifies that authority as
+the basis for one or more requirements. A citation to another numbered part's Escapewheel contract
+is not a direct invocation of the external authorities on which that contract relies.
 
-The initial central bibliography MUST identify every external authority on which this candidate
-directly relies:
+Each direct external normative authority MUST have exactly one bibliographic entry in the numbered
+parts. Each part whose normative prose invokes an external authority directly MUST identify the
+applicable entry from the prose that establishes the authority's use and MUST state the extent to
+which it applies. That invocation MAY govern a defined group of requirements and need not be
+repeated in each requirement. A bibliographic entry identifies the external document and edition;
+it MUST NOT become the owner of the Escapewheel meaning, processing rule, actor obligation, or
+conformance behavior that invokes it.
+
+An informative mention of a technology MUST NOT make its specification normative. Moving a
+bibliographic entry MUST NOT change the referenced behavior, and a reference used by several
+parts through direct invocation MUST NOT be copied into several normative-reference sections. The
+informational specification README MUST NOT contain a normative-reference section or become an
+independent bibliographic owner.
+
+An **exact** bibliographic entry MUST identify the edition used by the candidate. An
+**unversioned** entry MUST be identified as such and follows the linked external specification
+during candidate development. A specification release MUST identify the exact external edition on
+which every conformance requirement depends.
+
+A normative reference's own dependencies MUST apply through that reference and need not be copied
+into an Escapewheel reference section unless this specification relies on them directly. Where
+required behavior has no sufficient language-neutral authority, a numbered part MUST NOT promote
+an implementation or library's observed behavior into a normative reference. The missing authority
+MUST remain a candidate defect and MUST prevent release until the subject-owning part defines the
+behavior or cites an adequate specification.
+
+The application column states the extent to which the specification invokes each shared authority:
 
 | reference | candidate edition | application |
 |---|---|---|
@@ -425,24 +449,7 @@ directly relies:
 | [RFC 8259](https://www.rfc-editor.org/info/rfc8259) | exact | JSON |
 | [RFC 3986](https://www.rfc-editor.org/info/rfc3986) | exact | URI syntax |
 | [JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core) and [Validation](https://json-schema.org/draft/2020-12/json-schema-validation) | Draft 2020-12 | incorporated JSON Schemas |
-| [Apache Parquet format](https://github.com/apache/parquet-format), including [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md) | unversioned | Parquet files and logical types |
-| [Apache Arrow columnar format](https://arrow.apache.org/docs/format/Columnar.html), [IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc), and [Flight](https://arrow.apache.org/docs/format/Flight.html) | unversioned | Arrow data, IPC, and Flight |
-| [Zarr v3 core](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html), [data types](https://zarr-specs.readthedocs.io/en/latest/v3/data-types/index.html), [regular chunk grid](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-grids/regular-grid/index.html), and [default chunk-key encoding](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-key-encodings/default/index.html) | core v3.0; other entries unversioned | Zarr v3 arrays |
-| Zarr v3 [Bytes](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/bytes/), [Gzip](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/gzip/), [Blosc](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/blosc/), [CRC32C](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/), [transpose](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/), and [sharding-indexed](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/) codec specifications | unversioned | permitted Zarr v3 codec pipeline components |
-| [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html) | 2.0 | permitted external Zarr v2 arrays |
-| [RFC 8878](https://www.rfc-editor.org/info/rfc8878) | exact | Zstandard framing |
-| [NIST FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final) | exact | SHA-256 |
 
-An informative technology mention does not make its specification normative. A normative
-reference's own dependencies apply through that reference and need not be copied here unless this
-specification relies on them directly.
-
-Where required behavior has no sufficient language-neutral authority, this bibliography MUST NOT
-promote an implementation or library's observed behavior into a normative reference. The missing
-authority MUST remain a candidate defect and MUST prevent release until the subject-owning part
-defines the behavior or cites an adequate specification. This applies initially to the unspecified
-Tier 2 rule language and to any required Zarr codec configuration or binary behavior not determined
-by the listed Zarr and Zstandard specifications.
-
-The informational README MAY retain informative references and links to this bibliography. It
-MUST NOT contain a normative-reference section of its own.
+The missing-authority release block applies currently to the unspecified Tier 2 rule language and
+to any required Zarr codec configuration or binary behavior not determined by the authorities in
+[Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references).

@@ -8,9 +8,12 @@ Normative. Profile identifier: `escapewheel-portable-v0.1`.
 This part defines how the logical resources of Part 02 are stored in the portable profile. A packet under this profile MUST be readable without a server.
 
 The portable physical profile defined by this part is identified by
-`escapewheel-portable-v0.1`. Its requirements use the JSON, URI, Parquet, Arrow, Zarr,
-Zstandard, and SHA-256 authorities identified in
-[Part 00 §10](00_architecture.md#ew-normative-references).
+`escapewheel-portable-v0.1`. Its requirements directly invoke the shared JSON and URI authorities
+identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the portable-profile
+authorities identified in [Part 03 §12](#ew-portable-profile-normative-references). The application
+columns in those sections state their extent. The `sha256` field and prefix-resource digest meaning
+belong to Part 04 §4.1 and Part 04 §5.4; this part determines when portable-profile resources record
+and verify that catalog field rather than invoking FIPS 180-4 independently.
 
 This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology. Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's.
 
@@ -429,3 +432,17 @@ Where a protocol needs the adapter running — `flight-v0.1` does, `files-v0.1` 
 The retry puts one obligation on the adapter: it MUST NOT bind before it can answer `ListFlights`. A build's first call arrives as soon as the socket answers, so an adapter that binds and then extracts serves discovery from a half-built server.
 
 A build that started a process owns it and terminates it once it holds the rows and the report, so an adapter MUST NOT rely on running code after its last response.
+
+<a id="ew-portable-profile-normative-references" data-spec-anchor="canonical"></a>
+## 12. Normative references
+
+The application column states the extent to which this part invokes each external authority:
+
+| reference | candidate edition | application |
+|---|---|---|
+| [Apache Parquet format](https://github.com/apache/parquet-format), including [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md) | unversioned | Parquet files and logical types |
+| [Apache Arrow columnar format](https://arrow.apache.org/docs/format/Columnar.html), [IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc), and [Flight](https://arrow.apache.org/docs/format/Flight.html) | unversioned | Arrow data, IPC, and Flight |
+| [Zarr v3 core](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html), [data types](https://zarr-specs.readthedocs.io/en/latest/v3/data-types/index.html), [regular chunk grid](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-grids/regular-grid/index.html), and [default chunk-key encoding](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-key-encodings/default/index.html) | core v3.0; other entries unversioned | Zarr v3 arrays |
+| Zarr v3 [Bytes](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/bytes/), [Gzip](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/gzip/), [Blosc](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/blosc/), [CRC32C](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/), [transpose](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/), and [sharding-indexed](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/) codec specifications | unversioned | permitted Zarr v3 codec pipeline components |
+| [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html) | 2.0 | permitted external Zarr v2 arrays |
+| [RFC 8878](https://www.rfc-editor.org/info/rfc8878) | exact | Zstandard framing |

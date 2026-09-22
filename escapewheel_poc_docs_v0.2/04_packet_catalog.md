@@ -9,6 +9,11 @@ This part defines the packet catalog: the document that binds a packet's concret
 semantic, logical, registry, and physical-profile contracts that govern them. In the portable
 profile it is `packet.json` at the packet root.
 
+Its requirements directly invoke the shared JSON and URI authorities identified in
+[Part 00 §10](00_architecture.md#ew-normative-references) and the SHA-256 authority identified in
+[Part 04 §10](#ew-packet-catalog-normative-references). The application columns in those sections
+state their extent.
+
 ## 2. Principles
 
 The catalog is the packet's map. A reader MUST resolve resources through it and MUST NOT infer them from file layout.
@@ -190,3 +195,12 @@ A validator MUST check that a declared extension registry exists. It MUST NOT re
 | `validator_version` | MUST |
 
 A packet whose committed manifest records `failed` MUST NOT present its resources as canonical.
+
+<a id="ew-packet-catalog-normative-references" data-spec-anchor="canonical"></a>
+## 10. Normative references
+
+The application column states the extent to which this part invokes the external authority:
+
+| reference | candidate edition | application |
+|---|---|---|
+| [NIST FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final) | exact | SHA-256 |

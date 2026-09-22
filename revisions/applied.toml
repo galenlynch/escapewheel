@@ -2815,6 +2815,7 @@ where = [{ part = "00", anchor = "ew-candidate-consistency" }]
 [clause."R122 §3.4"]
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-specification-authority" }]
+note = "R124 §3.1 supersedes only the complete-bibliography allocation; the remaining framework subjects stay applied here."
 
 [clause."R122 §3.5"]
 disposition = "applied"
@@ -2833,8 +2834,9 @@ disposition = "applied"
 where = [{ part = "00", anchor = "ew-specification-candidate" }]
 
 [clause."R122 §3.9"]
-disposition = "applied"
-where = [{ part = "00", anchor = "ew-normative-references" }]
+disposition = "superseded"
+by = "R124"
+note = "R124 replaces the complete central bibliography with one shared or subject-local owner per directly invoked authority."
 
 [clause."R123 §3.1"]
 disposition = "applied"
@@ -2872,3 +2874,31 @@ note = "Public logical identifier types follow their registry declarations witho
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-numbered-part-ownership" }]
 note = "Part 00 assigns the semantic, logical, reader-operation, and informative projection subjects to their numbered owners."
+
+[clause."R124 §3.1"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-specification-authority" },
+  { part = "00", anchor = "ew-normative-references" },
+  { part = "03", anchor = "ew-portable-profile-scope" },
+  { part = "03", anchor = "ew-portable-profile-normative-references" },
+  { part = "04", anchor = "ew-packet-catalog-scope" },
+  { part = "04", anchor = "ew-packet-catalog-normative-references" },
+]
+note = "reference policy, direct invocation, and exactly one shared or subject-local bibliographic owner"
+
+[clause."R124 §3.2"]
+disposition = "applied"
+where = [{ part = "00", anchor = "ew-normative-references" }]
+note = "candidate edition discipline and the missing-authority release block"
+
+[clause."R124 §3.3"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-normative-references" },
+  { part = "03", anchor = "ew-portable-profile-scope" },
+  { part = "03", anchor = "ew-portable-profile-normative-references" },
+  { part = "04", anchor = "ew-packet-catalog-scope" },
+  { part = "04", anchor = "ew-packet-catalog-normative-references" },
+]
+note = "exact current allocation and invocation of the eleven existing bibliographic rows"

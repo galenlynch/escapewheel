@@ -16,9 +16,9 @@ which files a person writes, the rest is a straight line.
 | file | what it is |
 |---|---|
 | `nwb_lake_poc_docs/02_core_logical_schemas.md` | the **frozen** starting point. Never edited, including to fix errors |
-| `escapewheel_poc_docs_v0.2/00_architecture.md` | the authority framework, part subjects and statuses, and normative bibliography |
+| `escapewheel_poc_docs_v0.2/00_architecture.md` | the authority framework, part subjects and statuses, normative-reference policy, and shared references |
 | `escapewheel_poc_docs_v0.2/README.md` | the informational specification entry point; its tables are checked projections |
-| `escapewheel_poc_docs_v0.2/01_*.md` through `10_*.md` | subject-owning numbered parts; normative prose changes through an accepted revision's incorporation |
+| `escapewheel_poc_docs_v0.2/01_*.md` through `10_*.md` | subject-owning numbered parts, including their local normative references; normative prose changes through an accepted revision's incorporation |
 | `escapewheel_poc_docs_v0.2/CONTRIBUTING.md` | the non-normative specification style guide |
 | `escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md` | generated convenience rendering; never edited directly |
 | `revisions/proposals/*.md` | active problem statements and alternatives; non-authoritative |
@@ -186,7 +186,7 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 fall and must not rise. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 637 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 640 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for
