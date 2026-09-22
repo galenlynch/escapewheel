@@ -72,6 +72,12 @@ change.
 
 Acceptance requires explicit authorization. A proposal or draft carries no `R<N>`.
 
+Roadmap work-item labels such as `P4.2` are coordination identifiers, not durable lifecycle
+references. The roadmap may point to a proposal or draft, but a proposal or draft must not cite a
+roadmap label or depend on roadmap prose. State the actual problem, dependency, or deferred subject
+directly; name an accepted revision when it is the dependency. This relationship is one-way so a
+lifecycle artifact remains intelligible if the roadmap is reorganized.
+
 ## 3. Phase A — establish the baseline
 
 Every proposal and draft records a full `Based on` commit hash. Before evaluating it:
@@ -222,6 +228,11 @@ incorporation.
 - State the replacement rule, not an editing instruction.
 - Introduce terms before relying on them and use one term for one concept.
 - Name every amended part and section.
+- Apply the specification style guide's
+  [structure guidance](../escapewheel_poc_docs_v0.2/CONTRIBUTING.md#6-make-structure-support-lookup):
+  use bullets for three or more independently checkable peers under one shared obligation, numbers
+  only when order matters, and a table when entries repeat the same attributes; keep interdependent
+  logic in prose.
 - For a registry declaration, give every affected type, presence, role, identity, vocabulary, key,
   reference, and rule field.
 - Keep deferred questions only when either answer leaves the Decision unchanged. Otherwise the

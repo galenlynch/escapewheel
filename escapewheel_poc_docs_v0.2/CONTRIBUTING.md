@@ -135,6 +135,14 @@ The first sentence of a paragraph should connect to established context and stat
 claim. Put supporting evidence after the claim. Lists use parallel grammar, and a lead-in must fit
 every item syntactically.
 
+Use a list when three or more peer requirements are independently checkable under one clear
+lead-in. Use bullets when their order is immaterial, numbers when order or precedence matters, and
+a table when each item repeats the same attributes. Put one independently testable requirement in
+each item. A shared requirement keyword in the lead-in governs every item only when its actor,
+force, and conditions are identical; otherwise repeat the actor and keyword. Keep interdependent
+logic, qualifications, and argument in prose rather than fragmenting them merely because the
+paragraph is long.
+
 ## 7. Use citations to identify the current rule
 
 Cite a requirement by part name and section number, such as `Part 02 §9.1`. Cite the section that

@@ -8,6 +8,8 @@
 | **Decision domain** | <specification or process> |
 | **Affects** | <concepts and current specification locations, if known> |
 
+<!-- Do not cite roadmap work-item labels. State dependencies and deferred subjects directly. -->
+
 ## 1. Problem
 
 <!-- Describe the current behavior and the concrete problem without prescribing a solution. -->

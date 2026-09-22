@@ -298,9 +298,9 @@ P1 authority framework
 | P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | P0.1 | [R121](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) |
 | P1 | Specification authority, abstraction levels, and normative ownership | P0.1, P0.2 | [R122](../accepted/R122-define-specification-artifacts-and-normative-ownership.md) |
 | P2 | Placement cleanup and unit-identity reconciliation | P1 | [R123](../accepted/R123-a-unit-is-identified-by-its-packet-assigned-unit-id.md) |
-| P2.1 | Locate normative references with their subject owners | P1; executed after P2 | Structural revision target |
-| P3 | Executable declarative-rule language | P2.1 | Rule-language revision target |
-| P4.1 | Registry-document conformance contract | P3 | [Proposal](define-registry-document-conformance.md) |
+| P2.1 | Locate normative references with their subject owners | P1; executed after P2 | [R124](../accepted/R124-normative-references-reside-with-their-subject-owners.md) |
+| P3 | Executable declarative-rule language | P2.1 | [R125](../accepted/R125-tier-2-rules-use-a-versioned-escapewheel-sql-profile.md) |
+| P4.1 | Registry-document conformance contract | P3 | [Draft](../drafts/define-registry-document-conformance.md) |
 | P4.2 | Uniform registry-validation boundaries | P4.1 | Proposal to be scoped |
 | P5 | Resource/profile declarations and resource classification | P4.2 | Proposal to be scoped |
 | P6 | Packet manifest, requiredness, and registry binding | P5 | Proposal to be scoped |

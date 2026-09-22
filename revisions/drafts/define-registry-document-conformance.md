@@ -25,8 +25,8 @@ ordered validation phases and the four possible document results.
 
 This revision replaces incompatible or incomplete rules now spread across Part 02, Part 09, the
 meta-schema, a shared Python checker, and repository-only checks. It does not decide where public
-writer, validator, reader, or extension-author entry points invoke the result; roadmap P4.2 owns
-that separate boundary decision.
+writer, validator, reader, or extension-author entry points invoke the result; that separate
+trust-boundary decision remains deferred.
 
 This is a structural revision. The affected requirements already occur in the sections that own
 tables, columns, references, semantics, and registry documents. Appending a second conformance
@@ -103,7 +103,7 @@ carries the short value `0.1` in `logical_standard_version` and repeats the full
 `extends`. The current meta-schema accepts both claims. The class of the document and which claim
 matters consequently depend on caller context rather than on one document contract.
 
-### 2.2 Public-boundary evidence and split from P4.2
+### 2.2 Public-boundary evidence and deferred decisions
 
 Direct `PacketWriter` construction accepted a core or extension registry with duplicate column
 declarations. Validation of an otherwise valid generated packet also passed when the supplied core
@@ -111,9 +111,10 @@ or embedded extension registry contained a duplicate rule ID. These are invocati
 they demonstrate why every caller needs one result rather than selecting an ad hoc subset of
 checks.
 
-This revision defines that result. P4.2 will require it at trust boundaries and decide whether a
-particular API returns, reports, or raises it. P7 will decide packet-level composition, missing
-declared registries, extension table-byte checks, and partial reader access.
+This revision defines that result. A later revision must decide where trust boundaries require it
+and whether a particular API returns, reports, or raises it. Separate packet-validation decisions
+must address result composition, missing declared registries, extension table-byte checks, and
+partial reader access.
 
 ### 2.3 Selected architecture
 
@@ -176,34 +177,44 @@ extension. Part 02 **MUST** expressly incorporate these artifacts for the stated
 | `registry/registry_contracts/escapewheel-registry-contract-v0.1.json` | exact contract selector values, phase order, invariant IDs, applicability, and owning anchors |
 | `registry/logical_schemas.json` | exact current core and analysis declarations |
 
-The core specification **MUST NOT** incorporate a concrete extension registry, list one as a member
-of the core specification candidate, or assign its version. Part 09 **MUST** define the class and
-the rules by which any extension registry conforms, without naming a particular extension. A
-supplied extension registry is the sole declaration source for resources in its namespace,
-subject to the packet's registration and binding rules. Repository co-location, conformance
-fixtures, and implementation support **MUST NOT** make that registry part of core or a member of
-the core specification candidate.
+Core and extension ownership follows these requirements:
 
-The registry-contract schema **MUST** have identifier
-`https://escapewheel.org/schemas/registry-contract/0.1.0`. The initial descriptor **MUST** have ID
-`escapewheel-registry-contract-v0.1`. Its closed object **MUST** contain `$schema`, `id`,
-`registry_schema`, `semantic_standard`, `logical_standard`, `rule_languages`, `phases`, and
-`invariants`. Each closed invariant entry **MUST** contain exactly `id`, `phase`, `classes`, and
-`anchors`, carrying its stable ID, phase, applicable document classes, and owning canonical
-specification anchors respectively.
+- The core specification **MUST NOT** incorporate a concrete extension registry, list one as a
+  member of the core specification candidate, or assign its version.
+- Part 09 **MUST** define the class and rules by which any extension registry conforms, without
+  naming a particular extension.
+- A supplied extension registry is the sole declaration source for resources in its namespace,
+  subject to the packet's registration and binding rules.
+- Repository co-location, conformance fixtures, and implementation support **MUST NOT** make that
+  registry part of core or a member of the core specification candidate.
 
-The descriptor schema **MUST** close the root and each invariant entry. `$schema` and
-`registry_schema` **MUST** be absolute URI strings. `id`, `semantic_standard`,
-`logical_standard`, and each `rule_languages` member **MUST** be strings matching
-`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-v[0-9]+(?:\.[0-9]+)*$`.
-`rule_languages`, `phases`, `invariants`, every invariant's `classes`, and every invariant's
-`anchors` **MUST** be nonempty arrays with no duplicate member. `phases` **MUST** equal, in order,
-`json`, `schema_selection`, `shape`, `contract_selection`, `semantic`, `rule_static`, and
-`external_domain`. An invariant ID **MUST** consist of at least two dot-separated lowercase
-snake-case components; its phase **MUST** occur in `phases`; each class **MUST** be `core` or
-`extension`; and each anchor **MUST** be a canonical `ew-` anchor identifier. Invariant IDs
-**MUST** be unique across the descriptor, and every anchor **MUST** resolve uniquely in the
-numbered specification.
+The registry-contract artifacts have these identities and fields:
+
+- The registry-contract schema **MUST** have identifier
+  `https://escapewheel.org/schemas/registry-contract/0.1.0`.
+- The initial descriptor **MUST** have ID `escapewheel-registry-contract-v0.1`.
+- Its closed root object **MUST** contain `$schema`, `id`, `registry_schema`, `semantic_standard`,
+  `logical_standard`, `rule_languages`, `phases`, and `invariants`.
+- Each closed invariant entry **MUST** contain exactly `id`, `phase`, `classes`, and `anchors`,
+  carrying its stable ID, phase, applicable document classes, and owning canonical specification
+  anchors respectively.
+
+The descriptor schema **MUST** impose all of these constraints:
+
+- the root and each invariant entry are closed objects;
+- `$schema` and `registry_schema` are absolute URI strings;
+- `id`, `semantic_standard`, `logical_standard`, and each `rule_languages` member are strings
+  matching `^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-v[0-9]+(?:\.[0-9]+)*$`;
+- `rule_languages`, `phases`, `invariants`, every invariant's `classes`, and every invariant's
+  `anchors` are nonempty arrays with no duplicate member;
+- `phases` equals, in order, `json`, `schema_selection`, `shape`, `contract_selection`, `semantic`,
+  `rule_static`, and `external_domain`;
+- an invariant ID consists of at least two dot-separated lowercase snake-case components;
+- an invariant's `phase` occurs in `phases`;
+- each invariant class is `core` or `extension`;
+- each anchor is a canonical `ew-` anchor identifier;
+- invariant IDs are unique across the descriptor; and
+- every anchor resolves uniquely in the numbered specification.
 
 The descriptor **MUST NOT** contain an algorithm, executable expression, message, exception list,
 or implementation selector. Prose remains the semantic owner. Conformance vectors **MUST** be
@@ -211,19 +222,26 @@ informative evidence and **MUST NOT** become a third owner.
 
 ### 3.2 Registry-document classes and selectors
 
-Every registry document **MUST** carry `$schema`, `registry_version`,
-`logical_standard_version`, `rule_language`, and `tables`. A core document **MUST** carry
-`semantic_standard_version` and **MUST NOT** carry `extension_id` or `extends`. An extension
-document **MUST** carry `extension_id` and **MUST NOT** carry `semantic_standard_version` or
-`extends`. The presence of `extension_id` **MUST** determine the document class; caller context
-**MUST NOT** redefine it.
+Registry documents use this class field contract:
 
-The core document **MUST** own only the `core` and `analysis` table namespaces. An extension
-document **MUST** own only the namespace equal to its `extension_id`; that identifier **MUST NOT**
-be `core`, `analysis`, or `nwb`. A core registry reference **MUST** target the core document. An
-extension registry reference **MUST** target either the conforming core context selected by its
-full `logical_standard_version` or the same extension document, and **MUST NOT** target another
-extension.
+- Every registry document **MUST** carry `$schema`, `registry_version`,
+  `logical_standard_version`, `rule_language`, and `tables`.
+- A core document **MUST** carry `semantic_standard_version` and **MUST NOT** carry `extension_id`
+  or `extends`.
+- An extension document **MUST** carry `extension_id` and **MUST NOT** carry
+  `semantic_standard_version` or `extends`.
+- The presence of `extension_id` **MUST** determine the document class; caller context **MUST NOT**
+  redefine it.
+
+Registry namespace and reference ownership follow these constraints:
+
+- The core document **MUST** own only the `core` and `analysis` table namespaces.
+- An extension document **MUST** own only the namespace equal to its `extension_id`.
+- An `extension_id` **MUST NOT** be `core`, `analysis`, or `nwb`.
+- A core registry reference **MUST** target the core document.
+- An extension registry reference **MUST** target either the conforming core context selected by
+  its full `logical_standard_version` or the same extension document, and **MUST NOT** target
+  another extension.
 
 The meta-schema **MUST** check identifier syntax and the fields required for each class, but
 **MUST NOT** hard-code the current contract selector values. The descriptor **MUST** assign the
@@ -280,30 +298,55 @@ Applicable semantic invariants **MUST** run in descriptor order. Tier 2 rules **
 Part 11 static validation under the selected rule language. External lexical domains **MUST** run
 last and offline.
 
-The complete result **MUST** contain the selected descriptor ID whenever one descriptor was
-selected, including the unique extension-visible selection used with absent core context; one
-overall state; and one phase record for every phase in the seven-phase order above, whether or not
-a descriptor was selected. Every descriptor **MUST** repeat that order exactly. The overall state
-**MUST** be exactly one of `valid`, `invalid`, `unsupported`, or `incomplete`. A phase record
-**MUST** identify its phase; have exactly one state from `passed`, `invalid`, `unsupported`,
-`incomplete`, and `skipped`; and contain ordered outcome records for every check that did not pass
-and every check skipped within a partially evaluated phase. An outcome record **MUST** identify
-its state and stable schema, semantic-invariant, or rule-language outcome ID, the owning resource
-or rule ID where one applies, and its instance location as an RFC 6901 JSON Pointer. A skipped
-outcome or phase **MUST** contain a stable reason ID. A source mapping unable to preserve a byte
-location **MUST** still preserve the JSON Pointer; the abstract result does not require a line or
-byte offset.
+The complete result **MUST** contain:
 
-Part 02 **MUST** assign the pre-contract outcome IDs `registry.json.invalid_utf8`,
-`registry.json.invalid_syntax`, `registry.json.duplicate_member`,
-`registry.schema.selector_missing`, `registry.schema.selector_type`,
-`registry.schema.selector_unsupported`, `registry.contract.selector_unsupported`,
-`registry.contract.selector_ambiguous`, and `registry.contract.core_context_unusable`. It **MUST**
-assign skip-reason IDs `registry.phase.mapping_input`, `registry.phase.prerequisite_invalid`,
-`registry.phase.prerequisite_unsupported`, and `registry.phase.prerequisite_incomplete`.
-Schema-validation findings **MUST** use the selected meta-schema ID and schema-location pointer as
-their stable outcome identity. Semantic and external-domain findings **MUST** use descriptor
-invariant IDs, and rule-static findings **MUST** use Part 11 outcome IDs attached to the owning rule.
+- the selected descriptor ID whenever one descriptor was selected, including the unique
+  extension-visible selection used with absent core context;
+- exactly one overall state: `valid`, `invalid`, `unsupported`, or `incomplete`; and
+- one phase record for every phase in the seven-phase order above, whether or not a descriptor was
+  selected.
+
+Every descriptor **MUST** repeat that phase order exactly. Each phase record **MUST**:
+
+- identify its phase;
+- have exactly one state from `passed`, `invalid`, `unsupported`, `incomplete`, and `skipped`; and
+- contain ordered outcome records for every check that did not pass and every check skipped within
+  a partially evaluated phase.
+
+Each outcome record **MUST** identify:
+
+- its state and stable schema, semantic-invariant, or rule-language outcome ID;
+- the owning resource or rule ID where one applies; and
+- its instance location as an RFC 6901 JSON Pointer.
+
+A skipped outcome or phase **MUST** contain a stable reason ID. A source mapping unable to preserve
+a byte location **MUST** still preserve the JSON Pointer; the abstract result does not require a
+line or byte offset.
+
+Part 02 **MUST** assign these pre-contract outcome IDs:
+
+- `registry.json.invalid_utf8`;
+- `registry.json.invalid_syntax`;
+- `registry.json.duplicate_member`;
+- `registry.schema.selector_missing`;
+- `registry.schema.selector_type`;
+- `registry.schema.selector_unsupported`;
+- `registry.contract.selector_unsupported`;
+- `registry.contract.selector_ambiguous`; and
+- `registry.contract.core_context_unusable`.
+
+Part 02 **MUST** assign these skip-reason IDs:
+
+- `registry.phase.mapping_input`;
+- `registry.phase.prerequisite_invalid`;
+- `registry.phase.prerequisite_unsupported`; and
+- `registry.phase.prerequisite_incomplete`.
+
+Stable finding identity follows these requirements:
+
+- Schema-validation findings **MUST** use the selected meta-schema ID and schema-location pointer.
+- Semantic and external-domain findings **MUST** use descriptor invariant IDs.
+- Rule-static findings **MUST** use Part 11 outcome IDs attached to the owning rule.
 
 An outcome **MUST** be a finding exactly when its state is `invalid`; an unsupported, incomplete,
 or skipped outcome **MUST NOT** be relabeled as a finding. An outcome before an instance can be
@@ -316,8 +359,8 @@ A definitive violation **MUST** dominate an unsupported or incomplete independen
 otherwise unsupported **MUST** dominate incomplete, incomplete **MUST** dominate valid, and only
 completed passing phases **MUST** produce valid. The same precedence **MUST** determine a partially
 evaluated phase's state from its outcome records. A dependent phase skipped after an earlier
-failure **MUST** be recorded with its reason. P4.2, not this revision, owns public API, CLI, report,
-and exception serialization of this abstract result.
+failure **MUST** be recorded with its reason. This revision does not define public API, CLI,
+report, or exception serialization of this abstract result.
 
 ### 3.4 Meta-schema boundary
 
@@ -387,20 +430,28 @@ Each member name of the root `tables` object **MUST** be the resource ID of its 
 That key, not an inferred filename or a field inside the table object, **MUST** determine the
 resource namespace subject to §3.2.
 
-Within each table, column names **MUST** be unique. Within each registry document, rule IDs
-**MUST** be unique. A rule held by resource `namespace.table` **MUST** have the exact form
-`namespace.table.local_rule_id`, where `local_rule_id` is one lowercase snake-case identifier
-containing no dot; a shared prefix alone does not establish ownership.
+Declaration identity follows these requirements:
+
+- Within each table, column names **MUST** be unique.
+- Within each registry document, rule IDs **MUST** be unique.
+- A rule held by resource `namespace.table` **MUST** have the exact form
+  `namespace.table.local_rule_id`, where `local_rule_id` is one lowercase snake-case identifier
+  containing no dot; a shared prefix alone does not establish ownership.
 
 A non-null primary key **MUST** contain unique member names, and each member **MUST** resolve once
 to a required column. A null primary key **MUST** remain the declaration that duplicate rows are
 admitted and **MUST NOT** serve as a reference target.
 
-Each reference **MUST** contain unique source and target members of equal nonzero arity. Every
-member **MUST** resolve. The target side **MUST** equal the target table's complete non-null primary
-key in declared order. Each paired column **MUST** have compatible type and role and, when it is an
-identifier, compatible identity. A data column paired with a discriminator as the declared shared
-key is the sole role-compatibility exception.
+Each reference **MUST** satisfy all of these constraints:
+
+- its source and target each contain unique members and have equal nonzero arity;
+- every source and target member resolves;
+- its target side equals the target table's complete non-null primary key in declared order; and
+- each paired column has compatible type and role and, when it is an identifier, compatible
+  identity.
+
+A data column paired with a discriminator as the declared shared key is the sole role-compatibility
+exception.
 
 A table owns an assigned identifier exactly when the identifier column is a member of that table's
 primary key and is not a source member of any reference the table declares. For each owned assigned
@@ -409,34 +460,49 @@ identifier's `_id` suffix with `_name`; that name **MUST** be a string data colu
 declare `identity`. A table that merely carries or references an assigned identifier **MUST NOT**
 declare that corresponding same-base `_name` column.
 
-A declared `metadata` column **MUST** have the exact type, presence, and role stated in §3.4 and
-the standard description Part 02 defines. A table **MUST** declare it when the primary key contains
-an identifier that is not a source member of a declared reference; it **MUST NOT** declare it when
-the non-null primary key is nonempty, every key member is a reference source, and none is such an
-owned identifier. Between those bounds the declaration remains permitted. Every `determined_by`
-array **MUST** contain no duplicate name, and every member **MUST** resolve to a column of the same
-table.
+A `metadata` declaration follows these requirements:
 
-A discriminator **MUST** select exactly one resolution shape: paired value by declaring
-`discriminates`, by position by declaring `positions_in`, or shared key by declaring neither. It
-**MUST NOT** declare both fields. A field named by `discriminates` or `positions_in` **MUST** resolve
-once in the same table to a string data column and **MUST** have the same `required` or `nullable`
-presence as the discriminator; neither member of such a pair may be optional. Every
-`discriminates_via` value `resource.column` **MUST** resolve to a column in `resource`, and that
-resource **MUST** declare exactly one reference in which the named column is a source member and
-the table carrying the discriminator is the target. This is a reverse one-hop declaration from
-the discriminated rows to the discriminator, not a reference owned by the discriminator's table.
-The selected shape's remaining target-specific obligations stay with packet validation as §3.5
-requires.
+- A declared `metadata` column **MUST** have the exact type, presence, and role stated in §3.4 and
+  the standard description Part 02 defines.
+- A table **MUST** declare `metadata` when its primary key contains an identifier that is not a
+  source member of a declared reference.
+- A table **MUST NOT** declare `metadata` when its non-null primary key is nonempty, every key
+  member is a reference source, and none is such an owned identifier.
+- Between those bounds, the declaration remains permitted.
 
-Every `unit_from` and `clock_from` source **MUST** resolve once, either in the same table or through
-exactly one declared one-hop reference. A `unit_from` target **MUST** be a string column whose
-authority entries include the canonical UCUM identity `https://ucum.org/ucum`. For every coordinate,
-the clock source is its explicit `clock_from` target when present and otherwise the same table's
-`clock_id`; that source **MUST** be an identifier participating in a declared reference to
-`core.clocks.clock_id`. A column carrying `authority` **MUST** be a string data column with an
-`open` or `closed` vocabulary; its authority array **MUST** be nonempty and contain no repeated
-URI. Every authority URI **MUST** satisfy §3.9.
+Every `determined_by` array **MUST** contain no duplicate name, and every member **MUST** resolve to
+a column of the same table.
+
+A discriminator declaration **MUST** satisfy all of these constraints:
+
+- it selects exactly one resolution shape: paired value by declaring `discriminates`, by position
+  by declaring `positions_in`, or shared key by declaring neither;
+- it does not declare both `discriminates` and `positions_in`;
+- a field named by `discriminates` or `positions_in` resolves once in the same table to a string
+  data column;
+- that named field has the same `required` or `nullable` presence as the discriminator, and neither
+  member of the pair is optional; and
+- every `discriminates_via` value `resource.column` resolves to a column in `resource`, which
+  declares exactly one reference in which the named column is a source member and the table
+  carrying the discriminator is the target.
+
+The last item is a reverse one-hop declaration from the discriminated rows to the discriminator,
+not a reference owned by the discriminator's table. The selected shape's remaining target-specific
+obligations stay with packet validation as §3.5 requires.
+
+Unit and clock context declarations **MUST** satisfy all of these constraints:
+
+- every `unit_from` and `clock_from` source resolves once, either in the same table or through
+  exactly one declared one-hop reference;
+- a `unit_from` target is a string column whose authority entries include the canonical UCUM
+  identity `https://ucum.org/ucum`;
+- for every coordinate, the clock source is its explicit `clock_from` target when present and
+  otherwise the same table's `clock_id`;
+- that clock source is an identifier participating in a declared reference to
+  `core.clocks.clock_id`;
+- a column carrying `authority` is a string data column with an `open` or `closed` vocabulary;
+- its authority array is nonempty and contains no repeated URI; and
+- every authority URI satisfies §3.9.
 
 In a core registry, no table other than `core.devices` **MUST** have a non-null primary key whose
 first member is `device_id`. This structural test, rather than a table-name list, identifies the
@@ -480,8 +546,8 @@ declaration-backed relations:
 - an `_uri` name, or the bare name `uri`, declares a string.
 
 The registry checker **MUST** determine discriminator behavior from the declaration and
-**MUST NOT** infer it from a `_kind` suffix. A source-provenance label **MUST** retain its declared type;
-the checker **MUST NOT** treat every `_label` suffix as an independent conformance rule.
+**MUST NOT** infer it from a `_kind` suffix. A source-provenance label **MUST** retain its declared
+type. The checker **MUST NOT** treat every `_label` suffix as an independent conformance rule.
 
 Column order, adjacency, reserved-word preferences, plural-name preferences, prose-restatement
 heuristics, and document-wide same-spelled-column vocabulary uniformity **MUST NOT** be registry
@@ -499,14 +565,18 @@ revision date 2024-06-17, as an exact normative reference for its case-sensitive
 terminal tables. A registry checker **MUST** validate every literal `unit` value against that
 grammar offline and **MUST NOT** contact a network service. A checker without the exact required
 domain **MUST** report the external-domain phase as unsupported rather than accept a printable
-approximation. Registry-document conformance validates only literal declarations; P7 owns
-validation of row values in columns selected by `unit_from`.
+approximation. Registry-document conformance validates only literal declarations; validation of
+row values in columns selected by `unit_from` remains a packet-validation decision.
 
 The specification **MUST NOT** make a particular parser library normative.
 
-An authority URI **MUST** be an absolute RFC 3986 URI. An authority entry named `UCUM` **MUST** use
-the canonical identity `https://ucum.org/ucum`, and an entry using that identity **MUST** be named
-`UCUM`. Validation **MUST NOT** dereference an authority URI.
+Authority identity follows these requirements:
+
+- An authority URI **MUST** be an absolute RFC 3986 URI.
+- An authority entry named `UCUM` **MUST** use the canonical identity
+  `https://ucum.org/ucum`.
+- An authority entry using that identity **MUST** be named `UCUM`.
+- Validation **MUST NOT** dereference an authority URI.
 
 ### 3.10 Incompatible development-version transition
 
@@ -514,12 +584,17 @@ The revised registry meta-schema `$id` and every registry document `$schema` **M
 `https://escapewheel.org/schemas/registry/0.4.0`. The core registry's `registry_version` **MUST** be
 `0.4.0`.
 
-Every extension using the revised meta-schema **MUST** carry the full
-`escapewheel-logical-v0.1` value in `logical_standard_version`, **MUST NOT** carry `extends`, and
-when migrating a document from an earlier meta-schema **MUST** select a `registry_version`
-different from that document's earlier version. A newly published extension selects its initial
-version independently. The core specification **MUST NOT** select either version. An old document
-**MUST NOT** be silently interpreted under the new meta-schema identifier.
+Every extension using the revised meta-schema satisfies these requirements:
+
+- It **MUST** carry the full `escapewheel-logical-v0.1` value in
+  `logical_standard_version`.
+- It **MUST NOT** carry `extends`.
+- When migrating a document from an earlier meta-schema, it **MUST** select a `registry_version`
+  different from that document's earlier version.
+
+A newly published extension selects its initial version independently. The core specification
+**MUST NOT** select either version. An old document **MUST NOT** be silently interpreted under the
+new meta-schema identifier.
 
 These development identifiers **MUST NOT** be reused later for an incompatible contract. This
 revision does not assign final release identities.
@@ -529,13 +604,14 @@ revision does not assign final release identities.
 - No substrate-independent scientific concept in Part 01 changes.
 - No Parquet, Zarr, media, or packet-catalog physical shape changes.
 - This revision does not identify an embedded registry by packet digest or decide when embedding
-  is required; P6 owns registry binding.
+  is required; registry binding remains outside its scope.
 - This revision does not decide how registry results compose with core, extension, or whole-packet
-  verdicts; P7 owns that composition.
+  verdicts; that composition remains outside its scope.
 - This revision does not require a writer, validator, reader, adapter, or public constructor to
-  invoke the result at a particular boundary; P4.2 owns those obligations.
+  invoke the result at a particular boundary; those obligations require a separate decision.
 - This revision does not replace registry replay with a direct declarative authoring source or
-  assign final release membership and identifiers; P10 and P11 retain those decisions.
+  assign final release membership and identifiers; direct authoring and release publication remain
+  outside its scope.
 
 ## 5. Consequence
 
@@ -552,9 +628,9 @@ revision makes a currently implicit or contradictory invariant exact.
 | logical prose and registry | Part 02 receives the complete contract, revised local rules, phase model, session proof, local UCUM reference, and incorporated schema, descriptor, and core registry; core advances to 0.4.0 and its nine UCUM authority URIs use the canonical identity. | Structural crosswalk, anchor and owner checks, normalized declaration comparison, positive and negative contract vectors. |
 | physical profiles | Unchanged because no storage encoding or profile capability changes. | Parts 03 and 10 byte comparison apart from generated navigation if any. |
 | packet catalog and JSON Schemas | Packet schemas are unchanged; generated packets update embedded or identified registry bytes and versions where present. | Catalog schema byte comparison and regenerated 28-packet corpus. |
-| validation and import | Shared registry checking must implement the ordered result without crashing after shape failures; trust-boundary invocation remains P4.2. | Focused phase/outcome and invariant tests; no claim yet that every caller invokes them. |
+| validation and import | Shared registry checking must implement the ordered result without crashing after shape failures; trust-boundary invocation requires a separate decision. | Focused phase/outcome and invariant tests; no claim yet that every caller invokes them. |
 | extensions | Part 09 becomes generic and names no concrete extension. The four repository-maintained examples adopt the disjoint extension shape and full logical ID, choose new versions in their own histories, and remain non-incorporated conformance evidence. | Generic extension vectors, each repository example, and focused namespace, context, reference, and session-path negatives. |
-| reader, writer, validator, adapters | Common registry-document result and types may be implemented; public invocation behavior remains unchanged until P4.2. Adapters do not acquire schema authority. | Package tests distinguish contract implementation from boundary invocation. |
+| reader, writer, validator, adapters | Common registry-document result and types may be implemented; this revision leaves public invocation behavior unchanged. Adapters do not acquire schema authority. | Package tests distinguish contract implementation from boundary invocation. |
 | conformance fixtures and tests | Add raw JSON, schema-selection, shape, contract-selection, semantic, rule-static, external-domain, and precedence cases; regenerate development fixtures. Add `ucumvert >=0.3.2,<0.4` to the validator implementation and lock the exact resolved version for incorporation. Distribute the MIT license and the official UCUM notice applicable to the vendored data. | At least one positive and focused negative for every invariant and phase outcome; an offline capability probe records the parser version, bundled UCUM 2.2 revision, and both license dispositions. |
 | revision process and tooling | No lifecycle meaning changes. A metadata-only anchor bootstrap precedes final appraisal; ledger and evidence later map every clause to its owner. Repository authoring checks may retain the conventions excluded from registry conformance, but their findings must not change §3.3's result. | Stage, citation, repointing, structural, ledger, and evidence checks. |
 | generated publications and developer documentation | Regenerate the combined specification, registry tables, counts, READMEs, and author guidance; label projected registry versions as core-only, keep concrete extensions out of Part 09, and keep authoring conventions distinct from conformance. | Generation and freshness checks plus documentation search for stale IDs, concrete extension names in Part 09, and duplicate owners. |
@@ -594,8 +670,8 @@ registry, a generic extension vector, and all four repository-maintained extensi
 Focused implementation tests must show that a missing role or another shape defect returns
 findings without `KeyError`. The implementation probe must establish that the locked `ucumvert`
 release bundles UCUM 2.2 data dated 2024-06-17, runs offline, and is redistributed with both its
-MIT license and the official UCUM notice applicable to that data. P4.2 will later add
-public-construction, embedded-copy, and trust-boundary evidence; those tests must not be
+MIT license and the official UCUM notice applicable to that data. A separate boundary revision
+must add public-construction, embedded-copy, and trust-boundary evidence; those tests must not be
 misreported as complete by this revision.
 
 Incorporation must run the stage, citation, repointing, heading, structural, ledger, and evidence
@@ -605,8 +681,7 @@ environment preflight failure must be recorded explicitly rather than treated as
 
 ## 7. Open
 
-P4.2 will decide mandatory invocation points and API behavior. P6 will bind registry identity to
-packets. P7 will compose registry, resource, extension, and packet verdicts. P10 will select the
-direct registry authoring source and final identifiers, and P11 will define immutable release
-membership. Those decisions may consume this contract but cannot weaken or redefine it without a
-later revision.
+Subsequent revisions must decide mandatory invocation points and API behavior; bind registry
+identity to packets; compose registry, resource, extension, and packet verdicts; select the direct
+registry authoring source and final identifiers; and define immutable release membership. Those
+decisions may consume this contract but cannot weaken or redefine it without a later revision.

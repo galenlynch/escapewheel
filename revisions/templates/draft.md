@@ -11,6 +11,9 @@
 | **Profile** | <all, a profile identifier, or “not applicable” for process> |
 | **Decision clauses** | <every subsection under §3, or §3 when Decision has no subsections> |
 
+<!-- Do not cite roadmap work-item labels. State dependencies and deferred subjects directly; use
+accepted revision clauses for an accepted dependency. -->
+
 <State which numbered sections are normative and which are informative.>
 
 Normative keywords follow BCP 14.
