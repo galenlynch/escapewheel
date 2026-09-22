@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `94950e145cdba57a61bb4a5bfba515c52f207595` |
+| **Based on** | `3ba8b7f16e198c9ea077a4cdfd6c3f26acf6441b` |
 | **Decision domain** | specification |
 | **Change form** | ordinary |
-| **Amends** | Part 02 registry section; Part 05, by appending a conformance-boundary section; incorporated registry-result schema |
+| **Amends** | Part 02 registry section; Part 05, by appending a conformance-boundary section; `registry/registry_result.schema.json` |
 | **Depends on** | [R126 §§3.1–3.7](../accepted/R126-a-registry-document-has-one-complete-conformance-contract.md#3-decision) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6; §3.7 |
@@ -51,9 +51,13 @@ Those properties make a bare Boolean, a list of invalid findings, and an asserti
 
 ### 2.2 Reproduced failures
 
-The baseline is commit `436c8acc3bf032e0b8a039c78786380d04d8c97d`. Its 31-stage quick
-verifier passed. The most recent complete-verifier evidence passed 221 reader, 168 validator, 553
-writer, and 66 AIND tests.
+The boundary failures were first established at commit
+`436c8acc3bf032e0b8a039c78786380d04d8c97d` and reproduced without a behavior change at the
+promotion commit, `99063386959de9ab363d0cd5d2911504ff767653`. During appraisal, the byte checker
+was also found to crash on a non-object JSON root. Commit
+`3ba8b7f16e198c9ea077a4cdfd6c3f26acf6441b` closes that already-specified R126 implementation gap
+and is this draft's appraisal baseline. The baseline's 31-stage quick verifier passes. The most
+recent complete-verifier evidence passed 221 reader, 168 validator, 553 writer, and 66 AIND tests.
 
 Focused probes against that baseline produced these results:
 
@@ -63,6 +67,7 @@ Focused probes against that baseline produced these results:
 | extension-author compatibility API | released extension with unknown `$schema` | complete state was `unsupported`; legacy check returned no failures |
 | packet validator | supplied core mapping with unknown `$schema` | complete state was `unsupported`; packet report passed with no errors |
 | packet validator | supplied mapping containing only recognized `$schema` | complete state was `invalid`; later code raised `KeyError: 'tables'` |
+| byte-oriented checker at the promotion commit | JSON array, null, number, or string at the document root | raised `AttributeError`; the appraisal baseline now returns an invalid schema-selection result and safely skips later phases |
 
 The reader independently opened the valid example packet. That is the intended separation:
 ordinary use of declarations is not a conformance claim, while producing packet bytes or
@@ -70,8 +75,8 @@ registry-derived conformance checks requires a valid declaration contract.
 
 ### 2.3 Identity and cost
 
-Three in-process measurements over the generated registries took a mean of 615.674 ms for the
-core registry and 3,083.888 ms for all four repository extension registries. These measurements
+Three in-process measurements over the generated registries took a mean of 303.350 ms for the
+core registry and 1,391.497 ms for all four repository extension registries. These measurements
 are feasibility observations rather than performance requirements. They show why a complete check
 belongs at a trust boundary and its result should be reused with the exact checked input instead
 of recomputed on every property access.
@@ -82,18 +87,19 @@ two documents can claim one version, and a mapping can be mutated. An extension 
 depends on the exact core context and the checker capabilities used for the evaluation.
 
 An immutable in-process checked context closes this gap without defining a portable cache
-protocol. For byte input it retains the exact bytes, the decoded document derived from them, the
-complete result, and the evaluation context. For mapping input it retains an immutable structural
-copy, its complete mapping-entry result, and the evaluation context. Downstream production and
-conformance code receives the checked context rather than the mutable original.
+protocol. For byte input it retains the exact bytes, the decoded JSON value when decoding
+succeeded, the complete result, and the evaluation context. For mapping input it retains an
+immutable structural copy, its complete mapping-entry result, and the evaluation context.
+Downstream production and conformance code receives the checked context rather than the mutable
+original.
 
 ### 2.4 Portable result feasibility
 
 A closed Draft 2020-12 JSON Schema can express the abstract result without duplicating the phase
 algorithms. A prototype accepted serializations of all four current result states and rejected an
-extra root member and a skipped phase lacking its reason. Position-specific `prefixItems` can
-require the seven phases in their normative order. State precedence, applicability, and outcome
-ordering remain prose rules owned by Part 02.
+extra root member, reordered phases, an invalid JSON Pointer, and a skipped phase lacking its
+reason. Position-specific `prefixItems` can require the seven phases in their normative order.
+State precedence, applicability, and outcome ordering remain prose rules owned by Part 02.
 
 ## 3. Decision
 
@@ -110,11 +116,14 @@ against that schema and MUST contain:
 - `phases`, containing exactly the seven Part 02 phase records in their required order.
 
 Each phase record MUST be closed and MUST contain `phase`, `state`, and `outcomes`. A skipped phase
-MUST also contain a stable `reason`. A passed or skipped phase MUST have no outcomes, and an
-invalid, unsupported, or incomplete phase MUST have at least one outcome.
+MUST also contain a stable `reason`, and a non-skipped phase MUST NOT contain `reason`. The state
+MUST be one of `passed`, `invalid`, `unsupported`, `incomplete`, and `skipped`. A passed or skipped
+phase MUST have no outcomes, and an invalid, unsupported, or incomplete phase MUST have at least
+one outcome.
 
 Each outcome record MUST be closed and MUST contain `state`, `id`, and `instance`. It MAY contain
-`owner`, `reason`, `schema_location`, and `detail`. A skipped outcome MUST contain a stable reason.
+`owner`, `reason`, `schema_location`, and `detail`. Its state MUST be one of `invalid`,
+`unsupported`, `incomplete`, and `skipped`; a skipped outcome MUST contain a stable reason.
 `instance` and `schema_location`, when present, MUST be RFC 6901 JSON Pointers.
 
 The result schema owns structure only. Part 02 §9.4 continues to own phase algorithms, state
@@ -127,16 +136,18 @@ MUST NOT affect conformance or result comparison.
 A **checked registry context** is an immutable in-process association of:
 
 - the exact registry input evaluated at the boundary;
-- the decoded registry document derived from that input;
+- the decoded JSON value derived from that input, when decoding succeeded;
 - the complete Part 02 registry result;
-- the local descriptor set and external-domain capabilities used for the evaluation; and
+- immutable representations of the local descriptor set and external-domain capabilities used
+  for the evaluation; and
 - for an extension, the exact checked core context supplied to its evaluation.
 
 For byte input, the exact registry input MUST be the byte sequence given to the byte-oriented
 entry point. For mapping input, it MUST be an immutable structural copy made before checking; its
-result MUST retain Part 02's skipped JSON phase. Code authorized by a registry result to produce
-packet bytes or registry-derived checks MUST use the decoded document in the same checked context,
-not reread the source or use the caller's original mapping.
+result MUST retain Part 02's skipped JSON phase. An implementation authorized by a valid registry
+result to produce packet bytes or registry-derived checks MUST use the decoded registry document
+in the same checked context, not reread the source or use the caller's original mapping. A
+non-valid context MAY lack a decoded registry document and authorizes no such interpretation.
 
 An implementation MAY reuse a checked registry context only while all five associated elements
 remain identical. It MUST NOT treat a path, declared version, mutable object identity, or digest
@@ -145,7 +156,8 @@ define a portable registry-result cache or a transferable validation receipt.
 
 ### 3.3 Producers and conformance tools check before interpretation
 
-The following operations are registry-document conformance boundaries:
+An implementation performs a registry-document conformance boundary when it performs any of these
+operations:
 
 - publishing or releasing a registry document;
 - starting a packet build, before checking a recipe, opening a source, or staging output;
@@ -154,10 +166,10 @@ The following operations are registry-document conformance boundaries:
 - checking a registry with extension-authoring tooling; and
 - generating Tier 1, Tier 2, or other conformance checks from registry declarations.
 
-Each boundary MUST obtain one complete Part 02 result before it interprets the registry for the
-named operation. A byte-owning boundary MUST use the byte-oriented entry point. A boundary that is
-given only an already-decoded mapping MUST use the mapping-oriented entry point and MUST NOT claim
-byte-level JSON checks were performed.
+The implementation MUST obtain one complete Part 02 result before it interprets the registry for
+the named operation. When the implementation owns the source bytes, it MUST use the byte-oriented
+entry point. When it is given only an already-decoded mapping, it MUST use the mapping-oriented
+entry point and MUST NOT claim byte-level JSON checks were performed.
 
 A low-level generator that accepts a registry document directly MUST either establish the checked
 registry context itself or require one from its caller. Merely receiving a mapping plus a result,
@@ -186,10 +198,11 @@ analysis.
 
 ### 3.5 Producers proceed only from valid checked contexts
 
-A registry publisher, release tool, extension-authoring tool, packet writer, and registry-derived
-check generator MUST proceed with the operation named in §3.3 only when the associated complete
-result is `valid`. For any other state, it MUST stop that operation and expose the complete result
-to its caller.
+An implementation publishing or releasing a registry or generating registry-derived conformance
+checks MUST complete that operation only when the associated result is `valid`. An implementation
+checking a registry for an extension author MUST report success only when that result is `valid`.
+For any other state, the implementation MUST stop the requested production or publication and
+expose the complete result to its caller.
 
 A writer MUST reject a non-valid registry before opening any source or staging any output. A public
 writer constructor that accepts mappings MAY retain that convenient input form, but it MUST copy
@@ -203,10 +216,14 @@ MAY additionally render it for a person.
 
 ### 3.6 Validators preserve non-valid registry states
 
-A packet validator MUST obtain one complete result for the core registry and for every available
-extension registry. It MUST use the checked core context for every extension evaluation; where the
-core result is not valid, it MUST still evaluate each available extension as far as Part 02 permits
-and preserve the resulting incomplete, unsupported, or invalid state.
+A packet validator MUST obtain one complete result for every embedded or caller-supplied core
+registry document it loads. For every extension registry that is available among those Part 05
+§5.4 requires it to validate, the validator MUST obtain one complete result. A registry document
+is available for this clause when the bytes at its declared location can be acquired; successful
+JSON parsing is not required. The validator MUST identify which checked core context directs
+packet checks and MUST use that context for every extension evaluation. Where its result is not
+valid, the validator MUST still evaluate each available extension as far as Part 02 permits and
+preserve the resulting incomplete, unsupported, or invalid state.
 
 Only a `valid` checked registry context may direct generation or execution of packet checks derived
 from that registry. For a non-valid result, the validator MUST:
@@ -227,7 +244,8 @@ conformance claim remains in force.
 A report MUST pair each registry result with an external subject label identifying the registry
 role being evaluated, such as `core` or a manifest-declared extension identifier. The subject label
 MUST NOT replace or manufacture the registry document's own identity; invalid JSON need not expose
-one.
+one. When one validation loads more than one document in the same role, the labels MUST distinguish
+their sources without changing either document's class.
 
 Public checking APIs, machine-readable command output, validation reports, and structured
 exceptions MUST expose the same §3.1 result representation without reducing it to a Boolean or a
@@ -253,6 +271,10 @@ This decision preserves complete per-document results for later validity composi
 settle whether an absent registry fails an extension, how extension results affect an overall
 packet verdict, or which resource-level checks apply to extension table bytes.
 
+An authoring tool may still create an explicitly unfinished registry draft. Drafting declarations
+without claiming conformance is not publishing a registry or generating conformance checks; the
+separate author check reports success only after the draft becomes valid.
+
 ## 5. Consequence
 
 The change is behavior-incompatible for writer, authoring, validation, and generation entry points
@@ -263,6 +285,22 @@ must copy and check before use.
 Registry and packet bytes remain compatible. No registry or packet regeneration is required. The
 result schema is a new incorporated artifact with its own version; existing registry document
 versions do not advance.
+
+Each Decision clause has this planned authoritative landing:
+
+| clause | current-owner disposition and planned landing |
+|---|---|
+| §3.1 | append `Registry-result serialization` under Part 02's registry section and incorporate `registry/registry_result.schema.json` |
+| §3.2 | append `Checked registry context` under Part 05's new conformance-boundary section |
+| §3.3 | append `Required boundaries` under that Part 05 section |
+| §3.4 | append `Reader independence` under that Part 05 section |
+| §3.5 | append `Producer and authoring reactions` under that Part 05 section |
+| §3.6 | append `Validator reactions` under that Part 05 section |
+| §3.7 | append `Portable reporting` under that Part 05 section; the representation remains owned by the new Part 02 subsection and incorporated schema |
+
+All destinations are new, so no anchor bootstrap is required. Incorporation gives each destination
+a canonical anchor. No existing clause is superseded, and no current citation requires
+repointing.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
@@ -292,13 +330,13 @@ Incorporation must provide evidence for these positive cases:
 - a reader without the validator package performs ordinary session, discriminator, reference,
   extension, and multi-packet operations without a result object.
 
-It must also provide negative cases for invalid UTF-8, invalid JSON, duplicate members, invalid
-shape, unknown schema, unknown contract, unusable core context, post-check mapping mutation,
-non-valid writer construction, and attempts to generate checks from a non-valid registry. The
-four result states and skipped-phase reasons must round-trip through API, report,
-machine-readable-command, and exception representations. Schema fixtures must reject extra
-members, phase reordering, a skipped record without a reason, an outcome with an invalid pointer,
-and an inconsistent outcome count.
+It must also provide negative cases for invalid UTF-8, invalid JSON, a non-object JSON root,
+duplicate members, invalid shape, unknown schema, unknown contract, unusable core context,
+post-check mapping mutation, non-valid writer construction, and attempts to generate checks from a
+non-valid registry. All four result states and skipped-phase reasons must round-trip through APIs,
+reports, and machine-readable command output; every rejected non-valid state must do so through
+its structured exception. Schema fixtures must reject extra members, phase reordering, a skipped
+record without a reason, an outcome with an invalid pointer, and an inconsistent outcome count.
 
 Implementation evidence must cover the repository registry checker, writer CLI and public
 constructor, recipe preflight, Tier 1 and Tier 2 generators, packet validator and report model,

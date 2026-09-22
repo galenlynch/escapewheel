@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [Registry documents are checked at conformance boundaries](check-registry-documents-at-conformance-boundaries.md) | 3,180 | Ready for acceptance; appraised 2026-09-22 at `3ba8b7f16e198c9ea077a4cdfd6c3f26acf6441b`. The R126 non-object-root checker gap found during appraisal was fixed at that baseline; no decision blocker remains. | New registry-result subsection in Part 02, new final conformance-boundary section in Part 05, and incorporated `registry/registry_result.schema.json`. |
