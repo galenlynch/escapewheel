@@ -576,8 +576,8 @@ validate uniformly.
 
 This is separated from invocation because defining a document contract and deciding how each
 public boundary reacts to its result are independently reviewable decisions. The active
-[proposal](define-registry-document-conformance.md) records the reproduced gaps and the exact
-boundary with the next item.
+[draft](../drafts/define-registry-document-conformance.md) records the candidate contract and the
+exact boundary with the next item.
 
 **Review coverage:** the registry-semantics portion of D1 and I2, plus the registry-fixture portion
 of I9.

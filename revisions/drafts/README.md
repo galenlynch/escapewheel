@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [A Registry Document Has One Complete Conformance Contract](define-registry-document-conformance.md) | 4,569 | Awaiting first acceptance appraisal; promoted from the checkpointed proposal at `35ee9bca2e532dd7d65aa95d734077ec535bdcda` on 2026-09-22. | P4.1; structural anchor bootstrap required before final appraisal. |
