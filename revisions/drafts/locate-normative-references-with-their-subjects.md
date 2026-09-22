@@ -42,7 +42,7 @@ single-part entries moved to new terminal sections in Parts 03 and 04.
 | Part 00 §10 entries for Parquet, Arrow, Zarr, and RFC 8878 | move without changing text or edition state | planned Part 03 section 12, `ew-portable-profile-normative-references` | places portable-format and transport references with the physical profile | §3.3 |
 | Part 00 §10 entry for NIST FIPS 180-4 | move without changing text or edition state | planned Part 04 section 10, `ew-packet-catalog-normative-references` | places SHA-256 identity with the catalog digest definition | §3.3 |
 | Part 00 §10 statement that the missing Tier 2 language prevents release | retain the general missing-authority rule but remove the issue-specific initial list after P3 supplies that authority | Part 00 §10 policy; P3 later owns the concrete resolution | avoids preserving a resolved issue as permanent architecture | §3.2 |
-| Part 03 §1 `ew-portable-profile-scope` — one blanket link to the central JSON, URI, Parquet, Arrow, Zarr, Zstandard, and SHA-256 bibliography | replace with links to Part 00 for shared JSON and URI references, the planned Part 03 reference section for profile-local references, and the planned Part 04 reference section for catalog digest identity | Part 03 §1, same anchor | changes lookup location only | §§3.1, 3.3 |
+| Part 03 §1 `ew-portable-profile-scope` — one blanket link to the central JSON, URI, Parquet, Arrow, Zarr, Zstandard, and SHA-256 bibliography | replace with links to Part 00 for shared JSON and URI references, the planned Part 03 reference section for profile-local references, and Part 04's digest contract; Part 03 no longer invokes FIPS 180-4 directly | Part 03 §1, same anchor | changes lookup location and makes the existing catalog ownership of digest meaning explicit | §§3.1, 3.3 |
 | Part 03, no current terminal reference section | add | planned Part 03 section 12, `ew-portable-profile-normative-references` | creates the local bibliography for one-part profile dependencies | §§3.1, 3.3 |
 | Part 04 §1 `ew-packet-catalog-scope` — catalog scope without local reference navigation | retain and extend with reference navigation | Part 04 §1, same anchor | makes the catalog's external dependency locally discoverable | §§3.1, 3.3 |
 | Part 04, no current terminal reference section | add | planned Part 04 section 10, `ew-packet-catalog-normative-references` | creates the local bibliography for SHA-256 | §§3.1, 3.3 |
@@ -121,22 +121,28 @@ historical text.
 ### 3.1 Reference ownership and invocation
 
 Part 00 **MUST** own the specification-wide policy for external normative references. An external
-authority on which normative requirements in exactly one numbered part depend **MUST** have its
-bibliographic entry in a normative-reference section of that part. An external authority on which
-normative requirements in more than one numbered part depend, or on which the Part 00 framework
-itself depends, **MUST** have one shared bibliographic entry in Part 00.
+authority that normative prose in exactly one numbered part invokes directly **MUST** have its
+bibliographic entry in a normative-reference section of that part. An external authority that
+normative prose in more than one numbered part invokes directly, or that the Part 00 framework
+itself invokes, **MUST** have one shared bibliographic entry in Part 00.
+
+Normative prose invokes an external authority **directly** when it identifies that authority as
+the basis for one or more requirements. A citation to another numbered part's Escapewheel contract
+is not a direct invocation of the external authorities on which that contract relies.
 
 Each direct external normative authority **MUST** have exactly one bibliographic entry in the
-numbered parts. A subject-owning part **MUST** cite that entry from the requirement that invokes
-the authority and **MUST** state the extent to which it applies. The entry identifies the external
-document and edition; it **MUST NOT** become the owner of the Escapewheel meaning, processing
-rule, actor obligation, or conformance behavior that invokes it.
+numbered parts. Each part whose normative prose invokes an external authority directly **MUST**
+identify the applicable entry from the prose that establishes the authority's use and **MUST**
+state the extent to which it applies. That invocation **MAY** govern a defined group of
+requirements and need not be repeated in each requirement. A bibliographic entry identifies the
+external document and edition; it **MUST NOT** become the owner of the Escapewheel meaning,
+processing rule, actor obligation, or conformance behavior that invokes it.
 
 An informative mention of a technology **MUST NOT** make its specification normative. Moving a
 bibliographic entry **MUST NOT** change the referenced behavior, and a reference used by several
-parts **MUST NOT** be copied into several normative-reference sections. The informational
-specification README **MUST NOT** contain a normative-reference section or become an independent
-bibliographic owner.
+parts through direct invocation **MUST NOT** be copied into several normative-reference sections.
+The informational specification README **MUST NOT** contain a normative-reference section or
+become an independent bibliographic owner.
 
 ### 3.2 Edition and authority discipline
 
@@ -210,7 +216,7 @@ regeneration, or reinterpretation.
 |---|---|---|
 | semantic prose | Unchanged because no scientific concept or identity changes. | Part 01 remains byte-identical. |
 | logical prose and registry | Unchanged because the JSON, URI, and JSON Schema entries remain shared in Part 00 and no logical declaration changes. | Parts 02 and the registry artifacts remain byte-identical. |
-| physical profiles | Part 03 §1 points to shared and local owners; the new terminal reference section receives the six existing profile-reference rows. | Exact row comparison against baseline Part 00 §10; framework owner check. |
+| physical profiles | Part 03 §1 points to shared and local reference owners and to Part 04 for digest meaning; the new terminal reference section receives the six existing profile-reference rows. | Exact row comparison against baseline Part 00 §10; framework owner check. |
 | packet catalog and JSON Schemas | Part 04 §1 gains reference navigation and its new terminal reference section receives FIPS 180-4; all JSON Schemas remain unchanged. | Exact FIPS row comparison; schema byte comparison; framework owner check. |
 | validation and import | Runtime behavior is unchanged; only bibliography lookup moves. | Existing validator, writer, reader, and corpus results remain unchanged. |
 | extensions | Unchanged because extension declarations inherit the same logical and physical contracts. | All extension registries remain byte-identical and pass existing checks. |
@@ -230,17 +236,20 @@ and inspect only normative-reference sections. Its positive case must establish 
 
 1. every required marker appears in the approved reference section;
 2. no marker appears in another numbered part's normative-reference section;
-3. each direct external authority has one normative bibliographic entry;
-4. Part 00 retains the shared entries and policy;
-5. Parts 03 and 04 contain the exact relocated entries and canonical anchors;
-6. no implementation or library is substituted for a missing language-neutral authority;
-7. the informational README contains no normative-reference section; and
-8. the combined specification exactly reproduces the changed parts.
+3. each part that invokes an external authority directly contains an invocation statement that
+   identifies the applicable entry and its extent;
+4. each direct external authority has one normative bibliographic entry;
+5. Part 00 retains the shared entries and policy;
+6. Parts 03 and 04 contain the exact relocated entries and canonical anchors;
+7. no implementation or library is substituted for a missing language-neutral authority;
+8. the informational README contains no normative-reference section; and
+9. the combined specification exactly reproduces the changed parts.
 
 The mutation probe must independently reject:
 
 - removal of a shared Part 00 entry;
 - removal of a Part 03 or Part 04 local entry;
+- removal of a Part 03 or Part 04 invocation statement;
 - moving an entry to a different part's reference section;
 - duplicating an entry across normative-reference sections;
 - inserting DuckDB, zarr-python, or Numcodecs as normative authority; and
@@ -251,6 +260,13 @@ ledger and evidence checks, heading check, generated-document checks, all packag
 framework probes, the complete packet corpus, and the full repository verifier. Since this
 decision changes no runtime contract, existing package suites are regression evidence rather than
 new behavioral evidence; no new packet fixture is warranted.
+
+The accepted-clause ledger must mark R122 §3.9 superseded by this revision. R122 §3.4 remains
+applied at `ew-specification-authority`; its ledger note must record that this revision supersedes
+only its complete-bibliography allocation. Section 3.1 lands in the amended Part 00 policy and the
+invocation and reference sections of Parts 03 and 04; §3.2 lands in Part 00 §10; and §3.3 lands in
+the three normative-reference sections and the amended scope sections. The evidence record must
+name those anchored owners explicitly.
 
 ## 7. Open
 

@@ -23,5 +23,5 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | `locate-normative-references-with-their-subjects.md` | 2,759 | not yet appraised; P2.1 follows R123 and precedes P3 | structural; no anchor bootstrap required |
+| 1 | `locate-normative-references-with-their-subjects.md` | 2,959 | 2026-09-21 — ready for acceptance on `3769082d29514ea9eeabe81c0931f98171faf8ea`; appraisal distinguished direct external invocation from reliance on another part's contract and allowed one invocation statement to govern a defined requirement group; all 28 quick-verifier stages pass | structural; no anchor bootstrap required; all 16 baseline citation surfaces read |
 | 2 | `define-a-portable-tier-2-rule-language.md` | 7,226 | revise after P2.1; the detailed language contract and its SQL/IEEE references move to Part 11 without reopening the approved language semantics | structural; five-anchor bootstrap verified before the Part 11 destination was selected |
