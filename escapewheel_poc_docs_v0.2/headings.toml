@@ -351,6 +351,12 @@ section = "2.3"
 title = "Internal consistency"
 aliases = []
 
+[anchor.ew-column-declaration]
+part = "02"
+section = "3"
+title = "Column declaration"
+aliases = []
+
 [anchor.ew-conformance-classes]
 part = "05"
 section = "10"
@@ -369,10 +375,28 @@ section = "4.1"
 title = "Requirements"
 aliases = []
 
+[anchor.ew-core-extension-discrimination]
+part = "09"
+section = "6.2"
+title = "Core may name an extension"
+aliases = []
+
+[anchor.ew-core-extension-reference-direction]
+part = "09"
+section = "6.1"
+title = "Core does not reference an extension"
+aliases = []
+
 [anchor.ew-core-logical-schema-scope]
 part = "02"
 section = "1"
 title = "Scope"
+aliases = []
+
+[anchor.ew-discriminator-semantics]
+part = "02"
+section = "8.3"
+title = "Discriminator"
 aliases = []
 
 [anchor.ew-example-queries]
@@ -381,16 +405,52 @@ section = "4"
 title = "Queries"
 aliases = []
 
+[anchor.ew-extension-definition]
+part = "09"
+section = "5.1"
+title = "What an extension is"
+aliases = []
+
+[anchor.ew-extension-namespacing]
+part = "09"
+section = "5.2"
+title = "Namespacing"
+aliases = []
+
 [anchor.ew-extension-verdicts]
 part = "09"
 section = "5.4"
 title = "Separate verdicts"
 aliases = []
 
+[anchor.ew-extension-versioning]
+part = "09"
+section = "5.5"
+title = "Independent versioning"
+aliases = []
+
+[anchor.ew-free-form-metadata]
+part = "02"
+section = "8.6"
+title = "Free-form metadata"
+aliases = []
+
+[anchor.ew-functional-dependence]
+part = "02"
+section = "8.5"
+title = "Functional dependence"
+aliases = []
+
 [anchor.ew-iceberg-catalog]
 part = "00"
 section = "3.5"
 title = "Iceberg catalog"
+aliases = []
+
+[anchor.ew-identifier-semantics]
+part = "02"
+section = "8.2"
+title = "Identity"
 aliases = []
 
 [anchor.ew-incomplete-validation]
@@ -403,6 +463,18 @@ aliases = []
 part = "03"
 section = "9.4"
 title = "Scope of revalidation"
+aliases = []
+
+[anchor.ew-logical-column-naming]
+part = "02"
+section = "4"
+title = "Naming"
+aliases = []
+
+[anchor.ew-logical-references]
+part = "02"
+section = "7"
+title = "References"
 aliases = []
 
 [anchor.ew-logical-standard]
@@ -525,6 +597,12 @@ section = "9.2"
 title = "Self-description"
 aliases = []
 
+[anchor.ew-registry-vocabularies]
+part = "02"
+section = "9.3"
+title = "Vocabularies"
+aliases = []
+
 [anchor.ew-resource-identity]
 part = "00"
 section = "3.6"
@@ -571,6 +649,12 @@ aliases = []
 part = "00"
 section = "2.1"
 title = "Specification candidate and release"
+aliases = []
+
+[anchor.ew-table-resource-requirements]
+part = "02"
+section = "2"
+title = "Table resource requirements"
 aliases = []
 
 [anchor.ew-tier-2-bounded-recursion]
@@ -631,6 +715,12 @@ aliases = []
 part = "05"
 section = "5.2"
 title = "Tier 2"
+aliases = []
+
+[anchor.ew-unit-and-clock-context]
+part = "02"
+section = "8.4"
+title = "Unit and clock"
 aliases = []
 
 [anchor.ew-unit-concept]

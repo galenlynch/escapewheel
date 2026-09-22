@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `35ee9bca2e532dd7d65aa95d734077ec535bdcda` |
+| **Based on** | `8b22b501cec6d2b76a1f286d84d2c082055f62f6` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 sections 1–4, 7, 8.2–8.6, 9.1–9.4, 10.2, and a new section 13; Part 09 sections 5.1, 5.2, 5.5, 6.1, and 6.2; the specification README sections 2 and 4; `registry/registry.schema.json`; `registry/logical_schemas.json`; new registry-contract schema and descriptor artifacts |
@@ -39,33 +39,43 @@ registry-conformance subsection and a subject-local normative reference.
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | [Part 02 §1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-core-logical-schema-scope), incorporation paragraph | revise in place | same anchor | incorporates the generic registry contract and core declarations, but no concrete extension registry | §3.1 |
-| Part 02, “Table resource requirements” | revise in place | same section | makes the object member name the resource identifier and permits only the declared key forms | §§3.4, 3.6 |
-| Part 02, “Column declaration” | revise in place | same section | makes local role-dependent fields schema constraints and prevents descriptions from overriding declarations | §§3.4, 3.8 |
-| Part 02, “Naming” | replace in place | same section | retains declaration-backed naming as conformance and moves layout and prose heuristics to authoring guidance | §3.8 |
-| Part 02, “References” | revise in place | same section | requires complete target keys, compatible pairs, and resolvable nonempty sides | §3.6 |
+| [Part 02 §2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-table-resource-requirements), “Table resource requirements” | revise in place | same anchor | makes the object member name the resource identifier and permits only the declared key forms | §§3.4, 3.6 |
+| [Part 02 §3](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-column-declaration), “Column declaration” | revise in place | same anchor | makes local role-dependent fields schema constraints and prevents descriptions from overriding declarations | §§3.4, 3.8 |
+| [Part 02 §4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-logical-column-naming), “Naming” | replace in place | same anchor | retains declaration-backed naming as conformance and moves layout and prose heuristics to authoring guidance | §3.8 |
+| [Part 02 §7](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-logical-references), “References” | revise in place | same anchor | requires complete target keys, compatible pairs, and resolvable nonempty sides | §3.6 |
 | [Part 02 §7.1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-session-scope), direct `session_id` reference | replace in place | same anchor | permits a proven chain of session-preserving references without weakening row integrity | §3.7 |
-| Part 02, “Identity” | revise in place | same section | states the assigned-name and carried/referenced-name invariant | §§3.5–3.6 |
-| Part 02, “Discriminator” | split static declaration checks from row checks | same section and registry-conformance subsection | registry conformance proves that resolution is derivable; packet validation retains target-specific row obligations | §§3.5–3.6 |
-| Part 02, “Unit and clock” | revise in place | same section and new normative-reference section | separates local source resolution from exact offline UCUM syntax | §§3.5, 3.9 |
-| Part 02, “Functional dependence” and “Free-form metadata” | revise in place | same sections | states cross-declaration resolution and metadata eligibility invariants | §§3.5–3.6 |
+| [Part 02 §8.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-identifier-semantics), “Identity” | revise in place | same anchor | states the assigned-name and carried/referenced-name invariant | §§3.5–3.6 |
+| [Part 02 §8.3](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-discriminator-semantics), “Discriminator” | split static declaration checks from row checks | same anchor and registry-conformance subsection | registry conformance proves that resolution is derivable; packet validation retains target-specific row obligations | §§3.5–3.6 |
+| [Part 02 §8.4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-unit-and-clock-context), “Unit and clock” | revise in place | same anchor and new normative-reference section | separates local source resolution from exact offline UCUM syntax | §§3.5, 3.9 |
+| [Part 02 §8.5](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-functional-dependence), “Functional dependence” | revise in place | same anchor | makes determinant resolution and uniqueness exact | §§3.5–3.6 |
+| [Part 02 §8.6](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-free-form-metadata), “Free-form metadata” | revise in place | same anchor | states exact standard metadata shape, description, and eligibility | §§3.5–3.6 |
 | [Part 02 §9.1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-document), one registry shape | replace in place | same anchor | defines common root fields and disjoint core and extension classes | §§3.1–3.2 |
 | [Part 02 §9.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-self-description), current IDs and unknown-schema behavior | replace in place | same anchor | selects a local schema and contract without dereferencing and advances incompatible development versions | §§3.2–3.3, 3.10 |
-| Part 02, “Vocabularies” | revise in place | same section | assigns local vocabulary combinations to shape and authority URI syntax to semantics | §§3.4–3.6 |
+| [Part 02 §9.3](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-vocabularies), “Vocabularies” | revise in place | same anchor | assigns local vocabulary combinations to shape and authority URI syntax to semantics | §§3.4–3.6 |
 | no complete registry-conformance subsection | add | planned Part 02 section 9.4, `ew-registry-conformance` | owns artifacts, phases, results, and named semantic invariant algorithms | §§3.1–3.9 |
-| Part 02, “Tier 2: declared” | revise in place | same section | adds rule identity, ownership, required-input, and phase integration requirements | §§3.5–3.6 |
+| [Part 02 §10.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-tier-2-rules), “Tier 2: declared” | revise in place | same anchor | adds rule identity, ownership, required-input, and phase integration requirements | §§3.5–3.6 |
 | no Part 02 normative-reference section | add | planned Part 02 section 13, `ew-logical-schema-normative-references` | identifies UCUM 2.2 case-sensitive syntax locally | §3.9 |
-| Part 09, “What an extension is” and “Namespacing” | revise in place | same sections | makes extension class, namespace ownership, and required core context exact without naming a concrete extension | §§3.1–3.3 |
-| Part 09, “Independent versioning” | revise in place | same section | makes `registry_version` the extension registry's own version, independent of the core registry's version | §§3.1–3.2 |
-| Part 09, “Core does not reference an extension” and “Core may name an extension” | revise in place | same sections | completes reference-direction restrictions and replaces the concrete extension example with the generic mechanism | §§3.1–3.2, 3.5 |
+| [Part 09 §5.1](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-definition), “What an extension is” | revise in place | same anchor | makes extension class and required core context exact without naming a concrete extension | §§3.1–3.3 |
+| [Part 09 §5.2](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-namespacing), “Namespacing” | revise in place | same anchor | states generic extension namespace ownership without a concrete namespace | §3.2 |
+| [Part 09 §5.5](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-versioning), “Independent versioning” | revise in place | same anchor | makes `registry_version` the extension registry's own version, independent of the core registry's version | §§3.1–3.2 |
+| [Part 09 §6.1](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-core-extension-reference-direction), “Core does not reference an extension” | revise in place | same anchor | completes core and extension reference-direction restrictions | §§3.1–3.2, 3.5 |
+| [Part 09 §6.2](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-core-extension-discrimination), “Core may name an extension” | revise in place | same anchor | retains generic discriminator naming while removing the concrete extension example | §§3.1–3.2, 3.5 |
 | specification README, authority summary and `registry_version` projection | revise as informative projections | same sections | points to the generic extension mechanism and labels the projected version as the core registry's | §§3.1–3.2, 3.10 |
 | current meta-schema and core registry | replace incompatible development identities and roots | same artifacts under the incorporated Part 02 contract | makes shape, selectors, and exact core declarations agree | §§3.1–3.4, 3.10 |
 | no machine-readable registry-contract index | add | `registry/registry_contract.schema.json` and `registry/registry_contracts/escapewheel-registry-contract-v0.1.json` | gives phases and prose invariants stable exact identities without duplicating algorithms | §§3.1, 3.5 |
 
-The affected existing headings for Part 02 sections 2–4, 7, 8.2–8.6, and 9.3 and Part 09 sections
-5.1, 5.2, 5.5, 6.1, and 6.2 do not yet have canonical anchors. Before the final appraisal, the
-structural procedure requires a separate metadata-only bootstrap commit adding an anchor to each.
-The two new headings receive anchors during incorporation. After that bootstrap, this draft's
-baseline, crosswalk links, measurements, and citation inventory must be refreshed.
+The metadata-only bootstrap commit `8b22b501cec6d2b76a1f286d84d2c082055f62f6` added canonical
+anchors to all 15 affected existing headings that lacked one. The process check confirms that the
+commit changed only those anchors. The two new headings receive anchors during incorporation.
+
+The refreshed reverse-impact query covers 20 affected existing sections and reports 378 citation
+occurrences at 365 unique lines in 76 files. Of those, 70 occurrences at 64 lines in 16 accepted
+records are historical and remain unchanged. The 308 current occurrences at 301 lines in 60 files
+were read individually. Most continue to cite retained meanings. Incorporation must update the
+stale direct-session checks and comments, printable-ASCII UCUM approximation, old schema and core
+version projections, redirecting UCUM URI, concrete Part 09 examples, and implementation comments
+whose owner or phase changes; generated tables and the combined rendering are regenerated rather
+than edited.
 
 ## 2. Background
 
@@ -128,7 +138,8 @@ case-sensitive UCUM 2.2 grammar. The core registry has nine UCUM authority entri
 redirecting `https://ucum.org/ucum.html` spelling rather than the canonical
 `https://ucum.org/ucum` identity. `ucumvert` 0.3.2 exposes an offline parser generated from vendored
 UCUM 2.2 essence data dated 2024-06-17. Its code is MIT-licensed; its vendored data identifies the
-separate UCUM Copyright Notice and License 1.0, whose notice must accompany redistribution.
+separate [UCUM Copyright Notice and License](https://ucum.org/license), headed Version 1.1,
+June 2024, whose notice must accompany redistribution.
 
 All four current indirectly session-scoped extension tables have a session-preserving path:
 
@@ -269,15 +280,19 @@ Applicable semantic invariants **MUST** run in descriptor order. Tier 2 rules **
 Part 11 static validation under the selected rule language. External lexical domains **MUST** run
 last and offline.
 
-The complete result **MUST** contain the selected descriptor ID when contract selection succeeds,
-one overall state, and one phase record for every phase in descriptor order. The overall state
+The complete result **MUST** contain the selected descriptor ID whenever one descriptor was
+selected, including the unique extension-visible selection used with absent core context; one
+overall state; and one phase record for every phase in the seven-phase order above, whether or not
+a descriptor was selected. Every descriptor **MUST** repeat that order exactly. The overall state
 **MUST** be exactly one of `valid`, `invalid`, `unsupported`, or `incomplete`. A phase record
 **MUST** identify its phase; have exactly one state from `passed`, `invalid`, `unsupported`,
-`incomplete`, and `skipped`; contain its ordered findings; and, when skipped, contain a stable
-reason ID. Each finding **MUST** identify its stable schema, semantic-invariant, or
-rule-language outcome ID, the owning resource or rule ID where one applies, and its instance
-location as an RFC 6901 JSON Pointer. A source mapping unable to preserve a byte location **MUST**
-still preserve the JSON Pointer; the abstract result does not require a line or byte offset.
+`incomplete`, and `skipped`; and contain ordered outcome records for every check that did not pass
+and every check skipped within a partially evaluated phase. An outcome record **MUST** identify
+its state and stable schema, semantic-invariant, or rule-language outcome ID, the owning resource
+or rule ID where one applies, and its instance location as an RFC 6901 JSON Pointer. A skipped
+outcome or phase **MUST** contain a stable reason ID. A source mapping unable to preserve a byte
+location **MUST** still preserve the JSON Pointer; the abstract result does not require a line or
+byte offset.
 
 Part 02 **MUST** assign the pre-contract outcome IDs `registry.json.invalid_utf8`,
 `registry.json.invalid_syntax`, `registry.json.duplicate_member`,
@@ -290,16 +305,19 @@ Schema-validation findings **MUST** use the selected meta-schema ID and schema-l
 their stable outcome identity. Semantic and external-domain findings **MUST** use descriptor
 invariant IDs, and rule-static findings **MUST** use Part 11 outcome IDs attached to the owning rule.
 
-A finding before an instance can be located **MUST** use the empty JSON Pointer for the document
-root. A duplicate-member finding **MUST** locate the containing object, not pretend that one of the
-duplicate values has a unique pointer. Within one phase, findings **MUST** be ordered by instance
-pointer, then outcome ID, then owning resource or rule ID, comparing each code point for code point.
+An outcome **MUST** be a finding exactly when its state is `invalid`; an unsupported, incomplete,
+or skipped outcome **MUST NOT** be relabeled as a finding. An outcome before an instance can be
+located **MUST** use the empty JSON Pointer for the document root. A duplicate-member outcome
+**MUST** locate the containing object, not pretend that one of the duplicate values has a unique
+pointer. Within one phase, outcome records **MUST** be ordered by instance pointer, then outcome ID,
+then owning resource or rule ID, comparing each code point for code point.
 
 A definitive violation **MUST** dominate an unsupported or incomplete independent phase;
 otherwise unsupported **MUST** dominate incomplete, incomplete **MUST** dominate valid, and only
-completed passing phases **MUST** produce valid. A dependent phase skipped after an earlier
-failure **MUST** be recorded with its reason. P4.2, not this revision, owns public API, CLI,
-report, and exception serialization of this abstract result.
+completed passing phases **MUST** produce valid. The same precedence **MUST** determine a partially
+evaluated phase's state from its outcome records. A dependent phase skipped after an earlier
+failure **MUST** be recorded with its reason. P4.2, not this revision, owns public API, CLI, report,
+and exception serialization of this abstract result.
 
 ### 3.4 Meta-schema boundary
 
@@ -389,7 +407,7 @@ primary key and is not a source member of any reference the table declares. For 
 identifier, the table **MUST** declare exactly one corresponding name formed by replacing the
 identifier's `_id` suffix with `_name`; that name **MUST** be a string data column and **MUST NOT**
 declare `identity`. A table that merely carries or references an assigned identifier **MUST NOT**
-declare that corresponding name on account of the carried value.
+declare that corresponding same-base `_name` column.
 
 A declared `metadata` column **MUST** have the exact type, presence, and role stated in §3.4 and
 the standard description Part 02 defines. A table **MUST** declare it when the primary key contains
@@ -471,7 +489,8 @@ conformance requirements. A description **MUST NOT** contradict or override a ma
 concise and non-duplicative wording remains specification style rather than a machine comparison
 of English text. The exact standard description required for `metadata` is a literal declaration,
 not an instruction to infer semantics from arbitrary prose; no other description is compared for
-semantic equivalence.
+semantic equivalence. A contradiction in other descriptive prose is an authoring defect that must
+be corrected, but it neither overrides the declaration nor changes the registry result.
 
 ### 3.9 External lexical domains
 
@@ -497,9 +516,10 @@ The revised registry meta-schema `$id` and every registry document `$schema` **M
 
 Every extension using the revised meta-schema **MUST** carry the full
 `escapewheel-logical-v0.1` value in `logical_standard_version`, **MUST NOT** carry `extends`, and
-**MUST** select a new `registry_version` according to that extension's own version history. The
-core specification **MUST NOT** select that version. An old document **MUST NOT** be silently
-interpreted under the new meta-schema identifier.
+when migrating a document from an earlier meta-schema **MUST** select a `registry_version`
+different from that document's earlier version. A newly published extension selects its initial
+version independently. The core specification **MUST NOT** select either version. An old document
+**MUST NOT** be silently interpreted under the new meta-schema identifier.
 
 These development identifiers **MUST NOT** be reused later for an incompatible contract. This
 revision does not assign final release identities.
@@ -535,7 +555,7 @@ revision makes a currently implicit or contradictory invariant exact.
 | validation and import | Shared registry checking must implement the ordered result without crashing after shape failures; trust-boundary invocation remains P4.2. | Focused phase/outcome and invariant tests; no claim yet that every caller invokes them. |
 | extensions | Part 09 becomes generic and names no concrete extension. The four repository-maintained examples adopt the disjoint extension shape and full logical ID, choose new versions in their own histories, and remain non-incorporated conformance evidence. | Generic extension vectors, each repository example, and focused namespace, context, reference, and session-path negatives. |
 | reader, writer, validator, adapters | Common registry-document result and types may be implemented; public invocation behavior remains unchanged until P4.2. Adapters do not acquire schema authority. | Package tests distinguish contract implementation from boundary invocation. |
-| conformance fixtures and tests | Add raw JSON, schema-selection, shape, contract-selection, semantic, rule-static, external-domain, and precedence cases; regenerate development fixtures. Add `ucumvert >=0.3.2,<0.4` to the validator implementation and lock the exact resolved version for incorporation. Distribute the MIT license and the UCUM data's Copyright Notice and License 1.0. | At least one positive and focused negative for every invariant and phase outcome; an offline capability probe records the parser version, bundled UCUM 2.2 revision, and both license dispositions. |
+| conformance fixtures and tests | Add raw JSON, schema-selection, shape, contract-selection, semantic, rule-static, external-domain, and precedence cases; regenerate development fixtures. Add `ucumvert >=0.3.2,<0.4` to the validator implementation and lock the exact resolved version for incorporation. Distribute the MIT license and the official UCUM notice applicable to the vendored data. | At least one positive and focused negative for every invariant and phase outcome; an offline capability probe records the parser version, bundled UCUM 2.2 revision, and both license dispositions. |
 | revision process and tooling | No lifecycle meaning changes. A metadata-only anchor bootstrap precedes final appraisal; ledger and evidence later map every clause to its owner. Repository authoring checks may retain the conventions excluded from registry conformance, but their findings must not change §3.3's result. | Stage, citation, repointing, structural, ledger, and evidence checks. |
 | generated publications and developer documentation | Regenerate the combined specification, registry tables, counts, READMEs, and author guidance; label projected registry versions as core-only, keep concrete extensions out of Part 09, and keep authoring conventions distinct from conformance. | Generation and freshness checks plus documentation search for stale IDs, concrete extension names in Part 09, and duplicate owners. |
 
@@ -562,11 +582,11 @@ class, resolvable owning anchors, and a corresponding evidence case. A converse 
 that no semantic conformance check is hidden in implementation code without a descriptor entry.
 Schema-owned constraints must be absent from the semantic inventory.
 
-Registry migration evidence must compare all 43 core/analysis and 11 repository-extension table declarations,
-all 121 rules, and all 128 references before and after the root-shape transition. It must prove
-that every reference targets a complete key, that all current rule IDs remain unique and owned,
-and that the four indirect session paths satisfy every condition in §3.7. It must parse all 61
-literal-unit declarations against the selected exact UCUM 2.2 data. That comparison is migration
+Registry migration evidence must compare all 43 core/analysis and 11 repository-extension table
+declarations, all 121 rules, and all 128 references before and after the root-shape transition. It
+must prove that every reference targets a complete key, that all current rule IDs remain unique and
+owned, and that the four indirect session paths satisfy every condition in §3.7. It must parse all
+61 literal-unit declarations against the selected exact UCUM 2.2 data. That comparison is migration
 and feasibility evidence; it does not incorporate any concrete extension registry.
 
 The same language-neutral checker must return the same result model for the incorporated core
@@ -574,8 +594,9 @@ registry, a generic extension vector, and all four repository-maintained extensi
 Focused implementation tests must show that a missing role or another shape defect returns
 findings without `KeyError`. The implementation probe must establish that the locked `ucumvert`
 release bundles UCUM 2.2 data dated 2024-06-17, runs offline, and is redistributed with both its
-MIT license and the UCUM data license. P4.2 will later add public-construction, embedded-copy, and
-trust-boundary evidence; those tests must not be misreported as complete by this revision.
+MIT license and the official UCUM notice applicable to that data. P4.2 will later add
+public-construction, embedded-copy, and trust-boundary evidence; those tests must not be
+misreported as complete by this revision.
 
 Incorporation must run the stage, citation, repointing, heading, structural, ledger, and evidence
 checks; every package suite affected by the result model; all registry-generation and publication

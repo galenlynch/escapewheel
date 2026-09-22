@@ -367,10 +367,13 @@ or level, numbering or order, body prose, normativity, meaning, or aliases. A pr
 that commit with its parent. When no bootstrap is needed, say so in the crosswalk.
 
 After the bootstrap, refresh measurements, impact queries, and citation inventories; complete the
-final appraisal; commit the exact draft; and request acceptance. Give a new section its anchor when
-it is created. Incorporation updates every affected live citation, ledger target, evidence owner,
-heading record, generated rendering, and human document atomically. An alias changes only through
-reviewed structural work.
+final appraisal; commit the exact draft; and request acceptance. The bootstrap commit remains
+source-only. In the following draft-refresh checkpoint, regenerate informational projections whose
+only change is propagation of the new anchors, before running the mechanical gates. That refresh
+does not incorporate the draft's substantive decision. Give a new section its anchor when it is
+created. Incorporation updates every affected live citation, ledger target, evidence owner, heading
+record, generated rendering, and human document atomically. An alias changes only through reviewed
+structural work.
 
 ## 7. Phase D — authorize acceptance and freeze the decision
 
