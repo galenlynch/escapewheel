@@ -274,7 +274,10 @@ P1 authority framework
      P4.2 uniform registry-validation boundaries
        |
        v
-     P5 resource/profile model
+     P5.1 logical resource declarations
+       |
+       v
+     P5.2 physical profile capabilities
        |
        v
      P6 packet manifest contract
@@ -302,11 +305,12 @@ P1 authority framework
 | P3 | Executable declarative-rule language | P2.1 | [R125](../accepted/R125-tier-2-rules-use-a-versioned-escapewheel-sql-profile.md) |
 | P4.1 | Registry-document conformance contract | P3 | [R126](../accepted/R126-a-registry-document-has-one-complete-conformance-contract.md) |
 | P4.2 | Uniform registry-validation boundaries | P4.1 | [R127](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) |
-| P5 | Resource/profile declarations and resource classification | P4.2 | Proposal to be scoped |
-| P6 | Packet manifest, requiredness, and registry binding | P5 | Proposal to be scoped |
+| P5.1 | Logical resource declarations and resource classification | P4.2 | Active proposal |
+| P5.2 | Portable-profile encodings and capability declarations | P5.1 | Proposal to be scoped |
+| P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | Proposal to be scoped |
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | Proposal to be scoped |
-| P8 | Recipe arbitration and adapter contract | P5, P6 | Proposal to be scoped |
-| P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5–P8 as applicable | Proposal family; split before promotion |
+| P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | Proposal to be scoped |
+| P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | Proposal family; split before promotion |
 | P10 | Final identifiers, direct registry source, and release integration | P2, P2.1, and P3–P9 | Proposal plus ordinary maintenance |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
 
@@ -597,23 +601,39 @@ the document result those policies consume; it does not decide the overall packe
 **Review coverage:** D2, the invocation portions of D1 and I2, I11, and the registry-boundary
 portion of I9. I7's physical extension-table parity remains with P7.
 
-### P5 — Resource/profile declarations and classification
+### P5.1 — Logical resource declarations and classification
 
-Extend the data-driven model beyond tables. Declare resource kinds, required/optional conditions,
-physical capabilities, canonicality, lineage, and extension non-table assets. Resolve whether the
-packet's `layer` and `canonical` fields are declared facts or derived from resource IDs, namespaces,
-extension declarations, and profile rules. The clean starting option is to remove redundant fields
-when the same answer is derivable, because there are no external compatibility constraints.
+Extend the data-driven logical model beyond tables. Make resources the registry's primary
+declarations and give tables, dense arrays, media, and documents one kind-specific declaration
+model. Define singleton and family instances, presence, catalog-row binding, dependencies,
+canonicality derived from content class, lineage, and extension-owned non-table assets. Bind each
+packet resource to one declaration and remove packet classification fields that merely repeat the
+declaration.
 
-This stage should make derivation and processing-run rules apply uniformly to tables, arrays,
-media, and documents, and should distinguish mandatory portability capabilities from optional but
-recognized ones.
+Keep the decision storage-agnostic. It may define the logical field through which a later physical
+encoding is selected, but it does not declare formats, codecs, portability capabilities, or the
+Part 03 descriptor that owns them.
 
-**Review coverage:** S3, S6, S10 in model form, D3, D8, I4, I5, I8, and the first live TODO.
+**Review coverage:** S3, S6, D3's logical half, D8, I4, I5, and the first live TODO.
+
+### P5.2 — Portable-profile encodings and capability declarations
+
+Give Part 03 a machine-readable descriptor for physical encodings and portability capabilities.
+Define the relationship between each logical resource kind and its permitted encodings, separate
+mandatory portability capabilities from recognized optional ones, and represent stored
+materialization or view capability without changing logical kind. The descriptor must remain a
+physical-layer authority consumed by packet binding and validation, not a second logical registry.
+
+This stage determines the physical-profile model needed by P6. Exact codec-floor wording and
+portability reporting remain independently reviewable in P9.3 after the capability vocabulary
+exists.
+
+**Review coverage:** S10 in model form, D3's physical half, and I8's capability-model portion.
 
 ### P6 — Packet manifest, requiredness, and registry binding
 
-Reconcile Part 04 with `manifest.schema.json` and the resource schema using P5's declarations.
+Reconcile Part 04 with `manifest.schema.json` and the resource schema using P5.1's logical
+declarations and P5.2's physical-capability model.
 Generate shared structural definitions where possible and add named semantic checks for uniqueness,
 format, state, and cross-field invariants. Decide how a packet identifies each core and extension
 registry by stable identifier, version, and digest; whether it embeds a copy; what validators
@@ -669,7 +689,7 @@ Split this family wherever the decisions can stand independently:
    predicate intentionally accepts or rejects that value. Do not confuse that domain decision with
    the rule language's comparison semantics.
 
-Analysis lineage and canonicality belong in P5 rather than this catch-all; adapter write capability
+Analysis lineage and canonicality belong in P5.1 rather than this catch-all; adapter write capability
 belongs in P8. This placement keeps the earlier review's “remaining reconciliations” from becoming
 one omnibus revision.
 
@@ -724,27 +744,27 @@ This table prevents a finding from disappearing merely because it was split out 
 
 | Findings or tracked work | Primary disposition |
 |---|---|
-| S0 authority and abstraction boundaries | P1; concrete placement cleanup continues in P2, P5, P8, and P9 |
+| S0 authority and abstraction boundaries | P1; concrete placement cleanup continues in P2, P5.1, P8, and P9 |
 | S1 contradictory unit identity | P2 |
 | S2 manifest prose/schema disagreement | P6 |
-| S3 unexpressed resource requiredness | P5 then P6 |
+| S3 unexpressed resource requiredness | P5.1 then P6 |
 | S4 validation/publication order | P9.1 |
 | S5 adapter no-write contradiction | P8 |
-| S6 analysis lineage/canonicality | P5 |
+| S6 analysis lineage/canonicality | P5.1 |
 | S7 prefix-resource checksum | P9.2 |
 | S8 stale table of contents | P2 or ordinary generated-document maintenance |
 | S9 stale normative counts | P2; generate future counts rather than copying them |
-| S10 codec floor | P5 model, then P9.3 wording and reporting |
+| S10 codec floor | P5.2 model, then P9.3 wording and reporting |
 | S11 uniqueness and cross-field invariants | P6 |
 | S12 profile scope | P9.4 |
 | D1 incomplete registry semantics | P3, P4.1, and P4.2 |
 | D2 extension registry parity | P4.1 and P4.2 for registry documents; P7 for declared resources and verdicts |
-| D3 missing whole-packet profile model | P5 |
+| D3 missing whole-packet profile model | P5.1 logical declarations and P5.2 physical capabilities |
 | D4 hidden arbitration | P8 |
 | D5 missing session-recipe schema | P8 |
 | D6 underspecified adapter declarations | P8 |
 | D7 imperative registry replay | P10 |
-| D8 extension non-table assets | P5 |
+| D8 extension non-table assets | P5.1 |
 | D9 cross-language proof | Deferred interoperability hardening; reconsider as a P11 release criterion if independent implementation is required for v0.2 |
 | R1–R4 and R6–R7 process gaps | P0 is complete; continue using its gates and evidence artifacts |
 | R5 mutable publication | P11 |
@@ -752,15 +772,15 @@ This table prevents a finding from disappearing merely because it was split out 
 | I1 core-only overall verdict | P7 |
 | I2 embedded registry validation | P4.1 defines the result, P4.2 invokes it, and P7 composes it |
 | I3 obsolete reader unit contract | P2 |
-| I4 overbroad canonical marking | P5 |
-| I5 missing non-table lineage | P5 |
+| I4 overbroad canonical marking | P5.1 |
+| I5 missing non-table lineage | P5.1 |
 | I6 manifest lookup and state validation | P6 |
 | I7 incomplete extension physical checks | P7, using P4.1-conforming extension declarations |
-| I8 codec capability reporting | P5 and P9.3 |
+| I8 codec capability reporting | P5.2 and P9.3 |
 | I9 missing cross-package release proof | P2–P10 incrementally; final matrix in P10 |
 | I10 stale public types and docs | P2 |
 | I11 constructor validation bypass | P4.2 for registry inputs and P8 for adapter/declaration inputs |
-| `layer` and `canonical` TODO | P5 |
+| `layer` and `canonical` TODO | P5.1 |
 | packet registry ID/version/digest TODO | shape in P6; final values in P10 |
 | direct declarative registry authoring TODO | P10, ordinarily if contract-preserving |
 | remaining JSON Schema audits | manifest/resources in P6; sources/adapter in P8 |
