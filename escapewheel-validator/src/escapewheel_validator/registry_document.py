@@ -222,12 +222,17 @@ def _load_contracts(descriptors: Iterable[Mapping[str, Any]] | None) -> list[dic
 
 
 def _check_mapping(
-    document: Mapping[str, Any],
+    document: Any,
     core: Mapping[str, Any] | None,
     json_phase: PhaseRecord,
     descriptors: Iterable[Mapping[str, Any]] | None,
 ) -> RegistryResult:
     phases = [json_phase]
+    if not isinstance(document, Mapping):
+        outcome = Outcome("invalid", "registry.schema.selector_missing")
+        phases.append(_phase("schema_selection", [outcome]))
+        phases.extend(_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[2:])
+        return _complete(phases, None)
     selector = document.get("$schema")
     if selector is None:
         outcome = Outcome("invalid", "registry.schema.selector_missing")

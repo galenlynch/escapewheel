@@ -103,6 +103,16 @@ def test_byte_entry_rejects_a_nested_duplicate_at_its_containing_object():
     assert all(phase.state == "skipped" for phase in result.phases[1:])
 
 
+@pytest.mark.parametrize("data", [b"[]", b"null", b"42", b'"registry"'])
+def test_byte_entry_reports_a_non_object_json_root(data):
+    result = check_registry_bytes(data)
+    assert result.state == "invalid"
+    assert result.phases[0].state == "passed"
+    assert result.phases[1].state == "invalid"
+    assert _ids(result) == {"registry.schema.selector_missing"}
+    assert all(phase.state == "skipped" for phase in result.phases[2:])
+
+
 def test_schema_selection_distinguishes_invalid_and_unsupported():
     missing = check_registry({})
     assert missing.state == "invalid"
