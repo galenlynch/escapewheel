@@ -17,6 +17,7 @@ packet embeds. `registry/tables.md` is a generated, informative listing of the s
 This part owns their declaration model and meaning. A disagreement between the part, incorporated
 registry, or informative projection makes the specification candidate internally inconsistent.
 
+<a id="ew-table-resource-requirements" data-spec-anchor="canonical"></a>
 ## 2. Table resource requirements
 
 Every table resource MUST declare:
@@ -27,6 +28,7 @@ Every table resource MUST declare:
 - its references to other tables (§7);
 - its Tier 2 validation rules, if any (§10.2).
 
+<a id="ew-column-declaration" data-spec-anchor="canonical"></a>
 ## 3. Column declaration
 
 Every column MUST declare a name, a type, a presence, and a role. It MAY declare an identity, a
@@ -49,6 +51,7 @@ A column's `description` MUST NOT restate what one of that column's own fields d
 
 `registry/check.py` enforces this for `vocabulary`, `resolves` and `enum`. An `authority`'s name in prose is indistinguishable from prose, so a description SHOULD NOT name a nomenclature the field identifies unless naming it is what makes the form legible: `core.subjects.strain` needs MGI named to say why `C57BL/6J`'s substrain letter matters, and the field beside it holds a URI a reader may not recognise.
 
+<a id="ew-logical-column-naming" data-spec-anchor="canonical"></a>
 ## 4. Naming
 
 Column names MUST be lowercase snake case.
@@ -106,6 +109,7 @@ A present nullable column is preferred to an absent one, because a stable column
 
 Duplication is permitted only where it buys otherwise-unavailable access. Axis names are carried in `core.array_dimensions` because a Zarr binding in another language cannot see them.
 
+<a id="ew-logical-references" data-spec-anchor="canonical"></a>
 ## 7. References
 
 A table declares each foreign key as a reference naming the target resource, this table's columns, and the target's columns. A reference MAY be composite, nullable, or self-referencing.
@@ -152,6 +156,7 @@ A **coordinate** is neither: copied verbatim like a source label, but used arith
 
 Because a reference relates columns of the same role (§7), converting every structural index at a boundary is join-preserving by construction.
 
+<a id="ew-identifier-semantics" data-spec-anchor="canonical"></a>
 ### 8.2 Identity
 
 An `identifier` column MUST declare `carried` or `assigned`. A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing. Seven tables carried both a generated `*_name` and a `name` declared by Part 02, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
@@ -160,6 +165,7 @@ A `carried` identifier gets no name column, and a table MUST NOT declare one for
 
 An assigned identifier's `*_name` MUST be unique within its packet — the 16 name columns in core and analysis that pair with one, not the 6 that name a kind of thing and are expected to repeat, such as `core.sorting_runs.sorter_name`. `registry/check.py` sorts them and requires the second kind to be declared. No rule can check it: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct case where four streams naming one serial become one device. The obligation falls on whatever composes the name.
 
+<a id="ew-discriminator-semantics" data-spec-anchor="canonical"></a>
 ### 8.3 Discriminator
 
 A `discriminator` column MUST be a `string` holding a dotted resource identifier — a namespace and
@@ -241,6 +247,7 @@ target or a thermistor's range belongs to an extension. A fact no detail table
 models stays in `metadata`, and what justifies promoting one out of it is a rule or a
 query that has to read it.
 
+<a id="ew-unit-and-clock-context" data-spec-anchor="canonical"></a>
 ### 8.4 Unit and clock
 
 A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit_from` naming a column that carries it. A `coordinate` column MUST declare `clock_from` where the clock its ticks are on is not the one that row's `clock_id` names, and MUST declare it where the table has no `clock_id` at all. Measured across the registry, 6 of 20 coordinates declare one and the other 14 resolve to their own row's clock; none has neither.
@@ -253,12 +260,14 @@ A column holding a physical unit MUST hold a UCUM code, and a column declaring o
 
 A consumer MAY label a quantity with its declared unit, and MUST NOT silently compare or combine two columns whose declared units differ. One vocabulary is what makes that rule run: `volts` and `V` differ while naming one unit, so without it the rule refuses a legitimate comparison exactly as readily as it catches a wrong one.
 
+<a id="ew-functional-dependence" data-spec-anchor="canonical"></a>
 ### 8.5 Functional dependence
 
 A column MAY declare `determined_by`, naming the columns whose values fix its own: two rows agreeing on every column named agree on this one, and an empty list declares a constant. The declaration is structural, decidable from the registry with no packet in hand.
 
 It is a statement about values and holds under any profile. What a profile does with it is the profile's: Part 03 §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows, because a wrong one waives a check rather than failing one.
 
+<a id="ew-free-form-metadata" data-spec-anchor="canonical"></a>
 ### 8.6 Free-form metadata
 
 A column named `metadata` is a `json_string` holding what a source stated about a row that this standard does not model, carried in the source's own vocabulary and read by no rule. Every declaration carries that description and no other.
@@ -318,6 +327,7 @@ If `$schema` names no meta-schema the consumer holds, the document MUST be repor
 a schema this consumer does not have — an **`info`** finding, not an error. A core validator is not
 required to hold an extension's schema, and the same reasoning applies one level up.
 
+<a id="ew-registry-vocabularies" data-spec-anchor="canonical"></a>
 ### 9.3 Vocabularies
 
 Every `string` column declares a `vocabulary`, whatever its role, except a discriminator, whose value space §8.3 fixes; a column of any other type declares none. There is no default, so an absent declaration is a defect rather than a claim of openness.

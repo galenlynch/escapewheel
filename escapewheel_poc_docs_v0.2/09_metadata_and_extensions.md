@@ -32,12 +32,14 @@ An import MUST NOT fail because optional extension metadata is absent.
 
 ## 5. Extensions
 
+<a id="ew-extension-definition" data-spec-anchor="canonical"></a>
 ### 5.1 What an extension is
 
 An extension is a registry document in the format of Part 02, in its own namespace. It declares tables, columns, references, and rules on exactly the same terms as core.
 
 An extension needs no code. A registry document names its tables, Parquet files hold their rows, and neither imports anything of the reference implementation.
 
+<a id="ew-extension-namespacing" data-spec-anchor="canonical"></a>
 ### 5.2 Namespacing
 
 An extension's resource identifier MUST begin with its namespace: `dynamic_foraging.trials`, not `trials`. A namespace MUST NOT be `core`, `analysis`, or `nwb`.
@@ -59,6 +61,7 @@ that the complete packet conforms.
 
 Separate verdicts are not an absent one. The **packet's** verdict is the conjunction of core's and every extension's, so a validator MUST NOT report a packet whose core passes and whose extension fails as conforming — an extension's canonical resources are part of what the packet holds ([Part 00 §3.2](00_architecture.md#ew-packet-content-classes)), and a failure among them is a failure of the packet. A consumer MAY still read core from such a packet, and MUST NOT read the packet's verdict as though the failure were external to it.
 
+<a id="ew-extension-versioning" data-spec-anchor="canonical"></a>
 ### 5.5 Independent versioning
 
 An extension carries its own version, independent of `registry_version`.
@@ -99,12 +102,14 @@ A build MUST look for a report after a failure as it does after a success, since
 
 ## 6. Direction of reference
 
+<a id="ew-core-extension-reference-direction" data-spec-anchor="canonical"></a>
 ### 6.1 Core does not reference an extension
 
 A core table MUST NOT declare a foreign key into an extension's table.
 
 The reasons are separable verdicts (§5.4) and independent versioning (§5.5). "Interpretable when no extension is present" is *not* among them: a packet embeds its extension registries, so they are present whenever the resources are.
 
+<a id="ew-core-extension-discrimination" data-spec-anchor="canonical"></a>
 ### 6.2 Core may name an extension
 
 A core table MAY name an extension's resource through a `discriminator` column (Part 02 §8.3). `core.intervals.interval_kind` holds `dynamic_foraging.trials`, and a consumer resolves it by reading the kind, taking that resource's primary key from the registry, and joining.
