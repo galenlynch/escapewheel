@@ -23,4 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | [A Registry Document Has One Complete Conformance Contract](define-registry-document-conformance.md) | 4,569 | Awaiting first acceptance appraisal; promoted from the checkpointed proposal at `35ee9bca2e532dd7d65aa95d734077ec535bdcda` on 2026-09-22. | P4.1; structural anchor bootstrap required before final appraisal. |
+| 1 | [A Registry Document Has One Complete Conformance Contract](define-registry-document-conformance.md) | 6,027 | Revised before acceptance on 2026-09-22 against `f1932b50d85817431ae0fb36a4345081ae0b07e8`: the user resolved extension ownership, result-boundary, invariant, and UCUM questions; stage, citation, repointing, feasibility, and quick-verifier checks pass. | P4.1; perform the separately committed structural anchor bootstrap, refresh the baseline and evidence, then run the final appraisal. |
