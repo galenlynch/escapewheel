@@ -4,6 +4,7 @@ import json
 import re
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -45,46 +46,32 @@ expected = {
     if re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", l.strip())
 }
 check("table set matches the Part 02 ledger", expected ^ set(T))
-# Part 09 §2's invariants live in `escapewheel_validator.registry_document`, because an author
-# outside this repository has the same document and the same question and no way to ask it. Core
-# is held to exactly what an extension is held to, which is only true while there is one
-# implementation of them.
+# Part 02 §9.4 defines one complete result for core and extension registry documents. This
+# repository check consumes that result rather than maintaining another invariant subset.
 sys.path.insert(0, str(HERE))
-from escapewheel_validator.registry_document import (
-    declarations,
-    structural,
-)
+from escapewheel_validator.registry_document import check_registry
 
 
-def _structural(tables, universe, prefix="", *, is_core=False):
-    """Run the shared invariants and report each finding through this script's own printer."""
-    for finding in structural(tables, universe, is_core=is_core):
-        check(f"{prefix}{finding.label}", finding.offenders)
+def _registry_result(name, document, core=None):
+    """Require one repository registry to complete the incorporated contract."""
+    result = check_registry(document, core)
+    check(
+        f"{name} registry document is valid",
+        [
+            f"{phase.phase}: {outcome.id} at {outcome.instance or '<root>'}: "
+            f"{outcome.detail or outcome.reason or outcome.state}"
+            for phase in result.phases
+            for outcome in phase.outcomes
+        ]
+        if result.state != "valid"
+        else [],
+    )
 
 
-_structural(T, T, is_core=True)
+_registry_result("core", REG)
 for _id, _doc in EXT.items():
-    _structural(_doc["tables"], T | _doc["tables"], prefix=f"{_id}: ")
+    _registry_result(_id, _doc, REG)
 
-# Part 09 §2's MUST, stated rather than implied: core resolving against itself above cannot see a
-# reference *into* an extension, because such a target would simply be absent from core.
-check(
-    "core references no extension",
-    [
-        (n, r["resource"])
-        for n, t in T.items()
-        for r in t["references"]
-        if r["resource"] in EXT_T
-    ],
-)
-# What an extension declares about itself, from the same module the command runs, so an author
-# outside this repository is held to exactly this.
-for _id, _doc in EXT.items():
-    for _finding in declarations(_doc, _id):
-        check(f"{_id}: {_finding.label}", _finding.offenders)
-# R57 §4 for core's own document, which `declarations` covers only for an extension. A meta-schema
-# URI resolves to nothing over the network, so what makes the declaration worth carrying is that it
-# is verifiable offline against the schema in hand.
 META_ID = json.loads((HERE / "registry.schema.json").read_text())["$id"]
 check(
     "every shipped registry names the current meta-schema",
@@ -97,27 +84,12 @@ check(
     ],
 )
 check(
-    "registry meta-schema identity is 0.3.0",
-    [] if META_ID == "https://escapewheel.org/schemas/registry/0.3.0" else [META_ID],
+    "registry meta-schema identity is 0.4.0",
+    [] if META_ID == "https://escapewheel.org/schemas/registry/0.4.0" else [META_ID],
 )
 check(
-    "core registry version is 0.3.0",
-    [] if REG.get("registry_version") == "0.3.0" else [REG.get("registry_version")],
-)
-EXPECTED_EXTENSION_VERSIONS = {
-    "aind_opto": "0.3.0",
-    "aind_unit_qc": "0.2.0",
-    "dynamic_foraging": "0.4.0",
-    "vr_foraging": "0.3.0",
-}
-check(
-    "shipped extension registry versions match Part 02",
-    [
-        f"{name}: {document.get('registry_version')}"
-        for name, document in EXT.items()
-        if document.get("registry_version") != EXPECTED_EXTENSION_VERSIONS.get(name)
-    ]
-    + sorted(set(EXPECTED_EXTENSION_VERSIONS) - set(EXT)),
+    "core registry version is 0.4.0",
+    [] if REG.get("registry_version") == "0.4.0" else [REG.get("registry_version")],
 )
 check(
     "every shipped registry selects the incorporated rule language",
@@ -251,58 +223,6 @@ check("every authored rule reached the registry", sorted(authored - merged))
 check(
     "the registry carries no rule rules.json does not author", sorted(merged - authored)
 )
-# Part 02 §10.2. `optional` lets a column be absent from the file, and a Tier 2 rule is SQL run against
-# that file -- so a rule naming one does not miss a check, it fails to parse, and the run meant to
-# find defects reports an error of its own. The match is on identifiers rather than text: string
-# literals and comments are stripped, and a name matches only whole, so `some_metadata_key` and a
-# quoted 'metadata' are not hits. Part 02 §10.2 records what this rests on -- every column bearing one of
-# these names is optional -- and R94 §6 what would break it.
-_OPTIONAL = {
-    c["name"]
-    for t_ in (*T.values(), *EXT_T.values())
-    for c in t_["columns"]
-    if c["presence"] == "optional"
-}
-
-
-def _identifiers(sql):
-    """Every whole word in `sql`, with string literals and comments removed."""
-    body = re.sub(r"'[^']*'", " ", sql)
-    body = re.sub(r"--[^\n]*", " ", body)
-    return set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", body))
-
-
-check(
-    "no Tier 2 rule names an optional column (Part 02 §10.2)",
-    sorted(
-        {
-            (r["id"], c)
-            for t_ in (*T.values(), *EXT_T.values())
-            for r in t_["rules"]
-            for c in _OPTIONAL & _identifiers(r["sql"])
-        }
-    ),
-    lambda b: f"{b[0]} names {b[1]}, which is optional and may be absent from the file",
-)
-
-ids = [r["id"] for r in authored_rules] + [
-    r["id"] for t_ in EXT_T.values() for r in t_["rules"]
-]
-check(
-    "rule ids are unique across core and every extension",
-    sorted({i for i in ids if ids.count(i) > 1}),
-)
-check(
-    "an extension's rule ids carry its table's name",
-    [
-        r["id"]
-        for n, t_ in EXT_T.items()
-        for r in t_["rules"]
-        if not r["id"].startswith(f"{n}.")
-    ],
-)
-
-
 # R50 §5: a naming convention is a property of the registry, not of any packet's rows, so no SQL
 # rule can see it -- and one written anyway would pass silently (R12 §4). It is checked here.
 #
@@ -479,187 +399,6 @@ print(
 )
 
 
-# Part 02 §7.1. Which tables are session-scoped: the ones reaching
-# `core.sessions` through their declared references. A property of the registry, decided with no
-# packet in hand, and the stricter of the two available tests -- every table carrying a
-# `session_id` reaches the table, while eight reach it without carrying the column, so the graph
-# subsumes the column and the column does not subsume the graph. R46 is what made it usable, by
-# declaring the sixteen foreign keys that had never been written.
-def session_scoped(tables):
-    """Every table reaching `core.sessions`, `core.sessions` itself included."""
-    edges = {n: {r["resource"] for r in t["references"]} for n, t in tables.items()}
-
-    def reaches(name, seen):
-        if name == "core.sessions":
-            return True
-        if name in seen:
-            return (
-                False  # a self-reference is well-founded (Part 01 §3.5) and not a route
-            )
-        seen.add(name)
-        return any(reaches(m, seen) for m in edges.get(name, ()))
-
-    return {n for n in tables if reaches(n, set())}
-
-
-scoped = session_scoped(T)
-carries = {
-    n for n, t in T.items() if any(c["name"] == "session_id" for c in t["columns"])
-}
-check(
-    "every table carrying session_id reaches core.sessions (Part 02 §7.1)",
-    sorted(carries - scoped),
-)
-# Part 02 §7.1's two halves, neither of which anything checked. The column and the reference are
-# separate obligations and the second is the one that bites: Tier 1 generates one anti-join per
-# declared reference and nothing from a column's name, so a `session_id` in no reference is a
-# foreign key no rule can see -- which is how 418,618,218 rows came to hold an unvalidated session
-# key. `core.sessions` is the one exemption, having nothing to reference but itself.
-#
-# The second check runs over the extensions too, and is deliberately weaker there than Part 02 §7.1's
-# letter: it asks that `session_id` be part of *some* declared reference rather than of a direct one
-# to `core.sessions`. Four extension tables carry it inside a composite reference to another
-# session-scoped table, which gives Tier 1 the anti-join Part 02 §7.1's reasoning asks for while not
-# being the reference Part 02 §7.1 names. Whether the letter or the reasoning governs is a question for
-# a revision; enforcing the letter here would mean adding a redundant reference to those four.
-check(
-    "every session-scoped table carries session_id (Part 02 §7.1)",
-    sorted(scoped - carries),
-)
-_in_a_reference = {
-    n for n, t in ALL.items() for r in t["references"] if "session_id" in r["columns"]
-}
-check(
-    "every table carrying session_id declares it in a reference (Part 02 §7.1)",
-    sorted(
-        {
-            n
-            for n, t in ALL.items()
-            if n != "core.sessions"
-            and any(c["name"] == "session_id" for c in t["columns"])
-        }
-        - _in_a_reference
-    ),
-)
-_direct = {
-    n
-    for n, t in ALL.items()
-    for r in t["references"]
-    if r["resource"] == "core.sessions" and r["columns"] == ["session_id"]
-}
-print(
-    f"      {len(_direct)} tables reference core.sessions on session_id directly; "
-    f"{len(_in_a_reference - _direct)} carry it inside a composite reference to another "
-    f"session-scoped table ({', '.join(sorted(_in_a_reference - _direct))})"
-)
-print(
-    f"      {len(scoped)} of {len(T)} core and analysis tables are session-scoped; "
-    f"{len(set(T) - scoped)} are not ({', '.join(sorted(set(T) - scoped))}); "
-    f"{len(scoped - carries)} reach core.sessions without carrying the column"
-)
-
-# Part 02 §8.3, §2.3.2. What a discriminator declares, checked where the meta-schema cannot: the
-# enum constrains the value but not that a discriminator has one, and `resolves` on anything else
-# is a declaration that decides nothing.
-_disc = []
-for _r, _t in ALL.items():
-    _names = {_c["name"] for _c in _t["columns"]}
-    for _c in _t["columns"]:
-        _is = _c.get("role") == "discriminator"
-        if _is and "resolves" not in _c:
-            _disc.append(f"{_r}.{_c['name']}: a discriminator declares no resolves")
-        for _field in ("resolves", "discriminates"):
-            if _field in _c and not _is:
-                _disc.append(
-                    f"{_r}.{_c['name']}: {_field} on a {_c.get('role')}, not a discriminator"
-                )
-        # A paired value lives in the named table's key space, so it is an identifier here too.
-        if (_paired := _c.get("discriminates")) is not None and _paired not in _names:
-            _disc.append(
-                f"{_r}.{_c['name']}: discriminates {_paired}, which is not a column here"
-            )
-check("a discriminator declares what it resolves to", sorted(_disc))
-
-# Part 02 §8.3. Three resolution shapes and only one was declared: `discriminates` separates a paired
-# value from the other two, leaving by-position and shared-key indistinguishable, so `generate`
-# read every discriminator without a paired value as shared-key and emitted Part 02 §8.3's reverse
-# check for it. `positions_in` is the declaration that was missing.
-_position = []
-for _r, _t in ALL.items():
-    _names = {_c["name"] for _c in _t["columns"]}
-    for _c in _t["columns"]:
-        if (_in := _c.get("positions_in")) is None:
-            continue
-        if _c.get("role") != "discriminator":
-            _position.append(
-                f"{_r}.{_c['name']}: positions_in on a {_c.get('role')}, not a discriminator"
-            )
-        if _in not in _names:
-            _position.append(
-                f"{_r}.{_c['name']}: positions_in names {_in}, which is not a column here"
-            )
-        if "discriminates" in _c:
-            _position.append(
-                f"{_r}.{_c['name']}: declares both positions_in and discriminates, "
-                "which are different resolution shapes"
-            )
-check(
-    "a by-position discriminator names the column holding its position column (Part 02 §8.3)",
-    sorted(_position),
-)
-
-# Part 02 §8.3: a discriminator may sit on the table whose rows it specialises, or one declared
-# reference away. Where it is away, `discriminates_via` names the *referencing* column as
-# `resource.column` -- a reference carries no identifier of its own, so there is nothing else to
-# name, and naming the referencing side settles the direction by construction.
-_via = []
-for _r, _t in ALL.items():
-    for _c in _t["columns"]:
-        if (_path := _c.get("discriminates_via")) is None:
-            continue
-        if _c.get("role") != "discriminator":
-            _via.append(
-                f"{_r}.{_c['name']}: declares discriminates_via and is not a discriminator"
-            )
-            continue
-        _parts = _path.split(".")
-        if len(_parts) != 3:
-            _via.append(
-                f"{_r}.{_c['name']}: discriminates_via {_path} is not a resource.column"
-            )
-            continue
-        _from, _col = f"{_parts[0]}.{_parts[1]}", _parts[2]
-        if _from not in ALL:
-            _via.append(
-                f"{_r}.{_c['name']}: discriminates_via names no resource {_from}"
-            )
-        elif not any(
-            _col in ref["columns"] and ref["resource"] == _r
-            for ref in ALL[_from]["references"]
-        ):
-            _via.append(
-                f"{_r}.{_c['name']}: {_from}.{_col} is no declared reference to {_r}"
-            )
-check("a discriminator away from its rows names the reference", sorted(_via))
-
-# Part 02 §8.3. A paired value is a string, and not by accident: one column resolves against
-# several kinds, and an assigned key is matched by its `*_name` where a carried one is matched by
-# the number itself, so the union it joins mixes types by construction.
-check(
-    "a paired value is a string",
-    sorted(
-        f"{_r}.{_c['discriminates']} is declared "
-        f"{next(x for x in _t['columns'] if x['name'] == _c['discriminates'])['type']}"
-        for _r, _t in ALL.items()
-        for _c in _t["columns"]
-        if _c.get("discriminates")
-        and any(
-            x["name"] == _c["discriminates"] and x["type"] != "string"
-            for x in _t["columns"]
-        )
-    ),
-)
-
 # Part 02 §8.3: a paired value holds one identifier, so it can only name a resource whose key is one
 # column. Reported rather than enforced -- the kind vocabulary is open (Part 02 §8.3), so what this can
 # say is which resources are namable at all, which is otherwise found by a check quietly matching
@@ -701,40 +440,6 @@ for _r in _unnamable:
     )
 
 
-# Part 02 §8.4: a declared unit or clock source must resolve. Structural -- decidable from the
-# registry with no packet in hand, which is where this format puts a check it can make without
-# data. The point is that a wrong `clock_from` converts ticks on the wrong clock silently.
-def _resolves(resource, spec, value):
-    """Whether a same-table column name or a one-hop `resource.column` resolves. Returns why not."""
-    parts = value.split(".")
-    if len(parts) == 1:
-        if value not in {c["name"] for c in spec["columns"]}:
-            return f"{resource} has no column {value}"
-        return None
-    target, column = f"{parts[0]}.{parts[1]}", parts[2]
-    if target not in ALL:
-        return f"{value} names no resource"
-    if not any(ref["resource"] == target for ref in spec["references"]):
-        return f"{resource} declares no reference to {target}, so the hop is not one this table can make"
-    if column not in {c["name"] for c in ALL[target]["columns"]}:
-        return f"{target} has no column {column}"
-    return None
-
-
-bad_context = []
-for _r, _t in ALL.items():
-    for _c in _t["columns"]:
-        for _field in ("unit_from", "clock_from"):
-            if _field in _c and (_why := _resolves(_r, _t, _c[_field])):
-                bad_context.append(f"{_r}.{_c['name']} {_field}: {_why}")
-        if "clock_from" in _c and _c.get("role") != "coordinate":
-            bad_context.append(
-                f"{_r}.{_c['name']}: clock_from on a {_c.get('role')}, not a coordinate"
-            )
-        if "unit" in _c and "unit_from" in _c:
-            bad_context.append(f"{_r}.{_c['name']}: declares both unit and unit_from")
-check("a declared unit or clock source resolves", sorted(bad_context))
-
 # A vendored schema is a build artifact (see `build.py`'s VENDORED), so a copy that disagrees
 # means the build was not run. Checked here because this is what one runs after touching the
 # registry, and because a stale copy has three times been reported as a hundred findings about
@@ -771,12 +476,15 @@ try:
 
     meta = json.loads((HERE / "registry.schema.json").read_text())
     jsonschema.Draft202012Validator.check_schema(meta)
-    errs = list(jsonschema.Draft202012Validator(meta).iter_errors(REG))
+    _format = jsonschema.FormatChecker()
+    errs = list(
+        jsonschema.Draft202012Validator(meta, format_checker=_format).iter_errors(REG)
+    )
     check(
         "registry validates against its meta-schema",
         [f"{list(e.path)[:4]}: {e.message[:60]}" for e in errs],
     )
-    validator = jsonschema.Draft202012Validator(meta)
+    validator = jsonschema.Draft202012Validator(meta, format_checker=_format)
     _history_cases = []
     for _label, _mutate in (
         (
@@ -809,6 +517,42 @@ try:
             f"{_id}: {list(e.path)[:4]} {e.message[:50]}"
             for _id, _doc in EXT.items()
             for e in validator.iter_errors(_doc)
+        ],
+    )
+    _contract_schema = json.loads((HERE / "registry_contract.schema.json").read_text())
+    jsonschema.Draft202012Validator.check_schema(_contract_schema)
+    _contract = json.loads(
+        (
+            HERE / "registry_contracts/escapewheel-registry-contract-v0.1.json"
+        ).read_text()
+    )
+    _contract_errors = list(
+        jsonschema.Draft202012Validator(
+            _contract_schema, format_checker=_format
+        ).iter_errors(_contract)
+    )
+    check(
+        "the incorporated registry contract validates against its schema",
+        [f"{list(e.path)[:4]} {e.message[:60]}" for e in _contract_errors],
+    )
+    _invariant_ids = [entry["id"] for entry in _contract["invariants"]]
+    check(
+        "registry contract invariant IDs are unique",
+        [item for item, count in Counter(_invariant_ids).items() if count > 1],
+    )
+    _parts = "\n".join(
+        path.read_text()
+        for path in sorted(
+            (HERE.parent / "escapewheel_poc_docs_v0.2").glob("[0-9][0-9]_*.md")
+        )
+    )
+    check(
+        "every registry contract anchor resolves uniquely in the numbered specification",
+        [
+            anchor
+            for entry in _contract["invariants"]
+            for anchor in entry["anchors"]
+            if _parts.count(f'id="{anchor}"') != 1
         ],
     )
     manifest = json.loads((HERE / "manifest.schema.json").read_text())

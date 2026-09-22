@@ -8,7 +8,7 @@ This generated rendering is not a standalone specification. See the repository
 
 ```text
 43 tables, 351 columns, 111 references, 76 Tier 2 rules
-registry 0.3.0   logical standard escapewheel-logical-v0.1
+registry 0.4.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -34,7 +34,7 @@ registry 0.3.0   logical standard escapewheel-logical-v0.1
 | `device_id` | int32 | nullable | — | The device that produced this array. |
 | `processing_run_id` | int32 | nullable | — | The run that produced this array. Null means it was acquired rather than computed. |
 | `sample_rate_hz` | float64 | nullable | — | Sample rate if regularly sampled. |
-| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | The physical unit of the array's values, as a UCUM code. |
+| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable | — | Multiply stored values by this before offset. |
 | `offset` | float64 | nullable | — | Add after conversion. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -59,7 +59,7 @@ registry 0.3.0   logical standard escapewheel-logical-v0.1
 | `coordinate_position_column` | string | nullable | free | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | resolves required | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`. |
 | `coordinate_array_asset_id` | int32 | nullable | — | A 1-D array holding one value per position (irregular axis). |
-| `coordinate_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | The physical unit of this axis's coordinate values, as a UCUM code. |
+| `coordinate_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of this axis's coordinate values, as a UCUM code. |
 | `step_value` | float64 | nullable | — | Increment per position. |
 | `origin_value` | float64 | nullable | — | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | — | Ticks advanced per position (numerator). |
@@ -120,7 +120,7 @@ registry 0.3.0   logical standard escapewheel-logical-v0.1
 | `device_id` | int32 | nullable | — | The device that produced this array. |
 | `processing_run_id` | int32 | nullable | — | The run that produced this array. Null means it was acquired rather than computed. |
 | `sample_rate_hz` | float64 | nullable | — | Sample rate if regularly sampled. |
-| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | The physical unit of the array's values, as a UCUM code. |
+| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of the array's values, as a UCUM code. |
 | `conversion` | float64 | nullable | — | Multiply stored values by this before offset. |
 | `offset` | float64 | nullable | — | Add after conversion. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -150,7 +150,7 @@ registry 0.3.0   logical standard escapewheel-logical-v0.1
 | `electrode_id` | int32 | nullable | — | Electrode ID. |
 | `channel_label` | string | nullable | free | Human-readable channel label. |
 | `inter_sample_shift` | float64 | nullable | — | Acquisition time offset within one sample period, in sample periods. |
-| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | The physical unit of the converted value, as a UCUM code. |
+| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of the converted value, as a UCUM code. |
 | `offset` | float64 | nullable | — | Add after conversion. |
 | `conversion` | float64 | nullable | — | Multiply stored values by this before offset. |
 
@@ -177,7 +177,7 @@ registry 0.3.0   logical standard escapewheel-logical-v0.1
 | `coordinate_position_column` | string | nullable | free | Which column of that resource holds the 0-based position. |
 | `coordinate_resource` | string | nullable | resolves required | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`. |
 | `coordinate_array_asset_id` | int32 | nullable | — | A 1-D array holding one value per position (irregular axis). |
-| `coordinate_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | The physical unit of this axis's coordinate values, as a UCUM code. |
+| `coordinate_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of this axis's coordinate values, as a UCUM code. |
 | `step_value` | float64 | nullable | — | Increment per position. |
 | `origin_value` | float64 | nullable | — | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | — | Ticks advanced per position (numerator). |
@@ -248,8 +248,8 @@ registry 0.3.0   logical standard escapewheel-logical-v0.1
 | `calibration_type` | string | **required** | open | What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (Part 02 §8.3), and this holds a value that resolves to no table. |
 | `calibrated_at` | timestamp | nullable | — | When the calibration was measured, which is not when it was in force; measured examples differ by 133 and 302 days. Null where the source states none, since what a source did not say is not invented (Part 01 §3.5). |
 | `description` | string | nullable | free | What the source said the calibration was. |
-| `input_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column. |
-| `output_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | The unit of `core.calibration_points.output_value`, as a UCUM code. |
+| `input_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column. |
+| `output_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The unit of `core.calibration_points.output_value`, as a UCUM code. |
 | `array_asset_id` | int32 | nullable | — | The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics. |
 | `detail_kind` | string | nullable | resolves optional | A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (Part 02 §12.3). |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
@@ -383,7 +383,7 @@ registry 0.3.0   logical standard escapewheel-logical-v0.1
 | `axis_index` | int64 | **required** | — | Which axis, 0-based (Part 02 §8.1.1). |
 | `axis_name` | string | **required** | open | Whatever the source called the field these values came from, verbatim (Part 02 §9.3). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be. |
 | `axis_direction` | string | nullable | open | Which way the values increase -- `right`, `anterior`, `superior`. Null where the source does not state it, which no inference may fill. |
-| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | The axis's unit, as a UCUM code (Part 02 §8.4). |
+| `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The axis's unit, as a UCUM code (Part 02 §8.4). |
 
 **Primary key** — `session_id`, `coordinate_frame`, `axis_index`  
 
@@ -1037,7 +1037,7 @@ registry 0.3.0   logical standard escapewheel-logical-v0.1
 | `curation_id` | int32 | **required** | — | Curation ID. |
 | `local_unit_label` | string | nullable | free | Opaque source label; undefined base, not an offset. |
 | `quality_label` | string | nullable | closed: `sua`, `mua`, `noise` | Quality label. |
-| `amplitude_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum.html) | Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. |
+| `amplitude_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. |
 | `quality_label_source` | string | nullable | open | Which core.unit_quality_labels source the designated label came from. |
 | `firing_rate_hz` | float64 | nullable | — | Firing rate if known. |
 | `n_spikes` | int64 | nullable | — | Total spikes for this unit in this context. |

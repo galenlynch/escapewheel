@@ -40,6 +40,7 @@ class CheckedRule:
 
     sql: str
     resources: frozenset[str]
+    inputs: frozenset[tuple[str, str]]
     result_names: tuple[str, ...]
 
 
@@ -132,7 +133,7 @@ def _check_identifiers(expression: exp.Expression) -> None:
             raise RuleProfileError("a derived table needs an explicit AS correlation name")
 
 
-def _check_binding(expression: exp.Expression, tables: Mapping[str, Any]) -> None:
+def _check_binding(expression: exp.Expression, tables: Mapping[str, Any]) -> Any:
     """Resolve every column against the declared relations before execution."""
     nested_schema: dict[str, dict[str, dict[str, str]]] = {}
     for resource, table in tables.items():
@@ -151,6 +152,25 @@ def _check_binding(expression: exp.Expression, tables: Mapping[str, Any]) -> Non
         raise RuleProfileError(f"query does not bind to its registry declarations: {exc}") from exc
     if build_scope(qualified) is None:
         raise RuleProfileError("query has no resolvable scope")
+    return qualified
+
+
+def _base_inputs(expression: Any) -> frozenset[tuple[str, str]]:
+    """Return exact registry columns bound by the qualified expression."""
+    root = build_scope(expression)
+    if root is None:
+        return frozenset()
+    inputs: set[tuple[str, str]] = set()
+    for scope in root.traverse():
+        aliases = {
+            alias: f"{source.db}.{source.name}"
+            for alias, (_, source) in scope.selected_sources.items()
+            if isinstance(source, exp.Table) and source.db
+        }
+        for column in scope.columns:
+            if resource := aliases.get(column.table):
+                inputs.add((resource, column.name))
+    return frozenset(inputs)
 
 
 def _check_surface(expression: exp.Expression, sql: str) -> None:  # noqa: C901
@@ -309,12 +329,12 @@ def check_rule(
     _check_identifiers(expression)
     resources = _base_tables(expression, visible)
     tables = core_tables | dict(registry.get("tables", {}))
-    _check_binding(expression, tables)
+    qualified = _check_binding(expression, tables)
     _check_window_keys(expression, resources, tables)
     _check_exact_overflow(expression)
     _check_recursion(expression, sql)
     names = _result_names(expression)
-    return CheckedRule(sql=sql, resources=resources, result_names=names)
+    return CheckedRule(sql=sql, resources=resources, inputs=_base_inputs(qualified), result_names=names)
 
 
 __all__ = ["PROFILE_ID", "CheckedRule", "RuleProfileError", "check_rule"]

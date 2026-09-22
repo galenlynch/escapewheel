@@ -51,6 +51,7 @@ def _col(name, type_, presence, **extra):
 def _registry():
     """A registry describing exactly the tables the fixture writes."""
     return {
+        "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
         "registry_version": "0.1.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -58,9 +59,9 @@ def _registry():
         "tables": {
             "core.sessions": {
                 "columns": [
-                    _col("session_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
                     _col("session_name", "string", "required"),
-                    _col("subject_id", "string", "required"),
+                    _col("subject_id", "int32", "required"),
                     _col("session_start_time", "timestamp", "required"),
                 ],
                 "primary_key": ["session_id"],
@@ -69,11 +70,11 @@ def _registry():
             },
             "core.trials": {
                 "columns": [
-                    _col("session_id", "string", "required"),
-                    _col("trial_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
+                    _col("trial_id", "int32", "required"),
                     _col("start_tick", "int64", "required"),
                     _col("stop_tick", "int64", "required"),
-                    _col("clock_id", "string", "required"),
+                    _col("clock_id", "int32", "required"),
                 ],
                 "primary_key": ["session_id", "trial_id"],
                 "references": [
@@ -94,12 +95,12 @@ def _registry():
             },
             "core.units": {
                 "columns": [
-                    _col("session_id", "string", "required"),
-                    _col("unit_id", "string", "required"),
-                    _col("sorting_run_id", "string", "required"),
-                    _col("curation_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
+                    _col("unit_id", "int32", "required"),
+                    _col("sorting_run_id", "int32", "required"),
+                    _col("curation_id", "int32", "required"),
                     _col("quality_label", "string", "nullable", enum=["sua", "mua", "noise"]),
-                    _col("clock_id", "string", "required"),
+                    _col("clock_id", "int32", "required"),
                 ],
                 "primary_key": ["unit_id"],
                 "references": [],
@@ -107,11 +108,11 @@ def _registry():
             },
             "core.events": {
                 "columns": [
-                    _col("session_id", "string", "required"),
-                    _col("event_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
+                    _col("event_id", "int32", "required"),
                     _col("event_type", "string", "required", vocabulary="open"),
                     _col("t_tick", "int64", "required"),
-                    _col("clock_id", "string", "required"),
+                    _col("clock_id", "int32", "required"),
                 ],
                 "primary_key": ["session_id", "event_id"],
                 "references": [],
@@ -119,8 +120,8 @@ def _registry():
             },
             "core.spike_events": {
                 "columns": [
-                    _col("session_id", "string", "required"),
-                    _col("unit_id", "string", "required"),
+                    _col("session_id", "int32", "required"),
+                    _col("unit_id", "int32", "required"),
                     _col("t_tick", "int64", "required"),
                 ],
                 "primary_key": ["session_id", "unit_id", "t_tick"],
@@ -150,44 +151,44 @@ def packet_root(tmp_path):
 
     sessions = pa.table(
         {
-            "session_id": pa.array(["s001"]),
+            "session_id": pa.array([1], type=pa.int32()),
             "session_name": pa.array(["s001"]),
-            "subject_id": pa.array(["m001"]),
+            "subject_id": pa.array([1], type=pa.int32()),
             "session_start_time": pa.array([1_756_000_000_000_000], type=TS),
         }
     )
     trials = pa.table(
         {
-            "session_id": pa.array(["s001", "s001"]),
-            "trial_id": pa.array(["trial_0001", "trial_0002"]),
+            "session_id": pa.array([1, 1], type=pa.int32()),
+            "trial_id": pa.array([1, 2], type=pa.int32()),
             "start_tick": pa.array([1000, 6000], type=pa.int64()),
             "stop_tick": pa.array([5000, 10000], type=pa.int64()),
-            "clock_id": pa.array(["behavior_s001"] * 2),
+            "clock_id": pa.array([1, 1], type=pa.int32()),
         }
     )
     units = pa.table(
         {
-            "session_id": pa.array(["s001", "s001"]),
-            "unit_id": pa.array(["unit_001", "unit_002"]),
-            "sorting_run_id": pa.array(["sort_001"] * 2),
-            "curation_id": pa.array(["cur_001"] * 2),
+            "session_id": pa.array([1, 1], type=pa.int32()),
+            "unit_id": pa.array([1, 2], type=pa.int32()),
+            "sorting_run_id": pa.array([1, 1], type=pa.int32()),
+            "curation_id": pa.array([1, 1], type=pa.int32()),
             "quality_label": pa.array(["sua", "mua"]),
-            "clock_id": pa.array(["imec_ap_s001"] * 2),
+            "clock_id": pa.array([2, 2], type=pa.int32()),
         }
     )
     events = pa.table(
         {
-            "session_id": pa.array(["s001"] * 3),
-            "event_id": pa.array(["ev_1", "ev_2", "ev_3"]),
+            "session_id": pa.array([1, 1, 1], type=pa.int32()),
+            "event_id": pa.array([1, 2, 3], type=pa.int32()),
             "event_type": pa.array(["stimulus_onset", "reward", "stimulus_onset"]),
             "t_tick": pa.array([1200, 4200, 6200], type=pa.int64()),
-            "clock_id": pa.array(["behavior_s001"] * 3),
+            "clock_id": pa.array([1, 1, 1], type=pa.int32()),
         }
     )
     spike_events = pa.table(
         {
-            "session_id": pa.array(["s001"] * 5),
-            "unit_id": pa.array(["unit_001"] * 3 + ["unit_002"] * 2),
+            "session_id": pa.array([1, 1, 1, 1, 1], type=pa.int32()),
+            "unit_id": pa.array([1, 1, 1, 2, 2], type=pa.int32()),
             "t_tick": pa.array([30000, 39000, 48000, 45000, 66000], type=pa.int64()),
         }
     )

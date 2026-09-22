@@ -27,6 +27,10 @@ OUT = HERE / "logical_schemas.json"
 VENDORED = {
     "registry.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+    "registry_contract.schema.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contract.schema.json",
+    "registry_contracts/escapewheel-registry-contract-v0.1.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.1.json",
     "rule_language.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/rule_language.schema.json",
     "rule_languages/escapewheel-rule-sql-v0.1.json": HERE.parent
@@ -511,7 +515,7 @@ for _vocab, _names in {
 #: Part 02 §9.3. Where a column's values are spelled, never what they may be: a validator MUST NOT
 #: dereference one (Part 04 §5.3) nor reject a value for being absent from it. An array because a
 #: strain is drawn from two registries, MGI for mouse and RGD for rat.
-UCUM = {"name": "UCUM", "uri": "https://ucum.org/ucum.html"}
+UCUM = {"name": "UCUM", "uri": "https://ucum.org/ucum"}
 #: Part 02 §9.3. A name beside the URI, because the name is a fact and not a substring: neither
 #: `informatics.jax.org` nor `rgd.mcw.edu` contains the name of the registry it serves, so no rule
 #: derives one from the other. R53 §2.3.1's shape one level over -- the identity a document
@@ -3307,7 +3311,7 @@ def build() -> dict:
     # the meta-schema rather than repeated, since a copy is what goes stale.
     return {
         "$schema": json.loads((HERE / "registry.schema.json").read_text())["$id"],
-        "registry_version": "0.3.0",
+        "registry_version": "0.4.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",
@@ -3340,8 +3344,11 @@ if __name__ == "__main__":
     for schema, consumer in VENDORED.items():
         source = HERE / schema
         if not consumer.parent.is_dir():
-            print(f"skip  {schema} -> {consumer} (sibling not present)")
-            continue
+            if consumer.parent.parent.is_dir():
+                consumer.parent.mkdir()
+            else:
+                print(f"skip  {schema} -> {consumer} (sibling not present)")
+                continue
         if consumer.exists() and consumer.read_text() == source.read_text():
             continue
         consumer.write_text(source.read_text())

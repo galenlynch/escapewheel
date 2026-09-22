@@ -2969,3 +2969,81 @@ note = "each validation layer supplies its own dependency facts"
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-self-description" }]
 note = "registry identities and the document-wide language selection changed atomically with migrated rules"
+
+[clause."R126 §3.1"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-core-logical-schema-scope" },
+  { part = "09", anchor = "ew-extension-definition" },
+]
+note = "language-neutral prose and four expressly incorporated JSON artifacts jointly own the complete contract"
+
+[clause."R126 §3.2"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-registry-document" },
+  { part = "09", anchor = "ew-extension-namespacing" },
+  { part = "09", anchor = "ew-core-extension-reference-direction" },
+]
+note = "disjoint core and extension classes, selectors, namespaces, versions, and reference direction"
+
+[clause."R126 §3.3"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-registry-self-description" },
+  { part = "02", anchor = "ew-registry-conformance" },
+]
+note = "ordered phases, abstract result, stable outcomes, skip reasons, and precedence"
+
+[clause."R126 §3.4"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-column-declaration" },
+  { part = "02", anchor = "ew-registry-conformance" },
+]
+note = "closed local shape and conditionals are carried exactly by the incorporated meta-schema"
+
+[clause."R126 §3.5"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-registry-conformance" },
+  { part = "09", anchor = "ew-extension-definition" },
+]
+note = "the incorporated descriptor enumerates the exact cross-declaration invariant inventory"
+
+[clause."R126 §3.6"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-table-resource-requirements" },
+  { part = "02", anchor = "ew-logical-references" },
+  { part = "02", anchor = "ew-identifier-semantics" },
+  { part = "02", anchor = "ew-registry-conformance" },
+]
+note = "resource identity, keys, references, semantics, context, and static-rule algorithms"
+
+[clause."R126 §3.7"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-session-scope" }]
+note = "session scope is proven by required, compatible, complete-key reference paths"
+
+[clause."R126 §3.8"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-logical-column-naming" },
+  { part = "02", anchor = "ew-registry-conformance" },
+]
+note = "declaration-backed naming is conformance; layout and prose heuristics remain authoring guidance"
+
+[clause."R126 §3.9"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-unit-and-clock-context" },
+  { part = "02", anchor = "ew-registry-conformance" },
+  { part = "02", anchor = "ew-logical-schema-normative-references" },
+]
+note = "offline exact UCUM syntax and canonical non-dereferenced authority identities"
+
+[clause."R126 §3.10"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-self-description" }]
+note = "incompatible development meta-schema, core-registry, and extension-example version transition"

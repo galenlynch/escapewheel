@@ -54,10 +54,11 @@ def documents() -> list[Path]:
     return found
 
 
-#: Where the invariants that hold of any registry document live. They left `registry/check.py` so
-#: that `escapewheel extension check` could run them, and that script now imports them.
-DOCUMENT_INVARIANTS = (
-    "escapewheel-validator/src/escapewheel_validator/registry_document.py"
+#: The incorporated descriptor is the enumerable invariant inventory. Part 02 and Part 09 own
+#: their algorithms; the shared checker implements them and `registry/check.py` consumes one
+#: complete result.
+REGISTRY_CONTRACT = (
+    "registry/registry_contracts/escapewheel-registry-contract-v0.1.json"
 )
 
 
@@ -78,22 +79,7 @@ def _check_counts() -> tuple[int, int]:
             and id(n) not in exclude
         )
 
-    shared = ast.parse((ROOT / DOCUMENT_INVARIANTS).read_text())
-    structural = next(
-        n
-        for n in shared.body
-        if isinstance(n, ast.FunctionDef) and n.name == "structural"
-    )
-    declarations = next(
-        n
-        for n in shared.body
-        if isinstance(n, ast.FunctionDef) and n.name == "declarations"
-    )
-    per_document = calls(structural, "c_") + sum(
-        1
-        for n in ast.walk(declarations)
-        if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "Finding"
-    )
+    per_document = len(json.loads((ROOT / REGISTRY_CONTRACT).read_text())["invariants"])
     return per_document, calls(
         ast.parse((ROOT / "registry/check.py").read_text()), "check"
     )
@@ -217,7 +203,7 @@ def facts() -> dict[str, str]:
         "extensions": f"{len(extensions)} extension registries: {', '.join(extensions)}",
         "corpus": f"{corpus} conformance packets",
         "checks": (
-            f"{per_document} structural invariants, each applied to core and to each of the "
+            f"{per_document} registry-contract invariants, applied by class to core and each of the "
             f"{len(extensions)} extension registries, and {whole} further checks over the "
             f"whole set"
         ),

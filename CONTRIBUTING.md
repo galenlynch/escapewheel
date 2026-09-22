@@ -26,7 +26,9 @@ which files a person writes, the rest is a straight line.
 | `revisions/accepted/R<N>-*.md` | accepted decision records explaining changes incorporated into the specification or revision process |
 | `registry/build.py` | one block per revision, applying it to the parsed Part 02 |
 | `registry/rules.json` | Tier 2 rules — the checks structure cannot imply |
-| `registry/registry.schema.json` | the meta-schema a registry document validates against |
+| `registry/registry.schema.json` | the local-shape schema a registry document validates against |
+| `registry/registry_contract.schema.json` | the closed shape of a registry-contract descriptor |
+| `registry/registry_contracts/*.json` | phase and semantic-invariant identities, applicability, and owning anchors |
 | `registry/manifest.schema.json` | the JSON Schema for `packet.json` |
 | `registry/extensions/*.json` | extension registries, in the same format, hand-written |
 | `escapewheel-validator/.../generate.py` | how Tier 1 checks are derived from structure |
@@ -43,6 +45,7 @@ registry/rules.json (+ R24 templates) ─┘         │
                                                  └──render.py──> registry/README.md (marked regions)
 
 registry/registry.schema.json ──build.py──> escapewheel-validator/src/…/schemas/
+registry/registry_contract*  ──build.py──> escapewheel-validator/src/…/schemas/
 registry/manifest.schema.json ──build.py──> escapewheel-reader/src/…/schemas/
 ```
 
@@ -126,12 +129,12 @@ the order matters.
    validator would have to learn.
 5. **`build.py`** writes `logical_schemas.json`, then calls `render.py` for `tables.md` and the
    README's regions, then copies the hand-written schemas into their consuming packages.
-6. **`check.py`** verifies the result: the structural invariants, each applied to core and to
-   every extension registry, then the meta-schema, the naming conventions, the selected rule
-   language, and — with DuckDB present — that every Tier 2 rule passes the static profile check
-   and binds against empty qualified tables built from the registry. The invariants themselves are
-   imported from `escapewheel_validator.registry_document`, so an extension author runs the same
-   ones through `escapewheel extension check`. Section 7 counts them.
+6. **`check.py`** verifies the result: one complete registry-contract result for core and every
+   extension, then repository authoring conventions, source-to-output agreement, vendored copies,
+   and — with DuckDB present — execution binding against empty qualified tables built from the
+   registry. The shared result is implemented in `escapewheel_validator.registry_document`, so an
+   extension author and this repository receive the same answer. Section 7 counts the descriptor's
+   invariant inventory.
 7. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the
    registry at validation time: not-null from `presence`, uniqueness from `primary_key`,
    anti-joins from `references`, membership from `enum`, and two more from each discriminator.
@@ -188,18 +191,19 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 fall and must not rise. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 651 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 661 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for
 
-The invariants that hold of **any** registry document live in
-`escapewheel_validator.registry_document`, so `escapewheel extension check` runs exactly what core
-is held to; `check.py` imports them and adds what is true of this repository's build. How many
-there are is counted from both sources, by `facts.py` parsing them:
+The incorporated registry-contract descriptor enumerates the invariants that apply to core and
+extension documents by class. Their algorithms are owned by Parts 02 and 09 and implemented once
+in `escapewheel_validator.registry_document`; `escapewheel extension check` and `check.py` consume
+that complete result. `check.py` separately adds checks true only of this repository's build.
+`facts.py` counts the descriptor inventory and those repository checks:
 
 <!-- BEGIN facts: checks -->
-35 structural invariants, each applied to core and to each of the 4 extension registries, and 46 further checks over the whole set
+20 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 35 further checks over the whole set
 <!-- END facts: checks -->
 
 | check | catches |

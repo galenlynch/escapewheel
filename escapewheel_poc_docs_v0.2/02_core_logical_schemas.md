@@ -11,18 +11,26 @@ The logical standard defined by this part is identified by `escapewheel-logical-
 
 The column-level definitions themselves are not written here. They are data (§9), carried in a registry document that a packet embeds and that generates the checks of Part 05. This part is the rules the registry obeys; the registry is the schema.
 
-This part expressly incorporates `registry/logical_schemas.json` as normative for its exact current
-table, column, key, reference, vocabulary, and rule declarations; that generated registry is what a
-packet embeds. `registry/tables.md` is a generated, informative listing of the same declarations.
-This part owns their declaration model and meaning. A disagreement between the part, incorporated
-registry, or informative projection makes the specification candidate internally inconsistent.
+This part expressly incorporates the following artifacts:
+
+| artifact | normative extent |
+|---|---|
+| `registry/registry.schema.json` | exact local JSON structure and conditional shape constraints |
+| `registry/registry_contract.schema.json` | exact structure of a registry-contract descriptor |
+| `registry/registry_contracts/escapewheel-registry-contract-v0.1.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
+| `registry/logical_schemas.json` | exact current core and analysis table, column, key, reference, vocabulary, and rule declarations |
+
+The generated core registry is what a packet embeds. `registry/tables.md` is a generated,
+informative listing of the same declarations. This part owns the declaration model, conformance
+algorithms, and meanings. A disagreement among the part and its incorporated artifacts makes the
+specification candidate internally inconsistent.
 
 <a id="ew-table-resource-requirements" data-spec-anchor="canonical"></a>
 ## 2. Table resource requirements
 
-Every table resource MUST declare:
+Each member name of the root `tables` object is the resource identifier of the table it contains.
+That table declaration MUST contain:
 
-- a schema identifier;
 - an ordered list of columns, each conforming to §3;
 - a primary key, or `null`;
 - its references to other tables (§7);
@@ -31,8 +39,8 @@ Every table resource MUST declare:
 <a id="ew-column-declaration" data-spec-anchor="canonical"></a>
 ## 3. Column declaration
 
-Every column MUST declare a name, a type, a presence, and a role. It MAY declare an identity, a
-vocabulary, a unit, and a clock.
+Every column MUST declare a name, a type, a presence, and a role. The role and type determine which
+other fields the column requires or permits.
 
 | attribute | required | clause |
 |---|---|---|
@@ -42,29 +50,32 @@ vocabulary, a unit, and a clock.
 | `role` | yes | §8.1 |
 | `identity` | for identifiers | §8.2 |
 | `enum` | for closed vocabularies | §9.3 |
-| `resolves`, `discriminates` | for discriminators | §8.3 |
+| `resolves`, `discriminates`, `positions_in`, `discriminates_via` | as applicable for discriminators | §8.3 |
 | `unit`, `unit_from`, `clock_from` | where applicable | §8.4 |
 | `authority` | where one nomenclature covers the column | §9.3 |
 | `description` | for an open vocabulary | §9.3 |
 
-A column's `description` MUST NOT restate what one of that column's own fields declares. `vocabulary`, `enum`, `reserved_values`, `authority` and `resolves` are read by a rule; a description is prose for a person, and prose repeating a field is a second statement of the same fact that nothing compares. What a description says is what no field can: the form the values take, what a reserved value means, and how two values compare. Naming a declared value is not restating one where the description says what that value means — `core.array_assets.band` names `wideband`, `ap` and `lfp` because it states what each is, and `core.processing_runs.status` named its three and cited their meanings elsewhere, so the list said nothing the `enum` did not.
-
-`registry/check.py` enforces this for `vocabulary`, `resolves` and `enum`. An `authority`'s name in prose is indistinguishable from prose, so a description SHOULD NOT name a nomenclature the field identifies unless naming it is what makes the form legible: `core.subjects.strain` needs MGI named to say why `C57BL/6J`'s substrain letter matters, and the field beside it holds a URI a reader may not recognise.
+A description MUST NOT contradict or override a machine declaration. Concise, non-duplicative
+wording remains authoring style rather than a registry-conformance comparison of English text.
+The one description compared literally is the standard `metadata` description in §8.6.
 
 <a id="ew-logical-column-naming" data-spec-anchor="canonical"></a>
 ## 4. Naming
 
-Column names MUST be lowercase snake case.
+Resource names and column names MUST be lowercase snake case. Registry conformance enforces these
+relations in both directions where stated:
 
-| suffix | use |
-|---|---|
-| `_id` | a stable identifier |
-| `_name` | the name an assigned identifier was assigned from |
-| `_tick` | a tick coordinate on a declared clock |
-| `_uri`, or bare `uri` | a URI |
-| `_index` | a zero-based offset into a sequence |
+- an identifier has an `_id` name, and an `_id` name declares an integer identifier;
+- a coordinate has a `_tick` name, and a `_tick` name declares a coordinate;
+- a structural index has an `_index` name, and an `_index` name declares a structural index or
+  sequence position;
+- an `_name` name declares a string; and
+- an `_uri` name, or the bare name `uri`, declares a string.
 
-A name is a property of the registry rather than of any packet's rows, so naming is checked against the declaration and not by a validation rule. A naming exception MUST carry a reason.
+A registry checker determines discriminator behavior from its declaration and MUST NOT infer it
+from a `_kind` suffix. Column order, adjacency, reserved-word preferences, plural-name preferences,
+and the vocabulary of same-spelled columns are authoring conventions rather than registry
+conformance requirements.
 
 A source-provenance label — `local_electrode_label`, `local_channel_label`, `local_unit_label` — is a `string` carrying whatever base the producing software used, and a consumer MUST NOT use it as an offset into any packet resource.
 
@@ -114,18 +125,37 @@ Duplication is permitted only where it buys otherwise-unavailable access. Axis n
 
 A table declares each foreign key as a reference naming the target resource, this table's columns, and the target's columns. A reference MAY be composite, nullable, or self-referencing.
 
-A reference MUST relate columns of the same type, of the same role, and of the same identity where both are identifiers. A join is on values: two columns of different types resolve to each other not at all, and relating an assigned identifier to a carried one resolves to nothing.
+A reference's source and target lists MUST be nonempty, contain no duplicate member, and have equal
+arity. Every source and target member MUST resolve. The target list MUST equal the target table's
+complete, non-null primary key in declared order.
+
+Each paired column MUST have the same type and role and, where it is an identifier, the same
+identity. A data column paired with a discriminator as the declared shared key is the sole role
+exception. A join is on values: columns of different types resolve to each other not at all, and
+relating an assigned identifier to a carried one resolves to nothing.
 
 Where §5.3 requires `int64` of an identifier whose distinct values may exceed `int32`, every column referencing it is `int64` too — the escape is taken on both sides or on neither, since a narrow column referencing a wide one truncates silently.
 
 <a id="ew-session-scope" data-spec-anchor="canonical"></a>
 ### 7.1 Session scope
 
-A table is **session-scoped** where it reaches `core.sessions` through its declared references, directly or transitively. That is a property of the registry, computable with no packet in hand.
+A table is **session-scoped** exactly where it has a session-preserving reference path ending at
+`core.sessions`; the zero-edge path makes `core.sessions` the base case. A session-scoped table
+MUST carry a required `int32` identifier named `session_id` with assigned identity. A table without
+such a path MUST NOT carry that column.
 
-A session-scoped table MUST carry a `session_id` column — `int32`, required, role `identifier`, identity `assigned` — and MUST declare the reference `session_id` → `core.sessions.session_id`. A table that does not reach `core.sessions` MUST NOT carry one; `core.subjects` and `core.source_files` are the two, which `core.sessions` references rather than the reverse.
+A reference is a session-preserving edge only where:
 
-Carrying the column without the reference is what the rule forbids: Tier 1 generates one anti-join per declared reference and nothing from a column's name, so an undeclared `session_id` is a foreign key no rule can see.
+1. its source contains `session_id` exactly once and maps it at the same position to the target's
+   `session_id`;
+2. every source member is required;
+3. the target is the complete non-null primary key required by §7; and
+4. every pair satisfies §7's type, role, and identity compatibility rules.
+
+The path MUST consist only of session-preserving edges and MUST terminate at
+`core.sessions.session_id`. Graph reachability, a cycle, or a reference carrying a different
+identifier does not prove session scope. Packet validation enforces the ordinary foreign-key
+anti-join at every edge and need not execute a recursive row query.
 
 A writer fills the column from the parent row it already read, or from the session it was constructed with, and MUST NOT infer it from a name: a file path and a packet directory both spell a session, and neither is a statement this specification constrains.
 
@@ -159,9 +189,15 @@ Because a reference relates columns of the same role (§7), converting every str
 <a id="ew-identifier-semantics" data-spec-anchor="canonical"></a>
 ### 8.2 Identity
 
-An `identifier` column MUST declare `carried` or `assigned`. A table owning an assigned identifier MUST carry the corresponding `*_name` column, and MUST NOT carry a second column naming the same thing. Seven tables carried both a generated `*_name` and a `name` declared by Part 02, equal on every row of every packet that wrote them; the `*_name` survives, taking the presence the declared column had.
+An `identifier` column MUST declare `carried` or `assigned`. A table owns an assigned identifier
+exactly where the identifier is in its primary key and is not a source member of a reference the
+table declares. For every owned assigned identifier, the table MUST declare exactly one
+corresponding name formed by replacing `_id` with `_name`. The name MUST be a string data column
+and MUST NOT declare `identity`.
 
-A `carried` identifier gets no name column, and a table MUST NOT declare one for it: the value is already the source's own, so a name beside it would be a second identity for one thing.
+A table that merely carries or references an assigned identifier MUST NOT declare that same-base
+`*_name` column. A carried identifier likewise gets no corresponding name column: its value is
+already the source's own identity.
 
 An assigned identifier's `*_name` MUST be unique within its packet — the 16 name columns in core and analysis that pair with one, not the 6 that name a kind of thing and are expected to repeat, such as `core.sorting_runs.sorter_name`. `registry/check.py` sorts them and requires the second kind to be declared. No rule can check it: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct case where four streams naming one serial become one device. The obligation falls on whatever composes the name.
 
@@ -175,7 +211,9 @@ extensions.
 **Which column carries it.** A discriminator MAY be declared on the table whose rows it
 specialises, or on a table those rows reach through one declared reference. Where it is not on the
 specialised table it MUST declare `discriminates_via`, holding the referencing column as a dotted
-`resource.column`; one reference and no more.
+`resource.column`. That named column MUST belong to a resource declaring exactly one reference in
+which the column is a source member and the discriminator's table is the target. This is a reverse
+one-hop declaration from the specialised rows to the discriminator.
 
 Where a column carries a discriminator's value as part of a shared key, it is **not** a discriminator and
 MUST NOT declare the role: it resolves nothing a consumer of that row does not already know. Such a
@@ -189,8 +227,9 @@ mismatch a reference may carry.
 | `required` | a defect: the row is uninterpretable |
 | `optional` | a fact: the packet does not hold that resource |
 
-Where a discriminator is paired with a value column, both are nullable and the two MUST agree — a
-row declares both or neither. A row declaring neither is **undeterminable**, which a
+Where a discriminator is paired with a value column, the two columns have the same `required` or
+`nullable` presence; neither may be optional. Their values MUST agree on presence — a row declares
+both or neither. A row declaring neither is **undeterminable**, which a
 consumer MUST report apart from a row whose value resolves to nothing: the fix for one is to record
 the missing half, and for the other to correct what it names.
 
@@ -252,9 +291,15 @@ query that has to read it.
 
 A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit_from` naming a column that carries it. A `coordinate` column MUST declare `clock_from` where the clock its ticks are on is not the one that row's `clock_id` names, and MUST declare it where the table has no `clock_id` at all. Measured across the registry, 6 of 20 coordinates declare one and the other 14 resolve to their own row's clock; none has neither.
 
-`clock_from` names a column of the same table or a one-hop `resource.column`. A consumer resolves it rather than guessing, because converting on the wrong clock fails silently.
+`unit_from` and `clock_from` each name a column of the same table or a one-hop
+`resource.column`. The latter form MUST resolve through exactly one reference the table declares.
+A consumer resolves the source rather than guessing.
 
-A validator decides all of it from the registry with no packet in hand: `unit` and `unit_from` are mutually exclusive, `clock_from` appears only on a `coordinate`, a same-table name is a column of that table, a `resource.column` name resolves through a reference the table declares and names a column of that resource, and a `clock_from` target is an `identifier` referencing `core.clocks`.
+`unit` and `unit_from` are mutually exclusive. A `unit_from` target MUST be a string column whose
+authority entries include the canonical UCUM identity `https://ucum.org/ucum`. For a coordinate,
+the clock source is its explicit `clock_from` target where present and otherwise the same table's
+`clock_id`. That source MUST be an identifier participating in a reference to
+`core.clocks.clock_id`. `clock_from` MUST NOT occur on another role.
 
 A column holding a physical unit MUST hold a UCUM code, and a column declaring one MUST declare a UCUM code — an annotation in curly braces is one, and is dimensionless, which is what a quantity normalised by something the packet measured is.
 
@@ -263,18 +308,21 @@ A consumer MAY label a quantity with its declared unit, and MUST NOT silently co
 <a id="ew-functional-dependence" data-spec-anchor="canonical"></a>
 ### 8.5 Functional dependence
 
-A column MAY declare `determined_by`, naming the columns whose values fix its own: two rows agreeing on every column named agree on this one, and an empty list declares a constant. The declaration is structural, decidable from the registry with no packet in hand.
+A column MAY declare `determined_by`, naming the columns whose values fix its own: two rows agreeing
+on every column named agree on this one, and an empty list declares a constant. Every member MUST
+resolve to a column of the same table, and no member may occur twice. The declaration is
+structural, decidable from the registry with no packet in hand.
 
 It is a statement about values and holds under any profile. What a profile does with it is the profile's: Part 03 §5.3 uses it to decide whether a table's stored order settles its primary key, and requires the scan establishing that order to verify the declaration against rows, because a wrong one waives a check rather than failing one.
 
 <a id="ew-free-form-metadata" data-spec-anchor="canonical"></a>
 ### 8.6 Free-form metadata
 
-A column named `metadata` is a `json_string` holding what a source stated about a row that this standard does not model, carried in the source's own vocabulary and read by no rule. Every declaration carries that description and no other.
+A column named `metadata` MUST be an optional `json_string` data column with this exact
+description: “What the source stated about this row that the standard does not model, carried in
+the source's own vocabulary and read by no rule.”
 
 A table's registry entry MUST declare `metadata` where its primary key includes an `identifier` column that is not part of a declared reference, MUST NOT declare one where every key column is part of a declared reference, and MAY declare one otherwise. An identifier of the table's own is what makes a row a thing rather than a statement about other things; a key made entirely of other tables' identifiers makes it a relationship, and nothing can be said about a relationship that is not a fact about one of its ends. Seventeen core tables fall in the first band and three in the second. Both bounds are decidable from the registry with no packet in hand, and `registry/check.py` enforces both against core and against every extension.
-
-A `metadata` column's presence MUST be `optional`. The applicable check matches the bare column name and is sound only while every column called `metadata` may be absent from the file.
 
 A validator SHOULD report, at `info`, a declared `metadata` column that no row of the packet fills. Where the key neither requires the column nor forbids it, declaring one is a judgement, and this is the evidence against which it is revisited: `core.spike_events` carried the column on 286,896,563 rows that no adapter ever filled.
 
@@ -301,31 +349,40 @@ No rule checks either half, and none is added. Nothing structural tells a code f
 <a id="ew-registry-document" data-spec-anchor="canonical"></a>
 ### 9.1 The schema is one document
 
-Table structure and validation rules are carried in one JSON document. It declares the semantic and
-logical standard versions, its own registry version, one document-wide `rule_language`, and its
-tables. The selected language applies atomically to every Tier 2 rule. A rule MUST NOT repeat or
-override it, and one registry document MUST NOT mix languages. The document MUST NOT contain
-registry-build `derived_from` at its root or `since` on a table or column declaration. The root,
-table, and column objects are closed, so any such property makes the document invalid. This rule
-does not apply to the packet catalog's resource-lineage `derived_from`.
+Table structure and validation rules are carried in one JSON document. Every registry document
+MUST carry `$schema`, `registry_version`, `logical_standard_version`, `rule_language`, and
+`tables`.
+
+A core registry MUST carry `semantic_standard_version` and MUST NOT carry `extension_id` or
+`extends`. An extension registry MUST carry `extension_id` and MUST NOT carry
+`semantic_standard_version` or `extends`. The presence of `extension_id` determines the document
+class; caller context MUST NOT redefine it.
+
+The selected rule language applies atomically to every Tier 2 rule. A rule MUST NOT repeat or
+override it, and one document MUST NOT mix languages. Root, table, column, reference, authority,
+and rule objects are closed. Registry-build `derived_from` and `since` fields are therefore
+invalid; this does not affect the packet catalog's resource-lineage `derived_from`.
 
 <a id="ew-registry-self-description" data-spec-anchor="canonical"></a>
 ### 9.2 Self-description
 
 A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on. A packet whose embedded registry disagrees with its recorded version is invalid.
 
-A core or extension registry document published with this specification MUST carry a top-level
-`$schema` equal to `https://escapewheel.org/schemas/registry/0.3.0`. The registry meta-schema MUST
-carry that exact value as its `$id`. The core registry's `registry_version` MUST be exactly `0.3.0`.
-A registry published with this specification MUST select
-`rule_language: escapewheel-rule-sql-v0.1`. The shipped extension versions are `0.3.0` for
-`aind_opto`, `0.2.0` for `aind_unit_qc`, `0.4.0` for `dynamic_foraging`, and `0.3.0` for
-`vr_foraging`.
-A validator MUST NOT dereference `$schema`.
+The incorporated registry meta-schema has `$id`
+`https://escapewheel.org/schemas/registry/0.4.0`. Every registry document conforming to that
+schema MUST carry that value in `$schema`. The incorporated core registry has
+`registry_version: 0.4.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`logical_standard_version: escapewheel-logical-v0.1`, and
+`rule_language: escapewheel-rule-sql-v0.1`.
 
-If `$schema` names no meta-schema the consumer holds, the document MUST be reported as governed by
-a schema this consumer does not have — an **`info`** finding, not an error. A core validator is not
-required to hold an extension's schema, and the same reasoning applies one level up.
+An extension's `registry_version` identifies that extension registry and advances independently of
+the core registry's version. An extension conforming to the incorporated meta-schema MUST carry
+the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT carry `extends`.
+The core specification does not assign an extension's version.
+
+A checker selects schemas and contracts only from local artifacts and MUST NOT dereference an
+identifier. An old registry document MUST NOT be silently interpreted under the new meta-schema
+identifier. These development identifiers MUST NOT later be reused for an incompatible contract.
 
 <a id="ew-registry-vocabularies" data-spec-anchor="canonical"></a>
 ### 9.3 Vocabularies
@@ -351,9 +408,154 @@ A scorer's own `label` is open, because aggregating over scorers is incompatible
 
 A value MAY be reserved only where it is read **whole**: where a consumer comparing two packets learns something from the value alone, without knowing what either packet was doing. Where an external nomenclature defines the values instead, the registry names it rather than copying a set the standard does not itself define. A validator SHOULD report a value outside a reserved set at `info`, and MUST NOT fail on one.
 
-An `open` column MUST carry a description stating the form its values take. Where one nomenclature covers the column, the column MAY declare `authority` — an array whose entries each declare a `name`, which is what a person reads, and a `uri`, which is identity rather than a fetch instruction: a validator MUST NOT dereference one and MUST NOT reject a value for being absent from it. Both are required of an entry, because the name is a fact and not a substring: neither `informatics.jax.org` nor `rgd.mcw.edu` contains the name of the registry it serves. A writer MUST spell a value as the named nomenclature does.
+An `open` column MUST carry a nonempty description stating the form its values take. A string data
+column with an open or closed vocabulary MAY declare `authority`, a nonempty array whose entries
+each carry a human-readable `name` and an absolute RFC 3986 `uri`. No URI may occur twice in one
+array. An authority URI is identity rather than a fetch instruction: a validator MUST NOT
+dereference one and MUST NOT reject a value for being absent from it. An entry named `UCUM` MUST
+use `https://ucum.org/ucum`, and an entry using that URI MUST be named `UCUM`. A writer MUST spell
+a value as the named nomenclature does.
 
 A column's declarations are rendered in `registry/tables.md` from the fields holding them — the vocabulary, the closed set itself, the reserved values, the authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is, and it showed none of them, which is why 35 descriptions had come to say them in prose.
+
+<a id="ew-registry-conformance" data-spec-anchor="canonical"></a>
+### 9.4 Registry-document conformance
+
+The incorporated registry-contract descriptor enumerates one complete, language-neutral
+conformance contract. Its closed root contains `$schema`, `id`, `registry_schema`,
+`semantic_standard`, `logical_standard`, `rule_languages`, `phases`, and `invariants`. Each closed
+invariant entry contains exactly `id`, `phase`, `classes`, and `anchors`. The descriptor contains
+identities and applicability only; it MUST NOT contain algorithms, executable expressions,
+messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
+the algorithms and meanings.
+
+The initial descriptor has ID `escapewheel-registry-contract-v0.1`. A checker MUST evaluate its
+phases in this order:
+
+1. `json`;
+2. `schema_selection`;
+3. `shape`;
+4. `contract_selection`;
+5. `semantic`;
+6. `rule_static`; and
+7. `external_domain`.
+
+A byte-oriented entry point MUST decode UTF-8 JSON and reject every duplicate object member. A
+mapping-oriented entry point begins after `json` and MUST NOT claim that the source bytes had
+unique members.
+
+After JSON decoding, a checker MUST inspect only root `$schema` to select a local meta-schema. A
+missing or non-string selector makes the document invalid; an unknown selector makes evaluation
+unsupported. The selected meta-schema validates the complete shape, and later phases MUST NOT
+index into a shape-invalid document.
+
+For a shape-valid core document, its class and declared registry-schema, semantic-standard,
+logical-standard, and rule-language identifiers MUST select exactly one local descriptor. For an
+extension, the tuple substitutes the required core context's semantic-standard identifier. No
+component may be inferred or ignored. An unknown or ambiguous tuple makes evaluation unsupported.
+A descriptor ID and a tuple that selected a contract MUST NOT be reinterpreted after publication.
+
+Without usable core context, an extension's visible class, registry-schema, logical-standard, and
+rule-language components MUST still select one unambiguous local descriptor before local checks
+run. No match or more than one match is unsupported. One match supplies the invariant inventory;
+only core-dependent evaluation is incomplete. An extension's core context is usable only where it
+selected the same contract, is valid, and declares the extension's logical-standard identifier.
+An absent, unsupported, incomplete, invalid, or mismatched core context makes core-dependent
+extension phases incomplete, not invalid. Shape and available extension-local invariants still
+run, and an independent invalid result dominates incompleteness.
+
+Applicable semantic invariants run in descriptor order. Tier 2 rules then receive Part 11 static
+validation. External lexical-domain validation runs last and offline.
+
+The complete result contains the selected descriptor ID where selection succeeded, exactly one
+overall state from `valid`, `invalid`, `unsupported`, and `incomplete`, and one record for every
+phase in order. Every phase record has a state from `passed`, `invalid`, `unsupported`,
+`incomplete`, and `skipped`, and ordered outcome records for each check that did not pass and each
+check skipped within a partially evaluated phase.
+
+An outcome record contains its state and stable schema, invariant, or rule-language outcome ID;
+the owning resource or rule ID where applicable; and an RFC 6901 instance pointer. A skipped
+outcome or phase also contains a stable reason ID. A mapping without byte locations still
+preserves the pointer.
+
+Pre-contract failures use these IDs:
+
+- `registry.json.invalid_utf8`;
+- `registry.json.invalid_syntax`;
+- `registry.json.duplicate_member`;
+- `registry.schema.selector_missing`;
+- `registry.schema.selector_type`;
+- `registry.schema.selector_unsupported`;
+- `registry.contract.selector_unsupported`;
+- `registry.contract.selector_ambiguous`; and
+- `registry.contract.core_context_unusable`.
+
+Skipped work uses these reason IDs:
+
+- `registry.phase.mapping_input`;
+- `registry.phase.prerequisite_invalid`;
+- `registry.phase.prerequisite_unsupported`; and
+- `registry.phase.prerequisite_incomplete`.
+
+Schema findings use the selected meta-schema ID and schema-location pointer. Semantic and
+external-domain findings use descriptor invariant IDs. Rule-static findings use Part 11 outcome
+IDs and identify the owning rule. An outcome is a finding exactly when its state is `invalid`;
+unsupported, incomplete, and skipped outcomes are not findings. A pre-instance outcome uses the
+empty pointer. A duplicate-member outcome points to its containing object.
+
+Within a phase, outcomes are ordered by instance pointer, outcome ID, then owner, comparing code
+point for code point. A definitive violation dominates an independent unsupported or incomplete
+phase; otherwise precedence is `invalid`, `unsupported`, `incomplete`, then `valid`. Only completed
+passing phases produce `valid`. A dependent skipped phase records its reason.
+
+The descriptor assigns these invariants in this exact order:
+
+| invariant ID | phase | classes |
+|---|---|---|
+| `registry.namespace.owned` | semantic | core, extension |
+| `registry.namespace.reference_direction` | semantic | core, extension |
+| `registry.column.name_unique` | semantic | core, extension |
+| `registry.primary_key.resolves` | semantic | core, extension |
+| `registry.reference.resolves` | semantic | core, extension |
+| `registry.reference.target_key` | semantic | core, extension |
+| `registry.reference.compatible` | semantic | core, extension |
+| `registry.session_scope.path` | semantic | core, extension |
+| `registry.identity.name` | semantic | core, extension |
+| `registry.metadata.eligibility` | semantic | core, extension |
+| `registry.determined_by.resolves` | semantic | core, extension |
+| `registry.discriminator.declaration` | semantic | core, extension |
+| `registry.discriminator.path` | semantic | core, extension |
+| `registry.context_source.resolves` | semantic | core, extension |
+| `registry.unit.ucum_2_2_cs` | external_domain | core, extension |
+| `registry.authority.uri` | semantic | core, extension |
+| `registry.rule.id_unique` | semantic | core, extension |
+| `registry.rule.id_owner` | semantic | core, extension |
+| `registry.rule.required_inputs` | rule_static | core, extension |
+| `registry.core.device_detail` | semantic | core |
+
+Every descriptor anchor MUST identify every numbered-part clause defining the invariant. Invariant
+IDs are unique. The descriptor schema closes its objects; requires nonempty, duplicate-free arrays;
+and checks the identifier, class, phase, and canonical-anchor syntax stated by its incorporated
+artifact. Every anchor MUST resolve uniquely in the numbered specification.
+
+Column names and rule IDs are unique within a table and registry document respectively. A rule in
+`namespace.table` has the exact form `namespace.table.local_rule_id`, where `local_rule_id` is one
+lowercase snake-case identifier containing no dot. A non-null primary key has unique members, and
+each member resolves once to a required column. A null key admits duplicate rows and cannot be a
+reference target.
+
+Every `determined_by` member resolves locally. A discriminator selects exactly one shape: paired
+value through `discriminates`, by position through `positions_in`, or shared key through neither;
+it MUST NOT declare both fields. The selected companion is a string data column with matching
+non-optional presence. Target-specific row resolution remains packet validation, not registry
+conformance.
+
+In a core registry, no table other than `core.devices` may have a non-null primary key whose first
+member is `device_id`. This structural condition reserves device-detail tables for extensions.
+Each rule MUST pass Part 11's static contract, including rejection of every optional bound input.
+
+This section defines an abstract result. Public APIs, command-line output, reports, exception
+serialization, and the boundaries that require invocation are defined separately.
 
 ## 10. Validation rules
 
@@ -371,6 +573,10 @@ template that the registry build expands to those fields. Its registry-level `ru
 selects the interpretation of `sql`; [Part 11](11_tier_2_rule_language.md) defines the current
 language, relation mapping, and finding relation. A rule is logically attached to the resource
 whose `rules` array contains it, but it may name other resources the selected language permits.
+
+Rule IDs MUST be unique within a registry document. A rule held by `namespace.table` MUST have the
+exact ID `namespace.table.local_rule_id`, where `local_rule_id` is one lowercase snake-case
+identifier containing no dot.
 
 A rule's SQL MUST NOT reference a column whose presence is `optional`. A rule is executed against the file, and `optional` permits the column to be absent from it (§6), so a rule naming one does not miss a check — the query fails to parse, and the run meant to find defects reports an error of its own. A constraint that wants an optional column either makes it `nullable`, which declares it always present and sometimes empty, or moves to the shim of §10.3.
 
@@ -582,3 +788,15 @@ A coordinate's values reference the axis rows of their own frame on `(session_id
 A coordinate MAY carry values on fewer axes than its frame declares, where its source states none on the rest, and a consumer MUST NOT read an absent axis row as a zero: it is a position the source did not state on that axis. That is what a null in the struck `x_um`, `y_um` and `z_um` said, in the form the child table has.
 
 `axis_value` declares `unit_from` of `core.coordinate_frame_axes.unit`, resolved one hop through that reference (§8.4): the unit is the axis's, so a frame stated in millimetres needs no second set of columns and no column name carries a unit.
+
+<a id="ew-logical-schema-normative-references" data-spec-anchor="canonical"></a>
+## 13. Normative references
+
+- [The Unified Code for Units of Measure, version 2.2](https://ucum.org/ucum), revision date
+  2024-06-17. Literal `unit` declarations use its case-sensitive syntax and terminal tables.
+- [RFC 3986, *Uniform Resource Identifier (URI): Generic Syntax*](https://www.rfc-editor.org/rfc/rfc3986).
+  Authority identifiers use its absolute-URI syntax.
+
+Registry validation of both lexical domains is offline and MUST NOT dereference an identifier.
+The UCUM grammar applies to literal `unit` declarations; row values selected by `unit_from` are
+validated with packet data rather than as registry declarations.

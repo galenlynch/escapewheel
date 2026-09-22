@@ -15,8 +15,6 @@ import sys
 import time
 from pathlib import Path
 
-import pyarrow as pa
-
 HERE = Path(__file__).resolve().parent
 REGISTRY = json.loads(
     (HERE.parent.parent / "registry" / "logical_schemas.json").read_text()
@@ -108,10 +106,11 @@ def detail(extension_id, table, extra, *, based):
             }
         )
     return {
+        "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
         "registry_version": "0.1.0",
-        "logical_standard_version": "0.1",
+        "logical_standard_version": "escapewheel-logical-v0.1",
+        "rule_language": "escapewheel-rule-sql-v0.1",
         "extension_id": extension_id,
-        "extends": "escapewheel-logical-v0.1",
         "tables": {
             f"{extension_id}.{table}": {
                 "columns": columns + extra,

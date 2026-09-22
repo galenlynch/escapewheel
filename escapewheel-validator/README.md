@@ -10,6 +10,17 @@
 
 Validate an Escapewheel packet against the registry it embeds.
 
+Registry documents have their own ordered conformance result before packet rows are considered.
+The incorporated descriptor enumerates seven phases and 20 stable invariant IDs; the validator
+uses the same result for core and extensions. Local JSON shape comes from the registry
+meta-schema, cross-declaration meaning from Parts 02 and 09, Tier 2 static checks from Part 11,
+and literal units from an offline case-sensitive UCUM 2.2 parser.
+
+Computing that registry result is a separate trust-boundary operation. Part 02 does not require an
+ordinary packet read to revalidate an unchanged registry; a caller may reuse a result cached by a
+stable content identity. The public boundaries that require a fresh or cached result remain a
+separate specification decision.
+
 Rules are **data, not code**. `registry/logical_schemas.json` carries every table's structure
 and its Tier 2 rules, and the checks are generated from it rather than written per table. The
 execution contract is the whole protocol: **a check's query returns offending rows — empty is
@@ -122,3 +133,5 @@ sphinx-build -b html docs/source/ docs/build/html
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+The packaged [third-party notices](src/escapewheel_validator/licenses/THIRD_PARTY_NOTICES.md)
+cover the offline UCUM parser and its UCUM 2.2 data.

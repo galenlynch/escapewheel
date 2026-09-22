@@ -1,6 +1,6 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.3.0",
-  "registry_version": "0.3.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
+  "registry_version": "0.4.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
@@ -110,7 +110,7 @@
           "authority": [
             {
               "name": "UCUM",
-              "uri": "https://ucum.org/ucum.html"
+              "uri": "https://ucum.org/ucum"
             }
           ]
         },
@@ -248,7 +248,7 @@
           "authority": [
             {
               "name": "UCUM",
-              "uri": "https://ucum.org/ucum.html"
+              "uri": "https://ucum.org/ucum"
             }
           ]
         },
@@ -550,7 +550,7 @@
           "authority": [
             {
               "name": "UCUM",
-              "uri": "https://ucum.org/ucum.html"
+              "uri": "https://ucum.org/ucum"
             }
           ]
         },
@@ -698,7 +698,7 @@
           "authority": [
             {
               "name": "UCUM",
-              "uri": "https://ucum.org/ucum.html"
+              "uri": "https://ucum.org/ucum"
             }
           ]
         },
@@ -830,7 +830,7 @@
           "authority": [
             {
               "name": "UCUM",
-              "uri": "https://ucum.org/ucum.html"
+              "uri": "https://ucum.org/ucum"
             }
           ]
         },
@@ -1162,7 +1162,7 @@
           "authority": [
             {
               "name": "UCUM",
-              "uri": "https://ucum.org/ucum.html"
+              "uri": "https://ucum.org/ucum"
             }
           ]
         },
@@ -1176,7 +1176,7 @@
           "authority": [
             {
               "name": "UCUM",
-              "uri": "https://ucum.org/ucum.html"
+              "uri": "https://ucum.org/ucum"
             }
           ]
         },
@@ -1748,7 +1748,7 @@
           "authority": [
             {
               "name": "UCUM",
-              "uri": "https://ucum.org/ucum.html"
+              "uri": "https://ucum.org/ucum"
             }
           ]
         }
@@ -4696,7 +4696,7 @@
           "authority": [
             {
               "name": "UCUM",
-              "uri": "https://ucum.org/ucum.html"
+              "uri": "https://ucum.org/ucum"
             }
           ]
         },

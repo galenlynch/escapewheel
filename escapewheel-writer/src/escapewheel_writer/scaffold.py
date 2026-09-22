@@ -105,7 +105,12 @@ def _column(table: pa.Table, name: str, resource: str, decisions: list[str]) -> 
     return entry
 
 
-def draft(extension_id: str, tables: dict[str, Path], *, logical_standard_version: str = "0.1") -> Draft:
+def draft(
+    extension_id: str,
+    tables: dict[str, Path],
+    *,
+    logical_standard_version: str = "escapewheel-logical-v0.1",
+) -> Draft:
     """Draft a registry document covering `tables`, mapping resource name to a Parquet file.
 
     Parameters
@@ -139,8 +144,8 @@ def draft(extension_id: str, tables: dict[str, Path], *, logical_standard_versio
             "$schema": registry_meta_schema()["$id"],
             "registry_version": "0.1.0",
             "logical_standard_version": logical_standard_version,
+            "rule_language": "escapewheel-rule-sql-v0.1",
             "extension_id": extension_id,
-            "extends": "escapewheel-logical-v0.1",
             "tables": drafted,
         },
         decisions,

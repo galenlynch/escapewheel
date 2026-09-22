@@ -103,6 +103,7 @@
 "9.1" = "The schema is one document"
 "9.2" = "Self-description"
 "9.3" = "Vocabularies"
+"9.4" = "Registry-document conformance"
 "10" = "Validation rules"
 "10.1" = "Tier 1: generated from structure"
 "10.2" = "Tier 2: declared"
@@ -125,6 +126,7 @@
 "12.5" = "A clock's observation window"
 "12.6" = "A clock's alignment record"
 "12.7" = "A frame's axes"
+"13" = "Normative references"
 
 ["03"]
 "1" = "Scope"
@@ -477,6 +479,12 @@ section = "7"
 title = "References"
 aliases = []
 
+[anchor.ew-logical-schema-normative-references]
+part = "02"
+section = "13"
+title = "Normative references"
+aliases = []
+
 [anchor.ew-logical-standard]
 part = "00"
 section = "3.1.2"
@@ -583,6 +591,12 @@ aliases = []
 part = "07"
 section = "7"
 title = "Performance notes"
+aliases = []
+
+[anchor.ew-registry-conformance]
+part = "02"
+section = "9.4"
+title = "Registry-document conformance"
 aliases = []
 
 [anchor.ew-registry-document]

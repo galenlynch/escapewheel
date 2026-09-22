@@ -29,7 +29,7 @@ def test_duplicate_primary_key(packet_root):
 
 def test_unresolved_foreign_key(packet_root):
     trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    broken = trials.set_column(0, "session_id", pa.array(["s999", "s999"]))
+    broken = trials.set_column(0, "session_id", pa.array([999, 999], type=pa.int32()))
     _rewrite(packet_root, "trials", broken)
     report = validate(open_packet(packet_root))
     assert any(f.check == "core.trials.session_id_resolves" for f in report.findings)
@@ -1088,24 +1088,24 @@ def test_a_packet_recording_no_owned_digest_says_so(packet_root):
 def _extension(root, *, tables=None, mutate=None):
     """Give the packet an extension registry and a table conforming to it."""
     document = {
+        "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
         "registry_version": "0.1.0",
-        "logical_standard_version": "0.1",
+        "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",
         "extension_id": "task",
-        "extends": "escapewheel-logical-v0.1",
         "tables": {
             "task.trials": {
                 "columns": [
                     {
                         "name": "session_id",
-                        "type": "string",
+                        "type": "int32",
                         "presence": "required",
                         "role": "identifier",
                         "identity": "assigned",
                     },
                     {
                         "name": "trial_id",
-                        "type": "string",
+                        "type": "int32",
                         "presence": "required",
                         "role": "identifier",
                         "identity": "assigned",
@@ -1115,6 +1115,7 @@ def _extension(root, *, tables=None, mutate=None):
                         "type": "string",
                         "presence": "nullable",
                         "role": "data",
+                        "vocabulary": "closed",
                         "enum": ["left", "right"],
                     },
                 ],
@@ -1178,7 +1179,7 @@ def test_an_extensions_closed_vocabulary_is_enforced(packet_root):
 def test_an_extension_reference_into_core_resolves(packet_root):
     """Part 09 §2 lets an extension reference core. Without the cross-registry link the anti-join is
     never generated and an orphan validates clean -- the gap R46 closed for core."""
-    root = _extension(packet_root, mutate=lambda r: r["trial_id"].__setitem__(0, "no_such_trial"))
+    root = _extension(packet_root, mutate=lambda r: r["trial_id"].__setitem__(0, 999))
     report = validate(open_packet(root))
     assert any(f.check.endswith("_resolves") and f.extension == "task" for f in report.findings)
 

@@ -34,7 +34,7 @@ IDENTIFIERS = {
         "02",
         "ew-core-logical-schema-scope",
     ),
-    "registry_version": ("0.3.0", "02", "ew-registry-self-description"),
+    "registry_version": ("0.4.0", "02", "ew-registry-self-description"),
 }
 
 REFERENCE_MARKERS = {
@@ -351,9 +351,7 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
     numbered_texts = {number: documents[name] for number, name in PARTS.items()}
     for field, (value, owner, _anchor) in IDENTIFIERS.items():
         if field == "registry_version":
-            declaration = (
-                "The core registry's `registry_version` MUST be exactly `0.3.0`."
-            )
+            declaration = "`registry_version: 0.4.0`"
             if declaration not in numbered_texts[owner]:
                 found.append(f"{field} owner declaration is missing from Part {owner}")
         else:

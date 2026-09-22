@@ -1,0 +1,31 @@
+{
+  "$schema": "https://escapewheel.org/schemas/registry-contract/0.1.0",
+  "id": "escapewheel-registry-contract-v0.1",
+  "registry_schema": "https://escapewheel.org/schemas/registry/0.4.0",
+  "semantic_standard": "escapewheel-semantic-v0.1",
+  "logical_standard": "escapewheel-logical-v0.1",
+  "rule_languages": ["escapewheel-rule-sql-v0.1"],
+  "phases": ["json", "schema_selection", "shape", "contract_selection", "semantic", "rule_static", "external_domain"],
+  "invariants": [
+    {"id": "registry.namespace.owned", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-registry-document", "ew-extension-definition", "ew-extension-namespacing"]},
+    {"id": "registry.namespace.reference_direction", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-registry-document", "ew-core-extension-reference-direction"]},
+    {"id": "registry.column.name_unique", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-column-declaration", "ew-registry-conformance"]},
+    {"id": "registry.primary_key.resolves", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-table-resource-requirements", "ew-registry-conformance"]},
+    {"id": "registry.reference.resolves", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-logical-references", "ew-registry-conformance"]},
+    {"id": "registry.reference.target_key", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-logical-references", "ew-registry-conformance"]},
+    {"id": "registry.reference.compatible", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-logical-references", "ew-registry-conformance"]},
+    {"id": "registry.session_scope.path", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-session-scope", "ew-registry-conformance"]},
+    {"id": "registry.identity.name", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-identifier-semantics", "ew-registry-conformance"]},
+    {"id": "registry.metadata.eligibility", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-free-form-metadata", "ew-registry-conformance"]},
+    {"id": "registry.determined_by.resolves", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-functional-dependence", "ew-registry-conformance"]},
+    {"id": "registry.discriminator.declaration", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-discriminator-semantics", "ew-registry-conformance"]},
+    {"id": "registry.discriminator.path", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-discriminator-semantics", "ew-registry-conformance"]},
+    {"id": "registry.context_source.resolves", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-unit-and-clock-context", "ew-registry-conformance"]},
+    {"id": "registry.unit.ucum_2_2_cs", "phase": "external_domain", "classes": ["core", "extension"], "anchors": ["ew-unit-and-clock-context", "ew-registry-conformance", "ew-logical-schema-normative-references"]},
+    {"id": "registry.authority.uri", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-registry-vocabularies", "ew-registry-conformance", "ew-logical-schema-normative-references"]},
+    {"id": "registry.rule.id_unique", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-tier-2-rules", "ew-registry-conformance"]},
+    {"id": "registry.rule.id_owner", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-tier-2-rules", "ew-registry-conformance"]},
+    {"id": "registry.rule.required_inputs", "phase": "rule_static", "classes": ["core", "extension"], "anchors": ["ew-tier-2-rules", "ew-registry-conformance", "ew-tier-2-query-profile"]},
+    {"id": "registry.core.device_detail", "phase": "semantic", "classes": ["core"], "anchors": ["ew-discriminator-semantics", "ew-registry-conformance", "ew-extension-definition"]}
+  ]
+}

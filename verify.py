@@ -75,6 +75,18 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         ["uv", "run", "--project", str(TOOLS), "python", "check.py"],
     ),
     (
+        "registry: R126 migration and external-domain evidence",
+        ROOT / "conformance/registry-contract",
+        [
+            "uv",
+            "run",
+            "--project",
+            str(ROOT / "escapewheel-validator"),
+            "python",
+            "probe.py",
+        ],
+    ),
+    (
         "rules: portable language vectors and shipped rules",
         ROOT / "conformance/rule-language",
         ["uv", "run", "--project", str(TOOLS), "python", "probe.py"],

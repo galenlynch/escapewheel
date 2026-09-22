@@ -63,11 +63,13 @@ candidate is versioned independently of the identifiers a packet records.
 | `profile_id` | `escapewheel-portable-v0.1` | [Part 03 §1](03_portable_physical_profile.md#ew-portable-profile-scope) |
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](02_core_logical_schemas.md#ew-core-logical-schema-scope) |
-| `registry_version` | `0.3.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description) |
+| `registry_version` | `0.4.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. Current development packets
-use core registry `0.3.0` and are regenerated rather than treated as compatible with the earlier
-development shape. Part 04 §3 defines the catalog fields that record these identifiers.
+use core registry `0.4.0` and are regenerated rather than treated as compatible with the earlier
+development shape. Each extension registry carries and advances its own `registry_version` under
+the generic mechanism in Part 09; the core specification does not assign extension versions.
+Part 04 §3 defines the catalog fields that record these identifiers.
 
 ## 5. Informative references
 
@@ -81,3 +83,5 @@ SHA-256 authority invoked by the packet catalog is in
 [Part 04 §10](04_packet_catalog.md#ew-packet-catalog-normative-references).
 The SQL and IEEE authorities invoked by the portable Tier 2 language are in
 [Part 11 §9](11_tier_2_rule_language.md#ew-rule-language-normative-references).
+The UCUM and URI authorities invoked by logical registry declarations are in
+[Part 02 §13](02_core_logical_schemas.md#ew-logical-schema-normative-references).

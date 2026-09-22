@@ -10,8 +10,19 @@ governs that packet's declared tables and rules; the current reference registry 
 is generated source data for new packets.
 
 `src/escapewheel_validator/schemas/registry.schema.json` is vendored by `../registry/build.py`.
-Change the hand-written schema in `../registry/`, run the generator, and commit both; never edit the
+The registry-contract schema and descriptor are vendored beside it. Change their hand-written
+sources in `../registry/`, run the generator, and commit both source and projections; never edit a
 vendored copy directly.
+
+`registry_document.py` returns the complete ordered Part 02 §9.4 result. Do not add a second
+registry checker at a caller boundary: invoke that result. The descriptor enumerates invariant
+IDs and applicability, while Parts 02 and 09—not Python labels—own their meaning. Literal-unit
+checks use the exact offline UCUM 2.2 data dated 2024-06-17; a printable-character approximation
+is not a substitute.
+
+The registry result is computed at a trust boundary, not on every ordinary packet read. Part 02
+defines the result but deliberately leaves mandatory invocation and cache identity to the next
+specification decision. Do not add an implicit reader-open hook while changing the checker.
 
 **Read the next section before writing any code here.** The most common contribution to this
 package belongs in the registry, and the design is what makes that true.

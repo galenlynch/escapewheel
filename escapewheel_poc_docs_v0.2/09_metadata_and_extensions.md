@@ -35,14 +35,19 @@ An import MUST NOT fail because optional extension metadata is absent.
 <a id="ew-extension-definition" data-spec-anchor="canonical"></a>
 ### 5.1 What an extension is
 
-An extension is a registry document in the format of Part 02, in its own namespace. It declares tables, columns, references, and rules on exactly the same terms as core.
+An extension is a registry document in the extension class defined by Part 02 §9.1. Its
+`extension_id` is its namespace, and its full `logical_standard_version` selects the core context
+against which core-dependent invariants run. It declares tables, columns, references, and rules on
+the same applicable terms as core.
 
 An extension needs no code. A registry document names its tables, Parquet files hold their rows, and neither imports anything of the reference implementation.
 
 <a id="ew-extension-namespacing" data-spec-anchor="canonical"></a>
 ### 5.2 Namespacing
 
-An extension's resource identifier MUST begin with its namespace: `dynamic_foraging.trials`, not `trials`. A namespace MUST NOT be `core`, `analysis`, or `nwb`.
+Every resource identifier in an extension registry MUST begin with the namespace equal to its
+`extension_id`. The extension owns only that namespace. An extension namespace MUST NOT be `core`,
+`analysis`, or `nwb`.
 
 ### 5.3 Registration
 
@@ -64,7 +69,9 @@ Separate verdicts are not an absent one. The **packet's** verdict is the conjunc
 <a id="ew-extension-versioning" data-spec-anchor="canonical"></a>
 ### 5.5 Independent versioning
 
-An extension carries its own version, independent of `registry_version`.
+An extension's `registry_version` is that extension registry's own version. It advances
+independently of the core registry's `registry_version`; the core specification neither selects
+nor assigns it.
 
 ### 5.6 A writer requires no code of an extension
 
@@ -105,14 +112,19 @@ A build MUST look for a report after a failure as it does after a success, since
 <a id="ew-core-extension-reference-direction" data-spec-anchor="canonical"></a>
 ### 6.1 Core does not reference an extension
 
-A core table MUST NOT declare a foreign key into an extension's table.
+A core registry reference MUST target the core registry. An extension registry reference MUST
+target either its selected core context or the same extension registry. A core table MUST NOT
+declare a foreign key into an extension table, and an extension MUST NOT reference another
+extension.
 
 The reasons are separable verdicts (§5.4) and independent versioning (§5.5). "Interpretable when no extension is present" is *not* among them: a packet embeds its extension registries, so they are present whenever the resources are.
 
 <a id="ew-core-extension-discrimination" data-spec-anchor="canonical"></a>
 ### 6.2 Core may name an extension
 
-A core table MAY name an extension's resource through a `discriminator` column (Part 02 §8.3). `core.intervals.interval_kind` holds `dynamic_foraging.trials`, and a consumer resolves it by reading the kind, taking that resource's primary key from the registry, and joining.
+A core table MAY name an extension resource through a `discriminator` column (Part 02 §8.3). A
+consumer resolves a value by reading the named registry resource, taking its primary key, and
+applying the declared discriminator shape.
 
 **A discriminator names without depending.** It creates neither a shared verdict nor a version coupling, which is why it is the one mechanism core is allowed.
 

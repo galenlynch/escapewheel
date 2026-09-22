@@ -1,63 +1,93 @@
-"""Check a registry document against the invariants that hold of any of them.
-
-Part 09 §2 makes an extension a registry document in the same format as core's, so what is true of
-a registry is true of one: a reference relates columns of the same type, role and identity, a
-namespace prefixes its own tables, a discriminator declares what it resolves to. None of it is
-visible to a packet's rows, so no SQL can see it (R12 §4) and no validation run against a built
-packet reports it.
-
-This lives here rather than in the repository's own `registry/check.py` because an author outside
-that repository has the same document and the same question, and had no way to ask it: a draft was
-sound or not, and the answer arrived when a build refused it, or did not arrive. `check.py` imports
-`structural` from here, so the invariants core is held to and the ones an extension is held to
-cannot drift apart.
-
-What is **not** here is the rest of `check.py`: the repository's table ledger, rule-expansion round
-trip, current-version ratchets, and vendored-schema comparison are facts about this repository's
-build rather than about a registry document, and an author has no use for them.
-"""
+"""Validate registry documents against the incorporated Part 02 contract."""
 
 from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable, Iterable, Mapping
+from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
+from xml.etree import ElementTree
 
-#: R2 §4's type vocabulary. A spelling outside it is a column no reader can be asked to decode.
-VOCAB = {"string", "int32", "int64", "float32", "float64", "bool", "date", "timestamp", "json_string"}
+import jsonschema
 
-#: Part 02 §8.4. A UCUM code is printable ASCII without spaces; an annotation in curly braces is one
-#: and is dimensionless. This rejects prose that was declared as a unit rather than parsing the
-#: grammar.
-_UCUM = re.compile(r"[!-~]+")
+from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, check_rule
 
-#: The meta-schema a registry document declares itself written in (Part 02 §9.2), vendored beside this
-#: module by the registry build.
-SCHEMA = Path(__file__).resolve().parent / "schemas" / "registry.schema.json"
+SCHEMAS = Path(__file__).resolve().parent / "schemas"
+SCHEMA = SCHEMAS / "registry.schema.json"
+CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
+CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.1.json"
+METADATA_DESCRIPTION = (
+    "What the source stated about this row that the standard does not model, carried "
+    "in the source's own vocabulary and read by no rule."
+)
+PHASES = (
+    "json",
+    "schema_selection",
+    "shape",
+    "contract_selection",
+    "semantic",
+    "rule_static",
+    "external_domain",
+)
+_PRECEDENCE = {"passed": 0, "skipped": 0, "incomplete": 1, "unsupported": 2, "invalid": 3}
+
+
+@dataclass(frozen=True)
+class Outcome:
+    """One non-passing check in the abstract registry result."""
+
+    state: str
+    id: str
+    instance: str = ""
+    owner: str | None = None
+    reason: str | None = None
+    schema_location: str | None = None
+    detail: str | None = None
+
+
+@dataclass(frozen=True)
+class PhaseRecord:
+    """The state and ordered non-passing outcomes of one contract phase."""
+
+    phase: str
+    state: str
+    outcomes: tuple[Outcome, ...] = ()
+    reason: str | None = None
+
+
+@dataclass(frozen=True)
+class RegistryResult:
+    """The complete language-neutral result for one registry document."""
+
+    descriptor_id: str | None
+    state: str
+    phases: tuple[PhaseRecord, ...]
+
+    @property
+    def findings(self) -> tuple[Outcome, ...]:
+        """Return exactly the invalid outcomes."""
+        return tuple(outcome for phase in self.phases for outcome in phase.outcomes if outcome.state == "invalid")
 
 
 @dataclass(frozen=True)
 class Finding:
-    """One invariant's result: what was checked, and what broke it.
-
-    Every invariant returns one of these whether or not it held, so a caller can report which ran
-    rather than only which failed. An invariant nothing exercised and one nothing broke are the
-    same line in a report and different facts about a document.
-    """
+    """Compatibility view used by the extension-author command."""
 
     label: str
     offenders: tuple[str, ...] = ()
 
     @property
     def passed(self) -> bool:
-        """Whether the document satisfies this invariant."""
+        """Whether the represented invariant passed."""
         return not self.offenders
 
     def __str__(self) -> str:
-        """Render the label, the count, and the first few offenders, as a person reads a report."""
+        """Render a concise human-oriented finding."""
         if self.passed:
             return self.label
         shown = ", ".join(self.offenders[:4])
@@ -65,427 +95,1149 @@ class Finding:
         return f"{self.label} ({len(self.offenders)}): {shown}{more}"
 
 
-def structural(
-    tables: Mapping[str, Any],
-    universe: Mapping[str, Any],
-    *,
-    is_core: bool = False,
-) -> list[Finding]:
-    """Return every invariant these tables break, as findings.
+class _Object(dict[str, Any]):
+    """Decoded object retaining duplicate member names for the JSON phase."""
 
-    `universe` is what a reference may resolve against: core's own tables for core, and core's
-    plus the extension's own for an extension. Part 09 §2 makes the direction one-way and §4 declines
-    dependency resolution, so an extension reaching another extension's table is not a reference
-    a packet can be relied on to satisfy.
-    """
-    found: list[Finding] = []
+    duplicates: tuple[str, ...]
 
-    def c_(label: str, bad: Iterable[Any], fmt: Callable[[Any], str] = str) -> None:
-        found.append(Finding(label, tuple(fmt(b) for b in bad)))
+    def __init__(self, pairs: list[tuple[str, Any]]) -> None:
+        super().__init__(pairs)
+        counts = Counter(name for name, _ in pairs)
+        self.duplicates = tuple(sorted(name for name, count in counts.items() if count > 1))
 
-    cols = {n: {c["name"]: c for c in t["columns"]} for n, t in tables.items()}
-    ucols = {n: {c["name"]: c for c in t["columns"]} for n, t in universe.items()}
-    c_("every table declares a primary key", [n for n, t in tables.items() if t["primary_key"] is None])
-    c_(
-        "every column type is in R2 §4's vocabulary",
-        [(n, c["name"], c["type"]) for n, t in tables.items() for c in t["columns"] if c["type"] not in VOCAB],
-    )
-    c_(
-        "no required column is json_string",
-        [
-            (n, c["name"])
-            for n, t in tables.items()
-            for c in t["columns"]
-            if c["type"] == "json_string" and c["presence"] != "optional"
-        ],
-    )
-    c_(
-        "no nested type spellings survived",
-        [
-            (n, c["name"], c["type"])
-            for n, t in tables.items()
-            for c in t["columns"]
-            if any(k in c["type"] for k in ("list", "struct", "map"))
-        ],
-    )
-    c_(
-        "primary key columns exist",
-        [(n, k) for n, t in tables.items() for k in (t["primary_key"] or []) if k not in cols[n]],
-    )
-    c_(
-        "primary key columns are required",
-        [
-            (n, k)
-            for n, t in tables.items()
-            for k in (t["primary_key"] or [])
-            if k in cols[n] and cols[n][k]["presence"] != "required"
-        ],
-    )
-    # Part 03 §5.3's override names columns, and a revision that narrows a key leaves them behind:
-    # `aind_unit_qc` kept sorting by two columns R81 had removed, which no packet could satisfy
-    # and no rule could see, because a sort is physical and SQL cannot read it (R12 §4).
-    c_("sort columns exist", [(n, k) for n, t in tables.items() for k in (t.get("sort") or []) if k not in cols[n]])
-    c_(
-        "reference targets exist",
-        [(n, r["resource"]) for n, t in tables.items() for r in t["references"] if r["resource"] not in universe],
-    )
-    c_(
-        "reference source columns exist",
-        [(n, c) for n, t in tables.items() for r in t["references"] for c in r["columns"] if c not in cols[n]],
-    )
-    c_(
-        "reference target columns exist",
-        [
-            (n, r["resource"], c)
-            for n, t in tables.items()
-            for r in t["references"]
-            if r["resource"] in universe
-            for c in r["resource_columns"]
-            if c not in ucols[r["resource"]]
-        ],
-    )
-    c_(
-        "reference arity matches",
-        [
-            (n, r["resource"])
-            for n, t in tables.items()
-            for r in t["references"]
-            if len(r["columns"]) != len(r["resource_columns"])
-        ],
-    )
-    # Part 02 §7. A join is on values, so two columns of different types resolve to each other not
-    # at all -- `string` "7" and `int32` 7 are not one value, and nothing else here compares them.
-    # R53 §2.1 is the case: it made every identifier `int32` where all 110 had been `string`, and
-    # an extension still declaring `string` matched on role, on identity and on target, which is
-    # every other thing this file asks of a reference.
-    types = {(n, c["name"]): c["type"] for n, t in universe.items() for c in t["columns"]}
-    c_(
-        "a reference relates columns of the same type",
-        [
-            (n, a, types.get((n, a)), r["resource"], b, types.get((r["resource"], b)))
-            for n, t in tables.items()
-            for r in t["references"]
-            for a, b in zip(r["columns"], r["resource_columns"])
-            if types.get((n, a)) != types.get((r["resource"], b))
-        ],
-    )
-    # Part 02 §7. A structural index may also be a foreign-key component, so a client converting one
-    # side and not the other would break the join. Both sides sharing a role is what makes
-    # converting every structural_index column join-preserving by construction.
-    role = {(n, c["name"]): c["role"] for n, t in universe.items() for c in t["columns"]}
-    # Part 02 §8.3 exempts one pair: a shared-key column carrying a discriminator's value is `data`
-    # where the column it references is the `discriminator`. Nothing converts either side, so
-    # Part 02 §7's reason does not reach it.
-    c_(
-        "a reference relates columns of the same role",
-        [
-            (n, a, r["resource"], b)
-            for n, t in tables.items()
-            for r in t["references"]
-            for a, b in zip(r["columns"], r["resource_columns"])
-            if role.get((n, a)) != role.get((r["resource"], b))
-            and (role.get((n, a)), role.get((r["resource"], b))) != ("data", "discriminator")
-        ],
-    )
-    # R53 §2.3 with Part 02 §7's reasoning: `number` resolves an assigned identifier through its
-    # target's map and coerces a carried one, so a reference across the two numbers each side
-    # differently and resolves to nothing. Decidable here, and invisible until a packet is built.
-    identity = {(n, c["name"]): c.get("identity") for n, t in universe.items() for c in t["columns"]}
-    c_(
-        "a reference relates columns of the same identity",
-        [
-            (n, a, r["resource"], b)
-            for n, t in tables.items()
-            for r in t["references"]
-            for a, b in zip(r["columns"], r["resource_columns"])
-            if role.get((n, a)) == "identifier" and identity.get((n, a)) != identity.get((r["resource"], b))
-        ],
-    )
-    # A convention of this registry rather than a conformance requirement, so no revision mandates
-    # it and Part 02 states no column order at all (CONTRIBUTING.md §4). `build.py` emits it for core; an
-    # extension is a registry document in the same format (Part 09 §2) and nothing regenerates one,
-    # which is the case this check exists for.
-    c_(
-        "a table carrying session_id leads with it",
-        [n for n, t in tables.items() if "session_id" in cols[n] and t["columns"][0]["name"] != "session_id"],
-    )
-    # Part 02 §8.4 resolves a `coordinate` against its own row's `clock_id`, so a reader who has found a
-    # tick needs the clock next to it. Twelve of the thirteen tables carrying one already do that;
-    # `core.units` did not, because R96 §3.2 added the column beside what R96 §3.1 had just added.
-    # A `clock_id` in the primary key leads for that reason instead, and a table with no coordinate
-    # has nothing to sit beside -- both fall out of the condition rather than needing a list.
-    _clocked = []
-    for n, t in tables.items():
-        names = [c["name"] for c in t["columns"]]
-        coords = {c["name"] for c in t["columns"] if c["role"] == "coordinate"}
-        if "clock_id" not in names or not coords or "clock_id" in (t["primary_key"] or []):
-            continue
-        k = names.index("clock_id")
-        if not ({names[k - 1] if k else None, names[k + 1] if k + 1 < len(names) else None} & coords):
-            _clocked.append((n, sorted(coords)))
-    c_(
-        "a clock_id outside the key sits beside a coordinate it interprets",
-        _clocked,
-        lambda b: f"{b[0]}: clock_id interprets {b[1]} and sits by neither",
-    )
-    c_(
-        "source labels are strings",
-        [
-            (n, c["name"], c["type"])
-            for n, t in tables.items()
-            for c in t["columns"]
-            if c["name"].endswith("_label") and c["type"] != "string"
-        ],
-    )
-    # Part 02 §8.6. Which tables declare `metadata` is bounded at both ends by the primary key, and
-    # both bounds are decidable here with no packet in hand. A key holding an identifier of its
-    # own -- one not part of a declared reference -- makes the row a thing, which may carry what
-    # its source said about it; a key made entirely of other tables' identifiers makes the row a
-    # relationship, and nothing can be said about one that is not a fact about an end. Between
-    # them the declaration is a judgement and nothing is checked.
-    #
-    # `build.py` emits the column from the key for core, so this fails only on an extension, which
-    # nothing regenerates -- which is the case it exists for.
-    own_key = {
-        n: [
-            k
-            for k in (t["primary_key"] or [])
-            if cols[n].get(k, {}).get("role") == "identifier"
-            and k not in {c for r in t["references"] for c in r["columns"]}
-        ]
-        for n, t in tables.items()
-    }
-    # The band reads *declared references*, so a table that forgets one lands here rather than in
-    # the check that would name the real defect: drop `core.unit_quality_labels`' session reference
-    # and `session_id` stops counting as referenced, which reads as an identifier of the table's own
-    # and reports a missing `metadata` column. Adding one satisfies this and leaves the foreign key
-    # undeclared, so the message says which reading to check first.
-    c_(
-        "a table keyed by an identifier of its own declares `metadata` (Part 02 §8.6)",
-        [n for n, t in tables.items() if own_key[n] and "metadata" not in cols[n]],
-        lambda n: (
-            f"{n} owes one, its key holding {own_key[n]}; where such a column should be part "
-            f"of a reference, the undeclared reference is the defect and not the column"
-        ),
-    )
-    c_(
-        "a table keyed only by other tables' identifiers declares no `metadata` (Part 02 §8.6)",
-        [
-            n
-            for n, t in tables.items()
-            if t["primary_key"]
-            and not own_key[n]
-            and "metadata" in cols[n]
-            and all(k in {c for r in t["references"] for c in r["columns"]} for k in t["primary_key"])
-        ],
-    )
-    # Part 02 §8.6 again: Part 02 §10.2's check matches a bare column name, which is sound only while every
-    # column called `metadata` is optional.
-    # Part 02 §8.3: Part 01 §3.17 makes this standard name no instruments, so a device's kind-specific
-    # facts live in an extension's table and never in core. A core table keyed beginning
-    # `device_id` would be that table, whatever it was called.
-    if is_core:  # a detail table keyed on `device_id` is what an extension is for
-        c_(
-            "no core table but `core.devices` is keyed beginning `device_id` (Part 02 §8.3)",
-            [
-                n
-                for n, t in tables.items()
-                if n != "core.devices" and t["primary_key"] and t["primary_key"][0] == "device_id"
-            ],
-            lambda n: f"{n} is shaped like a device detail table, which an extension declares (Part 09 §2)",
-        )
-    c_(
-        "every `metadata` column is optional (Part 02 §8.6)",
-        [n for n, t in tables.items() if "metadata" in cols[n] and cols[n]["metadata"]["presence"] != "optional"],
-    )
 
-    # ---- what a column says about its values (Part 02 §9.3) ---------------------------------------
-    # Part 02 §9.3 made open the default, so nothing distinguished a column deliberately left open
-    # from one nobody had classified, and the marker rode on a column rather than on the
-    # vocabulary -- `coordinate_frame` open on one table and undeclared on the other.
-    _strings = [(n, c) for n, t in tables.items() for c in t["columns"] if c["type"] == "string"]
-    c_(
-        "every string column but a discriminator declares a vocabulary (Part 02 §9.3)",
-        [(n, c["name"]) for n, c in _strings if c["role"] != "discriminator" and "vocabulary" not in c],
-    )
-    c_(
-        "a discriminator declares no vocabulary (Part 02 §9.3)",
-        [(n, c["name"]) for n, c in _strings if c["role"] == "discriminator" and "vocabulary" in c],
-        lambda x: f"{x[0]}.{x[1]}: Part 02 §8.3 fixes the value space to the declared resource IDs",
-    )
-    c_(
-        "no column of another type declares one (Part 02 §9.3)",
-        [
-            (n, c["name"])
-            for n, t in tables.items()
-            for c in t["columns"]
-            if c["type"] != "string" and "vocabulary" in c
-        ],
-    )
-    c_(
-        "`closed` holds exactly where `enum` does (Part 02 §9.3)",
-        [(n, c["name"]) for n, c in _strings if (c.get("vocabulary") == "closed") != ("enum" in c)],
-    )
-    c_(
-        "`reserved_values` appears only under `open` (R101 §3.4)",
-        [(n, c["name"]) for n, c in _strings if "reserved_values" in c and c.get("vocabulary") != "open"],
-    )
-    c_(
-        "an authority declares a name and an absolute URI (Part 02 §9.3)",
-        [
-            (n, c["name"], a)
-            for n, t in tables.items()
-            for c in t["columns"]
-            for a in c.get("authority", [])
-            if not (a.get("name") and str(a.get("uri", "")).startswith(("http://", "https://")))
-        ],
-    )
-    c_(
-        "a declared unit is a UCUM code (Part 02 §8.4)",
-        [
-            (n, c["name"], c["unit"])
-            for n, t in tables.items()
-            for c in t["columns"]
-            if c.get("unit") and not _UCUM.fullmatch(c["unit"])
-        ],
-        lambda x: (
-            f"{x[0]}.{x[1]} declares {x[2]!r}; an annotation in curly braces is a UCUM unit "
-            f"and is dimensionless, which is what a packet-relative quantity is"
-        ),
-    )
-    c_(
-        "an open column carries a description (R101 §3.5)",
-        [(n, c["name"]) for n, c in _strings if c.get("vocabulary") == "open" and not c.get("description")],
-    )
-    # §3.6: the drift caught mechanically. A name declared two ways in two tables is what
-    # §2.3 measured on `coordinate_frame`, `activity_type` and the eight unit columns.
-    _by_name: dict[str, set] = {}
-    for n, c in _strings:
-        if "vocabulary" in c:
-            _by_name.setdefault(c["name"], set()).add(
-                (c["vocabulary"], tuple((a["name"], a["uri"]) for a in c.get("authority", ())))
+def _pointer(parts: Iterable[Any]) -> str:
+    return "".join(f"/{str(part).replace('~', '~0').replace('/', '~1')}" for part in parts)
+
+
+def _owner(pointer: str) -> str | None:
+    parts = pointer.split("/")
+    if len(parts) >= 3 and parts[1] == "tables":
+        return parts[2].replace("~1", "/").replace("~0", "~")
+    return None
+
+
+def _ordered(outcomes: Iterable[Outcome]) -> tuple[Outcome, ...]:
+    return tuple(sorted(outcomes, key=lambda item: (item.instance, item.id, item.owner or "")))
+
+
+def _phase(name: str, outcomes: Iterable[Outcome] = ()) -> PhaseRecord:
+    ordered = _ordered(outcomes)
+    state = max((item.state for item in ordered), key=lambda value: _PRECEDENCE[value], default="passed")
+    return PhaseRecord(name, state, ordered)
+
+
+def _skipped(name: str, reason: str) -> PhaseRecord:
+    return PhaseRecord(name, "skipped", (), reason)
+
+
+def _complete(phases: list[PhaseRecord], descriptor_id: str | None) -> RegistryResult:
+    material = [phase.state for phase in phases if phase.state != "skipped"]
+    state = max(material, key=lambda value: _PRECEDENCE[value], default="incomplete")
+    return RegistryResult(descriptor_id, "valid" if state == "passed" else state, tuple(phases))
+
+
+def _duplicates(value: Any, path: tuple[Any, ...] = ()) -> list[Outcome]:
+    outcomes: list[Outcome] = []
+    if isinstance(value, _Object):
+        outcomes.extend(
+            Outcome(
+                "invalid",
+                "registry.json.duplicate_member",
+                _pointer(path),
+                detail=f"duplicate member {name!r}",
             )
-    c_(
-        "one column name carries one vocabulary and one authority (Part 02 §9.3)",
-        sorted(k for k, v in _by_name.items() if len(v) > 1),
-    )
+            for name in value.duplicates
+        )
+        for name, child in value.items():
+            outcomes.extend(_duplicates(child, (*path, name)))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            outcomes.extend(_duplicates(child, (*path, index)))
+    return outcomes
 
-    # R107 §3.6. A description restating a field is a second statement of the same fact that
-    # nothing compared, and six had drifted from the declaration beside them. Reaches four of the
-    # five fields exactly; an authority's name in prose is prose, so §3.1 binds the writer there.
-    # Capitalised, because "Calibrated open time" and "onto the closed set" are the ordinary words.
-    _CLAIM = re.compile(r"(?<![A-Za-z])(Open|Closed|Free)(?![A-Za-z])")
-    _restated = []
-    for n, t in tables.items():
-        for c in t["columns"]:
-            desc, said = c.get("description", ""), []
-            if _CLAIM.search(desc):
-                said.append("names a vocabulary")
-            if c.get("resolves") and f"resolves: {c['resolves']}" in desc:
-                said.append("quotes `resolves`")
-            # A value repeated with no meaning beside it restates the field; `band` states what
-            # each of its reserved values means, which is a fact no field carries (Part 02 §3).
-            if c.get("enum") and all(f"`{v}`" in desc for v in c["enum"]):
-                said.append("lists its `enum`")
-            if said:
-                _restated.append(f"{n}.{c['name']}: {', '.join(said)}")
-    c_("a description restates no field the column declares (Part 02 §3)", sorted(_restated))
-    return found
+
+def check_registry_bytes(
+    data: bytes,
+    core: Mapping[str, Any] | None = None,
+    *,
+    descriptors: Iterable[Mapping[str, Any]] | None = None,
+) -> RegistryResult:
+    """Validate UTF-8 JSON bytes, including duplicate object members."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        outcome = Outcome("invalid", "registry.json.invalid_utf8", detail=str(exc))
+        return _complete(
+            [
+                _phase("json", [outcome]),
+                *[_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[1:]],
+            ],
+            None,
+        )
+    try:
+        document = json.loads(text, object_pairs_hook=_Object)
+    except json.JSONDecodeError as exc:
+        outcome = Outcome("invalid", "registry.json.invalid_syntax", detail=str(exc))
+        return _complete(
+            [
+                _phase("json", [outcome]),
+                *[_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[1:]],
+            ],
+            None,
+        )
+    duplicate_outcomes = _duplicates(document)
+    if duplicate_outcomes:
+        return _complete(
+            [
+                _phase("json", duplicate_outcomes),
+                *[_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[1:]],
+            ],
+            None,
+        )
+    return _check_mapping(document, core, PhaseRecord("json", "passed"), descriptors)
+
+
+def check_registry(
+    document: Mapping[str, Any],
+    core: Mapping[str, Any] | None = None,
+    *,
+    descriptors: Iterable[Mapping[str, Any]] | None = None,
+) -> RegistryResult:
+    """Validate an already-decoded mapping, beginning after byte-level JSON checks."""
+    return _check_mapping(document, core, _skipped("json", "registry.phase.mapping_input"), descriptors)
+
+
+def _load_contracts(descriptors: Iterable[Mapping[str, Any]] | None) -> list[dict[str, Any]]:
+    schema = json.loads(CONTRACT_SCHEMA.read_text())
+    loaded = (
+        [dict(descriptor) for descriptor in descriptors]
+        if descriptors is not None
+        else [json.loads(path.read_text()) for path in sorted(CONTRACT.parent.glob("*.json"))]
+    )
+    validator = jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker())
+    for descriptor in loaded:
+        validator.validate(descriptor)
+    return loaded
+
+
+def _check_mapping(
+    document: Mapping[str, Any],
+    core: Mapping[str, Any] | None,
+    json_phase: PhaseRecord,
+    descriptors: Iterable[Mapping[str, Any]] | None,
+) -> RegistryResult:
+    phases = [json_phase]
+    selector = document.get("$schema")
+    if selector is None:
+        outcome = Outcome("invalid", "registry.schema.selector_missing")
+        phases.append(_phase("schema_selection", [outcome]))
+        phases.extend(_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[2:])
+        return _complete(phases, None)
+    if not isinstance(selector, str):
+        outcome = Outcome("invalid", "registry.schema.selector_type", "/$schema")
+        phases.append(_phase("schema_selection", [outcome]))
+        phases.extend(_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[2:])
+        return _complete(phases, None)
+
+    schema = json.loads(SCHEMA.read_text())
+    if selector != schema["$id"]:
+        outcome = Outcome("unsupported", "registry.schema.selector_unsupported", "/$schema")
+        phases.append(_phase("schema_selection", [outcome]))
+        phases.extend(_skipped(name, "registry.phase.prerequisite_unsupported") for name in PHASES[2:])
+        return _complete(phases, None)
+    phases.append(_phase("schema_selection"))
+
+    validator = jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker())
+    shape = [
+        Outcome(
+            "invalid",
+            str(schema["$id"]),
+            _pointer(error.absolute_path),
+            _owner(_pointer(error.absolute_path)),
+            schema_location=_pointer(error.absolute_schema_path),
+            detail=error.message,
+        )
+        for error in validator.iter_errors(document)
+    ]
+    phases.append(_phase("shape", shape))
+    if shape:
+        phases.extend(_skipped(name, "registry.phase.prerequisite_invalid") for name in PHASES[3:])
+        return _complete(phases, None)
+
+    contracts = _load_contracts(descriptors)
+    class_name = "extension" if "extension_id" in document else "core"
+    core_result: RegistryResult | None = None
+    core_usable = class_name == "core"
+    core_semantic: Any = document.get("semantic_standard_version")
+    if class_name == "extension" and core is not None:
+        core_result = check_registry(core, descriptors=contracts)
+        core_usable = (
+            core_result.state == "valid"
+            and "extension_id" not in core
+            and core.get("logical_standard_version") == document["logical_standard_version"]
+        )
+        if core_usable:
+            core_semantic = core.get("semantic_standard_version")
+
+    candidates = [
+        descriptor
+        for descriptor in contracts
+        if selector == descriptor["registry_schema"]
+        and document["logical_standard_version"] == descriptor["logical_standard"]
+        and document["rule_language"] in descriptor["rule_languages"]
+        and (class_name == "extension" and not core_usable or core_semantic == descriptor["semantic_standard"])
+    ]
+    contract_outcomes: list[Outcome] = []
+    descriptor_id: str | None = None
+    descriptor: Mapping[str, Any] | None = None
+    if not candidates:
+        contract_outcomes.append(Outcome("unsupported", "registry.contract.selector_unsupported"))
+    elif len(candidates) > 1:
+        contract_outcomes.append(Outcome("unsupported", "registry.contract.selector_ambiguous"))
+    else:
+        descriptor = candidates[0]
+        descriptor_id = str(descriptor["id"])
+        if class_name == "extension" and not core_usable:
+            contract_outcomes.append(
+                Outcome(
+                    "incomplete",
+                    "registry.contract.core_context_unusable",
+                    reason="registry.phase.prerequisite_incomplete",
+                )
+            )
+    phases.append(_phase("contract_selection", contract_outcomes))
+    if descriptor_id is None:
+        phases.extend(_skipped(name, "registry.phase.prerequisite_unsupported") for name in PHASES[4:])
+        return _complete(phases, None)
+
+    universe = dict(document["tables"])
+    if class_name == "extension" and core_usable and core is not None:
+        universe = dict(core["tables"]) | universe
+    assert descriptor is not None
+    semantic = _semantic_outcomes(document, universe, class_name, core_usable, descriptor)
+    phases.append(_phase("semantic", semantic))
+    rules = _rule_outcomes(document, core if core_usable and class_name == "extension" else None)
+    phases.append(_phase("rule_static", rules))
+    phases.append(_phase("external_domain", _unit_outcomes(document)))
+    return _complete(phases, descriptor_id)
+
+
+def _invalid(invariant: str, pointer: str, owner: str | None, detail: str) -> Outcome:
+    return Outcome("invalid", invariant, pointer, owner, detail=detail)
+
+
+def _columns(table: Mapping[str, Any]) -> dict[str, list[tuple[int, Mapping[str, Any]]]]:
+    result: dict[str, list[tuple[int, Mapping[str, Any]]]] = {}
+    for index, column in enumerate(table["columns"]):
+        result.setdefault(str(column["name"]), []).append((index, column))
+    return result
+
+
+def _one_column(table: Mapping[str, Any], name: str) -> Mapping[str, Any] | None:
+    found = _columns(table).get(name, [])
+    return found[0][1] if len(found) == 1 else None
+
+
+def _required_column(table: Mapping[str, Any], name: str) -> bool:
+    column = _one_column(table, name)
+    return column is not None and column["presence"] == "required"
+
+
+def _semantic_outcomes(
+    document: Mapping[str, Any],
+    universe: Mapping[str, Any],
+    class_name: str,
+    core_usable: bool,
+    descriptor: Mapping[str, Any] | None = None,
+) -> list[Outcome]:
+    checks = _semantic_checks()
+    if descriptor is None:
+        descriptor = json.loads(CONTRACT.read_text())
+    outcomes: list[Outcome] = []
+    core_dependent = {
+        "registry.reference.resolves",
+        "registry.reference.target_key",
+        "registry.reference.compatible",
+        "registry.session_scope.path",
+        "registry.context_source.resolves",
+    }
+    for entry in descriptor["invariants"]:
+        invariant = str(entry["id"])
+        if entry["phase"] != "semantic" or class_name not in entry["classes"]:
+            continue
+        check = checks[invariant]
+        outcomes.extend(check(document, universe, class_name, core_usable))
+        if class_name == "extension" and not core_usable and invariant in core_dependent:
+            outcomes.append(
+                Outcome(
+                    "incomplete",
+                    invariant,
+                    reason="registry.phase.prerequisite_incomplete",
+                    detail="usable core context is required for cross-registry resolution",
+                )
+            )
+    return outcomes
+
+
+def _semantic_checks() -> dict[str, Any]:
+    """Map every descriptor semantic ID to its sole implementation."""
+    return {
+        "registry.namespace.owned": _namespace_owned,
+        "registry.namespace.reference_direction": _reference_direction,
+        "registry.column.name_unique": _column_names,
+        "registry.primary_key.resolves": _primary_keys,
+        "registry.reference.resolves": _references_resolve,
+        "registry.reference.target_key": _reference_targets_key,
+        "registry.reference.compatible": _references_compatible,
+        "registry.session_scope.path": _session_scope,
+        "registry.identity.name": _identity_names,
+        "registry.metadata.eligibility": _metadata,
+        "registry.determined_by.resolves": _determined_by,
+        "registry.discriminator.declaration": _discriminator_declarations,
+        "registry.discriminator.path": _discriminator_paths,
+        "registry.context_source.resolves": _context_sources,
+        "registry.authority.uri": _authority_uris,
+        "registry.rule.id_unique": _rule_ids_unique,
+        "registry.rule.id_owner": _rule_ids_owned,
+        "registry.core.device_detail": _core_device_detail,
+    }
+
+
+def _namespace_owned(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, core_usable
+    allowed = {"core", "analysis"} if class_name == "core" else {str(document["extension_id"])}
+    return [
+        _invalid(
+            "registry.namespace.owned",
+            _pointer(("tables", resource)),
+            resource,
+            f"namespace {resource.split('.', 1)[0]!r} is not owned by this {class_name} registry",
+        )
+        for resource in document["tables"]
+        if resource.split(".", 1)[0] not in allowed
+    ]
+
+
+def _reference_direction(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, core_usable
+    own = set(document["tables"])
+    extension_id = document.get("extension_id")
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        for index, reference in enumerate(table["references"]):
+            target = str(reference["resource"])
+            namespace = target.split(".", 1)[0]
+            permitted = target in own if class_name == "core" else namespace in {"core", "analysis", extension_id}
+            if not permitted:
+                outcomes.append(
+                    _invalid(
+                        "registry.namespace.reference_direction",
+                        _pointer(("tables", resource, "references", index, "resource")),
+                        resource,
+                        f"reference target {target!r} is outside the permitted direction",
+                    )
+                )
+    return outcomes
+
+
+def _column_names(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        seen: set[str] = set()
+        for index, column in enumerate(table["columns"]):
+            name = str(column["name"])
+            if name in seen:
+                outcomes.append(
+                    _invalid(
+                        "registry.column.name_unique",
+                        _pointer(("tables", resource, "columns", index, "name")),
+                        resource,
+                        f"column name {name!r} occurs more than once",
+                    )
+                )
+            seen.add(name)
+    return outcomes
+
+
+def _primary_keys(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        columns = _columns(table)
+        for index, name in enumerate(table["primary_key"] or []):
+            resolved = columns.get(name, [])
+            if len(resolved) != 1:
+                outcomes.append(
+                    _invalid(
+                        "registry.primary_key.resolves",
+                        _pointer(("tables", resource, "primary_key", index)),
+                        resource,
+                        f"primary-key member {name!r} resolves {len(resolved)} times",
+                    )
+                )
+            elif resolved[0][1]["presence"] != "required":
+                outcomes.append(
+                    _invalid(
+                        "registry.primary_key.resolves",
+                        _pointer(("tables", resource, "primary_key", index)),
+                        resource,
+                        f"primary-key member {name!r} is not required",
+                    )
+                )
+    return outcomes
+
+
+def _references_resolve(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        source_columns = _columns(table)
+        for r_index, reference in enumerate(table["references"]):
+            base = ("tables", resource, "references", r_index)
+            target_name = str(reference["resource"])
+            target = universe.get(target_name)
+            if target is None:
+                if not (
+                    class_name == "extension"
+                    and not core_usable
+                    and target_name.split(".", 1)[0] in {"core", "analysis"}
+                ):
+                    outcomes.append(
+                        _invalid(
+                            "registry.reference.resolves",
+                            _pointer((*base, "resource")),
+                            resource,
+                            f"target resource {target_name!r} does not resolve",
+                        )
+                    )
+                continue
+            target_columns = _columns(target)
+            if len(reference["columns"]) != len(reference["resource_columns"]):
+                outcomes.append(
+                    _invalid(
+                        "registry.reference.resolves",
+                        _pointer(base),
+                        resource,
+                        "reference source and target arity differ",
+                    )
+                )
+            for side, names, available in (
+                ("columns", reference["columns"], source_columns),
+                ("resource_columns", reference["resource_columns"], target_columns),
+            ):
+                for c_index, name in enumerate(names):
+                    if len(available.get(name, [])) != 1:
+                        outcomes.append(
+                            _invalid(
+                                "registry.reference.resolves",
+                                _pointer((*base, side, c_index)),
+                                resource,
+                                f"reference member {name!r} resolves {len(available.get(name, []))} times",
+                            )
+                        )
+    return outcomes
+
+
+def _reference_targets_key(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        for index, reference in enumerate(table["references"]):
+            target = universe.get(reference["resource"])
+            if target is not None and (
+                target["primary_key"] is None or reference["resource_columns"] != target["primary_key"]
+            ):
+                outcomes.append(
+                    _invalid(
+                        "registry.reference.target_key",
+                        _pointer(("tables", resource, "references", index, "resource_columns")),
+                        resource,
+                        f"target side is not the complete ordered key of {reference['resource']}",
+                    )
+                )
+    return outcomes
+
+
+def _references_compatible(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        sources = _columns(table)
+        for r_index, reference in enumerate(table["references"]):
+            target = universe.get(reference["resource"])
+            if target is None:
+                continue
+            targets = _columns(target)
+            for c_index, (source_name, target_name) in enumerate(
+                zip(reference["columns"], reference["resource_columns"], strict=False)
+            ):
+                source_matches = sources.get(source_name, [])
+                target_matches = targets.get(target_name, [])
+                if len(source_matches) != 1 or len(target_matches) != 1:
+                    continue
+                source_column, target_column = source_matches[0][1], target_matches[0][1]
+                role_pair = (source_column["role"], target_column["role"])
+                compatible = source_column["type"] == target_column["type"] and (
+                    source_column["role"] == target_column["role"] or role_pair == ("data", "discriminator")
+                )
+                if source_column["role"] == "identifier":
+                    compatible = compatible and source_column.get("identity") == target_column.get("identity")
+                if not compatible:
+                    outcomes.append(
+                        _invalid(
+                            "registry.reference.compatible",
+                            _pointer(("tables", resource, "references", r_index, "columns", c_index)),
+                            resource,
+                            f"{source_name!r} is incompatible with {reference['resource']}.{target_name}",
+                        )
+                    )
+    return outcomes
+
+
+def _session_scope(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    if class_name == "extension" and not core_usable:
+        return []
+    edges: dict[str, set[str]] = {resource: set() for resource in universe}
+    for resource, table in universe.items():
+        sources = _columns(table)
+        for reference in table["references"]:
+            target = universe.get(reference["resource"])
+            if target is None or target["primary_key"] is None:
+                continue
+            try:
+                position = reference["columns"].index("session_id")
+            except ValueError:
+                continue
+            pairs = list(zip(reference["columns"], reference["resource_columns"], strict=False))
+            if (
+                position >= len(reference["resource_columns"])
+                or reference["resource_columns"][position] != "session_id"
+                or reference["resource_columns"] != target["primary_key"]
+                or any(not _required_column(table, name) for name in reference["columns"])
+                or len(pairs) != len(reference["columns"])
+            ):
+                continue
+            target_columns = _columns(target)
+            if all(
+                len(sources.get(left, [])) == 1
+                and len(target_columns.get(right, [])) == 1
+                and sources[left][0][1]["type"] == target_columns[right][0][1]["type"]
+                and (
+                    sources[left][0][1]["role"] == target_columns[right][0][1]["role"]
+                    or (sources[left][0][1]["role"], target_columns[right][0][1]["role"]) == ("data", "discriminator")
+                )
+                and sources[left][0][1].get("identity") == target_columns[right][0][1].get("identity")
+                for left, right in pairs
+            ):
+                edges[resource].add(str(reference["resource"]))
+    scoped = {"core.sessions"} if "core.sessions" in universe else set()
+    changed = True
+    while changed:
+        changed = False
+        for resource, targets in edges.items():
+            if resource not in scoped and targets & scoped:
+                scoped.add(resource)
+                changed = True
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        matches = _columns(table).get("session_id", [])
+        correct = (
+            len(matches) == 1
+            and matches[0][1]["type"] == "int32"
+            and matches[0][1]["presence"] == "required"
+            and matches[0][1]["role"] == "identifier"
+            and matches[0][1].get("identity") == "assigned"
+        )
+        if (resource in scoped) != correct:
+            outcomes.append(
+                _invalid(
+                    "registry.session_scope.path",
+                    _pointer(("tables", resource, "columns")),
+                    resource,
+                    "session-preserving path and required assigned int32 session_id disagree",
+                )
+            )
+    return outcomes
+
+
+def _identity_names(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        columns = _columns(table)
+        referenced = {name for reference in table["references"] for name in reference["columns"]}
+        owned = {
+            name
+            for name in (table["primary_key"] or [])
+            if name not in referenced
+            and (column := _one_column(table, name)) is not None
+            and column["role"] == "identifier"
+            and column.get("identity") == "assigned"
+        }
+        assigned = {
+            name
+            for name, matches in columns.items()
+            if len(matches) == 1
+            and matches[0][1]["role"] == "identifier"
+            and matches[0][1].get("identity") == "assigned"
+        }
+        for name in assigned:
+            expected = f"{name[:-3]}_name"
+            matches = columns.get(expected, [])
+            if name in owned:
+                correct = (
+                    len(matches) == 1
+                    and matches[0][1]["type"] == "string"
+                    and matches[0][1]["role"] == "data"
+                    and "identity" not in matches[0][1]
+                )
+                if not correct:
+                    outcomes.append(
+                        _invalid(
+                            "registry.identity.name",
+                            _pointer(("tables", resource, "columns")),
+                            resource,
+                            f"owned assigned identifier {name!r} needs exactly one string data column {expected!r}",
+                        )
+                    )
+            elif matches:
+                outcomes.append(
+                    _invalid(
+                        "registry.identity.name",
+                        _pointer(("tables", resource, "columns", matches[0][0])),
+                        resource,
+                        f"carried or referenced identifier {name!r} must not have {expected!r}",
+                    )
+                )
+    return outcomes
+
+
+def _metadata(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        columns = _columns(table)
+        metadata = columns.get("metadata", [])
+        for index, column in metadata:
+            if (
+                column["type"] != "json_string"
+                or column["presence"] != "optional"
+                or column["role"] != "data"
+                or column.get("description") != METADATA_DESCRIPTION
+            ):
+                outcomes.append(
+                    _invalid(
+                        "registry.metadata.eligibility",
+                        _pointer(("tables", resource, "columns", index)),
+                        resource,
+                        "metadata does not have the exact standard declaration",
+                    )
+                )
+        key = table["primary_key"] or []
+        referenced = {name for reference in table["references"] for name in reference["columns"]}
+        own = []
+        for name in key:
+            key_column = _one_column(table, name)
+            if name not in referenced and key_column is not None and key_column["role"] == "identifier":
+                own.append(name)
+        required = bool(own)
+        forbidden = bool(key) and not own and all(name in referenced for name in key)
+        if required and len(metadata) != 1:
+            outcomes.append(
+                _invalid(
+                    "registry.metadata.eligibility",
+                    _pointer(("tables", resource, "columns")),
+                    resource,
+                    f"table owning key identifiers {own!r} needs metadata",
+                )
+            )
+        if forbidden and metadata:
+            outcomes.append(
+                _invalid(
+                    "registry.metadata.eligibility",
+                    _pointer(("tables", resource, "columns", metadata[0][0])),
+                    resource,
+                    "a relationship table keyed only by reference sources must not declare metadata",
+                )
+            )
+    return outcomes
+
+
+def _determined_by(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        columns = _columns(table)
+        for c_index, column in enumerate(table["columns"]):
+            for d_index, name in enumerate(column.get("determined_by", [])):
+                if len(columns.get(name, [])) != 1:
+                    outcomes.append(
+                        _invalid(
+                            "registry.determined_by.resolves",
+                            _pointer(("tables", resource, "columns", c_index, "determined_by", d_index)),
+                            resource,
+                            f"determinant {name!r} does not resolve once in the table",
+                        )
+                    )
+    return outcomes
+
+
+def _discriminator_declarations(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        columns = _columns(table)
+        for index, column in enumerate(table["columns"]):
+            if column["role"] != "discriminator":
+                continue
+            paired = "discriminates" in column
+            positioned = "positions_in" in column
+            if paired and positioned:
+                outcomes.append(
+                    _invalid(
+                        "registry.discriminator.declaration",
+                        _pointer(("tables", resource, "columns", index)),
+                        resource,
+                        "a discriminator selects both paired-value and by-position shapes",
+                    )
+                )
+                continue
+            companion_name = column.get("discriminates") or column.get("positions_in")
+            if companion_name is None:
+                continue
+            matches = columns.get(companion_name, [])
+            correct = (
+                len(matches) == 1
+                and matches[0][1]["type"] == "string"
+                and matches[0][1]["role"] == "data"
+                and matches[0][1]["presence"] == column["presence"]
+                and column["presence"] in {"required", "nullable"}
+            )
+            if not correct:
+                outcomes.append(
+                    _invalid(
+                        "registry.discriminator.declaration",
+                        _pointer(("tables", resource, "columns", index)),
+                        resource,
+                        f"companion {companion_name!r} is not one matching string data column",
+                    )
+                )
+    return outcomes
+
+
+def _discriminator_paths(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    tables = document["tables"]
+    for target_resource, target in tables.items():
+        for c_index, column in enumerate(target["columns"]):
+            via = column.get("discriminates_via")
+            if via is None:
+                continue
+            source_resource, source_column = str(via).rsplit(".", 1)
+            source = tables.get(source_resource)
+            matches = [] if source is None else _columns(source).get(source_column, [])
+            references = (
+                []
+                if source is None
+                else [
+                    reference
+                    for reference in source["references"]
+                    if source_column in reference["columns"] and reference["resource"] == target_resource
+                ]
+            )
+            if len(matches) != 1 or len(references) != 1:
+                outcomes.append(
+                    _invalid(
+                        "registry.discriminator.path",
+                        _pointer(("tables", target_resource, "columns", c_index, "discriminates_via")),
+                        target_resource,
+                        f"{via!r} does not identify one reverse one-hop reference to {target_resource}",
+                    )
+                )
+    return outcomes
+
+
+def _resolve_context(
+    resource: str,
+    table: Mapping[str, Any],
+    value: str,
+    universe: Mapping[str, Any],
+) -> tuple[Mapping[str, Any] | None, str | None]:
+    if value.count(".") == 0:
+        return _one_column(table, value), None
+    target_resource, target_column = value.rsplit(".", 1)
+    target = universe.get(target_resource)
+    references = [reference for reference in table["references"] if reference["resource"] == target_resource]
+    if target is None or len(references) != 1:
+        return None, target_resource
+    return _one_column(target, target_column), target_resource
+
+
+def _context_sources(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        for index, column in enumerate(table["columns"]):
+            for field in ("unit_from", "clock_from"):
+                if field not in column:
+                    continue
+                target, target_resource = _resolve_context(resource, table, str(column[field]), universe)
+                unavailable_core = (
+                    class_name == "extension"
+                    and not core_usable
+                    and target_resource is not None
+                    and target_resource.split(".", 1)[0] in {"core", "analysis"}
+                )
+                if target is None and not unavailable_core:
+                    outcomes.append(
+                        _invalid(
+                            "registry.context_source.resolves",
+                            _pointer(("tables", resource, "columns", index, field)),
+                            resource,
+                            f"{field} source {column[field]!r} does not resolve through exactly one path",
+                        )
+                    )
+                if field == "unit_from" and target is not None:
+                    authorities = {entry["uri"] for entry in target.get("authority", [])}
+                    if target["type"] != "string" or "https://ucum.org/ucum" not in authorities:
+                        outcomes.append(
+                            _invalid(
+                                "registry.context_source.resolves",
+                                _pointer(("tables", resource, "columns", index, field)),
+                                resource,
+                                "unit_from target is not a UCUM-authorized string column",
+                            )
+                        )
+            if column["role"] != "coordinate":
+                continue
+            source_name = str(column.get("clock_from", "clock_id"))
+            source, source_resource = _resolve_context(resource, table, source_name, universe)
+            if source is None:
+                if not (class_name == "extension" and not core_usable and "." in source_name):
+                    outcomes.append(
+                        _invalid(
+                            "registry.context_source.resolves",
+                            _pointer(("tables", resource, "columns", index)),
+                            resource,
+                            f"coordinate clock source {source_name!r} does not resolve",
+                        )
+                    )
+                continue
+            declaring_table = table if source_resource is None else universe[source_resource]
+            participates = any(
+                reference["resource"] == "core.clocks"
+                and any(
+                    left == source["name"] and right == "clock_id"
+                    for left, right in zip(reference["columns"], reference["resource_columns"], strict=False)
+                )
+                for reference in declaring_table["references"]
+            )
+            if source["role"] != "identifier" or not participates:
+                outcomes.append(
+                    _invalid(
+                        "registry.context_source.resolves",
+                        _pointer(("tables", resource, "columns", index)),
+                        resource,
+                        f"clock source {source_name!r} is not an identifier referenced to core.clocks.clock_id",
+                    )
+                )
+    return outcomes
+
+
+def _absolute_uri(value: str) -> bool:
+    if any(character.isspace() for character in value):
+        return False
+    parsed = urlsplit(value)
+    return bool(parsed.scheme) and (bool(parsed.netloc) or parsed.scheme not in {"http", "https"})
+
+
+def _authority_uris(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        for c_index, column in enumerate(table["columns"]):
+            authorities = column.get("authority", [])
+            if authorities and not (
+                column["type"] == "string"
+                and column["role"] == "data"
+                and column.get("vocabulary") in {"open", "closed"}
+            ):
+                outcomes.append(
+                    _invalid(
+                        "registry.authority.uri",
+                        _pointer(("tables", resource, "columns", c_index, "authority")),
+                        resource,
+                        "authority is permitted only on string data with an open or closed vocabulary",
+                    )
+                )
+            seen: set[str] = set()
+            for a_index, authority in enumerate(authorities):
+                uri = str(authority["uri"])
+                name = str(authority["name"])
+                valid = _absolute_uri(uri) and uri not in seen
+                valid = valid and ((name == "UCUM") == (uri == "https://ucum.org/ucum"))
+                if not valid:
+                    outcomes.append(
+                        _invalid(
+                            "registry.authority.uri",
+                            _pointer(("tables", resource, "columns", c_index, "authority", a_index)),
+                            resource,
+                            f"authority {name!r}, {uri!r} has invalid or duplicate identity",
+                        )
+                    )
+                seen.add(uri)
+    return outcomes
+
+
+def _rule_ids_unique(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    seen: set[str] = set()
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        for index, rule in enumerate(table["rules"]):
+            rule_id = str(rule["id"])
+            if rule_id in seen:
+                outcomes.append(
+                    _invalid(
+                        "registry.rule.id_unique",
+                        _pointer(("tables", resource, "rules", index, "id")),
+                        rule_id,
+                        f"rule ID {rule_id!r} occurs more than once",
+                    )
+                )
+            seen.add(rule_id)
+    return outcomes
+
+
+def _rule_ids_owned(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        for index, rule in enumerate(table["rules"]):
+            rule_id = str(rule["id"])
+            suffix = rule_id.removeprefix(f"{resource}.")
+            valid = rule_id.startswith(f"{resource}.") and suffix.count(".") == 0
+            valid = valid and bool(re.fullmatch(r"[a-z][a-z0-9_]*", suffix))
+            if not valid:
+                outcomes.append(
+                    _invalid(
+                        "registry.rule.id_owner",
+                        _pointer(("tables", resource, "rules", index, "id")),
+                        rule_id,
+                        f"rule ID is not exactly {resource}.local_rule_id",
+                    )
+                )
+    return outcomes
+
+
+def _core_device_detail(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    del universe, core_usable
+    if class_name != "core":
+        return []
+    return [
+        _invalid(
+            "registry.core.device_detail",
+            _pointer(("tables", resource, "primary_key", 0)),
+            resource,
+            "a core table other than core.devices is shaped as a device-detail table",
+        )
+        for resource, table in document["tables"].items()
+        if resource != "core.devices" and table["primary_key"] and table["primary_key"][0] == "device_id"
+    ]
+
+
+def _rule_outcomes(document: Mapping[str, Any], core: Mapping[str, Any] | None) -> list[Outcome]:
+    outcomes: list[Outcome] = []
+    visible = dict(document["tables"])
+    if core is not None:
+        visible = dict(core["tables"]) | visible
+    for resource, table in document["tables"].items():
+        for index, rule in enumerate(table["rules"]):
+            pointer = _pointer(("tables", resource, "rules", index))
+            rule_id = str(rule["id"])
+            if document["rule_language"] != PROFILE_ID:
+                outcomes.append(
+                    Outcome(
+                        "unsupported",
+                        str(document["rule_language"]),
+                        pointer,
+                        rule_id,
+                        detail="the exact selected rule language is unavailable",
+                    )
+                )
+                continue
+            try:
+                checked = check_rule(str(rule["sql"]), document, core_resources=core)
+            except RuleProfileError as exc:
+                outcomes.append(_invalid(PROFILE_ID, pointer, rule_id, str(exc)))
+                continue
+            optional = sorted(
+                f"{input_resource}.{column}"
+                for input_resource, column in checked.inputs
+                if (spec := visible.get(input_resource)) is not None
+                and (declared := _one_column(spec, column)) is not None
+                and declared["presence"] == "optional"
+            )
+            if optional:
+                outcomes.append(
+                    _invalid(
+                        "registry.rule.required_inputs",
+                        pointer,
+                        rule_id,
+                        f"rule binds optional inputs: {', '.join(optional)}",
+                    )
+                )
+    return outcomes
+
+
+def _ucum_parser() -> Any | None:
+    try:
+        from ucumvert import get_ucum_parser  # type: ignore[import-untyped]
+
+        essence = files("ucumvert").joinpath("vendor/ucum-essence.xml").read_text()
+        root = ElementTree.fromstring(essence)
+        if root.attrib.get("version") != "2.2" or root.attrib.get("revision-date") != "2024-06-17":
+            return None
+        return get_ucum_parser()
+    except (ImportError, FileNotFoundError, ElementTree.ParseError):
+        return None
+
+
+def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
+    parser = _ucum_parser()
+    if parser is None:
+        return [
+            Outcome(
+                "unsupported",
+                "registry.unit.ucum_2_2_cs",
+                reason="registry.phase.prerequisite_unsupported",
+                detail="the exact UCUM 2.2 domain dated 2024-06-17 is unavailable",
+            )
+        ]
+    from ucumvert import InvalidUcumError, parse_ucum  # type: ignore[import-untyped]
+
+    outcomes: list[Outcome] = []
+    for resource, table in document["tables"].items():
+        for index, column in enumerate(table["columns"]):
+            if "unit" not in column:
+                continue
+            try:
+                parse_ucum(str(column["unit"]), parser=parser)
+            except InvalidUcumError as exc:
+                outcomes.append(
+                    _invalid(
+                        "registry.unit.ucum_2_2_cs",
+                        _pointer(("tables", resource, "columns", index, "unit")),
+                        resource,
+                        str(exc).splitlines()[0],
+                    )
+                )
+    return outcomes
 
 
 def against_schema(document: Any) -> list[Finding]:
-    """Check the document against Part 02 §9.2's meta-schema, where `jsonschema` is installed.
+    """Return the shape phase as the legacy finding view."""
+    if not isinstance(document, Mapping):
+        return [Finding("shape", ("document is not a mapping",))]
+    result = check_registry(document)
+    shape = next(phase for phase in result.phases if phase.phase == "shape")
+    return [Finding("shape", tuple(item.detail or item.id for item in shape.outcomes))]
 
-    Reports nothing at all where it is not, rather than a passing invariant: the schema fixes the
-    document's shape and `structural` checks what the shape cannot say, so an author without the
-    optional dependency still gets the half that finds real defects, and is not told that a check
-    which never ran held.
-    """
-    try:
-        import jsonschema
-    except ImportError:
-        return []
-    schema = json.loads(SCHEMA.read_text())
-    errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(document), key=lambda e: list(e.path))
+
+def structural(tables: Mapping[str, Any], universe: Mapping[str, Any], *, is_core: bool = False) -> list[Finding]:
+    """Return semantic invariants for callers that already selected and shaped a document."""
+    document: dict[str, Any] = {"tables": tables}
+    if not is_core:
+        namespace = next(iter(tables)).split(".", 1)[0] if tables else "extension"
+        document["extension_id"] = namespace
+    outcomes = _semantic_outcomes(document, universe, "core" if is_core else "extension", True)
+    labels = [entry["id"] for entry in json.loads(CONTRACT.read_text())["invariants"] if entry["phase"] == "semantic"]
     return [
         Finding(
-            "the document satisfies its meta-schema (Part 02 §9.2)",
-            tuple(f"{'/'.join(str(p) for p in e.path) or '<root>'}: {e.message}" for e in errors),
+            label,
+            tuple(item.detail or item.instance for item in outcomes if item.id == label and item.state == "invalid"),
         )
+        for label in labels
+        if is_core or label != "registry.core.device_detail"
     ]
-
-
-#: What `extends` must name: an extension is written against the logical standard, not a profile
-#: and not a packet (R17 §5).
-LOGICAL_STANDARD = "escapewheel-logical-v0.1"
 
 
 def declarations(document: Any, name: str | None = None) -> list[Finding]:
-    """Check what an extension declares about itself, which `structural` does not look at.
-
-    These hold of an extension and not of core, so they sit apart from the invariants both are
-    held to: its tables carry its namespace, it extends the logical standard, and it names the
-    meta-schema it is written in, which R57 §4 makes worth carrying precisely because it is
-    verifiable offline against the schema in hand.
-
-    Parameters
-    ----------
-    document : Mapping
-        The extension's registry document.
-    name : str, optional
-        What the document is filed as, without its suffix. Where given, `extension_id` must match
-        it: two documents disagreeing about which is which is a collision nothing else catches.
-    """
-    declared = document.get("extension_id")
-    meta = json.loads(SCHEMA.read_text()).get("$id")
-    found = [
-        Finding(
-            "an extension's tables carry its own namespace (Part 09 §2)",
-            tuple(n for n in document.get("tables", {}) if not n.startswith(f"{declared}.")),
-        ),
-        Finding(
-            f"the document extends {LOGICAL_STANDARD} (R17 §5)",
-            () if document.get("extends") == LOGICAL_STANDARD else (f"extends {document.get('extends')!r}",),
-        ),
-        Finding(
-            "the document names this meta-schema (R57 §4)",
-            () if document.get("$schema") == meta else (f"declares {document.get('$schema', 'none')!r}",),
-        ),
+    """Return document-class and namespace findings through the compatibility interface."""
+    del name
+    if not isinstance(document, Mapping) or "tables" not in document:
+        return [Finding("registry document shape", ("document has no tables mapping",))]
+    universe = document["tables"]
+    outcomes = _namespace_owned(document, universe, "extension", True) + _reference_direction(
+        document, universe, "extension", True
+    )
+    return [
+        Finding(label, tuple(item.detail or item.instance for item in outcomes if item.id == label))
+        for label in ("registry.namespace.owned", "registry.namespace.reference_direction")
     ]
-    if name is not None:
-        found.append(
-            Finding(
-                "the document's name is its `extension_id`",
-                () if declared == name else (f"filed as {name!r}, declares {declared!r}",),
-            )
-        )
-    return found
 
 
 def check_extension(document: Any, core: Any, *, name: str | None = None) -> list[Finding]:
-    """Every invariant an extension document is held to, against the core registry it extends.
+    """Validate one extension and return a concise legacy finding list."""
+    del name
+    if not isinstance(document, Mapping) or not isinstance(core, Mapping):
+        return [Finding("registry document", ("document and core must be mappings",))]
+    result = check_registry(document, core)
+    grouped: dict[str, list[str]] = {}
+    for outcome in result.findings:
+        grouped.setdefault(outcome.id, []).append(outcome.detail or outcome.instance)
+    return [Finding(label, tuple(offenders)) for label, offenders in grouped.items()]
 
-    A reference may resolve against core's tables or the extension's own and no further: Part 09 §2
-    makes the direction one-way and §4 declines dependency resolution, so an extension reaching
-    another extension's table is not a reference a packet can be relied on to satisfy.
 
-    Parameters
-    ----------
-    document : Mapping
-        The extension's registry document.
-    core : Mapping
-        The core registry it extends, which a packet embeds.
-    name : str, optional
-        What the document is filed as, without its suffix; passed through to :func:`declarations`.
-
-    Returns
-    -------
-    list of Finding
-        One per invariant checked, in the order they ran; `Finding.passed` says which held.
-    """
-    tables = document.get("tables", {})
-    return (
-        against_schema(document)
-        + declarations(document, name)
-        + structural(tables, dict(core.get("tables", {})) | dict(tables))
-    )
+__all__ = [
+    "CONTRACT",
+    "CONTRACT_SCHEMA",
+    "SCHEMA",
+    "Finding",
+    "Outcome",
+    "PhaseRecord",
+    "RegistryResult",
+    "against_schema",
+    "check_extension",
+    "check_registry",
+    "check_registry_bytes",
+    "declarations",
+    "structural",
+]

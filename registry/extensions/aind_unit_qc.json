@@ -1,10 +1,9 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.3.0",
-  "registry_version": "0.2.0",
-  "logical_standard_version": "0.1",
+  "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
+  "registry_version": "0.3.0",
+  "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "aind_unit_qc",
-  "extends": "escapewheel-logical-v0.1",
   "tables": {
     "aind_unit_qc.metrics": {
       "columns": [

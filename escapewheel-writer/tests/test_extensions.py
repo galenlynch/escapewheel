@@ -11,10 +11,11 @@ from escapewheel_validator import validate
 from escapewheel_writer import PacketWriter
 
 EXTENSION = {
+    "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
     "registry_version": "0.1.0",
-    "logical_standard_version": "0.1",
+    "logical_standard_version": "escapewheel-logical-v0.1",
+    "rule_language": "escapewheel-rule-sql-v0.1",
     "extension_id": "task",
-    "extends": "escapewheel-logical-v0.1",
     "tables": {
         "task.trials": {
             "columns": [
@@ -373,10 +374,11 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
 
 def _vrf_registry():
     return {
+        "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
         "registry_version": "0.1.0",
-        "logical_standard_version": "0.1",
+        "logical_standard_version": "escapewheel-logical-v0.1",
+        "rule_language": "escapewheel-rule-sql-v0.1",
         "extension_id": "vrf",
-        "extends": "escapewheel-logical-v0.1",
         "tables": {
             "vrf.sites": {
                 "columns": [
@@ -551,7 +553,7 @@ def test_the_check_command_refuses_a_document_with_a_dangling_reference(tmp_path
     path = tmp_path / "vr_foraging.json"
     path.write_text(json.dumps(document))
     assert main(["extension", "check", str(path), "--registry", str(_REGISTRY)]) == 1
-    assert "reference targets exist" in capsys.readouterr().out
+    assert "registry.reference.resolves" in capsys.readouterr().out
 
 
 def test_the_check_command_reads_the_registry_a_packet_embeds(tmp_path, capsys, registry, minimal):
