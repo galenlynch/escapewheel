@@ -301,7 +301,7 @@ P1 authority framework
 | P2.1 | Locate normative references with their subject owners | P1; executed after P2 | [R124](../accepted/R124-normative-references-reside-with-their-subject-owners.md) |
 | P3 | Executable declarative-rule language | P2.1 | [R125](../accepted/R125-tier-2-rules-use-a-versioned-escapewheel-sql-profile.md) |
 | P4.1 | Registry-document conformance contract | P3 | [R126](../accepted/R126-a-registry-document-has-one-complete-conformance-contract.md) |
-| P4.2 | Uniform registry-validation boundaries | P4.1 | Proposal to be scoped |
+| P4.2 | Uniform registry-validation boundaries | P4.1 | [R127](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) |
 | P5 | Resource/profile declarations and resource classification | P4.2 | Proposal to be scoped |
 | P6 | Packet manifest, requiredness, and registry binding | P5 | Proposal to be scoped |
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | Proposal to be scoped |
